@@ -2,7 +2,7 @@
 // deploy shows up on the next open; the cache is the fallback when offline.
 // Forecast requests are never cached here - the page keeps the last one in
 // localStorage and labels it with its time.
-const CACHE = 'weather-v1';
+const CACHE = 'weather-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
