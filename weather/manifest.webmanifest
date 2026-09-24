@@ -1,0 +1,14 @@
+{
+  "name": "Weather",
+  "short_name": "Weather",
+  "description": "Signal-style weather: the W3 Vivid card, fed by Open-Meteo.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A0A0C",
+  "theme_color": "#0A0A0C",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
