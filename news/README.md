@@ -3,9 +3,9 @@
 Latest headlines by topic (UK, World, US, Business, Tech, Science, Sport) as a
 home-screen web app: clean, minimal, frosted glass, light and dark.
 
-- **Data:** the RSS feeds listed in `feeds.json` (BBC News and The Guardian to
-  start). `scripts/fetch-news.mjs` reads them into `data/news.json`, the only
-  file the app loads. News sites don't allow browsers on other sites to read
+- **Data:** the RSS and Atom feeds listed in `feeds.json`.
+  `scripts/fetch-news.mjs` reads them into `data/news.json`, the only file the
+  app loads. News sites don't allow browsers on other sites to read
   their feeds (CORS), so the feeds are fetched ahead of time instead. No API
   keys needed.
 - **Updates:** `.github/workflows/news.yml` re-fetches every 30 minutes and
@@ -14,6 +14,30 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
+
+## Sources
+
+Only sources that are free to read are included, and only through their own
+public feeds:
+
+| Topic    | Sources |
+|----------|---------|
+| UK       | BBC News, The Guardian, Sky News |
+| World    | BBC News, The Guardian, Sky News, Al Jazeera, NPR |
+| US       | BBC News, The Guardian, Sky News, NPR, PBS News |
+| Business | BBC News, The Guardian, Sky News, NPR |
+| Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
+| Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
+| Sport    | BBC Sport, The Guardian, Sky Sports |
+
+Not included:
+
+- **Reuters** has had a paywall since October 2024 and stopped publishing RSS
+  feeds in 2020.
+- **Associated Press** is free to read but has no official RSS feed.
+- **BBC News** is free in the UK. Since mid-2025, readers in the US hit a
+  paywall after reading a certain amount. Remove the BBC lines from
+  `feeds.json` if that matters where you read.
 
 ## Add or change sources
 

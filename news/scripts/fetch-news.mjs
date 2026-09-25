@@ -57,7 +57,7 @@ function raw(xml, name) {
 
 function attrs(tag) {
   const out = {};
-  for (const [, k, v] of tag.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) out[k.toLowerCase()] = decode(v);
+  for (const [, k, dq, sq] of tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) out[k.toLowerCase()] = decode(dq ?? sq);
   return out;
 }
 

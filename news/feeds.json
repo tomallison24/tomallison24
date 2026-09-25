@@ -42,7 +42,6 @@
     { "topic": "science",  "source": "ScienceDaily",     "url": "https://www.sciencedaily.com/rss/top/science.xml" },
     { "topic": "science",  "source": "The Conversation", "url": "https://theconversation.com/uk/environment/articles.atom" },
     { "topic": "science",  "source": "The Conversation", "url": "https://theconversation.com/uk/technology/articles.atom" },
-    { "topic": "science",  "source": "The Conversation", "url": "https://theconversation.com/uk/science/articles.atom" },
 
     { "topic": "sport",    "source": "BBC Sport",        "url": "https://feeds.bbci.co.uk/sport/rss.xml" },
     { "topic": "sport",    "source": "The Guardian",     "url": "https://www.theguardian.com/uk/sport/rss" },
