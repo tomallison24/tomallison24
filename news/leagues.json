@@ -19,7 +19,7 @@
     {"id": "nba", "label": "NBA", "sport": "nba", "path": "basketball/nba", "comp": null, "homeFirst": false},
     {"id": "mlb", "label": "MLB", "sport": "mlb", "path": "baseball/mlb", "comp": null, "homeFirst": false},
     {"id": "nhl", "label": "NHL", "sport": "nhl", "path": "hockey/nhl", "comp": null, "homeFirst": false},
-    {"id": "rugby.267979", "label": "Premiership (rugby)", "sport": "rugby-union", "path": "rugby/267979", "comp": "comp:rugby-union:premiership-rugby", "homeFirst": true},
+    {"id": "rugby.267979", "label": "Premiership Rugby", "sport": "rugby-union", "path": "rugby/267979", "comp": "comp:rugby-union:premiership-rugby", "homeFirst": true},
     {"id": "rugby.270557", "label": "United Rugby Championship", "sport": "rugby-union", "path": "rugby/270557", "comp": "comp:rugby-union:united-rugby-championship", "homeFirst": true},
     {"id": "rugby.271937", "label": "Champions Cup", "sport": "rugby-union", "path": "rugby/271937", "comp": "comp:rugby-union:champions-cup", "homeFirst": true},
     {"id": "rugby.180659", "label": "Six Nations", "sport": "rugby-union", "path": "rugby/180659", "comp": "comp:rugby-union:six-nations", "homeFirst": true},
@@ -27,9 +27,7 @@
     {"id": "rugby.244293", "label": "The Rugby Championship", "sport": "rugby-union", "path": "rugby/244293", "comp": null, "homeFirst": true},
     {"id": "rugby.242041", "label": "Super Rugby Pacific", "sport": "rugby-union", "path": "rugby/242041", "comp": null, "homeFirst": true},
     {"id": "rugby.164205", "label": "Rugby World Cup", "sport": "rugby-union", "path": "rugby/164205", "comp": "comp:rugby-union:rugby-world-cup", "homeFirst": true},
-    {"id": "rugby.289234", "label": "International Tests", "sport": "rugby-union", "path": "rugby/289234", "comp": null, "homeFirst": true},
-    {"id": "rl.3", "label": "Rugby league (test 3)", "sport": "rugby-league", "path": "rugby-league/3", "comp": null, "homeFirst": true},
-    {"id": "rl.4", "label": "Rugby league (test 4)", "sport": "rugby-league", "path": "rugby-league/4", "comp": null, "homeFirst": true},
-    {"id": "rl.nrl", "label": "Rugby league (test nrl)", "sport": "rugby-league", "path": "rugby-league/nrl", "comp": null, "homeFirst": true}
+    {"id": "rugby.289234", "label": "Rugby union internationals", "sport": "rugby-union", "path": "rugby/289234", "comp": null, "homeFirst": true},
+    {"id": "rugby-league", "label": "Rugby league", "sport": "rugby-league", "path": "rugby-league/3", "comp": null, "homeFirst": true}
   ]
 }

@@ -67,7 +67,10 @@ scoreboard feed directly from your phone while the view is open: every
 minute when a game is live, every 5 minutes otherwise. It covers the
 leagues in `leagues.json`: Premier League, Championship, Scottish
 Premiership, Champions/Europa/Conference League, FA Cup, League Cup, WSL,
-La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB and NHL. Your
+La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB, NHL and rugby
+(Premiership Rugby, URC, Champions Cup, Top 14, Six Nations, Rugby
+Championship, Super Rugby Pacific, Rugby World Cup, internationals and
+rugby league). Your
 Sport filters apply to scores too. Tap a game for ESPN's match page.
 
 - Each refresh also saves a copy (`data/scores.json`), shown when ESPN
