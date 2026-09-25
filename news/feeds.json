@@ -1,0 +1,50 @@
+{
+  "topics": [
+    { "id": "uk",       "label": "UK" },
+    { "id": "world",    "label": "World" },
+    { "id": "us",       "label": "US" },
+    { "id": "business", "label": "Business" },
+    { "id": "tech",     "label": "Tech" },
+    { "id": "science",  "label": "Science" },
+    { "id": "sport",    "label": "Sport" }
+  ],
+  "feeds": [
+    { "topic": "uk",       "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/uk/rss.xml" },
+    { "topic": "uk",       "source": "The Guardian",     "url": "https://www.theguardian.com/uk-news/rss" },
+    { "topic": "uk",       "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/uk.xml" },
+
+    { "topic": "world",    "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { "topic": "world",    "source": "The Guardian",     "url": "https://www.theguardian.com/world/rss" },
+    { "topic": "world",    "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/world.xml" },
+    { "topic": "world",    "source": "Al Jazeera",       "url": "https://www.aljazeera.com/xml/rss/all.xml" },
+    { "topic": "world",    "source": "NPR",              "url": "https://feeds.npr.org/1004/rss.xml" },
+
+    { "topic": "us",       "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml" },
+    { "topic": "us",       "source": "The Guardian",     "url": "https://www.theguardian.com/us-news/rss" },
+    { "topic": "us",       "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/us.xml" },
+    { "topic": "us",       "source": "NPR",              "url": "https://feeds.npr.org/1003/rss.xml" },
+    { "topic": "us",       "source": "PBS News",         "url": "https://www.pbs.org/newshour/feeds/rss/headlines" },
+
+    { "topic": "business", "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { "topic": "business", "source": "The Guardian",     "url": "https://www.theguardian.com/uk/business/rss" },
+    { "topic": "business", "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/business.xml" },
+    { "topic": "business", "source": "NPR",              "url": "https://feeds.npr.org/1006/rss.xml" },
+
+    { "topic": "tech",     "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { "topic": "tech",     "source": "The Guardian",     "url": "https://www.theguardian.com/uk/technology/rss" },
+    { "topic": "tech",     "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/technology.xml" },
+    { "topic": "tech",     "source": "NPR",              "url": "https://feeds.npr.org/1019/rss.xml" },
+    { "topic": "tech",     "source": "Ars Technica",     "url": "https://feeds.arstechnica.com/arstechnica/index" },
+
+    { "topic": "science",  "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { "topic": "science",  "source": "The Guardian",     "url": "https://www.theguardian.com/science/rss" },
+    { "topic": "science",  "source": "NPR",              "url": "https://feeds.npr.org/1007/rss.xml" },
+    { "topic": "science",  "source": "ScienceDaily",     "url": "https://www.sciencedaily.com/rss/top/science.xml" },
+    { "topic": "science",  "source": "The Conversation", "url": "https://theconversation.com/uk/environment/articles.atom" },
+    { "topic": "science",  "source": "The Conversation", "url": "https://theconversation.com/uk/technology/articles.atom" },
+
+    { "topic": "sport",    "source": "BBC Sport",        "url": "https://feeds.bbci.co.uk/sport/rss.xml" },
+    { "topic": "sport",    "source": "The Guardian",     "url": "https://www.theguardian.com/uk/sport/rss" },
+    { "topic": "sport",    "source": "Sky Sports",       "url": "https://www.skysports.com/rss/12040" }
+  ]
+}

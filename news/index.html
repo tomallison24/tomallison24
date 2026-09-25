@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>News</title>
+<meta name="description" content="Latest headlines for UK, World, US, Business, Tech, Science and Sport in one clean, frosted-glass home-screen app.">
+<meta name="theme-color" content="#EEF0F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#07080B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="News">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  News - headlines by topic as a home-screen web app.
+
+  Data: data/news.json, written by scripts/fetch-news.mjs from the RSS feeds
+  in feeds.json. The app never talks to a news site itself (no CORS there),
+  it only reads that one same-origin file.
+
+  Look: a quiet gradient backdrop that drifts slowly, with frosted glass
+  (backdrop-filter) only on a few large surfaces: the tab bar, the lead story
+  and the story list. Few glass layers keep scrolling smooth on iPhone.
+-->
+<style>
+  :root {
+    --bg: #EEF0F4;
+    --text: #0B0B0F;
+    --muted: rgba(60, 60, 67, 0.62);
+    --hairline: rgba(60, 60, 67, 0.14);
+    --glass: rgba(255, 255, 255, 0.46);
+    --glass-strong: rgba(255, 255, 255, 0.62);
+    --glass-bar: rgba(246, 247, 251, 0.78);
+    --glass-edge: rgba(255, 255, 255, 0.75);
+    --glass-shadow: 0 8px 32px rgba(31, 38, 64, 0.10);
+    --chip-on-bg: #0B0B0F;
+    --chip-on-text: #FFFFFF;
+    --skeleton: rgba(60, 60, 67, 0.10);
+    --blob-1: rgba(96, 150, 255, 0.60);
+    --blob-2: rgba(255, 158, 118, 0.55);
+    --blob-3: rgba(168, 138, 255, 0.55);
+    --blob-4: rgba(96, 208, 178, 0.50);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #07080B;
+      --text: #F5F5F7;
+      --muted: rgba(235, 235, 245, 0.58);
+      --hairline: rgba(255, 255, 255, 0.08);
+      --glass: rgba(30, 31, 38, 0.46);
+      --glass-strong: rgba(40, 41, 50, 0.62);
+      --glass-bar: rgba(14, 15, 20, 0.78);
+      --glass-edge: rgba(255, 255, 255, 0.10);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      --chip-on-bg: #F5F5F7;
+      --chip-on-text: #0B0B0F;
+      --skeleton: rgba(255, 255, 255, 0.07);
+      --blob-1: rgba(40, 100, 230, 0.50);
+      --blob-2: rgba(200, 80, 40, 0.40);
+      --blob-3: rgba(110, 60, 210, 0.45);
+      --blob-4: rgba(20, 150, 120, 0.38);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; color: var(--text); /* background stays on html so the backdrop shows through */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100vh; min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---- Backdrop: soft colour fields for the glass to blur ---- */
+  .backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .blob { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
+  .blob.b1 { top: -40vmax; left: -30vmax; background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%); animation: drift1 38s ease-in-out infinite alternate; }
+  .blob.b2 { top: 10vmax; right: -45vmax; background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%); animation: drift2 44s ease-in-out infinite alternate; }
+  .blob.b3 { bottom: -50vmax; left: -20vmax; background: radial-gradient(circle, var(--blob-3) 0%, transparent 70%); animation: drift3 50s ease-in-out infinite alternate; }
+  .blob.b4 { bottom: -30vmax; right: -40vmax; background: radial-gradient(circle, var(--blob-4) 0%, transparent 70%); animation: drift1 56s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1 { to { transform: translate(12vmax, 10vmax) scale(1.08); } }
+  @keyframes drift2 { to { transform: translate(-14vmax, 8vmax) scale(0.92); } }
+  @keyframes drift3 { to { transform: translate(10vmax, -12vmax) scale(1.05); } }
+  @media (prefers-reduced-motion: reduce) { .blob { animation: none !important; } }
+
+  /* ---- Glass ---- */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 0.5px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow), inset 0 0.5px 0 var(--glass-edge);
+  }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+
+  /* ---- Large title (scrolls away, like iOS) ---- */
+  .masthead { padding-top: calc(env(safe-area-inset-top) + 18px); padding-bottom: 10px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .masthead .date { margin: 0 0 2px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
+  .masthead h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+  .round-btn { width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center; flex: none; margin-bottom: 2px; }
+  .round-btn svg { width: 18px; height: 18px; }
+  .round-btn.spinning svg { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Sticky frosted topic bar ---- */
+  /* The status-bar strip and the tab bar are separate so the bar never
+     changes height when it pins; both frost only once it has. */
+  .statusbar { position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); z-index: 11; border: 0; box-shadow: none; }
+  .topbar {
+    position: sticky; top: env(safe-area-inset-top); z-index: 10;
+    border-width: 0 0 0.5px 0; border-radius: 0;
+    box-shadow: none;
+  }
+  .statusbar.stuck, .topbar.stuck { background: var(--glass-bar); }
+  .statusbar:not(.stuck), .topbar:not(.stuck) { background: transparent; border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    padding: 8px max(16px, env(safe-area-inset-left)); scroll-padding: 0 16px;
+    max-width: 560px; margin: 0 auto;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: none; height: 34px; padding: 0 15px; border-radius: 999px;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--text);
+    background: var(--glass-strong); border: 0.5px solid var(--glass-edge);
+    transition: background-color 0.2s, color 0.2s, transform 0.15s;
+  }
+  .tab:active { transform: scale(0.96); }
+  .tab[aria-selected="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
+
+  /* ---- Feed ---- */
+  main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 14px; }
+
+  .lead { display: block; border-radius: 24px; overflow: hidden; }
+  .lead .img { aspect-ratio: 16 / 9; background: var(--skeleton); overflow: hidden; }
+  .lead .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lead .body { padding: 14px 16px 16px; }
+  .lead h2 { margin: 6px 0 0; font-size: 22px; line-height: 1.22; font-weight: 700; letter-spacing: -0.015em; }
+  .lead p { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .list { border-radius: 24px; overflow: hidden; }
+  .row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .row:active, .lead:active { background: var(--hairline); }
+  .row .text { flex: 1; min-width: 0; }
+  .row h3 { margin: 4px 0 0; font-size: 16px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .row .thumb { width: 76px; height: 76px; border-radius: 14px; overflow: hidden; flex: none; background: var(--skeleton); }
+  .row .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .meta { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; }
+  .meta .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .meta .sep { opacity: 0.6; }
+
+  .notice { border-radius: 24px; padding: 28px 20px; text-align: center; }
+  .notice h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .notice p { margin: 6px 0 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
+  .notice button { margin-top: 14px; height: 36px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 15px; background: var(--chip-on-bg); color: var(--chip-on-text); }
+
+  .status { text-align: center; font-size: 12px; line-height: 1.5; color: var(--muted); padding: 4px 8px 0; }
+
+  /* ---- Loading skeleton ---- */
+  .sk { background: var(--skeleton); border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <p class="date" id="today"></p>
+      <h1>News</h1>
+    </div>
+    <button class="round-btn glass" id="refresh" aria-label="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+    </button>
+  </header>
+</div>
+
+<div class="statusbar glass" id="statusbar" aria-hidden="true"></div>
+<nav class="topbar glass" id="topbar">
+  <div class="tabs" id="tabs" role="tablist" aria-label="Topics"></div>
+</nav>
+
+<div class="wrap">
+  <main id="feed" aria-live="polite"></main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const DATA_URL = 'data/news.json';
+  const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
+  const LATEST = { id: 'latest', label: 'Latest' };
+  const DEFAULT_TOPICS = [
+    { id: 'uk', label: 'UK' }, { id: 'world', label: 'World' }, { id: 'us', label: 'US' },
+    { id: 'business', label: 'Business' }, { id: 'tech', label: 'Tech' },
+    { id: 'science', label: 'Science' }, { id: 'sport', label: 'Sport' },
+  ];
+  const TOPIC_COLOURS = {
+    uk: '#FF453A', world: '#30B0C7', us: '#0A84FF', business: '#FF9F0A',
+    tech: '#5E5CE6', science: '#30D158', sport: '#FF6B2C',
+  };
+
+  const $ = id => document.getElementById(id);
+  const feedEl = $('feed'), tabsEl = $('tabs'), topbar = $('topbar'), refreshBtn = $('refresh');
+
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  let data = store.get('news.data');
+  let topic = store.get('news.topic') || LATEST.id;
+  let loading = false;
+  let lastFetch = 0;
+
+  // ---- helpers ----
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const safeUrl = u => (typeof u === 'string' && /^https?:\/\//i.test(u)) ? u : null;
+
+  function ago(iso, now = Date.now()) {
+    if (!iso) return '';
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return '';
+    const m = Math.max(0, Math.round((now - t) / 60000));
+    if (m < 1) return 'Just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = new Date(t);
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  // BBC thumbnails are 240px wide; ask for a sharper one and fall back if refused.
+  function sharper(url) {
+    return url.replace(/(ichef\.bbci\.co\.uk\/(?:ace\/standard|news))\/240\//, '$1/800/');
+  }
+
+  function img(url, alt, big) {
+    const src = safeUrl(url);
+    if (!src) return '';
+    const hi = big ? sharper(src) : src;
+    const fallback = hi !== src ? ` data-fallback="${esc(src)}"` : '';
+    return `<img src="${esc(hi)}"${fallback} alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  }
+
+  function topics() { return (data && Array.isArray(data.topics) && data.topics.length) ? data.topics : DEFAULT_TOPICS; }
+  function topicLabel(id) { return (topics().find(t => t.id === id) || {}).label || id; }
+
+  function storiesFor(id) {
+    const all = (data && Array.isArray(data.stories)) ? data.stories : [];
+    if (id !== LATEST.id) return all.filter(s => s.topic === id);
+    const seen = new Set();
+    return all
+      .filter(s => !seen.has(s.id) && seen.add(s.id))
+      .sort((a, b) => (b.published || '').localeCompare(a.published || ''))
+      .slice(0, 80);
+  }
+
+  function meta(s, showTopic) {
+    const parts = [];
+    if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(topicLabel(s.topic))}</span>`);
+    parts.push(`<span>${esc(s.source)}</span>`);
+    const when = ago(s.published);
+    if (when) parts.push(`<span>${esc(when)}</span>`);
+    return `<div class="meta">${parts.join('<span class="sep">·</span>')}</div>`;
+  }
+
+  // ---- render ----
+  function renderTabs() {
+    const list = [LATEST, ...topics()];
+    if (!list.some(t => t.id === topic)) topic = LATEST.id;
+    tabsEl.innerHTML = list.map(t =>
+      `<button class="tab" role="tab" data-topic="${esc(t.id)}" aria-selected="${t.id === topic}">${esc(t.label)}</button>`
+    ).join('');
+    const on = tabsEl.querySelector('[aria-selected="true"]');
+    if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
+  }
+
+  function renderFeed() {
+    if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', true); return; }
+
+    const isLatest = topic === LATEST.id;
+    const stories = storiesFor(topic);
+    if (!stories.length) {
+      feedEl.innerHTML = notice('Nothing here right now', `No ${esc(topicLabel(topic))} stories came through on the last update.`, true) + status();
+      return;
+    }
+
+    // Lead: the newest story with a picture, if one is near the top.
+    const leadIdx = stories.slice(0, 5).findIndex(s => safeUrl(s.image));
+    const lead = leadIdx >= 0 ? stories[leadIdx] : null;
+    const rest = stories.filter((_, i) => i !== leadIdx);
+
+    let html = '';
+    if (lead) {
+      html += `<a class="lead glass" href="${esc(safeUrl(lead.url))}" target="_blank" rel="noopener">
+        <div class="img">${img(lead.image, '', true)}</div>
+        <div class="body">${meta(lead, isLatest)}<h2>${esc(lead.title)}</h2>${lead.summary ? `<p>${esc(lead.summary)}</p>` : ''}</div>
+      </a>`;
+    }
+    if (rest.length) {
+      html += `<div class="list glass">${rest.map(s => `
+        <a class="row" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">
+          <div class="text">${meta(s, isLatest)}<h3>${esc(s.title)}</h3></div>
+          ${safeUrl(s.image) ? `<div class="thumb">${img(s.image, '', false)}</div>` : ''}
+        </a>`).join('')}</div>`;
+    }
+    feedEl.innerHTML = html + status();
+  }
+
+  function status() {
+    if (!data) return '';
+    const sources = [...new Set((data.feeds || []).filter(f => f.ok).map(f => f.source.replace(/ (News|Sport)$/, '')))];
+    const down = (data.feeds || []).filter(f => !f.ok).length;
+    const when = ago(data.generatedAt);
+    const updated = !when ? '' : /^\d/.test(when) && !when.endsWith('ago') ? `Updated ${when}` : `Updated ${when.toLowerCase()}`;
+    return `<p class="status">${[updated, sources.join(', ')].filter(Boolean).map(esc).join(' · ')}${down ? `<br>${down} feed${down > 1 ? 's' : ''} unavailable on the last update` : ''}</p>`;
+  }
+
+  function notice(title, body, retry) {
+    return `<div class="notice glass"><h2>${esc(title)}</h2><p>${body}</p>${retry ? '<button data-action="retry">Try again</button>' : ''}</div>`;
+  }
+
+  function skeleton() {
+    const row = `<div class="row"><div class="text"><div class="sk" style="width:40%;height:10px"></div><div class="sk" style="width:95%;height:14px;margin-top:10px"></div><div class="sk" style="width:70%;height:14px;margin-top:6px"></div></div><div class="thumb sk"></div></div>`;
+    return `<div class="lead glass"><div class="img sk" style="border-radius:0"></div><div class="body"><div class="sk" style="width:35%;height:10px"></div><div class="sk" style="width:90%;height:20px;margin-top:12px"></div><div class="sk" style="width:60%;height:20px;margin-top:6px"></div></div></div>
+      <div class="list glass">${row.repeat(5)}</div>`;
+  }
+
+  function render() { renderTabs(); renderFeed(); }
+
+  // ---- data ----
+  async function load() {
+    if (loading) return;
+    loading = true;
+    refreshBtn.classList.add('spinning');
+    if (!data) renderFeed();
+    try {
+      const res = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const next = await res.json();
+      if (!next || !Array.isArray(next.stories)) throw new Error('Bad data');
+      data = next;
+      lastFetch = Date.now();
+      store.set('news.data', data);
+    } catch (err) {
+      console.warn('News update failed:', err);
+    } finally {
+      loading = false;
+      refreshBtn.classList.remove('spinning');
+      render();
+    }
+  }
+
+  function select(id) {
+    if (id === topic) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    topic = id;
+    store.set('news.topic', topic);
+    render();
+    // Keep the tab bar pinned where it is, with the new list starting under it.
+    const pinned = parseFloat(getComputedStyle(topbar).top) || 0;
+    const top = feedEl.getBoundingClientRect().top + window.scrollY - pinned - topbar.offsetHeight - 8;
+    if (window.scrollY > top) window.scrollTo({ top });
+  }
+
+  // ---- events ----
+  tabsEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-topic]');
+    if (b) select(b.dataset.topic);
+  });
+  feedEl.addEventListener('click', e => {
+    if (e.target.closest('[data-action="retry"]')) load();
+  });
+  refreshBtn.addEventListener('click', load);
+
+  // Broken or refused images: try the original, then drop the frame.
+  feedEl.addEventListener('error', e => {
+    const im = e.target;
+    if (im.tagName !== 'IMG') return;
+    if (im.dataset.fallback) { im.src = im.dataset.fallback; delete im.dataset.fallback; return; }
+    const frame = im.closest('.thumb, .img');
+    if (frame) frame.remove();
+  }, true);
+
+  // Swipe left/right on the list to move between topics.
+  let sx = 0, sy = 0, st = 0;
+  feedEl.addEventListener('touchstart', e => {
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now();
+  }, { passive: true });
+  feedEl.addEventListener('touchend', e => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (sx < 24 || sx > window.innerWidth - 24) return;           // leave edge swipes to the OS
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - st > 600) return;
+    const ids = [LATEST.id, ...topics().map(t => t.id)];
+    const i = ids.indexOf(topic) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < ids.length) select(ids[i]);
+  }, { passive: true });
+
+  // Frost the tab bar only once it is pinned under the status bar.
+  const statusbar = $('statusbar');
+  new IntersectionObserver(([e]) => {
+    const stuck = e.intersectionRatio < 1;
+    topbar.classList.toggle('stuck', stuck);
+    statusbar.classList.toggle('stuck', stuck);
+  }, { threshold: 1 })
+    .observe(document.querySelector('.masthead'));
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastFetch > STALE_MS) load();
+  });
+
+  $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  render();
+  load();
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
