@@ -182,11 +182,24 @@ for (const r of results) {
 
 const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
 const stories = [];
-for (const { id, keep } of config.topics) {
+// A topic with "collect" terms also picks up any other topic's story whose
+// headline uses one of them (AI gets the BBC's tech stories about AI).
+// All-capitals terms such as "AI" must match exactly; others ignore case.
+function headlineMatcher(terms) {
+  const res = terms.map(t => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, /^[A-Z0-9]+$/.test(t) ? '' : 'i'));
+  return title => res.some(re => re.test(title));
+}
+
+const all = results.flatMap(r => r.stories);
+for (const { id, keep, collect } of config.topics) {
   const seen = new Set();
-  stories.push(...results
-    .flatMap(r => r.stories)
-    .filter(s => s.topic === id && !seen.has(s.url) && seen.add(s.url))
+  const matches = collect ? headlineMatcher(collect) : null;
+  const picked = matches
+    ? all.filter(s => s.topic !== id && matches(s.title)).map(({ tags: _, ...s }) => ({ ...s, topic: id }))
+    : [];
+  if (matches) console.log(`${id}: ${picked.length} stories collected from other topics`);
+  stories.push(...[...all.filter(s => s.topic === id), ...picked]
+    .filter(s => !seen.has(s.url) && seen.add(s.url))
     .sort(byTime)
     .slice(0, keep || PER_TOPIC));
 }

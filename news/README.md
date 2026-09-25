@@ -1,6 +1,6 @@
 # News
 
-Latest headlines by topic (UK, World, US, Business, Tech, Science, Sport) as a
+Latest headlines by topic (UK, World, US, Business, Tech, AI, Science, Sport) as a
 home-screen web app: clean, minimal, frosted glass, light and dark.
 
 - **Data:** the RSS and Atom feeds listed in `feeds.json`.
@@ -27,6 +27,7 @@ public feeds:
 | US       | BBC News, The Guardian, Sky News, NPR, PBS News |
 | Business | BBC News, The Guardian, Sky News, NPR |
 | Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
+| AI       | The Guardian, Ars Technica, TechCrunch, VentureBeat, plus any story from the other feeds with AI in its headline |
 | Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
 | Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport) |
 
