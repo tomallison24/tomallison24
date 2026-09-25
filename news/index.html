@@ -47,6 +47,7 @@
     --field: rgba(118, 118, 128, 0.12);
     --seg-on: #FFFFFF;
     --toast-action: #7CB6FF;
+    --live: #E5242B;
     --blob-1: rgba(96, 150, 255, 0.60);
     --blob-2: rgba(255, 158, 118, 0.55);
     --blob-3: rgba(168, 138, 255, 0.55);
@@ -75,6 +76,7 @@
       --field: rgba(118, 118, 128, 0.24);
       --seg-on: #636366;
       --toast-action: #0A64E0;
+      --live: #FF5A52;
       --blob-1: rgba(40, 100, 230, 0.50);
       --blob-2: rgba(200, 80, 40, 0.40);
       --blob-3: rgba(110, 60, 210, 0.45);
@@ -159,10 +161,13 @@
 
   /* ---- Sport filter bar: second line of the pinned bar, Sport tab only ---- */
   .filterbar {
-    display: flex; align-items: center; gap: 8px;
     padding: 0 max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
     max-width: 560px; margin: 0 auto;
   }
+  .fb-row { display: flex; align-items: center; gap: 8px; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; margin-bottom: 8px; border-radius: 9px; background: var(--field); }
+  .modes .seg { gap: 6px; }
+  .modes .live-dot { display: inline-block; }
   .filterbar[hidden] { display: none; }
   .chip {
     flex: none; height: 30px; padding: 0 12px; border-radius: 999px;
@@ -265,6 +270,22 @@
   .notice .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .notice .actions button.secondary { background: var(--glass-strong); color: var(--text); border: 0.5px solid var(--glass-edge); }
   @media (prefers-reduced-motion: reduce) { .sheet, .scrim, .toast { transition: none; } }
+
+  /* ---- Scores ---- */
+  .scores .game { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px; }
+  .scores .game + .game::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .scores .game:active { background: var(--hairline); }
+  .gstat { width: 54px; flex: none; font-size: 12px; font-weight: 700; line-height: 1.25; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .gstat.in { color: var(--live); display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); flex: none; animation: pulse 1.4s ease-in-out infinite; }
+  .gteams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .gteam { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 500; }
+  .glogo { width: 20px; height: 20px; flex: none; object-fit: contain; }
+  .gname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gscore { min-width: 22px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .game.decided .gteam:not(.win) { color: var(--muted); }
+  .game.decided .gteam.win { font-weight: 700; }
+  main .sect h3 { margin: 6px 4px 6px; }
 
   /* ---- Feed ---- */
   main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 14px; }
@@ -377,6 +398,9 @@
 
   const DATA_URL = 'data/news.json';
   const CATALOG_URL = 'sport-catalog.json';
+  const LEAGUES_URL = 'leagues.json';
+  const SCORES_URL = 'data/scores.json';                  // copy saved on each refresh
+  const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
   const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
   const LATEST = { id: 'latest', label: 'Latest' };
   const SPORT = 'sport';
@@ -418,6 +442,7 @@
   let catalog = null, catalogFailed = false;
   let picks = Array.isArray(store.get('news.sport.picks')) ? store.get('news.sport.picks').filter(x => typeof x === 'string') : [];
   let pickList = [];
+  let sportMode = store.get('news.sport.mode') === 'scores' ? 'scores' : 'news';
 
   // ---- helpers ----
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -585,20 +610,28 @@
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
   }
 
-  // Sport tab: one line saying what is filtered, with Filters and Reset.
+  // Sport tab: a News | Scores switch, then one line saying what is
+  // filtered, with Filters and Reset (filters apply to both).
   function renderFilterbar() {
     filterEl.hidden = topic !== SPORT;
     if (filterEl.hidden) return;
     const n = pickList.length;
-    filterEl.innerHTML = n
+    const live = liveCount();
+    const modes = `<div class="modes" role="tablist" aria-label="Sport view">
+      <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
+      <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n">${live} live</span>` : ''}</button>
+    </div>`;
+    const row = n
       ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on">${ICON.sliders}Filters<span class="n">${n}</span></button>
          <button class="filter-summary" data-action="edit-picks">${esc(pickList.map(p => p.label).join(', '))}</button>
          <button class="chip" data-action="reset-picks">${ICON.x}Reset</button>`
       : `<button class="chip" data-action="edit-picks">${ICON.sliders}Filter</button>
-         <span class="filter-summary">Showing all sport</span>`;
+         <span class="filter-summary">${sportMode === 'scores' ? 'Showing all leagues' : 'Showing all sport'}</span>`;
+    filterEl.innerHTML = modes + `<div class="fb-row">${row}</div>`;
   }
 
   function renderFeed() {
+    if (topic === SPORT && sportMode === 'scores') { feedEl.innerHTML = renderScores(); return; }
     if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', '<button data-action="retry">Try again</button>'); return; }
 
     const isLatest = topic === LATEST.id;
@@ -759,6 +792,7 @@
     refreshPicks();
     if (sheetOpen) renderSheet();
     else { renderFilterbar(); renderFeed(); }
+    if (topic === SPORT && sportMode === 'scores') fetchScores();
   }
 
   // Reset from the results page clears every filter, with a few seconds to undo.
@@ -779,6 +813,179 @@
     if (undoPicks) setPicks(undoPicks);
     undoPicks = null;
   });
+
+  // ---- scores ----
+  // Read live from ESPN's public scoreboard feed while the Scores view is
+  // open: every minute while anything is in play, every 5 minutes otherwise.
+  // If ESPN can't be reached, fall back to the copy saved on each refresh.
+  let leagues = store.get('news.leagues');
+  let scores = {};                  // league id -> games
+  let scoresAt = 0, scoresSource = '', scoresLoading = false, scoresTimer = 0;
+
+  // Keep in step with normalize() in scripts/fetch-scores.mjs.
+  function normalize(json, league) {
+    return ((json && json.events) || []).map(ev => {
+      const comp = (ev.competitions || [])[0] || {};
+      const sides = comp.competitors || [];
+      const side = where => {
+        const c = sides.find(x => x.homeAway === where) || {};
+        const t = c.team || {};
+        return {
+          name: t.displayName || t.name || '',
+          short: t.shortDisplayName || t.abbreviation || t.displayName || '',
+          logo: t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null,
+          score: c.score == null ? null : String(typeof c.score === 'object' ? (c.score.displayValue ?? '') : c.score),
+          winner: !!c.winner,
+        };
+      };
+      const type = (ev.status || comp.status || {}).type || {};
+      const link = (ev.links || []).find(l => (l.rel || []).includes('summary')) || (ev.links || [])[0];
+      return {
+        id: String(ev.id), league: league.id, state: type.state || 'pre',
+        detail: type.shortDetail || type.detail || '', start: ev.date || comp.date || null,
+        home: side('home'), away: side('away'), link: (link && link.href) || null,
+      };
+    });
+  }
+
+  const allGames = () => Object.values(scores).flat();
+  function liveCount() {
+    return (leagues || []).reduce((n, l) => n + (scores[l.id] || []).filter(g => g.state === 'in' && gameMatches(g, l)).length, 0);
+  }
+
+  // Leagues worth fetching for the current filters.
+  function relevantLeagues() {
+    const all = leagues || [];
+    if (!pickList.length) return all;
+    return all.filter(l => pickList.some(p =>
+      p.kind === 'kw' || (p.kind === 'team' && !p.sport) ||
+      (p.kind === 'sport' && p.sport === l.sport) ||
+      (p.kind === 'comp' && p.id === l.comp) ||
+      (p.kind === 'team' && p.sport === l.sport)));
+  }
+
+  function gameMatches(g, l) {
+    if (!pickList.length) return true;
+    const names = [g.home.name, g.home.short, g.away.name, g.away.short].join('\n');
+    return pickList.some(p => {
+      if (p.kind === 'sport') return p.sport === l.sport;
+      if (p.kind === 'comp') return p.id === l.comp;
+      if (p.kind === 'kw') return termRe(p.label, true).test(names);
+      if (p.sport && p.sport !== l.sport) return false;
+      return p.terms.some(t => termRe(t, false).test(names));
+    });
+  }
+
+  async function loadLeagues() {
+    try {
+      const res = await fetch(LEAGUES_URL, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      leagues = (await res.json()).leagues || [];
+      store.set('news.leagues', leagues);
+    } catch (err) {
+      console.warn('League list failed to load:', err);
+    }
+    if (topic === SPORT && sportMode === 'scores') fetchScores();
+  }
+
+  async function loadSnapshot() {
+    try {
+      const res = await fetch(`${SCORES_URL}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const snap = await res.json();
+      for (const l of snap.leagues || []) if (l.ok) scores[l.id] = l.games || [];
+      scoresAt = Date.parse(snap.generatedAt) || 0;
+      scoresSource = 'copy';
+      return true;
+    } catch (err) {
+      console.warn('Saved scores unavailable:', err);
+      return false;
+    }
+  }
+
+  async function fetchScores() {
+    clearTimeout(scoresTimer);
+    if (scoresLoading || !leagues) return;
+    scoresLoading = true;
+    if (topic === SPORT && sportMode === 'scores') renderFeed();
+    const list = relevantLeagues();
+    const got = await Promise.allSettled(list.map(l =>
+      fetch(`${ESPN}/${l.path}/scoreboard`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+        .then(json => [l.id, normalize(json, l)])));
+    const ok = got.filter(r => r.status === 'fulfilled');
+    for (const r of ok) scores[r.value[0]] = r.value[1];
+    if (ok.length) { scoresAt = Date.now(); scoresSource = 'live'; }
+    else if (list.length) await loadSnapshot();
+    scoresLoading = false;
+    renderFilterbar();
+    if (topic === SPORT && sportMode === 'scores') renderFeed();
+    scheduleScores();
+  }
+
+  function scheduleScores() {
+    clearTimeout(scoresTimer);
+    if (document.visibilityState !== 'visible' || topic !== SPORT || sportMode !== 'scores') return;
+    const live = allGames().some(g => g.state === 'in');
+    scoresTimer = setTimeout(fetchScores, live ? 60e3 : 300e3);
+  }
+
+  function kickoff(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    if (d.toDateString() === new Date().toDateString()) return time;
+    return `${d.toLocaleDateString('en-GB', { weekday: 'short' })}<br>${time}`;
+  }
+
+  function gameRow(g, l) {
+    const decided = g.state === 'post' && (g.home.winner || g.away.winner);
+    const stat = g.state === 'in' ? `<span class="live-dot" aria-hidden="true"></span>${esc(g.detail || 'Live')}`
+      : g.state === 'post' ? esc(g.detail || 'FT') : kickoff(g.start);
+    const team = t => `<div class="gteam${t.winner ? ' win' : ''}">
+        ${safeUrl(t.logo) ? `<img class="glogo" src="${esc(t.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<span class="glogo"></span>'}
+        <span class="gname">${esc(t.short || t.name)}</span>
+        <span class="gscore">${g.state === 'pre' || t.score == null ? '' : esc(t.score)}</span>
+      </div>`;
+    const [first, second] = l.homeFirst ? [g.home, g.away] : [g.away, g.home];
+    const body = `<div class="gstat ${esc(g.state)}">${stat}</div><div class="gteams">${team(first)}${team(second)}</div>`;
+    const cls = `game ${esc(g.state)}${decided ? ' decided' : ''}`;
+    return safeUrl(g.link) ? `<a class="${cls}" href="${esc(g.link)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
+  }
+
+  const STATE_ORDER = { in: 0, pre: 1, post: 2 };
+  function renderScores() {
+    if (!leagues || (scoresLoading && !allGames().length)) return skeleton();
+    const sections = relevantLeagues()
+      .map((l, i) => {
+        const games = (scores[l.id] || []).filter(g => gameMatches(g, l))
+          .sort((a, b) => (STATE_ORDER[a.state] ?? 1) - (STATE_ORDER[b.state] ?? 1) || (a.start || '').localeCompare(b.start || ''));
+        return { l, i, games, live: games.some(g => g.state === 'in') };
+      })
+      .filter(x => x.games.length)
+      .sort((a, b) => (b.live - a.live) || (a.i - b.i));
+    const when = scoresAt ? ago(new Date(scoresAt).toISOString()) : '';
+    const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}</p>`;
+    if (!sections.length) {
+      if (!scoresAt) return notice('Scores unavailable', 'Couldn’t reach ESPN or the saved copy. Check your connection and try again.', '<button data-action="retry-scores">Try again</button>');
+      return pickList.length
+        ? notice('No games for your filters', 'None of the games on right now involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
+        : notice('No games right now', 'There are no games listed in these leagues at the moment.', '') + foot;
+    }
+    return sections.map(({ l, games }) =>
+      `<section class="sect"><h3>${esc(l.label)}</h3><div class="card scores">${games.map(g => gameRow(g, l)).join('')}</div></section>`
+    ).join('') + foot;
+  }
+
+  function setMode(mode) {
+    if (mode === sportMode) return;
+    sportMode = mode;
+    store.set('news.sport.mode', mode);
+    renderFilterbar();
+    renderFeed();
+    keepBarInPlace();
+    if (mode === 'scores') fetchScores(); else clearTimeout(scoresTimer);
+  }
 
   // ---- data ----
   async function load() {
@@ -835,6 +1042,7 @@
     store.set('news.topic', topic);
     render();
     keepBarInPlace();
+    if (topic === SPORT && sportMode === 'scores') fetchScores(); else clearTimeout(scoresTimer);
   }
 
   // ---- events ----
@@ -843,11 +1051,14 @@
     if (b) select(b.dataset.topic);
   });
   filterEl.addEventListener('click', e => {
+    const m = e.target.closest('[data-mode]');
+    if (m) return setMode(m.dataset.mode);
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
     if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
   feedEl.addEventListener('click', e => {
     if (e.target.closest('[data-action="retry"]')) return load();
+    if (e.target.closest('[data-action="retry-scores"]')) return fetchScores();
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
     if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
@@ -889,6 +1100,7 @@
   feedEl.addEventListener('error', e => {
     const im = e.target;
     if (im.tagName !== 'IMG') return;
+    if (im.classList.contains('glogo')) { im.style.visibility = 'hidden'; return; }
     if (im.dataset.fallback) { im.src = im.dataset.fallback; delete im.dataset.fallback; return; }
     const frame = im.closest('.thumb, .img');
     if (frame) frame.remove();
@@ -920,6 +1132,8 @@
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && Date.now() - lastFetch > STALE_MS) load();
+    if (document.visibilityState === 'visible' && topic === SPORT && sportMode === 'scores') fetchScores();
+    else clearTimeout(scoresTimer);
   });
 
   $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -930,6 +1144,7 @@
   render();
   load();
   loadCatalog();
+  loadLeagues();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

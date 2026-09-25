@@ -2,8 +2,8 @@
 // so a new deploy (and fresh headlines) show up on the next open; the cache
 // is only the fallback when offline. Story images come from the publishers
 // and are left to the browser's own cache.
-const CACHE = 'news-v2';
-const SHELL = ['./', 'index.html', 'sport-catalog.json', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'news-v3';
+const SHELL = ['./', 'index.html', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,7 +20,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // The page adds ?t= to the data URL to dodge HTTP caches; store it under
   // one key so the offline copy is always the latest.
-  const key = url.pathname.endsWith('/data/news.json') ? url.pathname : e.request;
+  const key = /\/data\/(news|scores)\.json$/.test(url.pathname) ? url.pathname : e.request;
   e.respondWith(
     fetch(e.request)
       .then(res => {
