@@ -6,7 +6,7 @@
     { "id": "business", "label": "Business" },
     { "id": "tech",     "label": "Tech" },
     { "id": "science",  "label": "Science" },
-    { "id": "sport",    "label": "Sport", "keep": 300, "tags": true }
+    { "id": "sport",    "label": "Sport", "keep": 400, "tags": true }
   ],
   "feeds": [
     { "topic": "uk",       "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/uk/rss.xml" },

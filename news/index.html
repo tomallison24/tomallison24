@@ -39,6 +39,11 @@
     --chip-on-bg: #0B0B0F;
     --chip-on-text: #FFFFFF;
     --skeleton: rgba(60, 60, 67, 0.10);
+    --accent: #0A64E0;
+    --accent-soft: rgba(10, 100, 224, 0.13);
+    --accent-edge: rgba(10, 100, 224, 0.35);
+    --scrim: rgba(15, 18, 30, 0.28);
+    --sheet: rgba(246, 247, 251, 0.92);
     --blob-1: rgba(96, 150, 255, 0.60);
     --blob-2: rgba(255, 158, 118, 0.55);
     --blob-3: rgba(168, 138, 255, 0.55);
@@ -59,6 +64,11 @@
       --chip-on-bg: #F5F5F7;
       --chip-on-text: #0B0B0F;
       --skeleton: rgba(255, 255, 255, 0.07);
+      --accent: #5AA2FF;
+      --accent-soft: rgba(90, 162, 255, 0.17);
+      --accent-edge: rgba(90, 162, 255, 0.40);
+      --scrim: rgba(0, 0, 0, 0.45);
+      --sheet: rgba(22, 23, 30, 0.92);
       --blob-1: rgba(40, 100, 230, 0.50);
       --blob-2: rgba(200, 80, 40, 0.40);
       --blob-3: rgba(110, 60, 210, 0.45);
@@ -108,6 +118,8 @@
   .masthead { padding-top: calc(env(safe-area-inset-top) + 18px); padding-bottom: 10px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
   .masthead .date { margin: 0 0 2px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
   .masthead h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 36px; height: 36px; flex: none; border-radius: 9px; box-shadow: 0 2px 10px rgba(20, 24, 48, 0.22); }
   .round-btn { width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center; flex: none; margin-bottom: 2px; }
   .round-btn svg { width: 18px; height: 18px; }
   .round-btn.spinning svg { animation: spin 0.9s linear infinite; }
@@ -138,6 +150,81 @@
   }
   .tab:active { transform: scale(0.96); }
   .tab[aria-selected="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
+
+  /* ---- Sport picks row: second line of the pinned bar, Sport tab only ---- */
+  .subtabs {
+    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    padding: 0 max(16px, env(safe-area-inset-left)) 8px; scroll-padding: 0 16px;
+    max-width: 560px; margin: 0 auto;
+  }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtabs[hidden] { display: none; }
+  .chip {
+    flex: none; height: 30px; padding: 0 12px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap;
+    background: var(--glass-strong); border: 0.5px solid var(--glass-edge);
+    transition: background-color 0.2s, color 0.2s, transform 0.15s;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip svg { width: 15px; height: 15px; flex: none; }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-edge); }
+  .chip.primary { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
+  .chip .hint { font-weight: 500; color: var(--muted); }
+  button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Picker sheet ---- */
+  html.locked, html.locked body { overflow: hidden; }
+  .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet-wrap[hidden] { display: none; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.25s; touch-action: none; }
+  .sheet {
+    position: relative; width: 100%; max-width: 560px;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 16px);
+    display: flex; flex-direction: column;
+    border-radius: 24px 24px 0 0; border-width: 0.5px 0.5px 0;
+    background: var(--sheet);
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .sheet:focus { outline: none; }
+  .sheet-wrap.open .scrim { opacity: 1; }
+  .sheet-wrap.open .sheet { transform: none; }
+  @media (min-width: 640px) {
+    .sheet-wrap { align-items: center; }
+    .sheet { border-radius: 24px; border-width: 0.5px; max-height: min(760px, calc(100dvh - 48px)); }
+  }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--hairline); margin: 8px auto 0; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 2px; }
+  .sheet-head h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.015em; }
+  .sheet-done { height: 34px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 15px; background: var(--chip-on-bg); color: var(--chip-on-text); }
+  .sheet-hint { margin: 0; padding: 4px 16px 12px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .search {
+    display: block; margin: 0 16px 6px; height: 40px; padding: 0 12px; border-radius: 12px;
+    border: 0.5px solid var(--glass-edge); background: var(--glass-strong); color: var(--text);
+    font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none;
+  }
+  .search::placeholder { color: var(--muted); }
+  .sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(env(safe-area-inset-bottom) + 24px); }
+  .group { padding: 12px 0 2px; }
+  .group-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .group h3, .section, .fold summary { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .section { margin: 22px 0 0; padding-bottom: 8px; border-bottom: 0.5px solid var(--hairline); }
+  .fold { padding: 0; border-bottom: 0.5px solid var(--hairline); }
+  .fold summary { margin: 0; padding: 13px 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+  .fold summary::-webkit-details-marker { display: none; }
+  .fold summary::after { content: ""; width: 8px; height: 8px; margin-left: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform 0.2s; }
+  .fold[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+  .fold summary .count { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .fold summary .count.on { color: var(--accent); font-weight: 600; }
+  .fold .picks { padding-bottom: 14px; }
+  .picks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sheet-note { margin: 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
+  .text-btn { font-size: 14px; font-weight: 600; color: var(--accent); padding: 4px 0; }
+  .chip.add { margin-top: 12px; }
+  .meta .pickname { color: var(--accent); }
+  .notice .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .notice .actions button.secondary { background: var(--glass-strong); color: var(--text); border: 0.5px solid var(--glass-edge); }
+  @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
 
   /* ---- Feed ---- */
   main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 14px; }
@@ -181,7 +268,27 @@
   <header class="masthead">
     <div>
       <p class="date" id="today"></p>
-      <h1>News</h1>
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <radialGradient id="logo-a" cx="0.15" cy="0.1" r="0.75"><stop offset="0" stop-color="#4682FF"/><stop offset="1" stop-color="#4682FF" stop-opacity="0"/></radialGradient>
+            <radialGradient id="logo-b" cx="0.95" cy="0.45" r="0.65"><stop offset="0" stop-color="#FF946E" stop-opacity="0.9"/><stop offset="1" stop-color="#FF946E" stop-opacity="0"/></radialGradient>
+            <radialGradient id="logo-c" cx="0.3" cy="1" r="0.7"><stop offset="0" stop-color="#966EFF"/><stop offset="1" stop-color="#966EFF" stop-opacity="0"/></radialGradient>
+            <radialGradient id="logo-d" cx="0.95" cy="1" r="0.5"><stop offset="0" stop-color="#3CC8AA" stop-opacity="0.7"/><stop offset="1" stop-color="#3CC8AA" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="64" height="64" rx="15" fill="#0C0E16"/>
+          <rect width="64" height="64" rx="15" fill="url(#logo-a)"/>
+          <rect width="64" height="64" rx="15" fill="url(#logo-b)"/>
+          <rect width="64" height="64" rx="15" fill="url(#logo-c)"/>
+          <rect width="64" height="64" rx="15" fill="url(#logo-d)"/>
+          <rect x="12" y="14" width="40" height="36" rx="8" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="0.75"/>
+          <rect x="18.5" y="21" width="27" height="5" rx="2.5" fill="#FFFFFF"/>
+          <rect x="18.5" y="30" width="22.5" height="3.25" rx="1.6" fill="#FFFFFF" fill-opacity="0.72"/>
+          <rect x="18.5" y="36" width="27" height="3.25" rx="1.6" fill="#FFFFFF" fill-opacity="0.72"/>
+          <rect x="18.5" y="42" width="16" height="3.25" rx="1.6" fill="#FFFFFF" fill-opacity="0.72"/>
+        </svg>
+        <h1>News</h1>
+      </div>
     </div>
     <button class="round-btn glass" id="refresh" aria-label="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
@@ -192,10 +299,25 @@
 <div class="statusbar glass" id="statusbar" aria-hidden="true"></div>
 <nav class="topbar glass" id="topbar">
   <div class="tabs" id="tabs" role="tablist" aria-label="Topics"></div>
+  <div class="subtabs" id="subtabs" aria-label="Sport filters" hidden></div>
 </nav>
 
 <div class="wrap">
   <main id="feed" aria-live="polite"></main>
+</div>
+
+<div class="sheet-wrap" id="sheet" hidden>
+  <div class="scrim" data-action="close-sheet"></div>
+  <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+    <div class="grabber" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <h2 id="sheet-title">Your sport</h2>
+      <button class="sheet-done" data-action="close-sheet">Done</button>
+    </header>
+    <p class="sheet-hint">Pick the sports, competitions and teams you follow. The Sport tab then shows only stories about them.</p>
+    <input class="search" id="sheet-search" type="search" placeholder="Search, or add a player, driver or event" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Search sports, competitions and teams">
+    <div class="sheet-body" id="sheet-body"></div>
+  </section>
 </div>
 
 <script>
@@ -203,8 +325,11 @@
   'use strict';
 
   const DATA_URL = 'data/news.json';
+  const CATALOG_URL = 'sport-catalog.json';
   const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
   const LATEST = { id: 'latest', label: 'Latest' };
+  const SPORT = 'sport';
+  const LATEST_PER_TOPIC = 50;              // no one topic can crowd out Latest
   const DEFAULT_TOPICS = [
     { id: 'uk', label: 'UK' }, { id: 'world', label: 'World' }, { id: 'us', label: 'US' },
     { id: 'business', label: 'Business' }, { id: 'tech', label: 'Tech' },
@@ -214,9 +339,15 @@
     uk: '#FF453A', world: '#30B0C7', us: '#0A84FF', business: '#FF9F0A',
     tech: '#5E5CE6', science: '#30D158', sport: '#FF6B2C',
   };
+  const ICON = {
+    sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  };
 
   const $ = id => document.getElementById(id);
-  const feedEl = $('feed'), tabsEl = $('tabs'), topbar = $('topbar'), refreshBtn = $('refresh');
+  const feedEl = $('feed'), tabsEl = $('tabs'), subtabsEl = $('subtabs'), topbar = $('topbar'), refreshBtn = $('refresh');
+  const sheetWrap = $('sheet'), sheetEl = sheetWrap.querySelector('.sheet'), sheetBody = $('sheet-body'), searchEl = $('sheet-search');
 
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -228,9 +359,17 @@
   let loading = false;
   let lastFetch = 0;
 
+  // Sport picks live on this device only. Ids come from sport-catalog.json
+  // ("team:football:arsenal") or are typed keywords ("kw:Lewis Hamilton").
+  let catalog = null, catalogFailed = false;
+  let picks = Array.isArray(store.get('news.sport.picks')) ? store.get('news.sport.picks').filter(x => typeof x === 'string') : [];
+  let sportView = store.get('news.sport.view') || 'picks';   // 'picks', 'all' or one pick's id
+  let pickList = [];
+
   // ---- helpers ----
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const safeUrl = u => (typeof u === 'string' && /^https?:\/\//i.test(u)) ? u : null;
+  const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
 
   function ago(iso, now = Date.now()) {
     if (!iso) return '';
@@ -262,20 +401,127 @@
 
   function topics() { return (data && Array.isArray(data.topics) && data.topics.length) ? data.topics : DEFAULT_TOPICS; }
   function topicLabel(id) { return (topics().find(t => t.id === id) || {}).label || id; }
+  function topicStories(id) { return (data && Array.isArray(data.stories)) ? data.stories.filter(s => s.topic === id) : []; }
+
+  // ---- sport matching ----
+  const slug = s => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const straight = s => String(s || '').replace(/[‘’]/g, "'");
+  const reCache = new Map();
+
+  // Whole-word match. Team and competition names are matched with their
+  // capitals ("Heat", not "heat"); sports and typed keywords ignore case.
+  function termRe(term, anyCase) {
+    const key = (anyCase ? 'i:' : 's:') + term;
+    let re = reCache.get(key);
+    if (!re) {
+      const src = straight(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try { re = new RegExp(`(?<![\\p{L}\\p{N}])${src}(?![\\p{L}\\p{N}])`, anyCase ? 'iu' : 'u'); }
+      catch { re = new RegExp(`\\b${src}\\b`, anyCase ? 'i' : ''); }
+      reCache.set(key, re);
+    }
+    return re;
+  }
+
+  function buildCatalog(raw) {
+    const entries = new Map();
+    const sportLabel = {};
+    const sports = (raw.sports || []).map(s => {
+      sportLabel[s.id] = s.label;
+      const e = { id: `sport:${s.id}`, kind: 'sport', sport: s.id, label: s.label,
+        paths: s.paths || [], tags: (s.tags || []).map(t => t.toLowerCase()), terms: s.terms || [] };
+      entries.set(e.id, e);
+      return e;
+    });
+    const make = (kind, sport, name, lastWord) => {
+      const [label, ...also] = Array.isArray(name) ? name : [name];
+      const terms = [label, ...also];
+      if (lastWord) terms.push(label.split(' ').pop());
+      const e = { id: `${kind}:${sport || 'any'}:${slug(label)}`, kind, sport: sport || null, label, terms: [...new Set(terms)] };
+      entries.set(e.id, e);
+      return e;
+    };
+    const competitions = (raw.competitions || []).map(g => ({
+      title: g.sport ? sportLabel[g.sport] || g.sport : 'Multi-sport',
+      items: (g.names || []).map(n => make('comp', g.sport, n)),
+    }));
+    const teams = (raw.teams || []).map(g => ({
+      title: g.group, items: (g.names || []).map(n => make('team', g.sport, n, g.lastWord)),
+    }));
+    return { entries, sports, competitions, teams, sportLabel };
+  }
+
+  function pickEntry(id) {
+    if (id.startsWith('kw:')) return { id, kind: 'kw', label: id.slice(3) };
+    return catalog ? catalog.entries.get(id) || null : null;
+  }
+  function refreshPicks() {
+    pickList = picks.map(pickEntry).filter(Boolean);
+    const known = catalog || sportView.startsWith('kw:');
+    if (known && sportView !== 'picks' && sportView !== 'all' && !pickList.some(p => p.id === sportView)) sportView = 'picks';
+  }
+
+  // Which sports a story is about: its web address (/football/, /f1/), the
+  // publisher's tags, or the sport's own words. Worked out once per story.
+  let facts = new WeakMap();
+  function factsFor(s) {
+    let f = facts.get(s);
+    if (f) return f;
+    let segs = [];
+    try { segs = new URL(s.url).pathname.toLowerCase().split('/').filter(Boolean); } catch {}
+    const tags = (s.tags || []).map(t => String(t).toLowerCase());
+    const text = straight([s.title, s.summary, ...(s.tags || [])].join('\n'));
+    const sports = new Set();
+    for (const sp of catalog ? catalog.sports : []) {
+      if (sp.paths.some(p => segs.includes(p)) || sp.tags.some(t => tags.includes(t)) ||
+          sp.terms.some(t => termRe(t, true).test(text))) sports.add(sp.sport);
+    }
+    f = { text, sports };
+    facts.set(s, f);
+    return f;
+  }
+
+  // A team or competition only counts when its sport matches too, so
+  // "Rangers" in football never picks up the Texas Rangers.
+  function matches(p, s) {
+    const f = factsFor(s);
+    if (p.kind === 'sport') return f.sports.has(p.sport);
+    if (p.kind === 'kw') return termRe(p.label, true).test(f.text);
+    if (p.sport && !f.sports.has(p.sport)) return false;
+    return p.terms.some(t => termRe(t, false).test(f.text));
+  }
+  const firstMatch = (s, list) => list.find(p => matches(p, s)) || null;
+
+  function activePicks() {
+    if (!pickList.length || sportView === 'all') return null;
+    if (sportView === 'picks') return pickList;
+    const one = pickList.find(p => p.id === sportView);
+    return one ? [one] : pickList;
+  }
 
   function storiesFor(id) {
-    const all = (data && Array.isArray(data.stories)) ? data.stories : [];
-    if (id !== LATEST.id) return all.filter(s => s.topic === id);
+    if (id === SPORT) {
+      const active = activePicks();
+      const all = topicStories(SPORT);
+      return (active ? all.filter(s => firstMatch(s, active)) : all).slice(0, 100);
+    }
+    if (id !== LATEST.id) return topicStories(id);
     const seen = new Set();
-    return all
+    return topics()
+      .flatMap(t => {
+        let list = topicStories(t.id);
+        if (t.id === SPORT && pickList.length) list = list.filter(s => firstMatch(s, pickList));
+        return list.slice(0, LATEST_PER_TOPIC);
+      })
       .filter(s => !seen.has(s.id) && seen.add(s.id))
-      .sort((a, b) => (b.published || '').localeCompare(a.published || ''))
+      .sort(byTime)
       .slice(0, 80);
   }
 
   function meta(s, showTopic) {
     const parts = [];
-    if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(topicLabel(s.topic))}</span>`);
+    const pick = s.topic === SPORT && pickList.length && (showTopic || sportView === 'picks') ? firstMatch(s, pickList) : null;
+    if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
+    else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
     parts.push(`<span>${esc(s.source)}</span>`);
     const when = ago(s.published);
     if (when) parts.push(`<span>${esc(when)}</span>`);
@@ -293,13 +539,33 @@
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
   }
 
+  function renderSubtabs() {
+    subtabsEl.hidden = topic !== SPORT;
+    if (subtabsEl.hidden) return;
+    const view = pickList.length ? sportView : 'all';
+    const chip = (v, label) => `<button class="chip" data-view="${esc(v)}" aria-pressed="${view === v}">${esc(label)}</button>`;
+    subtabsEl.innerHTML =
+      `<button class="chip${pickList.length ? '' : ' primary'}" data-action="edit-picks">${ICON.sliders}${pickList.length ? 'Edit' : 'Choose teams &amp; sports'}</button>` +
+      (pickList.length ? chip('picks', 'My picks') : '') +
+      chip('all', 'All sport') +
+      pickList.map(p => chip(p.id, p.label)).join('');
+  }
+
   function renderFeed() {
-    if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', true); return; }
+    if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', '<button data-action="retry">Try again</button>'); return; }
 
     const isLatest = topic === LATEST.id;
     const stories = storiesFor(topic);
     if (!stories.length) {
-      feedEl.innerHTML = notice('Nothing here right now', `No ${esc(topicLabel(topic))} stories came through on the last update.`, true) + status();
+      if (topic === SPORT && activePicks()) {
+        const names = activePicks().map(p => p.label);
+        const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
+        feedEl.innerHTML = notice('Nothing on your picks right now',
+          `None of the latest sport stories mention ${esc(list)}. They’ll show here as soon as one does.`,
+          '<button data-view="all">Show all sport</button><button class="secondary" data-action="edit-picks">Edit picks</button>') + status();
+        return;
+      }
+      feedEl.innerHTML = notice('Nothing here right now', `No ${esc(topicLabel(topic))} stories came through on the last update.`, '<button data-action="retry">Try again</button>') + status();
       return;
     }
 
@@ -334,8 +600,8 @@
     return `<p class="status">${[updated, sources.join(', ')].filter(Boolean).map(esc).join(' · ')}${down ? `<br>${down} feed${down > 1 ? 's' : ''} unavailable on the last update` : ''}</p>`;
   }
 
-  function notice(title, body, retry) {
-    return `<div class="notice glass"><h2>${esc(title)}</h2><p>${body}</p>${retry ? '<button data-action="retry">Try again</button>' : ''}</div>`;
+  function notice(title, body, actions) {
+    return `<div class="notice glass"><h2>${esc(title)}</h2><p>${body}</p>${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
   }
 
   function skeleton() {
@@ -344,7 +610,112 @@
       <div class="list glass">${row.repeat(5)}</div>`;
   }
 
-  function render() { renderTabs(); renderFeed(); }
+  function render() { renderTabs(); renderSubtabs(); renderFeed(); }
+
+  // ---- picker sheet ----
+  let sheetOpen = false, picksChanged = false, returnFocus = null;
+  const openGroups = new Set();
+
+  function hintFor(e) {
+    if (e.kind === 'kw') return 'keyword';
+    if (e.kind === 'sport' || !catalog) return '';
+    return e.sport ? catalog.sportLabel[e.sport] || '' : 'Any sport';
+  }
+
+  function pickChip(e, withHint) {
+    const on = picks.includes(e.id);
+    const hint = withHint ? hintFor(e) : '';
+    return `<button class="chip" data-pick="${esc(e.id)}" aria-pressed="${on}">${on ? ICON.check : ''}${esc(e.label)}${hint ? `<span class="hint">· ${esc(hint)}</span>` : ''}</button>`;
+  }
+
+  function foldHtml(key, title, items) {
+    const n = items.filter(e => picks.includes(e.id)).length;
+    return `<details class="fold" data-group="${esc(key)}"${openGroups.has(key) ? ' open' : ''}>
+      <summary><span>${esc(title)}</span><span class="count${n ? ' on' : ''}">${n ? `${n} selected` : items.length}</span></summary>
+      <div class="picks">${items.map(e => pickChip(e)).join('')}</div>
+    </details>`;
+  }
+
+  function renderSheet() {
+    const q = searchEl.value.trim();
+    const scroll = sheetBody.scrollTop;
+    let html = '';
+    if (q) {
+      const ql = q.toLowerCase();
+      const hits = catalog ? [...catalog.entries.values()].filter(e =>
+        e.label.toLowerCase().includes(ql) || (e.terms || []).some(t => t.toLowerCase().includes(ql))).slice(0, 60) : [];
+      const known = hits.some(e => e.label.toLowerCase() === ql) || picks.some(id => id.toLowerCase() === `kw:${ql}`);
+      html += `<section class="group">
+        ${hits.length ? `<div class="picks">${hits.map(e => pickChip(e, true)).join('')}</div>` : '<p class="sheet-note">No sport, competition or team by that name.</p>'}
+        ${known ? '' : `<button class="chip add" data-add="${esc(q.slice(0, 40))}">${ICON.plus}Follow “${esc(q.slice(0, 40))}”</button>`}
+      </section>`;
+    } else {
+      html += `<section class="group">
+        <div class="group-head"><h3>Following</h3>${pickList.length ? '<button class="text-btn" data-action="clear-picks">Clear all</button>' : ''}</div>
+        ${pickList.length ? `<div class="picks">${pickList.map(e => pickChip(e, e.kind === 'kw')).join('')}</div>` : '<p class="sheet-note">Nothing yet. Tap anything below, or search for a player, driver or event to follow it as a keyword.</p>'}
+      </section>`;
+      if (catalog) {
+        html += `<section class="group"><h3>Sports</h3><div class="picks">${catalog.sports.map(e => pickChip(e)).join('')}</div></section>`;
+        html += `<h3 class="section">Competitions</h3>${catalog.competitions.map(g => foldHtml(`c:${g.title}`, g.title, g.items)).join('')}`;
+        html += `<h3 class="section">Teams</h3>${catalog.teams.map(g => foldHtml(`t:${g.title}`, g.title, g.items)).join('')}`;
+      } else {
+        html += `<p class="sheet-note" style="margin-top:12px">${catalogFailed ? 'Couldn’t load the list of sports and teams. You can still follow anything by typing it in the search box.' : 'Loading sports and teams…'}</p>`;
+      }
+    }
+    sheetBody.innerHTML = html;
+    sheetBody.scrollTop = scroll;
+  }
+
+  function openSheet() {
+    if (sheetOpen) return;
+    sheetOpen = true;
+    picksChanged = false;
+    returnFocus = document.activeElement;
+    searchEl.value = '';
+    if (catalog) {
+      for (const g of catalog.competitions) if (g.items.some(e => picks.includes(e.id))) openGroups.add(`c:${g.title}`);
+      for (const g of catalog.teams) if (g.items.some(e => picks.includes(e.id))) openGroups.add(`t:${g.title}`);
+    } else if (!catalogFailed) {
+      loadCatalog();
+    }
+    renderSheet();
+    sheetBody.scrollTop = 0;
+    sheetWrap.hidden = false;
+    document.documentElement.classList.add('locked');
+    requestAnimationFrame(() => requestAnimationFrame(() => sheetWrap.classList.add('open')));
+    sheetEl.focus({ preventScroll: true });
+  }
+
+  function closeSheet() {
+    if (!sheetOpen) return;
+    sheetOpen = false;
+    sheetWrap.classList.remove('open');
+    document.documentElement.classList.remove('locked');
+    const hide = () => { if (!sheetOpen) sheetWrap.hidden = true; };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
+    if (picksChanged && pickList.length) setView('picks', false);
+    renderSubtabs();
+    renderFeed();
+    const back = returnFocus && returnFocus.isConnected ? returnFocus : document.querySelector('[data-action="edit-picks"]');
+    if (back) back.focus({ preventScroll: true });
+  }
+
+  function savePicks() {
+    picksChanged = true;
+    store.set('news.sport.picks', picks);
+    refreshPicks();
+    renderSheet();
+  }
+
+  function setView(v, scroll = true) {
+    sportView = v;
+    store.set('news.sport.view', v);
+    renderSubtabs();
+    renderFeed();
+    if (scroll) keepBarInPlace();
+    const on = subtabsEl.querySelector('[aria-pressed="true"]');
+    if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  }
 
   // ---- data ----
   async function load() {
@@ -369,15 +740,38 @@
     }
   }
 
+  async function loadCatalog() {
+    try {
+      const res = await fetch(CATALOG_URL, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      catalog = buildCatalog(raw);
+      store.set('news.sport.catalog', raw);
+      catalogFailed = false;
+      facts = new WeakMap();          // sports were unknown until now
+      refreshPicks();
+    } catch (err) {
+      catalogFailed = true;
+      console.warn('Sport list failed to load:', err);
+    } finally {
+      render();
+      if (sheetOpen) renderSheet();
+    }
+  }
+
+  // Keep the tab bar pinned where it is, with the new list starting under it.
+  function keepBarInPlace() {
+    const pinned = parseFloat(getComputedStyle(topbar).top) || 0;
+    const top = feedEl.getBoundingClientRect().top + window.scrollY - pinned - topbar.offsetHeight - 8;
+    if (window.scrollY > top) window.scrollTo({ top });
+  }
+
   function select(id) {
     if (id === topic) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     topic = id;
     store.set('news.topic', topic);
     render();
-    // Keep the tab bar pinned where it is, with the new list starting under it.
-    const pinned = parseFloat(getComputedStyle(topbar).top) || 0;
-    const top = feedEl.getBoundingClientRect().top + window.scrollY - pinned - topbar.offsetHeight - 8;
-    if (window.scrollY > top) window.scrollTo({ top });
+    keepBarInPlace();
   }
 
   // ---- events ----
@@ -385,10 +779,50 @@
     const b = e.target.closest('[data-topic]');
     if (b) select(b.dataset.topic);
   });
+  subtabsEl.addEventListener('click', e => {
+    if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
+    const b = e.target.closest('[data-view]');
+    if (b) setView(b.dataset.view);
+  });
   feedEl.addEventListener('click', e => {
-    if (e.target.closest('[data-action="retry"]')) load();
+    if (e.target.closest('[data-action="retry"]')) return load();
+    if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
+    const b = e.target.closest('[data-view]');
+    if (b) setView(b.dataset.view);
   });
   refreshBtn.addEventListener('click', load);
+
+  sheetWrap.addEventListener('click', e => {
+    if (e.target.closest('[data-action="close-sheet"]')) return closeSheet();
+    if (e.target.closest('[data-action="clear-picks"]')) { picks = []; return savePicks(); }
+    const add = e.target.closest('[data-add]');
+    if (add) {
+      const id = `kw:${add.dataset.add}`;
+      if (!picks.includes(id)) picks.push(id);
+      searchEl.value = '';
+      return savePicks();
+    }
+    const b = e.target.closest('[data-pick]');
+    if (b) {
+      const id = b.dataset.pick;
+      picks = picks.includes(id) ? picks.filter(x => x !== id) : [...picks, id];
+      savePicks();
+    }
+  });
+  sheetBody.addEventListener('toggle', e => {
+    const key = e.target.dataset && e.target.dataset.group;
+    if (key) e.target.open ? openGroups.add(key) : openGroups.delete(key);
+  }, true);
+  searchEl.addEventListener('input', () => { renderSheet(); sheetBody.scrollTop = 0; });
+  searchEl.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const add = sheetBody.querySelector('[data-add]');
+    const hits = sheetBody.querySelectorAll('[data-pick]');
+    if (add) add.click(); else if (hits.length === 1) hits[0].click();
+    searchEl.blur();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeSheet(); });
 
   // Broken or refused images: try the original, then drop the frame.
   feedEl.addEventListener('error', e => {
@@ -429,8 +863,12 @@
 
   $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Last copy of the sport list first, so picks apply from the first frame.
+  try { const raw = store.get('news.sport.catalog'); if (raw) catalog = buildCatalog(raw); } catch {}
+  refreshPicks();
   render();
   load();
+  loadCatalog();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
