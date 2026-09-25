@@ -28,7 +28,7 @@ public feeds:
 | Business | BBC News, The Guardian, Sky News, NPR |
 | Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
 | Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
-| Sport    | BBC Sport, The Guardian, Sky Sports |
+| Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport) |
 
 Not included:
 
@@ -38,6 +38,22 @@ Not included:
 - **BBC News** is free in the UK. Since mid-2025, readers in the US hit a
   paywall after reading a certain amount. Remove the BBC lines from
   `feeds.json` if that matters where you read.
+
+## Sport picks
+
+On the Sport tab, **Edit** opens a list of sports, competitions and teams
+(`sport-catalog.json`). Pick any of them, or type a player, driver or event to
+follow it as a keyword. The Sport tab then shows only stories about your
+picks. **My picks**, **All sport** and a chip per pick switch between views.
+The Latest tab also only includes sport stories about your picks.
+
+- A sport is recognised from the story's web address (`/football/`, `/f1/`),
+  the publisher's own tags (the Guardian tags every sport story with its
+  sport, competition and teams) or the sport's name in the headline.
+- Teams and competitions only count when their sport matches too, so
+  "Rangers" in football never picks up the Texas Rangers.
+- Picks are saved on each device (your iPhone and PC keep their own).
+- To add teams or competitions to the list, edit `sport-catalog.json`.
 
 ## Add or change sources
 

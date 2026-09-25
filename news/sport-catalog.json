@@ -1,0 +1,107 @@
+{
+  "about": "What the Sport picker offers. A sport matches a story by its web address (/football/, /f1/), the publisher's tags or its terms. Competitions and teams also need their sport to match, so 'Rangers' in football never picks up the Texas Rangers. Names are [label, other names...]; lastWord also matches the last word of each name (Chiefs, Lakers). Anything missing can be added in the app as a keyword.",
+  "sports": [
+    { "id": "football",     "label": "Football",                "paths": ["football", "soccer"], "tags": ["Football", "Soccer"] },
+    { "id": "cricket",      "label": "Cricket",                 "paths": ["cricket"], "tags": ["Cricket"], "terms": ["cricket"] },
+    { "id": "rugby-union",  "label": "Rugby union",             "paths": ["rugby-union"], "tags": ["Rugby union"], "terms": ["rugby union"] },
+    { "id": "rugby-league", "label": "Rugby league",            "paths": ["rugby-league", "rugbyleague"], "tags": ["Rugby league"], "terms": ["rugby league"] },
+    { "id": "tennis",       "label": "Tennis",                  "paths": ["tennis"], "tags": ["Tennis"], "terms": ["tennis"] },
+    { "id": "f1",           "label": "Formula 1",               "paths": ["formula1", "formulaone", "f1"], "tags": ["Formula One", "Formula 1", "F1"], "terms": ["Formula 1", "Formula One", "F1"] },
+    { "id": "golf",         "label": "Golf",                    "paths": ["golf"], "tags": ["Golf"], "terms": ["golf"] },
+    { "id": "boxing",       "label": "Boxing",                  "paths": ["boxing"], "tags": ["Boxing"], "terms": ["boxing"] },
+    { "id": "mma",          "label": "MMA & UFC",               "paths": ["mixed-martial-arts", "mma", "ufc"], "tags": ["MMA", "UFC", "Mixed martial arts"], "terms": ["UFC", "MMA"] },
+    { "id": "athletics",    "label": "Athletics",               "paths": ["athletics"], "tags": ["Athletics"], "terms": ["athletics"] },
+    { "id": "cycling",      "label": "Cycling",                 "paths": ["cycling"], "tags": ["Cycling"], "terms": ["cycling"] },
+    { "id": "darts",        "label": "Darts",                   "paths": ["darts"], "tags": ["Darts"], "terms": ["darts"] },
+    { "id": "snooker",      "label": "Snooker",                 "paths": ["snooker"], "tags": ["Snooker"], "terms": ["snooker"] },
+    { "id": "horse-racing", "label": "Horse racing",            "paths": ["horse-racing", "racing"], "tags": ["Horse racing"], "terms": ["horse racing"] },
+    { "id": "nfl",          "label": "American football (NFL)", "paths": ["nfl", "american-football"], "tags": ["NFL", "American football"], "terms": ["NFL"] },
+    { "id": "nba",          "label": "Basketball (NBA)",        "paths": ["nba", "basketball"], "tags": ["NBA", "Basketball"], "terms": ["NBA"] },
+    { "id": "mlb",          "label": "Baseball (MLB)",          "paths": ["mlb", "baseball"], "tags": ["MLB", "Baseball"], "terms": ["MLB"] },
+    { "id": "nhl",          "label": "Ice hockey (NHL)",        "paths": ["nhl", "ice-hockey"], "tags": ["NHL", "Ice hockey"], "terms": ["NHL"] }
+  ],
+  "competitions": [
+    { "sport": "football", "names": [
+      "Premier League", "Championship", "League One", "League Two", "FA Cup",
+      ["League Cup", "Carabao Cup", "EFL Cup"], "Scottish Premiership",
+      "Champions League", "Europa League", ["Conference League", "Europa Conference League"],
+      ["Women's Super League", "WSL"], "La Liga", "Serie A", "Bundesliga", "Ligue 1",
+      ["MLS", "Major League Soccer"], "World Cup", ["Euros", "European Championship"], "Nations League"
+    ] },
+    { "sport": "cricket", "names": [
+      ["The Ashes", "Ashes"], ["Test cricket", "Test match", "Test series"], "County Championship",
+      ["IPL", "Indian Premier League"], "The Hundred", "T20 World Cup"
+    ] },
+    { "sport": "rugby-union", "names": [
+      "Six Nations", ["Premiership (rugby)", "Premiership Rugby", "Gallagher Premiership", "Premiership"],
+      ["United Rugby Championship", "URC"], ["Champions Cup", "Investec Champions Cup"],
+      ["Rugby World Cup", "World Cup"], ["British & Irish Lions", "British and Irish Lions", "Lions"]
+    ] },
+    { "sport": "rugby-league", "names": ["Super League", "NRL", "Challenge Cup"] },
+    { "sport": "tennis", "names": [
+      "Wimbledon", ["US Open (tennis)", "US Open"], "Australian Open",
+      ["French Open", "Roland Garros", "Roland-Garros"], "Davis Cup", "ATP Finals", "WTA Finals"
+    ] },
+    { "sport": "golf", "names": [
+      ["The Masters", "Masters"], ["The Open", "Open Championship"], ["US Open (golf)", "US Open"],
+      "PGA Championship", "Ryder Cup", "Solheim Cup", ["LIV Golf", "LIV"]
+    ] },
+    { "sport": "cycling", "names": ["Tour de France"] },
+    { "sport": "darts", "names": [["World Darts Championship", "World Championship"], ["Premier League Darts", "Premier League"]] },
+    { "sport": "snooker", "names": [["World Snooker Championship", "World Championship", "Crucible"]] },
+    { "sport": "horse-racing", "names": ["Grand National", ["Cheltenham Festival", "Cheltenham"], "Royal Ascot"] },
+    { "sport": "nfl", "names": ["Super Bowl"] },
+    { "sport": "nba", "names": ["NBA Finals"] },
+    { "sport": "mlb", "names": ["World Series"] },
+    { "sport": "nhl", "names": ["Stanley Cup"] },
+    { "sport": null, "names": [["Olympics", "Olympic", "Olympic Games", "Paralympics", "Paralympic"], "Commonwealth Games"] }
+  ],
+  "teams": [
+    { "group": "English football clubs", "sport": "football", "names": [
+      ["Arsenal", "Gunners"], ["Aston Villa", "Villa"], ["Birmingham City", "Birmingham"], ["Bournemouth", "Cherries"],
+      ["Brentford", "Bees"], ["Brighton", "Brighton & Hove Albion", "Seagulls"], ["Burnley", "Clarets"], "Chelsea",
+      ["Coventry City", "Coventry"], ["Crystal Palace", "Palace"], ["Everton", "Toffees"], "Fulham",
+      ["Ipswich Town", "Ipswich"], ["Leeds United", "Leeds"], ["Leicester City", "Leicester", "Foxes"], "Liverpool",
+      ["Manchester City", "Man City"], ["Manchester United", "Man Utd", "Man United", "Red Devils"],
+      ["Middlesbrough", "Boro"], ["Newcastle United", "Newcastle", "Magpies"], ["Norwich City", "Norwich"],
+      ["Nottingham Forest", "Forest"], ["Sheffield United", "Blades"], ["Southampton", "Saints"],
+      ["Sunderland", "Black Cats"], ["Tottenham Hotspur", "Tottenham", "Spurs"], "Watford",
+      ["West Bromwich Albion", "West Brom", "Baggies"], ["West Ham United", "West Ham", "Hammers"],
+      ["Wolves", "Wolverhampton Wanderers", "Wolverhampton"], "Wrexham"
+    ] },
+    { "group": "Scottish football clubs", "sport": "football", "names": [
+      "Aberdeen", "Celtic", ["Hearts", "Heart of Midlothian"], ["Hibernian", "Hibs"], "Rangers"
+    ] },
+    { "group": "European football clubs", "sport": "football", "names": [
+      "AC Milan", ["Atletico Madrid", "Atlético Madrid", "Atletico", "Atlético"], ["Barcelona", "Barca", "Barça"],
+      ["Bayern Munich", "Bayern"], ["Borussia Dortmund", "Dortmund"], ["Inter Milan", "Internazionale"],
+      ["Juventus", "Juve"], "Napoli", ["Paris Saint-Germain", "PSG", "Paris St-Germain"], "Real Madrid"
+    ] },
+    { "group": "National teams (every sport)", "sport": null, "names": [
+      "England", "Scotland", "Wales", "Northern Ireland", ["Ireland", "Republic of Ireland"],
+      ["Team GB", "Great Britain"], ["USA", "Team USA", "USMNT", "USWNT", "United States"]
+    ] },
+    { "group": "Formula 1 teams", "sport": "f1", "names": [
+      "Alpine", "Aston Martin", ["Audi", "Sauber"], "Cadillac", "Ferrari", "Haas", "McLaren", "Mercedes",
+      "Racing Bulls", ["Red Bull", "Red Bull Racing"], "Williams"
+    ] },
+    { "group": "NFL teams", "sport": "nfl", "lastWord": true, "names": [
+      "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers",
+      "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos",
+      "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars",
+      "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+      "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets",
+      "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks",
+      "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"
+    ] },
+    { "group": "NBA teams", "sport": "nba", "lastWord": true, "names": [
+      "Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls",
+      ["Cleveland Cavaliers", "Cavs"], ["Dallas Mavericks", "Mavs"], "Denver Nuggets", "Detroit Pistons",
+      "Golden State Warriors", "Houston Rockets", "Indiana Pacers", ["Los Angeles Clippers", "LA Clippers"],
+      "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves",
+      "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic",
+      ["Philadelphia 76ers", "Sixers"], "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings",
+      "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"
+    ] }
+  ]
+}
