@@ -297,3 +297,12 @@ await writeFile(OUT, JSON.stringify({
   stories,
 }));
 console.log(`Wrote ${stories.length} stories (${results.length - failed}/${results.length} feeds ok) to ${OUT}`);
+
+// Scores fallback copy (see fetch-scores.mjs). Run from here so the workflow
+// file, whose last editor owns the refresh schedule, doesn't need changing.
+try {
+  const { saveScores } = await import('./fetch-scores.mjs');
+  await saveScores();
+} catch (err) {
+  console.log(`Scores copy skipped: ${err.message}`);
+}

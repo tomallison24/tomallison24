@@ -60,6 +60,21 @@ The bar under the tabs shows how many filters are on and what they are.
 - Filters are saved on each device (your iPhone and PC keep their own).
 - To add teams or competitions to the lists, edit `sport-catalog.json`.
 
+## Sport: live scores
+
+The Sport tab has a **News | Scores** switch. Scores reads ESPN's public
+scoreboard feed directly from your phone while the view is open: every
+minute when a game is live, every 5 minutes otherwise. It covers the
+leagues in `leagues.json`: Premier League, Championship, Scottish
+Premiership, Champions/Europa/Conference League, FA Cup, League Cup, WSL,
+La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB and NHL. Your
+Sport filters apply to scores too. Tap a game for ESPN's match page.
+
+- Each refresh also saves a copy (`data/scores.json`), shown when ESPN
+  can't be reached.
+- ESPN's feed is public but undocumented, so it may change or stop
+  without notice.
+
 ## Add or change sources
 
 Edit `feeds.json`. Each feed needs a `topic` (one of the ids in `topics`), a
