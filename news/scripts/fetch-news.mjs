@@ -154,9 +154,40 @@ function parse(xml, feed) {
   }).filter(Boolean);
 }
 
+// Europe PMC search results (JSON), for peer-reviewed papers. The feed's
+// "query" should include OPEN_ACCESS:y so every link is free to read.
+async function europePmc(feed) {
+  const url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?' + new URLSearchParams({
+    query: feed.query, sort: 'P_PDATE_D desc', format: 'json', pageSize: String(PER_FEED), resultType: 'core',
+  });
+  const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'User-Agent': 'news-home-screen-app/1.0' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const list = (await res.json())?.resultList?.result || [];
+  return list.map(r => {
+    const link = r.doi ? `https://doi.org/${r.doi}` : `https://europepmc.org/article/${r.source}/${r.id}`;
+    const date = new Date(r.firstPublicationDate || r.firstIndexDate || '');
+    const title = decode(String(r.title || '').replace(/<[^>]*>/g, '')).replace(/\.$/, '').trim();
+    return title && {
+      id: createHash('sha1').update(link).digest('hex').slice(0, 12),
+      topic: feed.topic,
+      source: r.journalInfo?.journal?.title || feed.source,
+      title,
+      summary: clip(decode(String(r.abstractText || '').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim(), 220),
+      url: link,
+      image: null,
+      published: Number.isNaN(date.getTime()) ? null : date.toISOString(),
+    };
+  }).filter(Boolean);
+}
+
 async function fetchFeed(feed) {
   const started = Date.now();
   try {
+    if (feed.type === 'europepmc') {
+      const stories = await europePmc(feed);
+      if (!stories.length) throw new Error('no items found');
+      return { ...feed, url: 'https://europepmc.org', ok: true, count: stories.length, ms: Date.now() - started, stories };
+    }
     const res = await fetch(feed.url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { 'User-Agent': 'news-home-screen-app/1.0 (personal RSS reader)', Accept: 'application/rss+xml, application/xml, text/xml' },
@@ -187,20 +218,31 @@ const stories = [];
 // Topics listed in its "moveFrom" lose those stories, so AI news shows under
 // AI and not under Tech as well.
 // All-capitals terms such as "AI" must match exactly; others ignore case.
-function headlineMatcher(terms) {
+// With "matchSummary" the summary counts too, not just the headline.
+function termMatcher(terms, withSummary) {
   const res = terms.map(t => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, /^[A-Z0-9]+$/.test(t) ? '' : 'i'));
-  return title => res.some(re => re.test(title));
+  return s => res.some(re => re.test(withSummary ? `${s.title}\n${s.summary}` : s.title));
 }
 
-const all = results.flatMap(r => r.stories);
+// A topic with "filter" terms keeps only its own feeds' stories that use one
+// of them (Stem cells: only pluripotent stem cell stories).
+let all = results.flatMap(r => r.stories);
+for (const { id, filter, matchSummary } of config.topics) {
+  if (!filter) continue;
+  const ok = termMatcher(filter, matchSummary);
+  const before = all.filter(s => s.topic === id).length;
+  all = all.filter(s => s.topic !== id || ok(s));
+  console.log(`${id}: ${all.filter(s => s.topic === id).length} of ${before} stories pass the filter`);
+}
+
 const collected = {};
 const moved = new Map();   // topic -> URLs that now live elsewhere
-for (const { id, collect, moveFrom = [] } of config.topics) {
+for (const { id, collect, moveFrom = [], matchSummary } of config.topics) {
   if (!collect) continue;
-  const matches = headlineMatcher(collect);
-  collected[id] = all.filter(s => s.topic !== id && matches(s.title)).map(({ tags: _, ...s }) => ({ ...s, topic: id }));
+  const matches = termMatcher(collect, matchSummary);
+  collected[id] = all.filter(s => s.topic !== id && matches(s)).map(({ tags: _, ...s }) => ({ ...s, topic: id }));
   for (const s of all) {
-    if (moveFrom.includes(s.topic) && matches(s.title)) {
+    if (moveFrom.includes(s.topic) && matches(s)) {
       if (!moved.has(s.topic)) moved.set(s.topic, new Set());
       moved.get(s.topic).add(s.url);
     }
@@ -209,10 +251,29 @@ for (const { id, collect, moveFrom = [] } of config.topics) {
 }
 for (const [topic, urls] of moved) console.log(`${topic}: ${urls.size} stories moved to their own topic`);
 
+// Topics with "keepDays" hold on to stories from the last published copy of
+// news.json ("previous" in feeds.json) for that many days, so a quiet topic
+// doesn't empty out when its feeds move on.
+const carried = {};
+if (config.previous && config.topics.some(t => t.keepDays)) {
+  try {
+    const res = await fetch(config.previous, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const prev = res.ok ? await res.json() : null;
+    for (const { id, keepDays } of config.topics) {
+      if (!keepDays || !prev?.stories) continue;
+      const since = new Date(Date.now() - keepDays * 864e5).toISOString();
+      carried[id] = prev.stories.filter(s => s.topic === id && (s.published || '') >= since);
+      console.log(`${id}: ${carried[id].length} stories carried over from the last update`);
+    }
+  } catch (err) {
+    console.log(`Previous news.json unavailable (${err.message}); starting fresh`);
+  }
+}
+
 for (const { id, keep } of config.topics) {
   const seen = new Set();
   const gone = moved.get(id) || new Set();
-  stories.push(...[...all.filter(s => s.topic === id && !gone.has(s.url)), ...(collected[id] || [])]
+  stories.push(...[...all.filter(s => s.topic === id && !gone.has(s.url)), ...(collected[id] || []), ...(carried[id] || [])]
     .filter(s => !seen.has(s.url) && seen.add(s.url))
     .sort(byTime)
     .slice(0, keep || PER_TOPIC));

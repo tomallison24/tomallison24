@@ -1,6 +1,6 @@
 # News
 
-Latest headlines by topic (UK, World, US, Business, Tech, AI, Science, Sport) as a
+Latest headlines by topic (AI, Business, Science, Sport, Stem cells, Tech, UK, US, World) as a
 home-screen web app: clean, minimal, frosted glass, light and dark.
 
 - **Data:** the RSS and Atom feeds listed in `feeds.json`.
@@ -29,6 +29,7 @@ public feeds:
 | Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
 | AI       | The Guardian, Ars Technica, TechCrunch, plus any story from the other feeds with AI in its headline (AI stories are taken out of Tech) |
 | Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
+| Stem cells | The Niche, ScienceDaily, Stem Cell Reports, bioRxiv preprints (cell and developmental biology), open-access papers from Europe PMC, plus matching stories from the other topics. Only stories about pluripotent stem cells (iPSC, hESC, embryo models) are kept, for up to 30 days |
 | Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport) |
 
 Not included:
@@ -62,7 +63,7 @@ The bar under the tabs shows how many filters are on and what they are.
 ## Add or change sources
 
 Edit `feeds.json`. Each feed needs a `topic` (one of the ids in `topics`), a
-`source` name and an RSS `url`. Topics show up as tabs in the order listed.
+`source` name and an RSS `url`. Topics show up as tabs in A to Z order after Latest.
 A feed that fails is skipped for that run and counted in the app's footer;
 the job logs list each feed's result.
 
