@@ -13,7 +13,7 @@ on:
   schedule:
     # Every 30 minutes, off the hour: GitHub delays or drops scheduled runs
     # at busy times such as :00 and :30.
-    - cron: '13,43 * * * *'
+    - cron: '14,44 * * * *'
   workflow_dispatch:
   push:
     paths:
