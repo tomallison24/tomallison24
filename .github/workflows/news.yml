@@ -11,7 +11,9 @@ name: News
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # GitHub may start scheduled runs a few minutes late
+    # Every 30 minutes, off the hour: GitHub delays or drops scheduled runs
+    # at busy times such as :00 and :30.
+    - cron: '13,43 * * * *'
   workflow_dispatch:
   push:
     paths:
