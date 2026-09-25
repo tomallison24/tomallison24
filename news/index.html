@@ -270,7 +270,7 @@
     return all
       .filter(s => !seen.has(s.id) && seen.add(s.id))
       .sort((a, b) => (b.published || '').localeCompare(a.published || ''))
-      .slice(0, 60);
+      .slice(0, 80);
   }
 
   function meta(s, showTopic) {

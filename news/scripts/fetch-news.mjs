@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'data', 'news.json');
 const PER_FEED = 25;      // items kept from each feed
-const PER_TOPIC = 40;     // stories kept per topic after merging sources
+const PER_TOPIC = 50;     // stories kept per topic after merging sources
 const TIMEOUT_MS = 15000;
 
 const ENTITIES = {
@@ -49,6 +49,12 @@ function text(xml, name) {
   return decode(html.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 }
 
+// Inner markup of the first <name>…</name>, CDATA and entities undone.
+function raw(xml, name) {
+  const m = xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, 'i'));
+  return m ? decode(unCdata(m[1])) : '';
+}
+
 function attrs(tag) {
   const out = {};
   for (const [, k, v] of tag.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) out[k.toLowerCase()] = decode(v);
@@ -56,7 +62,8 @@ function attrs(tag) {
 }
 
 // Largest image the item offers: media:content (The Guardian),
-// media:thumbnail (BBC) or an image enclosure.
+// media:thumbnail (BBC) or an image enclosure; failing those, the first
+// real picture in the story's HTML (NPR).
 function image(xml) {
   let best = null;
   for (const [tag] of xml.matchAll(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/gi)) {
@@ -67,7 +74,27 @@ function image(xml) {
     const w = parseInt(a.width, 10) || 0;
     if (!best || w > best.w) best = { url: a.url, w };
   }
-  return best ? best.url : null;
+  if (best) return best.url;
+  for (const name of ['content:encoded', 'content', 'description', 'summary']) {
+    for (const [tag] of raw(xml, name).matchAll(/<img\b[^>]*>/gi)) {
+      const a = attrs(tag);
+      if (!a.src || !/^https:\/\//i.test(a.src)) continue;
+      if (a.width === '1' || a.height === '1' || /pixel|tracking|feeds\.feedburner/i.test(a.src)) continue;
+      return a.src;
+    }
+  }
+  return null;
+}
+
+// RSS: <link>url</link>. Atom: <link rel="alternate" href="url"/>.
+function itemLink(xml) {
+  const rss = text(xml, 'link');
+  if (rss) return rss;
+  for (const [tag] of xml.matchAll(/<link\b[^>]*>/gi)) {
+    const a = attrs(tag);
+    if (a.href && (!a.rel || a.rel === 'alternate')) return a.href;
+  }
+  return text(xml, 'guid');
 }
 
 function clip(s, max) {
@@ -88,19 +115,20 @@ function canonical(url) {
 }
 
 function parse(xml, feed) {
-  const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [];
+  // RSS 2.0 <item>s, or Atom <entry>s (The Conversation).
+  const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || xml.match(/<entry[\s>][\s\S]*?<\/entry>/gi) || [];
   return items.slice(0, PER_FEED).map(item => {
-    const url = text(item, 'link') || text(item, 'guid');
+    const url = itemLink(item);
     const title = text(item, 'title');
     if (!title || !/^https?:\/\//i.test(url)) return null;
-    const date = new Date(text(item, 'pubDate') || text(item, 'dc:date'));
+    const date = new Date(text(item, 'pubDate') || text(item, 'dc:date') || text(item, 'published') || text(item, 'updated'));
     const link = canonical(url);
     return {
       id: createHash('sha1').update(link).digest('hex').slice(0, 12),
       topic: feed.topic,
       source: feed.source,
       title,
-      summary: clip(text(item, 'description').replace(/\s*Continue reading(\.\.\.|\u2026)\s*$/i, ''), 220),
+      summary: clip((text(item, 'description') || text(item, 'summary') || text(item, 'content')).replace(/\s*Continue reading(\.\.\.|\u2026)\s*$/i, ''), 220),
       url: link,
       image: image(item),
       published: Number.isNaN(date.getTime()) ? null : date.toISOString(),
@@ -129,7 +157,7 @@ const results = await Promise.all(config.feeds.map(fetchFeed));
 
 for (const r of results) {
   const pics = r.stories.filter(s => s.image).length;
-  console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.topic.padEnd(9)} ${r.source.padEnd(13)} ${String(r.count).padStart(3)} items ${String(pics).padStart(3)} images ${String(r.ms).padStart(5)}ms ${r.error || ''} ${r.url}`);
+  console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.topic.padEnd(9)} ${r.source.padEnd(16)} ${String(r.count).padStart(3)} items ${String(pics).padStart(3)} images ${String(r.ms).padStart(5)}ms ${r.error || ''} ${r.url}`);
 }
 
 const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
