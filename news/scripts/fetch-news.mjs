@@ -128,7 +128,8 @@ const config = JSON.parse(await readFile(join(ROOT, 'feeds.json'), 'utf8'));
 const results = await Promise.all(config.feeds.map(fetchFeed));
 
 for (const r of results) {
-  console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.topic.padEnd(9)} ${r.source.padEnd(13)} ${String(r.count).padStart(3)} items ${String(r.ms).padStart(5)}ms ${r.error || ''} ${r.url}`);
+  const pics = r.stories.filter(s => s.image).length;
+  console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.topic.padEnd(9)} ${r.source.padEnd(13)} ${String(r.count).padStart(3)} items ${String(pics).padStart(3)} images ${String(r.ms).padStart(5)}ms ${r.error || ''} ${r.url}`);
 }
 
 const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
