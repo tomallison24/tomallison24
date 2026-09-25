@@ -102,6 +102,18 @@ means a very short or generic domain could catch more than you meant — every
 rule is listed under **Rules** with a delete button, and deleting one leaves
 already-filed mail where it is.
 
+## Tapping a message
+
+Tapping a row opens a preview drawer with the message as **text**. Marketing
+mail is nearly all HTML, and rendering that would fetch the sender's images —
+which is exactly how they learn you opened it. The body is parsed with
+`DOMParser`, which produces an inert document: no scripts run, no images load,
+no tracking pixel fires. **Open in Gmail** in the drawer hands the thread to
+the Gmail app when you want the real thing.
+
+Filing a message never marks it read, and neither does the filter — mail lands
+in the bucket unread and stays that way until you read it.
+
 ## Undo
 
 The toast after a tap has an **Undo** for a few seconds: it puts the
