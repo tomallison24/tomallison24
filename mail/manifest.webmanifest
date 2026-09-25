@@ -1,0 +1,14 @@
+{
+  "name": "Mail",
+  "short_name": "Mail",
+  "description": "Gmail triage: one tap files a sender's whole domain, and the bucket empties itself.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08080B",
+  "theme_color": "#08080B",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

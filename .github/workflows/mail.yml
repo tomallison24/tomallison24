@@ -1,0 +1,42 @@
+# Empties the Mail app's Marketing bucket on a schedule.
+#
+# The app sweeps when it is opened; this does the same daily so mail is
+# cleared whether or not the phone app is opened. Everything in the bucket
+# older than DELETE_AFTER_DAYS (default 3) goes to the Trash, where Gmail
+# deletes it for good after 30 days.
+#
+# Does nothing until the three Google secrets exist, so it is safe to leave
+# switched on. Setup: mail/README.md.
+name: Mail
+
+on:
+  schedule:
+    # Once a day at 07:23 UTC - off the hour, as GitHub delays scheduled runs
+    # at busy times such as :00.
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mail/scripts/sweep.mjs'
+      - '.github/workflows/mail.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Empty the bucket
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          MARKETING_LABEL: ${{ vars.MARKETING_LABEL }}
+          DELETE_AFTER_DAYS: ${{ vars.DELETE_AFTER_DAYS }}
+        run: node mail/scripts/sweep.mjs
