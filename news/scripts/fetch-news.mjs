@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'data', 'news.json');
 const PER_FEED = 25;      // items kept from each feed
-const PER_TOPIC = 50;     // stories kept per topic after merging sources
+const PER_TOPIC = 50;     // stories kept per topic after merging sources (a topic's "keep" overrides)
 const TIMEOUT_MS = 15000;
 
 const ENTITIES = {
@@ -86,6 +86,22 @@ function image(xml) {
   return null;
 }
 
+// Subject tags the publisher attached: RSS <category>Arsenal</category>,
+// Atom <category term="Arsenal"/>. The Guardian tags every sport story with
+// its sport, competition and teams, which the Sport filters match on.
+function categories(xml) {
+  const out = new Set();
+  for (const [, inner] of xml.matchAll(/<category(?:\s[^>]*)?(?<!\/)>([\s\S]*?)<\/category>/gi)) {
+    const t = decode(unCdata(inner)).replace(/<[^>]*>/g, '').trim();
+    if (t && t.length < 60) out.add(t);
+  }
+  for (const [tag] of xml.matchAll(/<category\b[^>]*\/>/gi)) {
+    const a = attrs(tag);
+    if (a.term && a.term.length < 60) out.add(a.term);
+  }
+  return [...out].slice(0, 15);
+}
+
 // RSS: <link>url</link>. Atom: <link rel="alternate" href="url"/>.
 function itemLink(xml) {
   const rss = text(xml, 'link');
@@ -123,6 +139,7 @@ function parse(xml, feed) {
     if (!title || !/^https?:\/\//i.test(url)) return null;
     const date = new Date(text(item, 'pubDate') || text(item, 'dc:date') || text(item, 'published') || text(item, 'updated'));
     const link = canonical(url);
+    const tags = feed.tags ? categories(item) : [];
     return {
       id: createHash('sha1').update(link).digest('hex').slice(0, 12),
       topic: feed.topic,
@@ -132,6 +149,7 @@ function parse(xml, feed) {
       url: link,
       image: image(item),
       published: Number.isNaN(date.getTime()) ? null : date.toISOString(),
+      ...(tags.length ? { tags } : {}),
     };
   }).filter(Boolean);
 }
@@ -153,7 +171,9 @@ async function fetchFeed(feed) {
 }
 
 const config = JSON.parse(await readFile(join(ROOT, 'feeds.json'), 'utf8'));
-const results = await Promise.all(config.feeds.map(fetchFeed));
+// A topic can ask for its feeds' tags ("tags": true) and keep more stories ("keep").
+const topicOf = Object.fromEntries(config.topics.map(t => [t.id, t]));
+const results = await Promise.all(config.feeds.map(f => fetchFeed({ ...f, tags: !!topicOf[f.topic]?.tags })));
 
 for (const r of results) {
   const pics = r.stories.filter(s => s.image).length;
@@ -162,13 +182,13 @@ for (const r of results) {
 
 const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
 const stories = [];
-for (const { id } of config.topics) {
+for (const { id, keep } of config.topics) {
   const seen = new Set();
   stories.push(...results
     .flatMap(r => r.stories)
     .filter(s => s.topic === id && !seen.has(s.url) && seen.add(s.url))
     .sort(byTime)
-    .slice(0, PER_TOPIC));
+    .slice(0, keep || PER_TOPIC));
 }
 
 const failed = results.filter(r => !r.ok).length;
@@ -182,7 +202,7 @@ await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify({
   generatedAt: new Date().toISOString(),
   topics: config.topics,
-  feeds: results.map(({ stories: _, ...r }) => r),
+  feeds: results.map(({ stories: _, tags: __, ...r }) => r),
   stories,
 }));
 console.log(`Wrote ${stories.length} stories (${results.length - failed}/${results.length} feeds ok) to ${OUT}`);
