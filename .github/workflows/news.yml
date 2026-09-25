@@ -1,0 +1,56 @@
+# Refreshes the News app's headlines and publishes the site to GitHub Pages.
+#
+# build:  fetches every feed in news/feeds.json into news/data/news.json and
+#         packages the repo (News + Weather) as the Pages site. Runs on any
+#         branch, so feed changes can be checked before merging.
+# deploy: publishes that package. Default branch only.
+#
+# One-time setup: Settings -> Pages -> Build and deployment -> Source:
+# "GitHub Actions".
+name: News
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # GitHub may start scheduled runs a few minutes late
+  workflow_dispatch:
+  push:
+    paths:
+      - 'news/**'
+      - 'weather/**'
+      - '.github/workflows/news.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Fetch headlines
+        run: node news/scripts/fetch-news.mjs
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    if: github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}news/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

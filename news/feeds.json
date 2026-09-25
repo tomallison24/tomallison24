@@ -1,0 +1,27 @@
+{
+  "topics": [
+    { "id": "uk",       "label": "UK" },
+    { "id": "world",    "label": "World" },
+    { "id": "us",       "label": "US" },
+    { "id": "business", "label": "Business" },
+    { "id": "tech",     "label": "Tech" },
+    { "id": "science",  "label": "Science" },
+    { "id": "sport",    "label": "Sport" }
+  ],
+  "feeds": [
+    { "topic": "uk",       "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/uk/rss.xml" },
+    { "topic": "uk",       "source": "The Guardian", "url": "https://www.theguardian.com/uk-news/rss" },
+    { "topic": "world",    "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { "topic": "world",    "source": "The Guardian", "url": "https://www.theguardian.com/world/rss" },
+    { "topic": "us",       "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml" },
+    { "topic": "us",       "source": "The Guardian", "url": "https://www.theguardian.com/us-news/rss" },
+    { "topic": "business", "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { "topic": "business", "source": "The Guardian", "url": "https://www.theguardian.com/uk/business/rss" },
+    { "topic": "tech",     "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { "topic": "tech",     "source": "The Guardian", "url": "https://www.theguardian.com/uk/technology/rss" },
+    { "topic": "science",  "source": "BBC News",     "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { "topic": "science",  "source": "The Guardian", "url": "https://www.theguardian.com/science/rss" },
+    { "topic": "sport",    "source": "BBC Sport",    "url": "https://feeds.bbci.co.uk/sport/rss.xml" },
+    { "topic": "sport",    "source": "The Guardian", "url": "https://www.theguardian.com/uk/sport/rss" }
+  ]
+}
