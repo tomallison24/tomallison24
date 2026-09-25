@@ -5,6 +5,7 @@
     { "id": "us",       "label": "US" },
     { "id": "business", "label": "Business" },
     { "id": "tech",     "label": "Tech" },
+    { "id": "ai",       "label": "AI", "collect": ["AI", "artificial intelligence", "machine learning", "chatbot", "chatbots", "ChatGPT", "OpenAI", "Anthropic", "DeepMind", "LLM", "LLMs", "large language model", "deepfake", "deepfakes", "generative AI"] },
     { "id": "science",  "label": "Science" },
     { "id": "sport",    "label": "Sport", "keep": 400, "tags": true }
   ],
@@ -35,6 +36,10 @@
     { "topic": "tech",     "source": "Sky News",         "url": "https://feeds.skynews.com/feeds/rss/technology.xml" },
     { "topic": "tech",     "source": "NPR",              "url": "https://feeds.npr.org/1019/rss.xml" },
     { "topic": "tech",     "source": "Ars Technica",     "url": "https://feeds.arstechnica.com/arstechnica/index" },
+
+    { "topic": "ai",       "source": "The Guardian",     "url": "https://www.theguardian.com/technology/artificialintelligenceai/rss" },
+    { "topic": "ai",       "source": "Ars Technica",     "url": "https://arstechnica.com/ai/feed/" },
+    { "topic": "ai",       "source": "TechCrunch",       "url": "https://techcrunch.com/category/artificial-intelligence/feed/" },
 
     { "topic": "science",  "source": "BBC News",         "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
     { "topic": "science",  "source": "The Guardian",     "url": "https://www.theguardian.com/science/rss" },
