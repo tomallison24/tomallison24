@@ -88,8 +88,7 @@
     {"topic": "stemcells", "source": "The Niche", "url": "https://ipscell.com/feed/"},
     {"topic": "stemcells", "source": "ScienceDaily", "url": "https://www.sciencedaily.com/rss/health_medicine/stem_cells.xml"},
     {"topic": "stemcells", "source": "Stem Cell Reports", "url": "https://www.cell.com/stem-cell-reports/inpress.rss"},
-    {"topic": "stemcells", "source": "bioRxiv (preprint)", "url": "https://connect.biorxiv.org/biorxiv_xml/cell_biology"},
-    {"topic": "stemcells", "source": "bioRxiv (preprint)", "url": "https://connect.biorxiv.org/biorxiv_xml/developmental_biology"},
-    {"topic": "stemcells", "source": "Europe PMC", "type": "europepmc", "query": "(TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"embryonic stem cells\") AND OPEN_ACCESS:y AND SRC:MED"}
+    {"topic": "stemcells", "source": "Europe PMC", "type": "europepmc", "query": "(TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"embryonic stem cells\") AND OPEN_ACCESS:y AND SRC:MED"},
+    {"topic": "stemcells", "source": "Preprint", "type": "europepmc", "query": "(TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"embryonic stem cells\") AND SRC:PPR"}
   ]
 }

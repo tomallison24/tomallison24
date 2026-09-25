@@ -29,7 +29,7 @@ public feeds:
 | Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
 | AI       | The Guardian, Ars Technica, TechCrunch, plus any story from the other feeds with AI in its headline (AI stories are taken out of Tech) |
 | Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
-| Stem cells | The Niche, ScienceDaily, Stem Cell Reports, bioRxiv preprints (cell and developmental biology), open-access papers from Europe PMC, plus matching stories from the other topics. Only stories about pluripotent stem cells (iPSC, hESC, embryo models) are kept, for up to 30 days |
+| Stem cells | The Niche, ScienceDaily, Stem Cell Reports, open-access papers and preprints (bioRxiv, medRxiv) via Europe PMC, plus matching stories from the other topics. Only stories about pluripotent stem cells (iPSC, hESC, embryo models) are kept, for up to 30 days |
 | Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport) |
 
 Not included:

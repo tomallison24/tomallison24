@@ -154,8 +154,9 @@ function parse(xml, feed) {
   }).filter(Boolean);
 }
 
-// Europe PMC search results (JSON), for peer-reviewed papers. The feed's
-// "query" should include OPEN_ACCESS:y so every link is free to read.
+// Europe PMC search results (JSON): peer-reviewed papers (SRC:MED, with
+// OPEN_ACCESS:y so every link is free to read) or preprints (SRC:PPR, which
+// covers bioRxiv and medRxiv).
 async function europePmc(feed) {
   const url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?' + new URLSearchParams({
     query: feed.query, sort: 'P_PDATE_D desc', format: 'json', pageSize: String(PER_FEED), resultType: 'core',
@@ -170,7 +171,9 @@ async function europePmc(feed) {
     return title && {
       id: createHash('sha1').update(link).digest('hex').slice(0, 12),
       topic: feed.topic,
-      source: r.journalInfo?.journal?.title || feed.source,
+      source: r.source === 'PPR'
+        ? `${r.bookOrReportDetails?.publisher || feed.source} (preprint)`
+        : r.journalInfo?.journal?.title || feed.source,
       title,
       summary: clip(decode(String(r.abstractText || '').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim(), 220),
       url: link,
