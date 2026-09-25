@@ -39,21 +39,24 @@ Not included:
   paywall after reading a certain amount. Remove the BBC lines from
   `feeds.json` if that matters where you read.
 
-## Sport picks
+## Sport filters
 
-On the Sport tab, **Edit** opens a list of sports, competitions and teams
-(`sport-catalog.json`). Pick any of them, or type a player, driver or event to
-follow it as a keyword. The Sport tab then shows only stories about your
-picks. **My picks**, **All sport** and a chip per pick switch between views.
-The Latest tab also only includes sport stories about your picks.
+On the Sport tab, **Filter** opens a panel with a search box and three lists:
+Sports, Competitions and Teams (from `sport-catalog.json`). Tick anything you
+follow, or search for a player, driver or event and follow it as a keyword.
+**Show N stories** closes the panel. The Sport tab and the sport stories in
+Latest then only show stories about your filters.
+
+The bar under the tabs shows how many filters are on and what they are.
+**Reset** clears them all, with a few seconds to undo.
 
 - A sport is recognised from the story's web address (`/football/`, `/f1/`),
   the publisher's own tags (the Guardian tags every sport story with its
   sport, competition and teams) or the sport's name in the headline.
 - Teams and competitions only count when their sport matches too, so
   "Rangers" in football never picks up the Texas Rangers.
-- Picks are saved on each device (your iPhone and PC keep their own).
-- To add teams or competitions to the list, edit `sport-catalog.json`.
+- Filters are saved on each device (your iPhone and PC keep their own).
+- To add teams or competitions to the lists, edit `sport-catalog.json`.
 
 ## Add or change sources
 

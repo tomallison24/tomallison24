@@ -43,7 +43,10 @@
     --accent-soft: rgba(10, 100, 224, 0.13);
     --accent-edge: rgba(10, 100, 224, 0.35);
     --scrim: rgba(15, 18, 30, 0.28);
-    --sheet: rgba(246, 247, 251, 0.92);
+    --sheet: rgba(246, 247, 251, 0.94);
+    --field: rgba(118, 118, 128, 0.12);
+    --seg-on: #FFFFFF;
+    --toast-action: #7CB6FF;
     --blob-1: rgba(96, 150, 255, 0.60);
     --blob-2: rgba(255, 158, 118, 0.55);
     --blob-3: rgba(168, 138, 255, 0.55);
@@ -68,7 +71,10 @@
       --accent-soft: rgba(90, 162, 255, 0.17);
       --accent-edge: rgba(90, 162, 255, 0.40);
       --scrim: rgba(0, 0, 0, 0.45);
-      --sheet: rgba(22, 23, 30, 0.92);
+      --sheet: rgba(22, 23, 30, 0.94);
+      --field: rgba(118, 118, 128, 0.24);
+      --seg-on: #636366;
+      --toast-action: #0A64E0;
       --blob-1: rgba(40, 100, 230, 0.50);
       --blob-2: rgba(200, 80, 40, 0.40);
       --blob-3: rgba(110, 60, 210, 0.45);
@@ -151,38 +157,44 @@
   .tab:active { transform: scale(0.96); }
   .tab[aria-selected="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
 
-  /* ---- Sport picks row: second line of the pinned bar, Sport tab only ---- */
-  .subtabs {
-    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-    padding: 0 max(16px, env(safe-area-inset-left)) 8px; scroll-padding: 0 16px;
+  /* ---- Sport filter bar: second line of the pinned bar, Sport tab only ---- */
+  .filterbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
     max-width: 560px; margin: 0 auto;
   }
-  .subtabs::-webkit-scrollbar { display: none; }
-  .subtabs[hidden] { display: none; }
+  .filterbar[hidden] { display: none; }
   .chip {
     flex: none; height: 30px; padding: 0 12px; border-radius: 999px;
-    display: inline-flex; align-items: center; gap: 5px;
+    display: inline-flex; align-items: center; gap: 6px;
     font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap;
     background: var(--glass-strong); border: 0.5px solid var(--glass-edge);
-    transition: background-color 0.2s, color 0.2s, transform 0.15s;
+    transition: transform 0.15s;
   }
   .chip:active { transform: scale(0.96); }
   .chip svg { width: 15px; height: 15px; flex: none; }
-  .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-edge); }
-  .chip.primary { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
-  .chip .hint { font-weight: 500; color: var(--muted); }
-  button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chip .n {
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    display: inline-grid; place-items: center;
+    background: var(--accent); color: #FFFFFF; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .filter-summary {
+    flex: 1; min-width: 0; text-align: left;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* ---- Picker sheet ---- */
+  /* ---- Filter sheet ---- */
   html.locked, html.locked body { overflow: hidden; }
   .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
   .sheet-wrap[hidden] { display: none; }
   .scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.25s; touch-action: none; }
   .sheet {
     position: relative; width: 100%; max-width: 560px;
-    max-height: calc(100dvh - env(safe-area-inset-top) - 16px);
+    height: min(88dvh, 760px);
     display: flex; flex-direction: column;
-    border-radius: 24px 24px 0 0; border-width: 0.5px 0.5px 0;
+    border-radius: 20px 20px 0 0; border-width: 0.5px 0.5px 0;
     background: var(--sheet);
     transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
@@ -191,40 +203,68 @@
   .sheet-wrap.open .sheet { transform: none; }
   @media (min-width: 640px) {
     .sheet-wrap { align-items: center; }
-    .sheet { border-radius: 24px; border-width: 0.5px; max-height: min(760px, calc(100dvh - 48px)); }
+    .sheet { border-radius: 20px; border-width: 0.5px; height: min(720px, calc(100dvh - 48px)); }
   }
-  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--hairline); margin: 8px auto 0; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 2px; }
-  .sheet-head h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.015em; }
-  .sheet-done { height: 34px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 15px; background: var(--chip-on-bg); color: var(--chip-on-text); }
-  .sheet-hint { margin: 0; padding: 4px 16px 12px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--field); margin: 6px auto 0; flex: none; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 12px; flex: none; }
+  .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .close-btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--muted); }
+  .close-btn svg { width: 14px; height: 14px; }
+  .search-wrap { position: relative; margin: 0 16px 10px; flex: none; }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
   .search {
-    display: block; margin: 0 16px 6px; height: 40px; padding: 0 12px; border-radius: 12px;
-    border: 0.5px solid var(--glass-edge); background: var(--glass-strong); color: var(--text);
-    font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none;
+    display: block; width: 100%; height: 36px; padding: 0 12px 0 34px; border: 0; border-radius: 10px;
+    background: var(--field); color: var(--text); font: inherit; font-size: 16px;
+    -webkit-appearance: none; appearance: none;
   }
   .search::placeholder { color: var(--muted); }
-  .sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(env(safe-area-inset-bottom) + 24px); }
-  .group { padding: 12px 0 2px; }
-  .group-head { display: flex; align-items: baseline; justify-content: space-between; }
-  .group h3, .section, .fold summary { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-  .section { margin: 22px 0 0; padding-bottom: 8px; border-bottom: 0.5px solid var(--hairline); }
-  .fold { padding: 0; border-bottom: 0.5px solid var(--hairline); }
-  .fold summary { margin: 0; padding: 13px 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--text); }
-  .fold summary::-webkit-details-marker { display: none; }
-  .fold summary::after { content: ""; width: 8px; height: 8px; margin-left: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform 0.2s; }
-  .fold[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
-  .fold summary .count { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); }
-  .fold summary .count.on { color: var(--accent); font-weight: 600; }
-  .fold .picks { padding-bottom: 14px; }
-  .picks { display: flex; flex-wrap: wrap; gap: 8px; }
-  .sheet-note { margin: 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
-  .text-btn { font-size: 14px; font-weight: 600; color: var(--accent); padding: 4px 0; }
-  .chip.add { margin-top: 12px; }
+  .search:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent-edge); }
+  .search::-webkit-search-cancel-button { -webkit-appearance: none; }
+  .segmented {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+    margin: 0 16px 4px; padding: 2px; border-radius: 9px; background: var(--field); flex: none;
+  }
+  .segmented[hidden] { display: none; }
+  .seg { height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 600; }
+  .seg[aria-selected="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+  .seg .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 20px; }
+  .sect h3 { margin: 18px 4px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .sect:first-child .card:first-child { margin-top: 12px; }
+  .card { border-radius: 12px; overflow: hidden; background: var(--glass-strong); border: 0.5px solid var(--glass-edge); }
+  .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 14px; text-align: left; font-size: 16px; }
+  .opt + .opt::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .opt:active { background: var(--hairline); }
+  .opt .label { flex: 1; min-width: 0; }
+  .opt .sub { color: var(--muted); font-size: 14px; }
+  .opt .tick { width: 20px; height: 20px; flex: none; color: var(--accent); visibility: hidden; }
+  .opt[aria-pressed="true"] .tick { visibility: visible; }
+  .opt.add { color: var(--accent); font-weight: 600; }
+  .opt.add svg { width: 18px; height: 18px; flex: none; }
+  .sheet-note { margin: 14px 4px 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
+  .sheet-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px); border-top: 0.5px solid var(--hairline);
+  }
+  .text-btn { font-size: 16px; font-weight: 600; color: var(--accent); padding: 8px 4px; }
+  .text-btn:disabled { color: var(--muted); opacity: 0.5; cursor: default; }
+  .show-btn { height: 44px; padding: 0 22px; border-radius: 999px; font-size: 16px; font-weight: 600; background: var(--chip-on-bg); color: var(--chip-on-text); }
+
+  /* ---- Undo toast ---- */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); z-index: 40;
+    display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px; border-radius: 999px;
+    width: max-content; max-width: calc(100vw - 32px); white-space: nowrap;
+    background: var(--chip-on-bg); color: var(--chip-on-text); font-size: 15px; font-weight: 600;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    transform: translate(-50%, 0); transition: opacity 0.2s, transform 0.2s;
+  }
+  .toast[hidden] { display: none; }
+  .toast button { height: 32px; padding: 0 14px; border-radius: 999px; color: var(--toast-action); font-weight: 700; }
   .meta .pickname { color: var(--accent); }
   .notice .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .notice .actions button.secondary { background: var(--glass-strong); color: var(--text); border: 0.5px solid var(--glass-edge); }
-  @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .sheet, .scrim, .toast { transition: none; } }
 
   /* ---- Feed ---- */
   main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 14px; }
@@ -299,7 +339,7 @@
 <div class="statusbar glass" id="statusbar" aria-hidden="true"></div>
 <nav class="topbar glass" id="topbar">
   <div class="tabs" id="tabs" role="tablist" aria-label="Topics"></div>
-  <div class="subtabs" id="subtabs" aria-label="Sport filters" hidden></div>
+  <div class="filterbar" id="filterbar" aria-label="Sport filters" hidden></div>
 </nav>
 
 <div class="wrap">
@@ -311,14 +351,25 @@
   <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
     <div class="grabber" aria-hidden="true"></div>
     <header class="sheet-head">
-      <h2 id="sheet-title">Your sport</h2>
-      <button class="sheet-done" data-action="close-sheet">Done</button>
+      <h2 id="sheet-title">Sport filters</h2>
+      <button class="close-btn" data-action="close-sheet" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </header>
-    <p class="sheet-hint">Pick the sports, competitions and teams you follow. The Sport tab then shows only stories about them.</p>
-    <input class="search" id="sheet-search" type="search" placeholder="Search, or add a player, driver or event" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Search sports, competitions and teams">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input class="search" id="sheet-search" type="search" placeholder="Search teams, players or events" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Search sports, competitions, teams and players">
+    </div>
+    <div class="segmented" id="sheet-seg" role="tablist" aria-label="Filter type"></div>
     <div class="sheet-body" id="sheet-body"></div>
+    <footer class="sheet-foot">
+      <button class="text-btn" id="sheet-reset" data-action="reset-picks">Reset</button>
+      <button class="show-btn" id="sheet-show" data-action="close-sheet">Show all sport</button>
+    </footer>
   </section>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-text"></span><button id="toast-undo">Undo</button></div>
 
 <script>
 (() => {
@@ -341,13 +392,16 @@
   };
   const ICON = {
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    tick: '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
   };
 
   const $ = id => document.getElementById(id);
-  const feedEl = $('feed'), tabsEl = $('tabs'), subtabsEl = $('subtabs'), topbar = $('topbar'), refreshBtn = $('refresh');
+  const feedEl = $('feed'), tabsEl = $('tabs'), filterEl = $('filterbar'), topbar = $('topbar'), refreshBtn = $('refresh');
   const sheetWrap = $('sheet'), sheetEl = sheetWrap.querySelector('.sheet'), sheetBody = $('sheet-body'), searchEl = $('sheet-search');
+  const segEl = $('sheet-seg'), sheetReset = $('sheet-reset'), sheetShow = $('sheet-show');
+  const toastEl = $('toast'), toastText = $('toast-text'), toastUndo = $('toast-undo');
 
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -363,7 +417,6 @@
   // ("team:football:arsenal") or are typed keywords ("kw:Lewis Hamilton").
   let catalog = null, catalogFailed = false;
   let picks = Array.isArray(store.get('news.sport.picks')) ? store.get('news.sport.picks').filter(x => typeof x === 'string') : [];
-  let sportView = store.get('news.sport.view') || 'picks';   // 'picks', 'all' or one pick's id
   let pickList = [];
 
   // ---- helpers ----
@@ -432,20 +485,20 @@
       entries.set(e.id, e);
       return e;
     });
-    const make = (kind, sport, name, lastWord) => {
+    const make = (kind, sport, name, lastWord, group) => {
       const [label, ...also] = Array.isArray(name) ? name : [name];
       const terms = [label, ...also];
       if (lastWord) terms.push(label.split(' ').pop());
-      const e = { id: `${kind}:${sport || 'any'}:${slug(label)}`, kind, sport: sport || null, label, terms: [...new Set(terms)] };
+      const e = { id: `${kind}:${sport || 'any'}:${slug(label)}`, kind, sport: sport || null, group, label, terms: [...new Set(terms)] };
       entries.set(e.id, e);
       return e;
     };
     const competitions = (raw.competitions || []).map(g => ({
       title: g.sport ? sportLabel[g.sport] || g.sport : 'Multi-sport',
-      items: (g.names || []).map(n => make('comp', g.sport, n)),
+      items: (g.names || []).map(n => make('comp', g.sport, n, false, g.sport ? sportLabel[g.sport] || g.sport : 'Multi-sport')),
     }));
     const teams = (raw.teams || []).map(g => ({
-      title: g.group, items: (g.names || []).map(n => make('team', g.sport, n, g.lastWord)),
+      title: g.group, items: (g.names || []).map(n => make('team', g.sport, n, g.lastWord, g.group)),
     }));
     return { entries, sports, competitions, teams, sportLabel };
   }
@@ -456,8 +509,6 @@
   }
   function refreshPicks() {
     pickList = picks.map(pickEntry).filter(Boolean);
-    const known = catalog || sportView.startsWith('kw:');
-    if (known && sportView !== 'picks' && sportView !== 'all' && !pickList.some(p => p.id === sportView)) sportView = 'picks';
   }
 
   // Which sports a story is about: its web address (/football/, /f1/), the
@@ -491,19 +542,10 @@
   }
   const firstMatch = (s, list) => list.find(p => matches(p, s)) || null;
 
-  function activePicks() {
-    if (!pickList.length || sportView === 'all') return null;
-    if (sportView === 'picks') return pickList;
-    const one = pickList.find(p => p.id === sportView);
-    return one ? [one] : pickList;
-  }
+  function sportMatches() { return topicStories(SPORT).filter(s => firstMatch(s, pickList)); }
 
   function storiesFor(id) {
-    if (id === SPORT) {
-      const active = activePicks();
-      const all = topicStories(SPORT);
-      return (active ? all.filter(s => firstMatch(s, active)) : all).slice(0, 100);
-    }
+    if (id === SPORT) return (pickList.length ? sportMatches() : topicStories(SPORT)).slice(0, 100);
     if (id !== LATEST.id) return topicStories(id);
     const seen = new Set();
     return topics()
@@ -519,7 +561,7 @@
 
   function meta(s, showTopic) {
     const parts = [];
-    const pick = s.topic === SPORT && pickList.length && (showTopic || sportView === 'picks') ? firstMatch(s, pickList) : null;
+    const pick = s.topic === SPORT && pickList.length ? firstMatch(s, pickList) : null;
     if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
     else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
     parts.push(`<span>${esc(s.source)}</span>`);
@@ -539,16 +581,17 @@
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
   }
 
-  function renderSubtabs() {
-    subtabsEl.hidden = topic !== SPORT;
-    if (subtabsEl.hidden) return;
-    const view = pickList.length ? sportView : 'all';
-    const chip = (v, label) => `<button class="chip" data-view="${esc(v)}" aria-pressed="${view === v}">${esc(label)}</button>`;
-    subtabsEl.innerHTML =
-      `<button class="chip${pickList.length ? '' : ' primary'}" data-action="edit-picks">${ICON.sliders}${pickList.length ? 'Edit' : 'Choose teams &amp; sports'}</button>` +
-      (pickList.length ? chip('picks', 'My picks') : '') +
-      chip('all', 'All sport') +
-      pickList.map(p => chip(p.id, p.label)).join('');
+  // Sport tab: one line saying what is filtered, with Filters and Reset.
+  function renderFilterbar() {
+    filterEl.hidden = topic !== SPORT;
+    if (filterEl.hidden) return;
+    const n = pickList.length;
+    filterEl.innerHTML = n
+      ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on">${ICON.sliders}Filters<span class="n">${n}</span></button>
+         <button class="filter-summary" data-action="edit-picks">${esc(pickList.map(p => p.label).join(', '))}</button>
+         <button class="chip" data-action="reset-picks">${ICON.x}Reset</button>`
+      : `<button class="chip" data-action="edit-picks">${ICON.sliders}Filter</button>
+         <span class="filter-summary">Showing all sport</span>`;
   }
 
   function renderFeed() {
@@ -557,12 +600,12 @@
     const isLatest = topic === LATEST.id;
     const stories = storiesFor(topic);
     if (!stories.length) {
-      if (topic === SPORT && activePicks()) {
-        const names = activePicks().map(p => p.label);
+      if (topic === SPORT && pickList.length) {
+        const names = pickList.map(p => p.label);
         const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
-        feedEl.innerHTML = notice('Nothing on your picks right now',
+        feedEl.innerHTML = notice('Nothing on your filters right now',
           `None of the latest sport stories mention ${esc(list)}. They’ll show here as soon as one does.`,
-          '<button data-view="all">Show all sport</button><button class="secondary" data-action="edit-picks">Edit picks</button>') + status();
+          '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + status();
         return;
       }
       feedEl.innerHTML = notice('Nothing here right now', `No ${esc(topicLabel(topic))} stories came through on the last update.`, '<button data-action="retry">Try again</button>') + status();
@@ -610,60 +653,71 @@
       <div class="list glass">${row.repeat(5)}</div>`;
   }
 
-  function render() { renderTabs(); renderSubtabs(); renderFeed(); }
+  function render() { renderTabs(); renderFilterbar(); renderFeed(); }
 
-  // ---- picker sheet ----
-  let sheetOpen = false, picksChanged = false, returnFocus = null;
-  const openGroups = new Set();
+  // ---- filter sheet ----
+  const SEGMENTS = [['sports', 'Sports'], ['competitions', 'Competitions'], ['teams', 'Teams']];
+  const KIND_OF_SEG = { sports: ['sport'], competitions: ['comp'], teams: ['team', 'kw'] };
+  let sheetOpen = false, sheetSeg = 'sports', picksChanged = false, returnFocus = null;
 
-  function hintFor(e) {
-    if (e.kind === 'kw') return 'keyword';
-    if (e.kind === 'sport' || !catalog) return '';
-    return e.sport ? catalog.sportLabel[e.sport] || '' : 'Any sport';
+  const keywordPicks = () => pickList.filter(p => p.kind === 'kw');
+
+  function optRow(e, sub) {
+    return `<button class="opt" data-pick="${esc(e.id)}" aria-pressed="${picks.includes(e.id)}">
+      <span class="label">${esc(e.label)}${sub ? `<span class="sub"> · ${esc(sub)}</span>` : ''}</span>${ICON.tick}</button>`;
+  }
+  function section(title, rows) {
+    return rows.length ? `<div class="sect">${title ? `<h3>${esc(title)}</h3>` : ''}<div class="card">${rows.join('')}</div></div>` : '';
   }
 
-  function pickChip(e, withHint) {
-    const on = picks.includes(e.id);
-    const hint = withHint ? hintFor(e) : '';
-    return `<button class="chip" data-pick="${esc(e.id)}" aria-pressed="${on}">${on ? ICON.check : ''}${esc(e.label)}${hint ? `<span class="hint">· ${esc(hint)}</span>` : ''}</button>`;
-  }
-
-  function foldHtml(key, title, items) {
-    const n = items.filter(e => picks.includes(e.id)).length;
-    return `<details class="fold" data-group="${esc(key)}"${openGroups.has(key) ? ' open' : ''}>
-      <summary><span>${esc(title)}</span><span class="count${n ? ' on' : ''}">${n ? `${n} selected` : items.length}</span></summary>
-      <div class="picks">${items.map(e => pickChip(e)).join('')}</div>
-    </details>`;
-  }
-
-  function renderSheet() {
+  function renderSheet(resetScroll) {
     const q = searchEl.value.trim();
-    const scroll = sheetBody.scrollTop;
+    segEl.hidden = !!q;
+    segEl.innerHTML = SEGMENTS.map(([id, label]) => {
+      const n = pickList.filter(p => KIND_OF_SEG[id].includes(p.kind)).length;
+      return `<button class="seg" role="tab" data-seg="${id}" aria-selected="${sheetSeg === id}">${label}${n ? `<span class="n">${n}</span>` : ''}</button>`;
+    }).join('');
+
     let html = '';
     if (q) {
       const ql = q.toLowerCase();
-      const hits = catalog ? [...catalog.entries.values()].filter(e =>
-        e.label.toLowerCase().includes(ql) || (e.terms || []).some(t => t.toLowerCase().includes(ql))).slice(0, 60) : [];
-      const known = hits.some(e => e.label.toLowerCase() === ql) || picks.some(id => id.toLowerCase() === `kw:${ql}`);
-      html += `<section class="group">
-        ${hits.length ? `<div class="picks">${hits.map(e => pickChip(e, true)).join('')}</div>` : '<p class="sheet-note">No sport, competition or team by that name.</p>'}
-        ${known ? '' : `<button class="chip add" data-add="${esc(q.slice(0, 40))}">${ICON.plus}Follow “${esc(q.slice(0, 40))}”</button>`}
-      </section>`;
-    } else {
-      html += `<section class="group">
-        <div class="group-head"><h3>Following</h3>${pickList.length ? '<button class="text-btn" data-action="clear-picks">Clear all</button>' : ''}</div>
-        ${pickList.length ? `<div class="picks">${pickList.map(e => pickChip(e, e.kind === 'kw')).join('')}</div>` : '<p class="sheet-note">Nothing yet. Tap anything below, or search for a player, driver or event to follow it as a keyword.</p>'}
-      </section>`;
-      if (catalog) {
-        html += `<section class="group"><h3>Sports</h3><div class="picks">${catalog.sports.map(e => pickChip(e)).join('')}</div></section>`;
-        html += `<h3 class="section">Competitions</h3>${catalog.competitions.map(g => foldHtml(`c:${g.title}`, g.title, g.items)).join('')}`;
-        html += `<h3 class="section">Teams</h3>${catalog.teams.map(g => foldHtml(`t:${g.title}`, g.title, g.items)).join('')}`;
-      } else {
-        html += `<p class="sheet-note" style="margin-top:12px">${catalogFailed ? 'Couldn’t load the list of sports and teams. You can still follow anything by typing it in the search box.' : 'Loading sports and teams…'}</p>`;
+      const hit = e => e.label.toLowerCase().includes(ql) || (e.terms || []).some(t => t.toLowerCase().includes(ql));
+      const all = catalog ? [...catalog.entries.values()] : [];
+      const sports = all.filter(e => e.kind === 'sport' && hit(e));
+      const comps = all.filter(e => e.kind === 'comp' && hit(e)).slice(0, 30);
+      const teams = all.filter(e => e.kind === 'team' && hit(e)).slice(0, 30);
+      const kws = keywordPicks().filter(hit);
+      const exact = [...sports, ...comps, ...teams, ...kws].some(e => e.label.toLowerCase() === ql);
+      const typed = q.slice(0, 40);
+      if (!exact) html += section('', [`<button class="opt add" data-add="${esc(typed)}">${ICON.plus}<span class="label">Follow “${esc(typed)}”</span></button>`]);
+      html += section('Sports', sports.map(e => optRow(e)))
+        + section('Competitions', comps.map(e => optRow(e, e.group)))
+        + section('Teams', teams.map(e => optRow(e, e.group)))
+        + section('Players & keywords', kws.map(e => optRow(e)));
+      if (!sports.length && !comps.length && !teams.length && !kws.length) {
+        html += '<p class="sheet-note">Not in the list. Follow it to see any headline that mentions it.</p>';
       }
+    } else if (!catalog) {
+      html = `<p class="sheet-note">${catalogFailed ? 'Couldn’t load the list of sports and teams. You can still search for anything and follow it.' : 'Loading…'}</p>`;
+    } else if (sheetSeg === 'sports') {
+      html = section('', catalog.sports.map(e => optRow(e)));
+    } else if (sheetSeg === 'competitions') {
+      // Sports with only a competition or two share one "More" list.
+      const big = catalog.competitions.filter(g => g.items.length >= 3);
+      const small = catalog.competitions.filter(g => g.items.length < 3);
+      html = big.map(g => section(g.title, g.items.map(e => optRow(e)))).join('')
+        + section('More', small.flatMap(g => g.items.map(e => optRow(e, g.title))));
+    } else {
+      html = section('Players & keywords', keywordPicks().map(e => optRow(e)))
+        + catalog.teams.map(g => section(g.title, g.items.map(e => optRow(e)))).join('');
     }
+    const scroll = sheetBody.scrollTop;
     sheetBody.innerHTML = html;
-    sheetBody.scrollTop = scroll;
+    sheetBody.scrollTop = resetScroll ? 0 : scroll;
+
+    sheetReset.disabled = !picks.length;
+    const n = pickList.length ? sportMatches().length : 0;
+    sheetShow.textContent = !pickList.length ? 'Show all sport' : n ? `Show ${n} ${n === 1 ? 'story' : 'stories'}` : 'Done';
   }
 
   function openSheet() {
@@ -672,14 +726,8 @@
     picksChanged = false;
     returnFocus = document.activeElement;
     searchEl.value = '';
-    if (catalog) {
-      for (const g of catalog.competitions) if (g.items.some(e => picks.includes(e.id))) openGroups.add(`c:${g.title}`);
-      for (const g of catalog.teams) if (g.items.some(e => picks.includes(e.id))) openGroups.add(`t:${g.title}`);
-    } else if (!catalogFailed) {
-      loadCatalog();
-    }
-    renderSheet();
-    sheetBody.scrollTop = 0;
+    if (!catalog && !catalogFailed) loadCatalog();
+    renderSheet(true);
     sheetWrap.hidden = false;
     document.documentElement.classList.add('locked');
     requestAnimationFrame(() => requestAnimationFrame(() => sheetWrap.classList.add('open')));
@@ -693,29 +741,40 @@
     document.documentElement.classList.remove('locked');
     const hide = () => { if (!sheetOpen) sheetWrap.hidden = true; };
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
-    if (picksChanged && pickList.length) setView('picks', false);
-    renderSubtabs();
+    renderFilterbar();
     renderFeed();
-    const back = returnFocus && returnFocus.isConnected ? returnFocus : document.querySelector('[data-action="edit-picks"]');
+    if (picksChanged) keepBarInPlace();
+    const back = returnFocus && returnFocus.isConnected ? returnFocus : filterEl.querySelector('[data-action="edit-picks"]');
     if (back) back.focus({ preventScroll: true });
   }
 
-  function savePicks() {
+  function setPicks(next) {
+    picks = next;
     picksChanged = true;
     store.set('news.sport.picks', picks);
     refreshPicks();
-    renderSheet();
+    if (sheetOpen) renderSheet();
+    else { renderFilterbar(); renderFeed(); }
   }
 
-  function setView(v, scroll = true) {
-    sportView = v;
-    store.set('news.sport.view', v);
-    renderSubtabs();
-    renderFeed();
-    if (scroll) keepBarInPlace();
-    const on = subtabsEl.querySelector('[aria-pressed="true"]');
-    if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  // Reset from the results page clears every filter, with a few seconds to undo.
+  let toastTimer = 0, undoPicks = null;
+  function resetFromResults() {
+    if (!picks.length) return;
+    undoPicks = picks.slice();
+    setPicks([]);
+    keepBarInPlace();
+    toastText.textContent = 'Filters cleared';
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; undoPicks = null; }, 6000);
   }
+  toastUndo.addEventListener('click', () => {
+    clearTimeout(toastTimer);
+    toastEl.hidden = true;
+    if (undoPicks) setPicks(undoPicks);
+    undoPicks = null;
+  });
 
   // ---- data ----
   async function load() {
@@ -779,41 +838,39 @@
     const b = e.target.closest('[data-topic]');
     if (b) select(b.dataset.topic);
   });
-  subtabsEl.addEventListener('click', e => {
+  filterEl.addEventListener('click', e => {
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
-    const b = e.target.closest('[data-view]');
-    if (b) setView(b.dataset.view);
+    if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
   feedEl.addEventListener('click', e => {
     if (e.target.closest('[data-action="retry"]')) return load();
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
-    const b = e.target.closest('[data-view]');
-    if (b) setView(b.dataset.view);
+    if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
   refreshBtn.addEventListener('click', load);
 
+  segEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-seg]');
+    if (!b || b.dataset.seg === sheetSeg) return;
+    sheetSeg = b.dataset.seg;
+    renderSheet(true);
+  });
   sheetWrap.addEventListener('click', e => {
     if (e.target.closest('[data-action="close-sheet"]')) return closeSheet();
-    if (e.target.closest('[data-action="clear-picks"]')) { picks = []; return savePicks(); }
+    if (e.target.closest('[data-action="reset-picks"]')) return setPicks([]);
     const add = e.target.closest('[data-add]');
     if (add) {
       const id = `kw:${add.dataset.add}`;
-      if (!picks.includes(id)) picks.push(id);
-      searchEl.value = '';
-      return savePicks();
+      if (!picks.includes(id)) setPicks([...picks, id]);
+      return;
     }
     const b = e.target.closest('[data-pick]');
     if (b) {
       const id = b.dataset.pick;
-      picks = picks.includes(id) ? picks.filter(x => x !== id) : [...picks, id];
-      savePicks();
+      setPicks(picks.includes(id) ? picks.filter(x => x !== id) : [...picks, id]);
     }
   });
-  sheetBody.addEventListener('toggle', e => {
-    const key = e.target.dataset && e.target.dataset.group;
-    if (key) e.target.open ? openGroups.add(key) : openGroups.delete(key);
-  }, true);
-  searchEl.addEventListener('input', () => { renderSheet(); sheetBody.scrollTop = 0; });
+  searchEl.addEventListener('input', () => renderSheet(true));
   searchEl.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
