@@ -5,7 +5,7 @@
     {"id": "business", "label": "Business"},
     {"id": "science", "label": "Science"},
     {"id": "sport", "label": "Sport", "keep": 400, "tags": true},
-    {"id": "stemcells", "label": "Stem cells", "filter": ["pluripotent", "pluripotency", "iPSC", "iPSCs", "hiPSC", "hiPSCs", "hPSC", "hPSCs", "hESC", "hESCs", "iPS cell", "iPS cells", "induced pluripotent", "embryonic stem cell", "embryonic stem cells", "embryo model", "embryo models", "blastoid", "blastoids"], "collect": ["pluripotent", "pluripotency", "iPSC", "iPSCs", "hiPSC", "hiPSCs", "hPSC", "hPSCs", "hESC", "hESCs", "iPS cell", "iPS cells", "induced pluripotent", "embryonic stem cell", "embryonic stem cells", "embryo model", "embryo models", "blastoid", "blastoids"], "matchSummary": true, "keepDays": 30},
+    {"id": "stemcells", "label": "Stem cells", "filter": ["stem cell", "stem cells", "stem-cell", "pluripotent", "pluripotency", "iPSC", "iPSCs", "hiPSC", "hiPSCs", "hPSC", "hPSCs", "hESC", "hESCs", "iPS cell", "iPS cells", "induced pluripotent", "embryonic stem cell", "embryonic stem cells", "organoid", "organoids", "embryo model", "embryo models", "blastoid", "blastoids", "gastruloid", "gastruloids", "mesenchymal", "haematopoietic", "hematopoietic"], "collect": ["stem cell", "stem cells", "stem-cell", "pluripotent", "pluripotency", "iPSC", "iPSCs", "hiPSC", "hiPSCs", "hPSC", "hPSCs", "hESC", "hESCs", "iPS cell", "iPS cells", "induced pluripotent", "embryonic stem cell", "embryonic stem cells", "organoid", "organoids", "embryo model", "embryo models", "blastoid", "blastoids", "gastruloid", "gastruloids", "mesenchymal", "haematopoietic", "hematopoietic"], "matchSummary": true, "keepDays": 30, "keep": 80},
     {"id": "tech", "label": "Tech"},
     {"id": "uk", "label": "UK"},
     {"id": "us", "label": "US"},
@@ -88,7 +88,7 @@
     {"topic": "stemcells", "source": "The Niche", "url": "https://ipscell.com/feed/"},
     {"topic": "stemcells", "source": "ScienceDaily", "url": "https://www.sciencedaily.com/rss/health_medicine/stem_cells.xml"},
     {"topic": "stemcells", "source": "Stem Cell Reports", "url": "https://www.cell.com/stem-cell-reports/inpress.rss"},
-    {"topic": "stemcells", "source": "Europe PMC", "type": "europepmc", "query": "(TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"embryonic stem cells\") AND OPEN_ACCESS:y AND SRC:MED"},
-    {"topic": "stemcells", "source": "Preprint", "type": "europepmc", "query": "(TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"embryonic stem cells\") AND SRC:PPR"}
+    {"topic": "stemcells", "source": "Europe PMC", "type": "europepmc", "query": "(TITLE_ABS:\"stem cell\" OR TITLE_ABS:\"stem cells\" OR TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"organoid\" OR TITLE_ABS:\"organoids\" OR TITLE_ABS:\"embryo model\" OR TITLE_ABS:\"blastoid\" OR TITLE_ABS:\"mesenchymal\" OR TITLE_ABS:\"haematopoietic\" OR TITLE_ABS:\"hematopoietic\") AND OPEN_ACCESS:y AND SRC:MED"},
+    {"topic": "stemcells", "source": "Preprint", "type": "europepmc", "query": "(TITLE_ABS:\"stem cell\" OR TITLE_ABS:\"stem cells\" OR TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"organoid\" OR TITLE_ABS:\"organoids\" OR TITLE_ABS:\"embryo model\" OR TITLE_ABS:\"blastoid\" OR TITLE_ABS:\"mesenchymal\" OR TITLE_ABS:\"haematopoietic\" OR TITLE_ABS:\"hematopoietic\") AND SRC:PPR"}
   ]
 }
