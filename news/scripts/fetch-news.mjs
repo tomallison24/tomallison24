@@ -184,6 +184,8 @@ const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
 const stories = [];
 // A topic with "collect" terms also picks up any other topic's story whose
 // headline uses one of them (AI gets the BBC's tech stories about AI).
+// Topics listed in its "moveFrom" lose those stories, so AI news shows under
+// AI and not under Tech as well.
 // All-capitals terms such as "AI" must match exactly; others ignore case.
 function headlineMatcher(terms) {
   const res = terms.map(t => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, /^[A-Z0-9]+$/.test(t) ? '' : 'i'));
@@ -191,14 +193,26 @@ function headlineMatcher(terms) {
 }
 
 const all = results.flatMap(r => r.stories);
-for (const { id, keep, collect } of config.topics) {
+const collected = {};
+const moved = new Map();   // topic -> URLs that now live elsewhere
+for (const { id, collect, moveFrom = [] } of config.topics) {
+  if (!collect) continue;
+  const matches = headlineMatcher(collect);
+  collected[id] = all.filter(s => s.topic !== id && matches(s.title)).map(({ tags: _, ...s }) => ({ ...s, topic: id }));
+  for (const s of all) {
+    if (moveFrom.includes(s.topic) && matches(s.title)) {
+      if (!moved.has(s.topic)) moved.set(s.topic, new Set());
+      moved.get(s.topic).add(s.url);
+    }
+  }
+  console.log(`${id}: ${collected[id].length} stories collected from other topics`);
+}
+for (const [topic, urls] of moved) console.log(`${topic}: ${urls.size} stories moved to their own topic`);
+
+for (const { id, keep } of config.topics) {
   const seen = new Set();
-  const matches = collect ? headlineMatcher(collect) : null;
-  const picked = matches
-    ? all.filter(s => s.topic !== id && matches(s.title)).map(({ tags: _, ...s }) => ({ ...s, topic: id }))
-    : [];
-  if (matches) console.log(`${id}: ${picked.length} stories collected from other topics`);
-  stories.push(...[...all.filter(s => s.topic === id), ...picked]
+  const gone = moved.get(id) || new Set();
+  stories.push(...[...all.filter(s => s.topic === id && !gone.has(s.url)), ...(collected[id] || [])]
     .filter(s => !seen.has(s.url) && seen.add(s.url))
     .sort(byTime)
     .slice(0, keep || PER_TOPIC));
