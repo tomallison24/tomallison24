@@ -1,0 +1,29 @@
+// Offline shell for the Mail app. Same-origin files load network-first, so a
+// new deploy shows up on the next open and the cache is only the fallback.
+// Gmail itself is cross-origin and never touched here: a cached mailbox would
+// be both stale and a copy of private mail sitting in a cache.
+const CACHE = 'mail-v1';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('mail-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+        return res;
+      })
+      .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
+  );
+});

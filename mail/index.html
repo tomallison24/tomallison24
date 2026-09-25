@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mail</title>
+<meta name="description" content="Gmail triage for the home screen: one tap buckets a sender's whole domain into Marketing, and Marketing empties itself.">
+<meta name="theme-color" content="#08080B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mail">
+<meta name="referrer" content="origin">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  Mail - Gmail triage as a home-screen app. No build step, no server, no
+  dependencies: this file is the whole app.
+
+  What one tap on the tag button does:
+    1. moves that conversation to the Marketing label and out of the inbox;
+    2. creates a Gmail filter so everything from the same domain does the
+       same from now on, without the app being open;
+    3. sweeps the mail already in the mailbox from that domain into Marketing.
+
+  Anything in Marketing older than 3 days (Settings: 1-30) goes to the Trash,
+  where Gmail deletes it for good after 30 days. The sweep runs when the app
+  opens; .github/workflows/mail.yml runs the same sweep daily so it happens
+  whether or not the app is opened.
+
+  Sign-in is the OAuth 2.0 implicit flow done by hand (a full-page redirect to
+  accounts.google.com and back) rather than Google's popup-based library: an
+  iPhone home-screen app opens popups in a separate browser view that cannot
+  hand a token back, while a redirect returns into the app. Access tokens last
+  about an hour and no refresh token exists, so a signed-out app bounces
+  through Google again - silently, once the grant is in place.
+
+  Scopes: gmail.modify (label, move, trash) and gmail.settings.basic (the
+  domain filters). Both are per-device; the token never leaves the phone.
+
+  Look: one sheet of frosted glass over a slow aurora, and every action has
+  its own motion - a tag stamp and a sheen before a row flies out to the
+  right, a row flying back left when it returns, a crumble for a deleted
+  rule, a wipe down the bucket when it empties. All of it collapses to
+  nothing under prefers-reduced-motion.
+-->
+<style>
+  :root {
+    --bg: #08080B;
+    --text: #FFFFFF;
+    --muted: rgba(235, 235, 245, 0.62);
+    --faint: rgba(235, 235, 245, 0.38);
+    --accent: #0A84FF;
+    --tag: #FF9F0A;
+    --danger: #FF453A;
+    /* glass */
+    --glass: rgba(18, 18, 22, 0.46);
+    --glass-2: rgba(38, 38, 44, 0.72);
+    --hair: rgba(255, 255, 255, 0.11);
+    --hair-2: rgba(255, 255, 255, 0.07);
+    --blur: blur(30px) saturate(180%);
+    --ease: cubic-bezier(.22, 1, .36, 1);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  html, body { margin: 0; color: var(--text); }
+  body {                                    /* no background: the aurora is behind it */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100vh; min-height: 100dvh;
+    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 84px) max(14px, env(safe-area-inset-left));
+    overscroll-behavior-y: none;
+  }
+
+  /* ---- the light behind the glass ---- */
+  .aurora { position: fixed; inset: -20%; z-index: -1; overflow: hidden; pointer-events: none; }
+  .aurora b {
+    position: absolute; display: block; border-radius: 50%;
+    filter: blur(58px); opacity: 0.72; will-change: transform;
+  }
+  .aurora b:nth-child(1) { width: 78vw; height: 78vw; left: -12vw;  top: 6vh;   background: radial-gradient(circle, #2E6BFF 0%, rgba(46,107,255,0) 68%); animation: drift1 34s ease-in-out infinite alternate; }
+  .aurora b:nth-child(2) { width: 66vw; height: 66vw; right: -14vw; top: 14vh;  background: radial-gradient(circle, #FF7A3D 0%, rgba(255,122,61,0) 68%); animation: drift2 41s ease-in-out infinite alternate; }
+  .aurora b:nth-child(3) { width: 86vw; height: 86vw; right: -16vw; bottom: 2vh; background: radial-gradient(circle, #9A5BFF 0%, rgba(154,91,255,0) 68%); animation: drift3 47s ease-in-out infinite alternate; }
+  .aurora b:nth-child(4) { width: 62vw; height: 62vw; left: -14vw;  bottom: 16vh; background: radial-gradient(circle, #18C3A5 0%, rgba(24,195,165,0) 68%); animation: drift4 38s ease-in-out infinite alternate; }
+  @keyframes drift1 { to { transform: translate3d(14vw, 10vh, 0) scale(1.18); } }
+  @keyframes drift2 { to { transform: translate3d(-12vw, 16vh, 0) scale(1.12); } }
+  @keyframes drift3 { to { transform: translate3d(-16vw, -12vh, 0) scale(1.22); } }
+  @keyframes drift4 { to { transform: translate3d(18vw, -14vh, 0) scale(1.15); } }
+
+  main { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  input { font: inherit; color: inherit; }
+  svg.i { display: inline-block; flex: none; fill: currentColor; }
+  .hide { display: none !important; }
+
+  /* ---- header ---- */
+  header { display: flex; align-items: center; gap: 10px; padding: 2px 4px 0; animation: fadeDown .5s var(--ease) both; }
+  header h1 { font-size: 27px; line-height: 1.05; letter-spacing: -0.025em; margin: 0; flex: 1; font-weight: 700; }
+  header .sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; margin-top: 3px; transition: opacity .3s; }
+  .iconbtn {
+    width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--glass); border: 1px solid var(--hair); color: var(--muted);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    transition: transform .18s var(--ease), background .2s, color .2s;
+  }
+  .iconbtn:active { transform: scale(0.9); background: var(--glass-2); color: var(--text); }
+  .iconbtn.turning svg { animation: rot .6s var(--ease); }
+
+  /* ---- tabs ---- */
+  .tabs {
+    position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 15px;
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
+    animation: fadeDown .5s .04s var(--ease) both;
+  }
+  .pill {
+    position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 11px;
+    background: rgba(255,255,255,0.13); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 10px rgba(0,0,0,0.25);
+    transition: transform .42s var(--ease), width .42s var(--ease);
+    pointer-events: none;
+  }
+  .tabs button {
+    position: relative; z-index: 1; flex: 1; padding: 8px 4px; border-radius: 11px;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: color .28s, transform .18s var(--ease);
+  }
+  .tabs button[aria-selected="true"] { color: var(--text); }
+  .tabs button:active { transform: scale(0.96); }
+  .tabs .count { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; transition: color .3s; }
+  .tabs .count.pop { animation: pop .45s var(--ease); color: var(--tag); }
+
+  /* ---- glass card ---- */
+  .card {
+    position: relative; border-radius: 22px; overflow: hidden;
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.38);
+  }
+  #screen > .card { animation: cardIn .5s var(--ease) both; }
+  #screen.quiet > .card, #screen.quiet ul.list > li, #screen.quiet .panel > * { animation: none; }
+  #screen.back > .card { animation: cardInBack .5s var(--ease) both; }
+  .card h2 {
+    font-size: 12px; font-weight: 600; color: var(--faint); margin: 0; padding: 13px 16px 9px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  /* ---- rows ---- */
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  ul.list > li {
+    position: relative; display: flex; align-items: stretch; gap: 10px; overflow: hidden;
+    padding: 11px 10px 11px 16px; border-top: 1px solid var(--hair-2);
+    animation: rowIn .52s var(--ease) both; animation-delay: calc(var(--i) * 34ms);
+    transition: height .3s var(--ease), padding .3s var(--ease), opacity .26s ease, transform .3s cubic-bezier(.4,0,.9,.4), filter .26s;
+  }
+  ul.list > li:first-child { border-top: 0; }
+  ul.list > li.going { height: 0 !important; padding-top: 0; padding-bottom: 0; opacity: 0; }
+  ul.list > li.going.right { transform: translateX(105%) rotate(1.6deg); }
+  ul.list > li.going.left  { transform: translateX(-105%) rotate(-1.6deg); }
+  ul.list > li.going.crumble { transform: scale(0.93); filter: blur(5px); }
+  /* the light that runs across a row the moment its action lands */
+  ul.list > li.confirm::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 20%, rgba(255,159,10,0.22) 45%, rgba(255,255,255,0.30) 52%, transparent 78%);
+    transform: translateX(-100%); animation: sheen .75s var(--ease);
+  }
+  ul.list > li.confirm.blue::after { background: linear-gradient(105deg, transparent 20%, rgba(10,132,255,0.22) 45%, rgba(255,255,255,0.30) 52%, transparent 78%); }
+
+  .open { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 2px 0; transition: transform .2s var(--ease), opacity .2s; }
+  button.open:active { transform: scale(0.985); opacity: 0.75; }
+  .who { display: flex; align-items: baseline; gap: 7px; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
+  .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who .when { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--faint); flex: none; font-variant-numeric: tabular-nums; }
+  .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; align-self: center; box-shadow: 0 0 10px rgba(10,132,255,0.8); animation: breathe 2.6s ease-in-out infinite; }
+  .subj { font-size: 14px; color: rgba(255,255,255,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .snip { font-size: 13px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--hair-2); color: var(--muted); font-size: 11px;
+    max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chip svg { opacity: 0.7; }
+  .chip.due { color: var(--danger); border-color: rgba(255,69,58,0.32); background: rgba(255,69,58,0.10); animation: breathe 2.4s ease-in-out infinite; }
+
+  .act {
+    width: 46px; height: 46px; align-self: center; border-radius: 15px;
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--hair); color: var(--tag);
+    transition: transform .2s var(--ease), background .2s, box-shadow .3s;
+  }
+  .act:active { transform: scale(0.88); background: rgba(255,159,10,0.16); }
+  .act.undo { color: var(--accent); }
+  .act.undo:active { background: rgba(10,132,255,0.16); }
+  .act.warn { color: var(--danger); }
+  .act.warn:active { background: rgba(255,69,58,0.16); }
+  .act[disabled] { opacity: 0.55; }
+  .act.stamping { animation: stamp .5s var(--ease); }
+
+  /* ---- the bucket emptying ---- */
+  .card.flushing::before {
+    content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,69,58,0.00) 0%, rgba(255,69,58,0.16) 45%, rgba(255,255,255,0.10) 55%, rgba(255,69,58,0.00) 100%);
+    animation: flush 1.05s var(--ease);
+  }
+
+  /* ---- states ---- */
+  .empty { padding: 30px 20px; text-align: center; color: var(--faint); font-size: 14px; line-height: 1.55; animation: rowIn .5s var(--ease) both; }
+  .skel {
+    height: 62px; border-top: 1px solid var(--hair-2);
+    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.055) 50%, transparent 80%);
+    background-size: 220% 100%; animation: shimmer 1.4s linear infinite; animation-delay: calc(var(--i) * 90ms);
+  }
+  .skel:first-child { border-top: 0; }
+
+  /* ---- panels ---- */
+  .panel { padding: 18px; display: flex; flex-direction: column; gap: 13px; }
+  .panel > * { animation: rowIn .5s var(--ease) both; }
+  .panel > *:nth-child(2) { animation-delay: .05s; } .panel > *:nth-child(3) { animation-delay: .1s; }
+  .panel > *:nth-child(4) { animation-delay: .15s; } .panel > *:nth-child(5) { animation-delay: .2s; }
+  .panel > *:nth-child(n+6) { animation-delay: .25s; }
+  .panel p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--muted); }
+  .panel strong { color: var(--text); }
+  .panel ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--muted); }
+  .panel code, code.url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--hair-2); border-radius: 7px; padding: 2px 6px;
+    word-break: break-all; color: var(--text);
+  }
+  .panel input[type=text] {
+    width: 100%; padding: 12px 13px; border-radius: 13px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--hair); outline: none; font-size: 15px; transition: border-color .25s, box-shadow .25s;
+  }
+  .panel input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
+  .hero {
+    align-self: center; width: 76px; height: 76px; border-radius: 26px; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,159,10,0.14); border: 1px solid rgba(255,159,10,0.28); color: var(--tag);
+    box-shadow: 0 0 40px rgba(255,159,10,0.22), inset 0 1px 0 rgba(255,255,255,0.18);
+    animation: float 4.5s ease-in-out infinite alternate;
+  }
+  .hero svg { width: 34px; height: 34px; }
+  .btn {
+    position: relative; overflow: hidden;
+    padding: 13px 16px; border-radius: 14px; background: var(--accent); color: #fff; font-weight: 600; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    box-shadow: 0 6px 20px rgba(10,132,255,0.30), inset 0 1px 0 rgba(255,255,255,0.22);
+    transition: transform .18s var(--ease), filter .2s, box-shadow .25s;
+  }
+  .btn:active { transform: scale(0.975); filter: brightness(0.9); }
+  .btn::after {
+    content: ''; position: absolute; inset: 0; background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.45), transparent 60%);
+    opacity: 0; transition: opacity .5s;
+  }
+  .btn:active::after { opacity: 1; transition: opacity 0s; }
+  .btn.ghost { background: rgba(255,255,255,0.07); border: 1px solid var(--hair); color: var(--text); font-weight: 500; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+  .btn.warn { background: rgba(255,69,58,0.10); border: 1px solid rgba(255,69,58,0.32); color: var(--danger); font-weight: 500; box-shadow: none; }
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); }
+  .field input[type=number] {
+    width: 72px; padding: 9px 10px; border-radius: 11px; background: rgba(255,255,255,0.06); border: 1px solid var(--hair);
+    color: var(--text); font: inherit; text-align: center; outline: none;
+  }
+  .note { font-size: 12px; line-height: 1.55; color: var(--faint); }
+  .note.bad { color: #FF9A92; }
+
+  /* ---- toast ---- */
+  #toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 30;
+    max-width: min(480px, calc(100vw - 28px)); width: max-content;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 13px 12px 16px; border-radius: 16px;
+    background: rgba(30, 30, 34, 0.62); border: 1px solid var(--hair);
+    backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+    font-size: 14px; animation: toastIn .42s var(--ease) both;
+  }
+  #toast .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toast button { color: var(--accent); font-weight: 600; flex: none; padding: 3px 5px; transition: transform .18s var(--ease); }
+  #toast button:active { transform: scale(0.92); }
+  #toast.bad { border-color: rgba(255,69,58,0.42); }
+  #toast.bad .msg { white-space: normal; }
+
+  .foot { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 12px; color: var(--faint); padding: 2px 0 4px; animation: rowIn .5s .2s var(--ease) both; }
+  .foot button { color: var(--muted); padding: 5px 10px; border-radius: 999px; background: var(--glass); border: 1px solid var(--hair-2); transition: transform .18s var(--ease), color .2s; }
+  .foot button:active { transform: scale(0.94); color: var(--text); }
+
+  /* ---- keyframes ---- */
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @keyframes cardIn { from { opacity: 0; transform: translateX(18px) scale(0.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes cardInBack { from { opacity: 0; transform: translateX(-18px) scale(0.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(10px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  @keyframes stamp { 0% { transform: scale(1); } 32% { transform: scale(1.34); box-shadow: 0 0 0 0 rgba(255,159,10,0.55); } 100% { transform: scale(1); box-shadow: 0 0 0 16px rgba(255,159,10,0); } }
+  @keyframes flush { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+  @keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.6); } 100% { transform: scale(1); } }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes float { from { transform: translateY(-5px) rotate(-3deg); } to { transform: translateY(5px) rotate(3deg); } }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  @keyframes shimmer { from { background-position: 220% 0; } to { background-position: -220% 0; } }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+  #toast { transform: translateX(-50%); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+    .aurora b { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+<main>
+  <header>
+    <h1>Mail<span class="sub" id="sub">&nbsp;</span></h1>
+    <button class="iconbtn hide" id="refresh" aria-label="Refresh">
+      <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6a5.9 5.9 0 0 1 4.22 1.78L13 11h8V3z"/></svg>
+    </button>
+    <button class="iconbtn hide" id="gear" aria-label="Settings">
+      <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.3 7.3 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 14 2h-4a.49.49 0 0 0-.48.42l-.38 2.65c-.61.25-1.17.58-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66a.5.5 0 0 0-.12.64l2 3.46c.14.24.44.32.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.48.42h4c.24 0 .45-.18.48-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1c.17.1.47.02.61-.22l2-3.46a.5.5 0 0 0-.12-.64z"/></svg>
+    </button>
+  </header>
+
+  <div class="tabs hide" id="tabs" role="tablist">
+    <span class="pill" id="pill"></span>
+    <button role="tab" data-view="inbox" aria-selected="true">Inbox <span class="count" id="c-inbox"></span></button>
+    <button role="tab" data-view="marketing" aria-selected="false">Marketing <span class="count" id="c-mkt"></span></button>
+    <button role="tab" data-view="rules" aria-selected="false">Rules <span class="count" id="c-rules"></span></button>
+  </div>
+
+  <div id="screen"></div>
+  <div class="foot" id="foot"></div>
+</main>
+<div id="toast" class="hide" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+// Paste your OAuth client ID here to skip the setup screen on every device.
+// It is not a secret: Google identifies the app by it, and only the redirect
+// URIs registered against it can receive a token.
+const BUILT_IN_CLIENT_ID = '';
+
+const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
+const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
+const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.modify',          // label, move, trash
+  'https://www.googleapis.com/auth/gmail.settings.basic',  // the domain filters
+];
+const K = {
+  clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
+  lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
+};
+const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
+const PAGE = 40;                  // conversations shown per list
+
+// ---------------------------------------------------------------------------
+// Small helpers
+// ---------------------------------------------------------------------------
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ls = {
+  get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  del: k => { try { localStorage.removeItem(k); } catch {} },
+};
+
+async function pool(items, n, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); }
+  }));
+  return out;
+}
+
+const chunks = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+
+function ago(ms) {
+  const s = (Date.now() - ms) / 1000;
+  if (s < 60) return 'now';
+  if (s < 3600) return Math.round(s / 60) + 'm';
+  if (s < 86400) return Math.round(s / 3600) + 'h';
+  if (s < 86400 * 7) return Math.round(s / 86400) + 'd';
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+const settings = {
+  get days() { const n = parseInt(ls.get(K.days, '3'), 10); return Number.isFinite(n) && n >= 1 && n <= 30 ? n : 3; },
+  set days(v) { ls.set(K.days, String(v)); },
+  get label() { return ls.get(K.label, 'Marketing') || 'Marketing'; },
+  set label(v) { ls.set(K.label, v); },
+};
+
+const clientId = () => (ls.get(K.clientId, '') || BUILT_IN_CLIENT_ID).trim();
+
+// ---------------------------------------------------------------------------
+// Sign-in: OAuth 2.0 implicit flow, by full-page redirect
+// ---------------------------------------------------------------------------
+class AuthError extends Error {}
+
+function redirectUri() {
+  return location.origin + location.pathname.replace(/index\.html$/, '');
+}
+
+function getToken() {
+  try {
+    const o = JSON.parse(ls.get(K.token, 'null'));
+    if (o && o.exp > Date.now()) return o;
+  } catch {}
+  return null;
+}
+
+const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic');
+
+function signIn(opts = {}) {
+  const id = clientId();
+  if (!id) return;
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+  // localStorage, not sessionStorage: on iOS the trip through Google can come
+  // back in a fresh page context and a lost nonce would look like tampering.
+  ls.set(K.state, nonce);
+  ls.set(K.lastAuth, String(Date.now()));
+  const u = new URL(AUTH);
+  u.search = new URLSearchParams({
+    client_id: id,
+    redirect_uri: redirectUri(),
+    response_type: 'token',
+    scope: SCOPES.join(' '),
+    include_granted_scopes: 'true',
+    state: nonce,
+    ...(opts.chooseAccount ? { prompt: 'select_account' } : {}),
+  });
+  location.href = u.toString();
+}
+
+function signOut() {
+  ls.del(K.token); ls.del(K.state); ls.del(K.lastAuth);
+  state.me = null;
+  render();
+}
+
+// Reads #access_token=... off the URL, then puts the URL back how it was.
+function consumeRedirect() {
+  const raw = location.hash.slice(1);
+  if (!raw || !/(^|&)(access_token|error)=/.test(raw)) return null;
+  const p = new URLSearchParams(raw);
+  history.replaceState(null, '', redirectUri() + location.search);
+  const want = ls.get(K.state, '');
+  ls.del(K.state);
+  if (p.get('error')) return { error: p.get('error') };
+  if (!want || p.get('state') !== want) return { error: 'state_mismatch' };
+  const life = parseInt(p.get('expires_in') || '3600', 10);
+  ls.set(K.token, JSON.stringify({
+    t: p.get('access_token'),
+    exp: Date.now() + life * 1000 - 60e3,
+    scope: p.get('scope') || '',
+  }));
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Gmail
+// ---------------------------------------------------------------------------
+async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
+  const tok = getToken();
+  if (!tok) throw new AuthError('signed out');
+  const url = new URL(API + path);
+  for (const [k, v] of Object.entries(params || {})) {
+    if (v == null) continue;
+    for (const one of Array.isArray(v) ? v : [v]) url.searchParams.append(k, one);
+  }
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: { Authorization: 'Bearer ' + tok.t, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    if (tries < 3) { await sleep(500 * 2 ** tries); return api(path, { method, body, params, tries: tries + 1 }); }
+    throw new Error('No connection to Gmail');
+  }
+  if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
+  const text = await res.text();
+  if (!res.ok) {
+    const rate = res.status === 429 || res.status >= 500 || (res.status === 403 && /rateLimitExceeded/i.test(text));
+    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return api(path, { method, body, params, tries: tries + 1 }); }
+    let msg = text.slice(0, 200);
+    try { msg = JSON.parse(text).error.message; } catch {}
+    const err = new Error(msg || ('Gmail returned ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+let labelPromise = null;
+function bucketLabel() {
+  if (!labelPromise) {
+    labelPromise = (async () => {
+      const name = settings.label;
+      const { labels = [] } = await api('/labels');
+      const found = labels.find(l => l.name.toLowerCase() === name.toLowerCase());
+      return found || api('/labels', {
+        method: 'POST',
+        body: { name, labelListVisibility: 'labelShow', messageListVisibility: 'show' },
+      });
+    })().catch(e => { labelPromise = null; throw e; });
+  }
+  return labelPromise;
+}
+
+async function idsFor(query, cap = 500) {
+  const ids = [];
+  let pageToken;
+  do {
+    const r = await api('/messages', { params: { q: query, maxResults: Math.min(100, cap - ids.length), pageToken } });
+    for (const m of r.messages || []) ids.push(m.id);
+    pageToken = r.nextPageToken;
+  } while (pageToken && ids.length < cap);
+  return ids;
+}
+
+function parseFrom(header) {
+  const m = /^\s*(?:"?([^"<]*?)"?\s*)?<?([^\s<>]+@[^\s<>]+?)>?\s*$/.exec(header || '');
+  const email = (m ? m[2] : '').toLowerCase();
+  const name = (m && m[1] ? m[1] : '').trim() || email.split('@')[0] || 'Unknown';
+  return { name, email, host: email.split('@')[1] || '' };
+}
+
+async function hydrate(ids) {
+  const out = await pool(ids, 6, id => api('/messages/' + id, {
+    params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] },
+  }).catch(() => null));
+  return out.filter(Boolean).map(m => {
+    const h = Object.fromEntries((m.payload?.headers || []).map(x => [x.name.toLowerCase(), x.value]));
+    const from = parseFrom(h.from);
+    return {
+      id: m.id, threadId: m.threadId, snippet: m.snippet || '',
+      subject: h.subject || '(no subject)',
+      date: Number(m.internalDate) || Date.parse(h.date) || Date.now(),
+      unread: (m.labelIds || []).includes('UNREAD'),
+      ...from,
+    };
+  }).sort((a, b) => b.date - a.date);
+}
+
+// ---------------------------------------------------------------------------
+// Which senders a rule may cover
+// ---------------------------------------------------------------------------
+// Two-part public suffixes, so a rule on bbc.co.uk is not written as co.uk.
+const SUFFIX2 = new Set(('co.uk org.uk ac.uk gov.uk me.uk net.uk sch.uk ltd.uk plc.uk com.au net.au org.au edu.au gov.au ' +
+  'co.nz net.nz org.nz co.za org.za com.br com.mx com.ar com.co co.jp ne.jp or.jp co.in net.in org.in com.sg com.hk ' +
+  'com.tw com.tr com.ua com.pl com.vn com.my com.ph co.kr co.th co.id co.il com.cn net.cn org.cn com.es com.pt').split(' '));
+
+// Shared mailbox providers: a rule on these would swallow personal mail, so
+// those senders get a rule on the exact address instead.
+const SHARED = new Set(('gmail.com googlemail.com outlook.com hotmail.com live.com msn.com yahoo.com ymail.com rocketmail.com ' +
+  'aol.com icloud.com me.com mac.com protonmail.com proton.me pm.me gmx.com gmx.net gmx.de mail.com zoho.com fastmail.com ' +
+  'hey.com duck.com qq.com 163.com 126.com naver.com daum.net yandex.com yandex.ru mail.ru tutanota.com hushmail.com ' +
+  'web.de t-online.de free.fr orange.fr laposte.net sky.com btinternet.com virginmedia.com talktalk.net ntlworld.com ' +
+  'blueyonder.co.uk comcast.net verizon.net att.net sbcglobal.net cox.net charter.net shaw.ca rogers.com bell.net ' +
+  'bigpond.com optusnet.com.au xtra.co.nz').split(' '));
+
+function baseDomain(host) {
+  const parts = String(host || '').toLowerCase().split('.').filter(Boolean);
+  if (parts.length <= 2) return parts.join('.');
+  return SUFFIX2.has(parts.slice(-2).join('.')) ? parts.slice(-3).join('.') : parts.slice(-2).join('.');
+}
+
+function isShared(domain) {
+  return SHARED.has(domain) || /^(yahoo|gmx|yandex|outlook|hotmail|live|aol)\./.test(domain);
+}
+
+// What one tap should cover: the whole domain, or just this sender.
+function ruleFor(item) {
+  const domain = baseDomain(item.host);
+  if (!domain || isShared(domain)) return { kind: 'sender', match: item.email, label: item.email };
+  return { kind: 'domain', match: domain, label: domain };
+}
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+// One tap: this conversation, a filter for everything that follows, and the
+// mail from that sender already in the mailbox.
+async function bucket(item) {
+  const label = await bucketLabel();
+  const rule = ruleFor(item);
+  const name = label.name.replace(/"/g, '');
+  const back = { label: label.id, threadId: item.threadId, fromInbox: [], filed: [], filterId: null, rule };
+
+  await api('/threads/' + item.threadId + '/modify', {
+    method: 'POST',
+    body: { addLabelIds: [label.id], removeLabelIds: ['INBOX'] },
+  });
+
+  if (canFilter()) {
+    try {
+      const existing = (await api('/settings/filters')).filter || [];
+      const already = existing.find(f =>
+        (f.criteria?.from || '').toLowerCase() === rule.match.toLowerCase() &&
+        (f.action?.addLabelIds || []).includes(label.id));
+      if (!already) {
+        const made = await api('/settings/filters', {
+          method: 'POST',
+          body: { criteria: { from: rule.match }, action: { addLabelIds: [label.id], removeLabelIds: ['INBOX'] } },
+        });
+        back.filterId = made.id;
+      }
+      state.rules = null;   // re-read next time the tab is opened
+    } catch (e) {
+      toast('Moved, but the rule failed: ' + e.message, { bad: true });
+    }
+  }
+
+  // Backfill, kept apart so Undo can put back only what was in the inbox.
+  const q = 'from:(' + rule.match + ') -label:"' + name + '" -in:sent -in:chats';
+  const [inInbox, elsewhere] = await Promise.all([idsFor(q + ' in:inbox', 400), idsFor(q + ' -in:inbox', 400)]);
+  back.fromInbox = inInbox;
+  back.filed = elsewhere;
+  for (const part of chunks(inInbox, 500)) {
+    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: [label.id], removeLabelIds: ['INBOX'] } });
+  }
+  for (const part of chunks(elsewhere, 500)) {
+    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: [label.id] } });
+  }
+  return { back, moved: 1 + inInbox.length + elsewhere.length };
+}
+
+async function undoBucket(back) {
+  await api('/threads/' + back.threadId + '/modify', {
+    method: 'POST', body: { addLabelIds: ['INBOX'], removeLabelIds: [back.label] },
+  });
+  for (const part of chunks(back.fromInbox, 500)) {
+    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: ['INBOX'], removeLabelIds: [back.label] } });
+  }
+  for (const part of chunks(back.filed, 500)) {
+    await api('/messages/batchModify', { method: 'POST', body: { ids: part, removeLabelIds: [back.label] } });
+  }
+  if (back.filterId) { try { await api('/settings/filters/' + back.filterId, { method: 'DELETE' }); } catch {} }
+  state.rules = null;
+}
+
+// Takes a single conversation back out of the bucket, leaving the rule alone.
+async function unbucket(item) {
+  const label = await bucketLabel();
+  await api('/threads/' + item.threadId + '/modify', {
+    method: 'POST', body: { addLabelIds: ['INBOX'], removeLabelIds: [label.id] },
+  });
+}
+
+// Everything in the bucket older than the cut-off goes to the Trash, which
+// Gmail empties for good after 30 days.
+async function sweep() {
+  const label = await bucketLabel();
+  const q = 'label:"' + label.name.replace(/"/g, '') + '" older_than:' + settings.days + 'd';
+  const ids = await idsFor(q, 1000);
+  let done = 0;
+  await pool(ids, 5, async id => {
+    try { await api('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch {}
+  });
+  ls.set(K.swept, String(Date.now()));
+  return done;
+}
+
+// ---------------------------------------------------------------------------
+// View
+// ---------------------------------------------------------------------------
+const state = { view: 'inbox', inbox: null, mkt: null, rules: null, me: null, busy: false, error: null };
+const screen = $('#screen');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let toastTimer = null;
+function toast(msg, { action, label, bad, ms } = {}) {
+  const el = $('#toast');
+  clearTimeout(toastTimer);
+  el.className = bad ? 'bad' : '';
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';   // replay the rise
+  el.innerHTML = '<span class="msg">' + esc(msg) + '</span>' + (action ? '<button id="toast-act">' + esc(label || 'Undo') + '</button>' : '');
+  if (action) $('#toast-act').onclick = () => { el.classList.add('hide'); action(); };
+  toastTimer = setTimeout(() => el.classList.add('hide'), ms || (action ? 7000 : bad ? 6000 : 3000));
+}
+
+const ICON = {
+  tag: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9a2 2 0 0 0 2.82 0l7-7a2 2 0 0 0 0-2.84M6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8"/></svg>',
+  back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
+  bin: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  spin: '<svg class="i spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8" /></svg>',
+};
+
+function listSkeleton(n = 6) {
+  return '<div class="card">' + Array.from({ length: n }, (_, i) => '<div class="skel" style="--i:' + i + '"></div>').join('') + '</div>';
+}
+
+function rowHTML(item, i, view) {
+  const rule = ruleFor(item);
+  const left = settings.days - (Date.now() - item.date) / 86400e3;
+  const due = left <= 0;
+  const meta = view === 'inbox'
+    ? '<span class="chip">' + esc(rule.label) + '</span>'
+    : '<span class="chip ' + (due ? 'due' : '') + '">' + ICON.bin + (due ? 'due now' : 'in ' + Math.ceil(left) + 'd') + '</span>';
+  return '<li style="--i:' + i + '" data-id="' + esc(item.id) + '">' +
+    '<button class="open" data-act="open" data-thread="' + esc(item.threadId) + '">' +
+      '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
+        '<span class="name">' + esc(item.name) + '</span>' +
+        '<span class="when">' + esc(ago(item.date)) + '</span></span>' +
+      '<span class="subj">' + esc(item.subject) + '</span>' +
+      '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
+      '<span class="meta">' + meta + '</span>' +
+    '</button>' +
+    '<button class="act ' + (view === 'inbox' ? '' : 'undo') + '" data-act="' + (view === 'inbox' ? 'bucket' : 'restore') + '" ' +
+      'aria-label="' + (view === 'inbox' ? 'Move ' + esc(rule.label) + ' to ' + esc(settings.label) : 'Back to inbox') + '">' +
+      (view === 'inbox' ? ICON.tag : ICON.back) + '</button>' +
+  '</li>';
+}
+
+const lastCount = {};
+function setCount(sel, n) {
+  const el = $(sel);
+  if (!el) return;
+  el.textContent = n == null ? '' : String(n);
+  if (lastCount[sel] != null && n != null && n !== lastCount[sel]) {
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+  lastCount[sel] = n;
+}
+
+function render() {
+  const signedIn = !!getToken();
+  setCount('#c-inbox', state.inbox?.length);
+  setCount('#c-mkt', state.mkt?.length);
+  setCount('#c-rules', state.rules?.length);
+  $('#tabs').classList.toggle('hide', !signedIn || state.view === 'settings');
+  $('#refresh').classList.toggle('hide', !signedIn || state.view === 'settings');
+  $('#gear').classList.toggle('hide', !signedIn);
+  $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
+  $('#sub').textContent = state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
+
+  if (!clientId()) return paint(viewSetup());
+  if (!signedIn) return paint(viewSignIn());
+  if (state.view === 'settings') return paint(viewSettings());
+  if (state.view === 'rules') return paint(viewRules());
+  return paint(viewList(state.view));
+}
+
+let quietOnce = false;              // set by an action: re-render without the entrance stagger
+function paint(html) {
+  screen.classList.toggle('quiet', quietOnce);
+  quietOnce = false;
+  screen.innerHTML = html;
+  movePill();
+  $('#foot').innerHTML = footHTML();
+}
+
+function footHTML() {
+  if (!getToken() || state.view === 'settings') return '';
+  const last = Number(ls.get(K.swept, 0));
+  const when = !last ? 'Not cleaned yet' : ago(last) === 'now' ? 'Cleaned just now' : 'Cleaned ' + ago(last) + ' ago';
+  return '<span>' + when + '</span>' +
+    '<button data-act="sweep">Clean up now</button>';
+}
+
+function viewSetup() {
+  return '<div class="card panel">' +
+    '<p><strong>One-time setup.</strong> This app talks to Gmail straight from your phone, so it needs an OAuth client ID of your own. It takes about three minutes.</p>' +
+    '<ol>' +
+      '<li>Open <code>console.cloud.google.com</code> and create a project.</li>' +
+      '<li>APIs &amp; Services → Library → enable <strong>Gmail API</strong>.</li>' +
+      '<li>OAuth consent screen: External, add yourself as a test user.</li>' +
+      '<li>Credentials → Create credentials → <strong>OAuth client ID</strong> → Web application.</li>' +
+      '<li>Add this exact <strong>Authorised JavaScript origin</strong>:<br><code class="url">' + esc(location.origin) + '</code></li>' +
+      '<li>Add this exact <strong>Authorised redirect URI</strong>:<br><code class="url">' + esc(redirectUri()) + '</code></li>' +
+      '<li>Copy the client ID and paste it here.</li>' +
+    '</ol>' +
+    '<input type="text" id="cid" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com" value="' + esc(ls.get(K.clientId, '')) + '">' +
+    '<button class="btn" data-act="save-cid">Save and connect</button>' +
+    '<p class="note">The client ID is not a secret and stays on this device. Nothing is sent anywhere but Google.</p>' +
+  '</div>';
+}
+
+function viewSignIn() {
+  const failed = state.error;
+  return '<div class="card panel signin">' +
+    '<div class="hero">' + ICON.tag + '</div>' +
+    '<p><strong>Connect Gmail</strong> to triage your inbox. One tap files a sender, everything from their domain follows, and the bucket empties itself after ' + settings.days + ' days.</p>' +
+    (failed ? '<p class="note bad">' + esc(failed) + '</p>' : '') +
+    '<button class="btn" data-act="signin">Connect Gmail</button>' +
+    '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
+    '<p class="note">Access lasts about an hour, then reconnects in a tap. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
+    '<button class="btn ghost" data-act="forget-cid">Change client ID</button>' +
+  '</div>';
+}
+
+function viewList(view) {
+  const items = view === 'inbox' ? state.inbox : state.mkt;
+  if (state.error) return '<div class="card"><div class="empty">' + esc(state.error) + '</div></div>';
+  if (items === null) return listSkeleton();
+  if (!items.length) {
+    return '<div class="card"><div class="empty">' + (view === 'inbox'
+      ? 'Inbox zero. Nothing left to file.'
+      : 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.') + '</div></div>';
+  }
+  const head = view === 'marketing'
+    ? '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>'
+    : '';
+  return '<div class="card">' + head + '<ul class="list">' + items.map((it, i) => rowHTML(it, i, view)).join('') + '</ul></div>';
+}
+
+function viewRules() {
+  if (state.rules === null) return listSkeleton(4);
+  if (!canFilter()) {
+    return '<div class="card"><div class="empty">Filter permission was not granted, so rules can\'t be listed.<br>Reconnect and allow "manage your filters".</div></div>';
+  }
+  if (!state.rules.length) {
+    return '<div class="card"><div class="empty">No rules yet.<br>Tapping the tag on a message writes one.</div></div>';
+  }
+  return '<div class="card"><h2>Gmail filters sending mail to ' + esc(settings.label) + '</h2><ul class="list">' +
+    state.rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '">' +
+      '<span class="open"><span class="who"><span class="name">' + esc(f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
+      '<span class="snip">Skips the inbox · files as ' + esc(settings.label) + '</span></span>' +
+      '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></li>').join('') +
+  '</ul></div>';
+}
+
+function viewSettings() {
+  return '<div class="card panel">' +
+    '<div class="field"><label for="days">Delete after</label>' +
+      '<span><input type="number" id="days" min="1" max="30" value="' + settings.days + '"> days</span></div>' +
+    '<div class="field"><label for="lab">Bucket label</label>' +
+      '<input type="text" id="lab" style="width:150px" value="' + esc(settings.label) + '"></div>' +
+    '<button class="btn ghost" data-act="save-settings">Save</button>' +
+    '<p class="note">Mail is moved to the Trash, where Gmail deletes it for good after 30 days — so there is always a way back.</p>' +
+    '<hr style="border:0;border-top:1px solid var(--border);margin:2px 0">' +
+    '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
+    '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
+    '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
+    '<button class="btn warn" data-act="signout">Sign out</button>' +
+    '<p class="note">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>' +
+  '</div>';
+}
+
+// The sliding pill behind the selected tab.
+function movePill() {
+  const tabs = $('#tabs'), pill = $('#pill');
+  if (!pill || tabs.classList.contains('hide')) return;
+  const on = tabs.querySelector('[aria-selected="true"]');
+  if (!on) return;
+  pill.style.width = on.offsetWidth + 'px';
+  pill.style.transform = 'translateX(' + on.offsetLeft + 'px)';
+}
+
+// ---------------------------------------------------------------------------
+// Loading
+// ---------------------------------------------------------------------------
+async function load(view, { force } = {}) {
+  try {
+    state.error = null;
+    if (view === 'rules') {
+      if (state.rules && !force) return render();
+      state.rules = null; render();
+      if (!canFilter()) { state.rules = []; return render(); }
+      const label = await bucketLabel();
+      const all = (await api('/settings/filters')).filter || [];
+      state.rules = all.filter(f => (f.action?.addLabelIds || []).includes(label.id));
+      return render();
+    }
+    const key = view === 'inbox' ? 'inbox' : 'mkt';
+    if (state[key] && !force) return render();
+    state[key] = null; render();
+    const q = view === 'inbox' ? 'in:inbox -in:chats' : 'label:"' + settings.label.replace(/"/g, '') + '"';
+    const ids = await idsFor(q, PAGE);
+    state[key] = await hydrate(ids);
+    render();
+  } catch (e) {
+    if (e instanceof AuthError) return render();
+    state.error = e.message;
+    render();
+  }
+}
+
+async function loadProfile() {
+  try {
+    const p = await api('/profile');
+    state.me = p.emailAddress;
+    $('#sub').textContent = state.me;
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('[role=tab]');
+  if (!b) return;
+  const order = ['inbox', 'marketing', 'rules'];
+  screen.classList.toggle('back', order.indexOf(b.dataset.view) < order.indexOf(state.view));
+  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t === b));
+  state.view = b.dataset.view;
+  movePill();
+  load(state.view);
+});
+
+$('#refresh').addEventListener('click', async () => {
+  const btn = $('#refresh');
+  btn.classList.add('turning');
+  labelPromise = null;
+  await load(state.view, { force: true });
+  setTimeout(() => btn.classList.remove('turning'), 300);
+});
+
+$('#gear').addEventListener('click', () => {
+  state.view = state.view === 'settings' ? 'inbox' : 'settings';
+  render();
+  if (state.view !== 'settings') load(state.view);
+});
+
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  const li = el.closest('li');
+
+  if (act === 'save-cid') {
+    const v = $('#cid').value.trim();
+    if (!v) return toast('Paste the client ID first', { bad: true });
+    ls.set(K.clientId, v);
+    return signIn();
+  }
+  if (act === 'forget-cid') { ls.del(K.clientId); return render(); }
+  if (act === 'signin') return signIn();
+  if (act === 'signin-pick') return signIn({ chooseAccount: true });
+  if (act === 'signout') { state.view = 'inbox'; return signOut(); }
+
+  if (act === 'save-settings') {
+    const d = Math.max(1, Math.min(30, parseInt($('#days').value, 10) || 3));
+    const name = ($('#lab').value || 'Marketing').trim();
+    const changed = name !== settings.label;
+    settings.days = d; settings.label = name;
+    if (changed) { labelPromise = null; state.mkt = null; state.rules = null; }
+    toast('Saved');
+    state.view = 'inbox'; render(); return load('inbox', { force: changed });
+  }
+
+  if (act === 'open') {
+    const box = state.me ? encodeURIComponent(state.me) : '0';
+    return window.open('https://mail.google.com/mail/u/' + box + '/#all/' + el.dataset.thread, '_blank', 'noopener');
+  }
+
+  if (act === 'sweep') {
+    if (state.busy) return;
+    state.busy = true;
+    const card = screen.querySelector('.card');
+    if (card && !reduced) { card.classList.add('flushing'); setTimeout(() => card.classList.remove('flushing'), 1100); }
+    toast('Cleaning up…');
+    try {
+      const n = await sweep();
+      toast(n ? n + ' moved to the Trash' : 'Nothing old enough yet');
+      state.mkt = null; if (state.view === 'marketing') load('marketing', { force: true });
+      $('#foot').innerHTML = footHTML();
+    } catch (err) {
+      toast(err instanceof AuthError ? 'Session expired — reconnect' : err.message, { bad: true });
+      render();
+    }
+    state.busy = false;
+    return;
+  }
+
+  if (act === 'del-rule') {
+    const id = li.dataset.filter;
+    el.disabled = true;
+    confirmTap(el, li, 'tag');
+    try {
+      await api('/settings/filters/' + id, { method: 'DELETE' });
+      await vanish(li, 'crumble');
+      state.rules = state.rules.filter(f => f.id !== id);
+      quietOnce = true; render();
+      toast('Rule deleted. Mail already filed stays put.');
+    } catch (err) { el.disabled = false; toast(err.message, { bad: true }); }
+    return;
+  }
+
+  if (act === 'bucket' || act === 'restore') {
+    const id = li.dataset.id;
+    const from = act === 'bucket' ? 'inbox' : 'mkt';
+    const item = (state[from] || []).find(x => x.id === id);
+    if (!item) return;
+    el.disabled = true;
+    confirmTap(el, li, act === 'restore' ? 'blue' : 'tag');
+    el.innerHTML = ICON.spin;
+    try {
+      if (act === 'bucket') {
+        const { back, moved } = await bucket(item);
+        await vanish(li, 'right');
+        state.inbox = state.inbox.filter(x => x.id !== id);
+        state.mkt = null;
+        quietOnce = true; render();
+        const what = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
+        toast(what + ' → ' + settings.label + (moved > 1 ? ' · ' + moved + ' messages' : ''), {
+          label: 'Undo',
+          action: async () => {
+            try { await undoBucket(back); toast('Put back'); state.inbox = null; state.mkt = null; load(state.view, { force: true }); }
+            catch (err) { toast(err.message, { bad: true }); }
+          },
+        });
+      } else {
+        await unbucket(item);
+        await vanish(li, 'left');
+        state.mkt = state.mkt.filter(x => x.id !== id);
+        state.inbox = null;
+        quietOnce = true; render();
+        toast('Back in the inbox. The rule is still on — remove it under Rules.');
+      }
+    } catch (err) {
+      el.disabled = false;
+      el.innerHTML = act === 'bucket' ? ICON.tag : ICON.back;
+      toast(err instanceof AuthError ? 'Session expired — reconnect' : err.message, { bad: true });
+      if (err instanceof AuthError) render();
+    }
+  }
+});
+
+// Sends a row off the way its action points: filed mail leaves to the right,
+// mail coming back to the inbox to the left, a deleted rule crumbles in place.
+function vanish(li, dir = 'right') {
+  if (!li || reduced) return Promise.resolve();
+  li.style.height = li.offsetHeight + 'px';
+  void li.offsetHeight;                       // commit the height, then collapse
+  li.classList.add('going', dir);
+  return new Promise(r => setTimeout(r, 300));
+}
+
+// A tap is answered before the network is: the button stamps and a light
+// runs across the row while Gmail is still being asked.
+function confirmTap(btn, li, tone) {
+  if (reduced) return;
+  btn.classList.add('stamping');
+  li.classList.add('confirm');
+  if (tone === 'blue') li.classList.add('blue');
+  setTimeout(() => { btn.classList.remove('stamping'); li.classList.remove('confirm', 'blue'); }, 820);
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+(function boot() {
+  const back = consumeRedirect();
+  if (back?.error) {
+    state.error = back.error === 'access_denied' ? 'Access was declined.'
+      : back.error === 'state_mismatch' ? 'Sign-in could not be verified. Try again.'
+      : 'Google said: ' + back.error;
+  }
+  render();
+
+  if (clientId() && !getToken()) {
+    // Once a grant exists, Google bounces straight back, so reconnecting can
+    // be silent. Only ever one automatic attempt, or a rejected grant loops.
+    const sinceTry = Date.now() - Number(ls.get(K.lastAuth, 0));
+    if (!state.error && sinceTry > 60e3 && ls.get(K.token + '.ever', '')) signIn();
+    return;
+  }
+  if (!getToken()) return;
+  ls.set(K.token + '.ever', '1');
+
+  loadProfile();
+  load('inbox');
+  if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
+    sweep().then(n => { if (n) { toast(n + ' old ' + settings.label + ' messages moved to the Trash'); state.mkt = null; $('#foot').innerHTML = footHTML(); } }).catch(() => {});
+  }
+})();
+
+// The glow under a pressed button starts where the finger landed.
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn');
+  if (!b) return;
+  const r = b.getBoundingClientRect();
+  b.style.setProperty('--x', (e.clientX - r.left) + 'px');
+  b.style.setProperty('--y', (e.clientY - r.top) + 'px');
+}, { passive: true });
+
+addEventListener('resize', movePill);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && getToken() && state.view !== 'settings') load(state.view, { force: true });
+});
+
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
