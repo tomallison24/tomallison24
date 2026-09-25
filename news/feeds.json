@@ -5,7 +5,7 @@
     { "id": "us",       "label": "US" },
     { "id": "business", "label": "Business" },
     { "id": "tech",     "label": "Tech" },
-    { "id": "ai",       "label": "AI", "collect": ["AI", "artificial intelligence", "machine learning", "chatbot", "chatbots", "ChatGPT", "OpenAI", "Anthropic", "DeepMind", "LLM", "LLMs", "large language model", "deepfake", "deepfakes", "generative AI"] },
+    { "id": "ai",       "label": "AI", "collect": ["AI", "artificial intelligence", "machine learning", "chatbot", "chatbots", "ChatGPT", "OpenAI", "Anthropic", "DeepMind", "LLM", "LLMs", "large language model", "deepfake", "deepfakes", "generative AI"], "moveFrom": ["tech"] },
     { "id": "science",  "label": "Science" },
     { "id": "sport",    "label": "Sport", "keep": 400, "tags": true }
   ],
