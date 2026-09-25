@@ -384,11 +384,11 @@
   const DEFAULT_TOPICS = [
     { id: 'uk', label: 'UK' }, { id: 'world', label: 'World' }, { id: 'us', label: 'US' },
     { id: 'business', label: 'Business' }, { id: 'tech', label: 'Tech' }, { id: 'ai', label: 'AI' },
-    { id: 'science', label: 'Science' }, { id: 'sport', label: 'Sport' },
+    { id: 'science', label: 'Science' }, { id: 'sport', label: 'Sport' }, { id: 'stemcells', label: 'Stem cells' },
   ];
   const TOPIC_COLOURS = {
     uk: '#FF453A', world: '#30B0C7', us: '#0A84FF', business: '#FF9F0A',
-    tech: '#5E5CE6', ai: '#BF5AF2', science: '#30D158', sport: '#FF6B2C',
+    tech: '#5E5CE6', ai: '#BF5AF2', science: '#30D158', sport: '#FF6B2C', stemcells: '#FF2D92',
   };
   const ICON = {
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
@@ -452,7 +452,11 @@
     return `<img src="${esc(hi)}"${fallback} alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
   }
 
-  function topics() { return (data && Array.isArray(data.topics) && data.topics.length) ? data.topics : DEFAULT_TOPICS; }
+  // Tabs run A to Z after Latest, whatever order the data lists them in.
+  function topics() {
+    const list = (data && Array.isArray(data.topics) && data.topics.length) ? data.topics : DEFAULT_TOPICS;
+    return [...list].sort((a, b) => a.label.localeCompare(b.label, 'en-GB'));
+  }
   function topicLabel(id) { return (topics().find(t => t.id === id) || {}).label || id; }
   function topicStories(id) { return (data && Array.isArray(data.stories)) ? data.stories.filter(s => s.topic === id) : []; }
 
