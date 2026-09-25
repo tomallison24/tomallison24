@@ -254,14 +254,25 @@ for (const { id, collect, moveFrom = [], matchSummary } of config.topics) {
 }
 for (const [topic, urls] of moved) console.log(`${topic}: ${urls.size} stories moved to their own topic`);
 
-// Topics with "keepDays" hold on to stories from the last published copy of
-// news.json ("previous" in feeds.json) for that many days, so a quiet topic
-// doesn't empty out when its feeds move on.
+// Topics with "keepDays" hold on to stories from the last run's news.json
+// for that many days, so a quiet topic doesn't empty out when its feeds move
+// on. The last run's copy is kept in .cache-news/ (the workflow restores it
+// from the Actions cache); failing that, the published copy ("previous" in
+// feeds.json), which only works while the site is public.
+const CACHE_COPY = join(ROOT, '..', '.cache-news', 'news.json');
 const carried = {};
-if (config.previous && config.topics.some(t => t.keepDays)) {
+if (config.topics.some(t => t.keepDays)) {
   try {
-    const res = await fetch(config.previous, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    const prev = res.ok ? await res.json() : null;
+    let prev = null;
+    try {
+      prev = JSON.parse(await readFile(CACHE_COPY, 'utf8'));
+      console.log('Previous news.json: from the Actions cache');
+    } catch {
+      if (!config.previous) throw new Error('no cached copy');
+      const res = await fetch(config.previous, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+      prev = res.ok ? await res.json() : null;
+      console.log(`Previous news.json: from ${config.previous} (${res.status})`);
+    }
     for (const { id, keepDays } of config.topics) {
       if (!keepDays || !prev?.stories) continue;
       const since = new Date(Date.now() - keepDays * 864e5).toISOString();
@@ -297,6 +308,9 @@ await writeFile(OUT, JSON.stringify({
   stories,
 }));
 console.log(`Wrote ${stories.length} stories (${results.length - failed}/${results.length} feeds ok) to ${OUT}`);
+// Keep this run's copy for the next run's carry-over.
+await mkdir(dirname(CACHE_COPY), { recursive: true });
+await writeFile(CACHE_COPY, await readFile(OUT));
 
 // Scores fallback copy (see fetch-scores.mjs). Run from here so the workflow
 // file, whose last editor owns the refresh schedule, doesn't need changing.

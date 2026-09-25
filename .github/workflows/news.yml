@@ -1,12 +1,13 @@
-# Refreshes the News app's headlines and publishes the site to GitHub Pages.
+# Refreshes the News app's headlines and publishes the site.
 #
 # build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (News + Weather) as the Pages site. Runs on any
-#         branch, so feed changes can be checked before merging.
-# deploy: publishes that package. Default branch only.
-#
-# One-time setup: Settings -> Pages -> Build and deployment -> Source:
-# "GitHub Actions".
+#         packages the repo (News + Weather). Runs on any branch, so feed
+#         changes can be checked before merging. On the default branch it
+#         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
+#         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits
+#         behind Cloudflare Access, so only signed-in people can open it).
+# deploy: publishes the same package to GitHub Pages (public). To be removed
+#         once the Cloudflare site is confirmed working.
 name: News
 
 on:
@@ -28,16 +29,40 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      PUBLISH: ${{ github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch }}
+      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # Last run's news.json, for topics that keep stories for days.
+      - name: Restore last run's headlines
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache-news
+          key: news-data-${{ github.run_id }}
+          restore-keys: news-data-
       - name: Fetch headlines
         run: node news/scripts/fetch-news.mjs
+      - name: Keep headlines for the next run
+        uses: actions/cache/save@v4
+        with:
+          path: .cache-news
+          key: news-data-${{ github.run_id }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: .
+      - name: Publish to Cloudflare Pages
+        if: env.PUBLISH == 'true' && env.HAS_CLOUDFLARE == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p _site && cp -r news weather _site/
+          npx --yes wrangler@4 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
+          npx --yes wrangler@4 pages deploy _site --project-name=tomallison24-news --branch=main --commit-dirty=true
 
   deploy:
     needs: build
