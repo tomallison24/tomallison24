@@ -55,8 +55,10 @@ export async function saveScores() {
       });
       if (cors === null) cors = res.headers.get('access-control-allow-origin');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const games = normalize(await res.json(), league);
-      console.log(`ok   scores ${league.id.padEnd(17)} ${String(games.length).padStart(3)} games, ${games.filter(g => g.state === 'in').length} live`);
+      const json = await res.json();
+      const games = normalize(json, league);
+      const name = json?.leagues?.[0]?.name || '?';
+      console.log(`ok   scores ${league.id.padEnd(17)} ${String(games.length).padStart(3)} games, ${games.filter(g => g.state === 'in').length} live  (ESPN: ${name})`);
       return { id: league.id, ok: true, games };
     } catch (err) {
       console.log(`FAIL scores ${league.id.padEnd(17)} ${err.message}`);
