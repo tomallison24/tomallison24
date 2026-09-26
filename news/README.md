@@ -66,7 +66,9 @@ The Sport tab has one-tap buttons for Liverpool, England (football and
 rugby union) and Northampton (Saints), on the same line as the Filter
 button. Tap one to see only that team's news and games, and tap it again to
 go back to your filters. The buttons are the `quick` list in
-`sport-catalog.json`: a label and the team ids it covers. They only change
+`sport-catalog.json`: a label and the team ids it covers. All three are men's
+teams only (`menOnly`): women's leagues are left out, and so is any story
+mentioning a word in `womenTerms` (women's, Lionesses, Red Roses, WSL...). They only change
 the Sport tab: Latest keeps using your saved filters.
 
 ## Sport: live scores and fixtures

@@ -9,7 +9,7 @@
     {"id": "uefa.europa.conf", "label": "Conference League", "sport": "football", "path": "soccer/uefa.europa.conf", "comp": "comp:football:conference-league", "homeFirst": true},
     {"id": "eng.fa", "label": "FA Cup", "sport": "football", "path": "soccer/eng.fa", "comp": "comp:football:fa-cup", "homeFirst": true},
     {"id": "eng.league_cup", "label": "League Cup", "sport": "football", "path": "soccer/eng.league_cup", "comp": "comp:football:league-cup", "homeFirst": true},
-    {"id": "eng.w.1", "label": "Women's Super League", "sport": "football", "path": "soccer/eng.w.1", "comp": "comp:football:women-s-super-league", "homeFirst": true},
+    {"id": "eng.w.1", "label": "Women's Super League", "sport": "football", "path": "soccer/eng.w.1", "comp": "comp:football:women-s-super-league", "homeFirst": true, "women": true},
     {"id": "esp.1", "label": "La Liga", "sport": "football", "path": "soccer/esp.1", "comp": "comp:football:la-liga", "homeFirst": true},
     {"id": "ita.1", "label": "Serie A", "sport": "football", "path": "soccer/ita.1", "comp": "comp:football:serie-a", "homeFirst": true},
     {"id": "ger.1", "label": "Bundesliga", "sport": "football", "path": "soccer/ger.1", "comp": "comp:football:bundesliga", "homeFirst": true},

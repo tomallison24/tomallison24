@@ -49,7 +49,8 @@ async function quickTeams() {
 // ("Northampton" is Northampton Saints; "England" isn't New England).
 const sameTeam = (term, name) => { const n = String(name || '').trim(); return n === term || n.startsWith(`${term} `); };
 const playing = (g, teams) => teams.some(t => t.names.some(x => [g.home.name, g.home.short, g.away.name, g.away.short].some(n => sameTeam(x, n))));
-const teamsFor = (league, teams) => teams.filter(t => !t.sport || t.sport === league.sport);
+// The one-tap buttons are men's teams only, so women's leagues get none.
+const teamsFor = (league, teams) => league.women ? [] : teams.filter(t => !t.sport || t.sport === league.sport);
 
 // Games that haven't started yet, soonest first: the first KEEP_UPCOMING,
 // plus any the quick teams play in the window.
