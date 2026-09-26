@@ -1,7 +1,8 @@
 # Mail
 
 Gmail triage as a home-screen web app: frosted glass over a slow aurora, one
-tag button next to every message, and a Marketing bucket that empties itself.
+tag button next to every message, a Marketing bucket that empties itself, tags
+that sort mail by who sent it, a page for each message, and search.
 
 **One tap on the tag does three things:**
 
@@ -106,17 +107,77 @@ means a very short or generic domain could catch more than you meant — every
 rule is listed under **Rules** with a delete button, and deleting one leaves
 already-filed mail where it is.
 
+## Tags
+
+Tags sort mail by who sent it, and keep doing so. Open a message from the
+school, tap **Tag**, type *Sofia's school*:
+
+- that message, everything **already** in the mailbox from the same domain
+  (archived mail included), and **all new mail** from it gets the tag — the
+  last by a Gmail filter, so it happens whether or not the app is open;
+- tagged mail **stays in the inbox** (only Marketing skips it);
+- a chip for the tag appears under the tabs, and tapping it filters the list
+  to that tag. Tap **Inbox** (or the Inbox tab again) to go back.
+
+The same domain rules apply as for Marketing: `news@mail.tmsa.org` tags all of
+`tmsa.org`, while a Gmail or Outlook sender is tagged by exact address only.
+
+Tags are ordinary Gmail labels, so they show up in Gmail too, and any label
+you already had appears as a chip. The **Rules** tab lists every rule by tag,
+lets you delete one, and has a **New rule** form for when you know the domain
+but have no message to hand (`tmsa.org` → *Sofia's school*).
+
 ## Tapping a message
 
-Tapping a row opens a preview drawer with the message as **text**. Marketing
-mail is nearly all HTML, and rendering that would fetch the sender's images —
-which is exactly how they learn you opened it. The body is parsed with
-`DOMParser`, which produces an inert document: no scripts run, no images load,
-no tracking pixel fires. **Open in Gmail** in the drawer hands the thread to
-the Gmail app when you want the real thing.
+Opens it as a page of its own, sliding in over the list; the back chevron or
+the iPhone's back swipe returns to exactly where you were. Opening a message
+marks it read in Gmail, the same as Gmail does.
+
+HTML mail is shown as designed, in a sandboxed frame that **can't run
+anything and can't load anything**: images, and the tracking pixels among
+them, stay off until you tap **Show** — at which point the sender can tell you
+opened it, and the note says so. Wide newsletters are scaled to fit the screen,
+the way Mail does. Plain-text mail is shown as text with its links tappable.
+
+**Tag**, **Marketing** (or **Inbox**, for mail already in the bucket) and
+**Open in Gmail** are on the page.
+
+## Selecting and deleting
+
+Like Mail: tap **Select** (or press and hold any message), tick what you want,
+then **Trash** or **Mark as Read / Unread** from the bar at the bottom.
+**Select All** takes the whole list as loaded. Works in the inbox, a tag,
+Marketing and search results.
+
+Trash is Gmail's Trash — 30 days to change your mind — and the toast has an
+**Undo** that brings each message back, into the inbox if that's where it was.
+
+## Search
+
+The bar at the top searches all of your mail, not just the inbox, and takes
+Gmail's own search syntax: `invoice`, `from:tmsa.org`, `has:attachment`,
+`after:2026/09/01`, `is:unread` and so on. **Show more** at the bottom of any
+list fetches the next page.
 
 Filing a message never marks it read, and neither does the filter — mail lands
 in the bucket unread and stays that way until you read it.
+
+## Staying signed in
+
+Google gives a browser-only app like this one an access token that lasts **an
+hour**, and — with no server to hold a secret — no way to renew it quietly in
+the background. So when the hour is up the app goes back through Google by
+itself, asking it not to show anything (`prompt=none`) and naming your account
+(`login_hint`) so there's no account chooser. If Google still knows you — it
+usually does — it answers straight away with a fresh token. If it can't, the
+app asks for one tap rather than showing an error, and never retries in a loop.
+
+On an iPhone home-screen app you may see a browser sheet flash for a moment
+during that hop; that's iOS showing the trip to Google. Staying signed in for
+weeks with no hop at all needs a small server — for example a Cloudflare Worker
+— holding the OAuth client secret and using refresh tokens. Google expires
+those after 7 days while the consent screen is in *Testing*, so the consent
+screen would need publishing too.
 
 ## Undo
 

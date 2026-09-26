@@ -2,7 +2,7 @@
 // new deploy shows up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v2';
+const CACHE = 'mail-v3';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

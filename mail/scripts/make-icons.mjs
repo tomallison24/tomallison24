@@ -1,7 +1,8 @@
-// Draws mail/icon-512.png and mail/icon-180.png: the News icon's family look
-// (dark background, soft colour blobs, a frosted glass panel) with an
-// envelope instead of headlines. Rendered at 1024 and boxed down, so the
-// edges stay smooth without any image library.
+// Draws mail/icon-512.png and mail/icon-180.png in the style of Apple's own
+// icons: a full-bleed gradient and a simple white glyph, with iOS rounding the
+// corners itself. The envelope sits on an orange tag - the app files mail by
+// tagging it - so it reads as its own app beside the built-in Mail. Rendered at
+// 1024 and boxed down, so edges stay smooth without any image library.
 //
 //   node mail/scripts/make-icons.mjs
 import { deflateSync } from 'node:zlib';
@@ -31,48 +32,66 @@ function segment(x, y, ax, ay, bx, by) {
 }
 
 // --- scene ------------------------------------------------------------------
-// Colour blobs behind the glass, in the News icon's palette.
-const BLOBS = [
-  { x: 0.14, y: 0.12, r: 0.54, c: [90, 120, 255], a: 0.62 },   // blue, top left
-  { x: 0.90, y: 0.24, r: 0.52, c: [255, 126, 60], a: 0.58 },   // orange, top right
-  { x: 0.84, y: 0.88, r: 0.58, c: [150, 90, 255], a: 0.62 },   // purple, bottom right
-  { x: 0.10, y: 0.92, r: 0.52, c: [40, 190, 160], a: 0.50 },   // teal, bottom left
-];
+// Signed distance to a convex or concave polygon (negative inside).
+function polygon(x, y, pts) {
+  let d = Infinity, inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [ax, ay] = pts[j], [bx, by] = pts[i];
+    d = Math.min(d, segment(x, y, ax, ay, bx, by));
+    if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
+  }
+  return inside ? -d : d;
+}
+
+// The tag: a luggage-tag pentagon with a punched hole, tilted, peeking out
+// from behind the envelope's top right corner.
+const TAG = { cx: 690, cy: 330, angle: 2.52, w: 190, h: 118, r: 22 };   // pointed end and hole up and out
+function tagShape(x, y) {
+  const c = Math.cos(-TAG.angle), sn = Math.sin(-TAG.angle);
+  const dx = x - TAG.cx, dy = y - TAG.cy;
+  const u = dx * c - dy * sn, v = dx * sn + dy * c;          // into the tag's own frame
+  const { w, h } = TAG;
+  const body = polygon(u, v, [[-w, 0], [-w + h, -h], [w, -h], [w, h], [-w + h, h]]) - TAG.r;
+  const hole = Math.hypot(u + w - h * 0.95, v) - 24;
+  return Math.max(body, -hole);
+}
 
 function pixel(x, y) {
-  const u = x / N, v = y / N;
-  let r = 10, g = 11, b = 14;                                   // #0A0B0E
+  const v = y / N;
+  // Apple-blue gradient, lighter at the top, as on the system apps.
+  let r = mix(66, 10, v), g = mix(196, 104, v), b = mix(255, 242, v);
 
-  for (const bl of BLOBS) {
-    const d = Math.hypot(u - bl.x, v - bl.y) / bl.r;
-    const f = Math.pow(Math.max(0, 1 - d), 2.2) * bl.a;          // soft falloff
-    r = mix(r, bl.c[0], f); g = mix(g, bl.c[1], f); b = mix(b, bl.c[2], f);
+  // Envelope geometry.
+  const cx = N / 2, cy = N / 2 + 40, hw = 300, hh = 206, rad = 44;
+  const env = roundedRect(x, y, cx, cy, hw, hh, rad);
+
+  // Soft shadow under everything, falling on the gradient.
+  const shadowEnv = roundedRect(x, y - 22, cx, cy, hw, hh, rad);
+  const sh = Math.exp(-Math.max(0, shadowEnv) / 38) * 0.22;
+  r = mix(r, 0, sh); g = mix(g, 30, sh); b = mix(b, 90, sh);
+
+  // Tag, behind the envelope.
+  const tag = aa(tagShape(x, y), 1.8);
+  if (tag > 0) {
+    const t = clamp01((y - 150) / 380);
+    r = mix(r, mix(255, 255, t), tag); g = mix(g, mix(176, 140, t), tag); b = mix(b, mix(56, 20, t), tag);
   }
 
-  // Frosted glass panel.
-  const panel = roundedRect(x, y, N / 2, N / 2, 344, 344, 98);
-  const inside = aa(panel, 2.0);
-  if (inside > 0) {
-    const lift = 0.15 * inside;                                  // milky fill
-    r = mix(r, 255, lift); g = mix(g, 255, lift); b = mix(b, 255, lift);
-    const edge = aa(Math.abs(panel + 2.5) - 2.5, 2.0) * 0.30;     // inner hairline
-    r = mix(r, 255, edge); g = mix(g, 255, edge); b = mix(b, 255, edge);
+  // Envelope: white with a whisper of cool grey toward the bottom.
+  const ink = aa(env, 1.8);
+  if (ink > 0) {
+    const t = clamp01((y - (cy - hh)) / (2 * hh));
+    r = mix(r, mix(255, 236, t), ink); g = mix(g, mix(255, 242, t), ink); b = mix(b, mix(255, 250, t), ink);
   }
 
-  // Envelope: one solid white shape with the flap notched out of it, the way
-  // the News icon draws its headlines as solid bars rather than outlines.
-  const pane = [r, g, b];
-  const cx = N / 2, cy = N / 2 + 4, hw = 208, hh = 150;
-  const ink = aa(roundedRect(x, y, cx, cy, hw, hh, 34), 1.8);
-  if (ink > 0) { r = mix(r, 255, ink); g = mix(g, 255, ink); b = mix(b, 255, ink); }
-
-  const apex = cy + 22, top = cy - hh - 6, inset = 16, notch = 30;
+  // Flap: a soft blue-grey crease, not a cut.
+  const apex = cy + 26, top = cy - hh + 34, inset = 40;
   const flap = Math.min(
     segment(x, y, cx - hw + inset, top, cx, apex),
     segment(x, y, cx + hw - inset, top, cx, apex),
-  ) - notch / 2;
-  const cut = Math.min(aa(flap, 1.8), ink);          // only ever cuts the envelope
-  if (cut > 0) { r = mix(r, pane[0], cut); g = mix(g, pane[1], cut); b = mix(b, pane[2], cut); }
+  ) - 11;
+  const crease = Math.min(aa(flap, 1.8), ink);
+  if (crease > 0) { r = mix(r, 168, crease); g = mix(g, 196, crease); b = mix(b, 236, crease); }
 
   return [r, g, b];
 }
