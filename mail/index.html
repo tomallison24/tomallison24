@@ -452,6 +452,55 @@
   @keyframes fadeIn { from { opacity: 0; } }
   @keyframes fadeOut { to { opacity: 0; } }
 
+  /* ---- selecting, the way Mail does it ---- */
+  .textbtn {
+    height: 36px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--accent);
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10); transition: transform .18s var(--ease);
+    animation: pop .3s var(--ease);
+  }
+  .textbtn:active { transform: scale(0.93); }
+  #selall { font-weight: 500; }
+  /* no text selection or iOS callout on a long press */
+  ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .check {
+    position: absolute; left: 14px; top: 50%; width: 24px; height: 24px; margin-top: -12px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.32); pointer-events: none;
+    opacity: 0; transform: translateX(-34px) scale(0.6);
+    transition: opacity .25s ease, transform .4s var(--ease), background .2s, border-color .2s, box-shadow .3s;
+  }
+  #screen.selecting ul.list > li { padding-left: 52px; cursor: pointer; }
+  #screen.selecting .check { opacity: 1; transform: none; }
+  #screen.selecting .act { opacity: 0; transform: scale(0.5); width: 0; margin-left: -10px; pointer-events: none; }
+  .act { transition: transform .2s var(--ease), background .2s, box-shadow .3s, opacity .25s, width .3s var(--ease), margin .3s var(--ease); }
+  ul.list > li.sel { background: rgba(10,132,255,0.10); }
+  li.sel .check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px rgba(10,132,255,0.55); animation: pop .35s var(--ease); }
+  li.sel .check::after {
+    content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px;
+    border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+  }
+  #selbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+    display: flex; align-items: center; gap: 10px; max-width: 560px; margin: 0 auto;
+    padding: 12px max(18px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 12px) max(18px, env(safe-area-inset-left));
+    border-radius: 24px 24px 0 0; border: 1px solid var(--hair); border-bottom: 0;
+    background: rgba(24, 24, 28, 0.78);
+    backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 -10px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10);
+    animation: sheetUp .42s var(--ease) both;
+  }
+  #selbar button {
+    display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 999px;
+    font-size: 15px; font-weight: 600; color: var(--accent); background: rgba(10,132,255,0.12);
+    border: 1px solid rgba(10,132,255,0.26); transition: transform .18s var(--ease), opacity .2s;
+  }
+  #selbar button.danger { color: var(--danger); background: rgba(255,69,58,0.12); border-color: rgba(255,69,58,0.32); }
+  #selbar button:active { transform: scale(0.93); }
+  #selbar button[disabled] { opacity: 0.35; }
+  #sel-count { flex: 1; text-align: center; font-size: 13px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  body.selecting { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+
   /* ---- keyframes ---- */
   @keyframes fadeDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
   @keyframes cardIn { from { opacity: 0; transform: translateX(18px) scale(0.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: none; } }
@@ -478,7 +527,9 @@
 <div class="aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
 <main>
   <header>
-    <h1>Mail<span class="sub" id="sub">&nbsp;</span></h1>
+    <h1><span id="title">Mail</span><span class="sub" id="sub">&nbsp;</span></h1>
+    <button class="textbtn hide" id="selall">Select All</button>
+    <button class="textbtn hide" id="edit">Select</button>
     <button class="iconbtn hide" id="refresh" aria-label="Refresh">
       <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6a5.9 5.9 0 0 1 4.22 1.78L13 11h8V3z"/></svg>
     </button>
@@ -509,6 +560,13 @@
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
 <div id="sheet" class="hide"></div>
+<div id="selbar" class="hide" role="toolbar" aria-label="Selected messages">
+  <button id="sel-mark" disabled>Mark</button>
+  <span id="sel-count"></span>
+  <button id="sel-trash" class="danger" disabled>
+    <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>Trash
+  </button>
+</div>
 <div id="toast" class="hide" role="status" aria-live="polite"></div>
 <script>
 "use strict";
@@ -533,6 +591,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
+  hint: 'mail.hint', silent: 'mail.silent',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -611,9 +670,15 @@ function getToken() {
 
 const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic');
 
+// Google gives a browser-only app an access token for an hour and no way to
+// renew it in the background. So when it runs out the app goes back through
+// Google - silently: prompt=none makes Google answer at once with a token, or
+// with interaction_required if it can't, and never shows a screen. login_hint
+// names the account, so having several signed in doesn't bring up a chooser.
 function signIn(opts = {}) {
   const id = clientId();
   if (!id) return;
+  const hint = ls.get(K.hint, '');
   const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
   // localStorage, not sessionStorage: on iOS the trip through Google can come
   // back in a fresh page context and a lost nonce would look like tampering.
@@ -627,8 +692,10 @@ function signIn(opts = {}) {
     scope: SCOPES.join(' '),
     include_granted_scopes: 'true',
     state: nonce,
-    ...(opts.chooseAccount ? { prompt: 'select_account' } : {}),
+    ...(opts.chooseAccount ? { prompt: 'select_account' } : hint ? { login_hint: hint } : {}),
+    ...(opts.silent && !opts.chooseAccount ? { prompt: 'none' } : {}),
   });
+  if (opts.silent) ls.set(K.silent, '1'); else ls.del(K.silent);
   location.href = u.toString();
 }
 
@@ -645,8 +712,9 @@ function consumeRedirect() {
   const p = new URLSearchParams(raw);
   history.replaceState(null, '', redirectUri() + location.search);
   const want = ls.get(K.state, '');
-  ls.del(K.state);
-  if (p.get('error')) return { error: p.get('error') };
+  const silent = ls.get(K.silent, '') === '1';
+  ls.del(K.state); ls.del(K.silent);
+  if (p.get('error')) return { error: p.get('error'), silent };
   if (!want || p.get('state') !== want) return { error: 'state_mismatch' };
   const life = parseInt(p.get('expires_in') || '3600', 10);
   ls.set(K.token, JSON.stringify({
@@ -1071,7 +1139,8 @@ const state = {
   search: '',      // while set, search results take the list's place
   lists: {},       // key -> { items, next, error, q, labelIds }
   rules: null, rulesError: null,
-  me: null, error: null, busy: false,
+  me: null, error: null, notice: false, busy: false,
+  select: null,    // Set of selected message ids while selecting
   reading: null,   // { item, data, images, error } while a message is open
   sheet: null,     // { item, rule } while the tag sheet is up
 };
@@ -1088,6 +1157,7 @@ function currentList() {
 
 // Whether a message still belongs in a list once its labels change.
 function belongs(key, it) {
+  if (it.labelIds.includes('TRASH')) return false;
   if (key === 'inbox') return it.labelIds.includes('INBOX');
   if (key === 'mkt') return it.labelIds.includes(bucketId());
   if (key.startsWith('tag:')) return it.labelIds.includes(key.slice(4));
@@ -1167,8 +1237,9 @@ function rowHTML(item, i, key) {
   } else {
     meta = '<span class="chip">' + esc(ruleFor(item).label) + '</span>' + tagChips(item.labelIds);
   }
-  const fresh = i >= freshFrom;
-  return '<li class="' + (fresh ? 'fresh' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
+  const fresh = i >= freshFrom, sel = state.select?.has(item.id);
+  return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
+    '<span class="check"></span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
@@ -1212,21 +1283,49 @@ function renderChips(show) {
   for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', (b.dataset.id || '') === (state.tag || ''));
 }
 
-function render() {
+// Everything around the list: header, tabs, chips, and the select bar.
+function renderChrome() {
   const signedIn = !!getToken() && !!clientId();
   const main = signedIn && state.view !== 'settings';
-  $('#tabs').classList.toggle('hide', !main);
-  $('#search').classList.toggle('hide', !main);
-  $('#refresh').classList.toggle('hide', !main);
-  $('#gear').classList.toggle('hide', !signedIn);
+  const listView = main && state.view !== 'rules';
+  const items = listView ? state.lists[currentList().key]?.items || [] : [];
+  if (state.select && !listView) state.select = null;
+  const sel = state.select;
+  if (sel) for (const id of [...sel]) if (!items.some(it => it.id === id)) sel.delete(id);   // rows that went away
+
+  $('#tabs').classList.toggle('hide', !main || !!sel);
+  $('#search').classList.toggle('hide', !main || !!sel);
+  $('#refresh').classList.toggle('hide', !main || !!sel);
+  $('#gear').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
-  $('#sub').textContent = state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
+  $('#edit').classList.toggle('hide', !listView || (!items.length && !sel));
+  $('#edit').textContent = sel ? 'Done' : 'Select';
+  $('#selall').classList.toggle('hide', !sel);
+  const all = sel && items.length && items.every(it => sel.has(it.id));
+  $('#selall').textContent = all ? 'Deselect All' : 'Select All';
+  $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : 'Mail';
+  $('#sub').textContent = sel ? 'Tap to select'
+    : state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
   for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t.dataset.view === state.view));
-  renderChips(main && state.view === 'inbox' && !state.search);
+  renderChips(main && state.view === 'inbox' && !state.search && !sel);
   setCount('#c-inbox', state.lists.inbox?.items?.length);
   setCount('#c-mkt', state.lists.mkt?.items?.length);
   setCount('#c-rules', state.rules?.length);
 
+  screen.classList.toggle('selecting', !!sel);
+  document.body.classList.toggle('selecting', !!sel);
+  $('#selbar').classList.toggle('hide', !sel);
+  $('#foot').classList.toggle('hide', !!sel);
+  if (sel) {
+    const chosen = items.filter(it => sel.has(it.id));
+    $('#sel-mark').textContent = chosen.some(it => it.unread) || !chosen.length ? 'Mark as Read' : 'Mark as Unread';
+    $('#sel-mark').disabled = $('#sel-trash').disabled = !chosen.length;
+    $('#sel-count').textContent = chosen.length ? chosen.length + ' of ' + items.length : '';
+  }
+}
+
+function render() {
+  renderChrome();
   if (!clientId()) return paint(viewSetup());
   if (!getToken()) return paint(viewSignIn());
   if (state.view === 'settings') return paint(viewSettings());
@@ -1275,9 +1374,10 @@ function viewSignIn() {
     '<div class="hero">' + ICON.tag + '</div>' +
     '<p><strong>Connect Gmail</strong> to triage your inbox. One tap files a sender, everything from their domain follows, and the bucket empties itself after ' + settings.days + ' days.</p>' +
     (state.error ? '<p class="note bad">' + esc(state.error) + '</p>' : '') +
+    (state.notice ? '<p class="note">Google couldn’t renew your sign-in on its own this time — one tap and you’re back.</p>' : '') +
     '<button class="btn" data-act="signin">Connect Gmail</button>' +
     '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
-    '<p class="note">Access lasts about an hour, then reconnects in a tap. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
+    '<p class="note">Google signs a browser app in for an hour at a time. After that the app renews it by itself, usually without you seeing anything. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
     '<p class="note' + (problem ? ' bad' : '') + '">Client ID on this device:<br><code class="url">' + esc(clientId()) + '</code>' +
       (problem ? '<br>' + esc(problem) : '<br>If Google says <em>invalid_client</em>, this does not match the one in Google Cloud.') + '</p>' +
     (BUILT_IN_CLIENT_ID ? '' : '<button class="btn ghost" data-act="forget-cid">Change client ID</button>') +
@@ -1549,6 +1649,7 @@ async function loadProfile() {
   try {
     const p = await api('/profile');
     state.me = p.emailAddress;
+    ls.set(K.hint, p.emailAddress);          // names the account for silent renewal
     if (state.view !== 'settings') $('#sub').textContent = state.me;
   } catch {}
 }
@@ -1559,6 +1660,117 @@ function go({ force } = {}) {
   if (state.view === 'rules') loadRules({ force });
   else if (state.view !== 'settings') loadList({ force });
 }
+
+// ---------------------------------------------------------------------------
+// Selecting
+// ---------------------------------------------------------------------------
+function rowsFor(ids) {
+  return ids.map(id => screen.querySelector('li[data-id="' + CSS.escape(id) + '"]'));
+}
+
+function enterSelect(firstId) {
+  state.select = new Set(firstId ? [firstId] : []);
+  if (firstId) rowsFor([firstId])[0]?.classList.add('sel');
+  renderChrome();
+}
+
+function exitSelect() {
+  if (!state.select) return;
+  state.select = null;
+  for (const li of screen.querySelectorAll('li.sel')) li.classList.remove('sel');
+  renderChrome();
+}
+
+function toggleSelect(li) {
+  const id = li.dataset.id, sel = state.select;
+  if (sel.has(id)) sel.delete(id); else sel.add(id);
+  li.classList.toggle('sel', sel.has(id));
+  renderChrome();
+}
+
+function selectedItems() {
+  const items = state.lists[currentList().key]?.items || [];
+  return items.filter(it => state.select?.has(it.id));
+}
+
+// Selected mail to the Trash. The rows go at once; Gmail is told after, and
+// Undo brings each back - to the inbox too, if that's where it was.
+async function trashSelected() {
+  const items = selectedItems();
+  if (!items.length) return;
+  const before = new Map(items.map(it => [it.id, it.labelIds.slice()]));
+  const rows = rowsFor([...before.keys()]);
+  exitSelect();
+  await Promise.all(rows.map(li => vanish(li, 'left')));
+  patch(it => before.has(it.id), ['TRASH'], ['INBOX']);
+  for (const [k, l] of Object.entries(state.lists)) if (l.items) l.items = l.items.filter(it => belongs(k, it));
+  quietOnce = true;
+  render();
+  let missed = 0;
+  try {
+    await pool([...before.keys()], 6, async id => {
+      try { await api('/messages/' + id + '/trash', { method: 'POST' }); }
+      catch (e) { if (e instanceof AuthError) throw e; missed++; }
+    });
+  } catch (err) { failed(err); state.lists = {}; return go({ force: true }); }
+  const n = before.size - missed;
+  if (missed) { toast(n + ' moved to the Trash; ' + missed + ' couldn’t be', { bad: true }); state.lists = {}; return go({ force: true }); }
+  toast(n + (n === 1 ? ' message' : ' messages') + ' moved to the Trash', { label: 'Undo', action: () => untrashAll(before) });
+}
+
+async function untrashAll(before) {
+  try {
+    const ids = [...before.keys()];
+    await pool(ids, 6, id => api('/messages/' + id + '/untrash', { method: 'POST' }));
+    await relabel(ids.filter(id => before.get(id).includes('INBOX')), ['INBOX']);
+    toast('Put back');
+    state.lists = {};
+    go({ force: true });
+  } catch (err) { failed(err); }
+}
+
+async function markSelected() {
+  const items = selectedItems();
+  if (!items.length) return;
+  const read = items.some(it => it.unread);            // any unread: mark them all read
+  const ids = items.map(it => it.id), set = new Set(ids);
+  exitSelect();
+  try {
+    await relabel(ids, read ? [] : ['UNREAD'], read ? ['UNREAD'] : []);
+    patch(it => set.has(it.id), read ? [] : ['UNREAD'], read ? ['UNREAD'] : []);
+    quietOnce = true;
+    render();
+    toast(ids.length + ' marked as ' + (read ? 'read' : 'unread'));
+  } catch (err) { failed(err); }
+}
+
+$('#edit').addEventListener('click', () => (state.select ? exitSelect() : enterSelect()));
+$('#selall').addEventListener('click', () => {
+  const items = state.lists[currentList().key]?.items || [];
+  const all = items.every(it => state.select.has(it.id));
+  state.select = new Set(all ? [] : items.map(it => it.id));
+  for (const li of screen.querySelectorAll('ul.list > li[data-id]')) li.classList.toggle('sel', state.select.has(li.dataset.id));
+  renderChrome();
+});
+$('#sel-trash').addEventListener('click', trashSelected);
+$('#sel-mark').addEventListener('click', markSelected);
+
+// Press and hold a row to start selecting with it, as in Mail.
+let press = null, swallowClick = false;
+screen.addEventListener('pointerdown', e => {
+  if (state.select || e.button > 0 || e.target.closest('.act')) return;
+  const li = e.target.closest('ul.list > li[data-id]');
+  if (!li) return;
+  press = { x: e.clientX, y: e.clientY, t: setTimeout(() => { press = null; swallowClick = true; enterSelect(li.dataset.id); }, 480) };
+});
+const cancelPress = () => { if (press) { clearTimeout(press.t); press = null; } };
+screen.addEventListener('pointermove', e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) screen.addEventListener(ev, () => {
+  cancelPress();
+  if (swallowClick) setTimeout(() => { swallowClick = false; }, 400);
+});
+addEventListener('scroll', cancelPress, { passive: true });
+screen.addEventListener('contextmenu', e => { if (e.target.closest('ul.list > li')) e.preventDefault(); });
 
 // ---------------------------------------------------------------------------
 // Events
@@ -1668,6 +1880,11 @@ async function undo(back) {
 }
 
 document.addEventListener('click', async e => {
+  if (swallowClick) { swallowClick = false; e.preventDefault(); return; }   // the release after a long press
+  if (state.select) {
+    const row = e.target.closest('#screen ul.list > li[data-id]');
+    if (row) { e.preventDefault(); return toggleSelect(row); }
+  }
   const el = e.target.closest('[data-act]');
   if (!el) return;
   const act = el.dataset.act;
@@ -1840,29 +2057,33 @@ addEventListener('popstate', () => {
 
 addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (state.sheet) closeSheet();
+  if (state.select) exitSelect();
+  else if (state.sheet) closeSheet();
   else if (state.reading) closeReader();
 });
 
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
+// Renews an expired sign-in without a screen, once a grant exists. Only one
+// automatic attempt a minute, so an answer of "can't" never turns into a loop.
+function renew() {
+  const sinceTry = Date.now() - Number(ls.get(K.lastAuth, 0));
+  if (!state.error && !state.notice && sinceTry > 60e3 && ls.get(K.token + '.ever', '')) signIn({ silent: true });
+}
+
 (function boot() {
   const back = consumeRedirect();
   if (back?.error) {
-    state.error = back.error === 'access_denied' ? 'Access was declined.'
+    // A silent renewal Google couldn't finish just needs one tap, not a warning.
+    if (back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error)) state.notice = true;
+    else state.error = back.error === 'access_denied' ? 'Access was declined.'
       : back.error === 'state_mismatch' ? 'Sign-in could not be verified. Try again.'
       : 'Google said: ' + back.error;
   }
   render();
 
-  if (clientId() && !getToken()) {
-    // Once a grant exists, Google bounces straight back, so reconnecting can
-    // be silent. Only ever one automatic attempt, or a rejected grant loops.
-    const sinceTry = Date.now() - Number(ls.get(K.lastAuth, 0));
-    if (!state.error && sinceTry > 60e3 && ls.get(K.token + '.ever', '')) signIn();
-    return;
-  }
+  if (clientId() && !getToken()) { renew(); return; }
   if (!getToken()) return;
   ls.set(K.token + '.ever', '1');
 
@@ -1890,7 +2111,9 @@ document.addEventListener('pointerdown', e => {
 
 addEventListener('resize', movePill);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !getToken() || state.reading) return;
+  if (document.visibilityState !== 'visible') return;
+  if (clientId() && !getToken()) return renew();         // back after the hour ran out
+  if (state.reading || state.select) return;
   if (state.view === 'inbox' || state.view === 'marketing') loadList({ force: true, quiet: true });
 });
 

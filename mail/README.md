@@ -142,6 +142,16 @@ the way Mail does. Plain-text mail is shown as text with its links tappable.
 **Tag**, **Marketing** (or **Inbox**, for mail already in the bucket) and
 **Open in Gmail** are on the page.
 
+## Selecting and deleting
+
+Like Mail: tap **Select** (or press and hold any message), tick what you want,
+then **Trash** or **Mark as Read / Unread** from the bar at the bottom.
+**Select All** takes the whole list as loaded. Works in the inbox, a tag,
+Marketing and search results.
+
+Trash is Gmail's Trash — 30 days to change your mind — and the toast has an
+**Undo** that brings each message back, into the inbox if that's where it was.
+
 ## Search
 
 The bar at the top searches all of your mail, not just the inbox, and takes
@@ -151,6 +161,23 @@ list fetches the next page.
 
 Filing a message never marks it read, and neither does the filter — mail lands
 in the bucket unread and stays that way until you read it.
+
+## Staying signed in
+
+Google gives a browser-only app like this one an access token that lasts **an
+hour**, and — with no server to hold a secret — no way to renew it quietly in
+the background. So when the hour is up the app goes back through Google by
+itself, asking it not to show anything (`prompt=none`) and naming your account
+(`login_hint`) so there's no account chooser. If Google still knows you — it
+usually does — it answers straight away with a fresh token. If it can't, the
+app asks for one tap rather than showing an error, and never retries in a loop.
+
+On an iPhone home-screen app you may see a browser sheet flash for a moment
+during that hop; that's iOS showing the trip to Google. Staying signed in for
+weeks with no hop at all needs a small server — for example a Cloudflare Worker
+— holding the OAuth client secret and using refresh tokens. Google expires
+those after 7 days while the consent screen is in *Testing*, so the consent
+screen would need publishing too.
 
 ## Undo
 
