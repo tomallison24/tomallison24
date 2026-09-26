@@ -16,6 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'data', 'scores.json');
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
 const AHEAD_DAYS = 14;     // how far ahead to look for fixtures
+const AHEAD_MINE = 21;     // ...and in leagues a one-tap team plays in (past international breaks)
 const KEEP_UPCOMING = 10;  // fixtures kept per league
 const HEADERS = { Origin: 'https://tomallison24.github.io', 'User-Agent': 'news-home-screen-app/1.0' };
 
@@ -27,17 +28,41 @@ async function espn(url) {
   return res;
 }
 
-// Games that haven't started yet, soonest first.
-async function upcoming(league, now) {
+// The Sport tab's one-tap teams (sport-catalog.json "quick"): their fixtures
+// are always kept, even past a busy league's first KEEP_UPCOMING. Ids are
+// built as in the app's buildCatalog().
+const slug = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+async function quickTeams() {
+  try {
+    const raw = JSON.parse(await readFile(join(ROOT, 'sport-catalog.json'), 'utf8'));
+    const want = new Set((raw.quick || []).map(q => q.id));
+    return (raw.teams || []).flatMap(g => (g.names || []).map(n => {
+      const names = Array.isArray(n) ? n : [n];
+      return { id: `team:${g.sport || 'any'}:${slug(names[0])}`, sport: g.sport, names };
+    })).filter(t => want.has(t.id));
+  } catch (err) {
+    console.log(`quick teams unavailable: ${err.message}`);
+    return [];
+  }
+}
+// Same rule as sameTeam() in index.html: the whole name, or its start
+// ("Northampton" is Northampton Saints; "England" isn't New England).
+const sameTeam = (term, name) => { const n = String(name || '').trim(); return n === term || n.startsWith(`${term} `); };
+const playing = (g, teams) => teams.some(t => t.names.some(x => [g.home.name, g.home.short, g.away.name, g.away.short].some(n => sameTeam(x, n))));
+const teamsFor = (league, teams) => teams.filter(t => !t.sport || t.sport === league.sport);
+
+// Games that haven't started yet, soonest first: the first KEEP_UPCOMING,
+// plus any the quick teams play in the window.
+async function upcoming(league, now, teams) {
+  const mine = teamsFor(league, teams);
   const found = new Map();
-  for (let day = 0; day <= AHEAD_DAYS && found.size < KEEP_UPCOMING; day++) {
+  for (let day = 0; mine.length ? day <= AHEAD_MINE : day <= AHEAD_DAYS && found.size < KEEP_UPCOMING; day++) {
     const res = await espn(`${ESPN}/${league.path}/scoreboard?dates=${ymd(new Date(now.getTime() + day * 864e5))}`);
     for (const g of normalize(await res.json(), league))
       if (g.state === 'pre' && Date.parse(g.start) > now.getTime()) found.set(g.id, g);
   }
-  return [...found.values()]
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .slice(0, KEEP_UPCOMING)
+  const all = [...found.values()].sort((a, b) => a.start.localeCompare(b.start));
+  return all.filter((g, i) => i < KEEP_UPCOMING || playing(g, mine))
     .map(({ home, away, ...g }) => ({ ...g, home: { name: home.name, short: home.short, logo: home.logo }, away: { name: away.name, short: away.short, logo: away.logo } }));
 }
 
@@ -76,6 +101,8 @@ export async function saveScores() {
   const { leagues } = JSON.parse(await readFile(join(ROOT, 'leagues.json'), 'utf8'));
   let cors = null;
   const now = new Date();
+  const teams = await quickTeams();
+  console.log(`quick teams: ${teams.map(t => t.names[0]).join(', ') || '(none)'}`);
   const out = await Promise.all(leagues.map(async league => {
     const entry = { id: league.id, ok: false, games: [], upcoming: [] };
     try {
@@ -90,9 +117,10 @@ export async function saveScores() {
       console.log(`FAIL scores ${league.id.padEnd(17)} ${err.message}`);
     }
     try {
-      entry.upcoming = await upcoming(league, now);
+      entry.upcoming = await upcoming(league, now, teams);
       const next = entry.upcoming[0];
-      console.log(`ok   next   ${league.id.padEnd(17)} ${String(entry.upcoming.length).padStart(3)} fixtures${next ? `, first ${next.start} ${next.home.short} v ${next.away.short}` : ''}`);
+      const ours = entry.upcoming.filter(g => playing(g, teamsFor(league, teams))).map(g => `${g.start.slice(0, 10)} ${g.home.short} v ${g.away.short}`);
+      console.log(`ok   next   ${league.id.padEnd(17)} ${String(entry.upcoming.length).padStart(3)} fixtures${next ? `, first ${next.start} ${next.home.short} v ${next.away.short}` : ''}${ours.length ? `; my teams: ${ours.join('; ')}` : ''}`);
     } catch (err) {
       console.log(`FAIL next   ${league.id.padEnd(17)} ${err.message}`);
     }

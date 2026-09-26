@@ -60,6 +60,14 @@ The bar under the tabs shows how many filters are on and what they are.
 - Filters are saved on each device (your iPhone and PC keep their own).
 - To add teams or competitions to the lists, edit `sport-catalog.json`.
 
+## Sport: my teams
+
+The Sport tab has one-tap buttons for Liverpool, England (football) and
+Northampton (Saints). Tap one to see only that team's news and games, and
+tap it again to go back to your filters. The buttons are the `quick` list in
+`sport-catalog.json`; any team in that file can go there. They only change
+the Sport tab: Latest keeps using your saved filters.
+
 ## Sport: live scores and fixtures
 
 The Sport tab has a **News | Scores** switch. Scores reads ESPN's public
@@ -78,7 +86,9 @@ Sport filters apply to scores too. Tap a game for ESPN's match page.
 - **Coming up**: under each league's games, the next fixtures (3 a league,
   or 5 when you've set filters, so your team's next games show). Each
   refresh looks up to 14 days ahead, a day at a time (ESPN refuses date
-  ranges), and saves up to 10 per league in the same copy. Fixtures are
+  ranges), and saves up to 10 per league in the same copy, plus every
+  fixture for the one-tap teams, however busy the league (looking 21 days
+  ahead in their leagues, to get past international breaks). Fixtures are
   only as fresh as the last refresh; games that have already started drop
   off.
 - ESPN's feed is public but undocumented, so it may change or stop
