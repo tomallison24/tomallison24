@@ -1,7 +1,10 @@
 // Saves a copy of every scoreboard in ../leagues.json to ../data/scores.json.
 // The app reads scores live from ESPN while the Scores view is open; this
 // copy is the fallback for when it can't (offline, or ESPN refuses the
-// browser). ESPN's scoreboard feed is public but undocumented, so it may
+// browser). It also carries each league's next fixtures, which the app always
+// reads from here: finding them takes a request per day ahead, too many to
+// make from a phone. (ESPN answers a date range with HTTP 400, so each day is
+// asked for on its own, stopping once enough fixtures are found.) ESPN's scoreboard feed is public but undocumented, so it may
 // change without notice. Never fails the build: a missing copy only means
 // no fallback.
 
@@ -12,6 +15,31 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'data', 'scores.json');
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
+const AHEAD_DAYS = 14;     // how far ahead to look for fixtures
+const KEEP_UPCOMING = 10;  // fixtures kept per league
+const HEADERS = { Origin: 'https://tomallison24.github.io', 'User-Agent': 'news-home-screen-app/1.0' };
+
+const ymd = d => d.toISOString().slice(0, 10).replace(/-/g, '');
+
+async function espn(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000), headers: HEADERS });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+// Games that haven't started yet, soonest first.
+async function upcoming(league, now) {
+  const found = new Map();
+  for (let day = 0; day <= AHEAD_DAYS && found.size < KEEP_UPCOMING; day++) {
+    const res = await espn(`${ESPN}/${league.path}/scoreboard?dates=${ymd(new Date(now.getTime() + day * 864e5))}`);
+    for (const g of normalize(await res.json(), league))
+      if (g.state === 'pre' && Date.parse(g.start) > now.getTime()) found.set(g.id, g);
+  }
+  return [...found.values()]
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .slice(0, KEEP_UPCOMING)
+    .map(({ home, away, ...g }) => ({ ...g, home: { name: home.name, short: home.short, logo: home.logo }, away: { name: away.name, short: away.short, logo: away.logo } }));
+}
 
 // Keep in step with normalize() in index.html.
 export function normalize(json, league) {
@@ -47,28 +75,33 @@ export function normalize(json, league) {
 export async function saveScores() {
   const { leagues } = JSON.parse(await readFile(join(ROOT, 'leagues.json'), 'utf8'));
   let cors = null;
+  const now = new Date();
   const out = await Promise.all(leagues.map(async league => {
+    const entry = { id: league.id, ok: false, games: [], upcoming: [] };
     try {
-      const res = await fetch(`${ESPN}/${league.path}/scoreboard`, {
-        signal: AbortSignal.timeout(15000),
-        headers: { Origin: 'https://tomallison24.github.io', 'User-Agent': 'news-home-screen-app/1.0' },
-      });
+      const res = await espn(`${ESPN}/${league.path}/scoreboard`);
       if (cors === null) cors = res.headers.get('access-control-allow-origin');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const games = normalize(json, league);
+      entry.games = normalize(json, league);
+      entry.ok = true;
       const name = json?.leagues?.[0]?.name || '?';
-      console.log(`ok   scores ${league.id.padEnd(17)} ${String(games.length).padStart(3)} games, ${games.filter(g => g.state === 'in').length} live  (ESPN: ${name})`);
-      return { id: league.id, ok: true, games };
+      console.log(`ok   scores ${league.id.padEnd(17)} ${String(entry.games.length).padStart(3)} games, ${entry.games.filter(g => g.state === 'in').length} live  (ESPN: ${name})`);
     } catch (err) {
       console.log(`FAIL scores ${league.id.padEnd(17)} ${err.message}`);
-      return { id: league.id, ok: false, games: [] };
     }
+    try {
+      entry.upcoming = await upcoming(league, now);
+      const next = entry.upcoming[0];
+      console.log(`ok   next   ${league.id.padEnd(17)} ${String(entry.upcoming.length).padStart(3)} fixtures${next ? `, first ${next.start} ${next.home.short} v ${next.away.short}` : ''}`);
+    } catch (err) {
+      console.log(`FAIL next   ${league.id.padEnd(17)} ${err.message}`);
+    }
+    return entry;
   }));
   console.log(`ESPN Access-Control-Allow-Origin: ${cors ?? '(none)'}`);
   await mkdir(dirname(OUT), { recursive: true });
   await writeFile(OUT, JSON.stringify({ generatedAt: new Date().toISOString(), leagues: out }));
-  console.log(`Wrote scores for ${out.filter(l => l.ok).length}/${out.length} leagues to ${OUT}`);
+  console.log(`Wrote scores for ${out.filter(l => l.ok).length}/${out.length} leagues and fixtures for ${out.filter(l => l.upcoming.length).length} to ${OUT}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await saveScores();
