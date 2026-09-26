@@ -85,9 +85,15 @@
     --armed-ink: #FFFFFF;
     --swipe-track: rgba(123, 108, 246, 0.10);
     --tag-ink: #D9D3FF;
-    --flag-ink: #FFB340;
-    --arch-ink: #C4A8FF;
-    --bin-ink: #FF7A72;
+    /* Flag, Archive, Trash: iOS Mail's orange, purple and red, at about half
+       their saturation so they sit as quietly as Tag */
+    --flag-tint: #C8913F;
+    --arch-tint: #8C79CF;
+    --bin-tint: #C9625B;
+    --flag-ink: #EBC68F;
+    --arch-ink: #CDBEF3;
+    --bin-ink: #F0A9A3;
+    --armed-mix-l: 50%;                       /* a full swipe's Trash capsule */
     /* glass */
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
@@ -137,9 +143,10 @@
       --armed-ink: initial;                   /* keeps each action's own dark ink */
       --swipe-track: rgba(123, 108, 246, 0.07);
       --tag-ink: #4A3FC4;
-      --flag-ink: #A35700;
-      --arch-ink: #6A3FD6;
-      --bin-ink: #C0271D;
+      --flag-ink: #855412;
+      --arch-ink: #5A45B0;
+      --bin-ink: #9E3A32;
+      --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
       --hair: rgba(60, 60, 67, 0.14);
@@ -654,15 +661,15 @@
   }
   .swipe-r { background: var(--fill); }
   .sa:active .gi { transform: scale(0.9); }
-  .sa.flag { --tint: #FF9500; --ink: var(--flag-ink); }
-  .sa.arch { --tint: #8E5CF7; --ink: var(--arch-ink); }
-  .sa.bin { --tint: #FF3B30; --ink: var(--bin-ink); }
+  .sa.flag { --tint: var(--flag-tint); --ink: var(--flag-ink); }
+  .sa.arch { --tint: var(--arch-tint); --ink: var(--arch-ink); }
+  .sa.bin { --tint: var(--bin-tint); --ink: var(--bin-ink); }
   li.armed-l .sa.flag, li.armed-l .sa.arch { flex-basis: 0; padding: 0; overflow: hidden; }
   li.armed-l .sa.bin { flex: 1 0 76px; }
   /* all the way: Trash stretches into a wide glass capsule, as Mail's fills the row */
   li.armed-l .sa.bin .gi {
     width: calc(100% - 28px); color: var(--armed-ink, var(--ink));
-    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--armed-mix), transparent);
+    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--armed-mix-l), transparent);
   }
   li.armed-l .sa.bin svg { animation: pop .35s var(--ease); }
   .who .when .flagged { color: #FF9500; display: inline-flex; }
