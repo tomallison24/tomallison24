@@ -22,6 +22,21 @@ happens on days you never open it.
 - **Nothing leaves the phone.** The app talks straight to the Gmail API from
   Safari. There is no backend to hold a token.
 
+## Light and dark
+
+The app follows the iPhone's own appearance — Settings → Display &
+Brightness — and switches the moment iOS does, including at sunset on
+*Automatic*, with no reload. Every colour is a token with a light and a dark
+value; text meets WCAG contrast on its real background in both (checked by
+the tests, not by eye). Emails themselves always render on white, as their
+senders designed them.
+
+The status bar is set to iOS's `default` style rather than
+`black-translucent`: that one always draws the clock in white, which would
+vanish on the light theme. The bar takes its colour from `theme-color`, set
+per theme. If the change doesn't show, remove the app from the home screen
+and add it again — iOS reads the status bar style when the app is added.
+
 ## Put it on your iPhone
 
 1. **Google Cloud, once** (about three minutes) — see *Setup* below.
