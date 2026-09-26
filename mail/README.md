@@ -2,7 +2,9 @@
 
 Gmail triage as a home-screen web app: frosted glass over a slow aurora, one
 tag button next to every message, a Marketing bucket that empties itself, tags
-that sort mail by who sent it, a page for each message, and search.
+that sort mail by who sent it, a page for each conversation, search, and the
+everyday parts of iOS Mail: swipe to flag, archive or trash, reply and forward
+with Undo Send, and attachments.
 
 **One tap on the tag does three things:**
 
@@ -175,9 +177,11 @@ to hand (`tmsa.org` → *Sofia's school*).
 
 ## Tapping a message
 
-Opens it as a page of its own, sliding in over the list; the back chevron or
-the iPhone's back swipe returns to exactly where you were. Opening a message
-marks it read in Gmail, the same as Gmail does.
+Each row is a **conversation**, as in Mail (the number shows how many
+messages). Tapping one opens it as a page of its own, sliding in over the list;
+the back chevron or the iPhone's back swipe returns to exactly where you were.
+The newest message and any unread ones are open; tap a folded one to open it.
+Opening a conversation marks it read in Gmail, the same as Gmail does.
 
 HTML mail is shown as designed, in a sandboxed frame that **can't run
 anything and can't load anything**: images, and the tracking pixels among
@@ -186,7 +190,48 @@ opened it, and the note says so. Wide newsletters are scaled to fit the screen,
 the way Mail does. Plain-text mail is shown as text with its links tappable.
 
 **Tag**, **Marketing** (or **Inbox**, for mail already in the bucket) and
-**Open in Gmail** are on the page.
+**Open in Gmail** are at the top; the bar at the bottom has **Trash**,
+**Archive**, **Flag**, **Reply** and **New Message**.
+
+## Swiping
+
+- **Right** — **Tag** (see Tags).
+- **Left** — a short swipe shows **Flag**, **Archive** and **Trash**; swipe all
+  the way to trash it. Every one has **Undo**, which puts back only the
+  messages that were in the inbox — your own replies in the conversation stay
+  in Sent.
+
+Flagged is Gmail's star, so it matches Gmail on the web. The **Flagged** chip
+under the tabs lists them.
+
+## Writing
+
+**Reply** on a conversation's page offers **Reply**, **Reply All** and
+**Forward**; the pencil (bottom right of the list, or in the bar) starts a new
+message.
+
+- Replies join the conversation in Gmail, quote the message, go to its
+  Reply-To if it has one, and leave you off Reply All.
+- **Send** waits 5 seconds with **Undo**. Meanwhile the message is kept on the
+  phone: if the app is closed before it goes, it comes back unsent with a note
+  rather than being lost or sent behind your back.
+- A send is **never retried**. If Gmail doesn't answer, the message may already
+  have gone, so the app says so and asks you to check Sent instead of risking
+  a duplicate.
+- **Cancel** after typing asks **Save Draft** (into Gmail's Drafts) or
+  **Delete Draft**.
+
+## Attachments
+
+Files show under the message they came with: name, type and size. Tap one to
+download it, then **Share or Save…** (the iOS share sheet: Save to Files,
+Photos, AirDrop…) or **Open**. Pictures get a preview. Nothing is downloaded
+until you tap.
+
+**Add Attachment** in a new message picks files from the phone; **Forward**
+keeps the original's files (tap × to drop one). Attachments can total
+**25 MB**. A file added from the phone survives Undo Send but not the app
+closing; if that happens it's marked **add it again**.
 
 ## Selecting and deleting
 
@@ -260,6 +305,12 @@ and the exact scope each method needs are confirmed there. Two things rest on
 secondary sources and my own testing instead:
 
 - the **7-day refresh token expiry** for consent screens in Testing;
+- the **25 MB attachment limit**, which is Gmail's published limit (the API's
+  own upload cap, from the discovery document, is 35 MB for the whole encoded
+  message, which 25 MB of files fits inside);
+- how **Share or Save…** and **Open** behave for files in a home-screen app.
+  The share sheet is the route iOS supports for handing a file on; **Open**
+  opens the file in a new view, which I could not try on an iPhone;
 - how **iOS home-screen apps handle the OAuth redirect**. The app uses a
   full-page redirect rather than Google's popup-based library precisely
   because popups can't hand a token back to a standalone home-screen app, but

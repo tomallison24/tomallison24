@@ -647,6 +647,33 @@
   }
   .fab:active { transform: scale(0.9); }
 
+  /* ---- files ---- */
+  .mfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; }
+  .fchip {
+    display: flex; align-items: center; gap: 11px; width: 100%; min-height: 54px; padding: 8px 10px; text-align: left;
+    border-radius: 14px; background: var(--fill); border: 1px solid var(--hair); color: var(--text);
+    transition: transform .18s var(--ease);
+  }
+  button.fchip:active { transform: scale(0.97); }
+  .fext {
+    flex: none; width: 34px; height: 40px; border-radius: 8px; display: inline-flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 5px; font-size: 9.5px; font-weight: 800; letter-spacing: .02em; color: #fff;
+    background: linear-gradient(160deg, hsl(var(--h) 75% 58%), hsl(var(--h) 70% 44%));
+  }
+  .fmeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .fname { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fsize { font-size: 12.5px; color: var(--faint); }
+  .fsize.lost { color: var(--danger); }
+  .fx { flex: none; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); font-size: 20px; }
+  .fx:active { background: var(--fill); }
+  .cfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+  .cfiles:empty { display: none; }
+  .cattach { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--hair-2); color: var(--accent); font-size: 15px; font-weight: 600; }
+  .cattach svg { width: 18px; height: 18px; }
+  .fprev { display: block; max-width: 100%; max-height: 46vh; margin: 0 auto; border-radius: 14px; object-fit: contain; }
+  .fwait { text-align: center; color: var(--faint); font-size: 14px; padding: 18px 0; }
+  a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+
   /* ---- the message page's toolbar ---- */
   .rbar {
     position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 3; margin-top: 4px;
@@ -1965,8 +1992,94 @@ function msgCard(m, open) {
   return '<div class="card msg" data-card="' + esc(m.id) + '">' + head + body + filesHTML(m) + '</div>';
 }
 
-// Files on a message (filled in by the attachments work).
-function filesHTML(m) { return ''; }
+// Files on a message: one tappable row each, as in Mail.
+function filesHTML(m) {
+  if (!m.files?.length) return '';
+  return '<div class="mfiles">' + m.files.map((f, i) =>
+    '<button class="fchip" data-act="open-file" data-msg="' + esc(m.id) + '" data-i="' + i + '" aria-label="Open ' + esc(f.name) + '">' +
+      fileRow(f, '<span class="fsize">' + esc(fmtSize(f.size)) + '</span>') + '</button>').join('') + '</div>';
+}
+
+// The coloured badge (PDF, JPG…), the name and the size.
+const FILE_HUE = [[/pdf/, 2], [/^image\//, 145], [/word|document|rtf|text\//, 214], [/sheet|excel|csv/, 130], [/presentation|powerpoint|keynote/, 28], [/zip|compressed|tar/, 45]];
+function fileRow(f, extra = '') {
+  const ext = (/\.([a-z0-9]{1,5})$/i.exec(f.name || '') || [, 'file'])[1].toUpperCase().slice(0, 4);
+  const h = (FILE_HUE.find(([re]) => re.test((f.type || '').toLowerCase())) || [, 230])[1];
+  return '<span class="fext" style="--h:' + h + '" aria-hidden="true">' + esc(ext) + '</span>' +
+    '<span class="fmeta"><span class="fname">' + esc(f.name || 'Attachment') + '</span>' + extra + '</span>';
+}
+function fmtSize(n) {
+  if (!n) return '';
+  if (n < 1024) return n + ' bytes';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / 1048576).toFixed(n < 10 * 1048576 ? 1 : 0) + ' MB';
+}
+
+// Gmail sends base64url; MIME and atob want plain base64.
+const b64std = s => { s = s.replace(/-/g, '+').replace(/_/g, '/').replace(/\s+/g, ''); return s + '='.repeat((4 - s.length % 4) % 4); };
+function bytesOf(b64) {
+  const bin = atob(b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function fetchFile(msgId, f) {
+  const r = await api('/messages/' + encodeURIComponent(msgId) + '/attachments/' + encodeURIComponent(f.attId));
+  return b64std(r.data || '');
+}
+
+// Opens a file in a sheet: a preview for pictures, and Share / Open. The
+// download happens first, so the Share tap is its own gesture (iOS needs one).
+async function openFile(msgId, i) {
+  const m = state.reading?.msgs?.find(x => x.id === msgId), f = m?.files?.[i];
+  if (!f) return;
+  closeSheet();
+  const s = state.sheet = { file: f };
+  const el = $('#sheet');
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(f.name) + '"></div>';
+  el.classList.remove('hide', 'leaving');
+  renderFileSheet();
+  try {
+    const data = await fetchFile(msgId, f);
+    if (state.sheet !== s) return;
+    s.blob = new Blob([bytesOf(data)], { type: f.type || 'application/octet-stream' });
+    s.url = URL.createObjectURL(s.blob);
+  } catch (err) {
+    if (state.sheet !== s) return;
+    if (err instanceof AuthError) { closeSheet(); return failed(err); }
+    s.error = err.message;
+  }
+  renderFileSheet();
+}
+
+function renderFileSheet() {
+  const s = state.sheet, box = $('#sheet .sheet');
+  if (!s?.file || !box) return;
+  const f = s.file, img = /^image\//.test(f.type) && s.url;
+  box.innerHTML = '<div class="grab"></div>' +
+    '<div class="fchip">' + fileRow(f, '<span class="fsize">' + esc(fmtSize(f.size)) + '</span>') + '</div>' +
+    (img ? '<img class="fprev" src="' + s.url + '" alt="' + esc(f.name) + '">' : '') +
+    (s.error ? '<p class="note cnote-bad">Couldn’t download it: ' + esc(s.error) + '</p>'
+      : !s.url ? '<p class="fwait">Downloading…</p>'
+      : '<button class="btn" data-act="file-share">Share or Save…</button>' +
+        '<a class="btn ghost" href="' + s.url + '" target="_blank" rel="noopener">Open</a>') +
+    '<button class="btn ghost" data-act="sheet-close">Done</button>';
+}
+
+// The share sheet (Save to Files, Photos, AirDrop…); a plain download where
+// the browser can't share files.
+async function shareFile() {
+  const s = state.sheet;
+  if (!s?.blob) return;
+  const file = new File([s.blob], s.file.name || 'attachment', { type: s.blob.type });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); }
+    catch (e) { if (e.name !== 'AbortError') toast('Couldn’t share it: ' + e.message, { bad: true }); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = s.url; a.download = file.name;
+  document.body.append(a); a.click(); a.remove();
+}
 
 // Puts each open message's HTML into its sandboxed frame and sizes it.
 function mountFrames(root) {
@@ -2139,6 +2252,8 @@ const COMPOSE_TITLE = { new: 'New Message', reply: 'Reply', all: 'Reply All', fw
 
 function openCompose(job, { note } = {}) {
   state.compose = { mode: 'new', to: '', cc: '', subject: '', body: '', files: [], ...job, start: job.body || '' };
+  state.compose.files = [...(state.compose.files || [])];
+  state.compose.startFiles = state.compose.files.length;
   const c = state.compose, el = $('#compose');
   el.innerHTML = '<div class="cwrap">' +
     '<div class="ctop">' +
@@ -2153,6 +2268,8 @@ function openCompose(job, { note } = {}) {
       '<label class="cf"><span>Subject:</span><input id="c-subj" type="text" value="' + esc(c.subject) + '"></label>' +
       '<textarea id="c-body" aria-label="Message">' + esc(c.body) + '</textarea>' +
       '<div class="cfiles" id="c-files"></div>' +
+      '<button class="cattach" data-act="compose-attach">' + ICON.clip + 'Add Attachment</button>' +
+      '<input id="c-pick" type="file" multiple hidden>' +
     '</div>' +
   '</div>';
   el.classList.remove('hide', 'leaving');
@@ -2162,8 +2279,49 @@ function openCompose(job, { note } = {}) {
   setTimeout(() => (c.to ? body : $('#c-to')).focus(), 350);
 }
 
-// Files on the message being written (filled in by the attachments work).
-function renderComposeFiles() {}
+// Gmail's limit on attachments (the message itself, base64 and all, must fit
+// under the upload endpoint's 35 MB).
+const MAX_FILES = 25 * 1048576;
+const filesTotal = files => (files || []).reduce((n, f) => n + (f.size || 0), 0);
+// A file you added from the phone survives Undo, but not the app closing: only
+// forwarded ones (still in Gmail) can be fetched again.
+const lostFile = f => !f.data && !f.attId && !f.reading;
+
+// Files on the message being written, each with a remove button.
+function renderComposeFiles() {
+  const c = state.compose, el = $('#c-files');
+  if (!c || !el) return;
+  el.innerHTML = c.files.map((f, i) => '<div class="fchip">' +
+    fileRow(f, lostFile(f) ? '<span class="fsize lost">Not kept — add it again</span>' : '<span class="fsize">' + esc(f.reading ? 'Adding…' : fmtSize(f.size)) + '</span>') +
+    '<button class="fx" data-act="compose-unfile" data-i="' + i + '" aria-label="Remove ' + esc(f.name) + '">×</button></div>').join('');
+}
+
+const readB64 = file => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(String(r.result).split(',')[1] || '');
+  r.onerror = () => reject(r.error || new Error('Couldn’t read the file'));
+  r.readAsDataURL(file);
+});
+
+async function addComposeFiles(input) {
+  const c = state.compose;
+  const picked = [...(input.files || [])];
+  input.value = '';
+  if (!c) return;
+  for (const file of picked) {
+    if (filesTotal(c.files) + file.size > MAX_FILES) {
+      toast('“' + file.name + '” is too big — attachments can come to 25 MB in all', { bad: true, ms: 6000 });
+      continue;
+    }
+    const f = { name: file.name || 'attachment', type: file.type || 'application/octet-stream', size: file.size, data: null, reading: true };
+    c.files.push(f);                                   // counts toward the limit while it reads
+    renderComposeFiles();
+    try { f.data = await readB64(file); }
+    catch (err) { c.files.splice(c.files.indexOf(f), 1); toast('Couldn’t add “' + file.name + '”: ' + err.message, { bad: true }); }
+    delete f.reading;
+    if (state.compose === c) renderComposeFiles();
+  }
+}
 
 function readCompose() {
   return { to: $('#c-to').value, cc: $('#c-cc').value, subject: $('#c-subj').value, body: $('#c-body').value };
@@ -2204,6 +2362,11 @@ async function sendCompose() {
   const bad = to.concat(cc).find(a => !a.ok);
   if (!to.length) return toast('Add someone to send it to', { bad: true });
   if (bad) return toast('That address doesn’t look right: ' + bad.email, { bad: true, ms: 6000 });
+  const busy = c.files.find(f => f.reading);
+  if (busy) return toast('Still adding “' + busy.name + '”…', { ms: 3000 });
+  const lost = c.files.find(lostFile);
+  if (lost) return toast('Add “' + lost.name + '” again, or remove it', { bad: true, ms: 6000 });
+  if (filesTotal(c.files) > MAX_FILES) return toast('Attachments come to ' + fmtSize(filesTotal(c.files)) + ' — the limit is 25 MB', { bad: true, ms: 6000 });
   const job = { ...c, ...f, to, cc };
   // Held for a few seconds so Undo can take it back - and on disk meanwhile,
   // so closing the app can't lose it.
@@ -2237,14 +2400,19 @@ async function sendCompose() {
   }
 }
 
-// Fetches forwarded files' bytes (filled in by the attachments work).
-async function ensureFileData(job) {}
+// Forwarded files are fetched from Gmail only when the message goes. Files
+// that can't be (added on the phone, then the app closed) are left off a
+// draft, and stop a send before it starts (above).
+async function ensureFileData(job) {
+  job.files = (job.files || []).filter(f => f.data || f.attId);
+  for (const f of job.files) if (!f.data) f.data = await fetchFile(f.msgId, f);
+}
 
 async function cancelCompose() {
   const c = state.compose;
   if (!c) return;
   const f = readCompose();
-  const typed = f.body.trim() !== (c.start || '').trim() || (c.mode === 'new' && (f.to.trim() || f.subject.trim()));
+  const typed = f.body.trim() !== (c.start || '').trim() || (c.mode === 'new' && (f.to.trim() || f.subject.trim())) || c.files.length !== c.startFiles;
   if (!typed) return closeCompose();
   const pick = await choiceSheet({
     title: 'Keep this message?',
@@ -2328,6 +2496,7 @@ function confirmSheet({ title, body, yes }) {
 function closeSheet() {
   const el = $('#sheet');
   if (confirmDone) { const done = confirmDone; confirmDone = null; done(null); }
+  if (state.sheet?.url) { const u = state.sheet.url; state.sheet.url = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
   const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
@@ -2676,6 +2845,7 @@ $('#search').addEventListener('submit', e => {
   go({ force: true });
 });
 $('#q').addEventListener('input', () => $('#q-clear').classList.toggle('hide', !$('#q').value));
+document.addEventListener('change', e => { if (e.target.id === 'c-pick') addComposeFiles(e.target); });
 $('#q-clear').addEventListener('click', () => { clearSearch(); $('#q').focus(); });
 
 function clearSearch(reload = true) {
@@ -2832,6 +3002,14 @@ document.addEventListener('click', async e => {
     }
     case 'compose-new': return openCompose({ mode: 'new' });
     case 'compose-send': return sendCompose();
+    case 'compose-attach': return $('#c-pick')?.click();
+    case 'compose-unfile': {
+      const c = state.compose;
+      if (c) { c.files.splice(Number(el.dataset.i), 1); renderComposeFiles(); }
+      return;
+    }
+    case 'open-file': return openFile(el.dataset.msg, Number(el.dataset.i));
+    case 'file-share': return shareFile();
     case 'compose-cancel': return cancelCompose();
     case 'choice': {
       const done = confirmDone;
