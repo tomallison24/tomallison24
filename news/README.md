@@ -60,6 +60,14 @@ The bar under the tabs shows how many filters are on and what they are.
 - Filters are saved on each device (your iPhone and PC keep their own).
 - To add teams or competitions to the lists, edit `sport-catalog.json`.
 
+## Sport: my teams
+
+The Sport tab has one-tap buttons for Liverpool, England (football) and
+Northampton (Saints). Tap one to see only that team's news and games, and
+tap it again to go back to your filters. The buttons are the `quick` list in
+`sport-catalog.json`; any team in that file can go there. They only change
+the Sport tab: Latest keeps using your saved filters.
+
 ## Sport: live scores and fixtures
 
 The Sport tab has a **News | Scores** switch. Scores reads ESPN's public

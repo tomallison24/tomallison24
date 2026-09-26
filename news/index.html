@@ -183,6 +183,9 @@
     display: inline-grid; place-items: center;
     background: var(--accent); color: #FFFFFF; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
   }
+  .quick { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; scrollbar-width: none; }
+  .quick::-webkit-scrollbar { display: none; }
+  .quick .chip[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
   .filter-summary {
     flex: 1; min-width: 0; text-align: left;
     font-size: 13px; font-weight: 500; color: var(--muted);
@@ -426,7 +429,10 @@
   // ("team:football:arsenal") or are typed keywords ("kw:Lewis Hamilton").
   let catalog = null, catalogFailed = false;
   let picks = Array.isArray(store.get('news.sport.picks')) ? store.get('news.sport.picks').filter(x => typeof x === 'string') : [];
-  let pickList = [];
+  let pickList = [];               // what the Sport tab shows: a quick team, else the saved picks
+  let savedPickList = [];          // the saved picks alone (Latest always uses these)
+  // One-tap team button (sport-catalog.json "quick"), on until tapped again.
+  let quick = typeof store.get('news.sport.quick') === 'string' ? store.get('news.sport.quick') : null;
   let sportMode = store.get('news.sport.mode') === 'scores' ? 'scores' : 'news';
 
   // ---- helpers ----
@@ -514,7 +520,8 @@
     const teams = (raw.teams || []).map(g => ({
       title: g.group, items: (g.names || []).map(n => make('team', g.sport, n, g.lastWord, g.group)),
     }));
-    return { entries, sports, competitions, teams, sportLabel };
+    const quickTeams = (raw.quick || []).filter(q => q && entries.has(q.id));
+    return { entries, sports, competitions, teams, sportLabel, quick: quickTeams };
   }
 
   function pickEntry(id) {
@@ -522,8 +529,11 @@
     return catalog ? catalog.entries.get(id) || null : null;
   }
   function refreshPicks() {
-    pickList = picks.map(pickEntry).filter(Boolean);
+    savedPickList = picks.map(pickEntry).filter(Boolean);
+    const q = quick && pickEntry(quick);
+    pickList = q ? [q] : savedPickList;
   }
+  const quickOn = () => !!quick && pickList.length === 1 && pickList[0].id === quick;
 
   // Which sports a story is about: its web address (/football/, /f1/), the
   // publisher's tags, or the sport's own words. Worked out once per story.
@@ -565,7 +575,7 @@
     return topics()
       .flatMap(t => {
         let list = topicStories(t.id);
-        if (t.id === SPORT && pickList.length) list = list.filter(s => firstMatch(s, pickList));
+        if (t.id === SPORT && savedPickList.length) list = list.filter(s => firstMatch(s, savedPickList));
         return list.slice(0, LATEST_PER_TOPIC);
       })
       .filter(s => !seen.has(s.id) && seen.add(s.id))
@@ -575,7 +585,8 @@
 
   function meta(s, showTopic) {
     const parts = [];
-    const pick = s.topic === SPORT && pickList.length ? firstMatch(s, pickList) : null;
+    const list = showTopic ? savedPickList : pickList;
+    const pick = s.topic === SPORT && list.length ? firstMatch(s, list) : null;
     if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
     else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
     parts.push(`<span>${esc(s.source)}</span>`);
@@ -606,13 +617,17 @@
       <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
       <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n">${live} live</span>` : ''}</button>
     </div>`;
+    const mine = catalog && catalog.quick.length
+      ? `<div class="quick" role="group" aria-label="My teams">${catalog.quick.map(q =>
+          `<button class="chip" data-quick="${esc(q.id)}" aria-pressed="${quickOn() && quick === q.id}">${esc(q.label)}</button>`).join('')}</div>`
+      : '';
     const row = n
       ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on">${ICON.sliders}Filters<span class="n">${n}</span></button>
          <button class="filter-summary" data-action="edit-picks">${esc(pickList.map(p => p.label).join(', '))}</button>
          <button class="chip" data-action="reset-picks">${ICON.x}Reset</button>`
       : `<button class="chip" data-action="edit-picks">${ICON.sliders}Filter</button>
          <span class="filter-summary">${sportMode === 'scores' ? 'Showing all leagues' : 'Showing all sport'}</span>`;
-    filterEl.innerHTML = modes + `<div class="fb-row">${row}</div>`;
+    filterEl.innerHTML = modes + mine + (quickOn() ? '' : `<div class="fb-row">${row}</div>`);
   }
 
   function renderFeed() {
@@ -622,6 +637,12 @@
     const isLatest = topic === LATEST.id;
     const stories = storiesFor(topic);
     if (!stories.length) {
+      if (topic === SPORT && quickOn()) {
+        feedEl.innerHTML = notice(`Nothing on ${esc(pickList[0].label)} right now`,
+          'None of the latest sport stories mention them. They’ll show here as soon as one does.',
+          `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all sport'}</button>`) + status();
+        return;
+      }
       if (topic === SPORT && pickList.length) {
         const names = pickList.map(p => p.label);
         const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
@@ -744,6 +765,7 @@
 
   function openSheet() {
     if (sheetOpen) return;
+    if (quick) setQuick(null);      // the sheet edits the saved picks
     sheetOpen = true;
     picksChanged = false;
     returnFocus = document.activeElement;
@@ -768,6 +790,16 @@
     if (picksChanged) keepBarInPlace();
     const back = returnFocus && returnFocus.isConnected ? returnFocus : filterEl.querySelector('[data-action="edit-picks"]');
     if (back) back.focus({ preventScroll: true });
+  }
+
+  function setQuick(id) {
+    quick = id && quick !== id ? id : null;
+    store.set('news.sport.quick', quick);
+    refreshPicks();
+    renderFilterbar();
+    renderFeed();
+    keepBarInPlace();
+    if (topic === SPORT && sportMode === 'scores') fetchScores();
   }
 
   function setPicks(next) {
@@ -978,6 +1010,8 @@
     const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}${fixWhen ? ` · fixtures checked ${esc(fixWhen.toLowerCase())}` : ''}</p>`;
     if (!sections.length) {
       if (!scoresAt) return notice('Scores unavailable', 'Couldn’t reach ESPN or the saved copy. Check your connection and try again.', '<button data-action="retry-scores">Try again</button>');
+      if (quickOn()) return notice(`No games for ${esc(pickList[0].label)}`, 'Nothing on now or in the next two weeks.',
+        `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all leagues'}</button>`) + foot;
       return pickList.length
         ? notice('No games for your filters', 'None of the games on now or coming up involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
         : notice('No games right now', 'There are no games or fixtures listed in these leagues at the moment.', '') + foot;
@@ -1064,12 +1098,16 @@
   filterEl.addEventListener('click', e => {
     const m = e.target.closest('[data-mode]');
     if (m) return setMode(m.dataset.mode);
+    const q = e.target.closest('[data-quick]');
+    if (q) return setQuick(q.dataset.quick);
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
     if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
   feedEl.addEventListener('click', e => {
     if (e.target.closest('[data-action="retry"]')) return load();
     if (e.target.closest('[data-action="retry-scores"]')) return fetchScores();
+    const q = e.target.closest('[data-quick]');
+    if (q) return setQuick(q.dataset.quick);
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
     if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
