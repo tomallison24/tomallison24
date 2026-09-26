@@ -612,6 +612,41 @@
   .who .when .flagged { color: #FF9500; display: inline-flex; }
   .who .when .flagged svg { width: 13px; height: 13px; }
 
+  /* ---- writing ---- */
+  #compose {
+    position: fixed; inset: 0; z-index: 22; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 20px) max(14px, env(safe-area-inset-left));
+    background: var(--page); animation: sheetUp .44s var(--ease) both;
+  }
+  #compose.leaving { animation: sheetDown .28s cubic-bezier(.4,0,1,1) both; }
+  .cwrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .ctop { display: flex; align-items: center; gap: 10px; }
+  .ctitle { flex: 1; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .send {
+    width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(10,132,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform .18s var(--ease);
+  }
+  .send:active { transform: scale(0.88); }
+  .cform { display: flex; flex-direction: column; }
+  .cf { display: flex; align-items: center; gap: 8px; padding: 0 16px; min-height: 48px; border-bottom: 1px solid var(--hair-2); }
+  .cf span { color: var(--faint); font-size: 15px; flex: none; }
+  .cf input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 16px; color: var(--text); }
+  #c-body {
+    min-height: 46vh; padding: 14px 16px 18px; background: none; border: 0; outline: none; resize: none;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; color: var(--text);
+  }
+  .cnote-bad { padding: 12px 16px; font-size: 13px; line-height: 1.5; color: var(--bad-text); }
+  .fab {
+    position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 15;
+    width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent); background: var(--glass-2); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: 0 10px 28px var(--lift-strong), inset 0 1px 0 var(--hi);
+    transition: transform .2s var(--ease); animation: pop .45s var(--ease) both;
+  }
+  .fab:active { transform: scale(0.9); }
+
   /* ---- the message page's toolbar ---- */
   .rbar {
     position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 3; margin-top: 4px;
@@ -705,6 +740,10 @@
   <div class="foot" id="foot"></div>
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
+<div id="compose" class="hide" role="dialog" aria-label="New message"></div>
+<button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
+  <svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7H5V5h7V3zm12.78 1a.7.7 0 0 0-.48.2l-1.22 1.21 2.5 2.5L19.8 6.7c.26-.26.26-.7 0-.95L18.25 4.2a.7.7 0 0 0-.47-.2m-2.41 2.12L8 13.5V16h2.5l7.37-7.38z"/></svg>
+</button>
 <div id="sheet" class="hide"></div>
 <div id="selbar" class="hide" role="toolbar" aria-label="Selected messages">
   <button id="sel-mark" disabled>Mark</button>
@@ -740,7 +779,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -1510,6 +1549,9 @@ const ICON = {
   back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
   chev: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   bin: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  reply: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11"/></svg>',
+  compose: '<svg class="i" width="21" height="21" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7H5V5h7V3zm12.78 1a.7.7 0 0 0-.48.2l-1.22 1.21 2.5 2.5L19.8 6.7c.26-.26.26-.7 0-.95L18.25 4.2a.7.7 0 0 0-.47-.2m-2.41 2.12L8 13.5V16h2.5l7.37-7.38z"/></svg>',
+  up: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>',
   flag: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>',
   archive: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M3 3h18v4H3zm1 5h16v13H4zm5.5 3a.5.5 0 0 0-.5.5V13h6v-1.5a.5.5 0 0 0-.5-.5z"/></svg>',
   trash: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
@@ -1626,6 +1668,7 @@ function renderChrome() {
   setCount('#c-mkt', state.lists.mkt?.items?.length);
   setCount('#c-rules', signedIn ? chipTags().length || null : null);
 
+  $('#fab').classList.toggle('hide', !listView || !!sel);
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
   $('#selbar').classList.toggle('hide', !sel);
@@ -1964,6 +2007,284 @@ function toggleMsg(id) {
 }
 
 // ---------------------------------------------------------------------------
+// Writing: new messages, replies, forwards
+// ---------------------------------------------------------------------------
+const UPLOAD = 'https://gmail.googleapis.com/upload/gmail/v1/users/me';
+const UNDO_SEND = Number(ls.get('mail.undoSend', '')) || 5000;   // (the tests shorten this)
+
+function b64utf8(str) {
+  let bin = '';
+  for (const b of new TextEncoder().encode(str)) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+// Headers are ASCII: anything else goes in an RFC 2047 encoded word.
+const encWord = str => /^[\x20-\x7e]*$/.test(str) ? str : '=?UTF-8?B?' + b64utf8(str) + '?=';
+// A header value is one line. Nothing typed can split it and add a header -
+// no sneaking a Bcc in through the subject.
+const oneLine = str => String(str || '').replace(/[\r\n]+/g, ' ').trim();
+const wrap76 = str => str.replace(/.{76}/g, '$&\r\n');
+
+// "Name <a@b.com>, c@d.org" -> [{ name, email, ok }]
+function parseAddresses(text) {
+  const out = [];
+  for (const piece of String(text || '').split(/[,;]/)) {
+    const t = piece.trim();
+    if (!t) continue;
+    const m = /^(.*?)<\s*([^<>\s]+)\s*>$/.exec(t);
+    const email = (m ? m[2] : t).trim().toLowerCase(), name = m ? m[1].trim().replace(/^"|"$/g, '') : '';
+    out.push({ name, email, ok: /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[a-z]{2,}$/i.test(email) });
+  }
+  return out;
+}
+const formatAddresses = list => list.map(a => a.name ? encWord(oneLine(a.name).replace(/"/g, '')) + ' <' + a.email + '>' : a.email).join(', ');
+
+function htmlToText(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const n of doc.querySelectorAll('script, style, head, noscript')) n.remove();
+  for (const n of doc.querySelectorAll('br')) n.replaceWith('\n');
+  for (const n of doc.querySelectorAll('p, div, tr, li, h1, h2, h3, h4, table, blockquote')) n.append('\n');
+  return doc.body?.textContent || '';
+}
+const plainOf = m => m.text ? tidy(m.text) : m.html ? tidy(htmlToText(m.html)) : m.snippet || '';
+const longDate = ms => new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+// The whole message, as Gmail's upload endpoint takes it. Text is UTF-8 in
+// base64; files (when there are any) make it multipart/mixed.
+function buildMime(job) {
+  const h = [];
+  if (state.me) h.push('From: ' + state.me);
+  h.push('To: ' + formatAddresses(job.to));
+  if (job.cc.length) h.push('Cc: ' + formatAddresses(job.cc));
+  h.push('Subject: ' + encWord(oneLine(job.subject)));
+  h.push('Date: ' + new Date().toUTCString());
+  h.push('Message-ID: <' + crypto.randomUUID() + '@mail.tomallison24.github.io>');
+  if (job.inReplyTo) h.push('In-Reply-To: ' + oneLine(job.inReplyTo));
+  if (job.references) h.push('References: ' + oneLine(job.references));
+  h.push('MIME-Version: 1.0');
+  const textPart = 'Content-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n' + wrap76(b64utf8(job.body.replace(/\r?\n/g, '\r\n')));
+  const files = (job.files || []).filter(f => f.data);
+  if (!files.length) return h.join('\r\n') + '\r\n' + textPart + '\r\n';
+  const bnd = 'mix_' + crypto.randomUUID().replace(/-/g, '');
+  const parts = [textPart].concat(files.map(f =>
+    'Content-Type: ' + oneLine(f.type || 'application/octet-stream') + '; name="' + encWord(oneLine(f.name).replace(/"/g, '')) + '"\r\n' +
+    'Content-Disposition: attachment; filename="' + encWord(oneLine(f.name).replace(/"/g, '')) + '"\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n' + wrap76(f.data)));
+  return h.join('\r\n') + '\r\nContent-Type: multipart/mixed; boundary="' + bnd + '"\r\n\r\n' +
+    parts.map(p => '--' + bnd + '\r\n' + p + '\r\n').join('') + '--' + bnd + '--\r\n';
+}
+
+// Sends (or saves) through Gmail's upload endpoint, which takes the thread to
+// join alongside the message. Never retried: if the answer is lost the message
+// may already have gone, and a second try would send it twice.
+async function uploadMime(what, raw, meta) {
+  const tok = getToken();
+  if (!tok) throw new AuthError('signed out');
+  const bnd = 'rel_' + crypto.randomUUID().replace(/-/g, '');
+  const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+    '\r\n--' + bnd + '\r\nContent-Type: message/rfc822\r\n\r\n' + raw + '\r\n--' + bnd + '--';
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT * 3);
+  let res, text;
+  try {
+    res = await fetch(UPLOAD + '/' + what + '?uploadType=multipart', {
+      method: 'POST', body, signal: ctl.signal,
+      headers: { Authorization: 'Bearer ' + tok.t, 'Content-Type': 'multipart/related; boundary=' + bnd },
+    });
+    text = await res.text();
+  } catch (e) {
+    const err = new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
+    err.unsure = true;
+    throw err;
+  } finally { clearTimeout(timer); }
+  if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
+  if (!res.ok) {
+    let msg = text.slice(0, 200);
+    try { msg = JSON.parse(text).error.message; } catch {}
+    throw new Error(msg || 'Gmail returned ' + res.status);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+// What a reply, reply-all or forward starts with, from the message it answers:
+// the newest in the conversation.
+function draftFrom(mode, r) {
+  const m = r.msgs[r.msgs.length - 1], me = (state.me || '').toLowerCase();
+  const mine = m.from.email === me;
+  const bare = list => parseAddresses(list).filter(a => a.ok).map(a => a.email);
+  const subj = m.subject || r.item.subject || '';
+  if (mode === 'fwd') {
+    return {
+      mode, to: '', cc: '', subject: /^fwd?:/i.test(subj) ? subj : 'Fwd: ' + subj,
+      body: '\n\n---------- Forwarded message ---------\nFrom: ' + m.from.name + ' <' + m.from.email + '>\nDate: ' + longDate(m.date) +
+        '\nSubject: ' + subj + '\nTo: ' + (m.to || '') + '\n\n' + plainOf(m),
+      files: m.files.map(f => ({ ...f, msgId: m.id })),
+    };
+  }
+  let to = mine ? bare(m.to) : bare(m.replyTo || '').length ? bare(m.replyTo) : [m.from.email];
+  let cc = [];
+  if (mode === 'all') {
+    to = to.concat(bare(m.to));
+    cc = bare(m.cc);
+  }
+  const uniq = list => [...new Set(list)].filter(e => e && e !== me);
+  to = uniq(to);
+  cc = uniq(cc).filter(e => !to.includes(e));
+  return {
+    mode, to: to.join(', '), cc: cc.join(', '), subject: /^re:/i.test(subj) ? subj : 'Re: ' + subj,
+    body: '\n\nOn ' + longDate(m.date) + ', ' + m.from.name + ' <' + m.from.email + '> wrote:\n' + plainOf(m).split('\n').map(l => '> ' + l).join('\n'),
+    threadId: r.item.threadId, inReplyTo: m.messageId, references: [m.references, m.messageId].filter(Boolean).join(' '),
+  };
+}
+
+const COMPOSE_TITLE = { new: 'New Message', reply: 'Reply', all: 'Reply All', fwd: 'Forward' };
+
+function openCompose(job, { note } = {}) {
+  state.compose = { mode: 'new', to: '', cc: '', subject: '', body: '', files: [], ...job, start: job.body || '' };
+  const c = state.compose, el = $('#compose');
+  el.innerHTML = '<div class="cwrap">' +
+    '<div class="ctop">' +
+      '<button class="textbtn" data-act="compose-cancel">Cancel</button>' +
+      '<span class="ctitle">' + esc(COMPOSE_TITLE[c.mode] || 'New Message') + '</span>' +
+      '<button class="send" data-act="compose-send" aria-label="Send">' + ICON.up + '</button>' +
+    '</div>' +
+    (note ? '<div class="card cnote-bad">' + esc(note) + '</div>' : '') +
+    '<div class="card cform">' +
+      '<label class="cf"><span>To:</span><input id="c-to" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(c.to) + '"></label>' +
+      '<label class="cf"><span>Cc:</span><input id="c-cc" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(c.cc) + '"></label>' +
+      '<label class="cf"><span>Subject:</span><input id="c-subj" type="text" value="' + esc(c.subject) + '"></label>' +
+      '<textarea id="c-body" aria-label="Message">' + esc(c.body) + '</textarea>' +
+      '<div class="cfiles" id="c-files"></div>' +
+    '</div>' +
+  '</div>';
+  el.classList.remove('hide', 'leaving');
+  renderComposeFiles();
+  const body = $('#c-body');
+  body.setSelectionRange(0, 0);
+  setTimeout(() => (c.to ? body : $('#c-to')).focus(), 350);
+}
+
+// Files on the message being written (filled in by the attachments work).
+function renderComposeFiles() {}
+
+function readCompose() {
+  return { to: $('#c-to').value, cc: $('#c-cc').value, subject: $('#c-subj').value, body: $('#c-body').value };
+}
+
+function closeCompose() {
+  const el = $('#compose');
+  state.compose = null;
+  if (el.classList.contains('hide')) return;
+  const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  if (reduced) return finish();
+  el.classList.add('leaving');
+  setTimeout(finish, 280);
+}
+
+// A choice of several, in the same sheet as the confirmations.
+function choiceSheet({ title, body, options }) {
+  closeSheet();
+  return new Promise(resolve => {
+    confirmDone = resolve;
+    state.sheet = { confirm: true };
+    const el = $('#sheet');
+    el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+      '<div class="sheet" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<div class="grab"></div><h3>' + esc(title) + '</h3>' + (body ? '<p class="note">' + body + '</p>' : '') +
+        options.map(o => '<button class="btn ' + (o.danger ? 'warn' : o.primary ? '' : 'ghost') + '" data-act="choice" data-id="' + esc(o.id) + '">' + esc(o.label) + '</button>').join('') +
+        '<button class="btn ghost" data-act="sheet-close">Cancel</button>' +
+      '</div>';
+    el.classList.remove('hide', 'leaving');
+  });
+}
+
+async function sendCompose() {
+  const c = state.compose;
+  if (!c) return;
+  const f = readCompose();
+  const to = parseAddresses(f.to), cc = parseAddresses(f.cc);
+  const bad = to.concat(cc).find(a => !a.ok);
+  if (!to.length) return toast('Add someone to send it to', { bad: true });
+  if (bad) return toast('That address doesn’t look right: ' + bad.email, { bad: true, ms: 6000 });
+  const job = { ...c, ...f, to, cc };
+  // Held for a few seconds so Undo can take it back - and on disk meanwhile,
+  // so closing the app can't lose it.
+  const keep = { ...job, to: f.to, cc: f.cc, files: (job.files || []).map(({ data, ...rest }) => rest) };
+  ls.set(K.pending, JSON.stringify(keep));
+  closeCompose();
+  let undone = false;
+  toast('Sending…', { label: 'Undo', ms: UNDO_SEND + 600, action: () => { undone = true; ls.del(K.pending); openCompose({ ...keep, files: job.files }); } });
+  await sleep(UNDO_SEND);
+  if (undone) return;
+  toast('Sending…', { ms: 60000 });
+  try {
+    await ensureFileData(job);
+    await uploadMime('messages/send', buildMime(job), job.threadId ? { threadId: job.threadId } : {});
+    ls.del(K.pending);
+    toast('Sent');
+    if (state.reading && job.threadId === state.reading.item.threadId) refreshReader();
+    // Refresh the list on screen in place (its rows must stay findable while
+    // the reader is open); other lists reload when next shown.
+    const key = currentList().key;
+    for (const k of Object.keys(state.lists)) if (k !== key) delete state.lists[k];
+    loadList({ force: true, quiet: true });
+  } catch (err) {
+    ls.del(K.pending);
+    if (err instanceof AuthError) { ls.set(K.pending, JSON.stringify(keep)); return failed(err); }
+    if (err.unsure) {
+      openCompose({ ...keep, files: job.files }, { note: 'Gmail didn’t answer, so this may already have been sent. Check your Sent mail before sending again.' });
+    } else {
+      openCompose({ ...keep, files: job.files }, { note: 'Not sent: ' + err.message });
+    }
+  }
+}
+
+// Fetches forwarded files' bytes (filled in by the attachments work).
+async function ensureFileData(job) {}
+
+async function cancelCompose() {
+  const c = state.compose;
+  if (!c) return;
+  const f = readCompose();
+  const typed = f.body.trim() !== (c.start || '').trim() || (c.mode === 'new' && (f.to.trim() || f.subject.trim()));
+  if (!typed) return closeCompose();
+  const pick = await choiceSheet({
+    title: 'Keep this message?',
+    options: [{ id: 'save', label: 'Save Draft', primary: true }, { id: 'delete', label: 'Delete Draft', danger: true }],
+  });
+  if (!pick) return;                                   // Cancel: back to writing
+  if (pick === 'delete') return closeCompose();
+  const job = { ...c, ...f, to: parseAddresses(f.to).filter(a => a.ok), cc: parseAddresses(f.cc).filter(a => a.ok) };
+  closeCompose();
+  toast('Saving draft…', { ms: 60000 });
+  try {
+    await ensureFileData(job);
+    await uploadMime('drafts', buildMime(job), { message: job.threadId ? { threadId: job.threadId } : {} });
+    toast('Draft saved in Gmail');
+  } catch (err) {
+    if (err instanceof AuthError) return failed(err);
+    openCompose({ ...c, ...f }, { note: (err.unsure ? 'Gmail didn’t answer, so the draft may have been saved. ' : 'Draft not saved: ') + err.message });
+  }
+}
+
+// Shows your reply in the open conversation once it's sent.
+async function refreshReader() {
+  const r = state.reading;
+  if (!r) return;
+  try {
+    const msgs = await fetchThread(r.item);
+    if (state.reading !== r) return;
+    r.msgs = msgs;
+    r.open.add(msgs[msgs.length - 1]?.id);
+    r.item.count = msgs.length;
+    renderReader();
+  } catch {}
+}
+
+function replyButtons() {
+  return '<button class="rb" data-act="reader-reply" aria-label="Reply">' + ICON.reply + '</button>' +
+    '<button class="rb" data-act="compose-new" aria-label="New message">' + ICON.compose + '</button>';
+}
+
+// ---------------------------------------------------------------------------
 // The tag sheet
 // ---------------------------------------------------------------------------
 function openSheet(item) {
@@ -2006,7 +2327,7 @@ function confirmSheet({ title, body, yes }) {
 
 function closeSheet() {
   const el = $('#sheet');
-  if (confirmDone) { const done = confirmDone; confirmDone = null; done(false); }
+  if (confirmDone) { const done = confirmDone; confirmDone = null; done(null); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
   const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
@@ -2501,6 +2822,24 @@ document.addEventListener('click', async e => {
       return throwAway([it], act === 'row-trash' ? 'trash' : 'archive');
     }
     case 'reader-trash': if (state.reading) throwAway([state.reading.item], 'trash'); return;
+    case 'reader-reply': {
+      const r = state.reading;
+      if (!r?.msgs?.length) return;
+      const pick = await choiceSheet({ title: r.item.subject, options: [
+        { id: 'reply', label: 'Reply', primary: true }, { id: 'all', label: 'Reply All' }, { id: 'fwd', label: 'Forward' }] });
+      if (pick) openCompose(draftFrom(pick, r));
+      return;
+    }
+    case 'compose-new': return openCompose({ mode: 'new' });
+    case 'compose-send': return sendCompose();
+    case 'compose-cancel': return cancelCompose();
+    case 'choice': {
+      const done = confirmDone;
+      confirmDone = null;
+      closeSheet();
+      if (done) done(el.dataset.id);
+      return;
+    }
     case 'reader-archive': if (state.reading) throwAway([state.reading.item], 'archive'); return;
     case 'reader-flag': if (state.reading) toggleFlag(state.reading.item); return;
     case 'swipe-tag': {
@@ -2697,7 +3036,8 @@ addEventListener('popstate', () => {
 
 addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (state.select) exitSelect();
+  if (state.compose && !state.sheet) cancelCompose();
+  else if (state.select) exitSelect();
   else if (state.sheet) closeSheet();
   else if (state.reading) closeReader();
 });
@@ -2728,6 +3068,10 @@ function renew() {
   ls.set(K.token + '.ever', '1');
 
   loadProfile();
+  try {
+    const waiting = JSON.parse(ls.get(K.pending, 'null'));
+    if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
+  } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); }).catch(() => {});
   loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
