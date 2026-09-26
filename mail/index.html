@@ -421,7 +421,21 @@ const settings = {
   set label(v) { ls.set(K.label, v); },
 };
 
-const clientId = () => (ls.get(K.clientId, '') || BUILT_IN_CLIENT_ID).trim();
+// A client ID is only letters, digits, dots and dashes. Copying one through
+// Messages, Notes or an email can add characters that can't be seen - a
+// zero-width or non-breaking space - and Google then answers "invalid_client:
+// the OAuth client was not found". Keeping only the legal characters also
+// repairs a bad copy already saved on a device.
+const cleanClientId = raw => String(raw || '').replace(/[^A-Za-z0-9.\-]/g, '');
+const clientId = () => cleanClientId(ls.get(K.clientId, '') || BUILT_IN_CLIENT_ID);
+
+// Says what is wrong with a pasted value, or nothing when it looks right.
+function clientIdProblem(id) {
+  if (!id) return 'Paste the client ID first.';
+  if (/^GOCSPX/i.test(id)) return 'That is the client secret. Paste the Client ID from the same page - it ends in .apps.googleusercontent.com.';
+  if (!/\.apps\.googleusercontent\.com$/.test(id)) return 'A client ID ends in .apps.googleusercontent.com. This one does not, so it was probably cut short while copying.';
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Sign-in: OAuth 2.0 implicit flow, by full-page redirect
@@ -872,6 +886,8 @@ function viewSignIn() {
     '<button class="btn" data-act="signin">Connect Gmail</button>' +
     '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
     '<p class="note">Access lasts about an hour, then reconnects in a tap. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
+    '<p class="note' + (clientIdProblem(clientId()) ? ' bad' : '') + '">Client ID on this device:<br><code class="url">' + esc(clientId()) + '</code>' +
+      (clientIdProblem(clientId()) ? '<br>' + esc(clientIdProblem(clientId())) : '<br>If Google says <em>invalid_client</em>, this does not match the one in Google Cloud.') + '</p>' +
     '<button class="btn ghost" data-act="forget-cid">Change client ID</button>' +
   '</div>';
 }
@@ -1006,8 +1022,9 @@ document.addEventListener('click', async e => {
   const li = el.closest('li');
 
   if (act === 'save-cid') {
-    const v = $('#cid').value.trim();
-    if (!v) return toast('Paste the client ID first', { bad: true });
+    const v = cleanClientId($('#cid').value);
+    const problem = clientIdProblem(v);
+    if (problem) return toast(problem, { bad: true, ms: 9000 });
     ls.set(K.clientId, v);
     return signIn();
   }
