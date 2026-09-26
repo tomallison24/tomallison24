@@ -3,7 +3,8 @@
   "womenTerms": ["women", "women's", "womens", "Lionesses", "Red Roses", "WSL", "Women's Super League", "PWR", "Premiership Women's Rugby"],
   "quick": [
     { "label": "Liverpool", "ids": ["team:football:liverpool"], "menOnly": true },
-    { "label": "England", "ids": ["team:football:england-football", "team:rugby-union:england-rugby"], "menOnly": true },
+    { "label": "England ⚽", "ids": ["team:football:england-football"], "menOnly": true },
+    { "label": "England 🏉", "ids": ["team:rugby-union:england-rugby"], "menOnly": true },
     { "label": "Northampton", "ids": ["team:rugby-union:northampton-saints"], "menOnly": true }
   ],
   "sports": [
