@@ -647,6 +647,16 @@
   }
   .fab:active { transform: scale(0.9); }
 
+  /* ---- mailing lists and blocking ---- */
+  .unsub {
+    display: flex; align-items: center; gap: 10px; margin: 0 14px 10px; padding: 9px 12px;
+    border-radius: 12px; background: var(--fill); border: 1px solid var(--hair); font-size: 13.5px; color: var(--muted);
+  }
+  .unsub span { flex: 1; min-width: 0; }
+  .unsub .textbtn { flex: none; font-weight: 600; }
+  .blocked { display: flex; align-items: center; gap: 10px; }
+  .blocked span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* ---- files ---- */
   .mfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; }
   .fchip {
@@ -806,7 +816,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -1127,6 +1137,7 @@ function parseFrom(header) {
 const unescapeHtml = s => new DOMParser().parseFromString('<!doctype html><body>' + s, 'text/html').body.textContent || '';
 
 const hdr = (m, name) => headerOf(m?.payload, name);
+const hdrAll = (m, name) => (m?.payload?.headers || []).filter(h => h.name.toLowerCase() === name).map(h => h.value || '');
 
 // A page of conversations - Gmail's threads - newest first.
 async function threadPage(q, { labelIds, pageToken, max = PAGE } = {}) {
@@ -1203,8 +1214,44 @@ async function fetchThread(item) {
       html: html ? await partText(m.id, html) : null,
       text: text ? await partText(m.id, text) : null,
       files: attachmentsOf(m.payload),
+      unsub: unsubOf(m),
     };
   }));
+}
+
+// A mailing list's way out (List-Unsubscribe): a one-click web address
+// (List-Unsubscribe-Post), an email address, or a page to finish on.
+function unsubOf(m) {
+  const raw = hdr(m, 'list-unsubscribe');
+  if (!raw) return null;
+  const uris = [...raw.matchAll(/<\s*([^>]+?)\s*>/g)].map(x => x[1].trim());
+  const https = uris.find(u => /^https:\/\/[^\s]+$/i.test(u)) || null;
+  const mailto = uris.find(u => /^mailto:[^\s]+$/i.test(u)) || null;
+  if (!https && !mailto) return null;
+  const from = parseFrom(hdr(m, 'from'));
+  return {
+    https, mailto, email: from.email,
+    oneClick: !!https && /list-unsubscribe\s*=\s*one-click/i.test(hdr(m, 'list-unsubscribe-post')),
+    trusted: !(m.labelIds || []).includes('SPAM') && authentic(m, from),
+  };
+}
+
+// Whether Gmail itself vouched that the mail is from the domain it names:
+// DMARC, or a DKIM signature, passing for the From domain. Only Gmail's own
+// verdict counts - the topmost Authentication-Results, from mx.google.com - as
+// a sender can write one of its own further down. Unsubscribing from a sender
+// that fails this would only tell a spammer the address works.
+function authentic(m, from) {
+  const dom = baseDomain(from.host);
+  const ar = hdrAll(m, 'authentication-results')[0] || '';
+  if (!dom || !/^\s*mx\.google\.com\s*;/i.test(ar)) return false;
+  for (const part of ar.split(';')) {
+    const dmarc = /\bdmarc=pass\b[\s\S]*?\bheader\.from=([^\s;]+)/i.exec(part);
+    if (dmarc && baseDomain(dmarc[1]) === dom) return true;
+    const dkim = /\bdkim=pass\b[\s\S]*?\bheader\.(?:i|d)=@?([^\s;]+)/i.exec(part);
+    if (dkim && baseDomain(dkim[1].replace(/^.*@/, '')) === dom) return true;
+  }
+  return false;
 }
 
 // Files attached to a message, wherever they sit in its MIME tree.
@@ -1569,6 +1616,8 @@ function failed(err) {
 }
 
 const ICON = {
+  more: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>',
+  block: '<svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M4 12a8 8 0 0 1 12.9-6.32L5.68 16.9A7.95 7.95 0 0 1 4 12m8 8a7.95 7.95 0 0 1-4.9-1.68L18.32 7.1A8 8 0 0 1 12 20"/></svg>',
   tag: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9a2 2 0 0 0 2.82 0l7-7a2 2 0 0 0 0-2.84M6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8"/></svg>',
   mkt: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M18 11v2h4v-2zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61M20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4M4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34"/></svg>',
   eye: '<svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>',
@@ -1879,10 +1928,25 @@ function viewSettings() {
     '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
+    blockedHTML() +
     '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
     '<button class="btn warn" data-act="signout">Sign out</button>' +
     '<p class="note">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>' +
   '</div>';
+}
+
+// Blocked senders, each with Unblock. The list is Gmail's own filters.
+function blockedHTML() {
+  if (!canFilter()) return '';
+  if (!filtersCache) {
+    refreshFilters().then(() => { if (state.view === 'settings') render(); }).catch(() => {});
+    return '';
+  }
+  const list = blockedList();
+  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
+    '<div class="field"><span>Blocked senders</span><span>' + (list.length || 'none') + '</span></div>' +
+    list.map(b => '<div class="blocked"><span>' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') +
+    (list.length ? '<p class="note">Unblocking lets their new mail in. Anything already in the Trash stays there until Gmail empties it after 30 days.</p>' : '');
 }
 
 // The sliding pill behind the selected tab.
@@ -1947,6 +2011,7 @@ function renderReader() {
       '<button class="iconbtn" data-act="close-reader" aria-label="Back">' + ICON.chev + '</button>' +
       '<span class="rspace"></span>' +
       '<button class="pillbtn" data-act="tag-open">' + ICON.label + 'Tag</button>' +
+      '<button class="iconbtn" data-act="reader-more" aria-label="More">' + ICON.more + '</button>' +
       (inBucket
         ? '<button class="pillbtn bluec" data-act="restore-reader">' + ICON.back + 'Inbox</button>'
         : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.mkt + esc(settings.label) + '</button>') +
@@ -1989,8 +2054,23 @@ function msgCard(m, open) {
   const body = m.html
     ? '<div class="mbody html"><iframe class="rframe" data-msg="' + esc(m.id) + '" title="Message from ' + esc(m.from.name) + '" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>'
     : '<div class="mbody rtext">' + (m.text ? linkify(tidy(m.text)) : esc(m.snippet || 'This message has no text.')) + '</div>';
-  return '<div class="card msg" data-card="' + esc(m.id) + '">' + head + body + filesHTML(m) + '</div>';
+  return '<div class="card msg" data-card="' + esc(m.id) + '">' + head + unsubHTML(m) + body + filesHTML(m) + '</div>';
 }
+
+// As in Mail: "This message is from a mailing list", with the way out.
+function unsubHTML(m) {
+  if (!m.unsub) return '';
+  const when = unsubbed()[m.unsub.email];
+  if (when) {
+    return '<div class="unsub"><span>You unsubscribed on ' + esc(shortDay(when)) + '. Still getting it?</span>' +
+      '<button class="textbtn" data-act="block-sender" data-email="' + esc(m.unsub.email) + '">Block</button></div>';
+  }
+  return '<div class="unsub"><span>This message is from a mailing list.</span>' +
+    '<button class="textbtn" data-act="unsub" data-msg="' + esc(m.id) + '">Unsubscribe</button></div>';
+}
+function unsubbed() { try { return JSON.parse(ls.get(K.unsubbed, '{}')) || {}; } catch { return {}; } }
+function markUnsubbed(email) { const u = unsubbed(); u[email] = Date.now(); ls.set(K.unsubbed, JSON.stringify(u)); }
+const shortDay = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 // Files on a message: one tappable row each, as in Mail.
 function filesHTML(m) {
@@ -2453,6 +2533,189 @@ function replyButtons() {
 }
 
 // ---------------------------------------------------------------------------
+// Blocking and unsubscribing
+// ---------------------------------------------------------------------------
+// A block is a Gmail filter - from this address, straight to the Trash - so it
+// works whether or not the app is open, as Gmail's own "Delete it" rule does.
+const isBlock = f => (f.action?.addLabelIds || []).includes('TRASH') && /^[^\s@()]+@[^\s@()]+$/.test(f.criteria?.from || '');
+const blockedList = () => (filtersCache || []).filter(isBlock).map(f => ({ id: f.id, email: f.criteria.from.toLowerCase() }));
+
+// Who a conversation's "Block" means: the newest message not from you.
+function senderOf(r) {
+  const me = (state.me || '').toLowerCase();
+  const m = [...(r.msgs || [])].reverse().find(x => x.from.email && x.from.email !== me);
+  return m ? { email: m.from.email, name: m.from.name } : { email: r.item.email, name: r.item.name };
+}
+
+async function blockSender(email) {
+  const back = { email, filterId: null, trashed: [], inboxMsgs: [], missed: 0 };
+  if (!canFilter()) throw new Error('Blocking needs the filter permission — use Switch account in Settings to grant it');
+  const same = f => isBlock(f) && f.criteria.from.toLowerCase() === email;
+  if (!(await refreshFilters(true)).some(same)) {
+    try {
+      const made = await api('/settings/filters', { method: 'POST', once: true, body: { criteria: { from: email }, action: { addLabelIds: ['TRASH'] } } });
+      back.filterId = made.id;
+      filtersCache.push(made);
+    } catch (e) {
+      if (e instanceof AuthError) throw e;
+      const now = (await refreshFilters(true)).find(same);   // made after all?
+      if (!now) throw e;
+      back.filterId = now.id;
+    }
+  }
+  // Their mail already here goes too; what was in the inbox is noted for Undo.
+  const q = 'from:(' + email + ') -in:sent -in:chats';
+  const [ids, inbox] = await Promise.all([allIds(q, { cap: 800 }), allIds(q + ' in:inbox', { cap: 800 })]);
+  back.inboxMsgs = inbox;
+  await pool(ids, 6, async id => {
+    try { await api('/messages/' + id + '/trash', { method: 'POST' }); back.trashed.push(id); }
+    catch (e) { if (e instanceof AuthError) throw e; back.missed++; }
+  });
+  return back;
+}
+
+async function undoBlock(back) {
+  try {
+    toast('Unblocking…', { ms: 60000 });
+    if (back.filterId) {
+      await api('/settings/filters/' + back.filterId, { method: 'DELETE' });
+      if (filtersCache) filtersCache = filtersCache.filter(f => f.id !== back.filterId);
+    }
+    await pool(back.trashed, 6, id => api('/messages/' + id + '/untrash', { method: 'POST' }));
+    const put = new Set(back.trashed);
+    await relabel(back.inboxMsgs.filter(id => put.has(id)), ['INBOX']);
+    toast('Unblocked ' + back.email);
+    state.lists = {};
+    go({ force: true });
+  } catch (err) { failed(err); }
+}
+
+async function doBlock(email, name) {
+  email = (email || '').toLowerCase();
+  if (!email) return;
+  if (email === (state.me || '').toLowerCase()) return toast('That’s you — you can’t block yourself', { bad: true });
+  const ok = await confirmSheet({
+    title: 'Block ' + (name && name !== email ? name : email) + '?',
+    body: 'New mail from <b>' + esc(email) + '</b> will go straight to the Trash, and their mail already here goes there too. ' +
+      'Nothing is sent to them. Unblock any time in Settings.',
+    yes: 'Block',
+  });
+  if (!ok) return;
+  await closeReader();
+  const rows = (state.lists[currentList().key]?.items || []).filter(it => it.email === email);
+  await Promise.all(rowsFor(rows.map(it => it.id)).map(li => vanish(li, 'left')));
+  patch(it => it.email === email, ['TRASH'], ['INBOX']);
+  for (const [k, l] of Object.entries(state.lists)) if (l.items) l.items = l.items.filter(it => belongs(k, it));
+  quietOnce = true;
+  render();
+  toast('Blocking ' + email + '…', { ms: 60000 });
+  try {
+    const back = await blockSender(email);
+    const n = back.trashed.length;
+    const said = 'Blocked ' + email + (n ? ' · ' + n + (n === 1 ? ' message' : ' messages') + ' to the Trash' : '');
+    if (back.missed) toast(said + '; ' + back.missed + ' couldn’t be moved', { bad: true, label: 'Undo', action: () => undoBlock(back) });
+    else toast(said, { label: 'Undo', action: () => undoBlock(back) });
+    for (const k of Object.keys(state.lists)) if (k !== currentList().key) delete state.lists[k];
+  } catch (err) { failed(err); state.lists = {}; go({ force: true }); }
+}
+
+async function unblock(id) {
+  const b = blockedList().find(x => x.id === id);
+  if (!b) return;
+  try {
+    await api('/settings/filters/' + id, { method: 'DELETE' });
+    filtersCache = filtersCache.filter(f => f.id !== id);
+    toast('Unblocked ' + b.email + '. Their mail already in the Trash stays there for 30 days.', { ms: 6000 });
+    render();
+  } catch (err) { failed(err); }
+}
+
+// The sheet behind "Unsubscribe": says exactly what will happen, then does it.
+function unsubSheet(m) {
+  const u = m.unsub, who = m.from.name || u.email;
+  closeSheet();
+  state.sheet = { unsub: m };
+  const el = $('#sheet');
+  let body, go;
+  if (!u.trusted) {
+    body = 'Gmail couldn’t confirm this really comes from <b>' + esc(m.from.host) + '</b>. Unsubscribing from a sender like that can tell a spammer your address works. ' +
+      'Block them instead — nothing is sent to them.';
+    go = '<button class="btn danger" data-act="block-sender" data-email="' + esc(u.email) + '">' + ICON.block + ' Block ' + esc(u.email) + '</button>';
+  } else if (u.oneClick) {
+    body = 'Sends ' + esc(who) + ' a one-click unsubscribe request, the same way Gmail’s own Unsubscribe does. It can take a few days for their mail to stop.';
+    go = '<button class="btn" data-act="unsub-go">Unsubscribe</button>';
+  } else if (u.mailto) {
+    body = 'Sends an unsubscribe email from your Gmail to <b>' + esc(mailtoOf(u.mailto)?.to || '') + '</b>. It will show in your Sent mail. It can take a few days for their mail to stop.';
+    go = '<button class="btn" data-act="unsub-go">Send Unsubscribe Email</button>';
+  } else {
+    body = esc(who) + ' only offers an unsubscribe page. It opens in Safari, and you finish there.';
+    go = '<a class="btn" data-act="unsub-web" href="' + esc(u.https) + '" target="_blank" rel="noopener noreferrer">Open Unsubscribe Page</a>';
+  }
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+    '<div class="sheet" role="dialog" aria-modal="true" aria-label="Unsubscribe">' +
+      '<div class="grab"></div><h3>' + esc(u.trusted ? 'Unsubscribe from ' + who + '?' : 'Can’t verify this sender') + '</h3>' +
+      '<p class="note">' + body + '</p>' + go +
+      '<button class="btn ghost" data-act="sheet-close">Cancel</button>' +
+    '</div>';
+  el.classList.remove('hide', 'leaving');
+}
+
+// mailto:address?subject=...&body=... as the sender wrote it.
+function mailtoOf(uri) {
+  try {
+    const u = new URL(uri);
+    const to = decodeURIComponent(u.pathname).trim();
+    if (!parseAddresses(to).every(a => a.ok) || !to) return null;
+    return { to, subject: u.searchParams.get('subject') || 'unsubscribe', body: u.searchParams.get('body') || 'unsubscribe' };
+  } catch { return null; }
+}
+
+// One-click (RFC 8058): a plain form POST of "List-Unsubscribe=One-Click" to
+// the sender's address. The browser sends it without cookies or referrer; it
+// can't read the answer (the sender's server isn't this app's), so "sent" is
+// as sure as it gets - the same as for Gmail.
+async function unsubscribe(m) {
+  const u = m.unsub;
+  if (!u?.trusted) return;
+  closeSheet();
+  toast('Unsubscribing…', { ms: 60000 });
+  try {
+    if (u.oneClick) {
+      const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT);
+      try {
+        await fetch(u.https, { method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store',
+          body: new URLSearchParams({ 'List-Unsubscribe': 'One-Click' }), signal: ctl.signal });
+      } catch {
+        throw new Error(ctl.signal.aborted ? 'their server didn’t answer' : 'couldn’t reach their server');
+      } finally { clearTimeout(timer); }
+    } else {
+      const mt = mailtoOf(u.mailto);
+      if (!mt) throw new Error('their unsubscribe address isn’t valid');
+      await uploadMime('messages/send', buildMime({ to: parseAddresses(mt.to), cc: [], subject: mt.subject, body: mt.body }), {});
+    }
+    markUnsubbed(u.email);
+    toast('Unsubscribed from ' + (m.from.name || u.email) + '. If their mail keeps coming, Block them.', { ms: 6000 });
+    if (state.reading) renderReaderBody();
+  } catch (err) {
+    if (err instanceof AuthError) return failed(err);
+    toast('Couldn’t unsubscribe: ' + err.message + (err.unsure ? ' — check your Sent mail' : ''), { bad: true, ms: 7000 });
+  }
+}
+
+// The "…" on a message page: Mail's Block Sender, and Unsubscribe.
+async function readerMore() {
+  const r = state.reading;
+  if (!r) return;
+  const who = senderOf(r), last = [...(r.msgs || [])].reverse().find(m => m.unsub);
+  const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), options: [
+    ...(last ? [{ id: 'unsub', label: 'Unsubscribe', primary: true }] : []),
+    { id: 'block', label: 'Block Sender', danger: true },
+  ] });
+  if (pick === 'unsub') unsubSheet(last);
+  if (pick === 'block') doBlock(who.email, who.name);
+}
+
+// ---------------------------------------------------------------------------
 // The tag sheet
 // ---------------------------------------------------------------------------
 function openSheet(item) {
@@ -2499,7 +2762,7 @@ function closeSheet() {
   if (state.sheet?.url) { const u = state.sheet.url; state.sheet.url = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
-  const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  const finish = () => { if (state.sheet) return; el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
   if (reduced) return finish();
   el.classList.add('leaving');
   setTimeout(finish, 280);
@@ -3009,6 +3272,16 @@ document.addEventListener('click', async e => {
       return;
     }
     case 'open-file': return openFile(el.dataset.msg, Number(el.dataset.i));
+    case 'reader-more': return readerMore();
+    case 'block-sender': closeSheet(); return doBlock(el.dataset.email);
+    case 'unblock': return unblock(el.dataset.id);
+    case 'unsub': { const m = state.reading?.msgs?.find(x => x.id === el.dataset.msg); if (m?.unsub) unsubSheet(m); return; }
+    case 'unsub-go': { const m = state.sheet?.unsub; if (m) unsubscribe(m); return; }
+    case 'unsub-web': {           // the link itself opens the page; this just remembers
+      const m = state.sheet?.unsub;
+      if (m) { markUnsubbed(m.unsub.email); closeSheet(); if (state.reading) renderReaderBody(); }
+      return;
+    }
     case 'file-share': return shareFile();
     case 'compose-cancel': return cancelCompose();
     case 'choice': {
