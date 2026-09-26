@@ -523,9 +523,9 @@
     // first id is the key the device remembers.
     const quickTeams = (raw.quick || []).map(q => {
       const ids = (q.ids || [q.id]).filter(id => entries.has(id));
-      return ids.length ? { key: ids[0], label: q.label, ids } : null;
+      return ids.length ? { key: ids[0], label: q.label, ids, menOnly: !!q.menOnly } : null;
     }).filter(Boolean);
-    return { entries, sports, competitions, teams, sportLabel, quick: quickTeams };
+    return { entries, sports, competitions, teams, sportLabel, quick: quickTeams, womenTerms: raw.womenTerms || [] };
   }
 
   function pickEntry(id) {
@@ -571,7 +571,13 @@
   }
   const firstMatch = (s, list) => list.find(p => matches(p, s)) || null;
 
-  function sportMatches() { return topicStories(SPORT).filter(s => firstMatch(s, pickList)); }
+  // A men's-only team button drops stories that mention the women's game.
+  const menOnly = () => { const q = quickTeam(); return !!(q && q.menOnly); };
+  const aboutWomen = s => catalog.womenTerms.some(t => termRe(t, true).test(factsFor(s).text));
+  function sportMatches() {
+    const men = menOnly();
+    return topicStories(SPORT).filter(s => firstMatch(s, pickList) && !(men && aboutWomen(s)));
+  }
 
   function storiesFor(id) {
     if (id === SPORT) return (pickList.length ? sportMatches() : topicStories(SPORT)).slice(0, 100);
@@ -885,7 +891,7 @@
 
   // Leagues worth fetching for the current filters.
   function relevantLeagues() {
-    const all = leagues || [];
+    const all = (leagues || []).filter(l => !(l.women && menOnly()));
     if (!pickList.length) return all;
     return all.filter(l => pickList.some(p =>
       p.kind === 'kw' || (p.kind === 'team' && !p.sport) ||
@@ -902,6 +908,7 @@
   function gameMatches(g, l) {
     if (!pickList.length) return true;
     const names = [g.home.name, g.home.short, g.away.name, g.away.short];
+    if (menOnly() && (l.women || names.some(n => /\bwomen\b/i.test(n || '')))) return false;
     return pickList.some(p => {
       if (p.kind === 'sport') return p.sport === l.sport;
       if (p.kind === 'comp') return p.id === l.comp;
