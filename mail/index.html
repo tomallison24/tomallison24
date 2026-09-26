@@ -70,10 +70,30 @@
     --accent: #0A84FF;
     --tag: #FF9F0A;
     --danger: #FF453A;
-    /* swipe right to tag: the app's violet, muted to sit quietly under a row */
-    --swipe: #45416A;
-    --swipe-armed: #564F86;
-    --swipe-ink: #E6E2FF;
+    /* glass buttons, as on iOS: a translucent fill, lit along the top edge;
+       coloured ones carry a tint of their colour rather than a solid block */
+    --gb: rgba(255, 255, 255, 0.10);
+    --gb-edge: rgba(255, 255, 255, 0.16);
+    --gb-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+    --gb-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+    --tint-mix: 42%;                          /* how much colour a tinted button carries */
+    --accent-ink: #FFFFFF;                    /* text on a tinted button */
+    --danger-ink: #FFFFFF;
+    /* swipe actions: round glass icons in each action's own colour */
+    --gi-mix: 30%;
+    --armed-mix: 62%;
+    --armed-ink: #FFFFFF;
+    --swipe-track: rgba(123, 108, 246, 0.10);
+    --tag-ink: #D9D3FF;
+    /* Flag, Archive, Trash: iOS Mail's orange, purple and red, at about half
+       their saturation so they sit as quietly as Tag */
+    --flag-tint: #C8913F;
+    --arch-tint: #8C79CF;
+    --bin-tint: #C9625B;
+    --flag-ink: #EBC68F;
+    --arch-ink: #CDBEF3;
+    --bin-ink: #F0A9A3;
+    --armed-mix-l: 50%;                       /* a full swipe's Trash capsule */
     /* glass */
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
@@ -111,9 +131,22 @@
       --accent: #007AFF;
       --tag: #D97706;
       --danger: #E5281D;
-      --swipe: #E4E1F4;
-      --swipe-armed: #D3CDF0;
-      --swipe-ink: #4A3FC4;
+      --gb: rgba(255, 255, 255, 0.55);
+      --gb-edge: rgba(255, 255, 255, 0.95);
+      --gb-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%);
+      --gb-shadow: 0 4px 14px rgba(40, 40, 80, 0.10);
+      --tint-mix: 16%;
+      --accent-ink: #0059C8;
+      --danger-ink: #AE2117;
+      --gi-mix: 18%;
+      --armed-mix: 34%;
+      --armed-ink: initial;                   /* keeps each action's own dark ink */
+      --swipe-track: rgba(123, 108, 246, 0.07);
+      --tag-ink: #4A3FC4;
+      --flag-ink: #855412;
+      --arch-ink: #5A45B0;
+      --bin-ink: #9E3A32;
+      --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
       --hair: rgba(60, 60, 67, 0.14);
@@ -263,9 +296,10 @@
   .chip.due { color: var(--danger); border-color: rgba(255,69,58,0.32); background: rgba(255,69,58,0.10); animation: breathe 2.4s ease-in-out infinite; }
 
   .act {
-    width: 46px; height: 46px; align-self: center; border-radius: 15px;
+    width: 46px; height: 46px; align-self: center; border-radius: 999px;
     display: inline-flex; align-items: center; justify-content: center; flex: none;
-    background: var(--fill); border: 1px solid var(--hair); color: var(--tag);
+    background: var(--gb-shine), var(--gb); border: 1px solid var(--gb-edge); color: var(--tag);
+    box-shadow: inset 0 1px 0 var(--hi), 0 3px 10px var(--lift);
     transition: transform .2s var(--ease), background .2s, box-shadow .3s;
   }
   .act:active { transform: scale(0.88); background: rgba(255,159,10,0.16); }
@@ -320,9 +354,14 @@
   .hero svg { width: 34px; height: 34px; }
   .btn {
     position: relative; overflow: hidden;
-    padding: 13px 16px; border-radius: 14px; background: var(--accent); color: #fff; font-weight: 600; font-size: 15px;
+    --tint: var(--accent);
+    min-height: 50px; padding: 13px 18px; border-radius: 999px; font-weight: 600; font-size: 15px; color: var(--accent-ink);
     display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-    box-shadow: 0 6px 20px rgba(10,132,255,0.30), inset 0 1px 0 rgba(255,255,255,0.22);
+    background: rgba(10, 132, 255, 0.35);                          /* where color-mix isn't known */
+    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--tint-mix), transparent);
+    border: 1px solid color-mix(in srgb, var(--tint) 40%, var(--gb-edge));
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--hi), var(--gb-shadow);
     transition: transform .18s var(--ease), filter .2s, box-shadow .25s;
   }
   .btn:active { transform: scale(0.975); filter: brightness(0.9); }
@@ -331,8 +370,8 @@
     opacity: 0; transition: opacity .5s;
   }
   .btn:active::after { opacity: 1; transition: opacity 0s; }
-  .btn.ghost { background: var(--fill); border: 1px solid var(--hair); color: var(--text); font-weight: 500; box-shadow: inset 0 1px 0 var(--hi); }
-  .btn.warn { background: rgba(255,69,58,0.10); border: 1px solid rgba(255,69,58,0.32); color: var(--danger); font-weight: 500; box-shadow: none; }
+  .btn.ghost { background: var(--gb-shine), var(--gb); border: 1px solid var(--gb-edge); color: var(--text); font-weight: 500; }
+  .btn.warn { --tint: var(--danger); background: var(--gb-shine), color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); font-weight: 500; }
   .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); }
   .field input[type=number] {
     width: 72px; padding: 9px 10px; border-radius: 11px; background: var(--fill); border: 1px solid var(--hair);
@@ -582,17 +621,28 @@
   .swipe {
     position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden; cursor: pointer;
     display: flex; align-items: center;
-    background: var(--swipe);
-    box-shadow: inset -10px 0 14px -12px rgba(0,0,0,0.22);
+    background: var(--swipe-track);
     transition: width .34s var(--ease), background .25s;
   }
   .swipe-in {
-    width: 96px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    color: var(--swipe-ink); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+    width: 96px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+    --tint: #7B6CF6; --ink: var(--tag-ink);
   }
-  .swipe-in svg { width: 22px; height: 22px; transition: transform .3s var(--ease); }
-  li.armed .swipe { background: var(--swipe-armed); }
-  li.armed .swipe-in svg { transform: scale(1.3) rotate(-8deg); }
+  /* The glass icon the swipe actions share */
+  .gi {
+    width: 44px; height: 44px; border-radius: 999px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center; color: var(--ink);
+    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--gi-mix), transparent);
+    border: 1px solid color-mix(in srgb, var(--tint) 42%, var(--gb-edge));
+    box-shadow: inset 0 1px 0 var(--hi), 0 4px 12px var(--lift);
+    transition: transform .3s var(--ease), background .25s, color .25s, width .3s var(--ease);
+  }
+  .gi svg { width: 21px; height: 21px; }
+  li.armed .swipe-in .gi {
+    transform: scale(1.12) rotate(-6deg); color: var(--armed-ink, var(--ink));
+    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--armed-mix), transparent);
+  }
   li.swiped .swipe-in { animation: pop .35s var(--ease); }
   li.peek .rowtop { animation: peekRow 1.6s var(--ease) .5s both; }
   li.peek .swipe { animation: peekUnder 1.6s var(--ease) .5s both; }
@@ -606,15 +656,21 @@
     display: flex; justify-content: flex-end; transition: width .34s var(--ease);
   }
   .sa {
-    flex: 0 0 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    color: #fff; font-size: 12px; font-weight: 600; transition: flex-basis .3s var(--ease), padding .3s var(--ease);
+    flex: 0 0 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    color: var(--muted); font-size: 12px; font-weight: 600; transition: flex-basis .3s var(--ease), padding .3s var(--ease);
   }
-  .sa svg { width: 22px; height: 22px; }
-  .sa.flag { background: #FF9500; }
-  .sa.arch { background: #8E5CF7; }
-  .sa.bin { background: #FF3B30; }
+  .swipe-r { background: var(--fill); }
+  .sa:active .gi { transform: scale(0.9); }
+  .sa.flag { --tint: var(--flag-tint); --ink: var(--flag-ink); }
+  .sa.arch { --tint: var(--arch-tint); --ink: var(--arch-ink); }
+  .sa.bin { --tint: var(--bin-tint); --ink: var(--bin-ink); }
   li.armed-l .sa.flag, li.armed-l .sa.arch { flex-basis: 0; padding: 0; overflow: hidden; }
   li.armed-l .sa.bin { flex: 1 0 76px; }
+  /* all the way: Trash stretches into a wide glass capsule, as Mail's fills the row */
+  li.armed-l .sa.bin .gi {
+    width: calc(100% - 28px); color: var(--armed-ink, var(--ink));
+    background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--armed-mix-l), transparent);
+  }
   li.armed-l .sa.bin svg { animation: pop .35s var(--ease); }
   .who .when .flagged { color: #FF9500; display: inline-flex; }
   .who .when .flagged svg { width: 13px; height: 13px; }
@@ -631,7 +687,11 @@
   .ctitle { flex: 1; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
   .send {
     width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-    background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(10,132,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    color: #fff; background: var(--accent);
+    background: var(--gb-shine), color-mix(in srgb, var(--accent) 82%, transparent);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px color-mix(in srgb, var(--accent) 22%, transparent);
     transition: transform .18s var(--ease);
   }
   .send:active { transform: scale(0.88); }
@@ -656,8 +716,8 @@
 
   /* ---- mailing lists and blocking ---- */
   .unsub {
-    display: flex; align-items: center; gap: 10px; margin: 0 14px 10px; padding: 9px 12px;
-    border-radius: 12px; background: var(--fill); border: 1px solid var(--hair); font-size: 13.5px; color: var(--muted);
+    display: flex; align-items: center; gap: 10px; margin: 0 14px 10px; padding: 8px 8px 8px 14px;
+    border-radius: 999px; background: var(--gb-shine), var(--fill); border: 1px solid var(--gb-edge); box-shadow: inset 0 1px 0 var(--hi); font-size: 13.5px; color: var(--muted);
   }
   .unsub span { flex: 1; min-width: 0; }
   .unsub .textbtn { flex: none; font-weight: 600; }
@@ -668,7 +728,7 @@
   .mfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; }
   .fchip {
     display: flex; align-items: center; gap: 11px; width: 100%; min-height: 54px; padding: 8px 10px; text-align: left;
-    border-radius: 14px; background: var(--fill); border: 1px solid var(--hair); color: var(--text);
+    border-radius: 18px; background: var(--gb-shine), var(--fill); border: 1px solid var(--gb-edge); box-shadow: inset 0 1px 0 var(--hi); color: var(--text);
     transition: transform .18s var(--ease);
   }
   button.fchip:active { transform: scale(0.97); }
@@ -723,7 +783,7 @@
   .kept { align-self: center; flex: none; font-size: 11px; font-weight: 600; color: var(--faint); padding: 4px 9px; border-radius: 999px; border: 1px solid var(--hair); }
   .cnote { margin: -2px 16px 8px; font-size: 12px; line-height: 1.5; color: var(--faint); }
   .more button.danger { color: var(--danger); background: rgba(255,69,58,0.10); border-color: rgba(255,69,58,0.32); }
-  .btn.danger { background: var(--danger); box-shadow: 0 6px 20px rgba(255,69,58,0.3), inset 0 1px 0 rgba(255,255,255,0.22); }
+  .btn.danger { --tint: var(--danger); color: var(--danger-ink); }
   .sheet .note .chip { display: inline-flex; margin: 2px 0; }
 
   /* ---- keyframes ---- */
@@ -1671,11 +1731,11 @@ function rowHTML(item, i, key) {
   const fresh = i >= freshFrom, sel = state.select?.has(item.id);
   return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
-    '<span class="swipe" data-act="swipe-tag"><span class="swipe-in">' + ICON.label + 'Tag</span></span>' +
+    '<span class="swipe" data-act="swipe-tag"><span class="swipe-in"><span class="gi">' + ICON.label + '</span>Tag</span></span>' +
     '<span class="swipe-r">' +
-      '<button class="sa flag" data-act="row-flag">' + ICON.flag + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
-      '<button class="sa arch" data-act="row-archive">' + ICON.archive + 'Archive</button>' +
-      '<button class="sa bin" data-act="row-trash">' + ICON.trash + 'Trash</button>' +
+      '<button class="sa flag" data-act="row-flag"><span class="gi">' + ICON.flag + '</span>' + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
+      '<button class="sa arch" data-act="row-archive"><span class="gi">' + ICON.archive + '</span>Archive</button>' +
+      '<button class="sa bin" data-act="row-trash"><span class="gi">' + ICON.trash + '</span>Trash</button>' +
     '</span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
