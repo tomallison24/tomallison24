@@ -109,23 +109,42 @@ already-filed mail where it is.
 
 ## Tags
 
-Tags sort mail by who sent it, and keep doing so. Open a message from the
-school, tap **Tag**, type *Sofia's school*:
+Tags sort mail by who sent it, and keep doing so. **Swipe an email to the
+right** — a short swipe shows **Tag**, a long one opens it straight away — and
+type a name, say *Sofia's school*:
 
-- that message, everything **already** in the mailbox from the same domain
+- that email, everything **already** in the mailbox from the same domain
   (archived mail included), and **all new mail** from it gets the tag — the
   last by a Gmail filter, so it happens whether or not the app is open;
 - tagged mail **stays in the inbox** (only Marketing skips it);
-- a chip for the tag appears under the tabs, and tapping it filters the list
-  to that tag. Tap **Inbox** (or the Inbox tab again) to go back.
+- a chip for the tag appears under the tabs; tap it to see just that tag, and
+  **Inbox** to go back.
 
-The same domain rules apply as for Marketing: `news@mail.tmsa.org` tags all of
-`tmsa.org`, while a Gmail or Outlook sender is tagged by exact address only.
+**Tag** is also on each email's own page. The same domain rules apply as for
+Marketing: `news@mail.tmsa.org` tags all of `tmsa.org`, while a Gmail or
+Outlook sender is tagged by exact address only. The orange button on each row
+is **Marketing** (a megaphone), not tagging.
 
-Tags are ordinary Gmail labels, so they show up in Gmail too, and any label
-you already had appears as a chip. The **Rules** tab lists every rule by tag,
-lets you delete one, and has a **New rule** form for when you know the domain
-but have no message to hand (`tmsa.org` → *Sofia's school*).
+### The Tags tab
+
+Tags are ordinary Gmail labels, so they show up in Gmail too. The **Tags** tab
+sorts every label in the mailbox into three groups:
+
+- **Your tags** — those with a rule, or that you switched on. Only these are
+  chips. Each lists its rules and lets you hide its chip or delete it.
+- **Other labels in Gmail** — your own labels that aren't used as tags. Switch
+  a chip on to filter by one.
+- **Left by other apps** — folders old mail apps made: `[Imap]/…`,
+  `[Mailbox]/…` (Dropbox's Mailbox app), `Deleted Messages` and the like.
+  Hidden from the app; **Delete all unused** removes them in one go, after
+  asking. `Notes` (iPhone Notes keeps notes there) and `Unroll.me/…` are
+  **kept**, as something still reads them.
+
+Deleting a label takes it off the emails that have it and stops its rules; the
+emails themselves stay. It can't be undone, which is why the app asks first.
+
+There's also a **New tag** form for when you know the domain but have no email
+to hand (`tmsa.org` → *Sofia's school*).
 
 ## Tapping a message
 
