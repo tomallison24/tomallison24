@@ -285,6 +285,8 @@
   .gscore { min-width: 22px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .game.decided .gteam:not(.win) { color: var(--muted); }
   .game.decided .gteam.win { font-weight: 700; }
+  .scores .gnext { margin: 0; padding: 10px 14px 0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .scores .game + .gnext { border-top: 0.5px solid var(--hairline); margin-top: 2px; }
   main .sect h3 { margin: 6px 4px 6px; }
 
   /* ---- Feed ---- */
@@ -801,9 +803,12 @@
   // Read live from ESPN's public scoreboard feed while the Scores view is
   // open: every minute while anything is in play, every 5 minutes otherwise.
   // If ESPN can't be reached, fall back to the copy saved on each refresh.
+  // Fixtures (games still to come) always come from that saved copy.
   let leagues = store.get('news.leagues');
   let scores = {};                  // league id -> games
+  let fixtures = {};                // league id -> upcoming games, soonest first
   let scoresAt = 0, scoresSource = '', scoresLoading = false, scoresTimer = 0;
+  let snap = null, snapFetched = 0;
 
   // Keep in step with normalize() in scripts/fetch-scores.mjs.
   function normalize(json, league) {
@@ -871,19 +876,29 @@
     if (topic === SPORT && sportMode === 'scores') fetchScores();
   }
 
-  async function loadSnapshot() {
+  // The saved copy, re-read once it's older than maxAge (ms).
+  async function getSnapshot(maxAge) {
+    if (snap && Date.now() - snapFetched < maxAge) return snap;
     try {
       const res = await fetch(`${SCORES_URL}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const snap = await res.json();
-      for (const l of snap.leagues || []) if (l.ok) scores[l.id] = l.games || [];
-      scoresAt = Date.parse(snap.generatedAt) || 0;
-      scoresSource = 'copy';
-      return true;
+      snap = await res.json();
+      snapFetched = Date.now();
+      fixtures = {};
+      for (const l of snap.leagues || []) fixtures[l.id] = l.upcoming || [];
     } catch (err) {
       console.warn('Saved scores unavailable:', err);
-      return false;
     }
+    return snap;
+  }
+
+  async function loadSnapshot() {
+    const copy = await getSnapshot(0);
+    if (!copy) return false;
+    for (const l of copy.leagues || []) if (l.ok) scores[l.id] = l.games || [];
+    scoresAt = Date.parse(copy.generatedAt) || 0;
+    scoresSource = 'copy';
+    return true;
   }
 
   async function fetchScores() {
@@ -892,10 +907,13 @@
     scoresLoading = true;
     if (topic === SPORT && sportMode === 'scores') renderFeed();
     const list = relevantLeagues();
-    const got = await Promise.allSettled(list.map(l =>
-      fetch(`${ESPN}/${l.path}/scoreboard`, { cache: 'no-store' })
-        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-        .then(json => [l.id, normalize(json, l)])));
+    const [got] = await Promise.all([
+      Promise.allSettled(list.map(l =>
+        fetch(`${ESPN}/${l.path}/scoreboard`, { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+          .then(json => [l.id, normalize(json, l)]))),
+      getSnapshot(15 * 60e3),
+    ]);
     const ok = got.filter(r => r.status === 'fulfilled');
     for (const r of ok) scores[r.value[0]] = r.value[1];
     if (ok.length) { scoresAt = Date.now(); scoresSource = 'live'; }
@@ -918,7 +936,8 @@
     if (Number.isNaN(d.getTime())) return '';
     const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     if (d.toDateString() === new Date().toDateString()) return time;
-    return `${d.toLocaleDateString('en-GB', { weekday: 'short' })}<br>${time}`;
+    const soon = d.getTime() - Date.now() < 6 * 864e5;
+    return `${d.toLocaleDateString('en-GB', soon ? { weekday: 'short' } : { day: 'numeric', month: 'short' })}<br>${time}`;
   }
 
   function gameRow(g, l) {
@@ -939,24 +958,33 @@
   const STATE_ORDER = { in: 0, pre: 1, post: 2 };
   function renderScores() {
     if (!leagues || (scoresLoading && !allGames().length)) return skeleton();
+    const now = Date.now();
     const sections = relevantLeagues()
       .map((l, i) => {
-        const games = (scores[l.id] || []).filter(g => gameMatches(g, l))
+        const current = scores[l.id] || [];
+        const games = current.filter(g => gameMatches(g, l))
           .sort((a, b) => (STATE_ORDER[a.state] ?? 1) - (STATE_ORDER[b.state] ?? 1) || (a.start || '').localeCompare(b.start || ''));
-        return { l, i, games, live: games.some(g => g.state === 'in') };
+        // Next fixtures not already on today's scoreboard: 3 a league, or 5 when filtered.
+        const ids = new Set(current.map(g => g.id));
+        const next = (fixtures[l.id] || [])
+          .filter(g => !ids.has(g.id) && Date.parse(g.start) > now && gameMatches(g, l))
+          .slice(0, pickList.length ? 5 : 3);
+        return { l, i, games, next, live: games.some(g => g.state === 'in') };
       })
-      .filter(x => x.games.length)
+      .filter(x => x.games.length || x.next.length)
       .sort((a, b) => (b.live - a.live) || (a.i - b.i));
     const when = scoresAt ? ago(new Date(scoresAt).toISOString()) : '';
-    const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}</p>`;
+    const fixWhen = snap && sections.some(x => x.next.length) ? ago(snap.generatedAt) : '';
+    const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}${fixWhen ? ` · fixtures checked ${esc(fixWhen.toLowerCase())}` : ''}</p>`;
     if (!sections.length) {
       if (!scoresAt) return notice('Scores unavailable', 'Couldn’t reach ESPN or the saved copy. Check your connection and try again.', '<button data-action="retry-scores">Try again</button>');
       return pickList.length
-        ? notice('No games for your filters', 'None of the games on right now involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
-        : notice('No games right now', 'There are no games listed in these leagues at the moment.', '') + foot;
+        ? notice('No games for your filters', 'None of the games on now or coming up involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
+        : notice('No games right now', 'There are no games or fixtures listed in these leagues at the moment.', '') + foot;
     }
-    return sections.map(({ l, games }) =>
-      `<section class="sect"><h3>${esc(l.label)}</h3><div class="card scores">${games.map(g => gameRow(g, l)).join('')}</div></section>`
+    return sections.map(({ l, games, next }) =>
+      `<section class="sect"><h3>${esc(l.label)}</h3><div class="card scores">${games.map(g => gameRow(g, l)).join('')}${
+        next.length ? `<p class="gnext">Coming up</p>${next.map(g => gameRow(g, l)).join('')}` : ''}</div></section>`
     ).join('') + foot;
   }
 
