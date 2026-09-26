@@ -1,8 +1,9 @@
 // Draws mail/icon-512.png and mail/icon-180.png in the style of Apple's own
 // icons: a full-bleed gradient and a simple white glyph, with iOS rounding the
-// corners itself. The envelope sits on an orange tag - the app files mail by
-// tagging it - so it reads as its own app beside the built-in Mail. Rendered at
-// 1024 and boxed down, so edges stay smooth without any image library.
+// corners itself. "Sunrise": a white envelope with a pink flap on a warm
+// peach -> pink -> purple sky, so it reads as its own app beside the built-in
+// (blue) Mail. Rendered at 1024 and boxed down, so edges stay smooth without
+// any image library.
 //
 //   node mail/scripts/make-icons.mjs
 import { deflateSync } from 'node:zlib';
@@ -32,66 +33,45 @@ function segment(x, y, ax, ay, bx, by) {
 }
 
 // --- scene ------------------------------------------------------------------
-// Signed distance to a convex or concave polygon (negative inside).
-function polygon(x, y, pts) {
-  let d = Infinity, inside = false;
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const [ax, ay] = pts[j], [bx, by] = pts[i];
-    d = Math.min(d, segment(x, y, ax, ay, bx, by));
-    if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
-  }
-  return inside ? -d : d;
+// Gradient stops, top left to bottom right: peach, pink, purple.
+const STOPS = [[0, [255, 193, 116]], [0.5, [255, 111, 145]], [1, [177, 75, 255]]];
+function sky(x, y) {
+  // Along the line (0.2, 0) -> (0.8, 1) in unit square coordinates.
+  const u = x / N - 0.2, v = y / N, t = clamp01((u * 0.6 + v) / 1.36);
+  const k = t < 0.5 ? 0 : 1, [t0, c0] = STOPS[k], [t1, c1] = STOPS[k + 1];
+  const f = (t - t0) / (t1 - t0);
+  return [mix(c0[0], c1[0], f), mix(c0[1], c1[1], f), mix(c0[2], c1[2], f)];
 }
 
-// The tag: a luggage-tag pentagon with a punched hole, tilted, peeking out
-// from behind the envelope's top right corner.
-const TAG = { cx: 690, cy: 330, angle: 2.52, w: 190, h: 118, r: 22 };   // pointed end and hole up and out
-function tagShape(x, y) {
-  const c = Math.cos(-TAG.angle), sn = Math.sin(-TAG.angle);
-  const dx = x - TAG.cx, dy = y - TAG.cy;
-  const u = dx * c - dy * sn, v = dx * sn + dy * c;          // into the tag's own frame
-  const { w, h } = TAG;
-  const body = polygon(u, v, [[-w, 0], [-w + h, -h], [w, -h], [w, h], [-w + h, h]]) - TAG.r;
-  const hole = Math.hypot(u + w - h * 0.95, v) - 24;
-  return Math.max(body, -hole);
+// Complementary error function (Abramowitz-Stegun 7.1.26), for a blurred edge.
+function erfc(z) {
+  const s = z < 0 ? -1 : 1, a = Math.abs(z), t = 1 / (1 + 0.3275911 * a);
+  const e = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-a * a);
+  return s > 0 ? e : 2 - e;
 }
+
+const ENV = { cx: 512, cy: 518, hw: 280, hh: 196, r: 66 };
+const FLAP = { l: [284, 368], apex: [512, 548], rt: [740, 368], w: 15 };
 
 function pixel(x, y) {
-  const v = y / N;
-  // Apple-blue gradient, lighter at the top, as on the system apps.
-  let r = mix(66, 10, v), g = mix(196, 104, v), b = mix(255, 242, v);
+  let [r, g, b] = sky(x, y);
 
-  // Envelope geometry.
-  const cx = N / 2, cy = N / 2 + 40, hw = 300, hh = 206, rad = 44;
-  const env = roundedRect(x, y, cx, cy, hw, hh, rad);
+  // Soft plum shadow below the envelope, as if lit from above.
+  const sd = roundedRect(x, y - 26, ENV.cx, ENV.cy, ENV.hw, ENV.hh, ENV.r);
+  const sh = 0.38 * 0.5 * erfc(sd / (30 * Math.SQRT2));
+  r = mix(r, 107, sh); g = mix(g, 18, sh); b = mix(b, 64, sh);
 
-  // Soft shadow under everything, falling on the gradient.
-  const shadowEnv = roundedRect(x, y - 22, cx, cy, hw, hh, rad);
-  const sh = Math.exp(-Math.max(0, shadowEnv) / 38) * 0.22;
-  r = mix(r, 0, sh); g = mix(g, 30, sh); b = mix(b, 90, sh);
+  // Envelope: plain white.
+  const ink = aa(roundedRect(x, y, ENV.cx, ENV.cy, ENV.hw, ENV.hh, ENV.r), 1.8);
+  if (ink > 0) { r = mix(r, 255, ink); g = mix(g, 255, ink); b = mix(b, 255, ink); }
 
-  // Tag, behind the envelope.
-  const tag = aa(tagShape(x, y), 1.8);
-  if (tag > 0) {
-    const t = clamp01((y - 150) / 380);
-    r = mix(r, mix(255, 255, t), tag); g = mix(g, mix(176, 140, t), tag); b = mix(b, mix(56, 20, t), tag);
-  }
-
-  // Envelope: white with a whisper of cool grey toward the bottom.
-  const ink = aa(env, 1.8);
-  if (ink > 0) {
-    const t = clamp01((y - (cy - hh)) / (2 * hh));
-    r = mix(r, mix(255, 236, t), ink); g = mix(g, mix(255, 242, t), ink); b = mix(b, mix(255, 250, t), ink);
-  }
-
-  // Flap: a soft blue-grey crease, not a cut.
-  const apex = cy + 26, top = cy - hh + 34, inset = 40;
+  // Flap: a rounded pink stroke.
   const flap = Math.min(
-    segment(x, y, cx - hw + inset, top, cx, apex),
-    segment(x, y, cx + hw - inset, top, cx, apex),
-  ) - 11;
-  const crease = Math.min(aa(flap, 1.8), ink);
-  if (crease > 0) { r = mix(r, 168, crease); g = mix(g, 196, crease); b = mix(b, 236, crease); }
+    segment(x, y, ...FLAP.l, ...FLAP.apex),
+    segment(x, y, ...FLAP.rt, ...FLAP.apex),
+  ) - FLAP.w;
+  const pink = aa(flap, 1.8);
+  if (pink > 0) { r = mix(r, 255, pink); g = mix(g, 143, pink); b = mix(b, 174, pink); }
 
   return [r, g, b];
 }
