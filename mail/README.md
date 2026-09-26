@@ -47,8 +47,12 @@ Scopes asked for: `gmail.modify` (read, label, move, trash) and
 Google's consent screen the app still files mail, but each sender has to be
 tapped once instead of a rule catching the rest — the Rules tab says so.
 
-The client ID is not a secret, so it can be pasted into `BUILT_IN_CLIENT_ID`
-at the top of `index.html` to skip the setup screen on new devices.
+The client ID is built into `index.html` (`BUILT_IN_CLIENT_ID`), so any
+device goes straight to **Connect Gmail** with no setup. It is not a secret:
+it appears in every sign-in URL, and Google only returns tokens to the
+redirect URIs registered against it. The built-in ID wins over anything a
+device has saved, so a bad copy pasted on one phone can't lock it out. Empty
+it to go back to pasting a client ID per device.
 
 ### 2. The scheduled cleanup (optional)
 
