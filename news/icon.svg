@@ -1,37 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Home-screen icon. Full-bleed square: iOS rounds the corners itself. -->
+  <!-- Home-screen icon: the page is the whole icon. Full-bleed square: iOS rounds the corners itself. -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6ECFB"/>
+    </linearGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#4C9BFF"/>
       <stop offset="1" stop-color="#4F46E5"/>
     </linearGradient>
-    <radialGradient id="shine" cx="0.5" cy="0" r="0.8">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.32"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E9EEFF"/>
-    </linearGradient>
-    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.22"/>
-    </linearGradient>
-    <filter id="drop" x="-20%" y="-20%" width="140%" height="150%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#1B1464" flood-opacity="0.35"/>
-    </filter>
   </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#shine)"/>
-  <!-- Frosted card behind -->
-  <rect x="300" y="236" width="480" height="440" rx="76" fill="url(#glass)" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="4"/>
-  <!-- Front page -->
-  <g filter="url(#drop)">
-    <rect x="244" y="316" width="480" height="440" rx="76" fill="url(#page)"/>
-  </g>
-  <rect x="308" y="384" width="352" height="52" rx="26" fill="#3F6FF5"/>
-  <rect x="308" y="484" width="352" height="30" rx="15" fill="#1E2A5A" fill-opacity="0.26"/>
-  <rect x="308" y="544" width="300" height="30" rx="15" fill="#1E2A5A" fill-opacity="0.26"/>
-  <rect x="308" y="604" width="352" height="30" rx="15" fill="#1E2A5A" fill-opacity="0.26"/>
-  <rect x="308" y="664" width="200" height="30" rx="15" fill="#1E2A5A" fill-opacity="0.26"/>
+  <rect width="1024" height="1024" fill="url(#page)"/>
+  <rect x="170" y="249" width="684" height="90" rx="45" fill="url(#head)"/>
+  <rect x="170" y="419" width="684" height="56" rx="28" fill="#1E2A5A" fill-opacity="0.22"/>
+  <rect x="170" y="519" width="580" height="56" rx="28" fill="#1E2A5A" fill-opacity="0.22"/>
+  <rect x="170" y="619" width="684" height="56" rx="28" fill="#1E2A5A" fill-opacity="0.22"/>
+  <rect x="170" y="719" width="400" height="56" rx="28" fill="#1E2A5A" fill-opacity="0.22"/>
 </svg>
