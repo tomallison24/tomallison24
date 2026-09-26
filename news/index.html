@@ -183,14 +183,13 @@
     display: inline-grid; place-items: center;
     background: var(--accent); color: #FFFFFF; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
   }
-  .quick { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; scrollbar-width: none; }
-  .quick::-webkit-scrollbar { display: none; }
-  .quick .chip[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
-  .filter-summary {
-    flex: 1; min-width: 0; text-align: left;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .chip.icon { width: 30px; padding: 0; justify-content: center; }
+  .fb-sep { flex: none; width: 0.5px; height: 18px; background: var(--hairline); }
+  .teams { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .teams::-webkit-scrollbar { display: none; }
+  .teams.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+  .chip.team { padding: 0 11px; font-weight: 500; }
+  .chip.team[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; font-weight: 600; }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---- Filter sheet ---- */
@@ -520,7 +519,12 @@
     const teams = (raw.teams || []).map(g => ({
       title: g.group, items: (g.names || []).map(n => make('team', g.sport, n, g.lastWord, g.group)),
     }));
-    const quickTeams = (raw.quick || []).filter(q => q && entries.has(q.id));
+    // A button can cover several entries (England: football and rugby); its
+    // first id is the key the device remembers.
+    const quickTeams = (raw.quick || []).map(q => {
+      const ids = (q.ids || [q.id]).filter(id => entries.has(id));
+      return ids.length ? { key: ids[0], label: q.label, ids } : null;
+    }).filter(Boolean);
     return { entries, sports, competitions, teams, sportLabel, quick: quickTeams };
   }
 
@@ -530,10 +534,11 @@
   }
   function refreshPicks() {
     savedPickList = picks.map(pickEntry).filter(Boolean);
-    const q = quick && pickEntry(quick);
-    pickList = q ? [q] : savedPickList;
+    const q = quickTeam();
+    pickList = q ? q.ids.map(pickEntry) : savedPickList;
   }
-  const quickOn = () => !!quick && pickList.length === 1 && pickList[0].id === quick;
+  const quickTeam = () => (quick && catalog && catalog.quick.find(q => q.key === quick)) || null;
+  const quickOn = () => !!quickTeam();
 
   // Which sports a story is about: its web address (/football/, /f1/), the
   // publisher's tags, or the sport's own words. Worked out once per story.
@@ -611,23 +616,28 @@
   function renderFilterbar() {
     filterEl.hidden = topic !== SPORT;
     if (filterEl.hidden) return;
-    const n = pickList.length;
+    const on = quickOn();
+    const n = on ? 0 : savedPickList.length;
     const live = liveCount();
     const modes = `<div class="modes" role="tablist" aria-label="Sport view">
       <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
       <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n">${live} live</span>` : ''}</button>
     </div>`;
-    const mine = catalog && catalog.quick.length
-      ? `<div class="quick" role="group" aria-label="My teams">${catalog.quick.map(q =>
-          `<button class="chip" data-quick="${esc(q.id)}" aria-pressed="${quickOn() && quick === q.id}">${esc(q.label)}</button>`).join('')}</div>`
-      : '';
-    const row = n
-      ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on">${ICON.sliders}Filters<span class="n">${n}</span></button>
-         <button class="filter-summary" data-action="edit-picks">${esc(pickList.map(p => p.label).join(', '))}</button>
-         <button class="chip" data-action="reset-picks">${ICON.x}Reset</button>`
-      : `<button class="chip" data-action="edit-picks">${ICON.sliders}Filter</button>
-         <span class="filter-summary">${sportMode === 'scores' ? 'Showing all leagues' : 'Showing all sport'}</span>`;
-    filterEl.innerHTML = modes + mine + (quickOn() ? '' : `<div class="fb-row">${row}</div>`);
+    // One line: Filters (with Reset while any are on), then the team buttons.
+    const filters = n
+      ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on" title="${esc(savedPickList.map(p => p.label).join(', '))}">${ICON.sliders}<span class="n">${n}</span></button>
+         <button class="chip icon" data-action="reset-picks" aria-label="Reset filters">${ICON.x}</button>`
+      : `<button class="chip icon" data-action="edit-picks" aria-label="Filter">${ICON.sliders}</button>`;
+    const teams = catalog ? catalog.quick.map(q =>
+      `<button class="chip team" data-quick="${esc(q.key)}" aria-pressed="${on && quick === q.key}">${esc(q.label)}</button>`).join('') : '';
+    filterEl.innerHTML = modes + `<div class="fb-row">${filters}${teams ? `<span class="fb-sep" aria-hidden="true"></span><div class="teams" role="group" aria-label="My teams">${teams}</div>` : ''}</div>`;
+    // Fade the right edge while more buttons are scrolled out of view.
+    const row = filterEl.querySelector('.teams');
+    if (row) {
+      const fade = () => row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+      fade();
+      row.addEventListener('scroll', fade, { passive: true });
+    }
   }
 
   function renderFeed() {
@@ -638,7 +648,7 @@
     const stories = storiesFor(topic);
     if (!stories.length) {
       if (topic === SPORT && quickOn()) {
-        feedEl.innerHTML = notice(`Nothing on ${esc(pickList[0].label)} right now`,
+        feedEl.innerHTML = notice(`Nothing on ${esc(quickTeam().label)} right now`,
           'None of the latest sport stories mention them. They’ll show here as soon as one does.',
           `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all sport'}</button>`) + status();
         return;
@@ -1015,7 +1025,7 @@
     const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}${fixWhen ? ` · fixtures checked ${esc(fixWhen.toLowerCase())}` : ''}</p>`;
     if (!sections.length) {
       if (!scoresAt) return notice('Scores unavailable', 'Couldn’t reach ESPN or the saved copy. Check your connection and try again.', '<button data-action="retry-scores">Try again</button>');
-      if (quickOn()) return notice(`No games for ${esc(pickList[0].label)}`, 'Nothing on now or in the next two weeks.',
+      if (quickOn()) return notice(`No games for ${esc(quickTeam().label)}`, 'Nothing on now or in the next two weeks.',
         `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all leagues'}</button>`) + foot;
       return pickList.length
         ? notice('No games for your filters', 'None of the games on now or coming up involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot

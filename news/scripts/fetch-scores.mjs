@@ -35,7 +35,7 @@ const slug = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, 
 async function quickTeams() {
   try {
     const raw = JSON.parse(await readFile(join(ROOT, 'sport-catalog.json'), 'utf8'));
-    const want = new Set((raw.quick || []).map(q => q.id));
+    const want = new Set((raw.quick || []).flatMap(q => q.ids || [q.id]));
     return (raw.teams || []).flatMap(g => (g.names || []).map(n => {
       const names = Array.isArray(n) ? n : [n];
       return { id: `team:${g.sport || 'any'}:${slug(names[0])}`, sport: g.sport, names };

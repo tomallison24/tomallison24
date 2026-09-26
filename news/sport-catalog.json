@@ -1,9 +1,9 @@
 {
-  "about": "What the Sport picker offers. A sport matches a story by its web address (/football/, /f1/), the publisher's tags or its terms. Competitions and teams also need their sport to match, so 'Rangers' in football never picks up the Texas Rangers. Names are [label, other names...]; lastWord also matches the last word of each name (Chiefs, Lakers). Anything missing can be added in the app as a keyword. quick lists the one-tap team buttons at the top of the Sport tab (id from teams below, and a short label).",
+  "about": "What the Sport picker offers. A sport matches a story by its web address (/football/, /f1/), the publisher's tags or its terms. Competitions and teams also need their sport to match, so 'Rangers' in football never picks up the Texas Rangers. Names are [label, other names...]; lastWord also matches the last word of each name (Chiefs, Lakers). Anything missing can be added in the app as a keyword. quick lists the one-tap team buttons at the top of the Sport tab: a short label and the ids (from teams below) the button covers.",
   "quick": [
-    { "id": "team:football:liverpool", "label": "Liverpool" },
-    { "id": "team:football:england-football", "label": "England" },
-    { "id": "team:rugby-union:northampton-saints", "label": "Northampton" }
+    { "label": "Liverpool", "ids": ["team:football:liverpool"] },
+    { "label": "England", "ids": ["team:football:england-football", "team:rugby-union:england-rugby"] },
+    { "label": "Northampton", "ids": ["team:rugby-union:northampton-saints"] }
   ],
   "sports": [
     { "id": "football",     "label": "Football",                "paths": ["football", "soccer"], "tags": ["Football", "Soccer"] },
@@ -85,6 +85,10 @@
     { "group": "National football teams", "sport": "football", "names": [
       ["England (football)", "England", "Three Lions"], ["Scotland (football)", "Scotland"], ["Wales (football)", "Wales"],
       ["Northern Ireland (football)", "Northern Ireland"], ["Republic of Ireland (football)", "Republic of Ireland"]
+    ] },
+    { "group": "National rugby union teams", "sport": "rugby-union", "names": [
+      ["England (rugby)", "England", "Red Roses"], ["Scotland (rugby)", "Scotland"], ["Wales (rugby)", "Wales"],
+      ["Ireland (rugby)", "Ireland"]
     ] },
     { "group": "Rugby union clubs", "sport": "rugby-union", "names": [
       "Bath", ["Bristol Bears", "Bristol"], ["Exeter Chiefs", "Exeter"], ["Gloucester", "Gloucester Rugby"],
