@@ -50,15 +50,16 @@ function erfc(z) {
   return s > 0 ? e : 2 - e;
 }
 
-const ENV = { cx: 512, cy: 518, hw: 280, hh: 196, r: 66 };
-const FLAP = { l: [284, 368], apex: [512, 548], rt: [740, 368], w: 15 };
+// The envelope fills about two thirds of the width, like Apple's own glyphs.
+const ENV = { cx: 512, cy: 518, hw: 342, hh: 239, r: 80 };
+const FLAP = { l: [234, 335], apex: [512, 555], rt: [790, 335], w: 18 };
 
 function pixel(x, y) {
   let [r, g, b] = sky(x, y);
 
   // Soft plum shadow below the envelope, as if lit from above.
-  const sd = roundedRect(x, y - 26, ENV.cx, ENV.cy, ENV.hw, ENV.hh, ENV.r);
-  const sh = 0.38 * 0.5 * erfc(sd / (30 * Math.SQRT2));
+  const sd = roundedRect(x, y - 30, ENV.cx, ENV.cy, ENV.hw, ENV.hh, ENV.r);
+  const sh = 0.38 * 0.5 * erfc(sd / (34 * Math.SQRT2));
   r = mix(r, 107, sh); g = mix(g, 18, sh); b = mix(b, 64, sh);
 
   // Envelope: plain white.
