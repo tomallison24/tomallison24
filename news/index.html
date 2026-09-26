@@ -187,7 +187,13 @@
   .fb-sep { flex: none; width: 0.5px; height: 18px; background: var(--hairline); }
   .teams { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
   .teams::-webkit-scrollbar { display: none; }
-  .teams.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+  .teams.less, .teams.more {
+    --l: 0px; --r: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--l), #000 calc(100% - var(--r)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--l), #000 calc(100% - var(--r)), transparent);
+  }
+  .teams.less { --l: 20px; }
+  .teams.more { --r: 24px; }
   .chip.team { padding: 0 11px; font-weight: 500; }
   .chip.team[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; font-weight: 600; }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -637,10 +643,19 @@
     const teams = catalog ? catalog.quick.map(q =>
       `<button class="chip team" data-quick="${esc(q.key)}" aria-pressed="${on && quick === q.key}">${esc(q.label)}</button>`).join('') : '';
     filterEl.innerHTML = modes + `<div class="fb-row">${filters}${teams ? `<span class="fb-sep" aria-hidden="true"></span><div class="teams" role="group" aria-label="My teams">${teams}</div>` : ''}</div>`;
-    // Fade the right edge while more buttons are scrolled out of view.
+    // Fade whichever edge has buttons scrolled out of view.
     const row = filterEl.querySelector('.teams');
     if (row) {
-      const fade = () => row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+      // Keep the chosen team in view; the row is rebuilt on every change.
+      const chosen = row.querySelector('[aria-pressed="true"]');
+      if (chosen) {
+        const over = chosen.getBoundingClientRect().right - row.getBoundingClientRect().right;
+        if (over > 0) row.scrollLeft += over + 8;
+      }
+      const fade = () => {
+        row.classList.toggle('less', row.scrollLeft > 1);
+        row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+      };
       fade();
       row.addEventListener('scroll', fade, { passive: true });
     }
