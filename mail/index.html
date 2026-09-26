@@ -5,10 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mail</title>
 <meta name="description" content="Gmail triage for the home screen: one tap buckets a sender's whole domain into Marketing, and Marketing empties itself.">
-<meta name="theme-color" content="#08080B">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08080B" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- default, not black-translucent: that one always draws the clock white,
+     which vanishes on the light theme. default lets iOS pick the clock's colour
+     and use theme-color above for the bar. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mail">
 <meta name="referrer" content="origin">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -52,6 +56,10 @@
   right, a row flying back left when it returns, a crumble for a deleted
   rule, a wipe down the bucket when it empties. All of it collapses to
   nothing under prefers-reduced-motion.
+
+  Light or dark follows the iPhone's own setting (prefers-color-scheme), and
+  changes the moment iOS does. Every colour is a token on :root with a light
+  value under the media query; the email itself always renders on white.
 -->
 <style>
   :root {
@@ -69,7 +77,57 @@
     --hair-2: rgba(255, 255, 255, 0.07);
     --blur: blur(30px) saturate(180%);
     --ease: cubic-bezier(.22, 1, .36, 1);
+    --fill: rgba(255, 255, 255, 0.07);        /* chips, inputs, quiet buttons */
+    --pill: rgba(255, 255, 255, 0.13);        /* the selected tab */
+    --hi: rgba(255, 255, 255, 0.10);          /* the light catching a glass edge */
+    --lift: rgba(0, 0, 0, 0.38);              /* cards' shadow */
+    --lift-strong: rgba(0, 0, 0, 0.5);        /* sheets, toast, bars */
+    --toast: rgba(30, 30, 34, 0.62);
+    --page: rgba(8, 8, 11, 0.88);             /* the message page */
+    --sheet: rgba(28, 28, 32, 0.80);          /* tag sheet and select bar */
+    --scrim: rgba(0, 0, 0, 0.45);
+    --grab: rgba(255, 255, 255, 0.25);
+    --ring: rgba(255, 255, 255, 0.32);        /* an empty select circle */
+    --bad-text: #FF9A92;
+    --chip-on-text: #FFFFFF;
+    --tl: 80%;                                /* tag chip text lightness */
+    --aurora: 0.72;
     color-scheme: dark;
+  }
+
+  /* Light, when the iPhone is in Light mode - and it switches live when iOS
+     does, with no reload. Same glass, turned to frosted white; colours are
+     the iOS light-mode system ones, deepened where they carry text. */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #F2F2F7;
+      --text: #111114;
+      --muted: rgba(60, 60, 67, 0.80);
+      --faint: rgba(60, 60, 67, 0.64);          /* 0.55 measured 2.9:1 on the page - below the 3:1 floor */
+      --accent: #007AFF;
+      --tag: #D97706;
+      --danger: #E5281D;
+      --glass: rgba(255, 255, 255, 0.58);
+      --glass-2: rgba(255, 255, 255, 0.86);
+      --hair: rgba(60, 60, 67, 0.14);
+      --hair-2: rgba(60, 60, 67, 0.09);
+      --fill: rgba(118, 118, 128, 0.11);
+      --pill: rgba(255, 255, 255, 0.96);
+      --hi: rgba(255, 255, 255, 0.8);
+      --lift: rgba(40, 40, 80, 0.08);
+      --lift-strong: rgba(40, 40, 80, 0.16);
+      --toast: rgba(255, 255, 255, 0.84);
+      --page: rgba(242, 242, 247, 0.97);        /* dark text ghosts through light glass far more than the reverse */
+      --sheet: rgba(249, 249, 252, 0.90);
+      --scrim: rgba(0, 0, 0, 0.22);
+      --grab: rgba(60, 60, 67, 0.30);
+      --ring: rgba(60, 60, 67, 0.32);
+      --bad-text: #C4001A;
+      --chip-on-text: #111114;
+      --tl: 32%;
+      --aurora: 0.40;
+      color-scheme: light;
+    }
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); }
@@ -87,7 +145,7 @@
   .aurora { position: fixed; inset: -20%; z-index: -1; overflow: hidden; pointer-events: none; }
   .aurora b {
     position: absolute; display: block; border-radius: 50%;
-    filter: blur(58px); opacity: 0.72; will-change: transform;
+    filter: blur(58px); opacity: var(--aurora); will-change: transform;
   }
   .aurora b:nth-child(1) { width: 78vw; height: 78vw; left: -12vw;  top: 6vh;   background: radial-gradient(circle, #2E6BFF 0%, rgba(46,107,255,0) 68%); animation: drift1 34s ease-in-out infinite alternate; }
   .aurora b:nth-child(2) { width: 66vw; height: 66vw; right: -14vw; top: 14vh;  background: radial-gradient(circle, #FF7A3D 0%, rgba(255,122,61,0) 68%); animation: drift2 41s ease-in-out infinite alternate; }
@@ -112,7 +170,7 @@
     width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
     background: var(--glass); border: 1px solid var(--hair); color: var(--muted);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 var(--hi);
     transition: transform .18s var(--ease), background .2s, color .2s;
   }
   .iconbtn:active { transform: scale(0.9); background: var(--glass-2); color: var(--text); }
@@ -123,12 +181,12 @@
     position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 15px;
     background: var(--glass); border: 1px solid var(--hair);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
+    box-shadow: inset 0 1px 0 var(--hi);
     animation: fadeDown .5s .04s var(--ease) both;
   }
   .pill {
     position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 11px;
-    background: rgba(255,255,255,0.13); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 10px rgba(0,0,0,0.25);
+    background: var(--pill); box-shadow: inset 0 1px 0 var(--hi), 0 2px 10px rgba(0,0,0,0.18);
     transition: transform .42s var(--ease), width .42s var(--ease);
     pointer-events: none;
   }
@@ -148,7 +206,7 @@
     position: relative; border-radius: 22px; overflow: hidden;
     background: var(--glass); border: 1px solid var(--hair);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.38);
+    box-shadow: inset 0 1px 0 var(--hi), 0 16px 40px var(--lift);
   }
   #screen > .card { animation: cardIn .5s var(--ease) both; }
   #screen.quiet > .card, #screen.quiet ul.list > li, #screen.quiet .panel > * { animation: none; }
@@ -186,12 +244,12 @@
   .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .who .when { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--faint); flex: none; font-variant-numeric: tabular-nums; }
   .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; align-self: center; box-shadow: 0 0 10px rgba(10,132,255,0.8); animation: breathe 2.6s ease-in-out infinite; }
-  .subj { font-size: 14px; color: rgba(255,255,255,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subj { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .snip { font-size: 13px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
   .chip {
     display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
-    background: rgba(255,255,255,0.07); border: 1px solid var(--hair-2); color: var(--muted); font-size: 11px;
+    background: var(--fill); border: 1px solid var(--hair-2); color: var(--muted); font-size: 11px;
     max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .chip svg { opacity: 0.7; }
@@ -200,7 +258,7 @@
   .act {
     width: 46px; height: 46px; align-self: center; border-radius: 15px;
     display: inline-flex; align-items: center; justify-content: center; flex: none;
-    background: rgba(255,255,255,0.07); border: 1px solid var(--hair); color: var(--tag);
+    background: var(--fill); border: 1px solid var(--hair); color: var(--tag);
     transition: transform .2s var(--ease), background .2s, box-shadow .3s;
   }
   .act:active { transform: scale(0.88); background: rgba(255,159,10,0.16); }
@@ -222,7 +280,7 @@
   .empty { padding: 30px 20px; text-align: center; color: var(--faint); font-size: 14px; line-height: 1.55; animation: rowIn .5s var(--ease) both; }
   .skel {
     height: 62px; border-top: 1px solid var(--hair-2);
-    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.055) 50%, transparent 80%);
+    background: linear-gradient(100deg, transparent 20%, var(--fill) 50%, transparent 80%);
     background-size: 220% 100%; animation: shimmer 1.4s linear infinite; animation-delay: calc(var(--i) * 90ms);
   }
   .skel:first-child { border-top: 0; }
@@ -238,11 +296,11 @@
   .panel ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--muted); }
   .panel code, code.url {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-    background: rgba(255,255,255,0.07); border: 1px solid var(--hair-2); border-radius: 7px; padding: 2px 6px;
+    background: var(--fill); border: 1px solid var(--hair-2); border-radius: 7px; padding: 2px 6px;
     word-break: break-all; color: var(--text);
   }
   .panel input[type=text] {
-    width: 100%; padding: 12px 13px; border-radius: 13px; background: rgba(255,255,255,0.06);
+    width: 100%; padding: 12px 13px; border-radius: 13px; background: var(--fill);
     border: 1px solid var(--hair); outline: none; font-size: 16px;   /* under 16px, iOS zooms the page on focus */ transition: border-color .25s, box-shadow .25s;
   }
   .panel input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
@@ -266,15 +324,15 @@
     opacity: 0; transition: opacity .5s;
   }
   .btn:active::after { opacity: 1; transition: opacity 0s; }
-  .btn.ghost { background: rgba(255,255,255,0.07); border: 1px solid var(--hair); color: var(--text); font-weight: 500; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+  .btn.ghost { background: var(--fill); border: 1px solid var(--hair); color: var(--text); font-weight: 500; box-shadow: inset 0 1px 0 var(--hi); }
   .btn.warn { background: rgba(255,69,58,0.10); border: 1px solid rgba(255,69,58,0.32); color: var(--danger); font-weight: 500; box-shadow: none; }
   .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); }
   .field input[type=number] {
-    width: 72px; padding: 9px 10px; border-radius: 11px; background: rgba(255,255,255,0.06); border: 1px solid var(--hair);
+    width: 72px; padding: 9px 10px; border-radius: 11px; background: var(--fill); border: 1px solid var(--hair);
     color: var(--text); font: inherit; text-align: center; outline: none;
   }
   .note { font-size: 12px; line-height: 1.55; color: var(--faint); }
-  .note.bad { color: #FF9A92; }
+  .note.bad { color: var(--bad-text); }
 
   /* ---- toast ---- */
   #toast {
@@ -282,9 +340,9 @@
     max-width: min(480px, calc(100vw - 28px)); width: max-content;
     display: flex; align-items: center; gap: 12px;
     padding: 12px 13px 12px 16px; border-radius: 16px;
-    background: rgba(30, 30, 34, 0.62); border: 1px solid var(--hair);
+    background: var(--toast); border: 1px solid var(--hair);
     backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
-    box-shadow: 0 12px 36px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+    box-shadow: 0 12px 36px var(--lift-strong), inset 0 1px 0 var(--hi);
     font-size: 14px; animation: toastIn .42s var(--ease) both;
   }
   #toast .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -302,11 +360,11 @@
     display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 6px 0 13px; border-radius: 14px;
     background: var(--glass); border: 1px solid var(--hair);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
+    box-shadow: inset 0 1px 0 var(--hi);
     transition: border-color .25s, box-shadow .25s;
     animation: fadeDown .5s .02s var(--ease) both;
   }
-  .search:focus-within { border-color: rgba(10,132,255,0.6); box-shadow: 0 0 0 4px rgba(10,132,255,0.14), inset 0 1px 0 rgba(255,255,255,0.09); }
+  .search:focus-within { border-color: rgba(10,132,255,0.6); box-shadow: 0 0 0 4px rgba(10,132,255,0.14), inset 0 1px 0 var(--hi); }
   .search > svg { color: var(--faint); transition: color .25s; }
   .search:focus-within > svg { color: var(--accent); }
   .search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 16px; color: var(--text); -webkit-appearance: none; }
@@ -314,7 +372,7 @@
   .search input::-webkit-search-cancel-button { display: none; }
   .search .x {
     width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; flex: none;
-    color: var(--muted); background: rgba(255,255,255,0.09); animation: pop .3s var(--ease);
+    color: var(--muted); background: var(--fill); animation: pop .3s var(--ease);
   }
 
   /* ---- tag chips ---- */
@@ -331,12 +389,12 @@
     transition: color .25s, background .25s, border-color .25s, transform .18s var(--ease);
   }
   .chip2 i { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--h) 90% 62%); box-shadow: 0 0 8px hsl(var(--h) 90% 62% / .6); }
-  .chip2.on { color: #fff; background: hsl(var(--h) 80% 55% / .30); border-color: hsl(var(--h) 90% 66% / .55); }
+  .chip2.on { color: var(--chip-on-text); background: hsl(var(--h) 80% 55% / .30); border-color: hsl(var(--h) 90% 66% / .55); }
   .chip2.has { border-color: hsl(var(--h) 90% 66% / .45); }
   .chip2:active { transform: scale(0.94); }
   .tchip {
     --h: 211; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; flex: 0 1 auto;
-    font-size: 11px; font-weight: 500; color: hsl(var(--h) 95% 80%); min-width: 0;
+    font-size: 11px; font-weight: 500; color: hsl(var(--h) 90% var(--tl)); min-width: 0;
     background: hsl(var(--h) 90% 60% / .14); border: 1px solid hsl(var(--h) 90% 60% / .32);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
@@ -350,7 +408,7 @@
   .more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--hair-2); }
   .more button {
     display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 999px; font-size: 13px; color: var(--muted);
-    background: rgba(255,255,255,0.07); border: 1px solid var(--hair); transition: transform .18s var(--ease);
+    background: var(--fill); border: 1px solid var(--hair); transition: transform .18s var(--ease);
   }
   .more button:active { transform: scale(0.94); }
 
@@ -358,7 +416,7 @@
   #reader {
     position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 28px) max(14px, env(safe-area-inset-left));
-    background: rgba(8, 8, 11, 0.88);        /* frosted, but dense enough that the list can't show through */
+    background: var(--page);                 /* frosted, but dense enough that the list can't show through */
     backdrop-filter: blur(40px) saturate(170%); -webkit-backdrop-filter: blur(40px) saturate(170%);
     animation: pageIn .44s var(--ease) both;
   }
@@ -375,7 +433,7 @@
     font-size: 14px; font-weight: 600; color: var(--text);
     background: var(--glass); border: 1px solid var(--hair);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 var(--hi);
     transition: transform .18s var(--ease), background .2s;
   }
   .pillbtn:active { transform: scale(0.93); background: var(--glass-2); }
@@ -404,10 +462,10 @@
     margin-left: auto; flex: none; padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
     color: var(--accent); background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.28);
   }
-  .card.rmail { background: #fff; border-color: rgba(255,255,255,0.25); }
+  .card.rmail { background: #fff; border-color: var(--hair); }
   .rframe { display: block; width: 100%; height: 160px; border: 0; background: #fff; }
-  .rtext { padding: 16px 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.9); }
-  .rtext a { color: #64B5FF; }
+  .rtext { padding: 16px 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: var(--text); }
+  .rtext a { color: var(--accent); }
   .rfoot { display: flex; justify-content: center; padding-top: 2px; }
   .rowtop { display: flex; align-items: stretch; gap: 10px; }
   .plink {
@@ -420,26 +478,26 @@
 
   /* ---- the tag sheet ---- */
   #sheet { position: fixed; inset: 0; z-index: 40; }
-  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.45); animation: fadeIn .3s ease both; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); animation: fadeIn .3s ease both; }
   .sheet {
     position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
     display: flex; flex-direction: column; gap: 13px;
     padding: 10px 18px calc(env(safe-area-inset-bottom) + 18px);
     border-radius: 28px 28px 0 0; border: 1px solid var(--hair); border-bottom: 0;
-    background: rgba(28, 28, 32, 0.80);
+    background: var(--sheet);
     backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
-    box-shadow: 0 -14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+    box-shadow: 0 -14px 44px var(--lift-strong), inset 0 1px 0 var(--hi);
     animation: sheetUp .46s var(--ease) both;
   }
   #sheet.leaving .sheet { animation: sheetDown .28s cubic-bezier(.4,0,1,1) both; }
   #sheet.leaving .scrim { animation: fadeOut .28s ease both; }
-  .grab { width: 38px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.25); align-self: center; margin-bottom: 2px; }
+  .grab { width: 38px; height: 5px; border-radius: 99px; background: var(--grab); align-self: center; margin-bottom: 2px; }
   .sheet h3 { margin: 0; font-size: 18px; line-height: 1.4; letter-spacing: -0.01em; }
   .sheet h3 .chip { font-size: 14px; vertical-align: 1px; max-width: none; }
   .sheet .note { margin: 0; }
   .tagpick { display: flex; flex-wrap: wrap; gap: 8px; }
   .sheet input[type=text] {
-    width: 100%; padding: 12px 13px; border-radius: 13px; background: rgba(255,255,255,0.07);
+    width: 100%; padding: 12px 13px; border-radius: 13px; background: var(--fill);
     border: 1px solid var(--hair); outline: none; font-size: 16px; color: var(--text);
     transition: border-color .25s, box-shadow .25s;
   }
@@ -457,7 +515,7 @@
     height: 36px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--accent);
     background: var(--glass); border: 1px solid var(--hair);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10); transition: transform .18s var(--ease);
+    box-shadow: inset 0 1px 0 var(--hi); transition: transform .18s var(--ease);
     animation: pop .3s var(--ease);
   }
   .textbtn:active { transform: scale(0.93); }
@@ -466,7 +524,7 @@
   ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .check {
     position: absolute; left: 14px; top: 50%; width: 24px; height: 24px; margin-top: -12px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.32); pointer-events: none;
+    border: 2px solid var(--ring); pointer-events: none;
     opacity: 0; transform: translateX(-34px) scale(0.6);
     transition: opacity .25s ease, transform .4s var(--ease), background .2s, border-color .2s, box-shadow .3s;
   }
@@ -485,9 +543,9 @@
     display: flex; align-items: center; gap: 10px; max-width: 560px; margin: 0 auto;
     padding: 12px max(18px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 12px) max(18px, env(safe-area-inset-left));
     border-radius: 24px 24px 0 0; border: 1px solid var(--hair); border-bottom: 0;
-    background: rgba(24, 24, 28, 0.78);
+    background: var(--sheet);
     backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
-    box-shadow: 0 -10px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10);
+    box-shadow: 0 -10px 36px var(--lift-strong), inset 0 1px 0 var(--hi);
     animation: sheetUp .42s var(--ease) both;
   }
   #selbar button {
@@ -531,7 +589,7 @@
   .gtools .act { width: 36px; height: 36px; border-radius: 12px; }
   .mini {
     display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border-radius: 999px;
-    font-size: 12px; font-weight: 600; color: var(--faint); background: rgba(255,255,255,0.06); border: 1px solid var(--hair);
+    font-size: 12px; font-weight: 600; color: var(--faint); background: var(--fill); border: 1px solid var(--hair);
     transition: color .2s, background .2s, border-color .2s, transform .18s var(--ease);
   }
   .mini.on { color: var(--accent); background: rgba(10,132,255,0.12); border-color: rgba(10,132,255,0.3); }
@@ -769,7 +827,16 @@ function consumeRedirect() {
 // ---------------------------------------------------------------------------
 // Gmail
 // ---------------------------------------------------------------------------
-async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
+// No request may wait forever. On a phone a reply can simply never arrive -
+// the network drops, the app is backgrounded - and a fetch left waiting keeps
+// whatever is watching it spinning for good. (mail.timeout only shortens this
+// for the tests.)
+const TIMEOUT = Number(ls.get('mail.timeout', '')) || 20000;
+
+// once: for requests that create something. If the answer is lost the thing
+// may have been made anyway, so they are never sent twice blindly; the caller
+// looks for it instead.
+async function api(path, { method = 'GET', body, params, tries = 0, once = false } = {}) {
   const tok = getToken();
   if (!tok) throw new AuthError('signed out');
   const url = new URL(API + path);
@@ -777,22 +844,28 @@ async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
     if (v == null) continue;
     for (const one of Array.isArray(v) ? v : [v]) url.searchParams.append(k, one);
   }
-  let res;
+  const again = () => api(path, { method, body, params, tries: tries + 1, once });
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), TIMEOUT);
+  let res, text;
   try {
     res = await fetch(url, {
       method,
       headers: { Authorization: 'Bearer ' + tok.t, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
+      signal: ctl.signal,
     });
+    text = await res.text();
+    clearTimeout(timer);
   } catch (e) {
-    if (tries < 3) { await sleep(500 * 2 ** tries); return api(path, { method, body, params, tries: tries + 1 }); }
-    throw new Error('No connection to Gmail');
+    clearTimeout(timer);
+    if (!once && tries < 3) { await sleep(500 * 2 ** tries); return again(); }
+    throw new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
   }
   if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
-  const text = await res.text();
   if (!res.ok) {
     const rate = res.status === 429 || res.status >= 500 || (res.status === 403 && /rateLimitExceeded/i.test(text));
-    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return api(path, { method, body, params, tries: tries + 1 }); }
+    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return again(); }
     let msg = text.slice(0, 200);
     try { msg = JSON.parse(text).error.message; } catch {}
     const err = new Error(msg || ('Gmail returned ' + res.status));
@@ -824,12 +897,20 @@ async function labelNamed(name, { create = false } = {}) {
   const want = name.trim().toLowerCase();
   const found = (await refreshLabels()).find(l => l.name.toLowerCase() === want);
   if (found || !create) return found || null;
-  const made = await api('/labels', {
-    method: 'POST',
-    body: { name: name.trim(), labelListVisibility: 'labelShow', messageListVisibility: 'show' },
-  });
-  await refreshLabels(true);
-  return made;
+  try {
+    const made = await api('/labels', {
+      method: 'POST', once: true,
+      body: { name: name.trim(), labelListVisibility: 'labelShow', messageListVisibility: 'show' },
+    });
+    await refreshLabels(true);
+    return made;
+  } catch (e) {
+    if (e instanceof AuthError) throw e;
+    // Made after all, with the answer lost - or made meanwhile (409).
+    const now = (await refreshLabels(true)).find(l => l.name.toLowerCase() === want);
+    if (now) return now;
+    throw e;
+  }
 }
 
 const bucketLabel = () => labelNamed(settings.label, { create: true });
@@ -1133,29 +1214,43 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
 
   if (canFilter()) {
     try {
-      const existing = await refreshFilters(true);
-      const same = existing.some(f => (f.criteria?.from || '').toLowerCase() === rule.match &&
-        (f.action?.addLabelIds || []).includes(label.id));
-      if (!same) {
-        const made = await api('/settings/filters', {
-          method: 'POST',
-          body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
-        });
-        back.filterId = made.id;
-        filtersCache.push(made);
+      const isSame = f => (f.criteria?.from || '').toLowerCase() === rule.match && (f.action?.addLabelIds || []).includes(label.id);
+      if (!(await refreshFilters(true)).some(isSame)) {
+        try {
+          const made = await api('/settings/filters', {
+            method: 'POST', once: true,
+            body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
+          });
+          back.filterId = made.id;
+          filtersCache.push(made);
+        } catch (e) {
+          if (e instanceof AuthError) throw e;
+          const now = (await refreshFilters(true)).find(isSame);   // made after all?
+          if (!now) throw e;
+          back.filterId = now.id;
+        }
       }
     } catch (e) {
       toast('Done, but the rule for new mail failed: ' + e.message, { bad: true });
     }
   }
 
-  // Mail already here. What had the label before is left alone, so Undo only
-  // takes off what this added.
+  // The mail already here is done in the background, so what's on screen
+  // never waits on a whole mailbox's worth of it. back.done settles when it's
+  // finished; Undo waits for it.
+  back.done = backfill(back, rule, add, remove);
+  back.done.catch(() => {});        // reported by whoever watches it
+  state.rules = null;
+  return back;
+}
+
+// What had the label before is left alone, so Undo only takes off what this added.
+async function backfill(back, rule, add, remove) {
   const q = 'from:(' + rule.match + ') -in:sent -in:chats';
   const [all, had, inInbox] = await Promise.all([
     allIds(q, { cap: 800 }),
-    allIds(q, { labelIds: [label.id], cap: 800 }),
-    skipInbox ? allIds(q + ' in:inbox', { cap: 800 }) : [],
+    allIds(q, { labelIds: [back.label], cap: 800 }),
+    back.skipInbox ? allIds(q + ' in:inbox', { cap: 800 }) : [],
   ]);
   const hadSet = new Set(had);
   back.added = all.filter(id => !hadSet.has(id));
@@ -1164,6 +1259,14 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
   await relabel(inInbox.filter(id => hadSet.has(id)), [], remove);
   state.rules = null;
   return back;
+}
+
+// When the older mail is done, the toast says how much and offers Undo. If it
+// fails part-way, say so and show what Gmail really has.
+function finish(back, say, then) {
+  back.done
+    .then(() => { toast(say(back.added.length + (back.threadId ? 1 : 0)), { label: 'Undo', action: () => undo(back) }); if (then) then(); })
+    .catch(err => { failed(err); state.lists = {}; go({ force: true }); });
 }
 
 async function undoRule(back) {
@@ -1601,7 +1704,7 @@ function viewSettings() {
       '<input type="text" id="lab" style="width:150px" value="' + esc(settings.label) + '"></div>' +
     '<button class="btn ghost" data-act="save-settings">Save</button>' +
     '<p class="note">Mail is moved to the Trash, where Gmail deletes it for good after 30 days — so there is always a way back.</p>' +
-    '<hr style="border:0;border-top:1px solid var(--border);margin:2px 0">' +
+    '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
     '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
@@ -2096,9 +2199,9 @@ async function doBucket(item, btn, li) {
     await closeReader();
     patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], ['INBOX']);
     await settle('right');
-    const n = back.added.length + 1;
-    toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' → ' + settings.label +
-      (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+    const who = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
+    toast(who + ' → ' + settings.label + ' · filing their older mail…', { ms: 60000 });
+    finish(back, n => who + ' → ' + settings.label + (n > 1 ? ' · ' + n + ' messages' : ''));
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.mkt; }
     if (state.reading) renderReader();
@@ -2123,6 +2226,8 @@ async function doRestore(item, btn, li) {
 
 async function undo(back) {
   try {
+    toast('Putting it back…', { ms: 60000 });
+    await back.done?.catch(() => {});
     await undoRule(back);
     toast('Put back');
     state.lists = {};
@@ -2265,8 +2370,10 @@ document.addEventListener('click', async e => {
       if (name.toLowerCase() === settings.label.toLowerCase()) { closeSheet(); return doBucket(sheet.item); }
       el.disabled = true;
       el.innerHTML = ICON.spin + 'Tagging…';
+      const slow = setTimeout(() => { if (el.isConnected) el.innerHTML = ICON.spin + 'Still working — slow connection…'; }, 8000);
       try {
         const back = await tagSender(sheet.item, name);
+        clearTimeout(slow);
         closeSheet();
         patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], []);
         if (state.reading) {
@@ -2276,10 +2383,11 @@ document.addEventListener('click', async e => {
           if (box) { box.innerHTML = tagChips(it.labelIds); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
         }
         await settle('right');
-        const n = back.added.length + 1;
-        toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' tagged “' + back.labelName + '”' +
-          (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+        const who = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
+        toast('Tagged “' + back.labelName + '” · adding it to their older mail…', { ms: 60000 });
+        finish(back, n => who + ' tagged “' + back.labelName + '”' + (n > 1 ? ' · ' + n + ' messages' : ''));
       } catch (err) {
+        clearTimeout(slow);
         el.disabled = false;
         el.innerHTML = ICON.label + 'Tag';
         failed(err);
@@ -2339,9 +2447,10 @@ document.addEventListener('click', async e => {
         const back = await applyRule(rule, name, { skipInbox: bucketing });
         state.lists = {};
         chipSig = null;
-        toast('Rule added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
-          { label: 'Undo', action: () => undo(back) });
+        toast('Tag added: ' + rule.label + ' → ' + back.labelName + ' · tagging their older mail…', { ms: 60000 });
         await loadRules({ force: true });
+        finish(back, () => 'Tag added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
+          () => { if (state.view === 'rules') loadRules({ force: true }); });
       } catch (err) {
         el.disabled = false;
         el.textContent = 'Add rule';
