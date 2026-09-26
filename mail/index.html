@@ -501,6 +501,47 @@
   #sel-count { flex: 1; text-align: center; font-size: 13px; color: var(--faint); font-variant-numeric: tabular-nums; }
   body.selecting { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
 
+  /* ---- swipe right to tag ---- */
+  ul.list > li[data-id] { touch-action: pan-y; }
+  .rowtop { position: relative; z-index: 1; transition: transform .34s var(--ease); }
+  .swipe {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden; cursor: pointer;
+    display: flex; align-items: center;
+    background: linear-gradient(90deg, #5B4BF0, #9A5CF5);
+    box-shadow: inset -12px 0 18px -12px rgba(0,0,0,0.35);
+    transition: width .34s var(--ease), background .25s;
+  }
+  .swipe-in {
+    width: 96px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: #fff; font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  }
+  .swipe-in svg { width: 22px; height: 22px; transition: transform .3s var(--ease); }
+  li.armed .swipe { background: linear-gradient(90deg, #6A4BFF, #C065FF); }
+  li.armed .swipe-in svg { transform: scale(1.3) rotate(-8deg); }
+  li.swiped .swipe-in { animation: pop .35s var(--ease); }
+  li.peek .rowtop { animation: peekRow 1.6s var(--ease) .5s both; }
+  li.peek .swipe { animation: peekUnder 1.6s var(--ease) .5s both; }
+  @keyframes peekRow { 0%, 100% { transform: none; } 35%, 62% { transform: translateX(96px); } }
+  @keyframes peekUnder { 0%, 100% { width: 0; } 35%, 62% { width: 108px; } }
+  #screen.selecting .swipe { display: none; }
+
+  /* ---- the Tags tab ---- */
+  .card h2.gh { flex-wrap: wrap; }
+  .gtools { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+  .gtools .act { width: 36px; height: 36px; border-radius: 12px; }
+  .mini {
+    display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: var(--faint); background: rgba(255,255,255,0.06); border: 1px solid var(--hair);
+    transition: color .2s, background .2s, border-color .2s, transform .18s var(--ease);
+  }
+  .mini.on { color: var(--accent); background: rgba(10,132,255,0.12); border-color: rgba(10,132,255,0.3); }
+  .mini:active { transform: scale(0.93); }
+  .kept { align-self: center; flex: none; font-size: 11px; font-weight: 600; color: var(--faint); padding: 4px 9px; border-radius: 999px; border: 1px solid var(--hair); }
+  .cnote { margin: -2px 16px 8px; font-size: 12px; line-height: 1.5; color: var(--faint); }
+  .more button.danger { color: var(--danger); background: rgba(255,69,58,0.10); border-color: rgba(255,69,58,0.32); }
+  .btn.danger { background: var(--danger); box-shadow: 0 6px 20px rgba(255,69,58,0.3), inset 0 1px 0 rgba(255,255,255,0.22); }
+  .sheet .note .chip { display: inline-flex; margin: 2px 0; }
+
   /* ---- keyframes ---- */
   @keyframes fadeDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
   @keyframes cardIn { from { opacity: 0; transform: translateX(18px) scale(0.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: none; } }
@@ -550,7 +591,7 @@
     <span class="pill" id="pill"></span>
     <button role="tab" data-view="inbox" aria-selected="true">Inbox <span class="count" id="c-inbox"></span></button>
     <button role="tab" data-view="marketing" aria-selected="false">Marketing <span class="count" id="c-mkt"></span></button>
-    <button role="tab" data-view="rules" aria-selected="false">Rules <span class="count" id="c-rules"></span></button>
+    <button role="tab" data-view="rules" aria-selected="false">Tags <span class="count" id="c-rules"></span></button>
   </div>
 
   <div class="chips hide" id="chips"></div>
@@ -591,7 +632,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -794,12 +835,55 @@ async function labelNamed(name, { create = false } = {}) {
 const bucketLabel = () => labelNamed(settings.label, { create: true });
 const bucketId = () => [...labelsById.values()].find(l => l.name.toLowerCase() === settings.label.toLowerCase())?.id || null;
 
-// Tags are the labels you made yourself, apart from the Marketing bucket.
-function tags() {
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+// Every label you (or an app) made, apart from the Marketing bucket.
+function userLabels() {
   const bucket = settings.label.toLowerCase();
-  return [...labelsById.values()]
-    .filter(l => l.type === 'user' && l.name.toLowerCase() !== bucket && l.labelListVisibility !== 'labelHide')
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  return [...labelsById.values()].filter(l => l.type === 'user' && l.name.toLowerCase() !== bucket).sort(byName);
+}
+
+// Labels other mail apps and services leave in Gmail. They are never offered
+// as tags. Two are kept even from the one-tap clean-up, because something
+// still reads them.
+const LEFTOVERS = [
+  [/^\[imap\]/i, 'an old IMAP mail app'],
+  [/^\[mailbox\]/i, 'Dropbox’s Mailbox app, closed in 2016'],
+  [/^\[gmail\]/i, 'a mail app that mis-named a folder'],
+  [/^(deleted|sent) messages$/i, 'a mail app that mis-named a folder'],
+  [/^notes$/i, 'iPhone Notes', 'Kept: iPhone Notes stores your notes here when it syncs with Gmail.'],
+  [/^unroll\.me/i, 'Unroll.me', 'Kept: Unroll.me files the mail it unsubscribed you from here.'],
+];
+function leftover(l) {
+  for (const [re, who, keep] of LEFTOVERS) if (re.test(l.name)) return { who, keep: keep || null };
+  return null;
+}
+
+// Labels that can be tags: yours, not another app's.
+const tags = () => userLabels().filter(l => !leftover(l));
+
+// Filters, kept alongside the labels: a label with a rule is a tag in use.
+let filtersCache = null;
+async function refreshFilters(force) {
+  if (!canFilter()) return (filtersCache = []);
+  if (force || !filtersCache) filtersCache = (await api('/settings/filters')).filter || [];
+  return filtersCache;
+}
+
+// Your choice, per device, to show or hide a label as a chip.
+function chipPrefs() { try { return JSON.parse(ls.get(K.chips, '{}')) || {}; } catch { return {}; } }
+function setChipPref(id, show) {
+  const p = chipPrefs();
+  if (show == null) delete p[id]; else p[id] = show;
+  ls.set(K.chips, JSON.stringify(p));
+}
+
+// The chips: tags that have a rule, plus any label you switched on - never,
+// unless you ask, a leftover from another app.
+function chipTags() {
+  const p = chipPrefs();
+  const ruled = new Set((filtersCache || []).flatMap(f => f.action?.addLabelIds || []));
+  return userLabels().filter(l => p[l.id] ?? (!leftover(l) && ruled.has(l.id)));
 }
 
 // A tag keeps one colour everywhere, picked from its name.
@@ -1049,7 +1133,7 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
 
   if (canFilter()) {
     try {
-      const existing = (await api('/settings/filters')).filter || [];
+      const existing = await refreshFilters(true);
       const same = existing.some(f => (f.criteria?.from || '').toLowerCase() === rule.match &&
         (f.action?.addLabelIds || []).includes(label.id));
       if (!same) {
@@ -1058,6 +1142,7 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
           body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
         });
         back.filterId = made.id;
+        filtersCache.push(made);
       }
     } catch (e) {
       toast('Done, but the rule for new mail failed: ' + e.message, { bad: true });
@@ -1089,8 +1174,30 @@ async function undoRule(back) {
   }
   await relabel(back.leftInbox, ['INBOX']);
   await relabel(back.added, [], [back.label]);
-  if (back.filterId) { try { await api('/settings/filters/' + back.filterId, { method: 'DELETE' }); } catch {} }
+  if (back.filterId) {
+    try { await api('/settings/filters/' + back.filterId, { method: 'DELETE' }); } catch {}
+    if (filtersCache) filtersCache = filtersCache.filter(f => f.id !== back.filterId);
+  }
   state.rules = null;
+}
+
+// Deletes labels from Gmail - rules first, so no filter points at nothing.
+// The emails keep everything else; only the label comes off them.
+async function removeLabels(list) {
+  const filters = await refreshFilters(true);
+  for (const l of list) {
+    for (const f of filters.filter(f => (f.action?.addLabelIds || []).includes(l.id))) {
+      await api('/settings/filters/' + f.id, { method: 'DELETE' });
+    }
+    await api('/labels/' + l.id, { method: 'DELETE' });
+    setChipPref(l.id, null);
+  }
+  filtersCache = null;
+  labelsPromise = null;
+  chipSig = null;
+  state.lists = {};
+  if (state.tag && list.some(l => l.id === state.tag)) state.tag = null;
+  await Promise.all([refreshLabels(true), refreshFilters(true)]);
 }
 
 const bucket = item => applyRule(ruleFor(item), settings.label, { skipInbox: true, item });
@@ -1204,6 +1311,8 @@ function failed(err) {
 
 const ICON = {
   tag: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9a2 2 0 0 0 2.82 0l7-7a2 2 0 0 0 0-2.84M6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8"/></svg>',
+  mkt: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M18 11v2h4v-2zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61M20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4M4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34"/></svg>',
+  eye: '<svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>',
   label: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12z"/></svg>',
   back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
   chev: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
@@ -1219,9 +1328,9 @@ function listSkeleton(n = 6) {
 
 // The coloured chips for a message's own labels. The bucket keeps its orange.
 function tagChips(labelIds, skip) {
-  const bid = bucketId();
+  const bid = bucketId(), shown = new Set(chipTags().map(l => l.id));
   return labelIds.map(id => labelsById.get(id))
-    .filter(l => l && l.type === 'user' && l.id !== skip)
+    .filter(l => l && l.id !== skip && (l.id === bid || shown.has(l.id)))
     .map(l => '<span class="tchip" style="--h:' + (l.id === bid ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>')
     .join('');
 }
@@ -1240,6 +1349,7 @@ function rowHTML(item, i, key) {
   const fresh = i >= freshFrom, sel = state.select?.has(item.id);
   return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
+    '<span class="swipe" data-act="swipe-tag"><span class="swipe-in">' + ICON.label + 'Tag</span></span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
@@ -1251,7 +1361,7 @@ function rowHTML(item, i, key) {
       '</button>' +
       '<button class="act ' + (inBucket ? 'undo' : '') + '" data-act="' + (inBucket ? 'restore' : 'bucket') + '" ' +
         'aria-label="' + (inBucket ? 'Back to inbox' : 'Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label)) + '">' +
-        (inBucket ? ICON.back : ICON.tag) + '</button>' +
+        (inBucket ? ICON.back : ICON.mkt) + '</button>' +
     '</div>' +
   '</li>';
 }
@@ -1271,7 +1381,7 @@ function setCount(sel, n) {
 // picking one doesn't throw the row's scroll position back to the start.
 let chipSig = null;
 function renderChips(show) {
-  const box = $('#chips'), list = show ? tags() : [];
+  const box = $('#chips'), list = show ? chipTags() : [];
   box.classList.toggle('hide', !list.length);
   const sig = list.map(l => l.id + ':' + l.name).join('|');
   if (sig !== chipSig) {
@@ -1310,7 +1420,7 @@ function renderChrome() {
   renderChips(main && state.view === 'inbox' && !state.search && !sel);
   setCount('#c-inbox', state.lists.inbox?.items?.length);
   setCount('#c-mkt', state.lists.mkt?.items?.length);
-  setCount('#c-rules', state.rules?.length);
+  setCount('#c-rules', signedIn ? chipTags().length || null : null);
 
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
@@ -1338,6 +1448,7 @@ function paint(html) {
   screen.classList.toggle('quiet', quietOnce);
   quietOnce = false;
   screen.innerHTML = html;
+  openRow = null;
   freshFrom = Infinity;
   movePill();
   $('#foot').innerHTML = footHTML();
@@ -1407,21 +1518,24 @@ function viewList() {
 
 function viewRules() {
   if (!canFilter()) {
-    return '<div class="card"><div class="empty">Filter permission was not granted, so rules can\'t be listed.<br>Reconnect and allow "manage your filters".</div></div>';
+    return '<div class="card"><div class="empty">Filter permission was not granted, so tags can\'t be set up.<br>Reconnect and allow "manage your filters".</div></div>';
   }
   if (state.rulesError) return '<div class="card"><div class="empty">' + esc(state.rulesError) + '</div></div>';
   if (state.rules === null) return listSkeleton(4);
+  const bid = bucketId(), counts = state.labelCounts || {};
+  const size = id => counts[id] == null ? '' : counts[id] ? counts[id].toLocaleString() + ' email' + (counts[id] === 1 ? '' : 's') : 'empty';
   const names = [settings.label, ...tags().map(l => l.name)];
+
   const form = '<div class="card panel">' +
-    '<div class="ptitle">New rule</div>' +
-    '<input type="text" id="rule-from" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Domain or address — e.g. tmsa.org">' +
+    '<div class="ptitle">New tag</div>' +
+    '<input type="text" id="rule-from" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="From — a domain like tmsa.org, or an address">' +
     '<input type="text" id="rule-tag" list="tag-names" autocomplete="off" autocapitalize="sentences" placeholder="Tag — e.g. Sofia’s school">' +
     '<datalist id="tag-names">' + names.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist>' +
-    '<button class="btn" data-act="add-rule">Add rule</button>' +
-    '<p class="note">Tagged mail stays in your inbox, and mail already in your mailbox is tagged too. Choose “' + esc(settings.label) + '” to send it to the bucket instead.</p>' +
+    '<button class="btn" data-act="add-rule">Add tag</button>' +
+    '<p class="note">Or swipe right on any email. Mail already in your mailbox is tagged too, and it all stays in your inbox. Choose “' + esc(settings.label) + '” to send it to the bucket instead.</p>' +
   '</div>';
 
-  const bid = bucketId(), groups = new Map();
+  const groups = new Map();
   for (const f of state.rules) {
     for (const id of f.action?.addLabelIds || []) {
       if (labelsById.get(id)?.type !== 'user') continue;
@@ -1429,19 +1543,54 @@ function viewRules() {
       groups.get(id).push(f);
     }
   }
-  const order = [...groups.keys()].sort((a, b) => a === bid ? -1 : b === bid ? 1
-    : labelsById.get(a).name.localeCompare(labelsById.get(b).name, undefined, { sensitivity: 'base' }));
-  const cards = order.map(id => {
-    const l = labelsById.get(id), rules = groups.get(id);
-    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (id === bid ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>' +
-      '<span class="gcount">' + rules.length + ' rule' + (rules.length === 1 ? '' : 's') + '</span></h2><ul class="list">' +
-      rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
+  const shown = new Set(chipTags().map(l => l.id));
+  const yours = [...new Set([...groups.keys(), ...shown])].map(id => labelsById.get(id)).filter(Boolean)
+    .sort((a, b) => a.id === bid ? -1 : b.id === bid ? 1 : byName(a, b));
+
+  const chipBtn = l => {
+    const on = shown.has(l.id);
+    return '<button class="mini' + (on ? ' on' : '') + '" data-act="chip-pref" data-id="' + esc(l.id) + '" aria-pressed="' + on + '">' +
+      ICON.eye + (on ? 'Chip on' : 'Chip off') + '</button>';
+  };
+  const delBtn = (l, what) => '<button class="act warn" data-act="del-label" data-id="' + esc(l.id) + '" aria-label="Delete ' + what + ' ' + esc(l.name) + '">' + ICON.bin + '</button>';
+
+  const tagCard = l => {
+    const rules = groups.get(l.id) || [], isBucket = l.id === bid;
+    const meta = [rules.length ? rules.length + ' rule' + (rules.length === 1 ? '' : 's') : 'no rules', size(l.id)].filter(Boolean).join(' · ');
+    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (isBucket ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>' +
+      '<span class="gcount">' + meta + '</span>' +
+      (isBucket ? '' : '<span class="gtools">' + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
+      (rules.length ? '<ul class="list">' + rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
         '<span class="open"><span class="who"><span class="name">' + esc(f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
         '<span class="snip">' + ((f.action?.removeLabelIds || []).includes('INBOX') ? 'Skips the inbox' : 'Stays in the inbox') + '</span></span>' +
-        '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></div></li>').join('') +
-      '</ul></div>';
-  }).join('');
-  return form + (cards || '<div class="card"><div class="empty">No rules yet.<br>Add one above, or tag a message from its page.</div></div>');
+        '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></div></li>').join('') + '</ul>' : '') +
+      '</div>';
+  };
+
+  const labelRow = (l, line, tools) => '<li data-label="' + esc(l.id) + '"><div class="rowtop">' +
+    '<span class="open"><span class="who"><span class="name">' + esc(l.name) + '</span></span><span class="snip">' + line + '</span></span>' +
+    tools + '</div></li>';
+
+  const others = tags().filter(l => !yours.includes(l));
+  const otherCard = others.length ? '<div class="card"><h2>Other labels in Gmail</h2>' +
+    '<p class="cnote">Not used as tags, so not shown as chips. Switch one on to filter by it.</p><ul class="list">' +
+    others.map(l => labelRow(l, esc(size(l.id) || '&nbsp;'), '<span class="gtools">' + chipBtn(l) + delBtn(l, 'label') + '</span>')).join('') +
+    '</ul></div>' : '';
+
+  const left = userLabels().filter(l => leftover(l) && !shown.has(l.id));
+  const clearable = left.filter(l => !leftover(l).keep);
+  const leftCard = left.length ? '<div class="card"><h2>Left by other apps</h2>' +
+    '<p class="cnote">Old folders other mail apps and services made in your Gmail. Hidden here. Deleting one takes the label off; the emails stay.</p><ul class="list">' +
+    left.map(l => {
+      const o = leftover(l);
+      const line = esc(o.keep || 'From ' + o.who) + (size(l.id) ? ' · ' + esc(size(l.id)) : '');
+      return labelRow(l, line, o.keep ? '<span class="kept">Kept</span>' : delBtn(l, 'label'));
+    }).join('') + '</ul>' +
+    (clearable.length ? '<div class="more"><button class="danger" data-act="del-leftovers">' + ICON.bin + 'Delete all ' + clearable.length + ' unused</button></div>' : '') +
+    '</div>' : '';
+
+  const none = yours.length ? '' : '<div class="card"><div class="empty">No tags yet.<br>Swipe right on an email from the school — or anyone — to tag everything they send.</div></div>';
+  return form + none + yours.map(tagCard).join('') + otherCard + leftCard;
 }
 
 function viewSettings() {
@@ -1519,7 +1668,7 @@ function renderReader() {
       '<button class="pillbtn" data-act="tag-open">' + ICON.label + 'Tag</button>' +
       (inBucket
         ? '<button class="pillbtn bluec" data-act="restore-reader">' + ICON.back + 'Inbox</button>'
-        : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.tag + esc(settings.label) + '</button>') +
+        : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.mkt + esc(settings.label) + '</button>') +
     '</div>' +
     '<div class="card rhead">' +
       '<div class="rsubj">' + esc(it.subject) + '</div>' +
@@ -1560,7 +1709,7 @@ function renderReaderBody() {
 function openSheet(item) {
   const rule = ruleFor(item);
   state.sheet = { item, rule };
-  const list = tags();
+  const list = chipTags();
   const who = '<span class="chip">' + esc(rule.label) + '</span>';
   const el = $('#sheet');
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
@@ -1577,8 +1726,27 @@ function openSheet(item) {
   if (!list.length) setTimeout(() => $('#newtag')?.focus(), 350);
 }
 
+// A yes/no question in the same sheet, for anything that can't be undone.
+let confirmDone = null;
+function confirmSheet({ title, body, yes }) {
+  closeSheet();
+  return new Promise(resolve => {
+    confirmDone = resolve;
+    state.sheet = { confirm: true };
+    const el = $('#sheet');
+    el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+      '<div class="sheet" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<div class="grab"></div><h3>' + esc(title) + '</h3><p class="note">' + body + '</p>' +
+        '<button class="btn danger" data-act="confirm-yes">' + esc(yes) + '</button>' +
+        '<button class="btn ghost" data-act="sheet-close">Cancel</button>' +
+      '</div>';
+    el.classList.remove('hide', 'leaving');
+  });
+}
+
 function closeSheet() {
   const el = $('#sheet');
+  if (confirmDone) { const done = confirmDone; confirmDone = null; done(false); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
   const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
@@ -1611,6 +1779,7 @@ async function loadList({ force, quiet } = {}) {
   }
   if (quiet) quietOnce = true;
   render();
+  if (spec.key === 'inbox' && state.lists.inbox?.items?.length) hintSwipe();
 }
 
 async function loadMore(btn) {
@@ -1635,8 +1804,9 @@ async function loadRules({ force } = {}) {
   state.rules = null; state.rulesError = null; render();
   if (!canFilter()) { state.rules = []; return render(); }
   try {
-    await refreshLabels(true);
-    const all = (await api('/settings/filters')).filter || [];
+    const [labels, all] = await Promise.all([refreshLabels(true), refreshFilters(true)]);
+    const got = await pool(labels.filter(l => l.type === 'user'), 5, l => api('/labels/' + l.id).catch(() => null));
+    state.labelCounts = Object.fromEntries(got.filter(Boolean).map(l => [l.id, l.messagesTotal ?? null]));
     state.rules = all.filter(f => (f.action?.addLabelIds || []).some(id => labelsById.get(id)?.type === 'user'));
   } catch (e) {
     if (e instanceof AuthError) return render();
@@ -1669,6 +1839,7 @@ function rowsFor(ids) {
 }
 
 function enterSelect(firstId) {
+  closeRow();
   state.select = new Set(firstId ? [firstId] : []);
   if (firstId) rowsFor([firstId])[0]?.classList.add('sel');
   renderChrome();
@@ -1773,6 +1944,94 @@ addEventListener('scroll', cancelPress, { passive: true });
 screen.addEventListener('contextmenu', e => { if (e.target.closest('ul.list > li')) e.preventDefault(); });
 
 // ---------------------------------------------------------------------------
+// Swipe right to tag
+// ---------------------------------------------------------------------------
+// As in Mail: drag a row right and Tag shows underneath. Let go part-way and
+// the row stays open on the button; drag past half-way and it tags at once.
+// Rows scroll up and down as normal - touch-action: pan-y leaves vertical
+// moves to the browser, and a mostly-vertical start is never taken as a swipe.
+const SWIPE_OPEN = 96;
+let swipe = null, openRow = null;
+
+function setSwipe(li, dx, animate) {
+  const top = li.querySelector('.rowtop'), under = li.querySelector('.swipe');
+  if (!top || !under) return;
+  top.style.transition = under.style.transition = animate ? '' : 'none';
+  top.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
+  under.style.width = dx ? dx + 12 + 'px' : '';
+}
+
+function closeRow(li = openRow) {
+  if (!li) return;
+  setSwipe(li, 0, true);
+  li.classList.remove('swiped', 'armed');
+  if (openRow === li) openRow = null;
+}
+
+screen.addEventListener('pointerdown', e => {
+  if (state.select || e.button > 0 || e.target.closest('.act, .swipe')) return;
+  const li = e.target.closest('ul.list > li[data-id]');
+  if (!li) return;
+  if (openRow && openRow !== li) closeRow();
+  swipe = { li, id: e.pointerId, x: e.clientX, y: e.clientY, base: li === openRow ? SWIPE_OPEN : 0, dx: 0, lock: false };
+});
+
+screen.addEventListener('pointermove', e => {
+  const sw = swipe;
+  if (!sw || e.pointerId !== sw.id) return;
+  const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+  if (!sw.lock) {
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipe = null; return; }   // a scroll
+    if (Math.abs(dx) < 8) return;
+    sw.lock = true;
+    cancelPress();                                                                // not a long press either
+    try { sw.li.setPointerCapture(e.pointerId); } catch {}
+  }
+  const w = sw.li.offsetWidth;
+  let x = Math.max(0, sw.base + dx);
+  if (x > w * 0.8) x = w * 0.8 + (x - w * 0.8) * 0.25;                          // resist near the edge
+  sw.dx = x;
+  setSwipe(sw.li, x, false);
+  sw.li.classList.toggle('armed', x > w * 0.5);
+});
+
+screen.addEventListener('pointerup', e => {
+  const sw = swipe;
+  if (!sw || e.pointerId !== sw.id) return;
+  swipe = null;
+  if (!sw.lock) return;
+  swallowClick = true;                           // the release is not a tap
+  setTimeout(() => { swallowClick = false; }, 350);
+  const w = sw.li.offsetWidth;
+  if (sw.dx > w * 0.5) {                         // all the way: tag now
+    closeRow(sw.li);
+    const it = findItem(sw.li.dataset.id);
+    if (it) openSheet(it);
+  } else if (sw.dx > 56) {                       // part way: stay open on Tag
+    setSwipe(sw.li, SWIPE_OPEN, true);
+    sw.li.classList.remove('armed');
+    sw.li.classList.add('swiped');
+    openRow = sw.li;
+  } else closeRow(sw.li);
+});
+
+screen.addEventListener('pointercancel', e => {
+  const sw = swipe;
+  if (sw && e.pointerId === sw.id) { swipe = null; if (sw.lock) closeRow(sw.li); }
+});
+addEventListener('scroll', () => { if (openRow && !swipe) closeRow(); }, { passive: true });
+
+// Shown once: the first row slides open by itself to show the gesture.
+function hintSwipe() {
+  if (ls.get(K.swipeHint, '') || state.view !== 'inbox' || state.search || state.select) return;
+  const li = screen.querySelector('ul.list > li[data-id]');
+  if (!li) return;
+  ls.set(K.swipeHint, '1');
+  if (!reduced) { li.classList.add('peek'); setTimeout(() => li.classList.remove('peek'), 2600); }
+  setTimeout(() => toast('Tip: swipe an email to the right to tag it', { ms: 5000 }), reduced ? 0 : 900);
+}
+
+// ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
 $('#tabs').addEventListener('click', e => {
@@ -1841,7 +2100,7 @@ async function doBucket(item, btn, li) {
     toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' → ' + settings.label +
       (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
   } catch (err) {
-    if (btn) { btn.disabled = false; btn.innerHTML = ICON.tag; }
+    if (btn) { btn.disabled = false; btn.innerHTML = ICON.mkt; }
     if (state.reading) renderReader();
     failed(err);
   }
@@ -1880,7 +2139,9 @@ async function undo(back) {
 }
 
 document.addEventListener('click', async e => {
-  if (swallowClick) { swallowClick = false; e.preventDefault(); return; }   // the release after a long press
+  if (swallowClick) { swallowClick = false; e.preventDefault(); return; }   // the release after a long press or swipe
+  // A row left open on Tag closes on any tap outside its button, as in Mail.
+  if (openRow && !e.target.closest('.swipe')) { closeRow(); e.preventDefault(); return; }
   if (state.select) {
     const row = e.target.closest('#screen ul.list > li[data-id]');
     if (row) { e.preventDefault(); return toggleSelect(row); }
@@ -1930,6 +2191,67 @@ document.addEventListener('click', async e => {
     case 'restore-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + 'Inbox'; doRestore(state.reading.item); } return;
 
     case 'tag-open': if (state.reading) openSheet(state.reading.item); return;
+    case 'swipe-tag': {
+      const it = findItem(li.dataset.id);
+      closeRow(li);
+      if (it) openSheet(it);
+      return;
+    }
+    case 'confirm-yes': {
+      const done = confirmDone;
+      confirmDone = null;
+      closeSheet();
+      if (done) done(true);
+      return;
+    }
+
+    case 'chip-pref': {
+      const id = el.dataset.id, on = chipTags().some(l => l.id === id);
+      setChipPref(id, !on);
+      chipSig = null;
+      quietOnce = true;
+      render();
+      toast(on ? 'Chip hidden' : 'Chip shown under the Inbox tab');
+      return;
+    }
+    case 'del-label': {
+      const l = labelsById.get(el.dataset.id);
+      if (!l) return;
+      const n = state.labelCounts?.[l.id];
+      const yes = await confirmSheet({
+        title: 'Delete “' + l.name + '”?',
+        body: (n ? 'The label comes off ' + n.toLocaleString() + ' email' + (n === 1 ? '' : 's') : 'No emails have this label') +
+          ', and any rules for it stop. The emails themselves stay in your mailbox. This can’t be undone.',
+        yes: 'Delete',
+      });
+      if (!yes) return;
+      try {
+        if (li) await vanish(li, 'crumble');
+        await removeLabels([l]);
+        toast('“' + l.name + '” deleted');
+        await loadRules({ force: true });
+      } catch (err) { failed(err); loadRules({ force: true }); }
+      return;
+    }
+    case 'del-leftovers': {
+      const list = userLabels().filter(l => leftover(l) && !leftover(l).keep && !chipTags().some(c => c.id === l.id));
+      if (!list.length) return;
+      const yes = await confirmSheet({
+        title: 'Delete ' + list.length + ' old labels?',
+        body: list.map(l => '<span class="chip">' + esc(l.name) + '</span>').join(' ') +
+          '<br><br>They come off any emails that have them; the emails stay. Notes and Unroll.me are left alone. This can’t be undone.',
+        yes: 'Delete ' + list.length + ' labels',
+      });
+      if (!yes) return;
+      try {
+        const rows = list.map(l => screen.querySelector('li[data-label="' + CSS.escape(l.id) + '"]'));
+        await Promise.all(rows.map((r, i) => new Promise(ok => setTimeout(() => vanish(r, 'crumble').then(ok), i * 60))));
+        await removeLabels(list);
+        toast(list.length + ' old labels deleted');
+        await loadRules({ force: true });
+      } catch (err) { failed(err); loadRules({ force: true }); }
+      return;
+    }
     case 'sheet-close': return closeSheet();
     case 'pick-tag':
       $('#newtag').value = el.dataset.name;
@@ -1994,10 +2316,12 @@ document.addEventListener('click', async e => {
       confirmTap(el, li, 'tag');
       try {
         await api('/settings/filters/' + id, { method: 'DELETE' });
+        if (filtersCache) filtersCache = filtersCache.filter(f => f.id !== id);
         await vanish(li, 'crumble');
         state.rules = state.rules.filter(f => f.id !== id);
         quietOnce = true;
         render();
+        chipSig = null;
         toast('Rule deleted. Mail already tagged keeps its tag.');
       } catch (err) { el.disabled = false; failed(err); }
       return;
@@ -2088,7 +2412,7 @@ function renew() {
   ls.set(K.token + '.ever', '1');
 
   loadProfile();
-  refreshLabels().then(() => render()).catch(() => {});
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); }).catch(() => {});
   loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
