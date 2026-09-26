@@ -72,11 +72,13 @@ const run = async () => {
     return;
   }
 
-  const q = `label:"${LABEL.replace(/"/g, '')}" older_than:${DAYS}d`;
+  // Matched by label id, not by name in the search: a name with spaces or an
+  // apostrophe needs quoting that Gmail's search is fussy about.
+  const q = `older_than:${DAYS}d`;
   const ids = [];
   let pageToken;
   do {
-    const page = await api('/messages', { params: { q, maxResults: 500, pageToken } });
+    const page = await api('/messages', { params: { q, labelIds: label.id, maxResults: 500, pageToken } });
     for (const m of page.messages || []) ids.push(m.id);
     pageToken = page.nextPageToken;
   } while (pageToken);

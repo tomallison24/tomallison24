@@ -24,6 +24,14 @@
        same from now on, without the app being open;
     3. sweeps the mail already in the mailbox from that domain into Marketing.
 
+  Tags work the same way without leaving the inbox: tag one message from the
+  school and everything from that domain - already here and still to come -
+  carries the tag, and its chip under the tabs filters the list to it.
+
+  Tapping a message opens it as a page of its own, rendered in a sandboxed
+  frame that can run nothing and load nothing until "Show images" is tapped,
+  so tracking pixels stay dark. The search bar takes Gmail's own search syntax.
+
   Anything in Marketing older than 3 days (Settings: 1-30) goes to the Trash,
   where Gmail deletes it for good after 30 days. The sweep runs when the app
   opens; .github/workflows/mail.yml runs the same sweep daily so it happens
@@ -144,6 +152,7 @@
   }
   #screen > .card { animation: cardIn .5s var(--ease) both; }
   #screen.quiet > .card, #screen.quiet ul.list > li, #screen.quiet .panel > * { animation: none; }
+  #screen.quiet ul.list > li.fresh { animation: rowIn .52s var(--ease) both; animation-delay: calc(var(--i) * 34ms); }
   #screen.back > .card { animation: cardInBack .5s var(--ease) both; }
   .card h2 {
     font-size: 12px; font-weight: 600; color: var(--faint); margin: 0; padding: 13px 16px 9px;
@@ -159,30 +168,6 @@
     transition: height .3s var(--ease), padding .3s var(--ease), opacity .26s ease, transform .3s cubic-bezier(.4,0,.9,.4), filter .26s;
   }
   ul.list > li:first-child { border-top: 0; }
-  ul.list > li.peeking { background: rgba(255,255,255,0.035); }
-  .rowtop { display: flex; align-items: stretch; gap: 10px; }
-
-  /* the preview drawer */
-  .preview {
-    max-height: 0; opacity: 0; overflow: hidden;
-    transition: max-height .4s var(--ease), opacity .3s ease, margin .4s var(--ease);
-  }
-  .preview.on { max-height: 300px; opacity: 1; margin-top: 10px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .pbody {
-    white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6;
-    color: var(--muted); padding: 11px 12px; border-radius: 12px;
-    background: rgba(0,0,0,0.22); border: 1px solid var(--hair-2);
-    animation: rowIn .4s var(--ease) both;
-  }
-  .pbody.loading { color: var(--faint); font-style: italic; }
-  .pfoot { display: flex; align-items: center; gap: 8px; padding: 9px 2px 3px; }
-  .plink {
-    margin-left: auto; display: inline-flex; align-items: center; gap: 5px; flex: none;
-    color: var(--accent); font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 999px;
-    background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.26);
-    transition: transform .18s var(--ease);
-  }
-  .plink:active { transform: scale(0.94); }
   ul.list > li.going { height: 0 !important; padding-top: 0; padding-bottom: 0; opacity: 0; }
   ul.list > li.going.right { transform: translateX(105%) rotate(1.6deg); }
   ul.list > li.going.left  { transform: translateX(-105%) rotate(-1.6deg); }
@@ -258,7 +243,7 @@
   }
   .panel input[type=text] {
     width: 100%; padding: 12px 13px; border-radius: 13px; background: rgba(255,255,255,0.06);
-    border: 1px solid var(--hair); outline: none; font-size: 15px; transition: border-color .25s, box-shadow .25s;
+    border: 1px solid var(--hair); outline: none; font-size: 16px;   /* under 16px, iOS zooms the page on focus */ transition: border-color .25s, box-shadow .25s;
   }
   .panel input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
   .hero {
@@ -312,6 +297,161 @@
   .foot button { color: var(--muted); padding: 5px 10px; border-radius: 999px; background: var(--glass); border: 1px solid var(--hair-2); transition: transform .18s var(--ease), color .2s; }
   .foot button:active { transform: scale(0.94); color: var(--text); }
 
+  /* ---- search ---- */
+  .search {
+    display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 6px 0 13px; border-radius: 14px;
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
+    transition: border-color .25s, box-shadow .25s;
+    animation: fadeDown .5s .02s var(--ease) both;
+  }
+  .search:focus-within { border-color: rgba(10,132,255,0.6); box-shadow: 0 0 0 4px rgba(10,132,255,0.14), inset 0 1px 0 rgba(255,255,255,0.09); }
+  .search > svg { color: var(--faint); transition: color .25s; }
+  .search:focus-within > svg { color: var(--accent); }
+  .search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 16px; color: var(--text); -webkit-appearance: none; }
+  .search input::placeholder { color: var(--faint); }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .search .x {
+    width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; flex: none;
+    color: var(--muted); background: rgba(255,255,255,0.09); animation: pop .3s var(--ease);
+  }
+
+  /* ---- tag chips ---- */
+  .chips {
+    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    margin: -2px -14px 0; padding: 2px 14px 2px; animation: fadeDown .45s var(--ease) both;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip2 {
+    --h: 211; flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    transition: color .25s, background .25s, border-color .25s, transform .18s var(--ease);
+  }
+  .chip2 i { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--h) 90% 62%); box-shadow: 0 0 8px hsl(var(--h) 90% 62% / .6); }
+  .chip2.on { color: #fff; background: hsl(var(--h) 80% 55% / .30); border-color: hsl(var(--h) 90% 66% / .55); }
+  .chip2.has { border-color: hsl(var(--h) 90% 66% / .45); }
+  .chip2:active { transform: scale(0.94); }
+  .tchip {
+    --h: 211; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; flex: 0 1 auto;
+    font-size: 11px; font-weight: 500; color: hsl(var(--h) 95% 80%); min-width: 0;
+    background: hsl(var(--h) 90% 60% / .14); border: 1px solid hsl(var(--h) 90% 60% / .32);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tchip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .meta { overflow: hidden; }
+  .meta .chip { flex: 0 1 auto; min-width: 0; }
+  .card h2.gh { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; }
+  .card h2.gh .tchip { font-size: 13px; padding: 3px 10px; }
+  .gcount { font-size: 12px; font-weight: 400; color: var(--faint); }
+  .ptitle { font-size: 15px; font-weight: 600; }
+  .more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--hair-2); }
+  .more button {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 999px; font-size: 13px; color: var(--muted);
+    background: rgba(255,255,255,0.07); border: 1px solid var(--hair); transition: transform .18s var(--ease);
+  }
+  .more button:active { transform: scale(0.94); }
+
+  /* ---- the message page: slides over the list like a pushed screen ---- */
+  #reader {
+    position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 28px) max(14px, env(safe-area-inset-left));
+    background: rgba(8, 8, 11, 0.88);        /* frosted, but dense enough that the list can't show through */
+    backdrop-filter: blur(40px) saturate(170%); -webkit-backdrop-filter: blur(40px) saturate(170%);
+    animation: pageIn .44s var(--ease) both;
+  }
+  #reader.leaving { animation: pageOut .28s cubic-bezier(.4,0,1,1) both; }
+  #reader .wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  #reader .wrap > * { animation: rowIn .5s var(--ease) both; }
+  #reader .wrap > :nth-child(2) { animation-delay: .06s; } #reader .wrap > :nth-child(3) { animation-delay: .12s; }
+  #reader .wrap > :nth-child(4) { animation-delay: .18s; }
+  .rtop { display: flex; align-items: center; gap: 8px; }
+  .rtop .iconbtn { width: 38px; height: 38px; color: var(--text); }
+  .rspace { flex: 1; }
+  .pillbtn {
+    display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 15px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; color: var(--text);
+    background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    transition: transform .18s var(--ease), background .2s;
+  }
+  .pillbtn:active { transform: scale(0.93); background: var(--glass-2); }
+  .pillbtn.tagc { color: var(--tag); }
+  .pillbtn.bluec { color: var(--accent); }
+  .pillbtn[disabled] { opacity: 0.6; }
+  .rhead { padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .rsubj { font-size: 21px; line-height: 1.25; font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+  .rfrom { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .avatar {
+    --h: 211; width: 40px; height: 40px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px; color: #fff;
+    background: linear-gradient(135deg, hsl(var(--h) 85% 60%), hsl(calc(var(--h) + 40) 80% 46%));
+    box-shadow: 0 4px 16px hsl(var(--h) 85% 50% / .38), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .rwho { display: flex; flex-direction: column; min-width: 0; font-size: 15px; }
+  .rwho strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rmail { color: var(--faint); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rwhen { margin-left: auto; color: var(--faint); font-size: 12px; text-align: right; flex: none; max-width: 38%; }
+  .rtags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rtags:empty { display: none; }
+  .rtags.flash .tchip:last-child { animation: pop .5s var(--ease); }
+  .imgnote { display: flex; align-items: center; gap: 10px; padding: 11px 10px 11px 14px; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+  .imgnote svg { color: var(--faint); }
+  .imgnote button {
+    margin-left: auto; flex: none; padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    color: var(--accent); background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.28);
+  }
+  .card.rmail { background: #fff; border-color: rgba(255,255,255,0.25); }
+  .rframe { display: block; width: 100%; height: 160px; border: 0; background: #fff; }
+  .rtext { padding: 16px 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.9); }
+  .rtext a { color: #64B5FF; }
+  .rfoot { display: flex; justify-content: center; padding-top: 2px; }
+  .rowtop { display: flex; align-items: stretch; gap: 10px; }
+  .plink {
+    display: inline-flex; align-items: center; gap: 5px; flex: none;
+    color: var(--accent); font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px;
+    background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.26);
+    transition: transform .18s var(--ease);
+  }
+  .plink:active { transform: scale(0.94); }
+
+  /* ---- the tag sheet ---- */
+  #sheet { position: fixed; inset: 0; z-index: 40; }
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.45); animation: fadeIn .3s ease both; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 13px;
+    padding: 10px 18px calc(env(safe-area-inset-bottom) + 18px);
+    border-radius: 28px 28px 0 0; border: 1px solid var(--hair); border-bottom: 0;
+    background: rgba(28, 28, 32, 0.80);
+    backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 -14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+    animation: sheetUp .46s var(--ease) both;
+  }
+  #sheet.leaving .sheet { animation: sheetDown .28s cubic-bezier(.4,0,1,1) both; }
+  #sheet.leaving .scrim { animation: fadeOut .28s ease both; }
+  .grab { width: 38px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.25); align-self: center; margin-bottom: 2px; }
+  .sheet h3 { margin: 0; font-size: 18px; line-height: 1.4; letter-spacing: -0.01em; }
+  .sheet h3 .chip { font-size: 14px; vertical-align: 1px; max-width: none; }
+  .sheet .note { margin: 0; }
+  .tagpick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sheet input[type=text] {
+    width: 100%; padding: 12px 13px; border-radius: 13px; background: rgba(255,255,255,0.07);
+    border: 1px solid var(--hair); outline: none; font-size: 16px; color: var(--text);
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .sheet input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
+
+  @keyframes pageIn { from { transform: translateX(100%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+  @keyframes pageOut { to { transform: translateX(100%); opacity: 0.4; } }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes sheetDown { to { transform: translateY(100%); } }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
   /* ---- keyframes ---- */
   @keyframes fadeDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
   @keyframes cardIn { from { opacity: 0; transform: translateX(18px) scale(0.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: none; } }
@@ -347,6 +487,14 @@
     </button>
   </header>
 
+  <form class="search hide" id="search" role="search" action="#">
+    <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"/></svg>
+    <input type="search" id="q" placeholder="Search mail" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Search mail">
+    <button type="button" class="x hide" id="q-clear" aria-label="Clear search">
+      <svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+  </form>
+
   <div class="tabs hide" id="tabs" role="tablist">
     <span class="pill" id="pill"></span>
     <button role="tab" data-view="inbox" aria-selected="true">Inbox <span class="count" id="c-inbox"></span></button>
@@ -354,9 +502,13 @@
     <button role="tab" data-view="rules" aria-selected="false">Rules <span class="count" id="c-rules"></span></button>
   </div>
 
+  <div class="chips hide" id="chips"></div>
+
   <div id="screen"></div>
   <div class="foot" id="foot"></div>
 </main>
+<div id="reader" class="hide" role="dialog" aria-label="Message"></div>
+<div id="sheet" class="hide"></div>
 <div id="toast" class="hide" role="status" aria-live="polite"></div>
 <script>
 "use strict";
@@ -541,29 +693,73 @@ async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-let labelPromise = null;
-function bucketLabel() {
-  if (!labelPromise) {
-    labelPromise = (async () => {
-      const name = settings.label;
-      const { labels = [] } = await api('/labels');
-      const found = labels.find(l => l.name.toLowerCase() === name.toLowerCase());
-      return found || api('/labels', {
-        method: 'POST',
-        body: { name, labelListVisibility: 'labelShow', messageListVisibility: 'show' },
-      });
-    })().catch(e => { labelPromise = null; throw e; });
+// ---------------------------------------------------------------------------
+// Labels
+// ---------------------------------------------------------------------------
+// Every label in the mailbox, fetched once and refreshed whenever one is made.
+// Rows, chips and rules read this copy, so drawing them never waits on Gmail.
+let labelsPromise = null;
+const labelsById = new Map();
+
+async function refreshLabels(force) {
+  if (force || !labelsPromise) {
+    labelsPromise = api('/labels').then(r => r.labels || []).catch(e => { labelsPromise = null; throw e; });
   }
-  return labelPromise;
+  const all = await labelsPromise;
+  labelsById.clear();
+  for (const l of all) labelsById.set(l.id, l);
+  return all;
 }
 
-async function idsFor(query, cap = 500) {
+async function labelNamed(name, { create = false } = {}) {
+  const want = name.trim().toLowerCase();
+  const found = (await refreshLabels()).find(l => l.name.toLowerCase() === want);
+  if (found || !create) return found || null;
+  const made = await api('/labels', {
+    method: 'POST',
+    body: { name: name.trim(), labelListVisibility: 'labelShow', messageListVisibility: 'show' },
+  });
+  await refreshLabels(true);
+  return made;
+}
+
+const bucketLabel = () => labelNamed(settings.label, { create: true });
+const bucketId = () => [...labelsById.values()].find(l => l.name.toLowerCase() === settings.label.toLowerCase())?.id || null;
+
+// Tags are the labels you made yourself, apart from the Marketing bucket.
+function tags() {
+  const bucket = settings.label.toLowerCase();
+  return [...labelsById.values()]
+    .filter(l => l.type === 'user' && l.name.toLowerCase() !== bucket && l.labelListVisibility !== 'labelHide')
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+// A tag keeps one colour everywhere, picked from its name.
+const HUES = [211, 187, 145, 48, 28, 340, 280, 250];
+function hue(s) {
+  let h = 0;
+  for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return HUES[h % HUES.length];
+}
+
+// ---------------------------------------------------------------------------
+// Listing
+// ---------------------------------------------------------------------------
+// A label is matched by id, never by name inside the search: a name such as
+// "Sofia's school" needs quoting that Gmail's search is fussy about, while an
+// id is exact.
+async function page(q, { labelIds, pageToken, max = PAGE } = {}) {
+  const r = await api('/messages', { params: { q: q || undefined, labelIds, maxResults: max, pageToken } });
+  return { ids: (r.messages || []).map(m => m.id), next: r.nextPageToken || null };
+}
+
+async function allIds(q, { labelIds, cap = 500 } = {}) {
   const ids = [];
   let pageToken;
   do {
-    const r = await api('/messages', { params: { q: query, maxResults: Math.min(100, cap - ids.length), pageToken } });
-    for (const m of r.messages || []) ids.push(m.id);
-    pageToken = r.nextPageToken;
+    const r = await page(q, { labelIds, pageToken, max: Math.min(500, cap - ids.length) });
+    ids.push(...r.ids);
+    pageToken = r.next;
   } while (pageToken && ids.length < cap);
   return ids;
 }
@@ -575,34 +771,33 @@ function parseFrom(header) {
   return { name, email, host: email.split('@')[1] || '' };
 }
 
+// Gmail sends snippets HTML-escaped ("don&#39;t"); DOMParser turns them back
+// into plain text without running or loading anything.
+const unescapeHtml = s => new DOMParser().parseFromString('<!doctype html><body>' + s, 'text/html').body.textContent || '';
+
 async function hydrate(ids) {
   const out = await pool(ids, 6, id => api('/messages/' + id, {
     params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] },
   }).catch(() => null));
   return out.filter(Boolean).map(m => {
     const h = Object.fromEntries((m.payload?.headers || []).map(x => [x.name.toLowerCase(), x.value]));
-    const from = parseFrom(h.from);
     return {
-      id: m.id, threadId: m.threadId, snippet: m.snippet || '',
+      id: m.id, threadId: m.threadId, snippet: unescapeHtml(m.snippet || ''),
       subject: h.subject || '(no subject)',
       date: Number(m.internalDate) || Date.parse(h.date) || Date.now(),
-      unread: (m.labelIds || []).includes('UNREAD'),
-      ...from,
+      labelIds: m.labelIds || [],
+      get unread() { return this.labelIds.includes('UNREAD'); },
+      ...parseFrom(h.from),
     };
   }).sort((a, b) => b.date - a.date);
 }
 
-// A message body, as text. Marketing mail is nearly all HTML, and rendering
-// that would load the sender's images - which is how they learn you opened it.
-// DOMParser gives an inert document: no scripts run and no network is touched.
-function decode(data) {
-  const bin = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
-  return new TextDecoder('utf-8').decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
-}
-
+// ---------------------------------------------------------------------------
+// Reading a message
+// ---------------------------------------------------------------------------
 function findPart(node, type) {
   if (!node) return null;
-  if (node.mimeType === type && node.body?.data) return node.body.data;
+  if (node.mimeType === type && (node.body?.data || node.body?.attachmentId)) return node;
   for (const part of node.parts || []) {
     const hit = findPart(part, type);
     if (hit) return hit;
@@ -610,32 +805,89 @@ function findPart(node, type) {
   return null;
 }
 
-function htmlToText(html) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const n of doc.querySelectorAll('script, style, head, noscript')) n.remove();
-  for (const n of doc.querySelectorAll('br')) n.replaceWith('\n');
-  for (const n of doc.querySelectorAll('p, div, tr, li, h1, h2, h3, h4, table, blockquote')) n.append('\n');
-  return (doc.body?.textContent || '');
+const headerOf = (node, name) => (node?.headers || []).find(h => h.name.toLowerCase() === name)?.value || '';
+
+// A body part as text, in the character set the part says it is in. Large
+// parts come as an attachment id rather than inline.
+async function partText(msgId, part) {
+  let data = part.body.data;
+  if (!data) data = (await api('/messages/' + msgId + '/attachments/' + part.body.attachmentId)).data || '';
+  const bin = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  const charset = (/charset="?([^";\s]+)/i.exec(headerOf(part, 'content-type')) || [])[1] || 'utf-8';
+  try { return new TextDecoder(charset).decode(bytes); } catch { return new TextDecoder().decode(bytes); }
 }
+
+async function fetchMessage(item) {
+  const m = await api('/messages/' + item.id, { params: { format: 'full' } });
+  const html = findPart(m.payload, 'text/html');
+  const text = findPart(m.payload, 'text/plain');
+  return {
+    html: html ? await partText(item.id, html) : null,
+    text: text ? await partText(item.id, text) : null,
+  };
+}
+
+// The message as a page of its own, inside a sandboxed frame. The sandbox has
+// no allow-scripts, so nothing in the mail can run, and the frame's policy lets
+// it load nothing from the network - so images, and the tracking pixels among
+// them, stay dark until "Show" is tapped. allow-same-origin without scripts
+// only lets this page measure the frame to size it.
+function emailDoc(html, images) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const n of doc.querySelectorAll('script, noscript, meta, link, base, title, iframe, frame, frameset, object, embed, applet, form')) n.remove();
+  for (const el of doc.querySelectorAll('*')) {
+    for (const a of [...el.attributes]) if (/^on|^ping$/i.test(a.name)) el.removeAttribute(a.name);
+  }
+  for (const a of doc.querySelectorAll('a[href]')) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  const policy = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:" + (images ? ' https: http:' : '');
+  const bodyAttrs = [...(doc.body?.attributes || [])].map(a => ' ' + a.name + '="' + esc(a.value) + '"').join('');
+  return '<!doctype html><html><head><meta charset="utf-8">' +
+    '<meta http-equiv="Content-Security-Policy" content="' + policy + '">' +
+    '<meta http-equiv="x-dns-prefetch-control" content="off">' +
+    '<meta name="referrer" content="no-referrer">' +
+    '<style>html{-webkit-text-size-adjust:100%;overflow:hidden}body{margin:0;padding:14px;background:#fff;color:#1c1c1e;' +
+    'font:15px/1.5 -apple-system,system-ui,sans-serif;overflow-wrap:break-word}img{max-width:100%;height:auto}a{color:#0a63d8}</style>' +
+    (doc.head?.innerHTML || '') + '</head><body' + bodyAttrs + '>' + (doc.body?.innerHTML || '') + '</body></html>';
+}
+
+// Whether the mail asks for anything from the network - worth offering "Show".
+const wantsImages = html => /(?:src|background|srcset)\s*=\s*["']?\s*https?:|url\(\s*["']?\s*https?:/i.test(html);
 
 function tidy(text) {
   return text
     .replace(/\r/g, '')
-    .replace(/[ \t\u00a0\u200b]+/g, ' ')
+    .replace(/[ \t ​]+/g, ' ')
     .replace(/ ?\n ?/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-async function fetchBody(item) {
-  const msg = await api('/messages/' + item.id, { params: { format: 'full' } });
-  const plain = findPart(msg.payload, 'text/plain');
-  const html = plain ? null : findPart(msg.payload, 'text/html');
-  let text = plain ? decode(plain) : html ? htmlToText(decode(html)) : '';
-  text = tidy(text);
-  if (!text) text = item.snippet || 'No text in this message.';
-  return text.length > 4000 ? text.slice(0, 4000) + '\n…' : text;
+// Plain text with its web addresses made tappable. Matched on the raw text and
+// escaped piece by piece, so an address can never break out of its tag.
+function linkify(text) {
+  const re = /\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(text))) {
+    out += esc(text.slice(last, m.index)) + '<a href="' + esc(m[0]) + '" target="_blank" rel="noopener noreferrer">' + esc(m[0]) + '</a>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
 }
+
+// Emails are laid out for a column about 600px wide. One wider than the screen
+// is scaled down to fit, the way Mail does, and the frame is made as tall as
+// the message so the page scrolls rather than the frame.
+function fitFrame(frame) {
+  const doc = frame.contentDocument, root = doc?.documentElement, body = doc?.body;
+  if (!root || !body || !frame.isConnected || !frame.clientWidth) return;
+  body.style.transform = '';
+  const scale = Math.min(1, frame.clientWidth / Math.max(1, root.scrollWidth));
+  if (scale < 1) { body.style.transformOrigin = '0 0'; body.style.transform = 'scale(' + scale + ')'; }
+  frame.style.height = Math.ceil(root.scrollHeight * scale) + 'px';
+}
+
+const fullDate = ms => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 // ---------------------------------------------------------------------------
 // Which senders a rule may cover
@@ -671,87 +923,141 @@ function ruleFor(item) {
   return { kind: 'domain', match: domain, label: domain };
 }
 
+// A rule typed into the Rules tab: a domain such as tmsa.org, or one address.
+function ruleFromText(raw) {
+  const t = String(raw || '').trim().toLowerCase().replace(/^mailto:/, '').replace(/^@/, '');
+  if (/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(t)) return { kind: 'sender', match: t, label: t };
+  if (/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(t)) {
+    const d = baseDomain(t);
+    if (isShared(d)) return { error: d + ' is shared by millions of people, so a rule on it would catch everyone. Enter the full address instead, like name@' + d + '.' };
+    return { kind: 'domain', match: d, label: d };
+  }
+  return { error: 'Enter a domain like tmsa.org, or an address like office@tmsa.org.' };
+}
+
+// Whether a message is one a rule covers - used to update rows already on
+// screen without asking Gmail again.
+function covers(rule, it) {
+  return rule.kind === 'sender' ? it.email === rule.match : it.host === rule.match || it.host.endsWith('.' + rule.match);
+}
+
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
-// One tap: this conversation, a filter for everything that follows, and the
-// mail from that sender already in the mailbox.
-async function bucket(item) {
-  const label = await bucketLabel();
-  const rule = ruleFor(item);
-  const name = label.name.replace(/"/g, '');
-  const back = { label: label.id, threadId: item.threadId, fromInbox: [], filed: [], filterId: null, rule };
+async function relabel(ids, add = [], remove = []) {
+  if (!ids.length || (!add.length && !remove.length)) return;
+  for (const part of chunks(ids, 500)) {
+    await api('/messages/batchModify', {
+      method: 'POST',
+      body: { ids: part, ...(add.length && { addLabelIds: add }), ...(remove.length && { removeLabelIds: remove }) },
+    });
+  }
+}
 
-  await api('/threads/' + item.threadId + '/modify', {
+async function relabelThread(threadId, add = [], remove = []) {
+  if (!add.length && !remove.length) return;
+  await api('/threads/' + threadId + '/modify', {
     method: 'POST',
-    body: { addLabelIds: [label.id], removeLabelIds: ['INBOX'] },
+    body: { ...(add.length && { addLabelIds: add }), ...(remove.length && { removeLabelIds: remove }) },
   });
+}
+
+// Puts everything from one sender or domain under a label: this conversation
+// now, all new mail through a Gmail filter, and the mail already here. With
+// skipInbox it also leaves the inbox - that is the Marketing bucket - while a
+// tag leaves mail where it is. Returns what Undo needs to put it all back.
+async function applyRule(rule, labelName, { skipInbox = false, item = null } = {}) {
+  const label = await labelNamed(labelName, { create: true });
+  const add = [label.id], remove = skipInbox ? ['INBOX'] : [];
+  const back = {
+    rule, skipInbox, label: label.id, labelName: label.name, filterId: null,
+    threadId: item?.threadId || null,
+    threadInInbox: !!item?.labelIds.includes('INBOX'),
+    threadHadLabel: !!item?.labelIds.includes(label.id),
+    added: [], leftInbox: [],
+  };
+
+  if (item) await relabelThread(item.threadId, add, remove);
 
   if (canFilter()) {
     try {
       const existing = (await api('/settings/filters')).filter || [];
-      const already = existing.find(f =>
-        (f.criteria?.from || '').toLowerCase() === rule.match.toLowerCase() &&
+      const same = existing.some(f => (f.criteria?.from || '').toLowerCase() === rule.match &&
         (f.action?.addLabelIds || []).includes(label.id));
-      if (!already) {
+      if (!same) {
         const made = await api('/settings/filters', {
           method: 'POST',
-          body: { criteria: { from: rule.match }, action: { addLabelIds: [label.id], removeLabelIds: ['INBOX'] } },
+          body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
         });
         back.filterId = made.id;
       }
-      state.rules = null;   // re-read next time the tab is opened
     } catch (e) {
-      toast('Moved, but the rule failed: ' + e.message, { bad: true });
+      toast('Done, but the rule for new mail failed: ' + e.message, { bad: true });
     }
   }
 
-  // Backfill, kept apart so Undo can put back only what was in the inbox.
-  const q = 'from:(' + rule.match + ') -label:"' + name + '" -in:sent -in:chats';
-  const [inInbox, elsewhere] = await Promise.all([idsFor(q + ' in:inbox', 400), idsFor(q + ' -in:inbox', 400)]);
-  back.fromInbox = inInbox;
-  back.filed = elsewhere;
-  for (const part of chunks(inInbox, 500)) {
-    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: [label.id], removeLabelIds: ['INBOX'] } });
-  }
-  for (const part of chunks(elsewhere, 500)) {
-    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: [label.id] } });
-  }
-  return { back, moved: 1 + inInbox.length + elsewhere.length };
+  // Mail already here. What had the label before is left alone, so Undo only
+  // takes off what this added.
+  const q = 'from:(' + rule.match + ') -in:sent -in:chats';
+  const [all, had, inInbox] = await Promise.all([
+    allIds(q, { cap: 800 }),
+    allIds(q, { labelIds: [label.id], cap: 800 }),
+    skipInbox ? allIds(q + ' in:inbox', { cap: 800 }) : [],
+  ]);
+  const hadSet = new Set(had);
+  back.added = all.filter(id => !hadSet.has(id));
+  back.leftInbox = inInbox;
+  await relabel(back.added, add, remove);
+  await relabel(inInbox.filter(id => hadSet.has(id)), [], remove);
+  state.rules = null;
+  return back;
 }
 
-async function undoBucket(back) {
-  await api('/threads/' + back.threadId + '/modify', {
-    method: 'POST', body: { addLabelIds: ['INBOX'], removeLabelIds: [back.label] },
-  });
-  for (const part of chunks(back.fromInbox, 500)) {
-    await api('/messages/batchModify', { method: 'POST', body: { ids: part, addLabelIds: ['INBOX'], removeLabelIds: [back.label] } });
+async function undoRule(back) {
+  if (back.threadId) {
+    await relabelThread(back.threadId,
+      back.skipInbox && back.threadInInbox ? ['INBOX'] : [],
+      back.threadHadLabel ? [] : [back.label]);
   }
-  for (const part of chunks(back.filed, 500)) {
-    await api('/messages/batchModify', { method: 'POST', body: { ids: part, removeLabelIds: [back.label] } });
-  }
+  await relabel(back.leftInbox, ['INBOX']);
+  await relabel(back.added, [], [back.label]);
   if (back.filterId) { try { await api('/settings/filters/' + back.filterId, { method: 'DELETE' }); } catch {} }
   state.rules = null;
 }
 
-// Takes a single conversation back out of the bucket, leaving the rule alone.
+const bucket = item => applyRule(ruleFor(item), settings.label, { skipInbox: true, item });
+const tagSender = (item, name) => applyRule(ruleFor(item), name, { item });
+
+// One conversation back to the inbox, leaving the rule alone.
 async function unbucket(item) {
   const label = await bucketLabel();
-  await api('/threads/' + item.threadId + '/modify', {
-    method: 'POST', body: { addLabelIds: ['INBOX'], removeLabelIds: [label.id] },
-  });
+  await relabelThread(item.threadId, ['INBOX'], [label.id]);
+  return label.id;
+}
+
+// Opening a message is reading it: Gmail marks it read, and so does the list.
+async function markRead(item) {
+  if (!item.unread) return false;
+  try {
+    await api('/messages/' + item.id + '/modify', { method: 'POST', body: { removeLabelIds: ['UNREAD'] } });
+    patch(it => it.id === item.id, [], ['UNREAD']);
+    if (!item.labelIds.includes('UNREAD')) return true;
+    item.labelIds = item.labelIds.filter(l => l !== 'UNREAD');
+    return true;
+  } catch { return false; }
 }
 
 // Everything in the bucket older than the cut-off goes to the Trash, which
 // Gmail empties for good after 30 days.
 async function sweep() {
-  const label = await bucketLabel();
-  const q = 'label:"' + label.name.replace(/"/g, '') + '" older_than:' + settings.days + 'd';
-  const ids = await idsFor(q, 1000);
+  const label = await labelNamed(settings.label);
   let done = 0;
-  await pool(ids, 5, async id => {
-    try { await api('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch {}
-  });
+  if (label) {
+    const ids = await allIds('older_than:' + settings.days + 'd', { labelIds: [label.id], cap: 1000 });
+    await pool(ids, 5, async id => {
+      try { await api('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch {}
+    });
+  }
   ls.set(K.swept, String(Date.now()));
   return done;
 }
@@ -759,9 +1065,56 @@ async function sweep() {
 // ---------------------------------------------------------------------------
 // View
 // ---------------------------------------------------------------------------
-const state = { view: 'inbox', inbox: null, mkt: null, rules: null, me: null, busy: false, error: null, open: null };
+const state = {
+  view: 'inbox',   // inbox | marketing | rules | settings
+  tag: null,       // a tag's label id while its chip is on
+  search: '',      // while set, search results take the list's place
+  lists: {},       // key -> { items, next, error, q, labelIds }
+  rules: null, rulesError: null,
+  me: null, error: null, busy: false,
+  reading: null,   // { item, data, images, error } while a message is open
+  sheet: null,     // { item, rule } while the tag sheet is up
+};
 const screen = $('#screen');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// The list on screen, and how to ask Gmail for it.
+function currentList() {
+  if (state.search) return { key: 'q:' + state.search, q: state.search };
+  if (state.view === 'marketing') return { key: 'mkt', bucket: true };
+  if (state.tag) return { key: 'tag:' + state.tag, labelIds: [state.tag] };
+  return { key: 'inbox', q: 'in:inbox -in:chats' };
+}
+
+// Whether a message still belongs in a list once its labels change.
+function belongs(key, it) {
+  if (key === 'inbox') return it.labelIds.includes('INBOX');
+  if (key === 'mkt') return it.labelIds.includes(bucketId());
+  if (key.startsWith('tag:')) return it.labelIds.includes(key.slice(4));
+  return true;
+}
+
+// Changes labels on every copy of the matching messages held in lists.
+function patch(test, add, remove) {
+  for (const list of Object.values(state.lists)) {
+    for (const it of list.items || []) {
+      if (test(it)) it.labelIds = [...new Set(it.labelIds.filter(l => !remove.includes(l)).concat(add))];
+    }
+  }
+}
+
+// After a change: rows that no longer belong on screen leave with their
+// animation, and other lists - which may have gained mail - are fetched afresh
+// when next shown.
+async function settle(dir) {
+  const key = currentList().key, list = state.lists[key];
+  const gone = (list?.items || []).filter(it => !belongs(key, it));
+  await Promise.all(gone.map(it => vanish(screen.querySelector('li[data-id="' + CSS.escape(it.id) + '"]'), dir)));
+  for (const k of Object.keys(state.lists)) if (k !== key) delete state.lists[k];
+  if (list?.items) list.items = list.items.filter(it => belongs(key, it));
+  quietOnce = true;
+  render();
+}
 
 let toastTimer = null;
 function toast(msg, { action, label, bad, ms } = {}) {
@@ -774,10 +1127,18 @@ function toast(msg, { action, label, bad, ms } = {}) {
   toastTimer = setTimeout(() => el.classList.add('hide'), ms || (action ? 7000 : bad ? 6000 : 3000));
 }
 
+function failed(err) {
+  toast(err instanceof AuthError ? 'Session expired — reconnect' : err.message, { bad: true });
+  if (err instanceof AuthError) { closeSheet(); closeReader(); render(); }
+}
+
 const ICON = {
   tag: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9a2 2 0 0 0 2.82 0l7-7a2 2 0 0 0 0-2.84M6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8"/></svg>',
+  label: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12z"/></svg>',
   back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
+  chev: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   bin: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  img: '<svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></svg>',
   spin: '<svg class="i spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8" /></svg>',
   out: '<svg class="i" width="13" height="13" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z"/></svg>',
 };
@@ -786,17 +1147,30 @@ function listSkeleton(n = 6) {
   return '<div class="card">' + Array.from({ length: n }, (_, i) => '<div class="skel" style="--i:' + i + '"></div>').join('') + '</div>';
 }
 
-function rowHTML(item, i, view) {
-  const rule = ruleFor(item);
-  const left = settings.days - (Date.now() - item.date) / 86400e3;
-  const due = left <= 0;
-  const meta = view === 'inbox'
-    ? '<span class="chip">' + esc(rule.label) + '</span>'
-    : '<span class="chip ' + (due ? 'due' : '') + '">' + ICON.bin + (due ? 'due now' : 'in ' + Math.ceil(left) + 'd') + '</span>';
-  const open = state.open === item.id;
-  return '<li style="--i:' + i + '" data-id="' + esc(item.id) + '" class="' + (open ? 'peeking' : '') + '">' +
+// The coloured chips for a message's own labels. The bucket keeps its orange.
+function tagChips(labelIds, skip) {
+  const bid = bucketId();
+  return labelIds.map(id => labelsById.get(id))
+    .filter(l => l && l.type === 'user' && l.id !== skip)
+    .map(l => '<span class="tchip" style="--h:' + (l.id === bid ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>')
+    .join('');
+}
+
+let freshFrom = Infinity;   // rows from here on animate in even on a quiet repaint
+function rowHTML(item, i, key) {
+  const inBucket = item.labelIds.includes(bucketId());
+  let meta;
+  if (key === 'mkt') {
+    const left = settings.days - (Date.now() - item.date) / 86400e3;
+    meta = '<span class="chip ' + (left <= 0 ? 'due' : '') + '">' + ICON.bin + (left <= 0 ? 'due now' : 'in ' + Math.ceil(left) + 'd') + '</span>' +
+      tagChips(item.labelIds, bucketId());
+  } else {
+    meta = '<span class="chip">' + esc(ruleFor(item).label) + '</span>' + tagChips(item.labelIds);
+  }
+  const fresh = i >= freshFrom;
+  return '<li class="' + (fresh ? 'fresh' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<div class="rowtop">' +
-      '<button class="open" data-act="peek" aria-expanded="' + open + '">' +
+      '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
           '<span class="name">' + esc(item.name) + '</span>' +
           '<span class="when">' + esc(ago(item.date)) + '</span></span>' +
@@ -804,14 +1178,9 @@ function rowHTML(item, i, view) {
         '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
         '<span class="meta">' + meta + '</span>' +
       '</button>' +
-      '<button class="act ' + (view === 'inbox' ? '' : 'undo') + '" data-act="' + (view === 'inbox' ? 'bucket' : 'restore') + '" ' +
-        'aria-label="' + (view === 'inbox' ? 'Move ' + esc(rule.label) + ' to ' + esc(settings.label) : 'Back to inbox') + '">' +
-        (view === 'inbox' ? ICON.tag : ICON.back) + '</button>' +
-    '</div>' +
-    '<div class="preview' + (open ? ' on' : '') + '">' +
-      '<div class="pbody">' + (item.body ? esc(item.body) : '') + '</div>' +
-      '<div class="pfoot"><span class="chip">' + esc(item.email) + '</span>' +
-        '<button class="plink" data-act="open" data-thread="' + esc(item.threadId) + '">Open in Gmail ' + ICON.out + '</button></div>' +
+      '<button class="act ' + (inBucket ? 'undo' : '') + '" data-act="' + (inBucket ? 'restore' : 'bucket') + '" ' +
+        'aria-label="' + (inBucket ? 'Back to inbox' : 'Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label)) + '">' +
+        (inBucket ? ICON.back : ICON.tag) + '</button>' +
     '</div>' +
   '</li>';
 }
@@ -827,29 +1196,50 @@ function setCount(sel, n) {
   lastCount[sel] = n;
 }
 
+// Tag chips under the tabs. Rebuilt only when the tags themselves change, so
+// picking one doesn't throw the row's scroll position back to the start.
+let chipSig = null;
+function renderChips(show) {
+  const box = $('#chips'), list = show ? tags() : [];
+  box.classList.toggle('hide', !list.length);
+  const sig = list.map(l => l.id + ':' + l.name).join('|');
+  if (sig !== chipSig) {
+    chipSig = sig;
+    const chip = (id, name, h) => '<button class="chip2" data-act="chip" data-id="' + esc(id) + '"' +
+      (h == null ? '' : ' style="--h:' + h + '"') + '>' + (h == null ? '' : '<i></i>') + esc(name) + '</button>';
+    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, hue(l.name))).join('') : '';
+  }
+  for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', (b.dataset.id || '') === (state.tag || ''));
+}
+
 function render() {
-  const signedIn = !!getToken();
-  setCount('#c-inbox', state.inbox?.length);
-  setCount('#c-mkt', state.mkt?.length);
-  setCount('#c-rules', state.rules?.length);
-  $('#tabs').classList.toggle('hide', !signedIn || state.view === 'settings');
-  $('#refresh').classList.toggle('hide', !signedIn || state.view === 'settings');
+  const signedIn = !!getToken() && !!clientId();
+  const main = signedIn && state.view !== 'settings';
+  $('#tabs').classList.toggle('hide', !main);
+  $('#search').classList.toggle('hide', !main);
+  $('#refresh').classList.toggle('hide', !main);
   $('#gear').classList.toggle('hide', !signedIn);
   $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
   $('#sub').textContent = state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
+  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t.dataset.view === state.view));
+  renderChips(main && state.view === 'inbox' && !state.search);
+  setCount('#c-inbox', state.lists.inbox?.items?.length);
+  setCount('#c-mkt', state.lists.mkt?.items?.length);
+  setCount('#c-rules', state.rules?.length);
 
   if (!clientId()) return paint(viewSetup());
-  if (!signedIn) return paint(viewSignIn());
+  if (!getToken()) return paint(viewSignIn());
   if (state.view === 'settings') return paint(viewSettings());
   if (state.view === 'rules') return paint(viewRules());
-  return paint(viewList(state.view));
+  return paint(viewList());
 }
 
-let quietOnce = false;              // set by an action: re-render without the entrance stagger
+let quietOnce = false;              // set by an action: repaint without the entrance stagger
 function paint(html) {
   screen.classList.toggle('quiet', quietOnce);
   quietOnce = false;
   screen.innerHTML = html;
+  freshFrom = Infinity;
   movePill();
   $('#foot').innerHTML = footHTML();
 }
@@ -858,8 +1248,7 @@ function footHTML() {
   if (!getToken() || state.view === 'settings') return '';
   const last = Number(ls.get(K.swept, 0));
   const when = !last ? 'Not cleaned yet' : ago(last) === 'now' ? 'Cleaned just now' : 'Cleaned ' + ago(last) + ' ago';
-  return '<span>' + when + '</span>' +
-    '<button data-act="sweep">Clean up now</button>';
+  return '<span>' + when + '</span><button data-act="sweep">Clean up now</button>';
 }
 
 function viewSetup() {
@@ -881,49 +1270,78 @@ function viewSetup() {
 }
 
 function viewSignIn() {
-  const failed = state.error;
+  const problem = clientIdProblem(clientId());
   return '<div class="card panel signin">' +
     '<div class="hero">' + ICON.tag + '</div>' +
     '<p><strong>Connect Gmail</strong> to triage your inbox. One tap files a sender, everything from their domain follows, and the bucket empties itself after ' + settings.days + ' days.</p>' +
-    (failed ? '<p class="note bad">' + esc(failed) + '</p>' : '') +
+    (state.error ? '<p class="note bad">' + esc(state.error) + '</p>' : '') +
     '<button class="btn" data-act="signin">Connect Gmail</button>' +
     '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
     '<p class="note">Access lasts about an hour, then reconnects in a tap. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
-    '<p class="note' + (clientIdProblem(clientId()) ? ' bad' : '') + '">Client ID on this device:<br><code class="url">' + esc(clientId()) + '</code>' +
-      (clientIdProblem(clientId()) ? '<br>' + esc(clientIdProblem(clientId())) : '<br>If Google says <em>invalid_client</em>, this does not match the one in Google Cloud.') + '</p>' +
+    '<p class="note' + (problem ? ' bad' : '') + '">Client ID on this device:<br><code class="url">' + esc(clientId()) + '</code>' +
+      (problem ? '<br>' + esc(problem) : '<br>If Google says <em>invalid_client</em>, this does not match the one in Google Cloud.') + '</p>' +
     (BUILT_IN_CLIENT_ID ? '' : '<button class="btn ghost" data-act="forget-cid">Change client ID</button>') +
   '</div>';
 }
 
-function viewList(view) {
-  const items = view === 'inbox' ? state.inbox : state.mkt;
-  if (state.error) return '<div class="card"><div class="empty">' + esc(state.error) + '</div></div>';
-  if (items === null) return listSkeleton();
+function viewList() {
+  const spec = currentList(), list = state.lists[spec.key];
+  if (list?.error) return '<div class="card"><div class="empty">' + esc(list.error) + '</div></div>';
+  if (!list?.items) return listSkeleton();
+  const items = list.items;
+  const tagName = state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
+  let head = '';
+  if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
+  else if (spec.key === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
+  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + hue(tagName) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
-    return '<div class="card"><div class="empty">' + (view === 'inbox'
-      ? 'Inbox zero. Nothing left to file.'
-      : 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.') + '</div></div>';
+    const empty = state.search ? 'Nothing matches “' + esc(state.search) + '”.'
+      : spec.key === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
+      : state.tag ? 'Nothing tagged ' + esc(tagName) + ' yet.'
+      : 'Inbox zero. Nothing left to file.';
+    return '<div class="card">' + head + '<div class="empty">' + empty + '</div></div>';
   }
-  const head = view === 'marketing'
-    ? '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>'
-    : '';
-  return '<div class="card">' + head + '<ul class="list">' + items.map((it, i) => rowHTML(it, i, view)).join('') + '</ul></div>';
+  return '<div class="card">' + head + '<ul class="list">' + items.map((it, i) => rowHTML(it, i, spec.key)).join('') + '</ul>' +
+    (list.next ? '<div class="more"><button data-act="more">Show more</button></div>' : '') + '</div>';
 }
 
 function viewRules() {
-  if (state.rules === null) return listSkeleton(4);
   if (!canFilter()) {
     return '<div class="card"><div class="empty">Filter permission was not granted, so rules can\'t be listed.<br>Reconnect and allow "manage your filters".</div></div>';
   }
-  if (!state.rules.length) {
-    return '<div class="card"><div class="empty">No rules yet.<br>Tapping the tag on a message writes one.</div></div>';
+  if (state.rulesError) return '<div class="card"><div class="empty">' + esc(state.rulesError) + '</div></div>';
+  if (state.rules === null) return listSkeleton(4);
+  const names = [settings.label, ...tags().map(l => l.name)];
+  const form = '<div class="card panel">' +
+    '<div class="ptitle">New rule</div>' +
+    '<input type="text" id="rule-from" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Domain or address — e.g. tmsa.org">' +
+    '<input type="text" id="rule-tag" list="tag-names" autocomplete="off" autocapitalize="sentences" placeholder="Tag — e.g. Sofia’s school">' +
+    '<datalist id="tag-names">' + names.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist>' +
+    '<button class="btn" data-act="add-rule">Add rule</button>' +
+    '<p class="note">Tagged mail stays in your inbox, and mail already in your mailbox is tagged too. Choose “' + esc(settings.label) + '” to send it to the bucket instead.</p>' +
+  '</div>';
+
+  const bid = bucketId(), groups = new Map();
+  for (const f of state.rules) {
+    for (const id of f.action?.addLabelIds || []) {
+      if (labelsById.get(id)?.type !== 'user') continue;
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(f);
+    }
   }
-  return '<div class="card"><h2>Gmail filters sending mail to ' + esc(settings.label) + '</h2><ul class="list">' +
-    state.rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '">' +
-      '<span class="open"><span class="who"><span class="name">' + esc(f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
-      '<span class="snip">Skips the inbox · files as ' + esc(settings.label) + '</span></span>' +
-      '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></li>').join('') +
-  '</ul></div>';
+  const order = [...groups.keys()].sort((a, b) => a === bid ? -1 : b === bid ? 1
+    : labelsById.get(a).name.localeCompare(labelsById.get(b).name, undefined, { sensitivity: 'base' }));
+  const cards = order.map(id => {
+    const l = labelsById.get(id), rules = groups.get(id);
+    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (id === bid ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>' +
+      '<span class="gcount">' + rules.length + ' rule' + (rules.length === 1 ? '' : 's') + '</span></h2><ul class="list">' +
+      rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
+        '<span class="open"><span class="who"><span class="name">' + esc(f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
+        '<span class="snip">' + ((f.action?.removeLabelIds || []).includes('INBOX') ? 'Skips the inbox' : 'Stays in the inbox') + '</span></span>' +
+        '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></div></li>').join('') +
+      '</ul></div>';
+  }).join('');
+  return form + (cards || '<div class="card"><div class="empty">No rules yet.<br>Add one above, or tag a message from its page.</div></div>');
 }
 
 function viewSettings() {
@@ -954,40 +1372,192 @@ function movePill() {
 }
 
 // ---------------------------------------------------------------------------
+// The message page
+// ---------------------------------------------------------------------------
+let skipPop = false;
+
+function openReader(item) {
+  state.reading = { item, data: null, images: false, error: null };
+  try { history.pushState({ mailReader: item.id }, ''); } catch {}
+  const el = $('#reader');
+  el.classList.remove('hide', 'leaving');
+  el.scrollTop = 0;
+  renderReader();
+  markRead(item).then(changed => { if (changed) { quietOnce = true; render(); } });
+  fetchMessage(item)
+    .then(d => { if (state.reading?.item === item) { state.reading.data = d; renderReaderBody(); } })
+    .catch(err => {
+      if (state.reading?.item !== item) return;
+      state.reading.error = err instanceof AuthError ? 'Session expired — go back and reconnect.' : err.message;
+      renderReaderBody();
+    });
+}
+
+function closeReader(fromHistory) {
+  if (!state.reading) return Promise.resolve();
+  state.reading = null;
+  closeSheet();
+  if (!fromHistory && history.state?.mailReader) { skipPop = true; history.back(); }
+  const el = $('#reader');
+  return new Promise(done => {
+    const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; done(); };
+    if (reduced) return finish();
+    el.classList.add('leaving');
+    setTimeout(finish, 280);
+  });
+}
+
+function renderReader() {
+  const r = state.reading;
+  if (!r) return;
+  const it = r.item, inBucket = it.labelIds.includes(bucketId());
+  const initial = ([...it.name.trim()][0] || '?').toUpperCase();
+  $('#reader').innerHTML = '<div class="wrap">' +
+    '<div class="rtop">' +
+      '<button class="iconbtn" data-act="close-reader" aria-label="Back">' + ICON.chev + '</button>' +
+      '<span class="rspace"></span>' +
+      '<button class="pillbtn" data-act="tag-open">' + ICON.label + 'Tag</button>' +
+      (inBucket
+        ? '<button class="pillbtn bluec" data-act="restore-reader">' + ICON.back + 'Inbox</button>'
+        : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.tag + esc(settings.label) + '</button>') +
+    '</div>' +
+    '<div class="card rhead">' +
+      '<div class="rsubj">' + esc(it.subject) + '</div>' +
+      '<div class="rfrom"><span class="avatar" style="--h:' + hue(it.host || it.email) + '">' + esc(initial) + '</span>' +
+        '<span class="rwho"><strong>' + esc(it.name) + '</strong><span class="rmail">' + esc(it.email) + '</span></span>' +
+        '<span class="rwhen">' + esc(fullDate(it.date)) + '</span></div>' +
+      '<div class="rtags" id="rtags">' + tagChips(it.labelIds) + '</div>' +
+    '</div>' +
+    '<div id="rbody"></div>' +
+    '<div class="rfoot"><button class="plink" data-act="open" data-thread="' + esc(it.threadId) + '">Open in Gmail ' + ICON.out + '</button></div>' +
+  '</div>';
+  renderReaderBody();
+}
+
+function renderReaderBody() {
+  const r = state.reading, box = $('#rbody');
+  if (!r || !box) return;
+  if (r.error) { box.innerHTML = '<div class="card"><div class="empty">' + esc(r.error) + '</div></div>'; return; }
+  if (!r.data) { box.innerHTML = '<div class="card">' + '<div class="skel" style="--i:0"></div><div class="skel" style="--i:1"></div><div class="skel" style="--i:2"></div>' + '</div>'; return; }
+  const { html, text } = r.data;
+  if (html) {
+    box.innerHTML = (!r.images && wantsImages(html)
+      ? '<div class="card imgnote">' + ICON.img + '<span>Images are off, so the sender can’t tell you opened this.</span><button data-act="show-images">Show</button></div>'
+      : '') +
+      '<div class="card rmail"><iframe class="rframe" title="Message" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>';
+    const frame = box.querySelector('iframe');
+    frame.addEventListener('load', () => fitFrame(frame));
+    frame.srcdoc = emailDoc(html, r.images);
+    for (const ms of r.images ? [300, 1000, 2500, 6000] : [250, 900]) setTimeout(() => fitFrame(frame), ms);
+    return;
+  }
+  box.innerHTML = '<div class="card rtext">' + (text ? linkify(tidy(text)) : esc(r.item.snippet || 'This message has no text.')) + '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// The tag sheet
+// ---------------------------------------------------------------------------
+function openSheet(item) {
+  const rule = ruleFor(item);
+  state.sheet = { item, rule };
+  const list = tags();
+  const who = '<span class="chip">' + esc(rule.label) + '</span>';
+  const el = $('#sheet');
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+    '<div class="sheet" role="dialog" aria-modal="true" aria-label="Tag sender">' +
+      '<div class="grab"></div>' +
+      '<h3>Tag ' + (rule.kind === 'domain' ? 'everything from ' : 'mail from ') + who + '</h3>' +
+      '<p class="note">This message, what’s already in your mailbox, and all new mail ' +
+        (rule.kind === 'domain' ? 'from anyone at ' + esc(rule.label) : 'from this address') + '. It stays in your inbox.</p>' +
+      (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + hue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
+      '<input type="text" id="newtag" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="' + (list.length ? 'Or a new tag' : 'New tag') + ' — e.g. Sofia’s school">' +
+      '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
+    '</div>';
+  el.classList.remove('hide', 'leaving');
+  if (!list.length) setTimeout(() => $('#newtag')?.focus(), 350);
+}
+
+function closeSheet() {
+  const el = $('#sheet');
+  if (el.classList.contains('hide')) return;
+  state.sheet = null;
+  const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  if (reduced) return finish();
+  el.classList.add('leaving');
+  setTimeout(finish, 280);
+}
+
+// ---------------------------------------------------------------------------
 // Loading
 // ---------------------------------------------------------------------------
-async function load(view, { force } = {}) {
+// quiet: keep the rows on screen while fetching, and swap them in when ready.
+async function loadList({ force, quiet } = {}) {
+  const spec = currentList(), have = state.lists[spec.key];
+  if (have?.items && !force) return render();
+  if (!(quiet && have?.items)) { state.lists[spec.key] = { items: null }; render(); }
   try {
-    state.error = null;
-    if (view === 'rules') {
-      if (state.rules && !force) return render();
-      state.rules = null; render();
-      if (!canFilter()) { state.rules = []; return render(); }
-      const label = await bucketLabel();
-      const all = (await api('/settings/filters')).filter || [];
-      state.rules = all.filter(f => (f.action?.addLabelIds || []).includes(label.id));
-      return render();
+    let labelIds = spec.labelIds;
+    if (spec.bucket) {
+      const l = await labelNamed(settings.label);
+      if (!l) { state.lists[spec.key] = { items: [], next: null }; return render(); }
+      labelIds = [l.id];
     }
-    const key = view === 'inbox' ? 'inbox' : 'mkt';
-    if (state[key] && !force) return render();
-    state[key] = null; render();
-    const q = view === 'inbox' ? 'in:inbox -in:chats' : 'label:"' + settings.label.replace(/"/g, '') + '"';
-    const ids = await idsFor(q, PAGE);
-    state[key] = await hydrate(ids);
-    render();
+    const r = await page(spec.q, { labelIds });
+    const items = await hydrate(r.ids);
+    state.lists[spec.key] = { items, next: r.next, q: spec.q, labelIds };
   } catch (e) {
     if (e instanceof AuthError) return render();
-    state.error = e.message;
-    render();
+    state.lists[spec.key] = { items: null, error: e.message };
   }
+  if (quiet) quietOnce = true;
+  render();
+}
+
+async function loadMore(btn) {
+  const key = currentList().key, list = state.lists[key];
+  if (!list?.next) return;
+  btn.disabled = true;
+  btn.innerHTML = ICON.spin;
+  try {
+    const r = await page(list.q, { labelIds: list.labelIds, pageToken: list.next });
+    const more = await hydrate(r.ids);
+    const seen = new Set(list.items.map(it => it.id));
+    freshFrom = list.items.length;
+    list.items.push(...more.filter(it => !seen.has(it.id)));
+    list.next = r.next;
+    quietOnce = true;
+    render();
+  } catch (e) { failed(e); btn.disabled = false; btn.textContent = 'Show more'; }
+}
+
+async function loadRules({ force } = {}) {
+  if (state.rules && !force) return render();
+  state.rules = null; state.rulesError = null; render();
+  if (!canFilter()) { state.rules = []; return render(); }
+  try {
+    await refreshLabels(true);
+    const all = (await api('/settings/filters')).filter || [];
+    state.rules = all.filter(f => (f.action?.addLabelIds || []).some(id => labelsById.get(id)?.type === 'user'));
+  } catch (e) {
+    if (e instanceof AuthError) return render();
+    state.rulesError = e.message;
+  }
+  render();
 }
 
 async function loadProfile() {
   try {
     const p = await api('/profile');
     state.me = p.emailAddress;
-    $('#sub').textContent = state.me;
+    if (state.view !== 'settings') $('#sub').textContent = state.me;
   } catch {}
+}
+
+// Shows whatever the tabs, chips and search now point at.
+function go({ force } = {}) {
+  render();
+  if (state.view === 'rules') loadRules({ force });
+  else if (state.view !== 'settings') loadList({ force });
 }
 
 // ---------------------------------------------------------------------------
@@ -998,25 +1568,104 @@ $('#tabs').addEventListener('click', e => {
   if (!b) return;
   const order = ['inbox', 'marketing', 'rules'];
   screen.classList.toggle('back', order.indexOf(b.dataset.view) < order.indexOf(state.view));
-  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t === b));
+  if (b.dataset.view === 'inbox' && state.view === 'inbox') state.tag = null;   // a second tap clears the tag
   state.view = b.dataset.view;
-  movePill();
-  load(state.view);
+  clearSearch(false);
+  go();
 });
+
+$('#search').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#q').value.trim();
+  $('#q').blur();
+  if (!q) return clearSearch();
+  state.search = q;
+  screen.classList.remove('back');
+  go({ force: true });
+});
+$('#q').addEventListener('input', () => $('#q-clear').classList.toggle('hide', !$('#q').value));
+$('#q-clear').addEventListener('click', () => { clearSearch(); $('#q').focus(); });
+
+function clearSearch(reload = true) {
+  $('#q').value = '';
+  $('#q-clear').classList.add('hide');
+  if (!state.search) return;
+  state.search = '';
+  if (reload) go();
+}
 
 $('#refresh').addEventListener('click', async () => {
   const btn = $('#refresh');
   btn.classList.add('turning');
-  labelPromise = null;
-  await load(state.view, { force: true });
+  labelsPromise = null;
+  refreshLabels().then(() => render()).catch(() => {});
+  if (state.view === 'rules') await loadRules({ force: true });
+  else await loadList({ force: true, quiet: true });
   setTimeout(() => btn.classList.remove('turning'), 300);
 });
 
 $('#gear').addEventListener('click', () => {
   state.view = state.view === 'settings' ? 'inbox' : 'settings';
-  render();
-  if (state.view !== 'settings') load(state.view);
+  go();
 });
+
+function findItem(id) {
+  if (state.reading?.item.id === id) return state.reading.item;
+  for (const list of Object.values(state.lists)) {
+    const it = (list.items || []).find(x => x.id === id);
+    if (it) return it;
+  }
+  return null;
+}
+
+async function doBucket(item, btn, li) {
+  if (btn) { btn.disabled = true; confirmTap(btn, li, 'tag'); btn.innerHTML = ICON.spin; }
+  try {
+    const back = await bucket(item);
+    await closeReader();
+    patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], ['INBOX']);
+    await settle('right');
+    const n = back.added.length + 1;
+    toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' → ' + settings.label +
+      (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.innerHTML = ICON.tag; }
+    if (state.reading) renderReader();
+    failed(err);
+  }
+}
+
+async function doRestore(item, btn, li) {
+  if (btn) { btn.disabled = true; confirmTap(btn, li, 'blue'); btn.innerHTML = ICON.spin; }
+  try {
+    const labelId = await unbucket(item);
+    await closeReader();
+    patch(it => it.threadId === item.threadId, ['INBOX'], [labelId]);
+    await settle('left');
+    toast('Back in the inbox. The rule is still on — remove it under Rules.');
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.innerHTML = ICON.back; }
+    if (state.reading) renderReader();
+    failed(err);
+  }
+}
+
+async function undo(back) {
+  try {
+    await undoRule(back);
+    toast('Put back');
+    state.lists = {};
+    go({ force: true });
+    // An open message shows its tags: read them back from Gmail.
+    const r = state.reading;
+    if (r) {
+      const m = await api('/messages/' + r.item.id, { params: { format: 'minimal' } });
+      r.item.labelIds = m.labelIds || [];
+      const box = $('#rtags');
+      if (box && state.reading === r) box.innerHTML = tagChips(r.item.labelIds);
+    }
+  } catch (err) { failed(err); }
+}
 
 document.addEventListener('click', async e => {
   const el = e.target.closest('[data-act]');
@@ -1024,136 +1673,140 @@ document.addEventListener('click', async e => {
   const act = el.dataset.act;
   const li = el.closest('li');
 
-  if (act === 'save-cid') {
-    const v = cleanClientId($('#cid').value);
-    const problem = clientIdProblem(v);
-    if (problem) return toast(problem, { bad: true, ms: 9000 });
-    ls.set(K.clientId, v);
-    return signIn();
-  }
-  if (act === 'forget-cid') { ls.del(K.clientId); return render(); }
-  if (act === 'signin') return signIn();
-  if (act === 'signin-pick') return signIn({ chooseAccount: true });
-  if (act === 'signout') { state.view = 'inbox'; return signOut(); }
-
-  if (act === 'save-settings') {
-    const d = Math.max(1, Math.min(30, parseInt($('#days').value, 10) || 3));
-    const name = ($('#lab').value || 'Marketing').trim();
-    const changed = name !== settings.label;
-    settings.days = d; settings.label = name;
-    if (changed) { labelPromise = null; state.mkt = null; state.rules = null; }
-    toast('Saved');
-    state.view = 'inbox'; render(); return load('inbox', { force: changed });
-  }
-
-  if (act === 'open') {
-    e.stopPropagation();
-    const box = state.me ? encodeURIComponent(state.me) : '0';
-    return window.open('https://mail.google.com/mail/u/' + box + '/#all/' + el.dataset.thread, '_blank', 'noopener');
-  }
-
-  // Expanding a row is done to the DOM rather than through render(), so the
-  // drawer can actually animate open instead of appearing at full height.
-  if (act === 'peek') {
-    const id = li.dataset.id;
-    const list = state.view === 'inbox' ? state.inbox : state.mkt;
-    const item = (list || []).find(x => x.id === id);
-    if (!item) return;
-
-    for (const other of screen.querySelectorAll('li.peeking')) {
-      if (other !== li) { other.classList.remove('peeking'); other.querySelector('.preview').classList.remove('on'); }
+  switch (act) {
+    case 'save-cid': {
+      const v = cleanClientId($('#cid').value);
+      const problem = clientIdProblem(v);
+      if (problem) return toast(problem, { bad: true, ms: 9000 });
+      ls.set(K.clientId, v);
+      return signIn();
     }
-    const drawer = li.querySelector('.preview');
-    const opening = !li.classList.contains('peeking');
-    li.classList.toggle('peeking', opening);
-    drawer.classList.toggle('on', opening);
-    el.setAttribute('aria-expanded', String(opening));
-    state.open = opening ? id : null;
-    if (!opening || item.body) return;
+    case 'forget-cid': ls.del(K.clientId); return render();
+    case 'signin': return signIn();
+    case 'signin-pick': return signIn({ chooseAccount: true });
+    case 'signout': state.view = 'inbox'; state.lists = {}; return signOut();
 
-    const body = drawer.querySelector('.pbody');
-    body.classList.add('loading');
-    body.textContent = 'Loading…';
-    try {
-      item.body = await fetchBody(item);
-      body.classList.remove('loading');
-      body.textContent = item.body;
-    } catch (err) {
-      body.classList.remove('loading');
-      body.textContent = err instanceof AuthError ? 'Session expired — reconnect.' : item.snippet || err.message;
+    case 'save-settings': {
+      const d = Math.max(1, Math.min(30, parseInt($('#days').value, 10) || 3));
+      const name = ($('#lab').value || 'Marketing').trim();
+      const changed = name !== settings.label;
+      settings.days = d; settings.label = name;
+      if (changed) { labelsPromise = null; state.lists = {}; state.rules = null; chipSig = null; }
+      toast('Saved');
+      state.view = 'inbox';
+      return go({ force: changed });
     }
-    return;
-  }
 
-  if (act === 'sweep') {
-    if (state.busy) return;
-    state.busy = true;
-    const card = screen.querySelector('.card');
-    if (card && !reduced) { card.classList.add('flushing'); setTimeout(() => card.classList.remove('flushing'), 1100); }
-    toast('Cleaning up…');
-    try {
-      const n = await sweep();
-      toast(n ? n + ' moved to the Trash' : 'Nothing old enough yet');
-      state.mkt = null; if (state.view === 'marketing') load('marketing', { force: true });
-      $('#foot').innerHTML = footHTML();
-    } catch (err) {
-      toast(err instanceof AuthError ? 'Session expired — reconnect' : err.message, { bad: true });
-      render();
+    case 'open': {
+      e.stopPropagation();
+      const box = state.me ? encodeURIComponent(state.me) : '0';
+      return window.open('https://mail.google.com/mail/u/' + box + '/#all/' + el.dataset.thread, '_blank', 'noopener');
     }
-    state.busy = false;
-    return;
-  }
 
-  if (act === 'del-rule') {
-    const id = li.dataset.filter;
-    el.disabled = true;
-    confirmTap(el, li, 'tag');
-    try {
-      await api('/settings/filters/' + id, { method: 'DELETE' });
-      await vanish(li, 'crumble');
-      state.rules = state.rules.filter(f => f.id !== id);
-      quietOnce = true; render();
-      toast('Rule deleted. Mail already filed stays put.');
-    } catch (err) { el.disabled = false; toast(err.message, { bad: true }); }
-    return;
-  }
+    case 'read': { const it = findItem(li.dataset.id); if (it) openReader(it); return; }
+    case 'close-reader': return closeReader();
+    case 'show-images': if (state.reading) { state.reading.images = true; renderReaderBody(); } return;
 
-  if (act === 'bucket' || act === 'restore') {
-    const id = li.dataset.id;
-    const from = act === 'bucket' ? 'inbox' : 'mkt';
-    const item = (state[from] || []).find(x => x.id === id);
-    if (!item) return;
-    el.disabled = true;
-    confirmTap(el, li, act === 'restore' ? 'blue' : 'tag');
-    el.innerHTML = ICON.spin;
-    try {
-      if (act === 'bucket') {
-        const { back, moved } = await bucket(item);
-        await vanish(li, 'right');
-        state.inbox = state.inbox.filter(x => x.id !== id);
-        state.mkt = null;
-        quietOnce = true; render();
-        const what = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
-        toast(what + ' → ' + settings.label + (moved > 1 ? ' · ' + moved + ' messages' : ''), {
-          label: 'Undo',
-          action: async () => {
-            try { await undoBucket(back); toast('Put back'); state.inbox = null; state.mkt = null; load(state.view, { force: true }); }
-            catch (err) { toast(err.message, { bad: true }); }
-          },
-        });
-      } else {
-        await unbucket(item);
-        await vanish(li, 'left');
-        state.mkt = state.mkt.filter(x => x.id !== id);
-        state.inbox = null;
-        quietOnce = true; render();
-        toast('Back in the inbox. The rule is still on — remove it under Rules.');
+    case 'bucket': { const it = findItem(li.dataset.id); if (it) doBucket(it, el, li); return; }
+    case 'restore': { const it = findItem(li.dataset.id); if (it) doRestore(it, el, li); return; }
+    case 'bucket-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + esc(settings.label); doBucket(state.reading.item); } return;
+    case 'restore-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + 'Inbox'; doRestore(state.reading.item); } return;
+
+    case 'tag-open': if (state.reading) openSheet(state.reading.item); return;
+    case 'sheet-close': return closeSheet();
+    case 'pick-tag':
+      $('#newtag').value = el.dataset.name;
+      for (const b of $('#sheet').querySelectorAll('.chip2')) b.classList.toggle('on', b === el);
+      return;
+    case 'apply-tag': {
+      const sheet = state.sheet;
+      if (!sheet) return;
+      const name = $('#newtag').value.trim();
+      if (!name) return toast('Pick a tag, or type a new one', { bad: true });
+      if (name.toLowerCase() === settings.label.toLowerCase()) { closeSheet(); return doBucket(sheet.item); }
+      el.disabled = true;
+      el.innerHTML = ICON.spin + 'Tagging…';
+      try {
+        const back = await tagSender(sheet.item, name);
+        closeSheet();
+        patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], []);
+        if (state.reading) {
+          const it = state.reading.item;
+          it.labelIds = [...new Set(it.labelIds.concat(back.label))];
+          const box = $('#rtags');
+          if (box) { box.innerHTML = tagChips(it.labelIds); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
+        }
+        await settle('right');
+        const n = back.added.length + 1;
+        toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' tagged “' + back.labelName + '”' +
+          (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+      } catch (err) {
+        el.disabled = false;
+        el.innerHTML = ICON.label + 'Tag';
+        failed(err);
       }
-    } catch (err) {
-      el.disabled = false;
-      el.innerHTML = act === 'bucket' ? ICON.tag : ICON.back;
-      toast(err instanceof AuthError ? 'Session expired — reconnect' : err.message, { bad: true });
-      if (err instanceof AuthError) render();
+      return;
+    }
+
+    case 'chip':
+      state.tag = el.dataset.id || null;
+      screen.classList.remove('back');
+      return go();
+    case 'more': return loadMore(el);
+
+    case 'sweep': {
+      if (state.busy) return;
+      state.busy = true;
+      const card = screen.querySelector('.card');
+      if (card && !reduced) { card.classList.add('flushing'); setTimeout(() => card.classList.remove('flushing'), 1100); }
+      toast('Cleaning up…');
+      try {
+        const n = await sweep();
+        toast(n ? n + ' moved to the Trash' : 'Nothing old enough yet');
+        delete state.lists.mkt;
+        if (state.view === 'marketing') loadList({ force: true });
+        $('#foot').innerHTML = footHTML();
+      } catch (err) { failed(err); }
+      state.busy = false;
+      return;
+    }
+
+    case 'del-rule': {
+      const id = li.dataset.filter;
+      el.disabled = true;
+      confirmTap(el, li, 'tag');
+      try {
+        await api('/settings/filters/' + id, { method: 'DELETE' });
+        await vanish(li, 'crumble');
+        state.rules = state.rules.filter(f => f.id !== id);
+        quietOnce = true;
+        render();
+        toast('Rule deleted. Mail already tagged keeps its tag.');
+      } catch (err) { el.disabled = false; failed(err); }
+      return;
+    }
+
+    case 'add-rule': {
+      const rule = ruleFromText($('#rule-from').value);
+      const name = $('#rule-tag').value.trim();
+      if (rule.error) return toast(rule.error, { bad: true, ms: 9000 });
+      if (!name) return toast('Name the tag — e.g. Sofia’s school', { bad: true });
+      el.disabled = true;
+      el.innerHTML = ICON.spin;
+      try {
+        const bucketing = name.toLowerCase() === settings.label.toLowerCase();
+        const back = await applyRule(rule, name, { skipInbox: bucketing });
+        state.lists = {};
+        chipSig = null;
+        toast('Rule added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
+          { label: 'Undo', action: () => undo(back) });
+        await loadRules({ force: true });
+      } catch (err) {
+        el.disabled = false;
+        el.textContent = 'Add rule';
+        failed(err);
+      }
+      return;
     }
   }
 });
@@ -1171,12 +1824,25 @@ function vanish(li, dir = 'right') {
 // A tap is answered before the network is: the button stamps and a light
 // runs across the row while Gmail is still being asked.
 function confirmTap(btn, li, tone) {
-  if (reduced) return;
+  if (reduced || !btn || !li) return;
   btn.classList.add('stamping');
   li.classList.add('confirm');
   if (tone === 'blue') li.classList.add('blue');
   setTimeout(() => { btn.classList.remove('stamping'); li.classList.remove('confirm', 'blue'); }, 820);
 }
+
+// The iPhone's back swipe (and Safari's back button) closes the message page.
+addEventListener('popstate', () => {
+  if (skipPop) { skipPop = false; return; }
+  closeSheet();
+  if (state.reading) closeReader(true);
+});
+
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (state.sheet) closeSheet();
+  else if (state.reading) closeReader();
+});
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -1201,9 +1867,15 @@ function confirmTap(btn, li, tone) {
   ls.set(K.token + '.ever', '1');
 
   loadProfile();
-  load('inbox');
+  refreshLabels().then(() => render()).catch(() => {});
+  loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
-    sweep().then(n => { if (n) { toast(n + ' old ' + settings.label + ' messages moved to the Trash'); state.mkt = null; $('#foot').innerHTML = footHTML(); } }).catch(() => {});
+    sweep().then(n => {
+      if (!n) return;
+      toast(n + ' old ' + settings.label + ' messages moved to the Trash');
+      delete state.lists.mkt;
+      $('#foot').innerHTML = footHTML();
+    }).catch(() => {});
   }
 })();
 
@@ -1218,7 +1890,8 @@ document.addEventListener('pointerdown', e => {
 
 addEventListener('resize', movePill);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && getToken() && state.view !== 'settings') load(state.view, { force: true });
+  if (document.visibilityState !== 'visible' || !getToken() || state.reading) return;
+  if (state.view === 'inbox' || state.view === 'marketing') loadList({ force: true, quiet: true });
 });
 
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
