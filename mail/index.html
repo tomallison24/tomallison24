@@ -591,7 +591,44 @@
   li.peek .swipe { animation: peekUnder 1.6s var(--ease) .5s both; }
   @keyframes peekRow { 0%, 100% { transform: none; } 35%, 62% { transform: translateX(96px); } }
   @keyframes peekUnder { 0%, 100% { width: 0; } 35%, 62% { width: 108px; } }
-  #screen.selecting .swipe { display: none; }
+  #screen.selecting .swipe, #screen.selecting .swipe-r { display: none; }
+
+  /* ---- swipe left: Flag, Archive, Trash ---- */
+  .swipe-r {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden;
+    display: flex; justify-content: flex-end; transition: width .34s var(--ease);
+  }
+  .sa {
+    flex: 0 0 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: #fff; font-size: 12px; font-weight: 600; transition: flex-basis .3s var(--ease), padding .3s var(--ease);
+  }
+  .sa svg { width: 22px; height: 22px; }
+  .sa.flag { background: #FF9500; }
+  .sa.arch { background: #8E5CF7; }
+  .sa.bin { background: #FF3B30; }
+  li.armed-l .sa.flag, li.armed-l .sa.arch { flex-basis: 0; padding: 0; overflow: hidden; }
+  li.armed-l .sa.bin { flex: 1 0 76px; }
+  li.armed-l .sa.bin svg { animation: pop .35s var(--ease); }
+  .who .when .flagged { color: #FF9500; display: inline-flex; }
+  .who .when .flagged svg { width: 13px; height: 13px; }
+
+  /* ---- the message page's toolbar ---- */
+  .rbar {
+    position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 3; margin-top: 4px;
+    display: flex; justify-content: space-around; align-items: center; gap: 4px; padding: 6px;
+    border-radius: 22px; background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: 0 10px 30px var(--lift-strong), inset 0 1px 0 var(--hi);
+  }
+  .rb {
+    flex: 1; height: 44px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent); transition: transform .18s var(--ease), background .2s;
+  }
+  .rb:active { transform: scale(0.9); background: var(--fill); }
+  .rb.bin { color: var(--danger); }
+  .rb.on { color: #FF9500; }
+  .rb.on svg { animation: pop .35s var(--ease); }
+  #selbar #sel-archive { padding: 0 12px; }
 
   /* ---- the Tags tab ---- */
   .card h2.gh { flex-wrap: wrap; }
@@ -672,6 +709,9 @@
 <div id="selbar" class="hide" role="toolbar" aria-label="Selected messages">
   <button id="sel-mark" disabled>Mark</button>
   <span id="sel-count"></span>
+  <button id="sel-archive" disabled aria-label="Archive">
+    <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M3 3h18v4H3zm1 5h16v13H4zm5.5 3a.5.5 0 0 0-.5.5V13h6v-1.5a.5.5 0 0 0-.5-.5z"/></svg>
+  </button>
   <button id="sel-trash" class="danger" disabled>
     <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>Trash
   </button>
@@ -971,6 +1011,8 @@ function setChipPref(id, show) {
 
 // The chips: tags that have a rule, plus any label you switched on - never,
 // unless you ask, a leftover from another app.
+// Flagged is Gmail's STARRED, always offered first, the way Mail lists Flagged.
+const FLAGGED = { id: 'STARRED', name: 'Flagged', type: 'flag' };
 function chipTags() {
   const p = chipPrefs();
   const ruled = new Set((filtersCache || []).flatMap(f => f.action?.addLabelIds || []));
@@ -1468,6 +1510,9 @@ const ICON = {
   back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
   chev: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   bin: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  flag: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>',
+  archive: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M3 3h18v4H3zm1 5h16v13H4zm5.5 3a.5.5 0 0 0-.5.5V13h6v-1.5a.5.5 0 0 0-.5-.5z"/></svg>',
+  trash: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
   clip: '<svg class="i clip" width="13" height="13" viewBox="0 0 24 24"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6z"/></svg>',
   img: '<svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></svg>',
   spin: '<svg class="i spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8" /></svg>',
@@ -1502,12 +1547,18 @@ function rowHTML(item, i, key) {
   return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
     '<span class="swipe" data-act="swipe-tag"><span class="swipe-in">' + ICON.label + 'Tag</span></span>' +
+    '<span class="swipe-r">' +
+      '<button class="sa flag" data-act="row-flag">' + ICON.flag + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
+      '<button class="sa arch" data-act="row-archive">' + ICON.archive + 'Archive</button>' +
+      '<button class="sa bin" data-act="row-trash">' + ICON.trash + 'Trash</button>' +
+    '</span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
           '<span class="name">' + esc(item.name) + '</span>' +
           (item.count > 1 ? '<span class="cnt">' + item.count + '</span>' : '') +
-          '<span class="when">' + (item.attach ? ICON.clip : '') + esc(ago(item.date)) + '</span></span>' +
+          '<span class="when">' + (item.labelIds.includes('STARRED') ? '<span class="flagged">' + ICON.flag + '</span>' : '') +
+            (item.attach ? ICON.clip : '') + esc(ago(item.date)) + '</span></span>' +
         '<span class="subj">' + esc(item.subject) + '</span>' +
         '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
         '<span class="meta">' + meta + '</span>' +
@@ -1534,14 +1585,14 @@ function setCount(sel, n) {
 // picking one doesn't throw the row's scroll position back to the start.
 let chipSig = null;
 function renderChips(show) {
-  const box = $('#chips'), list = show ? chipTags() : [];
+  const box = $('#chips'), list = show ? [FLAGGED, ...chipTags()] : [];
   box.classList.toggle('hide', !list.length);
   const sig = list.map(l => l.id + ':' + l.name).join('|');
   if (sig !== chipSig) {
     chipSig = sig;
     const chip = (id, name, h) => '<button class="chip2" data-act="chip" data-id="' + esc(id) + '"' +
       (h == null ? '' : ' style="--h:' + h + '"') + '>' + (h == null ? '' : '<i></i>') + esc(name) + '</button>';
-    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, hue(l.name))).join('') : '';
+    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, l === FLAGGED ? 36 : hue(l.name))).join('') : '';
   }
   for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', (b.dataset.id || '') === (state.tag || ''));
 }
@@ -1582,7 +1633,7 @@ function renderChrome() {
   if (sel) {
     const chosen = items.filter(it => sel.has(it.id));
     $('#sel-mark').textContent = chosen.some(it => it.unread) || !chosen.length ? 'Mark as Read' : 'Mark as Unread';
-    $('#sel-mark').disabled = $('#sel-trash').disabled = !chosen.length;
+    $('#sel-mark').disabled = $('#sel-trash').disabled = $('#sel-archive').disabled = !chosen.length;
     $('#sel-count').textContent = chosen.length ? chosen.length + ' of ' + items.length : '';
   }
 }
@@ -1653,14 +1704,15 @@ function viewList() {
   if (list?.error) return '<div class="card"><div class="empty">' + esc(list.error) + '</div></div>';
   if (!list?.items) return listSkeleton();
   const items = list.items;
-  const tagName = state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
+  const tagName = state.tag === 'STARRED' ? 'Flagged' : state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
   else if (spec.key === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
-  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + hue(tagName) + '">' + esc(tagName) + '</span></h2>';
+  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
     const empty = state.search ? 'Nothing matches “' + esc(state.search) + '”.'
       : spec.key === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
+      : state.tag === 'STARRED' ? 'Nothing flagged.<br>Swipe an email left and tap Flag.'
       : state.tag ? 'Nothing tagged ' + esc(tagName) + ' yet.'
       : 'Inbox zero. Nothing left to file.';
     return '<div class="card">' + head + '<div class="empty">' + empty + '</div></div>';
@@ -1836,8 +1888,21 @@ function renderReader() {
     '</div>' +
     '<div id="rbody"></div>' +
     '<div class="rfoot"><button class="plink" data-act="open" data-thread="' + esc(it.threadId) + '">Open in Gmail ' + ICON.out + '</button></div>' +
+    '<div class="rbar" id="rbar"></div>' +
   '</div>';
+  renderReaderBar();
   renderReaderBody();
+}
+
+function renderReaderBar() {
+  const bar = $('#rbar'), it = state.reading?.item;
+  if (!bar || !it) return;
+  const flagged = it.labelIds.includes('STARRED');
+  bar.innerHTML =
+    '<button class="rb bin" data-act="reader-trash" aria-label="Trash">' + ICON.trash + '</button>' +
+    '<button class="rb" data-act="reader-archive" aria-label="Archive">' + ICON.archive + '</button>' +
+    '<button class="rb' + (flagged ? ' on' : '') + '" data-act="reader-flag" aria-label="' + (flagged ? 'Remove flag' : 'Flag') + '" aria-pressed="' + flagged + '">' + ICON.flag + '</button>' +
+    (typeof replyButtons === 'function' ? replyButtons() : '');
 }
 
 // One message of the conversation: a header you tap to open or fold it, and
@@ -2059,43 +2124,65 @@ function selectedItems() {
   return items.filter(it => state.select?.has(it.id));
 }
 
-// Selected mail to the Trash. The rows go at once; Gmail is told after, and
-// Undo brings each back - to the inbox too, if that's where it was.
-async function trashSelected() {
-  const items = selectedItems();
+// Conversations to the Trash, or archived (out of the inbox, kept in All
+// Mail). The rows go at once and Gmail is told after. Undo brings each back,
+// and returns to the inbox exactly the messages that were in it - not your own
+// replies, which never were.
+async function throwAway(items, how) {
   if (!items.length) return;
-  const before = new Map(items.map(it => [it.threadId, it.labelIds.slice()]));
+  const tids = [...new Set(items.map(it => it.threadId))];
   const rows = rowsFor(items.map(it => it.id));
-  exitSelect();
+  closeRow();
+  if (state.select) exitSelect();
+  await closeReader();
   await Promise.all(rows.map(li => vanish(li, 'left')));
-  patch(it => before.has(it.threadId), ['TRASH'], ['INBOX']);
+  patch(it => tids.includes(it.threadId), how === 'trash' ? ['TRASH'] : [], ['INBOX']);
   for (const [k, l] of Object.entries(state.lists)) if (l.items) l.items = l.items.filter(it => belongs(k, it));
   quietOnce = true;
   render();
+  const back = { tids, how, inboxMsgs: [] };
   let missed = 0;
   try {
-    // Which messages were in the inbox, so Undo puts back exactly those - not
-    // your own replies, which never were.
-    const snaps = await pool([...before.keys()], 6, id => api('/threads/' + id, { params: { format: 'minimal' } }).catch(() => null));
-    before.inboxMsgs = snaps.filter(Boolean).flatMap(t => (t.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id));
-    await pool([...before.keys()], 6, async id => {
-      try { await api('/threads/' + id + '/trash', { method: 'POST' }); }
-      catch (e) { if (e instanceof AuthError) throw e; missed++; }
+    const snaps = await pool(tids, 6, id => api('/threads/' + id, { params: { format: 'minimal' } }).catch(() => null));
+    back.inboxMsgs = snaps.filter(Boolean).flatMap(t => (t.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id));
+    await pool(tids, 6, async id => {
+      try {
+        if (how === 'trash') await api('/threads/' + id + '/trash', { method: 'POST' });
+        else await relabelThread(id, [], ['INBOX']);
+      } catch (e) { if (e instanceof AuthError) throw e; missed++; }
     });
   } catch (err) { failed(err); state.lists = {}; return go({ force: true }); }
-  const n = before.size - missed;
-  if (missed) { toast(n + ' moved to the Trash; ' + missed + ' couldn’t be', { bad: true }); state.lists = {}; return go({ force: true }); }
-  toast(n + (n === 1 ? ' conversation' : ' conversations') + ' moved to the Trash', { label: 'Undo', action: () => untrashAll(before) });
+  const n = tids.length - missed, what = n === 1 ? '1 conversation' : n + ' conversations';
+  if (missed) { toast(what + (how === 'trash' ? ' moved to the Trash' : ' archived') + '; ' + missed + ' couldn’t be', { bad: true }); state.lists = {}; return go({ force: true }); }
+  for (const k of Object.keys(state.lists)) if (k !== currentList().key) delete state.lists[k];
+  toast(how === 'trash' ? what + ' moved to the Trash' : what + ' archived', { label: 'Undo', action: () => bringBack(back) });
 }
 
-async function untrashAll(before) {
+async function bringBack(back) {
   try {
-    const ids = [...before.keys()];
-    await pool(ids, 6, id => api('/threads/' + id + '/untrash', { method: 'POST' }));
-    await relabel(before.inboxMsgs || [], ['INBOX']);
+    if (back.how === 'trash') await pool(back.tids, 6, id => api('/threads/' + id + '/untrash', { method: 'POST' }));
+    await relabel(back.inboxMsgs, ['INBOX']);
     toast('Put back');
     state.lists = {};
     go({ force: true });
+  } catch (err) { failed(err); }
+}
+
+const trashSelected = () => throwAway(selectedItems(), 'trash');
+const archiveSelected = () => throwAway(selectedItems(), 'archive');
+
+// Flag: Gmail's star. Toggles, like Mail's flag.
+async function toggleFlag(item) {
+  const on = !item.labelIds.includes('STARRED');
+  try {
+    await relabelThread(item.threadId, on ? ['STARRED'] : [], on ? [] : ['STARRED']);
+    patch(it => it.threadId === item.threadId, on ? ['STARRED'] : [], on ? [] : ['STARRED']);
+    if (!item.labelIds.includes('STARRED') === on) item.labelIds = on ? item.labelIds.concat('STARRED') : item.labelIds.filter(l => l !== 'STARRED');
+    delete state.lists['tag:STARRED'];
+    if (state.tag === 'STARRED' && !on) { await settle('left'); }
+    else { quietOnce = true; render(); }
+    if (state.reading) renderReaderBar();
+    toast(on ? 'Flagged' : 'Flag removed');
   } catch (err) { failed(err); }
 }
 
@@ -2123,6 +2210,7 @@ $('#selall').addEventListener('click', () => {
   renderChrome();
 });
 $('#sel-trash').addEventListener('click', trashSelected);
+$('#sel-archive').addEventListener('click', archiveSelected);
 $('#sel-mark').addEventListener('click', markSelected);
 
 // Press and hold a row to start selecting with it, as in Mail.
@@ -2149,30 +2237,33 @@ screen.addEventListener('contextmenu', e => { if (e.target.closest('ul.list > li
 // the row stays open on the button; drag past half-way and it tags at once.
 // Rows scroll up and down as normal - touch-action: pan-y leaves vertical
 // moves to the browser, and a mostly-vertical start is never taken as a swipe.
-const SWIPE_OPEN = 96;
+const SWIPE_OPEN = 96;          // right: room for Tag
+const SWIPE_OPEN_L = -228;      // left: room for Flag, Archive and Trash
 let swipe = null, openRow = null;
 
 function setSwipe(li, dx, animate) {
-  const top = li.querySelector('.rowtop'), under = li.querySelector('.swipe');
-  if (!top || !under) return;
-  top.style.transition = under.style.transition = animate ? '' : 'none';
+  const top = li.querySelector('.rowtop'), under = li.querySelector('.swipe'), right = li.querySelector('.swipe-r');
+  if (!top || !under || !right) return;
+  top.style.transition = under.style.transition = right.style.transition = animate ? '' : 'none';
   top.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
-  under.style.width = dx ? dx + 12 + 'px' : '';
+  under.style.width = dx > 0 ? dx + 12 + 'px' : '';
+  right.style.width = dx < 0 ? -dx + 12 + 'px' : '';
 }
 
 function closeRow(li = openRow) {
   if (!li) return;
   setSwipe(li, 0, true);
-  li.classList.remove('swiped', 'armed');
+  li.classList.remove('swiped', 'swiped-l', 'armed', 'armed-l');
   if (openRow === li) openRow = null;
 }
 
 screen.addEventListener('pointerdown', e => {
-  if (state.select || e.button > 0 || e.target.closest('.act, .swipe')) return;
+  if (state.select || e.button > 0 || e.target.closest('.act, .swipe, .swipe-r')) return;
   const li = e.target.closest('ul.list > li[data-id]');
   if (!li) return;
   if (openRow && openRow !== li) closeRow();
-  swipe = { li, id: e.pointerId, x: e.clientX, y: e.clientY, base: li === openRow ? SWIPE_OPEN : 0, dx: 0, lock: false };
+  const base = li !== openRow ? 0 : li.classList.contains('swiped-l') ? SWIPE_OPEN_L : SWIPE_OPEN;
+  swipe = { li, id: e.pointerId, x: e.clientX, y: e.clientY, base, dx: 0, lock: false };
 });
 
 screen.addEventListener('pointermove', e => {
@@ -2186,12 +2277,14 @@ screen.addEventListener('pointermove', e => {
     cancelPress();                                                                // not a long press either
     try { sw.li.setPointerCapture(e.pointerId); } catch {}
   }
-  const w = sw.li.offsetWidth;
-  let x = Math.max(0, sw.base + dx);
-  if (x > w * 0.8) x = w * 0.8 + (x - w * 0.8) * 0.25;                          // resist near the edge
+  const w = sw.li.offsetWidth, edge = w * 0.8;
+  let x = sw.base + dx;
+  if (x > edge) x = edge + (x - edge) * 0.25;                                   // resist near either edge
+  if (x < -edge) x = -edge + (x + edge) * 0.25;
   sw.dx = x;
   setSwipe(sw.li, x, false);
   sw.li.classList.toggle('armed', x > w * 0.5);
+  sw.li.classList.toggle('armed-l', x < -w * 0.55);                              // Trash fills the row, as in Mail
 });
 
 screen.addEventListener('pointerup', e => {
@@ -2202,14 +2295,22 @@ screen.addEventListener('pointerup', e => {
   swallowClick = true;                           // the release is not a tap
   setTimeout(() => { swallowClick = false; }, 350);
   const w = sw.li.offsetWidth;
-  if (sw.dx > w * 0.5) {                         // all the way: tag now
+  if (sw.dx > w * 0.5) {                         // right, all the way: tag now
     closeRow(sw.li);
     const it = findItem(sw.li.dataset.id);
     if (it) openSheet(it);
-  } else if (sw.dx > 56) {                       // part way: stay open on Tag
+  } else if (sw.dx > 56) {                       // right, part way: stay open on Tag
     setSwipe(sw.li, SWIPE_OPEN, true);
     sw.li.classList.remove('armed');
     sw.li.classList.add('swiped');
+    openRow = sw.li;
+  } else if (sw.dx < -w * 0.55) {                // left, all the way: to the Trash
+    const it = findItem(sw.li.dataset.id);
+    if (it) throwAway([it], 'trash');
+  } else if (sw.dx < -56) {                      // left, part way: stay open on Flag / Archive / Trash
+    setSwipe(sw.li, SWIPE_OPEN_L, true);
+    sw.li.classList.remove('armed-l');
+    sw.li.classList.add('swiped-l');
     openRow = sw.li;
   } else closeRow(sw.li);
 });
@@ -2342,7 +2443,7 @@ async function undo(back) {
 document.addEventListener('click', async e => {
   if (swallowClick) { swallowClick = false; e.preventDefault(); return; }   // the release after a long press or swipe
   // A row left open on Tag closes on any tap outside its button, as in Mail.
-  if (openRow && !e.target.closest('.swipe')) { closeRow(); e.preventDefault(); return; }
+  if (openRow && !e.target.closest('.swipe, .swipe-r')) { closeRow(); e.preventDefault(); return; }
   if (state.select) {
     const row = e.target.closest('#screen ul.list > li[data-id]');
     if (row) { e.preventDefault(); return toggleSelect(row); }
@@ -2393,6 +2494,15 @@ document.addEventListener('click', async e => {
     case 'restore-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + 'Inbox'; doRestore(state.reading.item); } return;
 
     case 'tag-open': if (state.reading) openSheet(state.reading.item); return;
+    case 'row-flag': case 'row-archive': case 'row-trash': {
+      const it = findItem(li.dataset.id);
+      if (!it) return;
+      if (act === 'row-flag') { closeRow(li); return toggleFlag(it); }
+      return throwAway([it], act === 'row-trash' ? 'trash' : 'archive');
+    }
+    case 'reader-trash': if (state.reading) throwAway([state.reading.item], 'trash'); return;
+    case 'reader-archive': if (state.reading) throwAway([state.reading.item], 'archive'); return;
+    case 'reader-flag': if (state.reading) toggleFlag(state.reading.item); return;
     case 'swipe-tag': {
       const it = findItem(li.dataset.id);
       closeRow(li);
