@@ -233,6 +233,33 @@ keeps the original's files (tap × to drop one). Attachments can total
 **25 MB**. A file added from the phone survives Undo Send but not the app
 closing; if that happens it's marked **add it again**.
 
+## Blocking and unsubscribing
+
+**Block** — the **…** on a message page → **Block Sender**. It writes a Gmail
+filter (*from that address → Trash*), so their new mail never reaches the
+inbox, whether or not the app is open, and moves their mail already here to
+the Trash. **Undo** puts it all back; **Settings → Blocked senders** lists who
+is blocked, with **Unblock**. Nothing is sent to the sender. (Gmail's own
+Block sends mail to Spam instead; either way Gmail deletes it after 30 days.)
+
+**Unsubscribe** — mail from a mailing list shows *This message is from a
+mailing list · Unsubscribe*, as in Mail. The app uses whatever the sender
+offers in its `List-Unsubscribe` header, best first:
+
+1. **One-click** (`List-Unsubscribe-Post`): the app sends the sender's server
+   the standard one-click request straight from the phone, without cookies or
+   a referrer. The sender's server isn't this app's, so the browser can't
+   read its answer: "sent" is as sure as it gets, which is also true of Gmail.
+2. **Email**: an unsubscribe email from your Gmail to the address they give;
+   it shows in Sent.
+3. **A web page**: opens in Safari and you finish there.
+
+It only offers this when **Gmail vouched for the sender**: DMARC or DKIM
+passed for the From domain in Gmail's own `Authentication-Results` header.
+Otherwise it says so and offers **Block** instead, because unsubscribing from a
+spammer only tells them your address works. The banner then remembers you
+unsubscribed and offers **Block** if their mail keeps coming.
+
 ## Selecting and deleting
 
 Like Mail: tap **Select** (or press and hold any message), tick what you want,
@@ -308,6 +335,16 @@ secondary sources and my own testing instead:
 - the **25 MB attachment limit**, which is Gmail's published limit (the API's
   own upload cap, from the discovery document, is 35 MB for the whole encoded
   message, which 25 MB of files fits inside);
+- that Gmail accepts a filter whose action is **adding `TRASH`** (Block).
+  The discovery document doesn't list which labels a filter may add; the
+  tests confirm the app sends exactly `{"addLabelIds":["TRASH"]}` and handles a
+  refusal by saying so. If Gmail refuses it, Block reports the error and the
+  mail already here is left alone;
+- the **one-click unsubscribe standard (RFC 8058)** and Gmail's bulk-sender
+  rules. rfc-editor.org and Google's help pages are blocked here, so the
+  request format comes from secondary descriptions rather than the RFC
+  itself. The `Authentication-Results` format *was* checked against a real
+  message in the connected mailbox;
 - how **Share or Save…** and **Open** behave for files in a home-screen app.
   The share sheet is the route iOS supports for handing a file on; **Open**
   opens the file in a new view, which I could not try on an iPhone;
