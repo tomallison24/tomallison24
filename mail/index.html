@@ -769,7 +769,16 @@ function consumeRedirect() {
 // ---------------------------------------------------------------------------
 // Gmail
 // ---------------------------------------------------------------------------
-async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
+// No request may wait forever. On a phone a reply can simply never arrive -
+// the network drops, the app is backgrounded - and a fetch left waiting keeps
+// whatever is watching it spinning for good. (mail.timeout only shortens this
+// for the tests.)
+const TIMEOUT = Number(ls.get('mail.timeout', '')) || 20000;
+
+// once: for requests that create something. If the answer is lost the thing
+// may have been made anyway, so they are never sent twice blindly; the caller
+// looks for it instead.
+async function api(path, { method = 'GET', body, params, tries = 0, once = false } = {}) {
   const tok = getToken();
   if (!tok) throw new AuthError('signed out');
   const url = new URL(API + path);
@@ -777,22 +786,28 @@ async function api(path, { method = 'GET', body, params, tries = 0 } = {}) {
     if (v == null) continue;
     for (const one of Array.isArray(v) ? v : [v]) url.searchParams.append(k, one);
   }
-  let res;
+  const again = () => api(path, { method, body, params, tries: tries + 1, once });
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), TIMEOUT);
+  let res, text;
   try {
     res = await fetch(url, {
       method,
       headers: { Authorization: 'Bearer ' + tok.t, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
+      signal: ctl.signal,
     });
+    text = await res.text();
+    clearTimeout(timer);
   } catch (e) {
-    if (tries < 3) { await sleep(500 * 2 ** tries); return api(path, { method, body, params, tries: tries + 1 }); }
-    throw new Error('No connection to Gmail');
+    clearTimeout(timer);
+    if (!once && tries < 3) { await sleep(500 * 2 ** tries); return again(); }
+    throw new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
   }
   if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
-  const text = await res.text();
   if (!res.ok) {
     const rate = res.status === 429 || res.status >= 500 || (res.status === 403 && /rateLimitExceeded/i.test(text));
-    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return api(path, { method, body, params, tries: tries + 1 }); }
+    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return again(); }
     let msg = text.slice(0, 200);
     try { msg = JSON.parse(text).error.message; } catch {}
     const err = new Error(msg || ('Gmail returned ' + res.status));
@@ -824,12 +839,20 @@ async function labelNamed(name, { create = false } = {}) {
   const want = name.trim().toLowerCase();
   const found = (await refreshLabels()).find(l => l.name.toLowerCase() === want);
   if (found || !create) return found || null;
-  const made = await api('/labels', {
-    method: 'POST',
-    body: { name: name.trim(), labelListVisibility: 'labelShow', messageListVisibility: 'show' },
-  });
-  await refreshLabels(true);
-  return made;
+  try {
+    const made = await api('/labels', {
+      method: 'POST', once: true,
+      body: { name: name.trim(), labelListVisibility: 'labelShow', messageListVisibility: 'show' },
+    });
+    await refreshLabels(true);
+    return made;
+  } catch (e) {
+    if (e instanceof AuthError) throw e;
+    // Made after all, with the answer lost - or made meanwhile (409).
+    const now = (await refreshLabels(true)).find(l => l.name.toLowerCase() === want);
+    if (now) return now;
+    throw e;
+  }
 }
 
 const bucketLabel = () => labelNamed(settings.label, { create: true });
@@ -1133,29 +1156,43 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
 
   if (canFilter()) {
     try {
-      const existing = await refreshFilters(true);
-      const same = existing.some(f => (f.criteria?.from || '').toLowerCase() === rule.match &&
-        (f.action?.addLabelIds || []).includes(label.id));
-      if (!same) {
-        const made = await api('/settings/filters', {
-          method: 'POST',
-          body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
-        });
-        back.filterId = made.id;
-        filtersCache.push(made);
+      const isSame = f => (f.criteria?.from || '').toLowerCase() === rule.match && (f.action?.addLabelIds || []).includes(label.id);
+      if (!(await refreshFilters(true)).some(isSame)) {
+        try {
+          const made = await api('/settings/filters', {
+            method: 'POST', once: true,
+            body: { criteria: { from: rule.match }, action: { addLabelIds: add, ...(remove.length && { removeLabelIds: remove }) } },
+          });
+          back.filterId = made.id;
+          filtersCache.push(made);
+        } catch (e) {
+          if (e instanceof AuthError) throw e;
+          const now = (await refreshFilters(true)).find(isSame);   // made after all?
+          if (!now) throw e;
+          back.filterId = now.id;
+        }
       }
     } catch (e) {
       toast('Done, but the rule for new mail failed: ' + e.message, { bad: true });
     }
   }
 
-  // Mail already here. What had the label before is left alone, so Undo only
-  // takes off what this added.
+  // The mail already here is done in the background, so what's on screen
+  // never waits on a whole mailbox's worth of it. back.done settles when it's
+  // finished; Undo waits for it.
+  back.done = backfill(back, rule, add, remove);
+  back.done.catch(() => {});        // reported by whoever watches it
+  state.rules = null;
+  return back;
+}
+
+// What had the label before is left alone, so Undo only takes off what this added.
+async function backfill(back, rule, add, remove) {
   const q = 'from:(' + rule.match + ') -in:sent -in:chats';
   const [all, had, inInbox] = await Promise.all([
     allIds(q, { cap: 800 }),
-    allIds(q, { labelIds: [label.id], cap: 800 }),
-    skipInbox ? allIds(q + ' in:inbox', { cap: 800 }) : [],
+    allIds(q, { labelIds: [back.label], cap: 800 }),
+    back.skipInbox ? allIds(q + ' in:inbox', { cap: 800 }) : [],
   ]);
   const hadSet = new Set(had);
   back.added = all.filter(id => !hadSet.has(id));
@@ -1164,6 +1201,14 @@ async function applyRule(rule, labelName, { skipInbox = false, item = null } = {
   await relabel(inInbox.filter(id => hadSet.has(id)), [], remove);
   state.rules = null;
   return back;
+}
+
+// When the older mail is done, the toast says how much and offers Undo. If it
+// fails part-way, say so and show what Gmail really has.
+function finish(back, say, then) {
+  back.done
+    .then(() => { toast(say(back.added.length + (back.threadId ? 1 : 0)), { label: 'Undo', action: () => undo(back) }); if (then) then(); })
+    .catch(err => { failed(err); state.lists = {}; go({ force: true }); });
 }
 
 async function undoRule(back) {
@@ -2096,9 +2141,9 @@ async function doBucket(item, btn, li) {
     await closeReader();
     patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], ['INBOX']);
     await settle('right');
-    const n = back.added.length + 1;
-    toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' → ' + settings.label +
-      (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+    const who = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
+    toast(who + ' → ' + settings.label + ' · filing their older mail…', { ms: 60000 });
+    finish(back, n => who + ' → ' + settings.label + (n > 1 ? ' · ' + n + ' messages' : ''));
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.mkt; }
     if (state.reading) renderReader();
@@ -2123,6 +2168,8 @@ async function doRestore(item, btn, li) {
 
 async function undo(back) {
   try {
+    toast('Putting it back…', { ms: 60000 });
+    await back.done?.catch(() => {});
     await undoRule(back);
     toast('Put back');
     state.lists = {};
@@ -2265,8 +2312,10 @@ document.addEventListener('click', async e => {
       if (name.toLowerCase() === settings.label.toLowerCase()) { closeSheet(); return doBucket(sheet.item); }
       el.disabled = true;
       el.innerHTML = ICON.spin + 'Tagging…';
+      const slow = setTimeout(() => { if (el.isConnected) el.innerHTML = ICON.spin + 'Still working — slow connection…'; }, 8000);
       try {
         const back = await tagSender(sheet.item, name);
+        clearTimeout(slow);
         closeSheet();
         patch(it => it.threadId === back.threadId || covers(back.rule, it), [back.label], []);
         if (state.reading) {
@@ -2276,10 +2325,11 @@ document.addEventListener('click', async e => {
           if (box) { box.innerHTML = tagChips(it.labelIds); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
         }
         await settle('right');
-        const n = back.added.length + 1;
-        toast((back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label) + ' tagged “' + back.labelName + '”' +
-          (n > 1 ? ' · ' + n + ' messages' : ''), { label: 'Undo', action: () => undo(back) });
+        const who = back.rule.kind === 'domain' ? 'Everything from ' + back.rule.label : back.rule.label;
+        toast('Tagged “' + back.labelName + '” · adding it to their older mail…', { ms: 60000 });
+        finish(back, n => who + ' tagged “' + back.labelName + '”' + (n > 1 ? ' · ' + n + ' messages' : ''));
       } catch (err) {
+        clearTimeout(slow);
         el.disabled = false;
         el.innerHTML = ICON.label + 'Tag';
         failed(err);
@@ -2339,9 +2389,10 @@ document.addEventListener('click', async e => {
         const back = await applyRule(rule, name, { skipInbox: bucketing });
         state.lists = {};
         chipSig = null;
-        toast('Rule added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
-          { label: 'Undo', action: () => undo(back) });
+        toast('Tag added: ' + rule.label + ' → ' + back.labelName + ' · tagging their older mail…', { ms: 60000 });
         await loadRules({ force: true });
+        finish(back, () => 'Tag added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
+          () => { if (state.view === 'rules') loadRules({ force: true }); });
       } catch (err) {
         el.disabled = false;
         el.textContent = 'Add rule';

@@ -120,6 +120,18 @@ type a name, say *Sofia's school*:
 - a chip for the tag appears under the tabs; tap it to see just that tag, and
   **Inbox** to go back.
 
+Tagging answers as soon as that email and the rule are done; the older mail
+is tagged in the background, and the toast says how many once it's finished
+(with **Undo**). Every request to Gmail has a time limit, so a reply lost to a
+patchy phone connection ends in a retry or a clear message — never a spinner
+that sits there for good.
+
+Some senders write through a platform rather than their own domain. TMSA's
+mail comes from ParentSquare (`donotreply+…@parentsquare.com`), so its rule is
+on `parentsquare.com`. That's right while TMSA is the only one using
+ParentSquare to reach you; if another school or club starts, their mail will
+get the tag too.
+
 **Tag** is also on each email's own page. The same domain rules apply as for
 Marketing: `news@mail.tmsa.org` tags all of `tmsa.org`, while a Gmail or
 Outlook sender is tagged by exact address only. The orange button on each row
