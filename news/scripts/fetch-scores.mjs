@@ -85,6 +85,12 @@ export function normalize(json, league) {
     };
     const type = (ev.status || comp.status || {}).type || {};
     const link = (ev.links || []).find(l => (l.rel || []).includes('summary')) || (ev.links || [])[0];
+    // US TV and streaming, as ESPN lists it ("FOX", "Paramount+"); often
+    // blank until close to the game.
+    const tv = [...new Set([
+      ...(comp.geoBroadcasts || []).map(b => b.media?.shortName),
+      ...(comp.broadcasts || []).flatMap(b => b.names || []),
+    ].filter(Boolean))].slice(0, 3);
     return {
       id: String(ev.id),
       league: league.id,
@@ -94,6 +100,7 @@ export function normalize(json, league) {
       home: side('home'),
       away: side('away'),
       link: link?.href || null,
+      tv,
     };
   });
 }

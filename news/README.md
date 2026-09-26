@@ -83,6 +83,9 @@ La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB, NHL and rugby
 Championship, Super Rugby Pacific, Rugby World Cup, internationals and
 rugby league). Your
 Sport filters apply to scores too. Tap a game for ESPN's match page.
+Games show where to watch in the US (TV or streaming, e.g. FOX, FS2,
+Paramount+) when ESPN lists it; many games get their listing only a few
+days before.
 
 - Each refresh also saves a copy (`data/scores.json`), shown when ESPN
   can't be reached.
