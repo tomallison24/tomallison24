@@ -293,6 +293,9 @@
   .gscore { min-width: 22px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .game.decided .gteam:not(.win) { color: var(--muted); }
   .game.decided .gteam.win { font-weight: 700; }
+  .gtv { display: flex; align-items: center; gap: 9px; margin-top: -1px; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .gtv svg { width: 14px; height: 14px; flex: none; margin: 0 3px; }  /* centred under the 20px team logos */
+  .gtv span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .scores .gnext { margin: 0; padding: 10px 14px 0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
   .scores .game + .gnext { border-top: 0.5px solid var(--hairline); margin-top: 2px; }
   main .sect h3 { margin: 6px 4px 6px; }
@@ -411,6 +414,7 @@
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
     tick: '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+    tv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M9 21h6M8 2.5l4 3.5 4-3.5"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
   };
 
@@ -891,8 +895,12 @@
       };
       const type = (ev.status || comp.status || {}).type || {};
       const link = (ev.links || []).find(l => (l.rel || []).includes('summary')) || (ev.links || [])[0];
+      const tv = [...new Set([
+        ...(comp.geoBroadcasts || []).map(b => b.media && b.media.shortName),
+        ...(comp.broadcasts || []).flatMap(b => b.names || []),
+      ].filter(Boolean))].slice(0, 3);
       return {
-        id: String(ev.id), league: league.id, state: type.state || 'pre',
+        tv, id: String(ev.id), league: league.id, state: type.state || 'pre',
         detail: type.shortDetail || type.detail || '', start: ev.date || comp.date || null,
         home: side('home'), away: side('away'), link: (link && link.href) || null,
       };
@@ -1019,7 +1027,10 @@
         <span class="gscore">${g.state === 'pre' || t.score == null ? '' : esc(t.score)}</span>
       </div>`;
     const [first, second] = l.homeFirst ? [g.home, g.away] : [g.away, g.home];
-    const body = `<div class="gstat ${esc(g.state)}">${stat}</div><div class="gteams">${team(first)}${team(second)}</div>`;
+    // Where to watch (US TV/streaming from ESPN), until the game is over.
+    const tv = g.state !== 'post' && Array.isArray(g.tv) && g.tv.length
+      ? `<div class="gtv">${ICON.tv}<span>${esc(g.tv.join(' · '))}</span></div>` : '';
+    const body = `<div class="gstat ${esc(g.state)}">${stat}</div><div class="gteams">${team(first)}${team(second)}${tv}</div>`;
     const cls = `game ${esc(g.state)}${decided ? ' decided' : ''}`;
     return safeUrl(g.link) ? `<a class="${cls}" href="${esc(g.link)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
