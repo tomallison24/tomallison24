@@ -16,6 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'data', 'scores.json');
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
 const AHEAD_DAYS = 14;     // how far ahead to look for fixtures
+const AHEAD_MINE = 21;     // ...and in leagues a one-tap team plays in (past international breaks)
 const KEEP_UPCOMING = 10;  // fixtures kept per league
 const HEADERS = { Origin: 'https://tomallison24.github.io', 'User-Agent': 'news-home-screen-app/1.0' };
 
@@ -38,21 +39,24 @@ async function quickTeams() {
     return (raw.teams || []).flatMap(g => (g.names || []).map(n => {
       const names = Array.isArray(n) ? n : [n];
       return { id: `team:${g.sport || 'any'}:${slug(names[0])}`, sport: g.sport, names };
-    })).filter(t => want.has(t.id))
-      .map(t => ({ ...t, re: t.names.map(x => new RegExp(`(?<![\\p{L}\\p{N}])${x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'u')) }));
+    })).filter(t => want.has(t.id));
   } catch (err) {
     console.log(`quick teams unavailable: ${err.message}`);
     return [];
   }
 }
-const playing = (g, teams) => teams.some(t => t.re.some(re => [g.home.name, g.home.short, g.away.name, g.away.short].some(n => re.test(n || ''))));
+// Same rule as sameTeam() in index.html: the whole name, or its start
+// ("Northampton" is Northampton Saints; "England" isn't New England).
+const sameTeam = (term, name) => { const n = String(name || '').trim(); return n === term || n.startsWith(`${term} `); };
+const playing = (g, teams) => teams.some(t => t.names.some(x => [g.home.name, g.home.short, g.away.name, g.away.short].some(n => sameTeam(x, n))));
+const teamsFor = (league, teams) => teams.filter(t => !t.sport || t.sport === league.sport);
 
 // Games that haven't started yet, soonest first: the first KEEP_UPCOMING,
 // plus any the quick teams play in the window.
 async function upcoming(league, now, teams) {
-  const mine = teams.filter(t => !t.sport || t.sport === league.sport);
+  const mine = teamsFor(league, teams);
   const found = new Map();
-  for (let day = 0; day <= AHEAD_DAYS && (found.size < KEEP_UPCOMING || mine.length); day++) {
+  for (let day = 0; mine.length ? day <= AHEAD_MINE : day <= AHEAD_DAYS && found.size < KEEP_UPCOMING; day++) {
     const res = await espn(`${ESPN}/${league.path}/scoreboard?dates=${ymd(new Date(now.getTime() + day * 864e5))}`);
     for (const g of normalize(await res.json(), league))
       if (g.state === 'pre' && Date.parse(g.start) > now.getTime()) found.set(g.id, g);
@@ -115,7 +119,7 @@ export async function saveScores() {
     try {
       entry.upcoming = await upcoming(league, now, teams);
       const next = entry.upcoming[0];
-      const ours = entry.upcoming.filter(g => playing(g, teams)).map(g => `${g.start.slice(0, 10)} ${g.home.short} v ${g.away.short}`);
+      const ours = entry.upcoming.filter(g => playing(g, teamsFor(league, teams))).map(g => `${g.start.slice(0, 10)} ${g.home.short} v ${g.away.short}`);
       console.log(`ok   next   ${league.id.padEnd(17)} ${String(entry.upcoming.length).padStart(3)} fixtures${next ? `, first ${next.start} ${next.home.short} v ${next.away.short}` : ''}${ours.length ? `; my teams: ${ours.join('; ')}` : ''}`);
     } catch (err) {
       console.log(`FAIL next   ${league.id.padEnd(17)} ${err.message}`);

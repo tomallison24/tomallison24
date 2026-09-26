@@ -87,7 +87,8 @@ Sport filters apply to scores too. Tap a game for ESPN's match page.
   or 5 when you've set filters, so your team's next games show). Each
   refresh looks up to 14 days ahead, a day at a time (ESPN refuses date
   ranges), and saves up to 10 per league in the same copy, plus every
-  fixture for the one-tap teams, however busy the league. Fixtures are
+  fixture for the one-tap teams, however busy the league (looking 21 days
+  ahead in their leagues, to get past international breaks). Fixtures are
   only as fresh as the last refresh; games that have already started drop
   off.
 - ESPN's feed is public but undocumented, so it may change or stop

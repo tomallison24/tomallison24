@@ -884,15 +884,20 @@
       (p.kind === 'team' && p.sport === l.sport)));
   }
 
+  // A team is the whole name or its start: "Northampton" is ESPN's
+  // "Northampton Saints", but "England" isn't "New England". Keep in step
+  // with sameTeam() in scripts/fetch-scores.mjs.
+  const sameTeam = (term, name) => { const n = String(name || '').trim(); return n === term || n.startsWith(`${term} `); };
+
   function gameMatches(g, l) {
     if (!pickList.length) return true;
-    const names = [g.home.name, g.home.short, g.away.name, g.away.short].join('\n');
+    const names = [g.home.name, g.home.short, g.away.name, g.away.short];
     return pickList.some(p => {
       if (p.kind === 'sport') return p.sport === l.sport;
       if (p.kind === 'comp') return p.id === l.comp;
-      if (p.kind === 'kw') return termRe(p.label, true).test(names);
+      if (p.kind === 'kw') return termRe(p.label, true).test(names.join('\n'));
       if (p.sport && p.sport !== l.sport) return false;
-      return p.terms.some(t => termRe(t, false).test(names));
+      return p.terms.some(t => names.some(n => sameTeam(t, n)));
     });
   }
 
