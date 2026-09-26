@@ -83,7 +83,7 @@
     --lift: rgba(0, 0, 0, 0.38);              /* cards' shadow */
     --lift-strong: rgba(0, 0, 0, 0.5);        /* sheets, toast, bars */
     --toast: rgba(30, 30, 34, 0.62);
-    --page: rgba(8, 8, 11, 0.88);             /* the message page */
+    --page: rgb(10, 10, 13);                  /* the message page: solid, as a pushed page in Mail is */
     --sheet: rgba(28, 28, 32, 0.80);          /* tag sheet and select bar */
     --scrim: rgba(0, 0, 0, 0.45);
     --grab: rgba(255, 255, 255, 0.25);
@@ -117,7 +117,7 @@
       --lift: rgba(40, 40, 80, 0.08);
       --lift-strong: rgba(40, 40, 80, 0.16);
       --toast: rgba(255, 255, 255, 0.84);
-      --page: rgba(242, 242, 247, 0.97);        /* dark text ghosts through light glass far more than the reverse */
+      --page: rgb(242, 242, 247);
       --sheet: rgba(249, 249, 252, 0.90);
       --scrim: rgba(0, 0, 0, 0.22);
       --grab: rgba(60, 60, 67, 0.30);
@@ -416,8 +416,7 @@
   #reader {
     position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 28px) max(14px, env(safe-area-inset-left));
-    background: var(--page);                 /* frosted, but dense enough that the list can't show through */
-    backdrop-filter: blur(40px) saturate(170%); -webkit-backdrop-filter: blur(40px) saturate(170%);
+    background: var(--page);                 /* solid: no blur needed, and none to pay for */
     animation: pageIn .44s var(--ease) both;
   }
   #reader.leaving { animation: pageOut .28s cubic-bezier(.4,0,1,1) both; }
@@ -452,7 +451,7 @@
   .rwho { display: flex; flex-direction: column; min-width: 0; font-size: 15px; }
   .rwho strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rmail { color: var(--faint); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rwhen { margin-left: auto; color: var(--faint); font-size: 12px; text-align: right; flex: none; max-width: 38%; }
+  .rwhen { margin-left: auto; color: var(--faint); font-size: 12px; text-align: right; flex: none; white-space: nowrap; }
   .rtags { display: flex; flex-wrap: wrap; gap: 6px; }
   .rtags:empty { display: none; }
   .rtags.flash .tchip:last-child { animation: pop .5s var(--ease); }
@@ -462,9 +461,20 @@
     margin-left: auto; flex: none; padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
     color: var(--accent); background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.28);
   }
-  .card.rmail { background: #fff; border-color: var(--hair); }
+  .rcount { font-size: 13px; color: var(--faint); margin-top: -6px; }
+  .msg { overflow: hidden; }
+  .mhead { display: flex; align-items: center; gap: 11px; width: 100%; min-width: 0; text-align: left; padding: 14px 16px; transition: background .2s; }
+  .mhead:active { background: var(--fill); }
+  .msg.folded .mhead { padding: 11px 16px; }
+  .msg.folded .avatar { width: 32px; height: 32px; font-size: 14px; }
+  .msg.unfold { animation: rowIn .4s var(--ease) both; }
+  .mbody.html { margin: 0 8px 8px; border-radius: 14px; overflow: hidden; background: #fff; border: 1px solid var(--hair); }
+  .mbody.rtext { padding: 2px 16px 18px; }
+  .who .cnt { flex: none; font-size: 11px; font-weight: 600; color: var(--faint); padding: 1px 7px; border-radius: 999px; background: var(--fill); }
+  .who .when { display: inline-flex; align-items: center; gap: 4px; }
+  .who .when .clip { opacity: .75; }
   .rframe { display: block; width: 100%; height: 160px; border: 0; background: #fff; }
-  .rtext { padding: 16px 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: var(--text); }
+  .rtext { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: var(--text); }
   .rtext a { color: var(--accent); }
   .rfoot { display: flex; justify-content: center; padding-top: 2px; }
   .rowtop { display: flex; align-items: stretch; gap: 10px; }
@@ -581,7 +591,106 @@
   li.peek .swipe { animation: peekUnder 1.6s var(--ease) .5s both; }
   @keyframes peekRow { 0%, 100% { transform: none; } 35%, 62% { transform: translateX(96px); } }
   @keyframes peekUnder { 0%, 100% { width: 0; } 35%, 62% { width: 108px; } }
-  #screen.selecting .swipe { display: none; }
+  #screen.selecting .swipe, #screen.selecting .swipe-r { display: none; }
+
+  /* ---- swipe left: Flag, Archive, Trash ---- */
+  .swipe-r {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden;
+    display: flex; justify-content: flex-end; transition: width .34s var(--ease);
+  }
+  .sa {
+    flex: 0 0 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: #fff; font-size: 12px; font-weight: 600; transition: flex-basis .3s var(--ease), padding .3s var(--ease);
+  }
+  .sa svg { width: 22px; height: 22px; }
+  .sa.flag { background: #FF9500; }
+  .sa.arch { background: #8E5CF7; }
+  .sa.bin { background: #FF3B30; }
+  li.armed-l .sa.flag, li.armed-l .sa.arch { flex-basis: 0; padding: 0; overflow: hidden; }
+  li.armed-l .sa.bin { flex: 1 0 76px; }
+  li.armed-l .sa.bin svg { animation: pop .35s var(--ease); }
+  .who .when .flagged { color: #FF9500; display: inline-flex; }
+  .who .when .flagged svg { width: 13px; height: 13px; }
+
+  /* ---- writing ---- */
+  #compose {
+    position: fixed; inset: 0; z-index: 22; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 20px) max(14px, env(safe-area-inset-left));
+    background: var(--page); animation: sheetUp .44s var(--ease) both;
+  }
+  #compose.leaving { animation: sheetDown .28s cubic-bezier(.4,0,1,1) both; }
+  .cwrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .ctop { display: flex; align-items: center; gap: 10px; }
+  .ctitle { flex: 1; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .send {
+    width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(10,132,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform .18s var(--ease);
+  }
+  .send:active { transform: scale(0.88); }
+  .cform { display: flex; flex-direction: column; }
+  .cf { display: flex; align-items: center; gap: 8px; padding: 0 16px; min-height: 48px; border-bottom: 1px solid var(--hair-2); }
+  .cf span { color: var(--faint); font-size: 15px; flex: none; }
+  .cf input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 16px; color: var(--text); }
+  #c-body {
+    min-height: 46vh; padding: 14px 16px 18px; background: none; border: 0; outline: none; resize: none;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; color: var(--text);
+  }
+  .cnote-bad { padding: 12px 16px; font-size: 13px; line-height: 1.5; color: var(--bad-text); }
+  .fab {
+    position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 15;
+    width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent); background: var(--glass-2); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: 0 10px 28px var(--lift-strong), inset 0 1px 0 var(--hi);
+    transition: transform .2s var(--ease); animation: pop .45s var(--ease) both;
+  }
+  .fab:active { transform: scale(0.9); }
+
+  /* ---- files ---- */
+  .mfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; }
+  .fchip {
+    display: flex; align-items: center; gap: 11px; width: 100%; min-height: 54px; padding: 8px 10px; text-align: left;
+    border-radius: 14px; background: var(--fill); border: 1px solid var(--hair); color: var(--text);
+    transition: transform .18s var(--ease);
+  }
+  button.fchip:active { transform: scale(0.97); }
+  .fext {
+    flex: none; width: 34px; height: 40px; border-radius: 8px; display: inline-flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 5px; font-size: 9.5px; font-weight: 800; letter-spacing: .02em; color: #fff;
+    background: linear-gradient(160deg, hsl(var(--h) 75% 58%), hsl(var(--h) 70% 44%));
+  }
+  .fmeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .fname { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fsize { font-size: 12.5px; color: var(--faint); }
+  .fsize.lost { color: var(--danger); }
+  .fx { flex: none; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); font-size: 20px; }
+  .fx:active { background: var(--fill); }
+  .cfiles { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+  .cfiles:empty { display: none; }
+  .cattach { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--hair-2); color: var(--accent); font-size: 15px; font-weight: 600; }
+  .cattach svg { width: 18px; height: 18px; }
+  .fprev { display: block; max-width: 100%; max-height: 46vh; margin: 0 auto; border-radius: 14px; object-fit: contain; }
+  .fwait { text-align: center; color: var(--faint); font-size: 14px; padding: 18px 0; }
+  a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+
+  /* ---- the message page's toolbar ---- */
+  .rbar {
+    position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 3; margin-top: 4px;
+    display: flex; justify-content: space-around; align-items: center; gap: 4px; padding: 6px;
+    border-radius: 22px; background: var(--glass); border: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: 0 10px 30px var(--lift-strong), inset 0 1px 0 var(--hi);
+  }
+  .rb {
+    flex: 1; height: 44px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent); transition: transform .18s var(--ease), background .2s;
+  }
+  .rb:active { transform: scale(0.9); background: var(--fill); }
+  .rb.bin { color: var(--danger); }
+  .rb.on { color: #FF9500; }
+  .rb.on svg { animation: pop .35s var(--ease); }
+  #selbar #sel-archive { padding: 0 12px; }
 
   /* ---- the Tags tab ---- */
   .card h2.gh { flex-wrap: wrap; }
@@ -658,10 +767,17 @@
   <div class="foot" id="foot"></div>
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
+<div id="compose" class="hide" role="dialog" aria-label="New message"></div>
+<button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
+  <svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7H5V5h7V3zm12.78 1a.7.7 0 0 0-.48.2l-1.22 1.21 2.5 2.5L19.8 6.7c.26-.26.26-.7 0-.95L18.25 4.2a.7.7 0 0 0-.47-.2m-2.41 2.12L8 13.5V16h2.5l7.37-7.38z"/></svg>
+</button>
 <div id="sheet" class="hide"></div>
 <div id="selbar" class="hide" role="toolbar" aria-label="Selected messages">
   <button id="sel-mark" disabled>Mark</button>
   <span id="sel-count"></span>
+  <button id="sel-archive" disabled aria-label="Archive">
+    <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M3 3h18v4H3zm1 5h16v13H4zm5.5 3a.5.5 0 0 0-.5.5V13h6v-1.5a.5.5 0 0 0-.5-.5z"/></svg>
+  </button>
   <button id="sel-trash" class="danger" disabled>
     <svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>Trash
   </button>
@@ -690,7 +806,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -961,6 +1077,8 @@ function setChipPref(id, show) {
 
 // The chips: tags that have a rule, plus any label you switched on - never,
 // unless you ask, a leftover from another app.
+// Flagged is Gmail's STARRED, always offered first, the way Mail lists Flagged.
+const FLAGGED = { id: 'STARRED', name: 'Flagged', type: 'flag' };
 function chipTags() {
   const p = chipPrefs();
   const ruled = new Set((filtersCache || []).flatMap(f => f.action?.addLabelIds || []));
@@ -1008,21 +1126,39 @@ function parseFrom(header) {
 // into plain text without running or loading anything.
 const unescapeHtml = s => new DOMParser().parseFromString('<!doctype html><body>' + s, 'text/html').body.textContent || '';
 
+const hdr = (m, name) => headerOf(m?.payload, name);
+
+// A page of conversations - Gmail's threads - newest first.
+async function threadPage(q, { labelIds, pageToken, max = PAGE } = {}) {
+  const r = await api('/threads', { params: { q: q || undefined, labelIds, maxResults: max, pageToken } });
+  return { ids: (r.threads || []).map(t => t.id), next: r.nextPageToken || null };
+}
+
+// One row per conversation, as Mail shows it: the newest message's time and
+// text, the other person's name (not yours, when you replied last), how many
+// messages it holds, and every label any of them carries. Messages in the
+// Trash don't count.
 async function hydrate(ids) {
-  const out = await pool(ids, 6, id => api('/messages/' + id, {
-    params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] },
+  const out = await pool(ids, 6, id => api('/threads/' + id, {
+    params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'Content-Type'] },
   }).catch(() => null));
-  return out.filter(Boolean).map(m => {
-    const h = Object.fromEntries((m.payload?.headers || []).map(x => [x.name.toLowerCase(), x.value]));
+  return out.filter(Boolean).map(t => {
+    const live = (t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH'));
+    const msgs = live.length ? live : t.messages || [];
+    if (!msgs.length) return null;
+    const last = msgs[msgs.length - 1];
+    const them = [...msgs].reverse().find(m => !(m.labelIds || []).includes('SENT')) || last;
     return {
-      id: m.id, threadId: m.threadId, snippet: unescapeHtml(m.snippet || ''),
-      subject: h.subject || '(no subject)',
-      date: Number(m.internalDate) || Date.parse(h.date) || Date.now(),
-      labelIds: m.labelIds || [],
+      id: t.id, threadId: t.id, msgId: last.id, count: msgs.length,
+      snippet: unescapeHtml(last.snippet || ''),
+      subject: hdr(msgs[0], 'subject') || hdr(last, 'subject') || '(no subject)',
+      date: Number(last.internalDate) || Date.parse(hdr(last, 'date')) || Date.now(),
+      labelIds: [...new Set(msgs.flatMap(m => m.labelIds || []))],
+      attach: msgs.some(m => /multipart\/mixed/i.test(hdr(m, 'content-type'))),
       get unread() { return this.labelIds.includes('UNREAD'); },
-      ...parseFrom(h.from),
+      ...parseFrom(hdr(them, 'from')),
     };
-  }).sort((a, b) => b.date - a.date);
+  }).filter(Boolean).sort((a, b) => b.date - a.date);
 }
 
 // ---------------------------------------------------------------------------
@@ -1051,14 +1187,34 @@ async function partText(msgId, part) {
   try { return new TextDecoder(charset).decode(bytes); } catch { return new TextDecoder().decode(bytes); }
 }
 
-async function fetchMessage(item) {
-  const m = await api('/messages/' + item.id, { params: { format: 'full' } });
-  const html = findPart(m.payload, 'text/html');
-  const text = findPart(m.payload, 'text/plain');
-  return {
-    html: html ? await partText(item.id, html) : null,
-    text: text ? await partText(item.id, text) : null,
-  };
+// Every message in a conversation, oldest first: who, when, the text in
+// both forms, and the files attached.
+async function fetchThread(item) {
+  const t = await api('/threads/' + item.threadId, { params: { format: 'full' } });
+  const live = (t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH'));
+  return Promise.all((live.length ? live : t.messages || []).map(async m => {
+    const html = findPart(m.payload, 'text/html'), text = findPart(m.payload, 'text/plain');
+    return {
+      id: m.id, labelIds: m.labelIds || [],
+      date: Number(m.internalDate) || Date.parse(hdr(m, 'date')) || 0,
+      from: parseFrom(hdr(m, 'from')), to: hdr(m, 'to'), cc: hdr(m, 'cc'), replyTo: hdr(m, 'reply-to'),
+      subject: hdr(m, 'subject'), messageId: hdr(m, 'message-id'), references: hdr(m, 'references'),
+      snippet: unescapeHtml(m.snippet || ''),
+      html: html ? await partText(m.id, html) : null,
+      text: text ? await partText(m.id, text) : null,
+      files: attachmentsOf(m.payload),
+    };
+  }));
+}
+
+// Files attached to a message, wherever they sit in its MIME tree.
+function attachmentsOf(node, out = []) {
+  if (!node) return out;
+  if (node.filename && node.body?.attachmentId) {
+    out.push({ name: node.filename, type: node.mimeType || 'application/octet-stream', size: node.body.size || 0, attId: node.body.attachmentId });
+  }
+  for (const part of node.parts || []) attachmentsOf(part, out);
+  return out;
 }
 
 // The message as a page of its own, inside a sandboxed frame. The sandbox has
@@ -1120,7 +1276,7 @@ function fitFrame(frame) {
   frame.style.height = Math.ceil(root.scrollHeight * scale) + 'px';
 }
 
-const fullDate = ms => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const fullDate = ms => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 // ---------------------------------------------------------------------------
 // Which senders a rule may cover
@@ -1317,8 +1473,8 @@ async function unbucket(item) {
 async function markRead(item) {
   if (!item.unread) return false;
   try {
-    await api('/messages/' + item.id + '/modify', { method: 'POST', body: { removeLabelIds: ['UNREAD'] } });
-    patch(it => it.id === item.id, [], ['UNREAD']);
+    await relabelThread(item.threadId, [], ['UNREAD']);
+    patch(it => it.threadId === item.threadId, [], ['UNREAD']);
     if (!item.labelIds.includes('UNREAD')) return true;
     item.labelIds = item.labelIds.filter(l => l !== 'UNREAD');
     return true;
@@ -1420,6 +1576,13 @@ const ICON = {
   back: '<svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>',
   chev: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   bin: '<svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  reply: '<svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11"/></svg>',
+  compose: '<svg class="i" width="21" height="21" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7H5V5h7V3zm12.78 1a.7.7 0 0 0-.48.2l-1.22 1.21 2.5 2.5L19.8 6.7c.26-.26.26-.7 0-.95L18.25 4.2a.7.7 0 0 0-.47-.2m-2.41 2.12L8 13.5V16h2.5l7.37-7.38z"/></svg>',
+  up: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>',
+  flag: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>',
+  archive: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M3 3h18v4H3zm1 5h16v13H4zm5.5 3a.5.5 0 0 0-.5.5V13h6v-1.5a.5.5 0 0 0-.5-.5z"/></svg>',
+  trash: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  clip: '<svg class="i clip" width="13" height="13" viewBox="0 0 24 24"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6z"/></svg>',
   img: '<svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></svg>',
   spin: '<svg class="i spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8" /></svg>',
   out: '<svg class="i" width="13" height="13" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z"/></svg>',
@@ -1453,11 +1616,18 @@ function rowHTML(item, i, key) {
   return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
     '<span class="swipe" data-act="swipe-tag"><span class="swipe-in">' + ICON.label + 'Tag</span></span>' +
+    '<span class="swipe-r">' +
+      '<button class="sa flag" data-act="row-flag">' + ICON.flag + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
+      '<button class="sa arch" data-act="row-archive">' + ICON.archive + 'Archive</button>' +
+      '<button class="sa bin" data-act="row-trash">' + ICON.trash + 'Trash</button>' +
+    '</span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
           '<span class="name">' + esc(item.name) + '</span>' +
-          '<span class="when">' + esc(ago(item.date)) + '</span></span>' +
+          (item.count > 1 ? '<span class="cnt">' + item.count + '</span>' : '') +
+          '<span class="when">' + (item.labelIds.includes('STARRED') ? '<span class="flagged">' + ICON.flag + '</span>' : '') +
+            (item.attach ? ICON.clip : '') + esc(ago(item.date)) + '</span></span>' +
         '<span class="subj">' + esc(item.subject) + '</span>' +
         '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
         '<span class="meta">' + meta + '</span>' +
@@ -1484,14 +1654,14 @@ function setCount(sel, n) {
 // picking one doesn't throw the row's scroll position back to the start.
 let chipSig = null;
 function renderChips(show) {
-  const box = $('#chips'), list = show ? chipTags() : [];
+  const box = $('#chips'), list = show ? [FLAGGED, ...chipTags()] : [];
   box.classList.toggle('hide', !list.length);
   const sig = list.map(l => l.id + ':' + l.name).join('|');
   if (sig !== chipSig) {
     chipSig = sig;
     const chip = (id, name, h) => '<button class="chip2" data-act="chip" data-id="' + esc(id) + '"' +
       (h == null ? '' : ' style="--h:' + h + '"') + '>' + (h == null ? '' : '<i></i>') + esc(name) + '</button>';
-    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, hue(l.name))).join('') : '';
+    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, l === FLAGGED ? 36 : hue(l.name))).join('') : '';
   }
   for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', (b.dataset.id || '') === (state.tag || ''));
 }
@@ -1525,6 +1695,7 @@ function renderChrome() {
   setCount('#c-mkt', state.lists.mkt?.items?.length);
   setCount('#c-rules', signedIn ? chipTags().length || null : null);
 
+  $('#fab').classList.toggle('hide', !listView || !!sel);
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
   $('#selbar').classList.toggle('hide', !sel);
@@ -1532,7 +1703,7 @@ function renderChrome() {
   if (sel) {
     const chosen = items.filter(it => sel.has(it.id));
     $('#sel-mark').textContent = chosen.some(it => it.unread) || !chosen.length ? 'Mark as Read' : 'Mark as Unread';
-    $('#sel-mark').disabled = $('#sel-trash').disabled = !chosen.length;
+    $('#sel-mark').disabled = $('#sel-trash').disabled = $('#sel-archive').disabled = !chosen.length;
     $('#sel-count').textContent = chosen.length ? chosen.length + ' of ' + items.length : '';
   }
 }
@@ -1603,14 +1774,15 @@ function viewList() {
   if (list?.error) return '<div class="card"><div class="empty">' + esc(list.error) + '</div></div>';
   if (!list?.items) return listSkeleton();
   const items = list.items;
-  const tagName = state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
+  const tagName = state.tag === 'STARRED' ? 'Flagged' : state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
   else if (spec.key === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
-  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + hue(tagName) + '">' + esc(tagName) + '</span></h2>';
+  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
     const empty = state.search ? 'Nothing matches “' + esc(state.search) + '”.'
       : spec.key === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
+      : state.tag === 'STARRED' ? 'Nothing flagged.<br>Swipe an email left and tap Flag.'
       : state.tag ? 'Nothing tagged ' + esc(tagName) + ' yet.'
       : 'Inbox zero. Nothing left to file.';
     return '<div class="card">' + head + '<div class="empty">' + empty + '</div></div>';
@@ -1729,20 +1901,27 @@ function movePill() {
 let skipPop = false;
 
 function openReader(item) {
-  state.reading = { item, data: null, images: false, error: null };
+  state.reading = { item, msgs: null, open: new Set(), images: false, error: null };
   try { history.pushState({ mailReader: item.id }, ''); } catch {}
   const el = $('#reader');
   el.classList.remove('hide', 'leaving');
   el.scrollTop = 0;
   renderReader();
-  markRead(item).then(changed => { if (changed) { quietOnce = true; render(); } });
-  fetchMessage(item)
-    .then(d => { if (state.reading?.item === item) { state.reading.data = d; renderReaderBody(); } })
+  fetchThread(item)
+    .then(msgs => {
+      const r = state.reading;
+      if (r?.item !== item) return;
+      r.msgs = msgs;
+      // As in Mail: the newest message open, and any you haven't read.
+      r.open = new Set([msgs[msgs.length - 1]?.id, ...msgs.filter(m => m.labelIds.includes('UNREAD')).map(m => m.id)]);
+      renderReaderBody();
+    })
     .catch(err => {
       if (state.reading?.item !== item) return;
       state.reading.error = err instanceof AuthError ? 'Session expired — go back and reconnect.' : err.message;
       renderReaderBody();
-    });
+    })
+    .finally(() => markRead(item).then(changed => { if (changed) { quietOnce = true; render(); } }));
 }
 
 function closeReader(fromHistory) {
@@ -1763,7 +1942,6 @@ function renderReader() {
   const r = state.reading;
   if (!r) return;
   const it = r.item, inBucket = it.labelIds.includes(bucketId());
-  const initial = ([...it.name.trim()][0] || '?').toUpperCase();
   $('#reader').innerHTML = '<div class="wrap">' +
     '<div class="rtop">' +
       '<button class="iconbtn" data-act="close-reader" aria-label="Back">' + ICON.chev + '</button>' +
@@ -1775,35 +1953,503 @@ function renderReader() {
     '</div>' +
     '<div class="card rhead">' +
       '<div class="rsubj">' + esc(it.subject) + '</div>' +
-      '<div class="rfrom"><span class="avatar" style="--h:' + hue(it.host || it.email) + '">' + esc(initial) + '</span>' +
-        '<span class="rwho"><strong>' + esc(it.name) + '</strong><span class="rmail">' + esc(it.email) + '</span></span>' +
-        '<span class="rwhen">' + esc(fullDate(it.date)) + '</span></div>' +
+      (it.count > 1 ? '<div class="rcount">' + it.count + ' messages</div>' : '') +
       '<div class="rtags" id="rtags">' + tagChips(it.labelIds) + '</div>' +
     '</div>' +
     '<div id="rbody"></div>' +
     '<div class="rfoot"><button class="plink" data-act="open" data-thread="' + esc(it.threadId) + '">Open in Gmail ' + ICON.out + '</button></div>' +
+    '<div class="rbar" id="rbar"></div>' +
   '</div>';
+  renderReaderBar();
   renderReaderBody();
+}
+
+function renderReaderBar() {
+  const bar = $('#rbar'), it = state.reading?.item;
+  if (!bar || !it) return;
+  const flagged = it.labelIds.includes('STARRED');
+  bar.innerHTML =
+    '<button class="rb bin" data-act="reader-trash" aria-label="Trash">' + ICON.trash + '</button>' +
+    '<button class="rb" data-act="reader-archive" aria-label="Archive">' + ICON.archive + '</button>' +
+    '<button class="rb' + (flagged ? ' on' : '') + '" data-act="reader-flag" aria-label="' + (flagged ? 'Remove flag' : 'Flag') + '" aria-pressed="' + flagged + '">' + ICON.flag + '</button>' +
+    (typeof replyButtons === 'function' ? replyButtons() : '');
+}
+
+// One message of the conversation: a header you tap to open or fold it, and
+// when open, the message itself.
+function msgCard(m, open) {
+  const initial = ([...m.from.name.trim()][0] || '?').toUpperCase();
+  const who = '<span class="avatar" style="--h:' + hue(m.from.host || m.from.email) + '">' + esc(initial) + '</span>' +
+    '<span class="rwho"><strong>' + esc(m.from.name) + '</strong><span class="rmail">' +
+      (open ? esc(m.from.email) + (m.to ? ' → ' + esc(m.to.replace(/\s*<[^>]*>/g, '').slice(0, 80)) : '') : esc(m.snippet.slice(0, 90))) +
+    '</span></span>' +
+    '<span class="rwhen">' + esc(open ? fullDate(m.date) : ago(m.date)) + '</span>';
+  const head = '<button class="mhead" data-act="toggle-msg" data-msg="' + esc(m.id) + '" aria-expanded="' + open + '">' + who + '</button>';
+  if (!open) return '<div class="card msg folded" data-card="' + esc(m.id) + '">' + head + '</div>';
+  const body = m.html
+    ? '<div class="mbody html"><iframe class="rframe" data-msg="' + esc(m.id) + '" title="Message from ' + esc(m.from.name) + '" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>'
+    : '<div class="mbody rtext">' + (m.text ? linkify(tidy(m.text)) : esc(m.snippet || 'This message has no text.')) + '</div>';
+  return '<div class="card msg" data-card="' + esc(m.id) + '">' + head + body + filesHTML(m) + '</div>';
+}
+
+// Files on a message: one tappable row each, as in Mail.
+function filesHTML(m) {
+  if (!m.files?.length) return '';
+  return '<div class="mfiles">' + m.files.map((f, i) =>
+    '<button class="fchip" data-act="open-file" data-msg="' + esc(m.id) + '" data-i="' + i + '" aria-label="Open ' + esc(f.name) + '">' +
+      fileRow(f, '<span class="fsize">' + esc(fmtSize(f.size)) + '</span>') + '</button>').join('') + '</div>';
+}
+
+// The coloured badge (PDF, JPG…), the name and the size.
+const FILE_HUE = [[/pdf/, 2], [/^image\//, 145], [/word|document|rtf|text\//, 214], [/sheet|excel|csv/, 130], [/presentation|powerpoint|keynote/, 28], [/zip|compressed|tar/, 45]];
+function fileRow(f, extra = '') {
+  const ext = (/\.([a-z0-9]{1,5})$/i.exec(f.name || '') || [, 'file'])[1].toUpperCase().slice(0, 4);
+  const h = (FILE_HUE.find(([re]) => re.test((f.type || '').toLowerCase())) || [, 230])[1];
+  return '<span class="fext" style="--h:' + h + '" aria-hidden="true">' + esc(ext) + '</span>' +
+    '<span class="fmeta"><span class="fname">' + esc(f.name || 'Attachment') + '</span>' + extra + '</span>';
+}
+function fmtSize(n) {
+  if (!n) return '';
+  if (n < 1024) return n + ' bytes';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / 1048576).toFixed(n < 10 * 1048576 ? 1 : 0) + ' MB';
+}
+
+// Gmail sends base64url; MIME and atob want plain base64.
+const b64std = s => { s = s.replace(/-/g, '+').replace(/_/g, '/').replace(/\s+/g, ''); return s + '='.repeat((4 - s.length % 4) % 4); };
+function bytesOf(b64) {
+  const bin = atob(b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function fetchFile(msgId, f) {
+  const r = await api('/messages/' + encodeURIComponent(msgId) + '/attachments/' + encodeURIComponent(f.attId));
+  return b64std(r.data || '');
+}
+
+// Opens a file in a sheet: a preview for pictures, and Share / Open. The
+// download happens first, so the Share tap is its own gesture (iOS needs one).
+async function openFile(msgId, i) {
+  const m = state.reading?.msgs?.find(x => x.id === msgId), f = m?.files?.[i];
+  if (!f) return;
+  closeSheet();
+  const s = state.sheet = { file: f };
+  const el = $('#sheet');
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(f.name) + '"></div>';
+  el.classList.remove('hide', 'leaving');
+  renderFileSheet();
+  try {
+    const data = await fetchFile(msgId, f);
+    if (state.sheet !== s) return;
+    s.blob = new Blob([bytesOf(data)], { type: f.type || 'application/octet-stream' });
+    s.url = URL.createObjectURL(s.blob);
+  } catch (err) {
+    if (state.sheet !== s) return;
+    if (err instanceof AuthError) { closeSheet(); return failed(err); }
+    s.error = err.message;
+  }
+  renderFileSheet();
+}
+
+function renderFileSheet() {
+  const s = state.sheet, box = $('#sheet .sheet');
+  if (!s?.file || !box) return;
+  const f = s.file, img = /^image\//.test(f.type) && s.url;
+  box.innerHTML = '<div class="grab"></div>' +
+    '<div class="fchip">' + fileRow(f, '<span class="fsize">' + esc(fmtSize(f.size)) + '</span>') + '</div>' +
+    (img ? '<img class="fprev" src="' + s.url + '" alt="' + esc(f.name) + '">' : '') +
+    (s.error ? '<p class="note cnote-bad">Couldn’t download it: ' + esc(s.error) + '</p>'
+      : !s.url ? '<p class="fwait">Downloading…</p>'
+      : '<button class="btn" data-act="file-share">Share or Save…</button>' +
+        '<a class="btn ghost" href="' + s.url + '" target="_blank" rel="noopener">Open</a>') +
+    '<button class="btn ghost" data-act="sheet-close">Done</button>';
+}
+
+// The share sheet (Save to Files, Photos, AirDrop…); a plain download where
+// the browser can't share files.
+async function shareFile() {
+  const s = state.sheet;
+  if (!s?.blob) return;
+  const file = new File([s.blob], s.file.name || 'attachment', { type: s.blob.type });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); }
+    catch (e) { if (e.name !== 'AbortError') toast('Couldn’t share it: ' + e.message, { bad: true }); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = s.url; a.download = file.name;
+  document.body.append(a); a.click(); a.remove();
+}
+
+// Puts each open message's HTML into its sandboxed frame and sizes it.
+function mountFrames(root) {
+  const r = state.reading;
+  for (const frame of root.querySelectorAll('iframe[data-msg]')) {
+    const m = r.msgs.find(x => x.id === frame.dataset.msg);
+    if (!m) continue;
+    frame.addEventListener('load', () => fitFrame(frame));
+    frame.srcdoc = emailDoc(m.html, r.images);
+    for (const ms of r.images ? [300, 1000, 2500, 6000] : [250, 900]) setTimeout(() => fitFrame(frame), ms);
+  }
 }
 
 function renderReaderBody() {
   const r = state.reading, box = $('#rbody');
   if (!r || !box) return;
   if (r.error) { box.innerHTML = '<div class="card"><div class="empty">' + esc(r.error) + '</div></div>'; return; }
-  if (!r.data) { box.innerHTML = '<div class="card">' + '<div class="skel" style="--i:0"></div><div class="skel" style="--i:1"></div><div class="skel" style="--i:2"></div>' + '</div>'; return; }
-  const { html, text } = r.data;
-  if (html) {
-    box.innerHTML = (!r.images && wantsImages(html)
-      ? '<div class="card imgnote">' + ICON.img + '<span>Images are off, so the sender can’t tell you opened this.</span><button data-act="show-images">Show</button></div>'
-      : '') +
-      '<div class="card rmail"><iframe class="rframe" title="Message" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>';
-    const frame = box.querySelector('iframe');
-    frame.addEventListener('load', () => fitFrame(frame));
-    frame.srcdoc = emailDoc(html, r.images);
-    for (const ms of r.images ? [300, 1000, 2500, 6000] : [250, 900]) setTimeout(() => fitFrame(frame), ms);
-    return;
+  if (!r.msgs) { box.innerHTML = '<div class="card">' + '<div class="skel" style="--i:0"></div><div class="skel" style="--i:1"></div><div class="skel" style="--i:2"></div>' + '</div>'; return; }
+  const remote = r.msgs.some(m => m.html && wantsImages(m.html));
+  box.innerHTML = (!r.images && remote
+    ? '<div class="card imgnote">' + ICON.img + '<span>Images are off, so the sender can’t tell you opened this.</span><button data-act="show-images">Show</button></div>'
+    : '') + r.msgs.map(m => msgCard(m, r.open.has(m.id))).join('');
+  mountFrames(box);
+}
+
+// Opens or folds one message without redrawing the rest.
+function toggleMsg(id) {
+  const r = state.reading, card = $('#rbody')?.querySelector('[data-card="' + CSS.escape(id) + '"]');
+  const m = r?.msgs?.find(x => x.id === id);
+  if (!card || !m) return;
+  if (r.open.has(id)) r.open.delete(id); else r.open.add(id);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = msgCard(m, r.open.has(id));
+  const fresh = tmp.firstChild;
+  card.replaceWith(fresh);
+  fresh.classList.add('unfold');
+  mountFrames(fresh);
+}
+
+// ---------------------------------------------------------------------------
+// Writing: new messages, replies, forwards
+// ---------------------------------------------------------------------------
+const UPLOAD = 'https://gmail.googleapis.com/upload/gmail/v1/users/me';
+const UNDO_SEND = Number(ls.get('mail.undoSend', '')) || 5000;   // (the tests shorten this)
+
+function b64utf8(str) {
+  let bin = '';
+  for (const b of new TextEncoder().encode(str)) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+// Headers are ASCII: anything else goes in an RFC 2047 encoded word.
+const encWord = str => /^[\x20-\x7e]*$/.test(str) ? str : '=?UTF-8?B?' + b64utf8(str) + '?=';
+// A header value is one line. Nothing typed can split it and add a header -
+// no sneaking a Bcc in through the subject.
+const oneLine = str => String(str || '').replace(/[\r\n]+/g, ' ').trim();
+const wrap76 = str => str.replace(/.{76}/g, '$&\r\n');
+
+// "Name <a@b.com>, c@d.org" -> [{ name, email, ok }]
+function parseAddresses(text) {
+  const out = [];
+  for (const piece of String(text || '').split(/[,;]/)) {
+    const t = piece.trim();
+    if (!t) continue;
+    const m = /^(.*?)<\s*([^<>\s]+)\s*>$/.exec(t);
+    const email = (m ? m[2] : t).trim().toLowerCase(), name = m ? m[1].trim().replace(/^"|"$/g, '') : '';
+    out.push({ name, email, ok: /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[a-z]{2,}$/i.test(email) });
   }
-  box.innerHTML = '<div class="card rtext">' + (text ? linkify(tidy(text)) : esc(r.item.snippet || 'This message has no text.')) + '</div>';
+  return out;
+}
+const formatAddresses = list => list.map(a => a.name ? encWord(oneLine(a.name).replace(/"/g, '')) + ' <' + a.email + '>' : a.email).join(', ');
+
+function htmlToText(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const n of doc.querySelectorAll('script, style, head, noscript')) n.remove();
+  for (const n of doc.querySelectorAll('br')) n.replaceWith('\n');
+  for (const n of doc.querySelectorAll('p, div, tr, li, h1, h2, h3, h4, table, blockquote')) n.append('\n');
+  return doc.body?.textContent || '';
+}
+const plainOf = m => m.text ? tidy(m.text) : m.html ? tidy(htmlToText(m.html)) : m.snippet || '';
+const longDate = ms => new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+// The whole message, as Gmail's upload endpoint takes it. Text is UTF-8 in
+// base64; files (when there are any) make it multipart/mixed.
+function buildMime(job) {
+  const h = [];
+  if (state.me) h.push('From: ' + state.me);
+  h.push('To: ' + formatAddresses(job.to));
+  if (job.cc.length) h.push('Cc: ' + formatAddresses(job.cc));
+  h.push('Subject: ' + encWord(oneLine(job.subject)));
+  h.push('Date: ' + new Date().toUTCString());
+  h.push('Message-ID: <' + crypto.randomUUID() + '@mail.tomallison24.github.io>');
+  if (job.inReplyTo) h.push('In-Reply-To: ' + oneLine(job.inReplyTo));
+  if (job.references) h.push('References: ' + oneLine(job.references));
+  h.push('MIME-Version: 1.0');
+  const textPart = 'Content-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n' + wrap76(b64utf8(job.body.replace(/\r?\n/g, '\r\n')));
+  const files = (job.files || []).filter(f => f.data);
+  if (!files.length) return h.join('\r\n') + '\r\n' + textPart + '\r\n';
+  const bnd = 'mix_' + crypto.randomUUID().replace(/-/g, '');
+  const parts = [textPart].concat(files.map(f =>
+    'Content-Type: ' + oneLine(f.type || 'application/octet-stream') + '; name="' + encWord(oneLine(f.name).replace(/"/g, '')) + '"\r\n' +
+    'Content-Disposition: attachment; filename="' + encWord(oneLine(f.name).replace(/"/g, '')) + '"\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n' + wrap76(f.data)));
+  return h.join('\r\n') + '\r\nContent-Type: multipart/mixed; boundary="' + bnd + '"\r\n\r\n' +
+    parts.map(p => '--' + bnd + '\r\n' + p + '\r\n').join('') + '--' + bnd + '--\r\n';
+}
+
+// Sends (or saves) through Gmail's upload endpoint, which takes the thread to
+// join alongside the message. Never retried: if the answer is lost the message
+// may already have gone, and a second try would send it twice.
+async function uploadMime(what, raw, meta) {
+  const tok = getToken();
+  if (!tok) throw new AuthError('signed out');
+  const bnd = 'rel_' + crypto.randomUUID().replace(/-/g, '');
+  const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+    '\r\n--' + bnd + '\r\nContent-Type: message/rfc822\r\n\r\n' + raw + '\r\n--' + bnd + '--';
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT * 3);
+  let res, text;
+  try {
+    res = await fetch(UPLOAD + '/' + what + '?uploadType=multipart', {
+      method: 'POST', body, signal: ctl.signal,
+      headers: { Authorization: 'Bearer ' + tok.t, 'Content-Type': 'multipart/related; boundary=' + bnd },
+    });
+    text = await res.text();
+  } catch (e) {
+    const err = new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
+    err.unsure = true;
+    throw err;
+  } finally { clearTimeout(timer); }
+  if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
+  if (!res.ok) {
+    let msg = text.slice(0, 200);
+    try { msg = JSON.parse(text).error.message; } catch {}
+    throw new Error(msg || 'Gmail returned ' + res.status);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+// What a reply, reply-all or forward starts with, from the message it answers:
+// the newest in the conversation.
+function draftFrom(mode, r) {
+  const m = r.msgs[r.msgs.length - 1], me = (state.me || '').toLowerCase();
+  const mine = m.from.email === me;
+  const bare = list => parseAddresses(list).filter(a => a.ok).map(a => a.email);
+  const subj = m.subject || r.item.subject || '';
+  if (mode === 'fwd') {
+    return {
+      mode, to: '', cc: '', subject: /^fwd?:/i.test(subj) ? subj : 'Fwd: ' + subj,
+      body: '\n\n---------- Forwarded message ---------\nFrom: ' + m.from.name + ' <' + m.from.email + '>\nDate: ' + longDate(m.date) +
+        '\nSubject: ' + subj + '\nTo: ' + (m.to || '') + '\n\n' + plainOf(m),
+      files: m.files.map(f => ({ ...f, msgId: m.id })),
+    };
+  }
+  let to = mine ? bare(m.to) : bare(m.replyTo || '').length ? bare(m.replyTo) : [m.from.email];
+  let cc = [];
+  if (mode === 'all') {
+    to = to.concat(bare(m.to));
+    cc = bare(m.cc);
+  }
+  const uniq = list => [...new Set(list)].filter(e => e && e !== me);
+  to = uniq(to);
+  cc = uniq(cc).filter(e => !to.includes(e));
+  return {
+    mode, to: to.join(', '), cc: cc.join(', '), subject: /^re:/i.test(subj) ? subj : 'Re: ' + subj,
+    body: '\n\nOn ' + longDate(m.date) + ', ' + m.from.name + ' <' + m.from.email + '> wrote:\n' + plainOf(m).split('\n').map(l => '> ' + l).join('\n'),
+    threadId: r.item.threadId, inReplyTo: m.messageId, references: [m.references, m.messageId].filter(Boolean).join(' '),
+  };
+}
+
+const COMPOSE_TITLE = { new: 'New Message', reply: 'Reply', all: 'Reply All', fwd: 'Forward' };
+
+function openCompose(job, { note } = {}) {
+  state.compose = { mode: 'new', to: '', cc: '', subject: '', body: '', files: [], ...job, start: job.body || '' };
+  state.compose.files = [...(state.compose.files || [])];
+  state.compose.startFiles = state.compose.files.length;
+  const c = state.compose, el = $('#compose');
+  el.innerHTML = '<div class="cwrap">' +
+    '<div class="ctop">' +
+      '<button class="textbtn" data-act="compose-cancel">Cancel</button>' +
+      '<span class="ctitle">' + esc(COMPOSE_TITLE[c.mode] || 'New Message') + '</span>' +
+      '<button class="send" data-act="compose-send" aria-label="Send">' + ICON.up + '</button>' +
+    '</div>' +
+    (note ? '<div class="card cnote-bad">' + esc(note) + '</div>' : '') +
+    '<div class="card cform">' +
+      '<label class="cf"><span>To:</span><input id="c-to" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(c.to) + '"></label>' +
+      '<label class="cf"><span>Cc:</span><input id="c-cc" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(c.cc) + '"></label>' +
+      '<label class="cf"><span>Subject:</span><input id="c-subj" type="text" value="' + esc(c.subject) + '"></label>' +
+      '<textarea id="c-body" aria-label="Message">' + esc(c.body) + '</textarea>' +
+      '<div class="cfiles" id="c-files"></div>' +
+      '<button class="cattach" data-act="compose-attach">' + ICON.clip + 'Add Attachment</button>' +
+      '<input id="c-pick" type="file" multiple hidden>' +
+    '</div>' +
+  '</div>';
+  el.classList.remove('hide', 'leaving');
+  renderComposeFiles();
+  const body = $('#c-body');
+  body.setSelectionRange(0, 0);
+  setTimeout(() => (c.to ? body : $('#c-to')).focus(), 350);
+}
+
+// Gmail's limit on attachments (the message itself, base64 and all, must fit
+// under the upload endpoint's 35 MB).
+const MAX_FILES = 25 * 1048576;
+const filesTotal = files => (files || []).reduce((n, f) => n + (f.size || 0), 0);
+// A file you added from the phone survives Undo, but not the app closing: only
+// forwarded ones (still in Gmail) can be fetched again.
+const lostFile = f => !f.data && !f.attId && !f.reading;
+
+// Files on the message being written, each with a remove button.
+function renderComposeFiles() {
+  const c = state.compose, el = $('#c-files');
+  if (!c || !el) return;
+  el.innerHTML = c.files.map((f, i) => '<div class="fchip">' +
+    fileRow(f, lostFile(f) ? '<span class="fsize lost">Not kept — add it again</span>' : '<span class="fsize">' + esc(f.reading ? 'Adding…' : fmtSize(f.size)) + '</span>') +
+    '<button class="fx" data-act="compose-unfile" data-i="' + i + '" aria-label="Remove ' + esc(f.name) + '">×</button></div>').join('');
+}
+
+const readB64 = file => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(String(r.result).split(',')[1] || '');
+  r.onerror = () => reject(r.error || new Error('Couldn’t read the file'));
+  r.readAsDataURL(file);
+});
+
+async function addComposeFiles(input) {
+  const c = state.compose;
+  const picked = [...(input.files || [])];
+  input.value = '';
+  if (!c) return;
+  for (const file of picked) {
+    if (filesTotal(c.files) + file.size > MAX_FILES) {
+      toast('“' + file.name + '” is too big — attachments can come to 25 MB in all', { bad: true, ms: 6000 });
+      continue;
+    }
+    const f = { name: file.name || 'attachment', type: file.type || 'application/octet-stream', size: file.size, data: null, reading: true };
+    c.files.push(f);                                   // counts toward the limit while it reads
+    renderComposeFiles();
+    try { f.data = await readB64(file); }
+    catch (err) { c.files.splice(c.files.indexOf(f), 1); toast('Couldn’t add “' + file.name + '”: ' + err.message, { bad: true }); }
+    delete f.reading;
+    if (state.compose === c) renderComposeFiles();
+  }
+}
+
+function readCompose() {
+  return { to: $('#c-to').value, cc: $('#c-cc').value, subject: $('#c-subj').value, body: $('#c-body').value };
+}
+
+function closeCompose() {
+  const el = $('#compose');
+  state.compose = null;
+  if (el.classList.contains('hide')) return;
+  const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  if (reduced) return finish();
+  el.classList.add('leaving');
+  setTimeout(finish, 280);
+}
+
+// A choice of several, in the same sheet as the confirmations.
+function choiceSheet({ title, body, options }) {
+  closeSheet();
+  return new Promise(resolve => {
+    confirmDone = resolve;
+    state.sheet = { confirm: true };
+    const el = $('#sheet');
+    el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+      '<div class="sheet" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<div class="grab"></div><h3>' + esc(title) + '</h3>' + (body ? '<p class="note">' + body + '</p>' : '') +
+        options.map(o => '<button class="btn ' + (o.danger ? 'warn' : o.primary ? '' : 'ghost') + '" data-act="choice" data-id="' + esc(o.id) + '">' + esc(o.label) + '</button>').join('') +
+        '<button class="btn ghost" data-act="sheet-close">Cancel</button>' +
+      '</div>';
+    el.classList.remove('hide', 'leaving');
+  });
+}
+
+async function sendCompose() {
+  const c = state.compose;
+  if (!c) return;
+  const f = readCompose();
+  const to = parseAddresses(f.to), cc = parseAddresses(f.cc);
+  const bad = to.concat(cc).find(a => !a.ok);
+  if (!to.length) return toast('Add someone to send it to', { bad: true });
+  if (bad) return toast('That address doesn’t look right: ' + bad.email, { bad: true, ms: 6000 });
+  const busy = c.files.find(f => f.reading);
+  if (busy) return toast('Still adding “' + busy.name + '”…', { ms: 3000 });
+  const lost = c.files.find(lostFile);
+  if (lost) return toast('Add “' + lost.name + '” again, or remove it', { bad: true, ms: 6000 });
+  if (filesTotal(c.files) > MAX_FILES) return toast('Attachments come to ' + fmtSize(filesTotal(c.files)) + ' — the limit is 25 MB', { bad: true, ms: 6000 });
+  const job = { ...c, ...f, to, cc };
+  // Held for a few seconds so Undo can take it back - and on disk meanwhile,
+  // so closing the app can't lose it.
+  const keep = { ...job, to: f.to, cc: f.cc, files: (job.files || []).map(({ data, ...rest }) => rest) };
+  ls.set(K.pending, JSON.stringify(keep));
+  closeCompose();
+  let undone = false;
+  toast('Sending…', { label: 'Undo', ms: UNDO_SEND + 600, action: () => { undone = true; ls.del(K.pending); openCompose({ ...keep, files: job.files }); } });
+  await sleep(UNDO_SEND);
+  if (undone) return;
+  toast('Sending…', { ms: 60000 });
+  try {
+    await ensureFileData(job);
+    await uploadMime('messages/send', buildMime(job), job.threadId ? { threadId: job.threadId } : {});
+    ls.del(K.pending);
+    toast('Sent');
+    if (state.reading && job.threadId === state.reading.item.threadId) refreshReader();
+    // Refresh the list on screen in place (its rows must stay findable while
+    // the reader is open); other lists reload when next shown.
+    const key = currentList().key;
+    for (const k of Object.keys(state.lists)) if (k !== key) delete state.lists[k];
+    loadList({ force: true, quiet: true });
+  } catch (err) {
+    ls.del(K.pending);
+    if (err instanceof AuthError) { ls.set(K.pending, JSON.stringify(keep)); return failed(err); }
+    if (err.unsure) {
+      openCompose({ ...keep, files: job.files }, { note: 'Gmail didn’t answer, so this may already have been sent. Check your Sent mail before sending again.' });
+    } else {
+      openCompose({ ...keep, files: job.files }, { note: 'Not sent: ' + err.message });
+    }
+  }
+}
+
+// Forwarded files are fetched from Gmail only when the message goes. Files
+// that can't be (added on the phone, then the app closed) are left off a
+// draft, and stop a send before it starts (above).
+async function ensureFileData(job) {
+  job.files = (job.files || []).filter(f => f.data || f.attId);
+  for (const f of job.files) if (!f.data) f.data = await fetchFile(f.msgId, f);
+}
+
+async function cancelCompose() {
+  const c = state.compose;
+  if (!c) return;
+  const f = readCompose();
+  const typed = f.body.trim() !== (c.start || '').trim() || (c.mode === 'new' && (f.to.trim() || f.subject.trim())) || c.files.length !== c.startFiles;
+  if (!typed) return closeCompose();
+  const pick = await choiceSheet({
+    title: 'Keep this message?',
+    options: [{ id: 'save', label: 'Save Draft', primary: true }, { id: 'delete', label: 'Delete Draft', danger: true }],
+  });
+  if (!pick) return;                                   // Cancel: back to writing
+  if (pick === 'delete') return closeCompose();
+  const job = { ...c, ...f, to: parseAddresses(f.to).filter(a => a.ok), cc: parseAddresses(f.cc).filter(a => a.ok) };
+  closeCompose();
+  toast('Saving draft…', { ms: 60000 });
+  try {
+    await ensureFileData(job);
+    await uploadMime('drafts', buildMime(job), { message: job.threadId ? { threadId: job.threadId } : {} });
+    toast('Draft saved in Gmail');
+  } catch (err) {
+    if (err instanceof AuthError) return failed(err);
+    openCompose({ ...c, ...f }, { note: (err.unsure ? 'Gmail didn’t answer, so the draft may have been saved. ' : 'Draft not saved: ') + err.message });
+  }
+}
+
+// Shows your reply in the open conversation once it's sent.
+async function refreshReader() {
+  const r = state.reading;
+  if (!r) return;
+  try {
+    const msgs = await fetchThread(r.item);
+    if (state.reading !== r) return;
+    r.msgs = msgs;
+    r.open.add(msgs[msgs.length - 1]?.id);
+    r.item.count = msgs.length;
+    renderReader();
+  } catch {}
+}
+
+function replyButtons() {
+  return '<button class="rb" data-act="reader-reply" aria-label="Reply">' + ICON.reply + '</button>' +
+    '<button class="rb" data-act="compose-new" aria-label="New message">' + ICON.compose + '</button>';
 }
 
 // ---------------------------------------------------------------------------
@@ -1849,7 +2495,8 @@ function confirmSheet({ title, body, yes }) {
 
 function closeSheet() {
   const el = $('#sheet');
-  if (confirmDone) { const done = confirmDone; confirmDone = null; done(false); }
+  if (confirmDone) { const done = confirmDone; confirmDone = null; done(null); }
+  if (state.sheet?.url) { const u = state.sheet.url; state.sheet.url = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
   const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
@@ -1873,7 +2520,7 @@ async function loadList({ force, quiet } = {}) {
       if (!l) { state.lists[spec.key] = { items: [], next: null }; return render(); }
       labelIds = [l.id];
     }
-    const r = await page(spec.q, { labelIds });
+    const r = await threadPage(spec.q, { labelIds });
     const items = await hydrate(r.ids);
     state.lists[spec.key] = { items, next: r.next, q: spec.q, labelIds };
   } catch (e) {
@@ -1891,7 +2538,7 @@ async function loadMore(btn) {
   btn.disabled = true;
   btn.innerHTML = ICON.spin;
   try {
-    const r = await page(list.q, { labelIds: list.labelIds, pageToken: list.next });
+    const r = await threadPage(list.q, { labelIds: list.labelIds, pageToken: list.next });
     const more = await hydrate(r.ids);
     const seen = new Set(list.items.map(it => it.id));
     freshFrom = list.items.length;
@@ -1967,39 +2614,65 @@ function selectedItems() {
   return items.filter(it => state.select?.has(it.id));
 }
 
-// Selected mail to the Trash. The rows go at once; Gmail is told after, and
-// Undo brings each back - to the inbox too, if that's where it was.
-async function trashSelected() {
-  const items = selectedItems();
+// Conversations to the Trash, or archived (out of the inbox, kept in All
+// Mail). The rows go at once and Gmail is told after. Undo brings each back,
+// and returns to the inbox exactly the messages that were in it - not your own
+// replies, which never were.
+async function throwAway(items, how) {
   if (!items.length) return;
-  const before = new Map(items.map(it => [it.id, it.labelIds.slice()]));
-  const rows = rowsFor([...before.keys()]);
-  exitSelect();
+  const tids = [...new Set(items.map(it => it.threadId))];
+  const rows = rowsFor(items.map(it => it.id));
+  closeRow();
+  if (state.select) exitSelect();
+  await closeReader();
   await Promise.all(rows.map(li => vanish(li, 'left')));
-  patch(it => before.has(it.id), ['TRASH'], ['INBOX']);
+  patch(it => tids.includes(it.threadId), how === 'trash' ? ['TRASH'] : [], ['INBOX']);
   for (const [k, l] of Object.entries(state.lists)) if (l.items) l.items = l.items.filter(it => belongs(k, it));
   quietOnce = true;
   render();
+  const back = { tids, how, inboxMsgs: [] };
   let missed = 0;
   try {
-    await pool([...before.keys()], 6, async id => {
-      try { await api('/messages/' + id + '/trash', { method: 'POST' }); }
-      catch (e) { if (e instanceof AuthError) throw e; missed++; }
+    const snaps = await pool(tids, 6, id => api('/threads/' + id, { params: { format: 'minimal' } }).catch(() => null));
+    back.inboxMsgs = snaps.filter(Boolean).flatMap(t => (t.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id));
+    await pool(tids, 6, async id => {
+      try {
+        if (how === 'trash') await api('/threads/' + id + '/trash', { method: 'POST' });
+        else await relabelThread(id, [], ['INBOX']);
+      } catch (e) { if (e instanceof AuthError) throw e; missed++; }
     });
   } catch (err) { failed(err); state.lists = {}; return go({ force: true }); }
-  const n = before.size - missed;
-  if (missed) { toast(n + ' moved to the Trash; ' + missed + ' couldn’t be', { bad: true }); state.lists = {}; return go({ force: true }); }
-  toast(n + (n === 1 ? ' message' : ' messages') + ' moved to the Trash', { label: 'Undo', action: () => untrashAll(before) });
+  const n = tids.length - missed, what = n === 1 ? '1 conversation' : n + ' conversations';
+  if (missed) { toast(what + (how === 'trash' ? ' moved to the Trash' : ' archived') + '; ' + missed + ' couldn’t be', { bad: true }); state.lists = {}; return go({ force: true }); }
+  for (const k of Object.keys(state.lists)) if (k !== currentList().key) delete state.lists[k];
+  toast(how === 'trash' ? what + ' moved to the Trash' : what + ' archived', { label: 'Undo', action: () => bringBack(back) });
 }
 
-async function untrashAll(before) {
+async function bringBack(back) {
   try {
-    const ids = [...before.keys()];
-    await pool(ids, 6, id => api('/messages/' + id + '/untrash', { method: 'POST' }));
-    await relabel(ids.filter(id => before.get(id).includes('INBOX')), ['INBOX']);
+    if (back.how === 'trash') await pool(back.tids, 6, id => api('/threads/' + id + '/untrash', { method: 'POST' }));
+    await relabel(back.inboxMsgs, ['INBOX']);
     toast('Put back');
     state.lists = {};
     go({ force: true });
+  } catch (err) { failed(err); }
+}
+
+const trashSelected = () => throwAway(selectedItems(), 'trash');
+const archiveSelected = () => throwAway(selectedItems(), 'archive');
+
+// Flag: Gmail's star. Toggles, like Mail's flag.
+async function toggleFlag(item) {
+  const on = !item.labelIds.includes('STARRED');
+  try {
+    await relabelThread(item.threadId, on ? ['STARRED'] : [], on ? [] : ['STARRED']);
+    patch(it => it.threadId === item.threadId, on ? ['STARRED'] : [], on ? [] : ['STARRED']);
+    if (!item.labelIds.includes('STARRED') === on) item.labelIds = on ? item.labelIds.concat('STARRED') : item.labelIds.filter(l => l !== 'STARRED');
+    delete state.lists['tag:STARRED'];
+    if (state.tag === 'STARRED' && !on) { await settle('left'); }
+    else { quietOnce = true; render(); }
+    if (state.reading) renderReaderBar();
+    toast(on ? 'Flagged' : 'Flag removed');
   } catch (err) { failed(err); }
 }
 
@@ -2007,11 +2680,11 @@ async function markSelected() {
   const items = selectedItems();
   if (!items.length) return;
   const read = items.some(it => it.unread);            // any unread: mark them all read
-  const ids = items.map(it => it.id), set = new Set(ids);
+  const ids = items.map(it => it.threadId), set = new Set(ids);
   exitSelect();
   try {
-    await relabel(ids, read ? [] : ['UNREAD'], read ? ['UNREAD'] : []);
-    patch(it => set.has(it.id), read ? [] : ['UNREAD'], read ? ['UNREAD'] : []);
+    await pool(ids, 6, id => relabelThread(id, read ? [] : ['UNREAD'], read ? ['UNREAD'] : []));
+    patch(it => set.has(it.threadId), read ? [] : ['UNREAD'], read ? ['UNREAD'] : []);
     quietOnce = true;
     render();
     toast(ids.length + ' marked as ' + (read ? 'read' : 'unread'));
@@ -2027,6 +2700,7 @@ $('#selall').addEventListener('click', () => {
   renderChrome();
 });
 $('#sel-trash').addEventListener('click', trashSelected);
+$('#sel-archive').addEventListener('click', archiveSelected);
 $('#sel-mark').addEventListener('click', markSelected);
 
 // Press and hold a row to start selecting with it, as in Mail.
@@ -2053,30 +2727,33 @@ screen.addEventListener('contextmenu', e => { if (e.target.closest('ul.list > li
 // the row stays open on the button; drag past half-way and it tags at once.
 // Rows scroll up and down as normal - touch-action: pan-y leaves vertical
 // moves to the browser, and a mostly-vertical start is never taken as a swipe.
-const SWIPE_OPEN = 96;
+const SWIPE_OPEN = 96;          // right: room for Tag
+const SWIPE_OPEN_L = -228;      // left: room for Flag, Archive and Trash
 let swipe = null, openRow = null;
 
 function setSwipe(li, dx, animate) {
-  const top = li.querySelector('.rowtop'), under = li.querySelector('.swipe');
-  if (!top || !under) return;
-  top.style.transition = under.style.transition = animate ? '' : 'none';
+  const top = li.querySelector('.rowtop'), under = li.querySelector('.swipe'), right = li.querySelector('.swipe-r');
+  if (!top || !under || !right) return;
+  top.style.transition = under.style.transition = right.style.transition = animate ? '' : 'none';
   top.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
-  under.style.width = dx ? dx + 12 + 'px' : '';
+  under.style.width = dx > 0 ? dx + 12 + 'px' : '';
+  right.style.width = dx < 0 ? -dx + 12 + 'px' : '';
 }
 
 function closeRow(li = openRow) {
   if (!li) return;
   setSwipe(li, 0, true);
-  li.classList.remove('swiped', 'armed');
+  li.classList.remove('swiped', 'swiped-l', 'armed', 'armed-l');
   if (openRow === li) openRow = null;
 }
 
 screen.addEventListener('pointerdown', e => {
-  if (state.select || e.button > 0 || e.target.closest('.act, .swipe')) return;
+  if (state.select || e.button > 0 || e.target.closest('.act, .swipe, .swipe-r')) return;
   const li = e.target.closest('ul.list > li[data-id]');
   if (!li) return;
   if (openRow && openRow !== li) closeRow();
-  swipe = { li, id: e.pointerId, x: e.clientX, y: e.clientY, base: li === openRow ? SWIPE_OPEN : 0, dx: 0, lock: false };
+  const base = li !== openRow ? 0 : li.classList.contains('swiped-l') ? SWIPE_OPEN_L : SWIPE_OPEN;
+  swipe = { li, id: e.pointerId, x: e.clientX, y: e.clientY, base, dx: 0, lock: false };
 });
 
 screen.addEventListener('pointermove', e => {
@@ -2090,12 +2767,14 @@ screen.addEventListener('pointermove', e => {
     cancelPress();                                                                // not a long press either
     try { sw.li.setPointerCapture(e.pointerId); } catch {}
   }
-  const w = sw.li.offsetWidth;
-  let x = Math.max(0, sw.base + dx);
-  if (x > w * 0.8) x = w * 0.8 + (x - w * 0.8) * 0.25;                          // resist near the edge
+  const w = sw.li.offsetWidth, edge = w * 0.8;
+  let x = sw.base + dx;
+  if (x > edge) x = edge + (x - edge) * 0.25;                                   // resist near either edge
+  if (x < -edge) x = -edge + (x + edge) * 0.25;
   sw.dx = x;
   setSwipe(sw.li, x, false);
   sw.li.classList.toggle('armed', x > w * 0.5);
+  sw.li.classList.toggle('armed-l', x < -w * 0.55);                              // Trash fills the row, as in Mail
 });
 
 screen.addEventListener('pointerup', e => {
@@ -2106,14 +2785,22 @@ screen.addEventListener('pointerup', e => {
   swallowClick = true;                           // the release is not a tap
   setTimeout(() => { swallowClick = false; }, 350);
   const w = sw.li.offsetWidth;
-  if (sw.dx > w * 0.5) {                         // all the way: tag now
+  if (sw.dx > w * 0.5) {                         // right, all the way: tag now
     closeRow(sw.li);
     const it = findItem(sw.li.dataset.id);
     if (it) openSheet(it);
-  } else if (sw.dx > 56) {                       // part way: stay open on Tag
+  } else if (sw.dx > 56) {                       // right, part way: stay open on Tag
     setSwipe(sw.li, SWIPE_OPEN, true);
     sw.li.classList.remove('armed');
     sw.li.classList.add('swiped');
+    openRow = sw.li;
+  } else if (sw.dx < -w * 0.55) {                // left, all the way: to the Trash
+    const it = findItem(sw.li.dataset.id);
+    if (it) throwAway([it], 'trash');
+  } else if (sw.dx < -56) {                      // left, part way: stay open on Flag / Archive / Trash
+    setSwipe(sw.li, SWIPE_OPEN_L, true);
+    sw.li.classList.remove('armed-l');
+    sw.li.classList.add('swiped-l');
     openRow = sw.li;
   } else closeRow(sw.li);
 });
@@ -2158,6 +2845,7 @@ $('#search').addEventListener('submit', e => {
   go({ force: true });
 });
 $('#q').addEventListener('input', () => $('#q-clear').classList.toggle('hide', !$('#q').value));
+document.addEventListener('change', e => { if (e.target.id === 'c-pick') addComposeFiles(e.target); });
 $('#q-clear').addEventListener('click', () => { clearSearch(); $('#q').focus(); });
 
 function clearSearch(reload = true) {
@@ -2235,8 +2923,8 @@ async function undo(back) {
     // An open message shows its tags: read them back from Gmail.
     const r = state.reading;
     if (r) {
-      const m = await api('/messages/' + r.item.id, { params: { format: 'minimal' } });
-      r.item.labelIds = m.labelIds || [];
+      const t = await api('/threads/' + r.item.threadId, { params: { format: 'minimal' } });
+      r.item.labelIds = [...new Set((t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH')).flatMap(m => m.labelIds || []))];
       const box = $('#rtags');
       if (box && state.reading === r) box.innerHTML = tagChips(r.item.labelIds);
     }
@@ -2246,7 +2934,7 @@ async function undo(back) {
 document.addEventListener('click', async e => {
   if (swallowClick) { swallowClick = false; e.preventDefault(); return; }   // the release after a long press or swipe
   // A row left open on Tag closes on any tap outside its button, as in Mail.
-  if (openRow && !e.target.closest('.swipe')) { closeRow(); e.preventDefault(); return; }
+  if (openRow && !e.target.closest('.swipe, .swipe-r')) { closeRow(); e.preventDefault(); return; }
   if (state.select) {
     const row = e.target.closest('#screen ul.list > li[data-id]');
     if (row) { e.preventDefault(); return toggleSelect(row); }
@@ -2289,6 +2977,7 @@ document.addEventListener('click', async e => {
     case 'read': { const it = findItem(li.dataset.id); if (it) openReader(it); return; }
     case 'close-reader': return closeReader();
     case 'show-images': if (state.reading) { state.reading.images = true; renderReaderBody(); } return;
+    case 'toggle-msg': return toggleMsg(el.dataset.msg);
 
     case 'bucket': { const it = findItem(li.dataset.id); if (it) doBucket(it, el, li); return; }
     case 'restore': { const it = findItem(li.dataset.id); if (it) doRestore(it, el, li); return; }
@@ -2296,6 +2985,41 @@ document.addEventListener('click', async e => {
     case 'restore-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + 'Inbox'; doRestore(state.reading.item); } return;
 
     case 'tag-open': if (state.reading) openSheet(state.reading.item); return;
+    case 'row-flag': case 'row-archive': case 'row-trash': {
+      const it = findItem(li.dataset.id);
+      if (!it) return;
+      if (act === 'row-flag') { closeRow(li); return toggleFlag(it); }
+      return throwAway([it], act === 'row-trash' ? 'trash' : 'archive');
+    }
+    case 'reader-trash': if (state.reading) throwAway([state.reading.item], 'trash'); return;
+    case 'reader-reply': {
+      const r = state.reading;
+      if (!r?.msgs?.length) return;
+      const pick = await choiceSheet({ title: r.item.subject, options: [
+        { id: 'reply', label: 'Reply', primary: true }, { id: 'all', label: 'Reply All' }, { id: 'fwd', label: 'Forward' }] });
+      if (pick) openCompose(draftFrom(pick, r));
+      return;
+    }
+    case 'compose-new': return openCompose({ mode: 'new' });
+    case 'compose-send': return sendCompose();
+    case 'compose-attach': return $('#c-pick')?.click();
+    case 'compose-unfile': {
+      const c = state.compose;
+      if (c) { c.files.splice(Number(el.dataset.i), 1); renderComposeFiles(); }
+      return;
+    }
+    case 'open-file': return openFile(el.dataset.msg, Number(el.dataset.i));
+    case 'file-share': return shareFile();
+    case 'compose-cancel': return cancelCompose();
+    case 'choice': {
+      const done = confirmDone;
+      confirmDone = null;
+      closeSheet();
+      if (done) done(el.dataset.id);
+      return;
+    }
+    case 'reader-archive': if (state.reading) throwAway([state.reading.item], 'archive'); return;
+    case 'reader-flag': if (state.reading) toggleFlag(state.reading.item); return;
     case 'swipe-tag': {
       const it = findItem(li.dataset.id);
       closeRow(li);
@@ -2490,7 +3214,8 @@ addEventListener('popstate', () => {
 
 addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (state.select) exitSelect();
+  if (state.compose && !state.sheet) cancelCompose();
+  else if (state.select) exitSelect();
   else if (state.sheet) closeSheet();
   else if (state.reading) closeReader();
 });
@@ -2521,6 +3246,10 @@ function renew() {
   ls.set(K.token + '.ever', '1');
 
   loadProfile();
+  try {
+    const waiting = JSON.parse(ls.get(K.pending, 'null'));
+    if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
+  } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); }).catch(() => {});
   loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
