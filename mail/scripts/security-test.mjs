@@ -180,9 +180,11 @@ if (seen.unsub) {
 let sent = null;
 await ctx.route('https://gmail.googleapis.com/upload/**', route => { sent = route.request(); route.fulfill({ contentType: 'application/json', body: '{"id":"s1","threadId":"t9"}' }); });
 await page.goBack(); await page.waitForTimeout(700);
-for (const sel of ['[data-view="rules"]', '[data-view="marketing"]', '[data-view="inbox"]', '#gear', '#gear', '#find']) {
-  await page.click(sel); await page.waitForTimeout(400);
+for (const name of ['Manage Tags', 'Marketing', 'Promotions', 'Inbox']) {
+  await page.click('#boxbtn'); await page.waitForTimeout(400);
+  await page.click(`#boxmenu .menu button:has(.name:text-is("${name}"))`); await page.waitForTimeout(500);
 }
+for (const sel of ['#gear', '#gear', '#find']) { await page.click(sel); await page.waitForTimeout(400); }
 await page.fill('#q', 'invoice'); await page.press('#q', 'Enter'); await page.waitForTimeout(700);
 await page.click('#fab');
 await page.fill('#c-to', 'friend@example.com'); await page.fill('#c-subj', 'Hi'); await page.fill('#c-body', 'Hello');

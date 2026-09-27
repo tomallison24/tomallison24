@@ -21,10 +21,11 @@ days you never open the app — but only once its Google credentials are set up
 
 ## Finding your way around
 
-- **One row of filters** under the title: **Inbox**, Gmail's own categories
-  (**Primary**, **Promotions**, **Updates** — the inbox as Gmail sorted it),
-  **Flagged**, your tags, **Marketing**, and **Tags** to manage them. It
-  scrolls sideways; the one you're on is tinted.
+- **Tap the title** (**Inbox ⌄**) for the mailbox menu, as in Mail:
+  **Inbox** and **Flagged**; Gmail's own categories (**Primary**,
+  **Promotions**, **Updates** — the inbox as Gmail sorted it); your tags;
+  **Marketing**; and **Manage Tags**. The one you're on is ticked, and the
+  title changes to match. Tap outside it to close it.
 - **Pull the list down** from the top: a short pull shows the search bar, a
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
@@ -209,8 +210,8 @@ straight away — and type a name, say *Sofia's school*:
   (archived mail included), and **all new mail** from it gets the tag — the
   last by a Gmail filter, so it happens whether or not the app is open;
 - tagged mail **stays in the inbox** (only Marketing skips it);
-- the tag joins the row of filters; tap it to see just that tag, and
-  **Inbox** to go back.
+- the tag joins the mailbox menu under the title; choose it to see just that
+  tag, and **Inbox** to go back.
 
 Tagging answers as soon as that email and the rule are done; the older mail
 is tagged in the background, and the toast says how many once it's finished
@@ -229,15 +230,16 @@ Marketing: `news@mail.tmsa.org` tags all of `tmsa.org`, while a Gmail or
 Outlook sender is tagged by exact address only. The orange button on each row
 is **Marketing** (a megaphone), not tagging.
 
-### The Tags tab
+### The Tags page
 
-Tags are ordinary Gmail labels, so they show up in Gmail too. The **Tags** tab
-sorts every label in the mailbox into three groups:
+Tags are ordinary Gmail labels, so they show up in Gmail too. The **Tags** page
+(**Manage Tags** in the menu) sorts every label in the mailbox into three groups:
 
 - **Your tags** — those with a rule, or that you switched on. Only these are
-  chips. Each lists its rules and lets you hide its chip or delete it.
+  in the mailbox menu. Each lists its rules and lets you take it out of the
+  menu or delete it.
 - **Other labels in Gmail** — your own labels that aren't used as tags. Switch
-  a chip on to filter by one.
+  one into the menu to filter by it.
 - **Left by other apps** — folders old mail apps made: `[Imap]/…`,
   `[Mailbox]/…` (Dropbox's Mailbox app), `Deleted Messages` and the like.
   Hidden from the app; **Delete all unused** removes them in one go, after
