@@ -90,6 +90,8 @@
     --accent-ink: #FFFFFF;                    /* text on a tinted button */
     --sel-ink: #FFFFFF;                       /* the chosen filter, over the aurora */
     --danger-ink: #FFFFFF;
+    --accent-text: var(--accent);             /* a coloured label on clear glass */
+    --danger-text: var(--danger);
     /* swipe actions: round glass icons in each action's own colour */
     --gi-mix: 30%;
     --armed-mix: 62%;
@@ -159,6 +161,8 @@
       --accent-ink: #0059C8;
       --sel-ink: #00479E;                     /* #0059C8 measured 4.0:1 over the aurora - below 4.5 */
       --danger-ink: #AE2117;
+      --accent-text: var(--accent-ink);         /* the plain blue and red are under 4.5:1 on near-white */
+      --danger-text: var(--danger-ink);
       --gi-mix: 18%;
       --armed-mix: 34%;
       --armed-ink: initial;                   /* keeps each action's own dark ink */
@@ -954,9 +958,8 @@
      Every neutral button, and the floating bars that hold them, share the
      pinned header's clear glass: round and text buttons, the grey full-width
      buttons, Open in Gmail, a message's toolbar and the select bar (the
-     compose button has the same, with its own fallback). Coloured
-     buttons (Connect, Send, Delete, the select bar's actions) keep their
-     colour, which says what they do. Last in the sheet so it wins. */
+     compose button has the same, with its own fallback). Coloured buttons
+     get it too, below. Last in the sheet so it wins. */
   .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar {
     background: var(--lg-bg); border-color: transparent;
     backdrop-filter: var(--lg-filter); -webkit-backdrop-filter: var(--lg-filter);
@@ -966,12 +969,27 @@
   .rgroup { box-shadow: var(--lg-rim), 0 10px 30px var(--lift-strong); }
   #selbar { box-shadow: var(--lg-rim), 0 -10px 36px var(--lift-strong); }
   .iconbtn:active, .pillbtn:active { background: var(--glass-2); }
+  /* Coloured buttons are clear glass too: the colour moves to the label and a
+     faint rim of the same colour, so Connect and Send still read blue and
+     Sign out and Trash red. */
+  .btn:not(.ghost), .send, #selbar button, #selbar button.danger {
+    background: var(--lg-bg); border-color: transparent;
+    backdrop-filter: var(--lg-filter); -webkit-backdrop-filter: var(--lg-filter);
+    color: var(--tint-text, var(--accent-text));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 42%, transparent), inset 0 1px 1px var(--hi);
+  }
+  .btn.warn, .btn.danger, #selbar button.danger { --tint-text: var(--danger-text); }
+  .btn:not(.ghost) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 42%, transparent), inset 0 1px 1px var(--hi), var(--gb-shadow); }
+  .send, #selbar button { --tint: var(--accent); }
+  #selbar button.danger { --tint: var(--danger); }
   /* where the glass can't blur, or Reduce Transparency is on: near-solid */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar { background: var(--bar-solid); }
+    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar,
+    .btn:not(.ghost), .send, #selbar button, #selbar button.danger { background: var(--bar-solid); }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar {
+    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar,
+    .btn:not(.ghost), .send, #selbar button, #selbar button.danger {
       background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
   }
