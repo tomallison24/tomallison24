@@ -665,7 +665,9 @@
     transition: opacity .25s ease, transform .4s var(--ease), background .2s, border-color .2s, box-shadow .3s;
   }
   #screen.selecting ul.list > li { padding-left: 52px; cursor: pointer; }
-  #screen.selecting .check { opacity: 1; transform: none; }
+  #screen.selecting .check { opacity: 1; transform: none; pointer-events: auto; touch-action: none; }
+  /* a finger-sized grip around each circle: drag down from it to select a run */
+  #screen.selecting .check::before { content: ''; position: absolute; inset: -16px -14px -16px -14px; }
   #screen.selecting .act { opacity: 0; transform: scale(0.5); width: 0; margin-left: -10px; pointer-events: none; }
   .act { transition: transform .2s var(--ease), background .2s, box-shadow .3s, opacity .25s, width .3s var(--ease), margin .3s var(--ease); }
   ul.list > li.sel { background: rgba(10,132,255,0.10); }
@@ -936,7 +938,7 @@
     <svg class="i s" width="18" height="18" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12.5h4"/></svg>
   </button>
   <button id="sel-trash" class="danger" disabled>
-    <svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M4 6.5h16"/><path d="M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1.7"/><path d="M6 6.5l.9 12.6a1.5 1.5 0 0 0 1.5 1.4h7.2a1.5 1.5 0 0 0 1.5-1.4L18 6.5"/><path d="M10 10.5v6M14 10.5v6"/></svg>TrashTrash
+    <svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M4 6.5h16"/><path d="M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1.7"/><path d="M6 6.5l.9 12.6a1.5 1.5 0 0 0 1.5 1.4h7.2a1.5 1.5 0 0 0 1.5-1.4L18 6.5"/><path d="M10 10.5v6M14 10.5v6"/></svg>Trash
   </button>
 </div>
 <div id="toast" class="hide" role="status" aria-live="polite"></div>

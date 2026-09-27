@@ -1073,7 +1073,7 @@ function renderChrome() {
   $('#boxbtn').disabled = !main || !!sel;
   if ($('#boxbtn').disabled) closeBoxMenu(true);
   $('#minititle').textContent = viewName();
-  $('#sub').textContent = sel ? 'Tap to select' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
+  $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);
   screen.classList.toggle('selecting', !!sel);
@@ -2438,6 +2438,74 @@ function toggleSelect(li) {
   li.classList.toggle('sel', sel.has(id));
   renderChrome();
 }
+
+// Drag down (or up) the circles and every row the finger passes takes the
+// first row's new state - all selected, or all cleared - as in Mail. Near the
+// top or bottom of the screen the list scrolls on by itself.
+let brush = null;
+function rowAt(y) {
+  const list = screen.querySelector('ul.list');
+  if (!list) return null;
+  const r = list.getBoundingClientRect();
+  const bar = $('#selbar').getBoundingClientRect();         // over the bar at the bottom: the row just above it
+  const el = document.elementFromPoint(r.left + 60, Math.max(4, Math.min((bar.top || innerHeight) - 4, y)));
+  return el?.closest('#screen ul.list > li[data-id]') || null;
+}
+function paintTo(y) {
+  const p = brush, li = rowAt(y);
+  if (!p || !li) return;
+  const all = [...screen.querySelectorAll('ul.list > li[data-id]')];
+  const a = all.indexOf(p.last), b = all.indexOf(li);
+  if (a < 0 || b < 0) return;
+  for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+    const row = all[i], id = row.dataset.id;
+    if (p.on) state.select.add(id); else state.select.delete(id);
+    row.classList.toggle('sel', p.on);
+  }
+  p.last = li;
+  if (!p.frame) p.frame = requestAnimationFrame(() => { p.frame = 0; renderChrome(); });
+}
+function autoScroll() {
+  const p = brush;
+  if (!p || !p.started) return;
+  const edge = 90, bottom = innerHeight - 110;          // the select bar sits at the bottom
+  const v = p.y < edge ? -(edge - p.y) / 4 : p.y > bottom ? (p.y - bottom) / 4 : 0;
+  if (v) { scrollBy(0, Math.max(-24, Math.min(24, v))); paintTo(p.y); }
+  p.raf = requestAnimationFrame(autoScroll);
+}
+screen.addEventListener('pointerdown', e => {
+  if (!state.select || e.button > 0) return;
+  const check = e.target.closest('.check'), li = check?.closest('ul.list > li[data-id]');
+  if (!li) return;
+  brush = { id: e.pointerId, y0: e.clientY, y: e.clientY, first: li, last: li, started: false, on: true, raf: 0, frame: 0 };
+  try { check.setPointerCapture(e.pointerId); } catch {}
+});
+screen.addEventListener('pointermove', e => {
+  const p = brush;
+  if (!p || e.pointerId !== p.id) return;
+  p.y = e.clientY;
+  if (!p.started) {
+    if (Math.abs(e.clientY - p.y0) < 6) return;
+    p.started = true;
+    p.on = !state.select.has(p.first.dataset.id);        // the first row decides: select, or clear
+    paintTo(p.y0);
+    p.raf = requestAnimationFrame(autoScroll);
+  }
+  paintTo(e.clientY);
+});
+const endPaint = e => {
+  const p = brush;
+  if (!p || e.pointerId !== p.id) return;
+  brush = null;
+  cancelAnimationFrame(p.raf);
+  if (p.started) {
+    swallowClick = true;                                  // the lift is not a tap on the last row
+    setTimeout(() => { swallowClick = false; }, 350);
+    renderChrome();
+  }
+};
+screen.addEventListener('pointerup', endPaint);
+screen.addEventListener('pointercancel', endPaint);
 
 function selectedItems() {
   const items = state.lists[currentList().key]?.items || [];
