@@ -1025,11 +1025,10 @@ function boxMenuHTML() {
 function openBoxMenu() {
   const el = $('#boxmenu'), btn = $('#boxbtn');
   if (btn.disabled) return;
-  if (scrollY > 0) scrollTo({ top: 0, behavior: 'instant' });   // opened from the compact bar
   el.innerHTML = boxMenuHTML();
   el.classList.remove('hide', 'leaving');
-  // Just under the title and the account line, so neither is covered.
-  const r = btn.getBoundingClientRect(), top = Math.round($('#sub').getBoundingClientRect().bottom + 8);
+  // Just under the header, so the title and account line stay in view.
+  const r = btn.getBoundingClientRect(), top = Math.round($('header').getBoundingClientRect().bottom + 6);
   const menu = el.querySelector('.menu');
   menu.style.left = Math.max(16, r.left - 4) + 'px';
   menu.style.top = top + 'px';
@@ -1072,7 +1071,6 @@ function renderChrome() {
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
   $('#boxbtn').disabled = !main || !!sel;
   if ($('#boxbtn').disabled) closeBoxMenu(true);
-  $('#minititle').textContent = viewName();
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);
@@ -2759,15 +2757,15 @@ $('#q').addEventListener('blur', () => setTimeout(() => {
   if (!$('#q').value && !state.search && document.activeElement !== $('#q')) { state.showSearch = false; renderChrome(); }
 }, 200));
 
-// The large title gives way to the compact bar once it has scrolled off.
-addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 56), { passive: true });
+// The header stays at the top; once the list moves under it, it turns compact.
+addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 8), { passive: true });
 
 // Pull to refresh, as in Mail: pull the list down from the top and let go. A
 // short pull shows the search bar; a longer one also fetches the list afresh.
 const PULL_SEARCH = 28, PULL_REFRESH = 70;
 let pull = null;
 const pullable = t => !state.select && !state.reading && !state.compose && !state.sheet && getToken() &&
-  state.view !== 'settings' && !boxMenuOpen() && !t.closest('#boxmenu, input, textarea, #sheet, #reader, #compose, #selbar, #toast, #minibar');
+  state.view !== 'settings' && !boxMenuOpen() && !t.closest('#boxmenu, input, textarea, #sheet, #reader, #compose, #selbar, #toast');
 function pullStart(y, t) {
   if (scrollY > 0 || !pullable(t)) return;
   pull = { y0: y, d: 0, on: false };
@@ -3081,7 +3079,6 @@ document.addEventListener('click', async e => {
     }
 
     case 'badge': return toggleBadge();
-    case 'to-top': return scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     case 'box-menu': return boxMenuOpen() ? closeBoxMenu() : openBoxMenu();
     case 'box-close': return closeBoxMenu();
     case 'box-view': {
