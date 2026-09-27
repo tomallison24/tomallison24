@@ -1111,17 +1111,12 @@ function viewSetup() {
 }
 
 function viewSignIn() {
-  const problem = clientIdProblem(clientId());
   return '<div class="card panel signin">' +
     '<div class="hero">' + ICON.tag + '</div>' +
-    '<p><strong>Connect Gmail</strong> to triage your inbox. One tap files a sender, everything from their domain follows, and the bucket empties itself after ' + settings.days + ' days.</p>' +
     (state.error ? '<p class="note bad">' + esc(state.error) + '</p>' : '') +
     (state.notice ? '<p class="note">Google couldn’t renew your sign-in on its own this time — one tap and you’re back.</p>' : '') +
     '<button class="btn" data-act="signin">Connect Gmail</button>' +
     '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
-    '<p class="note">Google signs a browser app in for an hour at a time. After that the app renews it by itself, usually without you seeing anything. Permissions: read and label mail, and manage filters. Nothing is stored off this device.</p>' +
-    '<p class="note' + (problem ? ' bad' : '') + '">Client ID on this device:<br><code class="url">' + esc(clientId()) + '</code>' +
-      (problem ? '<br>' + esc(problem) : '<br>If Google says <em>invalid_client</em>, this does not match the one in Google Cloud.') + '</p>' +
     (BUILT_IN_CLIENT_ID ? '' : '<button class="btn ghost" data-act="forget-cid">Change client ID</button>') +
   '</div>';
 }
