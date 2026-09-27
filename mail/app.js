@@ -1,5 +1,15 @@
 "use strict";
 
+// Refuse to run inside another page's frame. A hostile site could otherwise
+// lay the app, invisible, under its own buttons and steer your taps onto Trash
+// or Block (clickjacking). The proper guard is a frame-ancestors header, which
+// GitHub Pages can't send; this does the same job from inside the page. The
+// home-screen app is never framed, so it never sees this.
+if (window.top !== window.self) {
+  document.body.textContent = 'Mail can’t be opened inside another page.';
+  throw new Error('Mail refuses to run inside a frame');
+}
+
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
@@ -135,8 +145,20 @@ function signIn(opts = {}) {
   location.href = u.toString();
 }
 
+// Sign Out means signed out: Google cancels the token now rather than at the
+// end of its hour, and the phone forgets the account. Clearing "ever" matters
+// most - while it was set, the next open quietly signed straight back in.
+// Google's answer can't be read from here (no-cors), so Sign Out goes ahead
+// whether or not it arrives; the token still dies within the hour.
 function signOut() {
-  ls.del(K.token); ls.del(K.state); ls.del(K.lastAuth);
+  const tok = getToken()?.t;
+  if (tok) fetch('https://oauth2.googleapis.com/revoke', {
+    method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', keepalive: true,
+    body: new URLSearchParams({ token: tok }),
+  }).catch(() => {});
+  for (const k of [K.token, K.token + '.ever', K.state, K.lastAuth, K.silent, K.hint, K.pending, K.unsubbed]) ls.del(k);
+  rowCache.clear();
+  try { navigator.clearAppBadge?.().catch(() => {}); } catch {}
   state.me = null;
   render();
 }
@@ -518,7 +540,20 @@ function emailDoc(html, images) {
   for (const el of doc.querySelectorAll('*')) {
     for (const a of [...el.attributes]) if (/^on|^ping$/i.test(a.name)) el.removeAttribute(a.name);
   }
-  for (const a of doc.querySelectorAll('a[href]')) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  // Links keep to the web, email and phone numbers. Anything else - javascript:,
+  // data:, an address relative to nothing - loses its link and stays as text.
+  // The address is read as a browser would read it, so tricks like
+  // "java\tscript:" or leading spaces don't get past.
+  for (const a of doc.querySelectorAll('a, area')) {
+    for (const name of ['href', 'xlink:href']) {
+      const v = a.getAttribute(name);
+      if (v == null) continue;
+      let ok = false;
+      try { ok = /^(?:https?|mailto|tel):$/.test(new URL(v).protocol); } catch {}
+      if (!ok) a.removeAttribute(name);
+    }
+    if (a.hasAttribute('href')) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  }
   const policy = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:" + (images ? ' https: http:' : '');
   const bodyAttrs = [...(doc.body?.attributes || [])].map(a => ' ' + a.name + '="' + esc(a.value) + '"').join('');
   return '<!doctype html><html><head><meta charset="utf-8">' +

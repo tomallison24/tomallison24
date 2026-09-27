@@ -48,7 +48,8 @@ What stands between a hostile email and your mailbox:
   scripts and no forms; scripts, forms, frames, plugins and `on…` handlers are
   stripped as well, and the frame's own policy loads nothing from the network
   until you tap **Show** (so tracking pixels stay dark). Links open in a new
-  tab with no referrer and no way back into the app.
+  tab with no referrer and no way back into the app, and only web, email and
+  phone links survive: `javascript:`, `data:` and the like lose their link.
 - **Only the app's own code runs on the page.** `index.html` carries a Content
   Security Policy: scripts come from `app.js` and nowhere else — nothing
   inline, nothing from another site. So even text that slipped through
@@ -61,6 +62,14 @@ What stands between a hostile email and your mailbox:
   refresh token on the phone. Each sign-in carries a random `state` value
   that must come back unchanged, and the token is wiped from the address bar
   at once.
+- **It won't run inside another page.** A hostile site could otherwise lay
+  the app invisibly under its own buttons and steer taps onto Trash or Block
+  (clickjacking). Framed, it shows one line of text and does nothing.
+- **Sign Out means signed out.** It asks Google to cancel the token at once
+  (rather than leaving it to run out within the hour), and the phone forgets
+  the account, any unsent message and the unsubscribe list. The app no longer
+  signs itself back in the next time it's opened — before, it did, silently.
+  Expect Google to ask for permission again the next time you connect.
 - **Nothing about your mail is stored.** The offline cache holds only the
   app's own files; mail is kept in memory for the visit.
 - **Unsubscribing can't be turned against you.** It is only offered when
@@ -73,15 +82,21 @@ posts to the sender's own server). Narrowing those wouldn't add much: with
 scripts locked to `app.js`, nothing untrusted can make requests in the first
 place.
 
-A policy set in the page can't stop other sites framing it
-(`frame-ancestors`); that needs a response header, which GitHub Pages can't
-send. Cloudflare Pages can, through a `_headers` file.
+The frame guard is done in script because the proper tool, a
+`frame-ancestors` response header, is something GitHub Pages can't send.
+Cloudflare Pages can, through a `_headers` file.
+
+The GitHub workflows pin every action to an exact commit, and `wrangler` to an
+exact release, since those jobs can read the repository's secrets (the Gmail
+refresh token, the Cloudflare token) and a version tag can be moved to new
+code.
 
 `node mail/scripts/security-test.mjs` drives all of this in
 headless Chromium against a stubbed Gmail: an HTML attachment that read the
-token before the fix can't after it, and the list, reading, **Show**,
-attachments, unsubscribe, search, settings and sending were all checked for
-anything the policy blocks. Safari on an iPhone was not tested (see *What I
+token before the fix can't after it; hostile links are stripped; a framed copy
+does nothing; Sign Out cancels the token and stays signed out; and the list,
+reading, **Show**, attachments, unsubscribe, search, settings and sending were
+all checked for anything the policy blocks. Safari on an iPhone was not tested (see *What I
 could not verify*).
 
 ## Light and dark
@@ -467,6 +482,12 @@ secondary sources and my own testing instead:
   directives, but I could only run Chromium here — including the part where a
   file opened from the app inherits the policy. The attachment fix doesn't
   rely on that: HTML and SVG files never get **Open** in the first place;
+- **Google's token-cancelling endpoint** (`oauth2.googleapis.com/revoke`)
+  as called from a browser, and whether cancelling one token also withdraws
+  the app's permission (so Google asks again on the next connect). Google's
+  developer pages are blocked here. The request is sent without waiting for
+  an answer, so if Google ignored it Sign Out would still work — the token
+  would just live out its hour;
 - how **iOS home-screen apps handle the OAuth redirect**. The app uses a
   full-page redirect rather than Google's popup-based library precisely
   because popups can't hand a token back to a standalone home-screen app, but
