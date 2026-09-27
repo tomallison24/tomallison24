@@ -34,11 +34,70 @@ days you never open the app — but only once its Google credentials are set up
 - Rows show the sender, subject and preview, plus your own tags — no buttons
   and no domain chips; the actions live under the swipes.
 
-- **No build step, no server, no dependencies.** `index.html` is the whole
-  app; `sw.js` keeps the shell working offline. Gmail is never cached — a
+- **No build step, no server, no dependencies.** `index.html` is the page
+  and `app.js` everything it does; `sw.js` keeps the shell working offline. Gmail is never cached — a
   cached mailbox would be stale *and* a copy of private mail in a cache.
 - **Nothing leaves the phone.** The app talks straight to the Gmail API from
   Safari. There is no backend to hold a token.
+
+## Security
+
+What stands between a hostile email and your mailbox:
+
+- **Nothing in an email can run.** Messages show in a sandboxed frame with no
+  scripts and no forms; scripts, forms, frames, plugins and `on…` handlers are
+  stripped as well, and the frame's own policy loads nothing from the network
+  until you tap **Show** (so tracking pixels stay dark). Links open in a new
+  tab with no referrer and no way back into the app, and only web, email and
+  phone links survive: `javascript:`, `data:` and the like lose their link.
+- **Only the app's own code runs on the page.** `index.html` carries a Content
+  Security Policy: scripts come from `app.js` and nowhere else — nothing
+  inline, nothing from another site. So even text that slipped through
+  unescaped couldn't act as the app or read the sign-in. A file opened from
+  the app inherits the same policy.
+- **Attachments can't pose as the app.** Only pictures and PDFs have
+  **Open**; anything else is held as plain bytes and handed to the share sheet
+  (see *Attachments*).
+- **Sign-in is short-lived.** Google's token lasts an hour and there is no
+  refresh token on the phone. Each sign-in carries a random `state` value
+  that must come back unchanged, and the token is wiped from the address bar
+  at once.
+- **It won't run inside another page.** A hostile site could otherwise lay
+  the app invisibly under its own buttons and steer taps onto Trash or Block
+  (clickjacking). Framed, it shows one line of text and does nothing.
+- **Sign Out means signed out.** It asks Google to cancel the token at once
+  (rather than leaving it to run out within the hour), and the phone forgets
+  the account, any unsent message and the unsubscribe list. The app no longer
+  signs itself back in the next time it's opened — before, it did, silently.
+  Expect Google to ask for permission again the next time you connect.
+- **Nothing about your mail is stored.** The offline cache holds only the
+  app's own files; mail is kept in memory for the visit.
+- **Unsubscribing can't be turned against you.** It is only offered when
+  Gmail confirmed the sender (DMARC or DKIM), and the one-click request goes
+  without cookies or referrer.
+
+The policy allows images from any `https:`/`http:` address (emails' images
+after **Show**) and requests to any `https:` address (one-click unsubscribe
+posts to the sender's own server). Narrowing those wouldn't add much: with
+scripts locked to `app.js`, nothing untrusted can make requests in the first
+place.
+
+The frame guard is done in script because the proper tool, a
+`frame-ancestors` response header, is something GitHub Pages can't send.
+Cloudflare Pages can, through a `_headers` file.
+
+The GitHub workflows pin every action to an exact commit, and `wrangler` to an
+exact release, since those jobs can read the repository's secrets (the Gmail
+refresh token, the Cloudflare token) and a version tag can be moved to new
+code.
+
+`node mail/scripts/security-test.mjs` drives all of this in
+headless Chromium against a stubbed Gmail: an HTML attachment that read the
+token before the fix can't after it; hostile links are stripped; a framed copy
+does nothing; Sign Out cancels the token and stays signed out; and the list,
+reading, **Show**, attachments, unsubscribe, search, settings and sending were
+all checked for anything the policy blocks. Safari on an iPhone was not tested (see *What I
+could not verify*).
 
 ## Light and dark
 
@@ -266,6 +325,13 @@ download it, then **Share or Save…** (the iOS share sheet: Save to Files,
 Photos, AirDrop…) or **Open**. Pictures get a preview. Nothing is downloaded
 until you tap.
 
+**Open** is there for pictures and PDFs only. A file opened from the app counts
+as part of the app's own site, so an HTML or SVG attachment opened that way
+could run the sender's code as the app and read your Gmail sign-in. Everything
+else — Word, Excel, web pages — goes through **Share or Save…** (Save to Files
+opens it from there). The type a file claims is the sender's word, so the app
+checks it against that short list rather than trusting it.
+
 **Add Attachment** in a new message picks files from the phone; **Forward**
 keeps the original's files (tap × to drop one). Attachments can total
 **25 MB**. A file added from the phone survives Undo Send but not the app
@@ -412,6 +478,16 @@ secondary sources and my own testing instead:
 - how **Share or Save…** and **Open** behave for files in a home-screen app.
   The share sheet is the route iOS supports for handing a file on; **Open**
   opens the file in a new view, which I could not try on an iPhone;
+- the **Content Security Policy on Safari**. WebKit supports these
+  directives, but I could only run Chromium here — including the part where a
+  file opened from the app inherits the policy. The attachment fix doesn't
+  rely on that: HTML and SVG files never get **Open** in the first place;
+- **Google's token-cancelling endpoint** (`oauth2.googleapis.com/revoke`)
+  as called from a browser, and whether cancelling one token also withdraws
+  the app's permission (so Google asks again on the next connect). Google's
+  developer pages are blocked here. The request is sent without waiting for
+  an answer, so if Google ignored it Sign Out would still work — the token
+  would just live out its hour;
 - how **iOS home-screen apps handle the OAuth redirect**. The app uses a
   full-page redirect rather than Google's popup-based library precisely
   because popups can't hand a token back to a standalone home-screen app, but
