@@ -316,7 +316,7 @@ async function refreshFilters(force) {
   return filtersCache;
 }
 
-// Your choice, per device, to show or hide a label as a chip.
+// Your choice, per device, to show or hide a label in the mailbox menu.
 function chipPrefs() { try { return JSON.parse(ls.get(K.chips, '{}')) || {}; } catch { return {}; } }
 function setChipPref(id, show) {
   const p = chipPrefs();
@@ -324,7 +324,7 @@ function setChipPref(id, show) {
   ls.set(K.chips, JSON.stringify(p));
 }
 
-// The chips: tags that have a rule, plus any label you switched on - never,
+// The menu's tags: those that have a rule, plus any label you switched on - never,
 // unless you ask, a leftover from another app.
 // Flagged is Gmail's STARRED, always offered first, the way Mail lists Flagged.
 const FLAGGED = { id: 'STARRED', name: 'Flagged', type: 'flag' };
@@ -778,7 +778,6 @@ async function removeLabels(list) {
   }
   filtersCache = null;
   labelsPromise = null;
-  chipSig = null;
   state.lists = {};
   if (state.tag && list.some(l => l.id === state.tag)) state.tag = null;
   await Promise.all([refreshLabels(true), refreshFilters(true)]);
@@ -829,7 +828,7 @@ async function sweep() {
 // ---------------------------------------------------------------------------
 const state = {
   view: 'inbox',   // inbox | marketing | rules | settings
-  tag: null,       // a tag's label id while its chip is on
+  tag: null,       // the tag (or category, or Flagged) chosen in the mailbox menu
   search: '',      // while set, search results take the list's place
   lists: {},       // key -> { items, next, error, q, labelIds }
   rules: null, rulesError: null,
@@ -841,7 +840,7 @@ const state = {
 const screen = $('#screen');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Gmail's own sorting of the inbox (its category tabs), offered as filters.
+// Gmail's own sorting of the inbox (its category tabs), offered in the menu.
 const CATEGORIES = [
   { id: 'cat:primary', name: 'Primary', label: 'CATEGORY_PERSONAL' },
   { id: 'cat:promotions', name: 'Promotions', label: 'CATEGORY_PROMOTIONS' },
@@ -984,42 +983,73 @@ function rowHTML(item, i, key) {
   '</li>';
 }
 
-const lastCount = {};
-function setCount(sel, n) {
-  const el = $(sel);
-  if (!el) return;
-  el.textContent = n == null ? '' : String(n);
-  if (lastCount[sel] != null && n != null && n !== lastCount[sel]) {
-    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-  }
-  lastCount[sel] = n;
+// The mailbox menu: tap the big title, as in Mail. Inbox and Flagged, Gmail's
+// categories, your tags, then Marketing and the Tags page - one list in place
+// of a row of chips that ran off the side of the screen.
+const MENU_ICON = {
+  inbox: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3.5 13.5l2.2-7.4a1.5 1.5 0 0 1 1.4-1.1h9.8a1.5 1.5 0 0 1 1.4 1.1l2.2 7.4V18a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2z"/><path d="M3.5 13.5h4.8l1.2 2.2h5l1.2-2.2h4.8"/></svg>',
+  'cat:primary': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5a7 7 0 0 1 14 0"/></svg>',
+  'cat:promotions': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M6 18L18 6"/><circle cx="7.5" cy="7.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/></svg>',
+  'cat:updates': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.7v.1"/></svg>',
+  tick: '<svg class="i s bold" width="16" height="16" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+};
+
+// What the title says: the mailbox or tag on screen.
+function viewName() {
+  if (state.view === 'settings') return 'Settings';
+  if (state.view === 'rules') return 'Tags';
+  if (state.view === 'marketing') return settings.label;
+  return catOf(state.tag)?.name || (state.tag === 'STARRED' ? 'Flagged' : labelsById.get(state.tag)?.name) || 'Inbox';
 }
 
-// Tag chips under the tabs. Rebuilt only when the tags themselves change, so
-// picking one doesn't throw the row's scroll position back to the start.
-let chipSig = null;
-function renderChips(show) {
-  const box = $('#chips'), list = show ? [...CATEGORIES, FLAGGED, ...chipTags()] : [];
-  const sig = list.map(l => l.id + ':' + l.name).join('|');
-  if (sig !== chipSig) {
-    chipSig = sig;
-    const chip = (id, name, h) => '<button class="chip2" data-act="chip" data-id="' + esc(id) + '"' +
-      (h == null ? '' : ' style="--h:' + h + '"') + '>' + (h == null ? '' : '<i></i>') + esc(name) + '</button>';
-    box.innerHTML = list.map(l => chip(l.id, l.name, catOf(l.id) ? null : l === FLAGGED ? 36 : hue(l.name))).join('');
-  }
-  for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', state.view === 'inbox' && b.dataset.id === (state.tag || ''));
+function boxMenuHTML() {
+  const inbox = state.view === 'inbox';
+  const row = (act, attrs, name, on, right) => '<button role="menuitemradio" aria-checked="' + on + '" data-act="' + act + '" ' + attrs + '>' +
+    '<span class="tick">' + MENU_ICON.tick + '</span><span class="name">' + esc(name) + '</span>' + right + '</button>';
+  const count = n => n ? '<span class="cnt">' + n + '</span>' : '';
+  const ico = svg => '<span class="ico">' + svg + '</span>';
+  const tags = chipTags();
+  return '<div class="catch" data-act="box-close"></div><div class="menu" role="menu" aria-label="Mailboxes">' +
+    row('chip', 'data-id=""', 'Inbox', inbox && !state.tag, count(state.lists.inbox?.items?.length) + ico(MENU_ICON.inbox)) +
+    row('chip', 'data-id="STARRED"', 'Flagged', inbox && state.tag === 'STARRED', ico(ICON.flag)) +
+    '<hr>' +
+    CATEGORIES.map(c => row('chip', 'data-id="' + c.id + '"', c.name, inbox && state.tag === c.id, ico(MENU_ICON[c.id]))).join('') +
+    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '" style="--h:' + hue(l.name) + '"',
+      l.name, inbox && state.tag === l.id, ico('<i class="dot"></i>'))).join('') : '') +
+    '<hr>' +
+    row('box-view', 'data-view="marketing"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt)) +
+    row('box-view', 'data-view="rules"', 'Manage Tags', state.view === 'rules', ico(ICON.label)) +
+  '</div>';
 }
 
-// Keeps the chosen filter in view as the row scrolls sideways.
-function revealFilter() {
-  const row = $('#tabs'), on = row.querySelector('.chip2.on, [role=tab][aria-selected="true"]');
-  if (!on) return;
-  const l = on.offsetLeft - 14, r = on.offsetLeft + on.offsetWidth + 14;
-  if (l < row.scrollLeft) row.scrollTo({ left: l, behavior: reduced ? 'auto' : 'smooth' });
-  else if (r > row.scrollLeft + row.clientWidth) row.scrollTo({ left: r - row.clientWidth, behavior: reduced ? 'auto' : 'smooth' });
+function openBoxMenu() {
+  const el = $('#boxmenu'), btn = $('#boxbtn');
+  if (btn.disabled) return;
+  if (scrollY > 0) scrollTo({ top: 0, behavior: 'instant' });   // opened from the compact bar
+  el.innerHTML = boxMenuHTML();
+  el.classList.remove('hide', 'leaving');
+  // Just under the title and the account line, so neither is covered.
+  const r = btn.getBoundingClientRect(), top = Math.round($('#sub').getBoundingClientRect().bottom + 8);
+  const menu = el.querySelector('.menu');
+  menu.style.left = Math.max(16, r.left - 4) + 'px';
+  menu.style.top = top + 'px';
+  menu.style.maxHeight = 'calc(100dvh - ' + (top + 16) + 'px - env(safe-area-inset-bottom))';
+  btn.setAttribute('aria-expanded', 'true');
+  menu.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
 }
 
-// Everything around the list: header, tabs, chips, and the select bar.
+function closeBoxMenu(instant) {
+  const el = $('#boxmenu');
+  if (el.classList.contains('hide')) return;
+  $('#boxbtn').setAttribute('aria-expanded', 'false');
+  const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  if (instant || reduced) return finish();
+  el.classList.add('leaving');
+  setTimeout(finish, 180);
+}
+const boxMenuOpen = () => !$('#boxmenu').classList.contains('hide');
+
+// Everything around the list: the header, its title menu, and the select bar.
 function renderChrome() {
   const signedIn = !!getToken() && !!clientId();
   const main = signedIn && state.view !== 'settings';
@@ -1029,7 +1059,6 @@ function renderChrome() {
   const sel = state.select;
   if (sel) for (const id of [...sel]) if (!items.some(it => it.id === id)) sel.delete(id);   // rows that went away
 
-  $('#tabs').classList.toggle('hide', !main || !!sel);
   const searching = !!(state.showSearch || state.search);
   $('#search').classList.toggle('hide', !main || !!sel || !searching);
   $('#find').classList.toggle('hide', !main || !!sel || searching || state.view === 'rules');
@@ -1040,17 +1069,11 @@ function renderChrome() {
   $('#selall').classList.toggle('hide', !sel);
   const all = sel && items.length && items.every(it => sel.has(it.id));
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
-  $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : 'Mail';
-  $('#minititle').textContent = state.view === 'settings' ? 'Settings' : state.view === 'rules' ? 'Tags'
-    : state.view === 'marketing' ? settings.label : catOf(state.tag)?.name || (state.tag === 'STARRED' ? 'Flagged' : labelsById.get(state.tag)?.name) || 'Inbox';
-  $('#sub').textContent = sel ? 'Tap to select'
-    : state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
-  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t.dataset.view === state.view && !(t.dataset.view === 'inbox' && state.tag)));
-  renderChips(main && !sel);
-  revealFilter();
-  setCount('#c-inbox', state.lists.inbox?.items?.length);
-  setCount('#c-mkt', state.lists.mkt?.items?.length);
-  setCount('#c-rules', signedIn ? chipTags().length || null : null);
+  $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
+  $('#boxbtn').disabled = !main || !!sel;
+  if ($('#boxbtn').disabled) closeBoxMenu(true);
+  $('#minititle').textContent = viewName();
+  $('#sub').textContent = sel ? 'Tap to select' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);
   screen.classList.toggle('selecting', !!sel);
@@ -1081,7 +1104,6 @@ function paint(html) {
   screen.innerHTML = html;
   openRow = null;
   freshFrom = Infinity;
-  movePill();
   $('#foot').innerHTML = footHTML();
 }
 
@@ -1178,7 +1200,7 @@ function viewRules() {
   const chipBtn = l => {
     const on = shown.has(l.id);
     return '<button class="mini' + (on ? ' on' : '') + '" data-act="chip-pref" data-id="' + esc(l.id) + '" aria-pressed="' + on + '">' +
-      ICON.eye + (on ? 'Chip on' : 'Chip off') + '</button>';
+      ICON.eye + (on ? 'In menu' : 'Not in menu') + '</button>';
   };
   const delBtn = (l, what) => '<button class="act warn" data-act="del-label" data-id="' + esc(l.id) + '" aria-label="Delete ' + what + ' ' + esc(l.name) + '">' + ICON.bin + '</button>';
 
@@ -1201,7 +1223,7 @@ function viewRules() {
 
   const others = tags().filter(l => !yours.includes(l));
   const otherCard = others.length ? '<div class="card"><h2>Other labels in Gmail</h2>' +
-    '<p class="cnote">Not used as tags, so not shown as chips. Switch one on to filter by it.</p><ul class="list">' +
+    '<p class="cnote">Not used as tags, so not in the mailbox menu. Switch one on to filter by it.</p><ul class="list">' +
     others.map(l => labelRow(l, esc(size(l.id) || '&nbsp;'), '<span class="gtools">' + chipBtn(l) + delBtn(l, 'label') + '</span>')).join('') +
     '</ul></div>' : '';
 
@@ -1254,15 +1276,6 @@ function blockedHTML() {
     (list.length ? '<p class="note">Unblocking lets their new mail in. Anything already in the Trash stays there until Gmail empties it after 30 days.</p>' : '');
 }
 
-// The sliding pill behind the selected tab.
-function movePill() {
-  const tabs = $('#tabs'), pill = $('#pill');
-  if (!pill || tabs.classList.contains('hide')) return;
-  const on = tabs.querySelector('[aria-selected="true"]');
-  if (!on) return;
-  pill.style.width = on.offsetWidth + 'px';
-  pill.style.transform = 'translateX(' + on.offsetLeft + 'px)';
-}
 
 // ---------------------------------------------------------------------------
 // The message page
@@ -2391,7 +2404,7 @@ async function loadProfile() {
   } catch {}
 }
 
-// Shows whatever the tabs, chips and search now point at.
+// Shows whatever the mailbox menu and search now point at.
 function go({ force } = {}) {
   render();
   if (state.view === 'rules') loadRules({ force });
@@ -2641,16 +2654,6 @@ function hintSwipe() {
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
-$('#tabs').addEventListener('click', e => {
-  const b = e.target.closest('[role=tab]');
-  if (!b) return;
-  const order = ['inbox', 'marketing', 'rules'];
-  screen.classList.toggle('back', order.indexOf(b.dataset.view) < order.indexOf(state.view));
-  if (b.dataset.view === 'inbox') state.tag = null;       // Inbox is a filter of its own now
-  state.view = b.dataset.view;
-  clearSearch(false);
-  go();
-});
 
 $('#search').addEventListener('submit', e => {
   e.preventDefault();
@@ -2696,7 +2699,7 @@ addEventListener('scroll', () => document.body.classList.toggle('scrolled', scro
 const PULL_SEARCH = 28, PULL_REFRESH = 70;
 let pull = null;
 const pullable = t => !state.select && !state.reading && !state.compose && !state.sheet && getToken() &&
-  state.view !== 'settings' && !t.closest('#tabs, input, textarea, #sheet, #reader, #compose, #selbar, #toast, #minibar');
+  state.view !== 'settings' && !boxMenuOpen() && !t.closest('#boxmenu, input, textarea, #sheet, #reader, #compose, #selbar, #toast, #minibar');
 function pullStart(y, t) {
   if (scrollY > 0 || !pullable(t)) return;
   pull = { y0: y, d: 0, on: false };
@@ -2823,6 +2826,7 @@ document.addEventListener('click', async e => {
   if (!el) return;
   const act = el.dataset.act;
   const li = el.closest('li');
+  if (act !== 'box-menu' && el.closest('#boxmenu')) closeBoxMenu();
 
   switch (act) {
     case 'save-cid': {
@@ -2842,7 +2846,7 @@ document.addEventListener('click', async e => {
       const name = ($('#lab').value || 'Marketing').trim();
       const changed = name !== settings.label;
       settings.days = d; settings.label = name;
-      if (changed) { labelsPromise = null; state.lists = {}; state.rules = null; chipSig = null; }
+      if (changed) { labelsPromise = null; state.lists = {}; state.rules = null; }
       toast('Saved');
       state.view = 'inbox';
       return go({ force: changed });
@@ -2927,10 +2931,9 @@ document.addEventListener('click', async e => {
     case 'chip-pref': {
       const id = el.dataset.id, on = chipTags().some(l => l.id === id);
       setChipPref(id, !on);
-      chipSig = null;
-      quietOnce = true;
+          quietOnce = true;
       render();
-      toast(on ? 'Chip hidden' : 'Chip shown under the Inbox tab');
+      toast(on ? 'Hidden from the mailbox menu' : 'Shown in the mailbox menu');
       return;
     }
     case 'del-label': {
@@ -3011,6 +3014,16 @@ document.addEventListener('click', async e => {
 
     case 'badge': return toggleBadge();
     case 'to-top': return scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    case 'box-menu': return boxMenuOpen() ? closeBoxMenu() : openBoxMenu();
+    case 'box-close': return closeBoxMenu();
+    case 'box-view': {
+      const order = ['inbox', 'marketing', 'rules'];
+      screen.classList.toggle('back', order.indexOf(el.dataset.view) < order.indexOf(state.view));
+      state.tag = null;
+      state.view = el.dataset.view;
+      clearSearch(false);
+      return go();
+    }
     case 'chip':
       state.tag = el.dataset.id || null;
       state.view = 'inbox';
@@ -3047,8 +3060,7 @@ document.addEventListener('click', async e => {
         state.rules = state.rules.filter(f => f.id !== id);
         quietOnce = true;
         render();
-        chipSig = null;
-        toast('Rule deleted. Mail already tagged keeps its tag.');
+              toast('Rule deleted. Mail already tagged keeps its tag.');
       } catch (err) { el.disabled = false; failed(err); }
       return;
     }
@@ -3064,8 +3076,7 @@ document.addEventListener('click', async e => {
         const bucketing = name.toLowerCase() === settings.label.toLowerCase();
         const back = await applyRule(rule, name, { skipInbox: bucketing });
         state.lists = {};
-        chipSig = null;
-        toast('Tag added: ' + rule.label + ' → ' + back.labelName + ' · tagging their older mail…', { ms: 60000 });
+              toast('Tag added: ' + rule.label + ' → ' + back.labelName + ' · tagging their older mail…', { ms: 60000 });
         await loadRules({ force: true });
         finish(back, () => 'Tag added: ' + rule.label + ' → ' + back.labelName + (back.added.length ? ' · ' + back.added.length + ' messages' : ''),
           () => { if (state.view === 'rules') loadRules({ force: true }); });
@@ -3108,7 +3119,8 @@ addEventListener('popstate', () => {
 
 addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (state.compose && !state.sheet) cancelCompose();
+  if (boxMenuOpen()) closeBoxMenu();
+  else if (state.compose && !state.sheet) cancelCompose();
   else if (state.select) exitSelect();
   else if (state.sheet) closeSheet();
   else if (state.reading) closeReader();
@@ -3144,7 +3156,7 @@ function renew() {
     const waiting = JSON.parse(ls.get(K.pending, 'null'));
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
-  Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); bringBackReminders(); }).catch(() => {});
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); }).catch(() => {});
   loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
@@ -3165,7 +3177,7 @@ document.addEventListener('pointerdown', e => {
   b.style.setProperty('--y', (e.clientY - r.top) + 'px');
 }, { passive: true });
 
-addEventListener('resize', movePill);
+addEventListener('resize', () => closeBoxMenu(true));
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out
