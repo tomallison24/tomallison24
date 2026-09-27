@@ -266,7 +266,7 @@
     transition: opacity .2s, max-height .28s var(--ease), margin .28s var(--ease);
   }
   /* Where the glass can't blur - no support, or Reduce Transparency is on in
-     iOS Accessibility - the bar turns near-solid so the title stays readable. */
+     iOS Accessibility - the bar turns near-solid (the compose button too, below). */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     header::before { background: var(--bar-solid); }
   }
@@ -832,12 +832,19 @@
   .fab {
     position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 15;
     width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-    color: var(--accent); background: var(--glass-2); border: 1px solid var(--hair);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    box-shadow: 0 10px 28px var(--lift-strong), inset 0 1px 0 var(--hi);
+    /* the same clear Liquid Glass as the pinned header's pill */
+    color: var(--accent); background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+    backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
+    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi), 0 8px 26px var(--lift);
     transition: transform .2s var(--ease); animation: pop .45s var(--ease) both;
   }
   .fab:active { transform: scale(0.9); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .fab { background: var(--bar-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .fab { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
 
   /* ---- mailing lists and blocking ---- */
   .unsub {
@@ -968,7 +975,7 @@
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
 <div id="compose" class="hide" role="dialog" aria-label="New message"></div>
 <button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
-  <svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>
+  <svg class="i s" width="28" height="28" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>
 </button>
 <div id="sheet" class="hide"></div>
 <div id="boxmenu" class="hide"></div>
