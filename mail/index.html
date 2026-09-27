@@ -990,6 +990,13 @@ function clientIdProblem(id) {
 // Sign-in: OAuth 2.0 implicit flow, by full-page redirect
 // ---------------------------------------------------------------------------
 class AuthError extends Error {}
+// Gmail allows each user so many "quota units" a minute. Past that it answers
+// 429 (or 403 rateLimitExceeded) until the minute rolls over, so hammering it
+// with quick retries only digs deeper. One short retry, then a pause.
+class QuotaError extends Error {}
+const COOLDOWN = Number(localStorage.getItem('mail.cooldown')) || 60000;   // (the tests shorten this)
+let slowUntil = 0;
+const slowed = () => Date.now() < slowUntil;
 
 function redirectUri() {
   return location.origin + location.pathname.replace(/index\.html$/, '');
@@ -1075,6 +1082,7 @@ const TIMEOUT = Number(ls.get('mail.timeout', '')) || 20000;
 async function api(path, { method = 'GET', body, params, tries = 0, once = false } = {}) {
   const tok = getToken();
   if (!tok) throw new AuthError('signed out');
+  if (slowed()) throw new QuotaError('Gmail asked the app to slow down for a minute');   // nothing more until the pause is over
   const url = new URL(API + path);
   for (const [k, v] of Object.entries(params || {})) {
     if (v == null) continue;
@@ -1100,8 +1108,13 @@ async function api(path, { method = 'GET', body, params, tries = 0, once = false
   }
   if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
   if (!res.ok) {
-    const rate = res.status === 429 || res.status >= 500 || (res.status === 403 && /rateLimitExceeded/i.test(text));
-    if (rate && tries < 4) { await sleep(600 * 2 ** tries + Math.random() * 300); return again(); }
+    const quota = res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text));
+    if (quota) {
+      if (tries < 1) { await sleep(1500 + Math.random() * 1000); return again(); }
+      slowUntil = Date.now() + COOLDOWN;
+      throw new QuotaError('Gmail asked the app to slow down for a minute');
+    }
+    if (res.status >= 500 && tries < 3) { await sleep(600 * 2 ** tries + Math.random() * 300); return again(); }
     let msg = text.slice(0, 200);
     try { msg = JSON.parse(text).error.message; } catch {}
     const err = new Error(msg || ('Gmail returned ' + res.status));
@@ -1252,34 +1265,60 @@ const hdrAll = (m, name) => (m?.payload?.headers || []).filter(h => h.name.toLow
 // A page of conversations - Gmail's threads - newest first.
 async function threadPage(q, { labelIds, pageToken, max = PAGE } = {}) {
   const r = await api('/threads', { params: { q: q || undefined, labelIds, maxResults: max, pageToken } });
-  return { ids: (r.threads || []).map(t => t.id), next: r.nextPageToken || null };
+  const threads = r.threads || [];
+  return { ids: threads.map(t => t.id), hist: new Map(threads.map(t => [t.id, t.historyId])), next: r.nextPageToken || null };
 }
+
+// Rows already built, by conversation, with the historyId they were built at.
+// A list reload asks Gmail only for conversations whose historyId has moved on:
+// a refresh with nothing new costs one list call instead of forty. Kept in
+// memory for this visit only - nothing about your mail is stored on the phone.
+const rowCache = new Map();
+const ROW_CACHE_MAX = 1500;
 
 // One row per conversation, as Mail shows it: the newest message's time and
 // text, the other person's name (not yours, when you replied last), how many
 // messages it holds, and every label any of them carries. Messages in the
 // Trash don't count.
-async function hydrate(ids) {
-  const out = await pool(ids, 6, id => api('/threads/' + id, {
+async function hydrate(ids, hist) {
+  const known = new Map(), need = [];
+  for (const id of ids) {
+    const c = rowCache.get(id);
+    if (c && hist?.get(id) && c.historyId === hist.get(id)) known.set(id, c.item);
+    else need.push(id);
+  }
+  let stop = null;
+  const got = await pool(need, 4, id => api('/threads/' + id, {
     params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'Content-Type'] },
-  }).catch(() => null));
-  return out.filter(Boolean).map(t => {
-    const live = (t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH'));
-    const msgs = live.length ? live : t.messages || [];
-    if (!msgs.length) return null;
-    const last = msgs[msgs.length - 1];
-    const them = [...msgs].reverse().find(m => !(m.labelIds || []).includes('SENT')) || last;
-    return {
-      id: t.id, threadId: t.id, msgId: last.id, count: msgs.length,
-      snippet: unescapeHtml(last.snippet || ''),
-      subject: hdr(msgs[0], 'subject') || hdr(last, 'subject') || '(no subject)',
-      date: Number(last.internalDate) || Date.parse(hdr(last, 'date')) || Date.now(),
-      labelIds: [...new Set(msgs.flatMap(m => m.labelIds || []))],
-      attach: msgs.some(m => /multipart\/mixed/i.test(hdr(m, 'content-type'))),
-      get unread() { return this.labelIds.includes('UNREAD'); },
-      ...parseFrom(hdr(them, 'from')),
-    };
-  }).filter(Boolean).sort((a, b) => b.date - a.date);
+  }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) stop = e; return null; }));
+  if (stop) throw stop;                             // a half-drawn list would look like mail had gone
+  for (const t of got) {
+    const item = t && buildRow(t);
+    if (!item) continue;
+    rowCache.delete(t.id);
+    rowCache.set(t.id, { historyId: t.historyId || hist?.get(t.id), item });
+    if (rowCache.size > ROW_CACHE_MAX) rowCache.delete(rowCache.keys().next().value);
+    known.set(t.id, item);
+  }
+  return ids.map(id => known.get(id)).filter(Boolean);
+}
+
+function buildRow(t) {
+  const live = (t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH'));
+  const msgs = live.length ? live : t.messages || [];
+  if (!msgs.length) return null;
+  const last = msgs[msgs.length - 1];
+  const them = [...msgs].reverse().find(m => !(m.labelIds || []).includes('SENT')) || last;
+  return {
+    id: t.id, threadId: t.id, msgId: last.id, count: msgs.length,
+    snippet: unescapeHtml(last.snippet || ''),
+    subject: hdr(msgs[0], 'subject') || hdr(last, 'subject') || '(no subject)',
+    date: Number(last.internalDate) || Date.parse(hdr(last, 'date')) || Date.now(),
+    labelIds: [...new Set(msgs.flatMap(m => m.labelIds || []))],
+    attach: msgs.some(m => /multipart\/mixed/i.test(hdr(m, 'content-type'))),
+    get unread() { return this.labelIds.includes('UNREAD'); },
+    ...parseFrom(hdr(them, 'from')),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2997,7 +3036,7 @@ const canBadge = () => 'setAppBadge' in navigator;
 const badgeOn = () => ls.get(K.badge, '') === '1';
 let badgeTimer = null;
 function updateBadge() {
-  if (!canBadge() || !badgeOn() || !getToken()) return;
+  if (!canBadge() || !badgeOn() || !getToken() || slowed()) return;
   clearTimeout(badgeTimer);
   badgeTimer = setTimeout(async () => {
     try {
@@ -3132,23 +3171,42 @@ async function loadList({ force, quiet } = {}) {
       labelIds = [l.id];
     }
     const r = await threadPage(spec.q, { labelIds });
-    let items = await hydrate(r.ids);
+    let items = (await hydrate(r.ids, r.hist)).sort((a, b) => b.date - a.date);
     if (spec.key === 'inbox') {                     // reminders that came back go first, as in Mail
       const rl = await labelNamed(REMINDED);
       if (rl) {
-        const pinned = await hydrate((await threadPage('', { labelIds: ['INBOX', rl.id] })).ids);
+        const pr = await threadPage('', { labelIds: ['INBOX', rl.id] });
+        const pinned = await hydrate(pr.ids, pr.hist);
         items = pinned.concat(items.filter(it => !pinned.some(p => p.id === it.id)));
       }
     }
-    state.lists[spec.key] = { items, next: r.next, q: spec.q, labelIds };
+    state.lists[spec.key] = { items, next: r.next, q: spec.q, labelIds, at: Date.now() };
   } catch (e) {
     if (e instanceof AuthError) return render();
+    if (e instanceof QuotaError) {
+      if (have?.items) state.lists[spec.key] = have;
+      else state.lists[spec.key] = { items: null, error: 'Gmail asked the app to slow down. It will try again in a minute.' };
+      toast('Gmail asked the app to slow down — trying again in a minute', { ms: 6000 });
+      retryLater();
+      if (quiet) quietOnce = true;
+      return render();
+    }
     state.lists[spec.key] = { items: null, error: e.message };
   }
   if (quiet) quietOnce = true;
   render();
   if (spec.key === 'inbox' && state.lists.inbox?.items?.length) hintSwipe();
   updateBadge();
+}
+
+// One retry once the pause is over, for whatever list is on screen then.
+let retryTimer = null;
+function retryLater() {
+  if (retryTimer) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (!state.reading && state.view !== 'settings' && state.view !== 'rules') loadList({ force: true, quiet: true });
+  }, Math.max(1000, slowUntil - Date.now()));
 }
 
 async function loadMore(btn) {
@@ -3158,14 +3216,18 @@ async function loadMore(btn) {
   btn.innerHTML = ICON.spin;
   try {
     const r = await threadPage(list.q, { labelIds: list.labelIds, pageToken: list.next });
-    const more = await hydrate(r.ids);
+    const more = (await hydrate(r.ids, r.hist)).sort((a, b) => b.date - a.date);
     const seen = new Set(list.items.map(it => it.id));
     freshFrom = list.items.length;
     list.items.push(...more.filter(it => !seen.has(it.id)));
     list.next = r.next;
     quietOnce = true;
     render();
-  } catch (e) { failed(e); btn.disabled = false; btn.textContent = 'Show more'; }
+  } catch (e) {
+    if (e instanceof QuotaError) toast('Gmail asked the app to slow down — try again in a minute', { ms: 6000 });
+    else failed(e);
+    btn.disabled = false; btn.textContent = 'Show more';
+  }
 }
 
 async function loadRules({ force } = {}) {
@@ -3971,7 +4033,9 @@ addEventListener('resize', movePill);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out
-  if (state.reading || state.select) return;
+  if (state.reading || state.select || slowed()) return;
+  const list = state.lists[currentList().key];
+  if (list?.at && Date.now() - list.at < 30000) return;                 // loaded moments ago
   if (state.view === 'inbox' || state.view === 'marketing') loadList({ force: true, quiet: true });
 });
 

@@ -318,6 +318,22 @@ list fetches the next page.
 Filing a message never marks it read, and neither does the filter — mail lands
 in the bucket unread and stays that way until you read it.
 
+## Gmail's rate limit
+
+Gmail lets each person's apps spend a set number of "quota units" a minute;
+past that it refuses with *Quota exceeded … Units per minute per user* until
+the minute rolls over. So the app:
+
+- **fetches a conversation only when it has changed.** Gmail's list says which
+  ones have (their `historyId`); the rest are reused from memory for this visit
+  (never saved on the phone). A refresh with nothing new is one list call
+  instead of forty-one;
+- **doesn't reload on every return to the app** — only if the list is more
+  than 30 seconds old;
+- **when Gmail says slow down,** it retries once, then pauses for a minute
+  with the list left on screen, sends nothing in the meantime, and reloads by
+  itself afterwards.
+
 ## Staying signed in
 
 Google gives a browser-only app like this one an access token that lasts **an
@@ -389,6 +405,10 @@ secondary sources and my own testing instead:
   the app asks for permission either way;
 - the **grow-from-row** animation on an iPhone. It uses View Transitions,
   which the same data lists for iOS 18+; older iOS gets the plain slide;
+- **Gmail's quota numbers.** From Google's usage-limits page as I remember it
+  (not re-checked, as developers.google.com is blocked here): 15,000 units per
+  user per minute, and 10 units for each conversation fetched — so the old
+  forty-conversation reload cost about 410 units;
 - how **Share or Save…** and **Open** behave for files in a home-screen app.
   The share sheet is the route iOS supports for handing a file on; **Open**
   opens the file in a new view, which I could not try on an iPhone;
