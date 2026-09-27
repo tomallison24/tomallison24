@@ -300,8 +300,12 @@ unsubscribed and offers **Block** if their mail keeps coming.
 
 ## Selecting and deleting
 
-Like Mail: tap **Select** (or press and hold any message), tick what you want,
-then **Trash** or **Mark as Read / Unread** from the bar at the bottom.
+Like Mail: tap **Edit** (or press and hold any message), tick what you want,
+then **Trash**, **Archive** or **Mark as Read / Unread** from the bar at the
+bottom. To take a run of messages at once, **drag down the circles**: every row
+your finger passes is selected (start on one that's already ticked and the
+drag clears them instead), and holding near the top or bottom of the screen
+scrolls the list on.
 **Select All** takes the whole list as loaded. Works in the inbox, a tag,
 Marketing and search results.
 
