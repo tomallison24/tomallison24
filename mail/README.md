@@ -29,8 +29,10 @@ days you never open the app — but only once its Google credentials are set up
 - **Pull the list down** from the top: a short pull shows the search bar, a
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
-- The large **Mail** title gives way to a compact bar as you scroll; tap the
-  bar to jump back to the top.
+- The header **stays at the top** as you scroll: the large title shrinks to a
+  compact one on a frosted bar, with the mailbox menu, search, **Edit** and
+  Settings still to hand. (Tapping the iPhone's status bar, at the very top,
+  scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.
 - Rows show the sender, subject and preview, plus your own tags — no buttons
   and no domain chips; the actions live under the swipes.

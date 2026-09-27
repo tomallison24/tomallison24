@@ -108,6 +108,7 @@
     /* glass */
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
+    --bar: rgba(20, 20, 24, 0.94);            /* the header once it's pinned: readable even unblurred */
     --hair: rgba(255, 255, 255, 0.11);
     --hair-2: rgba(255, 255, 255, 0.07);
     --blur: blur(30px) saturate(180%);
@@ -161,6 +162,7 @@
       --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
+      --bar: rgba(248, 248, 251, 0.95);
       --hair: rgba(60, 60, 67, 0.14);
       --hair-2: rgba(60, 60, 67, 0.09);
       --fill: rgba(118, 118, 128, 0.11);
@@ -219,10 +221,40 @@
   .rb.on svg.i.s, .who .when .flagged svg.i.s { fill: currentColor; }
   .hide { display: none !important; }
 
-  /* ---- header ---- */
-  header { display: flex; align-items: center; gap: 10px; padding: 2px 4px 0; animation: fadeDown .5s var(--ease) both; }
-  header h1 { font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; margin: 0; flex: 1; font-weight: 700; }
-  header .sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; margin-top: 3px; transition: opacity .3s; }
+  /* ---- header ----
+     It stays at the top as the list scrolls, as in Mail: the large title
+     shrinks to a compact one, the account line folds away, and a frosted bar
+     appears behind it - with the mailbox menu, search, Edit and Settings still
+     to hand. The height it gives up is added back as margin below, so the list
+     doesn't jump when it shrinks. */
+  header {
+    --hh: 54px;
+    position: sticky; top: 0; z-index: 12; display: flex; align-items: center; gap: 10px;
+    height: calc(env(safe-area-inset-top) + 14px + var(--hh));
+    margin-top: calc(-1 * (env(safe-area-inset-top) + 10px));        /* reach up under the status bar */
+    padding: calc(env(safe-area-inset-top) + 12px) 4px 2px;
+    transition: height .28s var(--ease), margin-bottom .28s var(--ease);
+  }
+  /* the fade-in goes on what's inside: an animation on the header itself would
+     stop the bar's blur from reaching the list behind it */
+  header > * { animation: fadeDown .5s var(--ease) both; }
+  header::before {                          /* the bar: full width, whatever the page's width */
+    content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -1;
+    background: var(--bar); border-bottom: 1px solid var(--hair);
+    backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  header h1 { font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; margin: 0; flex: 1; font-weight: 700; transition: font-size .28s var(--ease); }
+  header .sub {
+    display: block; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; margin-top: 3px;
+    max-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    transition: opacity .2s, max-height .28s var(--ease), margin .28s var(--ease);
+  }
+  body.scrolled header { --hh: 40px; margin-bottom: 14px; padding-bottom: 6px; }
+  body.scrolled header::before { opacity: 1; }
+  body.scrolled header h1 { font-size: 21px; letter-spacing: -0.02em; }
+  body.scrolled header .sub { opacity: 0; max-height: 0; margin-top: 0; }
+  body.scrolled .boxbtn svg { width: 18px; height: 18px; margin-top: 2px; }
   .iconbtn {
     width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
     background: var(--glass); border: 1px solid var(--hair); color: var(--muted);
@@ -231,20 +263,6 @@
     transition: transform .18s var(--ease), background .2s, color .2s;
   }
   .iconbtn:active { transform: scale(0.9); background: var(--glass-2); color: var(--text); }
-
-  /* The large title scrolls away; a compact glass bar takes its place, as in iOS.
-     Tapping it goes back to the top. */
-  .minibar {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 12; height: calc(env(safe-area-inset-top) + 44px); padding-top: env(safe-area-inset-top);
-    display: flex; align-items: center; justify-content: center;
-    background: var(--glass-2); border-bottom: 1px solid var(--hair);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    transform: translateY(-100%); opacity: 0; pointer-events: none;
-    transition: transform .32s var(--ease), opacity .25s;
-  }
-  .minibar button { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; padding: 8px 20px; }
-  body.scrolled .minibar { transform: none; opacity: 1; pointer-events: auto; }
-  body.selecting .minibar, body.reading .minibar { display: none; }
 
   /* Pull to refresh: the list follows your finger, a glass spinner shows above it */
   main { transition: transform .45s var(--ease); }
@@ -899,7 +917,6 @@
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
-<div class="minibar" id="minibar"><button id="minititle" data-act="to-top" aria-label="Scroll to top">Mail</button></div>
 <div class="ptr" id="ptr" aria-hidden="true"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg></div>
 <main>
   <header>
