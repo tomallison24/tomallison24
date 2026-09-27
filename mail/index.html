@@ -78,6 +78,7 @@
     --gb-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
     --tint-mix: 42%;                          /* how much colour a tinted button carries */
     --accent-ink: #FFFFFF;                    /* text on a tinted button */
+    --sel-ink: #FFFFFF;                       /* the chosen filter, over the aurora */
     --danger-ink: #FFFFFF;
     /* swipe actions: round glass icons in each action's own colour */
     --gi-mix: 30%;
@@ -137,6 +138,7 @@
       --gb-shadow: 0 4px 14px rgba(40, 40, 80, 0.10);
       --tint-mix: 16%;
       --accent-ink: #0059C8;
+      --sel-ink: #00479E;                     /* #0059C8 measured 4.0:1 over the aurora - below 4.5 */
       --danger-ink: #AE2117;
       --gi-mix: 18%;
       --armed-mix: 34%;
@@ -209,7 +211,7 @@
 
   /* ---- header ---- */
   header { display: flex; align-items: center; gap: 10px; padding: 2px 4px 0; animation: fadeDown .5s var(--ease) both; }
-  header h1 { font-size: 27px; line-height: 1.05; letter-spacing: -0.025em; margin: 0; flex: 1; font-weight: 700; }
+  header h1 { font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; margin: 0; flex: 1; font-weight: 700; }
   header .sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; margin-top: 3px; transition: opacity .3s; }
   .iconbtn {
     width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
@@ -219,32 +221,60 @@
     transition: transform .18s var(--ease), background .2s, color .2s;
   }
   .iconbtn:active { transform: scale(0.9); background: var(--glass-2); color: var(--text); }
+
+  /* The large title scrolls away; a compact glass bar takes its place, as in iOS.
+     Tapping it goes back to the top. */
+  .minibar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 12; height: calc(env(safe-area-inset-top) + 44px); padding-top: env(safe-area-inset-top);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--glass-2); border-bottom: 1px solid var(--hair);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    transform: translateY(-100%); opacity: 0; pointer-events: none;
+    transition: transform .32s var(--ease), opacity .25s;
+  }
+  .minibar button { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; padding: 8px 20px; }
+  body.scrolled .minibar { transform: none; opacity: 1; pointer-events: auto; }
+  body.selecting .minibar, body.reading .minibar { display: none; }
+
+  /* Pull to refresh: the list follows your finger, a glass spinner shows above it */
+  main { transition: transform .45s var(--ease); }
+  main.pulling { transition: none; }
+  .ptr {
+    position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 12px); z-index: 5; width: 36px; height: 36px; margin-left: -18px;
+    border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--muted);
+    background: var(--gb-shine), var(--glass); border: 1px solid var(--gb-edge);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    box-shadow: inset 0 1px 0 var(--hi), 0 6px 16px var(--lift);
+    opacity: 0; transform: scale(.6); pointer-events: none; transition: opacity .25s, transform .25s var(--ease);
+  }
+  .ptr.ready { color: var(--accent); }
+  .ptr.spin svg { animation: rot .8s linear infinite; }
   .iconbtn.turning svg { animation: rot .6s var(--ease); }
 
-  /* ---- tabs ---- */
-  .tabs {
-    position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 15px;
-    background: var(--glass); border: 1px solid var(--hair);
+  /* ---- filters: one scrolling row of glass capsules ---- */
+  .filters {
+    display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    margin: -2px -14px 0; padding: 3px 14px 5px; animation: fadeDown .45s .04s var(--ease) both;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .chipset { display: contents; }
+  .filters [role=tab], .chip2 {
+    --h: 211; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px;
+    font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap;
+    background: var(--gb-shine), var(--glass); border: 1px solid var(--gb-edge);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
     box-shadow: inset 0 1px 0 var(--hi);
-    animation: fadeDown .5s .04s var(--ease) both;
+    transition: color .25s, background .25s, border-color .25s, transform .18s var(--ease);
   }
-  .pill {
-    position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 11px;
-    background: var(--pill); box-shadow: inset 0 1px 0 var(--hi), 0 2px 10px rgba(0,0,0,0.18);
-    transition: transform .42s var(--ease), width .42s var(--ease);
-    pointer-events: none;
+  .filters [role=tab][aria-selected="true"], .chip2.on {
+    color: var(--sel-ink); font-weight: 600;
+    background: var(--gb-shine), color-mix(in srgb, var(--accent) var(--tint-mix), transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--gb-edge));
   }
-  .tabs button {
-    position: relative; z-index: 1; flex: 1; padding: 8px 4px; border-radius: 11px;
-    font-size: 14px; font-weight: 500; color: var(--muted);
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    transition: color .28s, transform .18s var(--ease);
-  }
-  .tabs button[aria-selected="true"] { color: var(--text); }
-  .tabs button:active { transform: scale(0.96); }
-  .tabs .count { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; transition: color .3s; }
-  .tabs .count.pop { animation: pop .45s var(--ease); color: var(--tag); }
+  .filters [role=tab]:active, .chip2:active { transform: scale(0.94); }
+  .filters .count { font-size: 11px; color: inherit; opacity: .7; font-variant-numeric: tabular-nums; transition: color .3s; }
+  .filters .count:empty { display: none; }
+  .filters .count.pop { animation: pop .45s var(--ease); color: var(--tag); opacity: 1; }
 
   /* ---- glass card ---- */
   .card {
@@ -288,6 +318,10 @@
   .who { display: flex; align-items: baseline; gap: 7px; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
   .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .who .when { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--faint); flex: none; font-variant-numeric: tabular-nums; }
+  /* read while open: the dot fades out as you come back to the list */
+  .who .dot.fade { animation: none; }
+  .who .dot.fade.go { animation: dotOut .55s var(--ease) forwards; }
+  @keyframes dotOut { 60% { transform: scale(1.4); opacity: .5; } to { transform: scale(0); opacity: 0; width: 0; margin-right: -7px; } }
   .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; align-self: center; box-shadow: 0 0 10px rgba(10,132,255,0.8); animation: breathe 2.6s ease-in-out infinite; }
   .subj { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .snip { font-size: 13px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -427,22 +461,8 @@
   }
 
   /* ---- tag chips ---- */
-  .chips {
-    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-    margin: -2px -14px 0; padding: 2px 14px 2px; animation: fadeDown .45s var(--ease) both;
-  }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip2 {
-    --h: 211; flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    background: var(--glass); border: 1px solid var(--hair);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-    transition: color .25s, background .25s, border-color .25s, transform .18s var(--ease);
-  }
   .chip2 i { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--h) 90% 62%); box-shadow: 0 0 8px hsl(var(--h) 90% 62% / .6); }
-  .chip2.on { color: var(--chip-on-text); background: hsl(var(--h) 80% 55% / .30); border-color: hsl(var(--h) 90% 66% / .55); }
   .chip2.has { border-color: hsl(var(--h) 90% 66% / .45); }
-  .chip2:active { transform: scale(0.94); }
   .tchip {
     --h: 211; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; flex: 0 1 auto;
     font-size: 11px; font-weight: 500; color: hsl(var(--h) 90% var(--tl)); min-width: 0;
@@ -450,6 +470,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .tchip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .tchip.rem::before { display: none; }                 /* the bell is its mark */
   .meta { overflow: hidden; }
   .meta .chip { flex: 0 1 auto; min-width: 0; }
   .card h2.gh { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; }
@@ -471,6 +492,12 @@
     animation: pageIn .44s var(--ease) both;
   }
   #reader.leaving { animation: pageOut .28s cubic-bezier(.4,0,1,1) both; }
+  /* iOS 18+: the tapped row grows into the message (View Transitions); the
+     slide above is the fallback. */
+  #reader.vt, #reader.vt .wrap > * { animation: none; }
+  ::view-transition-group(msg) { animation-duration: .42s; animation-timing-function: cubic-bezier(.2, .85, .25, 1); }
+  ::view-transition-old(msg), ::view-transition-new(msg) { height: 100%; object-fit: cover; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .32s; }
   #reader .wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
   #reader .wrap > * { animation: rowIn .5s var(--ease) both; }
   #reader .wrap > :nth-child(2) { animation-delay: .06s; } #reader .wrap > :nth-child(3) { animation-delay: .12s; }
@@ -553,6 +580,10 @@
     animation: sheetUp .46s var(--ease) both;
   }
   #sheet.leaving .sheet { animation: sheetDown .28s cubic-bezier(.4,0,1,1) both; }
+  /* drag a sheet down to close it, as on iOS */
+  .sheet { touch-action: none; }
+  .sheet input, .sheet textarea { touch-action: auto; }
+  .sheet .grab { padding: 6px 0; margin: -6px auto; background-clip: content-box; }
   #sheet.leaving .scrim { animation: fadeOut .28s ease both; }
   .grab { width: 38px; height: 5px; border-radius: 99px; background: var(--grab); align-self: center; margin-bottom: 2px; }
   .sheet h3 { margin: 0; font-size: 18px; line-height: 1.4; letter-spacing: -0.01em; }
@@ -626,16 +657,16 @@
   ul.list > li[data-id] { touch-action: pan-y; }
   .rowtop { position: relative; z-index: 1; transition: transform .34s var(--ease); }
   .swipe {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden; cursor: pointer;
-    display: flex; align-items: center;
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0; overflow: hidden;
+    display: flex; justify-content: flex-start;
     background: var(--swipe-track);
     transition: width .34s var(--ease), background .25s;
   }
-  .swipe-in {
-    width: 96px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px;
-    color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
-    --tint: #7B6CF6; --ink: var(--tag-ink);
-  }
+  .sa.tagx { --tint: #7B6CF6; --ink: var(--tag-ink); }
+  .sa.mktx { --tint: var(--flag-tint); --ink: var(--flag-ink); }
+  .sa.inbx { --tint: var(--accent); --ink: var(--accent); }
+  li.armed .sa.mktx, li.armed .sa.inbx { flex-basis: 0; padding: 0; overflow: hidden; }
+  li.armed .sa.tagx { flex: 1 0 76px; }
   /* The glass icon the swipe actions share */
   .gi {
     width: 44px; height: 44px; border-radius: 999px; flex: none;
@@ -646,11 +677,12 @@
     transition: transform .3s var(--ease), background .25s, color .25s, width .3s var(--ease);
   }
   .gi svg { width: 21px; height: 21px; }
-  li.armed .swipe-in .gi {
-    transform: scale(1.12) rotate(-6deg); color: var(--armed-ink, var(--ink));
+  /* all the way right: Tag stretches into a wide capsule, as Trash does on the left */
+  li.armed .sa.tagx .gi {
+    width: calc(100% - 28px); color: var(--armed-ink, var(--ink));
     background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--armed-mix), transparent);
   }
-  li.swiped .swipe-in { animation: pop .35s var(--ease); }
+  li.swiped .swipe .gi { animation: pop .35s var(--ease); }
   li.peek .rowtop { animation: peekRow 1.6s var(--ease) .5s both; }
   li.peek .swipe { animation: peekUnder 1.6s var(--ease) .5s both; }
   @keyframes peekRow { 0%, 100% { transform: none; } 35%, 62% { transform: translateX(96px); } }
@@ -823,14 +855,14 @@
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+<div class="minibar" id="minibar"><button id="minititle" data-act="to-top" aria-label="Scroll to top">Mail</button></div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg></div>
 <main>
   <header>
     <h1><span id="title">Mail</span><span class="sub" id="sub">&nbsp;</span></h1>
     <button class="textbtn hide" id="selall">Select All</button>
-    <button class="textbtn hide" id="edit">Select</button>
-    <button class="iconbtn hide" id="refresh" aria-label="Refresh">
-      <svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4.5H15"/></svg>
-    </button>
+    <button class="iconbtn hide" id="find" aria-label="Search"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button>
+    <button class="textbtn hide" id="edit">Edit</button>
     <button class="iconbtn hide" id="gear" aria-label="Settings">
       <svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
@@ -844,14 +876,12 @@
     </button>
   </form>
 
-  <div class="tabs hide" id="tabs" role="tablist">
-    <span class="pill" id="pill"></span>
+  <nav class="filters hide" id="tabs" role="tablist" aria-label="Mailboxes">
     <button role="tab" data-view="inbox" aria-selected="true">Inbox <span class="count" id="c-inbox"></span></button>
+    <span class="chipset" id="chips"></span>
     <button role="tab" data-view="marketing" aria-selected="false">Marketing <span class="count" id="c-mkt"></span></button>
     <button role="tab" data-view="rules" aria-selected="false">Tags <span class="count" id="c-rules"></span></button>
-  </div>
-
-  <div class="chips hide" id="chips"></div>
+  </nav>
 
   <div id="screen"></div>
   <div class="foot" id="foot"></div>
@@ -896,7 +926,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -1127,7 +1157,7 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 // Every label you (or an app) made, apart from the Marketing bucket.
 function userLabels() {
   const bucket = settings.label.toLowerCase();
-  return [...labelsById.values()].filter(l => l.type === 'user' && l.name.toLowerCase() !== bucket).sort(byName);
+  return [...labelsById.values()].filter(l => l.type === 'user' && l.name.toLowerCase() !== bucket && !isReminderLabel(l)).sort(byName);
 }
 
 // Labels other mail apps and services leave in Gmail. They are never offered
@@ -1602,6 +1632,9 @@ async function markRead(item) {
   try {
     await relabelThread(item.threadId, [], ['UNREAD']);
     patch(it => it.threadId === item.threadId, [], ['UNREAD']);
+    for (const list of Object.values(state.lists)) for (const it of list.items || []) if (it.threadId === item.threadId) it.fading = true;
+    item.fading = true;
+    updateBadge();
     if (!item.labelIds.includes('UNREAD')) return true;
     item.labelIds = item.labelIds.filter(l => l !== 'UNREAD');
     return true;
@@ -1640,10 +1673,19 @@ const state = {
 const screen = $('#screen');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Gmail's own sorting of the inbox (its category tabs), offered as filters.
+const CATEGORIES = [
+  { id: 'cat:primary', name: 'Primary', label: 'CATEGORY_PERSONAL' },
+  { id: 'cat:promotions', name: 'Promotions', label: 'CATEGORY_PROMOTIONS' },
+  { id: 'cat:updates', name: 'Updates', label: 'CATEGORY_UPDATES' },
+];
+const catOf = key => CATEGORIES.find(c => c.id === key);
+
 // The list on screen, and how to ask Gmail for it.
 function currentList() {
   if (state.search) return { key: 'q:' + state.search, q: state.search };
   if (state.view === 'marketing') return { key: 'mkt', bucket: true };
+  if (catOf(state.tag)) return { key: state.tag, q: 'in:inbox category:' + state.tag.slice(4) + ' -in:chats' };
   if (state.tag) return { key: 'tag:' + state.tag, labelIds: [state.tag] };
   return { key: 'inbox', q: 'in:inbox -in:chats' };
 }
@@ -1654,6 +1696,7 @@ function belongs(key, it) {
   if (key === 'inbox') return it.labelIds.includes('INBOX');
   if (key === 'mkt') return it.labelIds.includes(bucketId());
   if (key.startsWith('tag:')) return it.labelIds.includes(key.slice(4));
+  if (catOf(key)) return it.labelIds.includes('INBOX') && it.labelIds.includes(catOf(key).label);
   return true;
 }
 
@@ -1696,6 +1739,7 @@ function failed(err) {
 }
 
 const ICON = {
+  bell: '<svg class="i s" width="12" height="12" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
   more: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>',
   block: '<svg class="i s" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
   tag: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3.5 12.1V4.6a1 1 0 0 1 1-1h7.5a1 1 0 0 1 .7.3l7.7 7.7a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-7.7-7.7a1 1 0 0 1-.3-.7z"/><circle cx="8" cy="8" r="1.4"/></svg>',
@@ -1739,12 +1783,19 @@ function rowHTML(item, i, key) {
     meta = '<span class="chip ' + (left <= 0 ? 'due' : '') + '">' + ICON.bin + (left <= 0 ? 'due now' : 'in ' + Math.ceil(left) + 'd') + '</span>' +
       tagChips(item.labelIds, bucketId());
   } else {
-    meta = '<span class="chip">' + esc(ruleFor(item).label) + '</span>' + tagChips(item.labelIds);
+    const rl = reminderId();
+    meta = (rl && item.labelIds.includes(rl) ? '<span class="tchip rem" style="--h:280">' + ICON.bell + 'Reminder</span>' : '') +
+      tagChips(item.labelIds);                    // only your own tags; the sender is already on the row
   }
   const fresh = i >= freshFrom, sel = state.select?.has(item.id);
   return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
-    '<span class="swipe" data-act="swipe-tag"><span class="swipe-in"><span class="gi">' + ICON.label + '</span>Tag</span></span>' +
+    '<span class="swipe">' +
+      '<button class="sa tagx" data-act="swipe-tag"><span class="gi">' + ICON.label + '</span>Tag</button>' +
+      (inBucket
+        ? '<button class="sa inbx" data-act="restore" aria-label="Back to inbox"><span class="gi">' + ICON.back + '</span>Inbox</button>'
+        : '<button class="sa mktx" data-act="bucket" aria-label="Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label) + '"><span class="gi">' + ICON.mkt + '</span>' + esc(settings.label) + '</button>') +
+    '</span>' +
     '<span class="swipe-r">' +
       '<button class="sa flag" data-act="row-flag"><span class="gi">' + ICON.flag + '</span>' + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
       '<button class="sa arch" data-act="row-archive"><span class="gi">' + ICON.archive + '</span>Archive</button>' +
@@ -1752,18 +1803,15 @@ function rowHTML(item, i, key) {
     '</span>' +
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
-        '<span class="who">' + (item.unread ? '<span class="dot"></span>' : '') +
+        '<span class="who">' + (item.unread ? '<span class="dot"></span>' : item.fading ? '<span class="dot fade"></span>' : '') +
           '<span class="name">' + esc(item.name) + '</span>' +
           (item.count > 1 ? '<span class="cnt">' + item.count + '</span>' : '') +
           '<span class="when">' + (item.labelIds.includes('STARRED') ? '<span class="flagged">' + ICON.flag + '</span>' : '') +
             (item.attach ? ICON.clip : '') + esc(ago(item.date)) + '</span></span>' +
         '<span class="subj">' + esc(item.subject) + '</span>' +
         '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
-        '<span class="meta">' + meta + '</span>' +
+        (meta ? '<span class="meta">' + meta + '</span>' : '') +
       '</button>' +
-      '<button class="act ' + (inBucket ? 'undo' : '') + '" data-act="' + (inBucket ? 'restore' : 'bucket') + '" ' +
-        'aria-label="' + (inBucket ? 'Back to inbox' : 'Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label)) + '">' +
-        (inBucket ? ICON.back : ICON.mkt) + '</button>' +
     '</div>' +
   '</li>';
 }
@@ -1783,16 +1831,24 @@ function setCount(sel, n) {
 // picking one doesn't throw the row's scroll position back to the start.
 let chipSig = null;
 function renderChips(show) {
-  const box = $('#chips'), list = show ? [FLAGGED, ...chipTags()] : [];
-  box.classList.toggle('hide', !list.length);
+  const box = $('#chips'), list = show ? [...CATEGORIES, FLAGGED, ...chipTags()] : [];
   const sig = list.map(l => l.id + ':' + l.name).join('|');
   if (sig !== chipSig) {
     chipSig = sig;
     const chip = (id, name, h) => '<button class="chip2" data-act="chip" data-id="' + esc(id) + '"' +
       (h == null ? '' : ' style="--h:' + h + '"') + '>' + (h == null ? '' : '<i></i>') + esc(name) + '</button>';
-    box.innerHTML = list.length ? chip('', 'Inbox', null) + list.map(l => chip(l.id, l.name, l === FLAGGED ? 36 : hue(l.name))).join('') : '';
+    box.innerHTML = list.map(l => chip(l.id, l.name, catOf(l.id) ? null : l === FLAGGED ? 36 : hue(l.name))).join('');
   }
-  for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', (b.dataset.id || '') === (state.tag || ''));
+  for (const b of box.querySelectorAll('.chip2')) b.classList.toggle('on', state.view === 'inbox' && b.dataset.id === (state.tag || ''));
+}
+
+// Keeps the chosen filter in view as the row scrolls sideways.
+function revealFilter() {
+  const row = $('#tabs'), on = row.querySelector('.chip2.on, [role=tab][aria-selected="true"]');
+  if (!on) return;
+  const l = on.offsetLeft - 14, r = on.offsetLeft + on.offsetWidth + 14;
+  if (l < row.scrollLeft) row.scrollTo({ left: l, behavior: reduced ? 'auto' : 'smooth' });
+  else if (r > row.scrollLeft + row.clientWidth) row.scrollTo({ left: r - row.clientWidth, behavior: reduced ? 'auto' : 'smooth' });
 }
 
 // Everything around the list: header, tabs, chips, and the select bar.
@@ -1806,20 +1862,24 @@ function renderChrome() {
   if (sel) for (const id of [...sel]) if (!items.some(it => it.id === id)) sel.delete(id);   // rows that went away
 
   $('#tabs').classList.toggle('hide', !main || !!sel);
-  $('#search').classList.toggle('hide', !main || !!sel);
-  $('#refresh').classList.toggle('hide', !main || !!sel);
+  const searching = !!(state.showSearch || state.search);
+  $('#search').classList.toggle('hide', !main || !!sel || !searching);
+  $('#find').classList.toggle('hide', !main || !!sel || searching || state.view === 'rules');
   $('#gear').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
   $('#edit').classList.toggle('hide', !listView || (!items.length && !sel));
-  $('#edit').textContent = sel ? 'Done' : 'Select';
+  $('#edit').textContent = sel ? 'Done' : 'Edit';
   $('#selall').classList.toggle('hide', !sel);
   const all = sel && items.length && items.every(it => sel.has(it.id));
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : 'Mail';
+  $('#minititle').textContent = state.view === 'settings' ? 'Settings' : state.view === 'rules' ? 'Tags'
+    : state.view === 'marketing' ? settings.label : catOf(state.tag)?.name || (state.tag === 'STARRED' ? 'Flagged' : labelsById.get(state.tag)?.name) || 'Inbox';
   $('#sub').textContent = sel ? 'Tap to select'
     : state.view === 'settings' ? 'Settings' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
-  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t.dataset.view === state.view));
-  renderChips(main && state.view === 'inbox' && !state.search && !sel);
+  for (const t of $('#tabs').querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', String(t.dataset.view === state.view && !(t.dataset.view === 'inbox' && state.tag)));
+  renderChips(main && !sel);
+  revealFilter();
   setCount('#c-inbox', state.lists.inbox?.items?.length);
   setCount('#c-mkt', state.lists.mkt?.items?.length);
   setCount('#c-rules', signedIn ? chipTags().length || null : null);
@@ -1903,15 +1963,16 @@ function viewList() {
   if (list?.error) return '<div class="card"><div class="empty">' + esc(list.error) + '</div></div>';
   if (!list?.items) return listSkeleton();
   const items = list.items;
-  const tagName = state.tag === 'STARRED' ? 'Flagged' : state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '';
+  const tagName = state.tag === 'STARRED' ? 'Flagged' : catOf(state.tag)?.name || (state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '');
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
   else if (spec.key === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
-  else if (state.tag) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
+  else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
     const empty = state.search ? 'Nothing matches “' + esc(state.search) + '”.'
       : spec.key === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
       : state.tag === 'STARRED' ? 'Nothing flagged.<br>Swipe an email left and tap Flag.'
+      : catOf(state.tag) ? 'Nothing in ' + esc(tagName) + '.'
       : state.tag ? 'Nothing tagged ' + esc(tagName) + ' yet.'
       : 'Inbox zero. Nothing left to file.';
     return '<div class="card">' + head + '<div class="empty">' + empty + '</div></div>';
@@ -2008,6 +2069,7 @@ function viewSettings() {
     '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
+    '<div class="field"><span>Unread count on the app icon</span><button class="textbtn" data-act="badge" aria-pressed="' + badgeOn() + '">' + (badgeOn() ? 'On' : 'Off') + '</button></div>' +
     blockedHTML() +
     '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
     '<button class="btn warn" data-act="signout">Sign out</button>' +
@@ -2044,13 +2106,25 @@ function movePill() {
 // ---------------------------------------------------------------------------
 let skipPop = false;
 
+const canMorph = () => !reduced && typeof document.startViewTransition === 'function';
+const named = (el, name) => { if (el) el.style.viewTransitionName = name || ''; };
+
 function openReader(item) {
   state.reading = { item, msgs: null, open: new Set(), images: false, error: null };
   try { history.pushState({ mailReader: item.id }, ''); } catch {}
-  const el = $('#reader');
-  el.classList.remove('hide', 'leaving');
-  el.scrollTop = 0;
-  renderReader();
+  const el = $('#reader'), li = rowsFor([item.id])[0];
+  const show = () => {
+    el.classList.remove('hide', 'leaving');
+    el.scrollTop = 0;
+    renderReader();
+    named(li);
+    named(el.querySelector('.rhead'), el.classList.contains('vt') ? 'msg' : '');
+  };
+  if (canMorph() && li) {
+    el.classList.add('vt');
+    named(li, 'msg');
+    document.startViewTransition(show).finished.finally(() => { named(el.querySelector('.rhead')); el.classList.remove('vt'); });
+  } else show();
   fetchThread(item)
     .then(msgs => {
       const r = state.reading;
@@ -2065,21 +2139,42 @@ function openReader(item) {
       state.reading.error = err instanceof AuthError ? 'Session expired — go back and reconnect.' : err.message;
       renderReaderBody();
     })
-    .finally(() => markRead(item).then(changed => { if (changed) { quietOnce = true; render(); } }));
+    .finally(() => markRead(item).then(changed => { if (changed) { quietOnce = true; render(); } }).then(() => settleReminder(item)));
 }
 
 function closeReader(fromHistory) {
   if (!state.reading) return Promise.resolve();
+  const item = state.reading.item;
   state.reading = null;
   closeSheet();
   if (!fromHistory && history.state?.mailReader) { skipPop = true; history.back(); }
   const el = $('#reader');
   return new Promise(done => {
-    const finish = () => { el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; done(); };
-    if (reduced) return finish();
+    const finish = () => { el.classList.add('hide'); el.classList.remove('leaving', 'vt'); el.innerHTML = ''; };
+    const after = () => { fadeReadDots(); done(); };
+    const li = rowsFor([item.id])[0];
+    if (canMorph() && li && !el.classList.contains('hide')) {        // the message shrinks back into its row
+      named(el.querySelector('.rhead'), 'msg');
+      el.classList.add('vt');
+      const t = document.startViewTransition(() => { finish(); named(li, 'msg'); fadeReadDots(); });   // the dot fades as it lands
+      t.finished.finally(() => { named(li); done(); });
+      return;
+    }
+    if (reduced) { finish(); return after(); }
     el.classList.add('leaving');
-    setTimeout(finish, 280);
+    setTimeout(() => { finish(); after(); }, 280);
   });
+}
+
+// Messages read while open lose their dot with a little fade on the way back.
+function fadeReadDots() {
+  for (const d of screen.querySelectorAll('.who .dot.fade')) {
+    d.classList.add('go');
+    const gone = () => d.remove();
+    d.addEventListener('animationend', gone, { once: true });
+    setTimeout(gone, reduced ? 0 : 800);
+  }
+  for (const list of Object.values(state.lists)) for (const it of list.items || []) it.fading = false;
 }
 
 function renderReader() {
@@ -2790,12 +2885,147 @@ async function readerMore() {
   if (!r) return;
   const who = senderOf(r), last = [...(r.msgs || [])].reverse().find(m => m.unsub);
   const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), options: [
-    ...(last ? [{ id: 'unsub', label: 'Unsubscribe', primary: true }] : []),
+    { id: 'remind', label: 'Remind Me', primary: true },
+    ...(last ? [{ id: 'unsub', label: 'Unsubscribe' }] : []),
     { id: 'block', label: 'Block Sender', danger: true },
   ] });
+  if (pick === 'remind') {
+    const item = r.item, opts = remindChoices();
+    const when = await choiceSheet({ title: 'Remind Me', body: 'It leaves the inbox now and comes back to the top of it, unread, on the day.',
+      options: opts.map((o, i) => ({ id: String(i), label: o.label + ' · ' + shortDate(o.date), primary: i === 0 })) });
+    if (when != null) remindMe(item, opts[Number(when)].date);
+  }
   if (pick === 'unsub') unsubSheet(last);
   if (pick === 'block') doBlock(who.email, who.name);
 }
+
+// ---------------------------------------------------------------------------
+// Remind Me
+// ---------------------------------------------------------------------------
+// Gmail's API has no snooze, so a reminder is a label named for its day,
+// "Remind 2026-09-28". On that day the app (when it opens) and the daily
+// GitHub job put the mail back in the inbox, unread, labelled "Reminded" so it
+// sits at the top until you read it.
+const REMIND = /^Remind (\d{4}-\d{2}-\d{2})$/i, REMINDED = 'Reminded';
+const isReminderLabel = l => REMIND.test(l.name) || l.name.toLowerCase() === REMINDED.toLowerCase();
+const reminderId = () => [...labelsById.values()].find(l => l.name.toLowerCase() === REMINDED.toLowerCase())?.id || null;
+const dayStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const shortDate = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+function remindChoices(now = new Date()) {
+  const at = n => { const d = new Date(now); d.setDate(d.getDate() + n); return d; };
+  const dow = now.getDay();                                   // 0 Sunday … 6 Saturday
+  const days = [1, (6 - dow + 7) % 7 || 7, (8 - dow) % 7 || 7];
+  const labels = ['Tomorrow', dow === 6 || dow === 0 ? 'Next Weekend' : 'This Weekend', 'Next Week'];
+  // On a Friday the weekend is tomorrow, on a Sunday next week is: offer the one after instead
+  for (let i = 1; i < days.length; i++) {
+    while (days.slice(0, i).includes(days[i])) { days[i] += 7; if (i === 1) labels[1] = 'Next Weekend'; }
+  }
+  return days.map((n, i) => ({ label: labels[i], date: at(n) }));
+}
+
+async function remindMe(item, date) {
+  const tid = item.threadId;
+  await closeReader();
+  await Promise.all(rowsFor([item.id]).map(li => vanish(li, 'left')));
+  patch(it => it.threadId === tid, [], ['INBOX']);
+  for (const [k, l] of Object.entries(state.lists)) if (l.items) l.items = l.items.filter(it => belongs(k, it));
+  quietOnce = true;
+  render();
+  try {
+    const snap = await api('/threads/' + tid, { params: { format: 'minimal' } });
+    const inboxMsgs = (snap.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id);
+    const label = await labelNamed('Remind ' + dayStr(date), { create: true });
+    await relabelThread(tid, [label.id], ['INBOX']);
+    toast('I’ll remind you ' + date.toLocaleDateString(undefined, { weekday: 'long' }), { label: 'Undo', action: async () => {
+      try {
+        await relabelThread(tid, [], [label.id]);
+        await relabel(inboxMsgs, ['INBOX']);
+        toast('Put back');
+        state.lists = {};
+        go({ force: true });
+      } catch (err) { failed(err); }
+    } });
+    updateBadge();
+  } catch (err) { failed(err); state.lists = {}; go({ force: true }); }
+}
+
+// Due reminders back to the inbox: unread, marked Reminded, the day label gone.
+// Your own replies in the conversation stay in Sent.
+async function dueReminders() {
+  const today = dayStr(new Date());
+  const due = (await refreshLabels()).filter(l => { const m = REMIND.exec(l.name); return m && m[1] <= today; });
+  if (!due.length) return 0;
+  const reminded = await labelNamed(REMINDED, { create: true });
+  let n = 0;
+  for (const l of due) {
+    const ids = await allIds('-in:sent', { labelIds: [l.id], cap: 500 });
+    if (ids.length) await relabel(ids, ['INBOX', 'UNREAD', reminded.id]);
+    n += ids.length;
+    await api('/labels/' + l.id, { method: 'DELETE' });      // takes the day label off everything
+  }
+  await refreshLabels(true);
+  return n;
+}
+function bringBackReminders() {
+  return dueReminders().then(n => {
+    if (!n) return;
+    toast(n === 1 ? 'A reminder is back in your inbox' : 'Your reminders are back in your inbox');
+    delete state.lists.inbox;
+    if (state.view === 'inbox' && !state.tag && !state.search) loadList({ force: true, quiet: true });
+  }).catch(() => {});
+}
+
+// Opening a reminder settles it: it is an ordinary inbox message again.
+async function settleReminder(item) {
+  const rl = reminderId();
+  if (!rl || !item.labelIds.includes(rl)) return;
+  try {
+    await relabelThread(item.threadId, [], [rl]);
+    patch(it => it.threadId === item.threadId, [], [rl]);
+    quietOnce = true;
+    render();
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// The unread count on the Home Screen icon
+// ---------------------------------------------------------------------------
+// iOS 16.4+ lets a web app on the Home Screen show a badge (setAppBadge). The
+// count is Gmail's own: unread conversations in the inbox.
+const canBadge = () => 'setAppBadge' in navigator;
+const badgeOn = () => ls.get(K.badge, '') === '1';
+let badgeTimer = null;
+function updateBadge() {
+  if (!canBadge() || !badgeOn() || !getToken()) return;
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(async () => {
+    try {
+      const n = (await api('/labels/INBOX')).threadsUnread || 0;
+      if (n) await navigator.setAppBadge(n); else await navigator.clearAppBadge();
+    } catch {}
+  }, 400);
+}
+async function toggleBadge() {
+  if (badgeOn()) {
+    ls.del(K.badge);
+    try { await navigator.clearAppBadge?.(); } catch {}
+    toast('Unread count taken off the icon');
+    return render();
+  }
+  if (!canBadge()) return toast('Only the Home Screen app can show a count on its icon — open Mail from your Home Screen', { bad: true, ms: 7000 });
+  // iOS asks for notification permission before it shows a web app's badge.
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    let p = 'default';
+    try { p = await Notification.requestPermission(); } catch {}
+    if (p !== 'granted') return toast('Allow notifications for Mail and the icon can show your unread count', { bad: true, ms: 7000 });
+  }
+  ls.set(K.badge, '1');
+  updateBadge();
+  toast('The icon now shows how many conversations are unread');
+  render();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') updateBadge(); });
 
 // ---------------------------------------------------------------------------
 // The tag sheet
@@ -2838,17 +3068,53 @@ function confirmSheet({ title, body, yes }) {
   });
 }
 
-function closeSheet() {
+function closeSheet(instant) {
   const el = $('#sheet');
   if (confirmDone) { const done = confirmDone; confirmDone = null; done(null); }
   if (state.sheet?.url) { const u = state.sheet.url; state.sheet.url = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
   if (el.classList.contains('hide')) return;
   state.sheet = null;
   const finish = () => { if (state.sheet) return; el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
-  if (reduced) return finish();
+  if (reduced || instant === true) return finish();
   el.classList.add('leaving');
   setTimeout(finish, 280);
 }
+
+// A sheet follows a downward drag; let go far enough (or with a flick) and it
+// closes, otherwise it springs back - as sheets do on iOS.
+let sheetDrag = null;
+document.addEventListener('pointerdown', e => {
+  const sh = e.target.closest('#sheet .sheet');
+  if (!sh || e.button > 0 || e.target.closest('button, input, textarea, a, select, label')) return;
+  sheetDrag = { sh, id: e.pointerId, y0: e.clientY, t0: performance.now(), dy: 0 };
+});
+document.addEventListener('pointermove', e => {
+  const d = sheetDrag;
+  if (!d || e.pointerId !== d.id) return;
+  const raw = e.clientY - d.y0;
+  d.dy = raw > 0 ? raw : raw / 6;                      // a little give upwards, then stops
+  if (Math.abs(raw) < 4) return;
+  d.sh.style.animation = 'none';
+  d.sh.style.transition = 'none';
+  d.sh.style.transform = 'translateY(' + d.dy + 'px)';
+});
+const endSheetDrag = e => {
+  const d = sheetDrag;
+  if (!d || e.pointerId !== d.id) return;
+  sheetDrag = null;
+  const speed = d.dy / Math.max(1, performance.now() - d.t0);          // px per ms
+  if (d.dy > 110 || (d.dy > 36 && speed > 0.55)) {
+    d.sh.style.transition = 'transform .24s cubic-bezier(.4,0,1,1)';
+    d.sh.style.transform = 'translateY(105%)';
+    $('#sheet .scrim')?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, fill: 'forwards' });
+    setTimeout(() => closeSheet(true), 240);
+  } else if (d.dy) {
+    d.sh.style.transition = 'transform .5s cubic-bezier(.2,1.3,.3,1)';   // springs back with a little overshoot
+    d.sh.style.transform = '';
+  }
+};
+document.addEventListener('pointerup', endSheetDrag);
+document.addEventListener('pointercancel', endSheetDrag);
 
 // ---------------------------------------------------------------------------
 // Loading
@@ -2866,7 +3132,14 @@ async function loadList({ force, quiet } = {}) {
       labelIds = [l.id];
     }
     const r = await threadPage(spec.q, { labelIds });
-    const items = await hydrate(r.ids);
+    let items = await hydrate(r.ids);
+    if (spec.key === 'inbox') {                     // reminders that came back go first, as in Mail
+      const rl = await labelNamed(REMINDED);
+      if (rl) {
+        const pinned = await hydrate((await threadPage('', { labelIds: ['INBOX', rl.id] })).ids);
+        items = pinned.concat(items.filter(it => !pinned.some(p => p.id === it.id)));
+      }
+    }
     state.lists[spec.key] = { items, next: r.next, q: spec.q, labelIds };
   } catch (e) {
     if (e instanceof AuthError) return render();
@@ -2875,6 +3148,7 @@ async function loadList({ force, quiet } = {}) {
   if (quiet) quietOnce = true;
   render();
   if (spec.key === 'inbox' && state.lists.inbox?.items?.length) hintSwipe();
+  updateBadge();
 }
 
 async function loadMore(btn) {
@@ -3068,11 +3342,11 @@ screen.addEventListener('contextmenu', e => { if (e.target.closest('ul.list > li
 // ---------------------------------------------------------------------------
 // Swipe right to tag
 // ---------------------------------------------------------------------------
-// As in Mail: drag a row right and Tag shows underneath. Let go part-way and
-// the row stays open on the button; drag past half-way and it tags at once.
+// As in Mail: drag a row right and Tag and Marketing show underneath. Let go
+// part-way and the row stays open on them; drag past half-way and it tags at once.
 // Rows scroll up and down as normal - touch-action: pan-y leaves vertical
 // moves to the browser, and a mostly-vertical start is never taken as a swipe.
-const SWIPE_OPEN = 96;          // right: room for Tag
+const SWIPE_OPEN = 160;         // right: room for Tag and Marketing
 const SWIPE_OPEN_L = -228;      // left: room for Flag, Archive and Trash
 let swipe = null, openRow = null;
 
@@ -3163,7 +3437,7 @@ function hintSwipe() {
   if (!li) return;
   ls.set(K.swipeHint, '1');
   if (!reduced) { li.classList.add('peek'); setTimeout(() => li.classList.remove('peek'), 2600); }
-  setTimeout(() => toast('Tip: swipe an email to the right to tag it', { ms: 5000 }), reduced ? 0 : 900);
+  setTimeout(() => toast('Tip: swipe an email right to tag it or send it to ' + settings.label, { ms: 5000 }), reduced ? 0 : 900);
 }
 
 // ---------------------------------------------------------------------------
@@ -3174,7 +3448,7 @@ $('#tabs').addEventListener('click', e => {
   if (!b) return;
   const order = ['inbox', 'marketing', 'rules'];
   screen.classList.toggle('back', order.indexOf(b.dataset.view) < order.indexOf(state.view));
-  if (b.dataset.view === 'inbox' && state.view === 'inbox') state.tag = null;   // a second tap clears the tag
+  if (b.dataset.view === 'inbox') state.tag = null;       // Inbox is a filter of its own now
   state.view = b.dataset.view;
   clearSearch(false);
   go();
@@ -3201,15 +3475,78 @@ function clearSearch(reload = true) {
   if (reload) go();
 }
 
-$('#refresh').addEventListener('click', async () => {
-  const btn = $('#refresh');
-  btn.classList.add('turning');
+// Fetches what's on screen afresh (pull to refresh).
+async function refresh() {
+  await dueReminders().catch(() => 0);
   labelsPromise = null;
   refreshLabels().then(() => render()).catch(() => {});
   if (state.view === 'rules') await loadRules({ force: true });
   else await loadList({ force: true, quiet: true });
-  setTimeout(() => btn.classList.remove('turning'), 300);
-});
+}
+
+// Search stays out of the way until you want it: the magnifier, or a pull down.
+$('#find').addEventListener('click', () => { state.showSearch = true; renderChrome(); $('#q').focus(); });
+$('#q').addEventListener('blur', () => setTimeout(() => {
+  if (!$('#q').value && !state.search && document.activeElement !== $('#q')) { state.showSearch = false; renderChrome(); }
+}, 200));
+
+// The large title gives way to the compact bar once it has scrolled off.
+addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 56), { passive: true });
+
+// Pull to refresh, as in Mail: pull the list down from the top and let go. A
+// short pull shows the search bar; a longer one also fetches the list afresh.
+const PULL_SEARCH = 28, PULL_REFRESH = 70;
+let pull = null;
+const pullable = t => !state.select && !state.reading && !state.compose && !state.sheet && getToken() &&
+  state.view !== 'settings' && !t.closest('#tabs, input, textarea, #sheet, #reader, #compose, #selbar, #toast, #minibar');
+function pullStart(y, t) {
+  if (scrollY > 0 || !pullable(t)) return;
+  pull = { y0: y, d: 0, on: false };
+}
+function pullMove(y, e) {
+  if (!pull) return;
+  if (swipe?.lock) { pull = null; return; }                   // a row is being swiped sideways
+  const dy = y - pull.y0;
+  if (!pull.on) {
+    if (dy < -4) { pull = null; return; }
+    if (dy < 10) return;
+    pull.on = true;
+    if (typeof cancelPress === 'function') cancelPress();
+    document.querySelector('main').classList.add('pulling');
+  }
+  if (e?.cancelable) e.preventDefault();                      // the page doesn't bounce as well
+  pull.d = Math.min(130, (dy - 10) * 0.5);                    // rubber band
+  document.querySelector('main').style.transform = 'translateY(' + pull.d + 'px)';
+  const k = Math.min(1, pull.d / PULL_REFRESH), ptr = $('#ptr');
+  ptr.style.opacity = k;
+  ptr.style.transform = 'scale(' + (0.6 + 0.4 * k) + ') rotate(' + Math.round(k * 300) + 'deg)';
+  ptr.classList.toggle('ready', pull.d >= PULL_REFRESH);
+}
+async function pullEnd() {
+  const p = pull;
+  pull = null;
+  if (!p?.on) return;
+  swallowClick = true;                                        // letting go is not a tap
+  setTimeout(() => { swallowClick = false; }, 350);
+  const m = document.querySelector('main'), ptr = $('#ptr');
+  m.classList.remove('pulling');
+  if (p.d >= PULL_SEARCH && !state.showSearch) { state.showSearch = true; renderChrome(); }
+  if (p.d >= PULL_REFRESH) {
+    m.style.transform = 'translateY(56px)';
+    ptr.classList.add('spin'); ptr.style.opacity = 1; ptr.style.transform = 'scale(1)';
+    try { await refresh(); } catch {}
+    ptr.classList.remove('spin', 'ready');
+  }
+  m.style.transform = ''; ptr.style.opacity = ''; ptr.style.transform = '';
+}
+addEventListener('touchstart', e => { if (e.touches.length === 1) pullStart(e.touches[0].clientY, e.target); }, { passive: true });
+addEventListener('touchmove', e => { if (pull && e.touches.length === 1) pullMove(e.touches[0].clientY, e); }, { passive: false });
+addEventListener('touchend', pullEnd);
+addEventListener('touchcancel', pullEnd);
+// the same by mouse, for a desktop browser (and the tests)
+addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button === 0) pullStart(e.clientY, e.target); });
+addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && pull) pullMove(e.clientY, null); });
+addEventListener('pointerup', e => { if (e.pointerType === 'mouse') pullEnd(); });
 
 $('#gear').addEventListener('click', () => {
   state.view = state.view === 'settings' ? 'inbox' : 'settings';
@@ -3474,8 +3811,12 @@ document.addEventListener('click', async e => {
       return;
     }
 
+    case 'badge': return toggleBadge();
+    case 'to-top': return scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     case 'chip':
       state.tag = el.dataset.id || null;
+      state.view = 'inbox';
+      clearSearch(false);
       screen.classList.remove('back');
       return go();
     case 'more': return loadMore(el);
@@ -3605,7 +3946,7 @@ function renew() {
     const waiting = JSON.parse(ls.get(K.pending, 'null'));
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
-  Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); }).catch(() => {});
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { chipSig = null; render(); bringBackReminders(); }).catch(() => {});
   loadList();
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {

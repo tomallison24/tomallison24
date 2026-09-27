@@ -1,12 +1,12 @@
 # Mail
 
-Gmail triage as a home-screen web app: frosted glass over a slow aurora, one
-tag button next to every message, a Marketing bucket that empties itself, tags
-that sort mail by who sent it, a page for each conversation, search, and the
-everyday parts of iOS Mail: swipe to flag, archive or trash, reply and forward
-with Undo Send, and attachments.
+Gmail triage as a home-screen web app: frosted glass over a slow aurora, a
+Marketing bucket that empties itself, tags that sort mail by who sent it,
+Gmail's own categories, a page for each conversation, search, and the everyday
+parts of iOS Mail: swipes, reply and forward with Undo Send, attachments,
+Remind Me, and an unread count on the icon.
 
-**One tap on the tag does three things:**
+**Swipe an email right and tap Marketing** — that one tap does three things:
 
 1. moves that conversation to the **Marketing** label and out of the inbox;
 2. writes a **Gmail filter** so everything from the same domain does the same
@@ -15,8 +15,24 @@ with Undo Send, and attachments.
 
 Anything in Marketing older than **3 days** (Settings: 1–30) goes to the
 Trash, where Gmail deletes it for good after 30 days. The sweep runs when the
-app opens, and `.github/workflows/mail.yml` runs the same sweep daily so it
-happens on days you never open it.
+app opens; `.github/workflows/mail.yml` can run it daily too, so it happens on
+days you never open the app — but only once its Google credentials are set up
+(Setup, step 2). Until then the daily run just logs "No Google credentials set".
+
+## Finding your way around
+
+- **One row of filters** under the title: **Inbox**, Gmail's own categories
+  (**Primary**, **Promotions**, **Updates** — the inbox as Gmail sorted it),
+  **Flagged**, your tags, **Marketing**, and **Tags** to manage them. It
+  scrolls sideways; the one you're on is tinted.
+- **Pull the list down** from the top: a short pull shows the search bar, a
+  longer one also fetches the list afresh (the glass spinner turns blue when
+  letting go will refresh). The magnifier opens search too.
+- The large **Mail** title gives way to a compact bar as you scroll; tap the
+  bar to jump back to the top.
+- **Edit** selects messages, as in Mail.
+- Rows show the sender, subject and preview, plus your own tags — no buttons
+  and no domain chips; the actions live under the swipes.
 
 - **No build step, no server, no dependencies.** `index.html` is the whole
   app; `sw.js` keeps the shell working offline. Gmail is never cached — a
@@ -127,14 +143,14 @@ already-filed mail where it is.
 ## Tags
 
 Tags sort mail by who sent it, and keep doing so. **Swipe an email to the
-right** — a short swipe shows **Tag**, a long one opens it straight away — and
-type a name, say *Sofia's school*:
+right** — a short swipe shows **Tag** (next to Marketing), a long one opens it
+straight away — and type a name, say *Sofia's school*:
 
 - that email, everything **already** in the mailbox from the same domain
   (archived mail included), and **all new mail** from it gets the tag — the
   last by a Gmail filter, so it happens whether or not the app is open;
 - tagged mail **stays in the inbox** (only Marketing skips it);
-- a chip for the tag appears under the tabs; tap it to see just that tag, and
+- the tag joins the row of filters; tap it to see just that tag, and
   **Inbox** to go back.
 
 Tagging answers as soon as that email and the rule are done; the older mail
@@ -195,14 +211,36 @@ the way Mail does. Plain-text mail is shown as text with its links tappable.
 
 ## Swiping
 
-- **Right** — **Tag** (see Tags).
+- **Right** — a short swipe shows **Tag** and **Marketing** (in the Marketing
+  list: **Inbox**, to move it back); swipe all the way to tag at once.
 - **Left** — a short swipe shows **Flag**, **Archive** and **Trash**; swipe all
   the way to trash it. Every one has **Undo**, which puts back only the
   messages that were in the inbox — your own replies in the conversation stay
   in Sent.
 
-Flagged is Gmail's star, so it matches Gmail on the web. The **Flagged** chip
-under the tabs lists them.
+Flagged is Gmail's star, so it matches Gmail on the web. The **Flagged** filter
+lists them.
+
+## Remind Me
+
+The **…** on a message page → **Remind Me** → **Tomorrow**, **This Weekend**
+(Saturday) or **Next Week** (Monday). The conversation leaves the inbox and, on
+the day, comes back **unread at the top** of it with a **Reminder** chip, until
+you open it.
+
+Gmail's API has no snooze, so a reminder is a label named for its day
+(`Remind 2026-09-28`), and the app brings due ones back **when it opens** (or
+on a pull to refresh). The daily GitHub job does the same once it has its
+credentials; without them, a reminder waits until you next open the app. The
+labels are the app's own bookkeeping and never show up as tags.
+
+## The unread count on the icon
+
+**Settings → Unread count on the app icon**. The count is Gmail's own —
+unread conversations in the inbox — and updates as you read. iOS 16.4+ allows
+this for a web app on the Home Screen; the app asks to allow notifications
+first, because I understand iOS won't show a web app's badge without that.
+Nothing is ever sent as a notification.
 
 ## Writing
 
@@ -272,7 +310,7 @@ Trash is Gmail's Trash — 30 days to change your mind — and the toast has an
 
 ## Search
 
-The bar at the top searches all of your mail, not just the inbox, and takes
+Search (pull down, or the magnifier) looks through all of your mail, not just the inbox, and takes
 Gmail's own search syntax: `invoice`, `from:tmsa.org`, `has:attachment`,
 `after:2026/09/01`, `is:unread` and so on. **Show more** at the bottom of any
 list fetches the next page.
@@ -345,6 +383,12 @@ secondary sources and my own testing instead:
   request format comes from secondary descriptions rather than the RFC
   itself. The `Authentication-Results` format *was* checked against a real
   message in the connected mailbox;
+- whether iOS needs **notification permission** before it shows the app-icon
+  badge. MDN's compatibility data (browser-compat-data 8.1.3) confirms the
+  badge itself on iOS 16.4+ Home Screen apps, but not the permission rule;
+  the app asks for permission either way;
+- the **grow-from-row** animation on an iPhone. It uses View Transitions,
+  which the same data lists for iOS 18+; older iOS gets the plain slide;
 - how **Share or Save…** and **Open** behave for files in a home-screen app.
   The share sheet is the route iOS supports for handing a file on; **Open**
   opens the file in a new view, which I could not try on an iPhone;

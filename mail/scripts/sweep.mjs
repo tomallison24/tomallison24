@@ -1,6 +1,6 @@
 // Empties the Marketing bucket on a schedule, so it happens whether or not
-// the app is opened. Run by .github/workflows/mail.yml; the app runs the same
-// sweep in the browser when you open it.
+// the app is opened, and brings back Remind Me mail that is due. Run by
+// .github/workflows/mail.yml; the app does the same when you open it.
 //
 // Everything older than DELETE_AFTER_DAYS goes to the Trash, which Gmail
 // deletes for good after 30 days. Nothing is erased outright, so a mistake is
@@ -49,23 +49,51 @@ async function accessToken() {
 }
 
 let token;
-async function api(path, { method = 'GET', params, tries = 0 } = {}) {
+async function api(path, { method = 'GET', params, body, tries = 0 } = {}) {
   const url = new URL(API + path);
   for (const [k, v] of Object.entries(params || {})) if (v != null) url.searchParams.set(k, v);
-  const res = await fetch(url, { method, headers: { Authorization: 'Bearer ' + token } });
+  const res = await fetch(url, {
+    method, headers: { Authorization: 'Bearer ' + token, ...(body && { 'Content-Type': 'application/json' }) },
+    ...(body && { body: JSON.stringify(body) }),
+  });
   if ((res.status === 429 || res.status >= 500) && tries < 4) {
     await sleep(800 * 2 ** tries);
-    return api(path, { method, params, tries: tries + 1 });
+    return api(path, { method, params, body, tries: tries + 1 });
   }
   const text = await res.text();
   if (!res.ok) throw new Error(method + ' ' + path + ' -> ' + res.status + ' ' + text.slice(0, 300));
   return text ? JSON.parse(text) : null;
 }
 
+// Remind Me: mail labelled "Remind YYYY-MM-DD" goes back to the inbox on that
+// day (UTC here), unread and labelled "Reminded"; then the day label is deleted.
+async function reminders(labels) {
+  const today = new Date().toISOString().slice(0, 10);
+  const due = labels.filter(l => { const m = /^Remind (\d{4}-\d{2}-\d{2})$/i.exec(l.name); return m && m[1] <= today; });
+  if (!due.length) return console.log('No reminders due.');
+  let reminded = labels.find(l => l.name.toLowerCase() === 'reminded');
+  if (!reminded) reminded = await api('/labels', { method: 'POST', body: { name: 'Reminded', labelListVisibility: 'labelShow', messageListVisibility: 'show' } });
+  for (const l of due) {
+    const ids = [];
+    let pageToken;
+    do {
+      const page = await api('/messages', { params: { q: '-in:sent', labelIds: l.id, maxResults: 500, pageToken } });
+      for (const m of page.messages || []) ids.push(m.id);
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+    for (let i = 0; i < ids.length; i += 500) {
+      await api('/messages/batchModify', { method: 'POST', body: { ids: ids.slice(i, i + 500), addLabelIds: ['INBOX', 'UNREAD', reminded.id] } });
+    }
+    await api('/labels/' + l.id, { method: 'DELETE' });
+    console.log(`Reminder "${l.name}": ${ids.length} message${ids.length === 1 ? '' : 's'} back in the inbox.`);
+  }
+}
+
 const run = async () => {
   token = await accessToken();
 
   const { labels = [] } = await api('/labels');
+  await reminders(labels);
   const label = labels.find(l => l.name.toLowerCase() === LABEL.toLowerCase());
   if (!label) {
     console.log(`No "${LABEL}" label in this mailbox yet - nothing to sweep.`);

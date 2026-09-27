@@ -1,4 +1,5 @@
-# Empties the Mail app's Marketing bucket on a schedule.
+# Empties the Mail app's Marketing bucket on a schedule, and brings back
+# Remind Me mail that is due.
 #
 # The app sweeps when it is opened; this does the same daily so mail is
 # cleared whether or not the phone app is opened. Everything in the bucket
@@ -32,7 +33,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Empty the bucket
+      - name: Empty the bucket and bring back reminders
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
