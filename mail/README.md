@@ -30,7 +30,7 @@ days you never open the app — but only once its Google credentials are set up
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
 - The header **stays at the top** as you scroll: the large title shrinks to a
-  compact one on a frosted bar, with the mailbox menu, search, **Edit** and
+  compact one on a see-through Liquid Glass bar, with the mailbox menu, search, **Edit** and
   Settings still to hand. (Tapping the iPhone's status bar, at the very top,
   scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.

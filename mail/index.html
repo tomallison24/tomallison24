@@ -108,7 +108,11 @@
     /* glass */
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
-    --bar: rgba(20, 20, 24, 0.94);            /* the header once it's pinned: readable even unblurred */
+    /* the pinned header: Liquid Glass - a thin tint, clearer towards the bottom, and a lit rim */
+    --bar-top: rgba(34, 34, 40, 0.58);
+    --bar-bottom: rgba(34, 34, 40, 0.30);
+    --bar-rim: rgba(255, 255, 255, 0.16);
+    --bar-solid: rgba(20, 20, 24, 0.96);
     --hair: rgba(255, 255, 255, 0.11);
     --hair-2: rgba(255, 255, 255, 0.07);
     --blur: blur(30px) saturate(180%);
@@ -162,7 +166,10 @@
       --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
-      --bar: rgba(248, 248, 251, 0.95);
+      --bar-top: rgba(255, 255, 255, 0.62);
+      --bar-bottom: rgba(255, 255, 255, 0.34);
+      --bar-rim: rgba(255, 255, 255, 0.85);
+      --bar-solid: rgba(248, 248, 251, 0.97);
       --hair: rgba(60, 60, 67, 0.14);
       --hair-2: rgba(60, 60, 67, 0.09);
       --fill: rgba(118, 118, 128, 0.11);
@@ -223,8 +230,8 @@
 
   /* ---- header ----
      It stays at the top as the list scrolls, as in Mail: the large title
-     shrinks to a compact one, the account line folds away, and a frosted bar
-     appears behind it - with the mailbox menu, search, Edit and Settings still
+     shrinks to a compact one, the account line folds away, and a Liquid Glass
+     bar appears behind it - with the mailbox menu, search, Edit and Settings still
      to hand. The height it gives up is added back as margin below, so the list
      doesn't jump when it shrinks. */
   header {
@@ -238,10 +245,11 @@
   /* the fade-in goes on what's inside: an animation on the header itself would
      stop the bar's blur from reaching the list behind it */
   header > * { animation: fadeDown .5s var(--ease) both; }
-  header::before {                          /* the bar: full width, whatever the page's width */
+  header::before {                          /* the Liquid Glass bar: full width, whatever the page's width */
     content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -1;
-    background: var(--bar); border-bottom: 1px solid var(--hair);
-    backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+    backdrop-filter: blur(22px) saturate(200%) brightness(1.04); -webkit-backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
+    box-shadow: inset 0 -1px 0 var(--bar-rim), 0 1px 0 var(--hair), 0 10px 28px var(--lift);
     opacity: 0; transition: opacity .25s; pointer-events: none;
   }
   header h1 { font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; margin: 0; flex: 1; font-weight: 700; transition: font-size .28s var(--ease); }
@@ -249,6 +257,14 @@
     display: block; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; margin-top: 3px;
     max-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     transition: opacity .2s, max-height .28s var(--ease), margin .28s var(--ease);
+  }
+  /* Where the glass can't blur - no support, or Reduce Transparency is on in
+     iOS Accessibility - the bar turns near-solid so the title stays readable. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    header::before { background: var(--bar-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    header::before { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
   body.scrolled header { --hh: 40px; margin-bottom: 14px; padding-bottom: 6px; }
   body.scrolled header::before { opacity: 1; }
