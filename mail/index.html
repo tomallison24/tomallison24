@@ -112,6 +112,10 @@
     --bar-top: rgba(34, 34, 40, 0.14);
     --bar-bottom: rgba(34, 34, 40, 0.05);
     --bar-rim: rgba(255, 255, 255, 0.16);
+    /* one clear Liquid Glass for every neutral button, bar and toolbar */
+    --lg-bg: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+    --lg-filter: blur(14px) saturate(190%) brightness(1.04);
+    --lg-rim: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi);
     --bar-solid: rgba(20, 20, 24, 0.96);
     --hair: rgba(255, 255, 255, 0.11);
     --hair-2: rgba(255, 255, 255, 0.07);
@@ -169,6 +173,8 @@
       --bar-top: rgba(255, 255, 255, 0.16);
       --bar-bottom: rgba(255, 255, 255, 0.05);
       --bar-rim: rgba(255, 255, 255, 0.85);
+      --lg-bg: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+      --lg-rim: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi);
       --bar-solid: rgba(248, 248, 251, 0.97);
       --hair: rgba(60, 60, 67, 0.14);
       --hair-2: rgba(60, 60, 67, 0.09);
@@ -697,19 +703,6 @@
     animation: pop .3s var(--ease);
   }
   .textbtn:active { transform: scale(0.93); }
-  /* The header's buttons (search, Edit, Settings, Select All / Done) are the
-     same clear Liquid Glass as the pinned pill and the compose button. */
-  header .iconbtn, header .textbtn {
-    background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom)); border-color: transparent;
-    backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
-    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi);
-  }
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    header .iconbtn, header .textbtn { background: var(--bar-solid); }
-  }
-  @media (prefers-reduced-transparency: reduce) {
-    header .iconbtn, header .textbtn { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  }
   #selall { font-weight: 500; }
   /* no text selection or iOS callout on a long press */
   ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -956,6 +949,31 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
     .aurora b { opacity: 0.4; }
+  }
+  /* ---- Liquid Glass, everywhere ----
+     Every neutral button, and the floating bars that hold them, share the
+     pinned header's clear glass: round and text buttons, the grey full-width
+     buttons, Open in Gmail, a message's toolbar and the select bar (the
+     compose button has the same, with its own fallback). Coloured
+     buttons (Connect, Send, Delete, the select bar's actions) keep their
+     colour, which says what they do. Last in the sheet so it wins. */
+  .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar {
+    background: var(--lg-bg); border-color: transparent;
+    backdrop-filter: var(--lg-filter); -webkit-backdrop-filter: var(--lg-filter);
+  }
+  .iconbtn, .textbtn, .pillbtn, .btn.ghost { box-shadow: var(--lg-rim); }
+  .plink { box-shadow: var(--lg-rim), 0 4px 14px var(--lift); }
+  .rgroup { box-shadow: var(--lg-rim), 0 10px 30px var(--lift-strong); }
+  #selbar { box-shadow: var(--lg-rim), 0 -10px 36px var(--lift-strong); }
+  .iconbtn:active, .pillbtn:active { background: var(--glass-2); }
+  /* where the glass can't blur, or Reduce Transparency is on: near-solid */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar { background: var(--bar-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar {
+      background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
   }
 </style>
 </head>
