@@ -109,8 +109,8 @@
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
     /* the pinned header: Liquid Glass - a thin tint, clearer towards the bottom, and a lit rim */
-    --bar-top: rgba(34, 34, 40, 0.58);
-    --bar-bottom: rgba(34, 34, 40, 0.30);
+    --bar-top: rgba(34, 34, 40, 0.30);
+    --bar-bottom: rgba(34, 34, 40, 0.14);
     --bar-rim: rgba(255, 255, 255, 0.16);
     --bar-solid: rgba(20, 20, 24, 0.96);
     --hair: rgba(255, 255, 255, 0.11);
@@ -166,8 +166,8 @@
       --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
-      --bar-top: rgba(255, 255, 255, 0.62);
-      --bar-bottom: rgba(255, 255, 255, 0.34);
+      --bar-top: rgba(255, 255, 255, 0.32);
+      --bar-bottom: rgba(255, 255, 255, 0.14);
       --bar-rim: rgba(255, 255, 255, 0.85);
       --bar-solid: rgba(248, 248, 251, 0.97);
       --hair: rgba(60, 60, 67, 0.14);
@@ -240,17 +240,24 @@
     height: calc(env(safe-area-inset-top) + 14px + var(--hh));
     margin-top: calc(-1 * (env(safe-area-inset-top) + 10px));        /* reach up under the status bar */
     padding: calc(env(safe-area-inset-top) + 12px) 4px 2px;
-    transition: height .28s var(--ease), margin-bottom .28s var(--ease);
+    transition: height .28s var(--ease), margin-bottom .28s var(--ease), padding .28s var(--ease);
   }
   /* the fade-in goes on what's inside: an animation on the header itself would
      stop the bar's blur from reaching the list behind it */
   header > * { animation: fadeDown .5s var(--ease) both; }
-  header::before {                          /* the Liquid Glass bar: full width, whatever the page's width */
-    content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -1;
+  header::before {                          /* the Liquid Glass bar: a rounded pill floating just inside the screen's edges */
+    content: ''; position: absolute; top: calc(env(safe-area-inset-top) + 4px); bottom: 0; left: -6px; right: -6px; z-index: -1;
+    border-radius: 999px;
     background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
-    backdrop-filter: blur(22px) saturate(200%) brightness(1.04); -webkit-backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
-    box-shadow: inset 0 -1px 0 var(--bar-rim), 0 1px 0 var(--hair), 0 10px 28px var(--lift);
-    opacity: 0; transition: opacity .25s; pointer-events: none;
+    backdrop-filter: blur(24px) saturate(200%) brightness(1.05); -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(1.05);
+    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi), 0 8px 26px var(--lift);
+    opacity: 0; transform: scale(.97); transition: opacity .25s, transform .3s var(--ease); pointer-events: none;
+  }
+  header::after {                           /* a soft fade under the status bar, so mail doesn't scroll sharp behind the clock */
+    content: ''; position: absolute; top: 0; left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -2;
+    height: calc(env(safe-area-inset-top) + 6px); pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, transparent), transparent);
+    opacity: 0; transition: opacity .25s;
   }
   header h1 { font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; margin: 0; flex: 1; font-weight: 700; transition: font-size .28s var(--ease); }
   header .sub {
@@ -266,8 +273,9 @@
   @media (prefers-reduced-transparency: reduce) {
     header::before { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
-  body.scrolled header { --hh: 40px; margin-bottom: 14px; padding-bottom: 6px; }
-  body.scrolled header::before { opacity: 1; }
+  body.scrolled header { --hh: 40px; margin-bottom: 14px; padding-bottom: 6px; padding-left: 12px; padding-right: 8px; }
+  body.scrolled header::before { opacity: 1; transform: none; }
+  body.scrolled header::after { opacity: 1; }
   body.scrolled header h1 { font-size: 21px; letter-spacing: -0.02em; }
   body.scrolled header .sub { opacity: 0; max-height: 0; margin-top: 0; }
   body.scrolled .boxbtn svg { width: 18px; height: 18px; margin-top: 2px; }
