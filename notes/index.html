@@ -2467,6 +2467,7 @@ svg.fs{fill:currentColor}
     syncCfg = {url:c.url, secret:c.secret}; syncState = 'idle';
     try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch(e) {}
     renderSyncStatus(); sync(false);
+    toast('Reconnected to the Google Sheet from this phone’s backup copy.');
   });
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
