@@ -37,6 +37,11 @@
   --tint-mix:16%; --note-mix:30%; --tl:32%; --aurora:.40; --mark:rgba(255,204,0,.45);
   --blur:blur(30px) saturate(180%); --ease:cubic-bezier(.22,1,.36,1);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --icon:#0E7C8C; --accent-text:#0059C8; --danger-text:#AE2117;
+  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(248,248,251,.97);
+  --seg-thumb:rgba(255,255,255,.92); --gb-shadow:0 4px 14px rgba(40,40,80,.10);
+  --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
+  --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
   --n-yellow:#FFCC00; --n-green:#34C759; --n-blue:#0A84FF; --n-pink:#FF2D55; --n-purple:#AF52DE;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -49,6 +54,9 @@
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
+  --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
+  --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
+  --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
@@ -60,6 +68,9 @@
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
+  --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
+  --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
+  --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -69,7 +80,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--font);
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 /* ---- glass ---- */
 .glass{background:var(--gb-shine),var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
@@ -97,7 +108,6 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .title small{display:block;font-size:12px;font-weight:400;letter-spacing:0;color:var(--faint);margin-top:3px}
 .acts{display:flex;gap:8px;align-items:center}
 .iconbtn{width:36px;height:36px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);transition:transform .18s var(--ease),color .2s}
-.iconbtn.glass{background:var(--glass);border:1px solid var(--hair);box-shadow:inset 0 1px 0 var(--hi)}
 .iconbtn:active{transform:scale(.9);color:var(--text)}
 .iconbtn[aria-pressed="true"]{color:var(--accent)}
 .iconbtn svg{width:19px;height:19px}
@@ -360,6 +370,72 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .cookdots i.on{width:20px;background:var(--accent)}
 @keyframes fromR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
 @keyframes fromL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+
+/* ---- Icons and buttons: the same system as Mail ----
+   Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
+   ticks and close); icons in a calm slate-teal, while text, dots and
+   switches keep the blue; every button and bar in the same clear Liquid
+   Glass. Sizes follow Mail: 22px icons in 36px header buttons, 24px in 38px
+   page buttons, 31px in the 56px compose button, 21px in the search bar,
+   20px in pill buttons. Last in the sheet so it wins. */
+svg.b{stroke-width:2.2}
+svg.f{fill:currentColor;stroke:none}
+svg.fs{fill:currentColor}
+.iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{
+  background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter)}
+.iconbtn{width:36px;height:36px;color:var(--icon);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s,color .2s}
+.iconbtn svg{width:22px;height:22px}
+.iconbtn:active{transform:scale(.9);background:var(--glass-2);color:var(--text)}
+.iconbtn[aria-pressed="true"]{color:var(--accent)}
+#edPin[aria-pressed="true"]{color:var(--flag)}
+.pagehead .iconbtn{width:38px;height:38px}
+.pagehead .iconbtn svg{width:24px;height:24px}
+.pagehead{padding:6px 14px}
+.textbtn{height:36px;padding:0 14px;border-radius:999px;font-size:15px;font-weight:600;color:var(--accent-text);box-shadow:var(--lg-rim);transition:transform .18s var(--ease)}
+.textbtn:active{transform:scale(.93)}
+.pillbtn{height:38px;padding:0 15px;gap:6px;font-size:14px;font-weight:600;color:var(--text);box-shadow:var(--lg-rim)}
+.pillbtn svg{width:20px;height:20px;color:var(--icon)}
+.pillbtn:active{transform:scale(.93);background:var(--glass-2)}
+.pillbtn.bluec,.pillbtn.bluec svg{color:var(--accent-text)}
+.pillbtn.bluec{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 42%,transparent),inset 0 1px 1px var(--hi)}
+.btn{--tint:var(--accent);color:var(--tint-text,var(--accent-text));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 42%,transparent),inset 0 1px 1px var(--hi),var(--gb-shadow)}
+.btn.quiet{color:var(--text);font-weight:500;box-shadow:var(--lg-rim)}
+.btn.quiet{background:var(--lg-bg)}
+.btn.danger,.btn.quiet.danger{--tint:var(--danger);background:var(--lg-bg);color:var(--danger-text);min-height:50px;width:100%;font-weight:500;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger) 42%,transparent),inset 0 1px 1px var(--hi)}
+.send{width:38px;height:38px;color:var(--accent-text);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 42%,transparent),inset 0 1px 1px var(--hi)}
+.send svg{width:22px;height:22px}
+.fab{width:56px;height:56px;color:var(--icon);box-shadow:var(--lg-rim),0 8px 26px var(--lift)}
+.fab svg{width:31px;height:31px;stroke-width:1.7}
+.fab.small{width:46px;height:46px}
+.fab.small svg{width:24px;height:24px}
+.search{height:44px;padding:0 7px 0 15px;gap:9px;box-shadow:var(--lg-rim),0 6px 20px var(--lift);transition:box-shadow .25s}
+.search:focus-within{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 65%,var(--bar-rim)),inset 0 1px 1px var(--hi),0 0 0 4px rgba(10,132,255,.14),0 6px 20px var(--lift)}
+.search > svg{width:21px;height:21px;color:var(--icon)}
+.search .clear{width:28px;height:28px;color:var(--muted);background:var(--fill)}
+.search .clear svg{width:14px;height:14px}
+.quickadd{box-shadow:var(--lg-rim),0 6px 20px var(--lift)}
+.tabs{box-shadow:var(--lg-rim),0 10px 30px var(--lift-strong)}
+.tab{color:var(--muted)}
+.tab svg{width:20px;height:20px;color:var(--icon)}
+.tab[aria-selected="true"],.seg button[aria-pressed="true"]{color:var(--text);background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+.seg{border-radius:20px;box-shadow:var(--lg-rim),0 6px 20px var(--lift)}
+.seg button{border-radius:17px}
+.seg button[aria-pressed="true"] b{color:var(--text)}
+.seg button.warn b{color:var(--danger)}
+.arrow{color:var(--icon);box-shadow:var(--lg-rim),0 8px 26px var(--lift)}
+.arrow svg{width:28px;height:28px}
+.chip svg{width:15px;height:15px;opacity:.7}
+.rowbtn .ic{width:26px;height:auto;background:none;border:0;border-radius:0;color:var(--icon)}
+.rowbtn .ic svg{width:22px;height:22px}
+.tagedit .tchip button svg{stroke-width:2.2}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid)}
+}
+@media (prefers-reduced-transparency:reduce){
+  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
 </style>
 </head>
 <body>
@@ -376,17 +452,17 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <div class="acts">
           <button class="iconbtn glass" id="viewBtn" type="button" aria-label="Switch to list view"></button>
 <button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
-            <svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg>
           </button>
           <button class="iconbtn glass" id="tagsBtn" type="button" aria-label="Manage tags">
-            <svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>
           </button>
         </div>
       </div>
       <label class="search glass">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
         <input id="q" type="search" placeholder="Search notes or #tag" autocomplete="off" aria-label="Search notes">
-        <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </label>
       <div class="chips" id="chips" role="toolbar" aria-label="Filter notes by tag"></div>
     </header>
@@ -400,20 +476,20 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <h1 class="title">Reminders<small id="remSub"></small></h1>
         <div class="acts">
           <button class="iconbtn glass" id="remSearchBtn" type="button" aria-label="Search reminders" aria-pressed="false">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
           </button>
 <button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
-            <svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg>
           </button>
           <button class="iconbtn glass" id="remTagsBtn" type="button" aria-label="Manage tags">
-            <svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>
           </button>
         </div>
       </div>
       <label class="search glass" id="rqWrap" hidden>
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
         <input id="rq" type="search" placeholder="Search reminders or #tag" autocomplete="off" aria-label="Search reminders">
-        <button class="clear" id="rqClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <button class="clear" id="rqClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </label>
       <div class="seg glass" id="seg" role="toolbar" aria-label="Reminder views"></div>
       <div class="chips" id="listChips" role="toolbar" aria-label="Filter by list"></div>
@@ -421,7 +497,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <main class="list" id="remMain">
       <form class="quickadd glass" id="quickAdd" autocomplete="off">
         <input id="qa" placeholder="Add a reminder…" aria-label="Add a reminder" enterkeyhint="done">
-        <button type="submit" class="send" aria-label="Add reminder"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="submit" class="send" aria-label="Add reminder"><svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg></button>
       </form>
       <div id="remBody" style="display:flex;flex-direction:column;gap:18px"></div>
     </main>
@@ -431,18 +507,18 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   <div class="dock">
     <nav class="tabs glass" role="tablist" aria-label="Sections">
       <button class="tab" type="button" role="tab" data-tab="notes" aria-selected="true">
-        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Notes
+        <svg viewBox="0 0 24 24"><rect x="4.2" y="2.8" width="15.6" height="18.4" rx="3.6"/><path d="M8.2 8h7.6M8.2 12h7.6M8.2 16h4.6"/></svg>Notes
       </button>
       <button class="tab" type="button" role="tab" data-tab="rem" aria-selected="false">
-        <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="6" height="6" rx="2"/><path d="M5 7l1 1 2-2M13 7h7M13 17h7"/><rect x="3.5" y="14" width="6" height="6" rx="2"/></svg>Reminders
+        <svg viewBox="0 0 24 24"><rect x="3" y="4.2" width="5.6" height="5.6" rx="1.8"/><path d="M4.5 7.1l1.1 1.1 1.7-1.9"/><rect x="3" y="14.2" width="5.6" height="5.6" rx="1.8"/><path d="M12 7h8.6M12 17h8.6"/></svg>Reminders
       </button>
     </nav>
     <div class="dockr">
       <button class="fab small" id="pasteBtn" type="button" aria-label="Paste from clipboard">
-        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="3"/><path d="M9 4.5V3.8A1.8 1.8 0 0 1 10.8 2h2.4A1.8 1.8 0 0 1 15 3.8v.7"/><path d="M9.5 11h5M9.5 15h3.5"/></svg>
+        <svg viewBox="0 0 24 24"><rect x="5" y="4.2" width="14" height="17" rx="3.2"/><path d="M9 4.4A1.8 1.8 0 0 1 10.8 2.6h2.4A1.8 1.8 0 0 1 15 4.4a1.4 1.4 0 0 1-1.4 1.4h-3.2A1.4 1.4 0 0 1 9 4.4z"/><path d="M8.8 11.4h6.4M8.8 15.4h4.2"/></svg>
       </button>
       <button class="fab" id="fab" type="button" aria-label="New note">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M11.5 3.8H7.6a3.8 3.8 0 0 0-3.8 3.8v8.8a3.8 3.8 0 0 0 3.8 3.8h8.8a3.8 3.8 0 0 0 3.8-3.8v-3.9"/><path d="M17.5 3.6a2.1 2.1 0 0 1 3 3l-7.4 7.4a2.4 2.4 0 0 1-1.1.6l-3 .8.8-3a2.4 2.4 0 0 1 .6-1.1z"/></svg>
       </button>
     </div>
   </div>
@@ -452,23 +528,23 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet page" role="dialog" aria-modal="true" aria-labelledby="edLbl">
       <div class="sheethead pagehead">
-        <button class="backbtn" id="edBack" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Notes</button>
+        <button class="iconbtn" id="edBack" type="button" aria-label="Back to notes"><svg viewBox="0 0 24 24" class="b"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg></button>
         <h2 id="edLbl" class="vh">Note</h2>
         <div class="acts">
           <button class="iconbtn" id="edPin" type="button" aria-pressed="false" aria-label="Pin note"></button>
           <button class="iconbtn" id="edShare" type="button" aria-label="Share note">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 14.4V3.6"/><path d="M8.2 7l3.1-3.1a1 1 0 0 1 1.4 0L15.8 7"/><path d="M8.6 10.2H7.4a3.2 3.2 0 0 0-3.2 3.2v4.4A3.2 3.2 0 0 0 7.4 21h9.2a3.2 3.2 0 0 0 3.2-3.2v-4.4a3.2 3.2 0 0 0-3.2-3.2h-1.2"/></svg>
           </button>
-          <button class="btn" id="edDone" type="button">Done</button>
+          <button class="textbtn" id="edDone" type="button">Done</button>
         </div>
       </div>
       <div class="sheetbody">
         <div class="recipebar" id="edRecipe" hidden>
-          <button class="pillbtn primary" id="edCook" type="button">
-            <svg viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z" style="fill:currentColor"/></svg>Step by step
+          <button class="pillbtn bluec" id="edCook" type="button">
+            <svg viewBox="0 0 24 24" class="f"><path d="M8 5.6v12.8a1 1 0 0 0 1.5.9l10-6.4a1 1 0 0 0 0-1.7l-10-6.4A1 1 0 0 0 8 5.6z"/></svg>Step by step
           </button>
-          <button class="pillbtn glass" id="edConvert" type="button">
-            <svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Convert
+          <button class="pillbtn" id="edConvert" type="button">
+            <svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Convert
           </button>
         </div>
         <div class="paper glass" id="edPaper">
@@ -512,9 +588,9 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <h2 id="tdLbl">Reminder</h2>
         <div class="acts">
           <button class="iconbtn" id="tdShare" type="button" aria-label="Share reminder">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 14.4V3.6"/><path d="M8.2 7l3.1-3.1a1 1 0 0 1 1.4 0L15.8 7"/><path d="M8.6 10.2H7.4a3.2 3.2 0 0 0-3.2 3.2v4.4A3.2 3.2 0 0 0 7.4 21h9.2a3.2 3.2 0 0 0 3.2-3.2v-4.4a3.2 3.2 0 0 0-3.2-3.2h-1.2"/></svg>
           </button>
-          <button class="btn" id="tdDone" type="button">Done</button>
+          <button class="textbtn" id="tdDone" type="button">Done</button>
         </div>
       </div>
       <div class="sheetbody">
@@ -547,7 +623,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         </div>
         <div class="opts">
           <button class="opt flagopt" id="tdFlag" type="button" aria-pressed="false">
-            <svg viewBox="0 0 24 24" style="fill:currentColor;width:15px;height:15px"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>Flag
+            <svg viewBox="0 0 24 24" class="fs"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg>Flag
           </button>
         </div>
         <button class="btn quiet danger" id="tdDelete" type="button">Delete reminder</button>
@@ -560,7 +636,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="lsLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="lsLbl">New list</h2><div class="acts"><button class="btn" id="lsSave" type="button">Save</button></div></div>
+      <div class="sheethead"><h2 id="lsLbl">New list</h2><div class="acts"><button class="textbtn" id="lsSave" type="button">Save</button></div></div>
       <div class="sheetbody">
         <div class="box glass"><input class="plain" id="lsName" placeholder="List name" aria-label="List name" style="font-size:18px;font-weight:700"></div>
         <div class="field"><p class="label">Color</p><div class="swatches" id="lsColors" role="radiogroup" aria-label="List color"></div></div>
@@ -574,20 +650,20 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="shLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="shLbl">Share a copy</h2><div class="acts"><button class="btn quiet" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="shLbl">Share a copy</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
       <div class="sheetbody">
         <p class="hint" id="shWhat"></p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" data-share="link">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
             <span>Share link<span class="sub">Send by Messages or email. They copy it, open Notes and tap Paste.</span></span>
           </button>
           <button class="rowbtn" type="button" data-share="file">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/></svg></span>
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M13.4 3H7.6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8.8a3 3 0 0 0 3-3V8.6z"/><path d="M13.4 3v3.6a2 2 0 0 0 2 2h4"/></svg></span>
             <span>Save as a file<span class="sub">Save to iCloud Drive or Google Drive. They open it with Import.</span></span>
           </button>
           <button class="rowbtn" type="button" data-share="copy">
-            <span class="ic"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></span>
+            <span class="ic"><svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="12.4" height="12.4" rx="3"/><path d="M15.6 8.4V6.2a3 3 0 0 0-3-3H6.2a3 3 0 0 0-3 3v6.4a3 3 0 0 0 3 3h2.2"/></svg></span>
             <span>Copy text</span>
           </button>
         </div>
@@ -601,7 +677,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="tgLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="tgLbl">Tags</h2><div class="acts"><button class="btn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="tgLbl">Tags</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
       <div class="sheetbody">
         <div class="rgroup glass" id="tagRows"></div>
         <p class="hint">Tags are shared by notes and reminders. Rename to update everything; rename onto an existing tag to merge. Deleting a tag keeps the items.</p>
@@ -614,16 +690,16 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="bkLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="bkLbl">Backup and import</h2><div class="acts"><button class="btn quiet" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="bkLbl">Backup and import</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
       <div class="sheetbody">
         <p class="hint" id="bkStatus"></p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="bkExport">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></span>
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
             <span>Back up everything<span class="sub">One file with all notes, lists and reminders. Save it to iCloud Drive or Google Drive.</span></span>
           </button>
           <button class="rowbtn" type="button" id="bkImport">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></span>
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
             <span>Import a file<span class="sub">A backup, or a note or reminder someone saved for you</span></span>
           </button>
         </div>
@@ -638,7 +714,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="imLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="imLbl">Add shared items?</h2><div class="acts"><button class="btn" id="imAdd" type="button">Add</button></div></div>
+      <div class="sheethead"><h2 id="imLbl">Add shared items?</h2><div class="acts"><button class="textbtn" id="imAdd" type="button">Add</button></div></div>
       <div class="sheetbody">
         <div class="box glass"><ul class="implist" id="imList"></ul></div>
         <p class="hint" id="imHint">They'll be added as new copies. Nothing you already have is changed.</p>
@@ -652,7 +728,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="psLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="psLbl">Paste as a note</h2><div class="acts"><button class="btn" id="psAdd" type="button">Add</button></div></div>
+      <div class="sheethead"><h2 id="psLbl">Paste as a note</h2><div class="acts"><button class="textbtn" id="psAdd" type="button">Add</button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste here"></textarea></div>
         <p class="hint" id="psHint"></p>
@@ -667,7 +743,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="lkLbl">Add it in your Notes app</h2></div>
       <div class="sheetbody">
-        <p class="hint">This opened in Safari, which keeps separate notes from the Notes app on your Home Screen. Copy the link, open Notes from your Home Screen, and tap the paste button next to +.</p>
+        <p class="hint">This opened in Safari, which keeps separate notes from the Notes app on your Home Screen. Copy the link, open Notes from your Home Screen, and tap the clipboard button next to the pencil.</p>
         <button class="btn" id="lkCopy" type="button">Copy link</button>
         <input class="linkbox" id="lkLink" readonly hidden aria-label="Share link">
         <button class="btn quiet" id="lkHere" type="button">Add it here in Safari instead</button>
@@ -678,16 +754,16 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   <!-- Recipe: step by step -->
   <div id="cook" hidden role="dialog" aria-modal="true" aria-labelledby="ckTitle">
     <div class="cooktop">
-      <button class="iconbtn glass" id="ckClose" type="button" aria-label="Close step by step"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="iconbtn glass" id="ckClose" type="button" aria-label="Close step by step"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <div class="ct" id="ckTitle"></div>
       <div class="cn" id="ckCount"></div>
     </div>
     <div class="cookbar"><i id="ckBar"></i></div>
     <div class="cookcard glass" id="ckCard" aria-live="polite"></div>
     <div class="cooknav">
-      <button class="arrow glass" id="ckPrev" type="button" aria-label="Previous step"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="arrow glass" id="ckPrev" type="button" aria-label="Previous step"><svg viewBox="0 0 24 24" class="b"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg></button>
       <div class="cookdots" id="ckDots" aria-hidden="true"></div>
-      <button class="arrow glass" id="ckNext" type="button" aria-label="Next step"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button class="arrow glass" id="ckNext" type="button" aria-label="Next step"><svg viewBox="0 0 24 24" class="b"><path d="M8.8 4.8l6.6 6.5a1 1 0 0 1 0 1.4l-6.6 6.5"/></svg></button>
     </div>
   </div>
 
@@ -702,17 +778,17 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   const LIST_COLORS = ['#3B82F6','#F59E0B','#10B981','#8B5CF6','#EC4899','#06B6D4','#EF4444'];
   const H = 3600e3, D = 24*H, now = Date.now();
   const I = {
-    pin:'<svg viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8"/></svg>',
-    pinFill:'<svg viewBox="0 0 24 24" style="fill:currentColor"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8"/></svg>',
-    bell:'<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg>',
-    clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>',
-    grid:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>',
-    rows:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg>',
-    x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg>',
-    flag:'<svg viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>',
-    check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-    plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'
+    pin:'<svg viewBox="0 0 24 24"><path d="M9.2 3.4h5.6a.8.8 0 0 1 .6 1.3l-1 1.3v4.4l2.7 2.6a1 1 0 0 1-.7 1.7H7.6a1 1 0 0 1-.7-1.7l2.7-2.6V6l-1-1.3a.8.8 0 0 1 .6-1.3z"/><path d="M12 15v5.6"/></svg>',
+    pinFill:'<svg viewBox="0 0 24 24" class="fs"><path d="M9.2 3.4h5.6a.8.8 0 0 1 .6 1.3l-1 1.3v4.4l2.7 2.6a1 1 0 0 1-.7 1.7H7.6a1 1 0 0 1-.7-1.7l2.7-2.6V6l-1-1.3a.8.8 0 0 1 .6-1.3z"/><path d="M12 15v5.6"/></svg>',
+    bell:'<svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg>',
+    clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3 2"/></svg>',
+    grid:'<svg viewBox="0 0 24 24"><rect x="3.6" y="3.6" width="7.2" height="7.2" rx="2.2"/><rect x="13.2" y="3.6" width="7.2" height="7.2" rx="2.2"/><rect x="3.6" y="13.2" width="7.2" height="7.2" rx="2.2"/><rect x="13.2" y="13.2" width="7.2" height="7.2" rx="2.2"/></svg>',
+    rows:'<svg viewBox="0 0 24 24"><rect x="3.6" y="4" width="16.8" height="6.4" rx="2.2"/><rect x="3.6" y="13.6" width="16.8" height="6.4" rx="2.2"/></svg>',
+    x:'<svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    trash:'<svg viewBox="0 0 24 24"><path d="M3.4 6.2h17.2"/><path d="M8.8 6.2V5.1a2 2 0 0 1 2-2h2.4a2 2 0 0 1 2 2v1.1"/><path d="M5.5 6.2l.8 12.2a2.8 2.8 0 0 0 2.8 2.6h5.8a2.8 2.8 0 0 0 2.8-2.6l.8-12.2"/><path d="M10 10.6v5.8M14 10.6v5.8"/></svg>',
+    flag:'<svg viewBox="0 0 24 24"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg>',
+    check:'<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
+    plus:'<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>'
   };
   const VIEWS = { today:'Today', upcoming:'Upcoming', flagged:'Flagged', all:'All' };
 
@@ -727,7 +803,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 
   // ---------- sample data ----------
   const SAMPLE_NOTES = [
-    {id:'n1',title:'Welcome to Notes',body:'Tap + to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to + to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,updated:now}
+    {id:'n1',title:'Welcome to Notes',body:'Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,updated:now}
   ];
   const SAMPLE_LISTS = [
     {id:'l1',name:'Personal',color:'#3B82F6'},
@@ -1494,7 +1570,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     openSheet('linkSheet');
   }
   $('lkCopy').onclick = async () => {
-    try { await navigator.clipboard.writeText($('lkLink').value); toast('Copied. Now open Notes from your Home Screen and tap Paste.'); closeSheet('linkSheet'); }
+    try { await navigator.clipboard.writeText($('lkLink').value); toast('Copied. Now open Notes from your Home Screen and tap the clipboard button.'); closeSheet('linkSheet'); }
     catch(e) { $('lkLink').hidden = false; $('lkLink').select(); toast('Select the link and copy it.'); }
   };
   $('lkHere').onclick = () => { closeSheet('linkSheet'); if (openHereItems) offerImport(openHereItems, 'It’ll be added in this browser.'); };

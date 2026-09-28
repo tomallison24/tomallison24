@@ -9,7 +9,7 @@ Mail and News. Free, no accounts, no server.
   Quick add understands `today`, `tomorrow` and `#tags`
   (`Call mom tomorrow #family`).
 - **Paste from Claude (or anywhere)**: copy a reply, tap the clipboard button
-  next to **+**. On Notes it becomes a note (the heading or first line is the
+  next to the pencil. On Notes it becomes a note (the heading or first line is the
   title, markdown is tidied, `#tags` kept, recipes tagged `recipe`). On
   Reminders each line becomes a reminder in the chosen list. If the clipboard
   can't be read, a box opens to paste into. Pasting a share link imports it.
@@ -35,3 +35,11 @@ Mail and News. Free, no accounts, no server.
 - Published with the other apps by `.github/workflows/news.yml`.
 
 Design notes and decisions: `tomallison24/Notes-Allison-OS`, `docs/DESIGN.md`.
+
+## Look
+
+Same icons and buttons as Mail: line icons on a 24px grid with a 1.7 stroke
+(2.2 for chevrons, ticks and close), in Mail's slate-teal (`--icon`), with
+blue kept for text, dots and switches; every button and bar in the same clear
+Liquid Glass (`--lg-bg`, `--lg-filter`, `--lg-rim`). New note uses Mail's
+compose (pencil) icon.
