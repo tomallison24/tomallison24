@@ -1443,9 +1443,13 @@ function closeReader(fromHistory) {
   state.reading = null;
   closeSheet();
   if (!fromHistory && history.state?.mailReader) { skipPop = true; history.back(); }
-  const el = $('#reader');
+  const el = $('#reader'), bar = $('#rbar');
+  bar.classList.add('leaving');                       // the buttons fade as the page goes
   return new Promise(done => {
-    const finish = () => { el.classList.add('hide'); el.classList.remove('leaving', 'vt'); el.innerHTML = ''; };
+    const finish = () => {
+      el.classList.add('hide'); el.classList.remove('leaving', 'vt'); el.innerHTML = '';
+      if (!state.reading) { bar.classList.add('hide'); bar.classList.remove('leaving'); bar.innerHTML = ''; }
+    };
     const after = () => { fadeReadDots(); done(); };
     const li = rowsFor([item.id])[0];
     if (canMorph() && li && !el.classList.contains('hide')) {        // the message shrinks back into its row
@@ -1493,16 +1497,18 @@ function renderReader() {
     '</div>' +
     '<div id="rbody"></div>' +
     '<div class="rfoot"><button class="plink" data-act="open" data-thread="' + esc(it.threadId) + '">Open in Gmail ' + ICON.out + '</button></div>' +
-    '<div class="rbar" id="rbar"></div>' +
   '</div>';
   renderReaderBar();
   renderReaderBody();
 }
 
+// The bar lives outside the message page: the page slides in (a transform),
+// and anything position: fixed inside a transformed page scrolls away with it.
 function renderReaderBar() {
   const bar = $('#rbar'), it = state.reading?.item;
   if (!bar || !it) return;
   const flagged = it.labelIds.includes('STARRED');
+  bar.classList.remove('hide', 'leaving');
   bar.innerHTML =
     '<span class="rgroup">' +
       '<button class="rb bin" data-act="reader-trash" aria-label="Trash">' + ICON.trash + '</button>' +
