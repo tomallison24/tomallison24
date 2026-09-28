@@ -111,7 +111,7 @@
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
     --pill: rgba(30, 30, 38, 0.58);           /* one conversation in the list */
-    --filt-mix: 78%;
+    --seg-thumb: rgba(255, 255, 255, 0.14);   /* the chosen half of All | Unread */
     /* the pinned header: Liquid Glass - a thin tint, clearer towards the bottom, and a lit rim */
     --bar-top: rgba(34, 34, 40, 0.14);
     --bar-bottom: rgba(34, 34, 40, 0.05);
@@ -177,7 +177,7 @@
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
       --pill: rgba(255, 255, 255, 0.74);
-      --filt-mix: 16%;
+      --seg-thumb: rgba(255, 255, 255, 0.92);
       --bar-top: rgba(255, 255, 255, 0.16);
       --bar-bottom: rgba(255, 255, 255, 0.05);
       --bar-rim: rgba(255, 255, 255, 0.85);
@@ -859,34 +859,36 @@
   @media (prefers-reduced-transparency: reduce) {
     .fab { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
-  /* The Unread filter, bottom left as in Mail: a glass circle that opens into
-     a tinted capsule saying what the list is showing. */
-  .filt {
-    position: fixed; left: max(18px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom) + 22px); z-index: 15;
-    height: 48px; min-width: 48px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 0;
-    color: var(--muted); background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+  /* All | Unread, at the top of the list: a frosted glass capsule whose lit
+     thumb slides to the side that's chosen, as iOS's segmented controls do. */
+  .seg {
+    position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 40px; padding: 3px; border-radius: 999px;
+    background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
     backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
-    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi), 0 8px 26px var(--lift);
-    font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
-    transition: transform .2s var(--ease), color .25s, background .3s, gap .35s var(--ease), padding .35s var(--ease);
-    animation: pop .45s var(--ease) both;
+    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi), 0 6px 20px var(--lift);
+    animation: rowIn .45s var(--ease) both;
   }
-  .filt svg { flex: none; }
-  .filt span { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-width .35s var(--ease), opacity .25s; }
-  .filt.on {
-    gap: 7px; padding: 0 16px 0 13px; color: var(--accent-ink);
-    background: var(--gb-shine), color-mix(in srgb, var(--accent) var(--filt-mix), transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--bar-rim)), inset 0 1px 1px var(--hi), 0 8px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  .seg .thumb {
+    position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 999px; pointer-events: none;
+    background: var(--gb-shine), var(--seg-thumb); border: 1px solid var(--gb-edge);
+    box-shadow: inset 0 1px 0 var(--hi), 0 3px 10px var(--lift);
+    transition: transform .42s cubic-bezier(.3, 1.35, .5, 1);
   }
-  .filt.on span { max-width: 80px; opacity: 1; }
-  .filt.on svg path { stroke-width: 2.2; }
-  .filt:active { transform: scale(0.9); }
+  .seg.on .thumb { transform: translateX(100%); }
+  .seg button {
+    position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--muted); border-radius: 999px;
+    transition: color .25s, transform .18s var(--ease);
+  }
+  .seg button[aria-checked="true"] { color: var(--text); }
+  .seg button:active { transform: scale(0.95); }
+  .seg .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .55; transition: opacity .25s, box-shadow .25s; }
+  .seg.on .udot { opacity: 1; box-shadow: 0 0 8px rgba(10,132,255,0.8); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .filt:not(.on) { background: var(--bar-solid); }
+    .seg { background: var(--bar-solid); }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .filt { backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .filt:not(.on) { background: var(--bar-solid); }
+    .seg { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
 
   /* ---- the list as pills: each conversation a rounded glass card of its own ---- */
@@ -919,7 +921,7 @@
   .stack .skel:first-child { margin-top: 0; }
   .stack .more { border-top: 0; padding: 14px 0 4px; }
   .stack .more button { background: var(--gb-shine), var(--pill); border-color: var(--gb-edge); box-shadow: inset 0 1px 0 var(--hi), 0 4px 12px var(--lift); }
-  /* room at the bottom so the last pill clears the two floating buttons */
+  /* room at the bottom so the last pill clears the compose button */
   #screen:has(ul.pills) { padding-bottom: 64px; }
   .stack.flushing::before {
     content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 24px;
@@ -1093,14 +1095,16 @@
   </form>
 
 
+  <div class="seg hide" id="seg" role="radiogroup" aria-label="Show">
+    <span class="thumb" aria-hidden="true"></span>
+    <button type="button" role="radio" data-act="unread-filter" data-on="0" aria-checked="true">All</button>
+    <button type="button" role="radio" data-act="unread-filter" data-on="1" aria-checked="false"><i class="udot" aria-hidden="true"></i>Unread</button>
+  </div>
   <div id="screen"></div>
   <div class="foot" id="foot"></div>
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
 <div id="compose" class="hide" role="dialog" aria-label="New message"></div>
-<button id="unreadbtn" class="filt hide" data-act="unread-filter" aria-pressed="false" aria-label="Show only unread">
-  <svg class="i s" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M7.6 9h8.8M9.4 12.3h5.2M11 15.6h2"/></svg><span>Unread</span>
-</button>
 <button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
   <svg class="i s" width="28" height="28" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>
 </button>

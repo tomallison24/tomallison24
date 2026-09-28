@@ -1084,9 +1084,9 @@ function renderChrome() {
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);
-  $('#unreadbtn').classList.toggle('hide', !listView || !!sel);
-  $('#unreadbtn').setAttribute('aria-pressed', String(!!state.unread));
-  $('#unreadbtn').classList.toggle('on', !!state.unread);
+  $('#seg').classList.toggle('hide', !listView || !!sel);
+  $('#seg').classList.toggle('on', !!state.unread);
+  for (const b of $('#seg').querySelectorAll('button')) b.setAttribute('aria-checked', String((b.dataset.on === '1') === !!state.unread));
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
   $('#selbar').classList.toggle('hide', !sel);
@@ -1166,7 +1166,7 @@ function viewList() {
   else if (spec.base === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
   else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
-    const empty = state.unread ? 'No unread mail here.<br>Tap Unread to see everything.'
+    const empty = state.unread ? 'No unread mail here.<br>Tap All to see everything.'
       : state.search ? 'Nothing matches “' + esc(state.search) + '”.'
       : spec.base === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
       : state.tag === 'STARRED' ? 'Nothing flagged.<br>Swipe an email left and tap Flag.'
@@ -3081,6 +3081,7 @@ document.addEventListener('click', async e => {
     }
     case 'compose-new': return openCompose({ mode: 'new' });
     case 'unread-filter':
+      if ((el.dataset.on === '1') === !!state.unread) return;
       state.unread = !state.unread;
       if (state.unread) delete state.lists[currentList().key];   // always a fresh look at what's unread
       screen.classList.remove('back');
