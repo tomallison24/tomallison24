@@ -830,6 +830,7 @@ const state = {
   view: 'inbox',   // inbox | marketing | rules | settings
   tag: null,       // the tag (or category, or Flagged) chosen in the mailbox menu
   search: '',      // while set, search results take the list's place
+  unread: false,   // the Unread filter: only unread mail, in whichever list is on screen
   lists: {},       // key -> { items, next, error, q, labelIds }
   rules: null, rulesError: null,
   me: null, error: null, notice: false, busy: false,
@@ -848,8 +849,15 @@ const CATEGORIES = [
 ];
 const catOf = key => CATEGORIES.find(c => c.id === key);
 
-// The list on screen, and how to ask Gmail for it.
+// The list on screen, and how to ask Gmail for it. With the Unread filter on,
+// the same list asks Gmail for is:unread and is kept apart (key + '|unread');
+// base is the list it filters.
 function currentList() {
+  const b = baseList();
+  if (!state.unread) return { ...b, base: b.key };
+  return { ...b, key: b.key + '|unread', base: b.key, q: [b.q, 'is:unread'].filter(Boolean).join(' ') };
+}
+function baseList() {
   if (state.search) return { key: 'q:' + state.search, q: state.search };
   if (state.view === 'marketing') return { key: 'mkt', bucket: true };
   if (catOf(state.tag)) return { key: state.tag, q: 'in:inbox category:' + state.tag.slice(4) + ' -in:chats' };
@@ -858,7 +866,9 @@ function currentList() {
 }
 
 // Whether a message still belongs in a list once its labels change.
+// A message read under the Unread filter stays until you leave, as in Mail.
 function belongs(key, it) {
+  key = key.replace(/\|unread$/, '');
   if (it.labelIds.includes('TRASH')) return false;
   if (key === 'inbox') return it.labelIds.includes('INBOX');
   if (key === 'mkt') return it.labelIds.includes(bucketId());
@@ -929,7 +939,7 @@ const ICON = {
 };
 
 function listSkeleton(n = 6) {
-  return '<div class="card">' + Array.from({ length: n }, (_, i) => '<div class="skel" style="--i:' + i + '"></div>').join('') + '</div>';
+  return '<div class="stack">' + Array.from({ length: n }, (_, i) => '<div class="skel" style="--i:' + i + '"></div>').join('') + '</div>';
 }
 
 // The coloured chips for a message's own labels. The bucket keeps its orange.
@@ -955,7 +965,7 @@ function rowHTML(item, i, key) {
       tagChips(item.labelIds);                    // only your own tags; the sender is already on the row
   }
   const fresh = i >= freshFrom, sel = state.select?.has(item.id);
-  return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
+  return '<li class="' + (fresh ? 'fresh' : '') + (sel ? ' sel' : '') + (item.unread ? ' unread' : '') + '" style="--i:' + (fresh ? i - freshFrom : i) + '" data-id="' + esc(item.id) + '">' +
     '<span class="check"></span>' +
     '<span class="swipe">' +
       '<button class="sa tagx" data-act="swipe-tag"><span class="gi">' + ICON.label + '</span>Tag</button>' +
@@ -1074,6 +1084,9 @@ function renderChrome() {
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);
+  $('#unreadbtn').classList.toggle('hide', !listView || !!sel);
+  $('#unreadbtn').setAttribute('aria-pressed', String(!!state.unread));
+  $('#unreadbtn').classList.toggle('on', !!state.unread);
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
   $('#selbar').classList.toggle('hide', !sel);
@@ -1150,18 +1163,20 @@ function viewList() {
   const tagName = state.tag === 'STARRED' ? 'Flagged' : catOf(state.tag)?.name || (state.tag ? labelsById.get(state.tag)?.name || 'Tag' : '');
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
-  else if (spec.key === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
+  else if (spec.base === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
   else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
-    const empty = state.search ? 'Nothing matches “' + esc(state.search) + '”.'
-      : spec.key === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
+    const empty = state.unread ? 'No unread mail here.<br>Tap Unread to see everything.'
+      : state.search ? 'Nothing matches “' + esc(state.search) + '”.'
+      : spec.base === 'mkt' ? 'Nothing in ' + esc(settings.label) + ' yet.<br>Tap the tag on a message to start.'
       : state.tag === 'STARRED' ? 'Nothing flagged.<br>Swipe an email left and tap Flag.'
       : catOf(state.tag) ? 'Nothing in ' + esc(tagName) + '.'
       : state.tag ? 'Nothing tagged ' + esc(tagName) + ' yet.'
       : 'Inbox zero. Nothing left to file.';
     return '<div class="card">' + head + '<div class="empty">' + empty + '</div></div>';
   }
-  return '<div class="card">' + head + '<ul class="list">' + items.map((it, i) => rowHTML(it, i, spec.key)).join('') + '</ul>' +
+  // Each conversation is its own glass pill, floating over the background.
+  return '<div class="stack">' + head + '<ul class="list pills">' + items.map((it, i) => rowHTML(it, i, spec.base)).join('') + '</ul>' +
     (list.next ? '<div class="more"><button data-act="more">Show more</button></div>' : '') + '</div>';
 }
 
@@ -2263,7 +2278,7 @@ function bringBackReminders() {
   return dueReminders().then(n => {
     if (!n) return;
     toast(n === 1 ? 'A reminder is back in your inbox' : 'Your reminders are back in your inbox');
-    delete state.lists.inbox;
+    delete state.lists.inbox; delete state.lists['inbox|unread'];
     if (state.view === 'inbox' && !state.tag && !state.search) loadList({ force: true, quiet: true });
   }).catch(() => {});
 }
@@ -2425,10 +2440,10 @@ async function loadList({ force, quiet } = {}) {
     }
     const r = await threadPage(spec.q, { labelIds });
     let items = (await hydrate(r.ids, r.hist)).sort((a, b) => b.date - a.date);
-    if (spec.key === 'inbox') {                     // reminders that came back go first, as in Mail
+    if (spec.base === 'inbox') {                    // reminders that came back go first, as in Mail
       const rl = await labelNamed(REMINDED);
       if (rl) {
-        const pr = await threadPage('', { labelIds: ['INBOX', rl.id] });
+        const pr = await threadPage(state.unread ? 'is:unread' : '', { labelIds: ['INBOX', rl.id] });
         const pinned = await hydrate(pr.ids, pr.hist);
         items = pinned.concat(items.filter(it => !pinned.some(p => p.id === it.id)));
       }
@@ -2448,7 +2463,7 @@ async function loadList({ force, quiet } = {}) {
   }
   if (quiet) quietOnce = true;
   render();
-  if (spec.key === 'inbox' && state.lists.inbox?.items?.length) hintSwipe();
+  if (spec.base === 'inbox' && state.lists[spec.key]?.items?.length) hintSwipe();
   updateBadge();
 }
 
@@ -2552,8 +2567,16 @@ function rowAt(y) {
   if (!list) return null;
   const r = list.getBoundingClientRect();
   const bar = $('#selbar').getBoundingClientRect();         // over the bar at the bottom: the row just above it
-  const el = document.elementFromPoint(r.left + 60, Math.max(4, Math.min((bar.top || innerHeight) - 4, y)));
-  return el?.closest('#screen ul.list > li[data-id]') || null;
+  const at = Math.max(4, Math.min((bar.top || innerHeight) - 4, y));
+  const el = document.elementFromPoint(r.left + 60, at);
+  const hit = el?.closest('#screen ul.list > li[data-id]');
+  if (hit || !list.classList.contains('pills') || at < r.top || at > r.bottom) return hit || null;
+  let best = null, gap = Infinity;
+  for (const li of list.querySelectorAll(':scope > li[data-id]')) {
+    const b = li.getBoundingClientRect(), d = at < b.top ? b.top - at : at > b.bottom ? at - b.bottom : 0;
+    if (d < gap) { gap = d; best = li; }
+  }
+  return best;
 }
 function paintTo(y) {
   const p = brush, li = rowAt(y);
@@ -3057,6 +3080,11 @@ document.addEventListener('click', async e => {
       return;
     }
     case 'compose-new': return openCompose({ mode: 'new' });
+    case 'unread-filter':
+      state.unread = !state.unread;
+      if (state.unread) delete state.lists[currentList().key];   // always a fresh look at what's unread
+      screen.classList.remove('back');
+      return go();
     case 'compose-send': return sendCompose();
     case 'compose-attach': return $('#c-pick')?.click();
     case 'compose-unfile': {
@@ -3223,7 +3251,7 @@ document.addEventListener('click', async e => {
     case 'sweep': {
       if (state.busy) return;
       state.busy = true;
-      const card = screen.querySelector('.card');
+      const card = screen.querySelector('.stack, .card');
       if (card && !reduced) { card.classList.add('flushing'); setTimeout(() => card.classList.remove('flushing'), 1100); }
       toast('Cleaning up…');
       try {

@@ -110,6 +110,8 @@
     /* glass */
     --glass: rgba(18, 18, 22, 0.46);
     --glass-2: rgba(38, 38, 44, 0.72);
+    --pill: rgba(30, 30, 38, 0.58);           /* one conversation in the list */
+    --filt-mix: 78%;
     /* the pinned header: Liquid Glass - a thin tint, clearer towards the bottom, and a lit rim */
     --bar-top: rgba(34, 34, 40, 0.14);
     --bar-bottom: rgba(34, 34, 40, 0.05);
@@ -174,6 +176,8 @@
       --armed-mix-l: 26%;
       --glass: rgba(255, 255, 255, 0.58);
       --glass-2: rgba(255, 255, 255, 0.86);
+      --pill: rgba(255, 255, 255, 0.74);
+      --filt-mix: 16%;
       --bar-top: rgba(255, 255, 255, 0.16);
       --bar-bottom: rgba(255, 255, 255, 0.05);
       --bar-rim: rgba(255, 255, 255, 0.85);
@@ -855,6 +859,73 @@
   @media (prefers-reduced-transparency: reduce) {
     .fab { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
+  /* The Unread filter, bottom left as in Mail: a glass circle that opens into
+     a tinted capsule saying what the list is showing. */
+  .filt {
+    position: fixed; left: max(18px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom) + 22px); z-index: 15;
+    height: 48px; min-width: 48px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 0;
+    color: var(--muted); background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
+    backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
+    box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi), 0 8px 26px var(--lift);
+    font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+    transition: transform .2s var(--ease), color .25s, background .3s, gap .35s var(--ease), padding .35s var(--ease);
+    animation: pop .45s var(--ease) both;
+  }
+  .filt svg { flex: none; }
+  .filt span { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-width .35s var(--ease), opacity .25s; }
+  .filt.on {
+    gap: 7px; padding: 0 16px 0 13px; color: var(--accent-ink);
+    background: var(--gb-shine), color-mix(in srgb, var(--accent) var(--filt-mix), transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--bar-rim)), inset 0 1px 1px var(--hi), 0 8px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .filt.on span { max-width: 80px; opacity: 1; }
+  .filt.on svg path { stroke-width: 2.2; }
+  .filt:active { transform: scale(0.9); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .filt:not(.on) { background: var(--bar-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .filt { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .filt:not(.on) { background: var(--bar-solid); }
+  }
+
+  /* ---- the list as pills: each conversation a rounded glass card of its own ---- */
+  .stack { position: relative; display: flex; flex-direction: column; }
+  .stack > h2 {
+    font-size: 12px; font-weight: 600; color: var(--faint); margin: 0; padding: 2px 8px 10px;
+    letter-spacing: 0.04em; text-transform: uppercase; animation: rowIn .5s var(--ease) both;
+  }
+  .stack > h2.gh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; }
+  .stack > h2.gh .tchip { font-size: 13px; padding: 3px 10px; }
+  ul.list.pills > li {
+    margin-top: 10px; padding: 13px 14px 13px 18px; border-top: 0; border-radius: 24px;
+    background: var(--gb-shine), var(--pill); border: 1px solid var(--gb-edge);
+    box-shadow: inset 0 1px 0 var(--hi), 0 6px 18px var(--lift);
+    transition: height .3s var(--ease), padding .3s var(--ease), margin .3s var(--ease), opacity .26s ease, transform .3s cubic-bezier(.4,0,.9,.4), filter .26s, background .25s, border-color .25s;
+  }
+  ul.list.pills > li:first-child { margin-top: 0; }
+  ul.list.pills > li.going { margin-top: 0; border-width: 0; }
+  ul.list.pills > li.unread .subj { font-weight: 600; }
+  #screen.selecting ul.list.pills > li { padding-left: 52px; }
+  ul.list.pills > li.sel {
+    background: var(--gb-shine), color-mix(in srgb, var(--accent) 14%, var(--pill));
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--gb-edge));
+  }
+  .stack .skel {
+    height: 84px; margin-top: 10px; border-top: 0; border-radius: 24px; border: 1px solid var(--gb-edge);
+    background: linear-gradient(100deg, transparent 20%, var(--fill) 50%, transparent 80%), var(--pill);
+    background-size: 220% 100%, auto; animation: shimmer 1.4s linear infinite; animation-delay: calc(var(--i) * 90ms);
+  }
+  .stack .skel:first-child { margin-top: 0; }
+  .stack .more { border-top: 0; padding: 14px 0 4px; }
+  .stack .more button { background: var(--gb-shine), var(--pill); border-color: var(--gb-edge); box-shadow: inset 0 1px 0 var(--hi), 0 4px 12px var(--lift); }
+  /* room at the bottom so the last pill clears the two floating buttons */
+  #screen:has(ul.pills) { padding-bottom: 64px; }
+  .stack.flushing::before {
+    content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255,69,58,0.00) 0%, rgba(255,69,58,0.16) 45%, rgba(255,255,255,0.10) 55%, rgba(255,69,58,0.00) 100%);
+    animation: flush 1.05s var(--ease);
+  }
 
   /* ---- mailing lists and blocking ---- */
   .unsub {
@@ -1027,6 +1098,9 @@
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
 <div id="compose" class="hide" role="dialog" aria-label="New message"></div>
+<button id="unreadbtn" class="filt hide" data-act="unread-filter" aria-pressed="false" aria-label="Show only unread">
+  <svg class="i s" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M7.6 9h8.8M9.4 12.3h5.2M11 15.6h2"/></svg><span>Unread</span>
+</button>
 <button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
   <svg class="i s" width="28" height="28" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>
 </button>
