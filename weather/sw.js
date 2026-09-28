@@ -2,8 +2,8 @@
 // deploy shows up on the next open; the cache is the fallback when offline.
 // Forecast requests are never cached here - the page keeps the last one in
 // localStorage and labels it with its time.
-const CACHE = 'weather-v2';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'weather-v3';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png?v=2', 'icon-512.png?v=2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
