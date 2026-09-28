@@ -128,6 +128,14 @@ npx http-server . -p 8080          # then open http://localhost:8080/news/
    `https://tomallison24.github.io/tomallison24/news/` in Safari.
 3. Share → **Add to Home Screen**.
 
+Opened from the Home Screen, the topic tabs sit in a floating bar at the
+bottom of the screen. Since iOS 26, iOS blurs the top of home-screen web
+apps and nothing a page does turns that off, so nothing you tap stays up
+there. The date and title start just below that band, and on Sport the
+News | Scores switch and team buttons sit at the top of the page. In Safari
+the tabs stay at the top. Add `?bar=bottom` to the address to try the bottom
+bar in a browser.
+
 GitHub pauses scheduled workflows in public repositories after 60 days with no
 repository activity. If headlines stop updating, re-enable the workflow in the
 Actions tab.
