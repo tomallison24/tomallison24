@@ -6,12 +6,16 @@ sit behind the glass in Mail and News.
 
 - **Apps**: four to a row (Mail, News, Weather, Notes), each with its own
   icon, plus **Settings**.
+- **Dock**: a frosted pill along the bottom with up to four apps and no
+  names, as on an iPhone. **Most used** (the default) fills it with the apps
+  you open most, counted from taps here; turn it off in Settings to choose
+  the four yourself. Apps in the dock leave the grid.
 - **Settings** (its icon, or press and hold anywhere on the screen, as on an
-  iPhone): set the order, take an app off the screen, and choose Auto, Light
-  or Dark. Auto follows the phone.
+  iPhone): the dock, the order, take an app off the screen, and choose Auto,
+  Light or Dark. Auto follows the phone.
 - **No build step, no server, no accounts.** `index.html` is the whole app
-  and `sw.js` keeps it working offline. The order and theme are kept in
-  `localStorage`.
+  and `sw.js` keeps it working offline. The order, dock, use counts and
+  theme are kept in `localStorage`.
 
 ## One app, with the others inside it
 
