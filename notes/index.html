@@ -220,7 +220,7 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .scrim{position:absolute;inset:0;background:var(--scrim);animation:fadeIn .3s ease both}
 .sheet{position:relative;width:100%;max-width:560px;margin:0 auto;border-radius:28px 28px 0 0;border-bottom:0;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);display:flex;flex-direction:column;animation:sheetUp .46s var(--ease) both}
 .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 24px)}
-.sheetwrap{position:fixed}
+.sheetwrap{position:fixed;inset:auto 0 auto 0;top:var(--vvt,0px);height:var(--vvh,100dvh)}
 .notice{border-radius:22px;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
 .notice span{flex:1}
 .implist{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
@@ -701,17 +701,28 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => {
     if (e.target.closest('[data-close]')) (closers[w.id] || (() => closeSheet(w.id)))();
   }));
-  // Swipe a sheet down to close it: from the handle or title bar at any time,
-  // or from the content when it's already scrolled to the top.
+  // Swipe a sheet down by its handle or title bar to close it. Not from the
+  // content: on iPhone, dragging the content to reach the title (while the
+  // keyboard moves things around) would otherwise close the sheet.
+  // Keep sheets inside the part of the screen the keyboard leaves visible.
+  if (window.visualViewport) {
+    const vv = window.visualViewport, root = document.documentElement.style;
+    const fit = () => { root.setProperty('--vvh', vv.height + 'px'); root.setProperty('--vvt', vv.offsetTop + 'px'); };
+    vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit();
+  }
+  // When a field in a sheet gets focus, bring it into view inside the sheet.
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (el.matches && el.matches('input, textarea') && el.closest('.sheetbody')) setTimeout(() => el.scrollIntoView({block:'nearest'}), 350);
+  });
   const closeWrap = w => (closers[w.id] || (() => closeSheet(w.id)))();
   document.querySelectorAll('.sheetwrap').forEach(w => {
-    const sheet = w.querySelector('.sheet'), body = w.querySelector('.sheetbody'), scrim = w.querySelector('.scrim');
+    const sheet = w.querySelector('.sheet'), scrim = w.querySelector('.scrim');
     let y0 = null, t0 = 0, dy = 0, fromHead = false, dragging = false, suppressClick = false;
     const reset = () => { sheet.classList.remove('dragging', 'settling'); sheet.style.transform = ''; scrim.style.opacity = ''; };
     function start(y, target){
       fromHead = !!target.closest('.grab, .sheethead');
-      const fromBody = !fromHead && !!target.closest('.sheetbody') && body.scrollTop <= 0 && !target.closest('input, textarea, select');
-      if (!fromHead && !fromBody) { y0 = null; return; }
+      if (!fromHead) { y0 = null; return; }
       y0 = y; t0 = Date.now(); dy = 0; dragging = false;
     }
     function move(y, e){
@@ -883,7 +894,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     $('edDelete').hidden = st.isNew;
     renderEditor();
     openSheet('editor');
-    (st.isNew && !pre ? $('edTitle') : $('edDone')).focus();
+    (st.isNew && !pre && !isIOS ? $('edTitle') : $('edDone')).focus({preventScroll:true});
   }
   function renderEditor(){
     const e = st.editing;
