@@ -79,6 +79,7 @@
     --faint: rgba(235, 235, 245, 0.38);
     --accent: #0A84FF;
     --icon: #4A9BA6;                          /* the icons: a calm slate-teal (text, dots and switches keep the blue) */
+    --icon-text: #4FA2AD;                     /* the teal as a word (Edit / Done): a hair lighter, 4.8:1 on glass (#4A9BA6 is 4.4) */
     --tag: #FF9F0A;
     --danger: #FF453A;
     /* glass buttons, as on iOS: a translucent fill, lit along the top edge;
@@ -155,6 +156,7 @@
       --faint: rgba(60, 60, 67, 0.64);          /* 0.55 measured 2.9:1 on the page - below the 3:1 floor */
       --accent: #007AFF;
       --icon: #0E7C8C;
+      --icon-text: #0B6F7D;                   /* a shade deeper: 5.3:1 on the page (#0E7C8C is 4.4, under 4.5 for text) */
       --tag: #D97706;
       --danger: #E5281D;
       --gb: rgba(255, 255, 255, 0.55);
@@ -719,6 +721,7 @@
   }
   .textbtn:active { transform: scale(0.93); }
   #selall { font-weight: 500; }
+  #edit { color: var(--icon-text); }
   /* no text selection or iOS callout on a long press */
   ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .check {

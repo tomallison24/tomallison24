@@ -2,7 +2,7 @@
 // new deploy shows up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v7';
+const CACHE = 'mail-v8';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -15,11 +15,18 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+// cache: 'no-cache' asks the server every time (a quick "not modified" when
+// nothing changed). Without it the phone's HTTP cache could hand back the old
+// page for up to ten minutes after a deploy, so a change seemed not to land.
+// A navigation's own Request can't take new options, so a fresh one is made
+// from its URL. If that was redirected (.../mail to .../mail/), the browser is
+// sent on to the new address, so the page's relative links resolve from there.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(new Request(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }))
+      .then(res => res.redirected && e.request.mode === 'navigate' ? Response.redirect(res.url, 302) : res)
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;
