@@ -428,6 +428,7 @@
   const LATEST = { id: 'latest', label: 'Latest' };
   const SPORT = 'sport';
   const LATEST_PER_TOPIC = 50;              // no one topic can crowd out Latest
+  const NOT_IN_LATEST = new Set(['sport']);  // Sport has its own tab; it swamped Latest
   const DEFAULT_TOPICS = [
     { id: 'uk', label: 'UK' }, { id: 'world', label: 'World' }, { id: 'us', label: 'US' },
     { id: 'business', label: 'Business' }, { id: 'tech', label: 'Tech' }, { id: 'ai', label: 'AI' },
@@ -466,7 +467,7 @@
   let catalog = null, catalogFailed = false;
   let picks = Array.isArray(store.get('news.sport.picks')) ? store.get('news.sport.picks').filter(x => typeof x === 'string') : [];
   let pickList = [];               // what the Sport tab shows: a quick team, else the saved picks
-  let savedPickList = [];          // the saved picks alone (Latest always uses these)
+  let savedPickList = [];          // the saved picks alone
   // One-tap team button (sport-catalog.json "quick"), on until tapped again.
   let quick = typeof store.get('news.sport.quick') === 'string' ? store.get('news.sport.quick') : null;
   let sportMode = store.get('news.sport.mode') === 'scores' ? 'scores' : 'news';
@@ -621,11 +622,8 @@
     if (id !== LATEST.id) return topicStories(id);
     const seen = new Set();
     return topics()
-      .flatMap(t => {
-        let list = topicStories(t.id);
-        if (t.id === SPORT && savedPickList.length) list = list.filter(s => firstMatch(s, savedPickList));
-        return list.slice(0, LATEST_PER_TOPIC);
-      })
+      .filter(t => !NOT_IN_LATEST.has(t.id))
+      .flatMap(t => topicStories(t.id).slice(0, LATEST_PER_TOPIC))
       .filter(s => !seen.has(s.id) && seen.add(s.id))
       .sort(byTime)
       .slice(0, 80);
@@ -633,8 +631,7 @@
 
   function meta(s, showTopic) {
     const parts = [];
-    const list = showTopic ? savedPickList : pickList;
-    const pick = s.topic === SPORT && list.length ? firstMatch(s, list) : null;
+    const pick = s.topic === SPORT && pickList.length ? firstMatch(s, pickList) : null;
     if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
     else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
     parts.push(`<span>${esc(s.source)}</span>`);
