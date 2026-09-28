@@ -35,14 +35,13 @@
     --glass-strong: rgba(255, 255, 255, 0.62);
     --glass-edge: rgba(255, 255, 255, 0.75);
     --glass-shadow: 0 8px 32px rgba(31, 38, 64, 0.10);
-    /* the pinned bar: a rounded Liquid Glass panel, as in the Mail app (a
-       little more frosted, as it can hold three rows of controls) */
-    --bar-top: rgba(255, 255, 255, 0.42);
-    --bar-bottom: rgba(255, 255, 255, 0.28);
+    /* the pinned bar: a rounded panel, as in the Mail app, but solid, so
+       headlines scrolling behind it never ghost through */
+    --bar-top: #F7F8FB;
+    --bar-bottom: #F1F2F6;
     --bar-rim: rgba(255, 255, 255, 0.85);
     --bar-hi: rgba(255, 255, 255, 0.8);
     --bar-lift: rgba(40, 40, 80, 0.08);
-    --bar-solid: rgba(248, 248, 251, 0.97);
     --chip-on-bg: #0B0B0F;
     --chip-on-text: #FFFFFF;
     --skeleton: rgba(60, 60, 67, 0.10);
@@ -70,12 +69,11 @@
       --glass: rgba(30, 31, 38, 0.46);
       --glass-strong: rgba(40, 41, 50, 0.62);
       --glass-edge: rgba(255, 255, 255, 0.10);
-      --bar-top: rgba(34, 34, 40, 0.46);
-      --bar-bottom: rgba(34, 34, 40, 0.32);
+      --bar-top: #1A1A20;
+      --bar-bottom: #141419;
       --bar-rim: rgba(255, 255, 255, 0.16);
       --bar-hi: rgba(255, 255, 255, 0.10);
       --bar-lift: rgba(0, 0, 0, 0.38);
-      --bar-solid: rgba(20, 20, 24, 0.96);
       --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
       --chip-on-bg: #F5F5F7;
       --chip-on-text: #0B0B0F;
@@ -146,13 +144,15 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Sticky topic bar ----
-     Once it pins under the status bar it sits on a rounded Liquid Glass
+     Once it pins under the status bar it sits on a rounded, solid
      panel floating just inside the screen's edges, as in the Mail app, with
-     a soft fade under the clock so stories don't scroll sharp behind it.
+     a solid strip under the clock so stories don't show behind it.
      The panel is drawn behind the bar, so the bar never changes height. */
+  /* Solid behind the clock, down to the panel's top edge: a see-through
+     fade here left half-hidden headlines looking smeared as they scrolled by. */
   .statusbar {
-    position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 6px); z-index: 11; pointer-events: none;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, transparent), transparent);
+    position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 4px); z-index: 11; pointer-events: none;
+    background: var(--bg);
     opacity: 0; transition: opacity 0.25s;
   }
   .topbar { position: sticky; top: env(safe-area-inset-top); z-index: 10; }
@@ -161,18 +161,10 @@
     top: 4px; bottom: 0; left: max(8px, calc(50% - 288px)); right: max(8px, calc(50% - 288px));
     border-radius: 26px;
     background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
-    backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
     box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--bar-hi), 0 8px 26px var(--bar-lift);
-    opacity: 0; transform: scale(0.97); transition: opacity 0.25s, transform 0.3s cubic-bezier(.22, 1, .36, 1);
+    opacity: 0; transition: opacity 0.25s;
   }
-  .topbar.stuck::before, .statusbar.stuck { opacity: 1; transform: none; }
-  /* Where the glass can't blur (or Reduce Transparency is on) the panel turns near-solid. */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .topbar::before { background: var(--bar-solid); }
-  }
-  @media (prefers-reduced-transparency: reduce) {
-    .topbar::before { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  }
+  .topbar.stuck::before, .statusbar.stuck { opacity: 1; }
   /* The tabs scroll within the pinned panel's width, so none spill past its
      edges. (No fade at the edges: a CSS mask made the text render soft on iOS.) */
   .tabs {
