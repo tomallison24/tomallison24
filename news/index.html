@@ -42,6 +42,12 @@
     --bar-rim: rgba(255, 255, 255, 0.85);
     --bar-hi: rgba(255, 255, 255, 0.8);
     --bar-lift: rgba(40, 40, 80, 0.08);
+    /* the bottom tab bar: Liquid Glass, as in iOS 26's own tab bars */
+    --lg-top: rgba(255, 255, 255, 0.36);
+    --lg-bottom: rgba(255, 255, 255, 0.20);
+    --lg-rim: rgba(255, 255, 255, 0.75);
+    --lg-sel: rgba(255, 255, 255, 0.72);
+    --lg-solid: rgba(248, 248, 251, 0.97);
     --chip-on-bg: #0B0B0F;
     --chip-on-text: #FFFFFF;
     --skeleton: rgba(60, 60, 67, 0.10);
@@ -74,6 +80,11 @@
       --bar-rim: rgba(255, 255, 255, 0.16);
       --bar-hi: rgba(255, 255, 255, 0.10);
       --bar-lift: rgba(0, 0, 0, 0.38);
+      --lg-top: rgba(40, 40, 48, 0.40);
+      --lg-bottom: rgba(28, 28, 34, 0.30);
+      --lg-rim: rgba(255, 255, 255, 0.16);
+      --lg-sel: rgba(255, 255, 255, 0.16);
+      --lg-solid: rgba(20, 20, 24, 0.96);
       --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
       --chip-on-bg: #F5F5F7;
       --chip-on-text: #0B0B0F;
@@ -200,7 +211,26 @@
      and on Sport the News | Scores switch and team buttons sit at the top of
      the page and scroll away with it. Set by script (html.bottom-bar). */
   .bottom-bar .topbar { position: fixed; top: auto; left: 0; right: 0; bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px)); }
-  .bottom-bar .topbar::before { opacity: 1; top: 0; box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--bar-hi), 0 6px 24px var(--bar-lift), 0 1px 3px var(--bar-lift); }
+  /* Liquid Glass: see-through, blurring and brightening what scrolls behind,
+     with a lit rim along the top edge. Tabs are plain labels on the glass;
+     the chosen one sits in a brighter glass capsule in the accent colour. */
+  .bottom-bar .topbar::before {
+    opacity: 1; top: 0;
+    background: linear-gradient(180deg, var(--lg-top), var(--lg-bottom));
+    backdrop-filter: blur(16px) saturate(190%) brightness(1.05); -webkit-backdrop-filter: blur(16px) saturate(190%) brightness(1.05);
+    box-shadow: inset 0 0 0 1px var(--lg-rim), inset 0 1px 1px var(--bar-hi), 0 8px 28px var(--bar-lift), 0 1px 3px var(--bar-lift);
+  }
+  .bottom-bar .tab { background: transparent; border-color: transparent; font-weight: 600; }
+  .bottom-bar .tab[aria-selected="true"] {
+    background: var(--lg-sel); color: var(--accent); font-weight: 700;
+    box-shadow: inset 0 0 0 0.5px var(--lg-rim), inset 0 1px 0 var(--bar-hi), 0 1px 4px var(--bar-lift);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .bottom-bar .topbar::before { background: var(--lg-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .bottom-bar .topbar::before { background: var(--lg-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
   .bottom-bar .statusbar { opacity: 0 !important; }
   .bottom-bar main { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
   .bottom-bar .toast { bottom: calc(env(safe-area-inset-bottom) + 76px); }
