@@ -409,7 +409,7 @@
   .who .dot.fade { animation: none; }
   .who .dot.fade.go { animation: dotOut .55s var(--ease) forwards; }
   @keyframes dotOut { 60% { transform: scale(1.4); opacity: .5; } to { transform: scale(0); opacity: 0; width: 0; margin-right: -7px; } }
-  .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; align-self: center; box-shadow: 0 0 10px rgba(10,132,255,0.8); animation: breathe 2.6s ease-in-out infinite; }
+  .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--icon); flex: none; align-self: center; box-shadow: 0 0 10px color-mix(in srgb, var(--icon) 75%, transparent); animation: breathe 2.6s ease-in-out infinite; }
   .subj { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .snip { font-size: 13px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
@@ -890,8 +890,8 @@
   }
   .seg button[aria-checked="true"] { color: var(--text); }
   .seg button:active { transform: scale(0.95); }
-  .seg .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .55; transition: opacity .25s, box-shadow .25s; }
-  .seg.on .udot { opacity: 1; box-shadow: 0 0 8px rgba(10,132,255,0.8); }
+  .seg .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--icon); opacity: .55; transition: opacity .25s, box-shadow .25s; }
+  .seg.on .udot { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, var(--icon) 75%, transparent); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .seg { background: var(--bar-solid); }
   }
