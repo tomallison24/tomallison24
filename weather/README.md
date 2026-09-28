@@ -10,3 +10,11 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   offline, and the last forecast is kept in `localStorage`.
 - Needs HTTPS for location (GitHub Pages is fine). On iPhone: open the page
   in Safari → Share → Add to Home Screen.
+
+## Icon
+
+`node weather/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`:
+a clear sky from azure to a deeper blue, a plain sun and one white cloud in
+front of it, in the same style as the Mail and Home icons. The links carry
+`?v=2` so phones fetch the new picture; a Home Screen app added before it
+keeps the old one until it is removed and added again.
