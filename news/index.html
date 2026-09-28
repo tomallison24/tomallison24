@@ -193,6 +193,19 @@
   .tab:active { transform: scale(0.96); }
   .tab[aria-selected="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; }
 
+  /* ---- Bottom tab bar (installed app on iPhone) ----
+     iOS 26 blurs the top of home-screen web apps, so there the topic tabs
+     float in their rounded panel near the bottom of the screen instead, as in
+     iOS 26's own apps. Stories run up under the clock as in any iPhone app,
+     and on Sport the News | Scores switch and team buttons sit at the top of
+     the page and scroll away with it. Set by script (html.bottom-bar). */
+  .bottom-bar .topbar { position: fixed; top: auto; left: 0; right: 0; bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px)); }
+  .bottom-bar .topbar::before { opacity: 1; top: 0; box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--bar-hi), 0 6px 24px var(--bar-lift), 0 1px 3px var(--bar-lift); }
+  .bottom-bar .statusbar { opacity: 0 !important; }
+  .bottom-bar main { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+  .bottom-bar .toast { bottom: calc(env(safe-area-inset-bottom) + 76px); }
+  .bottom-bar .filterbar { padding-top: 2px; }
+
   /* ---- Sport filter bar: second line of the pinned bar, Sport tab only ---- */
   .filterbar {
     padding: 0 max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
@@ -448,6 +461,16 @@
 
   const $ = id => document.getElementById(id);
   const feedEl = $('feed'), tabsEl = $('tabs'), filterEl = $('filterbar'), topbar = $('topbar'), refreshBtn = $('refresh');
+
+  // Installed on iPhone, the topic tabs go to the bottom of the screen and the
+  // Sport controls move into the page (see "Bottom tab bar" in the CSS).
+  // ?bar=bottom forces it, to try it in a browser.
+  const bottomBar = /[?&]bar=bottom\b/.test(location.search) ||
+    (matchMedia('(display-mode: standalone)').matches && CSS.supports('-webkit-touch-callout', 'none'));
+  if (bottomBar) {
+    document.documentElement.classList.add('bottom-bar');
+    topbar.after(filterEl);
+  }
   const sheetWrap = $('sheet'), sheetEl = sheetWrap.querySelector('.sheet'), sheetBody = $('sheet-body'), searchEl = $('sheet-search');
   const segEl = $('sheet-seg'), sheetReset = $('sheet-reset'), sheetShow = $('sheet-show');
   const toastEl = $('toast'), toastText = $('toast-text'), toastUndo = $('toast-undo');
@@ -1141,6 +1164,13 @@
 
   // Keep the tab bar pinned where it is, with the new list starting under it.
   function keepBarInPlace() {
+    if (bottomBar) {
+      // Bring the start of the new list (or the Sport controls) to just under the clock.
+      const anchor = topic === SPORT ? filterEl : feedEl;
+      const top = anchor.getBoundingClientRect().top + window.scrollY - $('statusbar').offsetHeight - 4;
+      if (window.scrollY > top) window.scrollTo({ top });
+      return;
+    }
     const pinned = parseFloat(getComputedStyle(topbar).top) || 0;
     const top = feedEl.getBoundingClientRect().top + window.scrollY - pinned - topbar.offsetHeight - 8;
     if (window.scrollY > top) window.scrollTo({ top });
