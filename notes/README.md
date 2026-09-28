@@ -90,11 +90,18 @@ tag and list tabs are rebuilt on every change, so make edits in the app.
 
 1. On your phone, open Notes → the **download** button (top right) → **Google
    Sheet sync**. Paste the Web app URL and type the secret phrase, then
-   **Connect and sync**.
-2. Still there, tap **Set up the other phone**. It copies a setup link with
-   the URL and secret in it. Send it to your wife (only her).
+   **Connect and sync**. If the iPhone offers to save them as a password, say
+   yes: next time, tap the link box and pick it.
+2. Still there, tap **Copy setup link**. It copies a link with the URL and
+   secret in it. Send it to your wife (only her).
 3. On her phone: copy the link, open Notes from the Home Screen, tap the
    **clipboard** button next to the pencil, then **Connect and sync**.
+
+Each place Notes opens keeps its own copy on an iPhone: its own Home Screen
+icon, AllisonOS Home, and Safari. Connect each one you use once; after that
+the connection stays (it's kept twice on the phone, in localStorage and
+IndexedDB). Removing and re-adding the Home Screen icon starts it fresh, so
+connect again with the setup link or the saved password.
 
 ### Changing the script later
 
