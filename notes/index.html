@@ -78,10 +78,12 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html{height:100%;background:var(--bg);overflow:hidden;overscroll-behavior:none}
-html,body{width:100%;max-width:100%}
+/* Laid out like Mail, News and Home: the page itself scrolls, and the bottom
+   bar is pinned above the home indicator. */
+html{background:var(--bg)}
+html.locked,html.locked body{overflow:hidden}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
-  -webkit-text-size-adjust:100%;overflow:hidden;position:fixed;inset:0;bottom:calc(-1 * var(--gap, 0px));overscroll-behavior:none}
+  -webkit-text-size-adjust:100%;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -94,8 +96,8 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
   box-shadow:0 -14px 44px var(--lift-strong),inset 0 1px 0 var(--hi)}
 
 /* ---- app shell + the light behind the glass ---- */
-.app{position:relative;width:100%;max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);isolation:isolate}
-.ambient{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.app{position:relative;width:100%;max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;overflow-x:clip;background:var(--bg);isolation:isolate}
+.ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 .ambient i{position:absolute;display:block;border-radius:50%;filter:blur(58px);opacity:var(--aurora);will-change:transform}
 .ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#2E6BFF 0%,rgba(46,107,255,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
 .ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#FF7A3D 0%,rgba(255,122,61,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
@@ -106,7 +108,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 @keyframes drift3{to{transform:translate3d(-16%,-12%,0) scale(1.22)}}
 @keyframes drift4{to{transform:translate3d(18%,-14%,0) scale(1.15)}}
 
-.view{flex:1;display:flex;flex-direction:column;min-height:0}
+.view{display:block}
 .top{padding:calc(env(safe-area-inset-top,0px) + 12px) max(14px,env(safe-area-inset-right,0px)) 4px max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;animation:fadeDown .5s var(--ease) both}
 .titlerow{display:flex;align-items:center;gap:10px;padding:2px 4px 0}
 .title{margin:0;flex:1;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
@@ -156,7 +158,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .seg button.warn b{color:var(--danger)}
 
 /* ---- content ---- */
-.list{flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.list{padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
 .sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:6px 4px 6px;display:flex;justify-content:space-between}
 .resulthead{font-size:13px;color:var(--faint);margin:0 4px}
 /* Two plain flex columns, not CSS multi-column: Safari can fail to draw
@@ -215,7 +217,7 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .morebtn:active{transform:scale(.94)}
 
 /* ---- floating capsules: sections + new, as in Mail's toolbar ---- */
-.dock{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
 .dock > *{pointer-events:auto}
 .tabs{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:999px;box-shadow:inset 0 1px 0 var(--hi),0 10px 30px var(--lift-strong)}
 .tab{height:44px;border-radius:999px;padding:0 13px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted);transition:background .2s,color .2s,transform .18s var(--ease)}
@@ -251,7 +253,7 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .sheet.settling{transition:transform .28s var(--ease)}
 .sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px 8px 20px}
 .sheethead h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em}
-.sheetbody{overflow-y:auto;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 .btn{--tint:var(--accent);position:relative;min-height:38px;padding:8px 18px;border-radius:999px;font-weight:600;font-size:15px;color:var(--accent-ink);
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--tint-mix),transparent);border:1px solid color-mix(in srgb,var(--tint) 40%,var(--gb-edge));
@@ -315,7 +317,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .linkbtn{color:var(--accent);font-weight:600;font-size:14px;padding:4px 6px}
 
 /* toast */
-.toast{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
   display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
   background:var(--toast);border:1px solid var(--hair);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
   box-shadow:0 12px 36px var(--lift-strong),inset 0 1px 0 var(--hi);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
@@ -513,27 +515,6 @@ svg.fs{fill:currentColor}
 </style>
 </head>
 <body>
-<script>
-  // iPhone Home Screen apps: iOS can report a page height shorter than the
-  // screen, leaving a bare strip under the app. Measure the real screen and
-  // let the page reach it (--gap). Not while the keyboard is up, and never
-  // more than 80px, so a real change of size is never mistaken for it.
-  (function(){
-    var root = document.documentElement;
-    function fit(){
-      var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-      var a = document.activeElement;
-      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
-      var screenH = innerHeight > innerWidth ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
-      var gap = standalone ? screenH - innerHeight : 0;
-      root.style.setProperty('--gap', (gap > 0 && gap <= 80 ? gap : 0) + 'px');
-    }
-    fit();
-    addEventListener('resize', fit);
-    addEventListener('orientationchange', function(){ setTimeout(fit, 300); });
-    addEventListener('pageshow', fit);
-  })();
-</script>
 
 
 <div class="app" id="app">
@@ -1063,8 +1044,9 @@ svg.fs{fill:currentColor}
 
   // ---------- sheets, toast, tag editor ----------
   const focusStack = [];
-  function openSheet(id){ focusStack.push(document.activeElement); $(id).hidden = false; }
-  function closeSheet(id){ $(id).hidden = true; const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
+  const lockPage = () => document.documentElement.classList.toggle('locked', [...document.querySelectorAll('.sheetwrap, #cook')].some(w => !w.hidden));
+  function openSheet(id){ focusStack.push(document.activeElement); $(id).hidden = false; lockPage(); }
+  function closeSheet(id){ $(id).hidden = true; lockPage(); const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
   const closers = { editor:() => finishEdit(), todoSheet:() => finishTodo() };
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => {
     if (e.target.closest('[data-close]')) (closers[w.id] || (() => closeSheet(w.id)))();
@@ -1171,6 +1153,7 @@ svg.fs{fill:currentColor}
 
   // ---------- tabs ----------
   function setTab(t){
+    if (st.tab !== t) window.scrollTo(0, 0);
     st.tab = t;
     try { localStorage.setItem(KEY+'-tab', t); } catch(e){}
     $('notesView').hidden = t !== 'notes';
@@ -1183,7 +1166,7 @@ svg.fs{fill:currentColor}
   document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
   $('fab').onclick = () => {
     if (st.tab === 'notes') openEditor(null);
-    else { $('remMain').scrollTop = 0; $('qa').focus(); }
+    else { window.scrollTo(0, 0); $('qa').focus(); }
   };
 
   function render(){
@@ -1332,7 +1315,7 @@ svg.fs{fill:currentColor}
     $('qClear').hidden = !st.q;
     $('q').placeholder = c ? 'Search ' + collName(c) : 'Search notes or #tag';
   }
-  function openColl(c){ st.coll = c; st.q = ''; $('q').value = ''; closeSwipe(); animateIn($('list')); render(); $('list').scrollTop = 0; }
+  function openColl(c){ st.coll = c; st.q = ''; $('q').value = ''; closeSwipe(); animateIn($('list')); render(); window.scrollTo(0, 0); }
   $('collBack').onclick = () => openColl(null);
 
   // ---------- note actions (swipe buttons, trash) ----------
@@ -2119,12 +2102,12 @@ svg.fs{fill:currentColor}
     screens.push({type:'done'});
     cook = {r, screens, i:0, ticked:new Set(), title:$('edTitle').value.trim() || 'Recipe', nSteps:screens.filter(s => s.type === 'step').length};
     $('ckTitle').textContent = cook.title;
-    $('cook').hidden = false;
+    $('cook').hidden = false; lockPage();
     renderCook(0);
     keepAwake();
     $('ckNext').focus({preventScroll:true});
   };
-  function closeCook(){ $('cook').hidden = true; cook = null; letSleep(); $('edCook').focus({preventScroll:true}); }
+  function closeCook(){ $('cook').hidden = true; lockPage(); cook = null; letSleep(); $('edCook').focus({preventScroll:true}); }
   function renderCook(dir){
     const c = cook, sc = c.screens[c.i], last = c.screens.length - 1;
     const stepNo = c.screens.slice(0, c.i + 1).filter(s => s.type === 'step').length;
