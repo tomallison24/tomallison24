@@ -173,7 +173,8 @@
   @media (prefers-reduced-transparency: reduce) {
     .topbar::before { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
-  /* The tabs scroll within the pinned panel's width, so none spill past its edges. */
+  /* The tabs scroll within the pinned panel's width, so none spill past its
+     edges. (No fade at the edges: a CSS mask made the text render soft on iOS.) */
   .tabs {
     display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
     padding: 8px; scroll-padding: 0 16px;
@@ -217,14 +218,6 @@
   .fb-sep { flex: none; width: 0.5px; height: 18px; background: var(--hairline); }
   .teams { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
   .teams::-webkit-scrollbar { display: none; }
-  /* Rows that scroll sideways fade at whichever edge has more to see. */
-  .edge-fade.less, .edge-fade.more {
-    --l: 0px; --r: 0px;
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--l), #000 calc(100% - var(--r)), transparent);
-    mask-image: linear-gradient(to right, transparent, #000 var(--l), #000 calc(100% - var(--r)), transparent);
-  }
-  .edge-fade.less { --l: 20px; }
-  .edge-fade.more { --r: 24px; }
   .chip.team { padding: 0 11px; font-weight: 500; }
   .chip.team[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-text); border-color: transparent; font-weight: 600; }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -386,7 +379,7 @@
 
 <div class="statusbar" id="statusbar" aria-hidden="true"></div>
 <nav class="topbar" id="topbar">
-  <div class="tabs edge-fade" id="tabs" role="tablist" aria-label="Topics"></div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Topics"></div>
   <div class="filterbar" id="filterbar" aria-label="Sport filters" hidden></div>
 </nav>
 
@@ -656,7 +649,6 @@
     ).join('');
     const on = tabsEl.querySelector('[aria-selected="true"]');
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
-    edgeFade(tabsEl);
   }
 
   // Sport tab: a News | Scores switch, then one line saying what is
@@ -678,24 +670,16 @@
       : `<button class="chip icon" data-action="edit-picks" aria-label="Filter">${ICON.sliders}</button>`;
     const teams = catalog ? catalog.quick.map(q =>
       `<button class="chip team" data-quick="${esc(q.key)}" aria-pressed="${on && quick === q.key}">${esc(q.label)}</button>`).join('') : '';
-    filterEl.innerHTML = modes + `<div class="fb-row">${filters}${teams ? `<span class="fb-sep" aria-hidden="true"></span><div class="teams edge-fade" role="group" aria-label="My teams">${teams}</div>` : ''}</div>`;
-    // Fade whichever edge has buttons scrolled out of view.
+    filterEl.innerHTML = modes + `<div class="fb-row">${filters}${teams ? `<span class="fb-sep" aria-hidden="true"></span><div class="teams" role="group" aria-label="My teams">${teams}</div>` : ''}</div>`;
+    // Keep the chosen team in view; the row is rebuilt on every change.
     const row = filterEl.querySelector('.teams');
     if (row) {
-      // Keep the chosen team in view; the row is rebuilt on every change.
       const chosen = row.querySelector('[aria-pressed="true"]');
       if (chosen) {
         const over = chosen.getBoundingClientRect().right - row.getBoundingClientRect().right;
         if (over > 0) row.scrollLeft += over + 8;
       }
-      edgeFade(row);
-      row.addEventListener('scroll', () => edgeFade(row), { passive: true });
     }
-  }
-
-  function edgeFade(row) {
-    row.classList.toggle('less', row.scrollLeft > 1);
-    row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
   }
 
   function renderFeed() {
@@ -1172,8 +1156,6 @@
   }
 
   // ---- events ----
-  tabsEl.addEventListener('scroll', () => edgeFade(tabsEl), { passive: true });
-  addEventListener('resize', () => edgeFade(tabsEl));
   tabsEl.addEventListener('click', e => {
     const b = e.target.closest('[data-topic]');
     if (b) select(b.dataset.topic);
