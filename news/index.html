@@ -496,7 +496,7 @@
   // Sport controls move into the page (see "Bottom tab bar" in the CSS).
   // ?bar=bottom forces it, to try it in a browser.
   const bottomBar = /[?&]bar=bottom\b/.test(location.search) ||
-    (matchMedia('(display-mode: standalone)').matches && CSS.supports('-webkit-touch-callout', 'none'));
+    ((matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) && CSS.supports('-webkit-touch-callout', 'none'));
   if (bottomBar) {
     document.documentElement.classList.add('bottom-bar');
     topbar.after(filterEl);
