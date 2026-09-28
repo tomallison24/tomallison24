@@ -23,6 +23,10 @@
   the whole site, so a tap on Mail or News stays in the same window with no
   browser bar, and the phone's back gesture returns here.
 
+  A dock along the bottom holds up to four apps with no names, as the
+  iPhone's does. It fills with the most used (each tap on an app is counted
+  here), or Settings turns that off and you pick them.
+
   Settings (its own icon, or press and hold anywhere) orders the apps, takes
   one off the screen, and forces Light or Dark; Auto follows the phone.
 
@@ -148,7 +152,7 @@
   }
 
   .wrap { max-width: 480px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
-  main { padding-top: calc(env(safe-area-inset-top) + 28px); padding-bottom: calc(env(safe-area-inset-bottom) + 28px); }
+  main { padding-top: calc(env(safe-area-inset-top) + 28px); padding-bottom: calc(env(safe-area-inset-bottom) + 124px); }
 
   /* ---- The grid: iOS's home screen, four icons to a row ---- */
   .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 8px; padding: 6px 4px; }
@@ -165,6 +169,18 @@
   .app .icon.settings { background: linear-gradient(180deg, #9A9AA2, #5F5F66); display: grid; place-items: center; color: #F2F2F7; }
   .app .icon.settings svg { width: 38px; height: 38px; }
   @media (min-width: 400px) { .apps { gap: 26px 12px; } .app .icon { width: 64px; height: 64px; } }
+
+  /* ---- The dock: a frosted pill along the bottom, icons with no names ---- */
+  .dock {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom) + 14px); z-index: 5;
+    width: calc(100% - 32px); max-width: 448px;
+    display: flex; justify-content: space-evenly; align-items: center;
+    padding: 12px 8px; border-radius: 32px;
+  }
+  .dock[hidden] { display: none; }
+  .dock .app { gap: 0; }
+  .dock .app .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
   /* ---- Install ---- */
   .install { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 22px; border-radius: 22px; }
@@ -239,6 +255,7 @@
     </section>
 
     <nav class="apps" id="apps" aria-label="Apps"></nav>
+    <nav class="dock glass" id="dock" aria-label="Dock" hidden></nav>
   </main>
 </div>
 
@@ -260,6 +277,11 @@
           <button class="seg" data-theme="light">Light</button>
           <button class="seg" data-theme="dark">Dark</button>
         </div>
+      </div>
+      <div class="sect">
+        <h3>Dock</h3>
+        <div class="group" id="dock-list"></div>
+        <p class="sheet-note" id="dock-note"></p>
       </div>
       <div class="sect">
         <h3>Apps</h3>
@@ -299,7 +321,13 @@
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
   // ---- settings ----
-  const settings = Object.assign({ theme: 'auto', order: APPS.map(a => a.id), hidden: [] }, store.get('settings') || {});
+  const DOCK_MAX = 4;
+  // dockAuto: the dock holds the most used apps; off, it holds settings.dock.
+  const settings = Object.assign({ theme: 'auto', order: APPS.map(a => a.id), hidden: [], dockAuto: true, dock: [] }, store.get('settings') || {});
+  settings.dock = (Array.isArray(settings.dock) ? settings.dock : []).filter(id => APPS.some(a => a.id === id)).slice(0, DOCK_MAX);
+  settings.dockAuto = settings.dockAuto !== false;
+  // How often each app has been opened from here, for the most-used dock.
+  const uses = Object.assign({}, store.get('uses') || {});
   settings.order = settings.order.filter(id => APPS.some(a => a.id === id));
   for (const a of APPS) if (!settings.order.includes(a.id)) settings.order.push(a.id);
   settings.hidden = settings.hidden.filter(id => APPS.some(a => a.id === id));
@@ -319,15 +347,80 @@
   // ---- the grid ----
   const orderedApps = () => settings.order.map(id => APPS.find(a => a.id === id));
 
-  function renderApps() {
-    $('apps').innerHTML = orderedApps().filter(a => !settings.hidden.includes(a.id)).map(a => `
-      <a class="app" href="${a.path}" draggable="false">
+  const shownApps = () => orderedApps().filter(a => !settings.hidden.includes(a.id));
+
+  // The dock's apps: the most used (ties keep the grid's order), or the
+  // ones chosen in Settings. Hidden apps never appear in it.
+  function dockApps() {
+    const shown = shownApps();
+    if (!settings.dockAuto) return shown.filter(a => settings.dock.includes(a.id)).slice(0, DOCK_MAX);
+    return shown.map((a, i) => ({ a, i, n: uses[a.id] || 0 }))
+      .sort((x, y) => y.n - x.n || x.i - y.i).slice(0, DOCK_MAX)
+      .sort((x, y) => x.i - y.i).map(x => x.a);
+  }
+
+  const tile = a => `
+      <a class="app" href="${a.path}" data-id="${a.id}" draggable="false">
         <span class="icon"><img src="${a.path}icon-512.png" alt="" width="60" height="60" decoding="async" draggable="false"></span>
         <span class="name">${esc(a.name)}</span>
-      </a>`).join('')
+      </a>`;
+
+  function renderApps() {
+    const dock = dockApps();
+    $('apps').innerHTML = shownApps().filter(a => !dock.includes(a)).map(tile).join('')
       + `<button class="app" id="gear" aria-haspopup="dialog"><span class="icon settings">${GEAR}</span><span class="name">Settings</span></button>`;
     $('gear').addEventListener('click', openSheet);
+    $('dock').innerHTML = dock.map(tile).join('');
+    $('dock').hidden = !dock.length;
   }
+
+  // Count each open, for the most-used dock. localStorage writes at once,
+  // so the count lands before the page goes.
+  document.addEventListener('click', e => {
+    const app = e.target.closest('a.app[data-id]');
+    if (!app || e.defaultPrevented) return;
+    uses[app.dataset.id] = (uses[app.dataset.id] || 0) + 1;
+    store.set('uses', uses);
+    // Tells the app it was opened from here, so a swipe up (home/back.js)
+    // comes back. sessionStorage lives as long as this window does.
+    try { sessionStorage.setItem('allisonos.home', location.href); } catch {}
+  });
+
+  function renderDockList() {
+    const auto = settings.dockAuto;
+    const inDock = dockApps().map(a => a.id);
+    const full = !auto && settings.dock.length >= DOCK_MAX;
+    $('dock-list').innerHTML = `
+      <div class="opt" data-dock="auto">
+        <span class="label">Most used<span class="sub">Fills the dock with the apps you open most</span></span>
+        <button class="switch" role="switch" aria-checked="${auto}" aria-label="Most used"></button>
+      </div>` + shownApps().map(a => {
+        const on = inDock.includes(a.id);
+        return `
+      <div class="opt${auto ? ' dim' : ''}" data-dock="${a.id}">
+        <img src="${a.path}icon-512.png" alt="" width="28" height="28">
+        <span class="label">${esc(a.name)}</span>
+        <button class="switch" role="switch" aria-checked="${on}" aria-label="${esc(a.name)} in the dock" ${auto || (full && !on) ? 'disabled' : ''}></button>
+      </div>`;
+      }).join('');
+    $('dock-note').textContent = auto
+      ? 'Turn Most used off to choose the dock yourself.'
+      : `Up to ${DOCK_MAX} apps. Apps in the dock leave the grid, as on an iPhone.`;
+  }
+
+  $('dock-list').addEventListener('click', e => {
+    const btn = e.target.closest('button.switch');
+    const row = e.target.closest('.opt');
+    if (!btn || !row || btn.disabled) return;
+    const id = row.dataset.dock;
+    if (id === 'auto') {
+      settings.dockAuto = !settings.dockAuto;
+      // Turning Most used off keeps what is there, so nothing jumps.
+      if (!settings.dockAuto) settings.dock = dockApps().map(a => a.id);
+    } else if (settings.dock.includes(id)) settings.dock = settings.dock.filter(x => x !== id);
+    else if (settings.dock.length < DOCK_MAX) settings.dock.push(id);
+    save(); renderApps(); renderDockList();
+  });
 
   function renderAppList() {
     const apps = orderedApps();
@@ -357,7 +450,7 @@
       if (settings.hidden.includes(id)) settings.hidden = settings.hidden.filter(x => x !== id);
       else settings.hidden.push(id);
     }
-    save(); renderApps(); renderAppList();
+    save(); renderApps(); renderAppList(); renderDockList();
   });
 
   // ---- install ----
@@ -390,7 +483,7 @@
   function openSheet() {
     if (!sheetWrap.hidden) return;
     lastFocus = document.activeElement;
-    renderAppList();
+    renderAppList(); renderDockList();
     sheetWrap.hidden = false;
     document.documentElement.classList.add('locked');
     requestAnimationFrame(() => { sheetWrap.classList.add('open'); sheetEl.focus(); });
