@@ -52,8 +52,9 @@ Not included:
 On the Sport tab, **Filter** opens a panel with a search box and three lists:
 Sports, Competitions and Teams (from `sport-catalog.json`). Tick anything you
 follow, or search for a player, driver or event and follow it as a keyword.
-**Show N stories** closes the panel. The Sport tab and the sport stories in
-Latest then only show stories about your filters.
+**Show N stories** closes the panel. The Sport tab then only shows stories
+about your filters. (Sport stories aren't in Latest at all; they have their
+own tab.)
 
 The bar under the tabs shows how many filters are on and what they are.
 **Reset** clears them all, with a few seconds to undo.
@@ -75,7 +76,7 @@ go back to your filters. The buttons are the `quick` list in
 `sport-catalog.json`: a label and the team ids it covers. All four are men's
 teams only (`menOnly`): women's leagues are left out, and so is any story
 mentioning a word in `womenTerms` (women's, Lionesses, Red Roses, WSL...). They only change
-the Sport tab: Latest keeps using your saved filters.
+the Sport tab.
 
 ## Sport: live scores and fixtures
 
