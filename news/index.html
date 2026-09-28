@@ -35,10 +35,10 @@
     --glass-strong: rgba(255, 255, 255, 0.62);
     --glass-edge: rgba(255, 255, 255, 0.75);
     --glass-shadow: 0 8px 32px rgba(31, 38, 64, 0.10);
-    /* the pinned bar: a rounded Liquid Glass panel, as in the Mail app (a
-       little more frosted, as it can hold three rows of controls) */
-    --bar-top: rgba(255, 255, 255, 0.42);
-    --bar-bottom: rgba(255, 255, 255, 0.28);
+    /* the pinned bar: a rounded panel, as in the Mail app, but mostly solid
+       so headlines scrolling behind it don't show through blurred */
+    --bar-top: rgba(248, 248, 251, 0.92);
+    --bar-bottom: rgba(244, 245, 249, 0.88);
     --bar-rim: rgba(255, 255, 255, 0.85);
     --bar-hi: rgba(255, 255, 255, 0.8);
     --bar-lift: rgba(40, 40, 80, 0.08);
@@ -70,8 +70,8 @@
       --glass: rgba(30, 31, 38, 0.46);
       --glass-strong: rgba(40, 41, 50, 0.62);
       --glass-edge: rgba(255, 255, 255, 0.10);
-      --bar-top: rgba(34, 34, 40, 0.46);
-      --bar-bottom: rgba(34, 34, 40, 0.32);
+      --bar-top: rgba(24, 24, 29, 0.92);
+      --bar-bottom: rgba(20, 20, 24, 0.88);
       --bar-rim: rgba(255, 255, 255, 0.16);
       --bar-hi: rgba(255, 255, 255, 0.10);
       --bar-lift: rgba(0, 0, 0, 0.38);
@@ -163,9 +163,9 @@
     background: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
     backdrop-filter: blur(14px) saturate(190%) brightness(1.04); -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
     box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--bar-hi), 0 8px 26px var(--bar-lift);
-    opacity: 0; transform: scale(0.97); transition: opacity 0.25s, transform 0.3s cubic-bezier(.22, 1, .36, 1);
+    opacity: 0; transition: opacity 0.25s;
   }
-  .topbar.stuck::before, .statusbar.stuck { opacity: 1; transform: none; }
+  .topbar.stuck::before, .statusbar.stuck { opacity: 1; }
   /* Where the glass can't blur (or Reduce Transparency is on) the panel turns near-solid. */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .topbar::before { background: var(--bar-solid); }
