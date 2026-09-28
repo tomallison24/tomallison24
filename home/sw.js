@@ -1,9 +1,9 @@
-// Offline shell for the Mail app. Same-origin files load network-first, so a
-// new deploy shows up on the next open and the cache is only the fallback.
-// Gmail itself is cross-origin and never touched here: a cached mailbox would
-// be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v6';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+// Offline shell for the Home app. Everything same-origin loads network-first
+// so a new deploy shows up on the next open; the cache is only the fallback
+// when offline. The other apps' icons are same-origin too, so they are kept
+// the same way.
+const CACHE = 'home-v2';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -11,7 +11,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('mail-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('home-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

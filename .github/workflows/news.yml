@@ -1,7 +1,7 @@
 # Refreshes the News app's headlines and publishes the site.
 #
 # build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (News + Weather + Mail). Runs on any branch, so feed
+#         packages the repo (Home + News + Weather + Mail + Notes). Runs on any branch, so feed
 #         changes can be checked before merging. On the default branch it
 #         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
 #         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits
@@ -21,6 +21,8 @@ on:
       - 'news/**'
       - 'weather/**'
       - 'mail/**'
+      - 'notes/**'
+      - 'home/**'
       - '.github/workflows/news.yml'
 
 permissions:
@@ -34,13 +36,16 @@ jobs:
       PUBLISH: ${{ github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch }}
       HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      # Actions are pinned to exact commits (version in the comment), not tags:
+      # a tag can be moved to new code, and these jobs can read the repo's
+      # secrets. To update, look up the new tag's commit and change both.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
       # Last run's news.json, for topics that keep stories for days.
       - name: Restore last run's headlines
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:
           path: .cache-news
           key: news-data-${{ github.run_id }}
@@ -48,11 +53,11 @@ jobs:
       - name: Fetch headlines
         run: node news/scripts/fetch-news.mjs
       - name: Keep headlines for the next run
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:
           path: .cache-news
           key: news-data-${{ github.run_id }}
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b   # v4.0.0
         with:
           path: .
       - name: Publish to Cloudflare Pages
@@ -61,9 +66,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          mkdir -p _site && cp -r news weather mail _site/
-          npx --yes wrangler@4 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
-          npx --yes wrangler@4 pages deploy _site --project-name=tomallison24-news --branch=main --commit-dirty=true
+          # wrangler is pinned to an exact release for the same reason; it runs
+          # with the Cloudflare token.
+          mkdir -p _site && cp -r home news weather mail notes _site/
+          npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
+          npx --yes wrangler@4.131.1 pages deploy _site --project-name=tomallison24-news --branch=main --commit-dirty=true
 
   deploy:
     needs: build
@@ -81,4 +88,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}news/
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4.0.5

@@ -29,8 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      # Actions are pinned to exact commits (version in the comment), not tags:
+      # a tag can be moved to new code, and these jobs can read the repo's
+      # secrets. To update, look up the new tag's commit and change both.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
       - name: Empty the bucket and bring back reminders
