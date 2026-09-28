@@ -2,6 +2,11 @@
 // scheduled sweep needs. Run it on your own machine, not in CI.
 //
 //   node mail/scripts/get-refresh-token.mjs <client-id> <client-secret>
+//   node mail/scripts/get-refresh-token.mjs <client-id> <client-secret> --metadata
+//
+// The first is for the daily job (it files and trashes mail: gmail.modify).
+// With --metadata it makes the token for the notification server instead,
+// which can read senders, subjects and labels but never a message's body.
 //
 // Why a second OAuth client: the phone app is a Web client using the implicit
 // flow, which never issues a refresh token. A scheduled job has nobody to tap
@@ -15,10 +20,13 @@
 import { createServer } from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
 
-const [ID, SECRET] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const METADATA = args.includes('--metadata');
+const [ID, SECRET] = args.filter(a => a !== '--metadata');
 const PORT = 8765;
 const REDIRECT = `http://127.0.0.1:${PORT}`;
-const SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
+const SCOPE = METADATA ? 'https://www.googleapis.com/auth/gmail.metadata' : 'https://www.googleapis.com/auth/gmail.modify';
+const NAME = METADATA ? 'PUSH_GOOGLE_REFRESH_TOKEN' : 'GOOGLE_REFRESH_TOKEN';
 
 if (!ID || !SECRET) {
   console.error('Usage: node mail/scripts/get-refresh-token.mjs <client-id> <client-secret>');
@@ -38,7 +46,7 @@ url.search = new URLSearchParams({
   code_challenge: challenge, code_challenge_method: 'S256',
 });
 
-console.log('\nOpen this in a browser, signed in as the mailbox you want swept:\n');
+console.log('\nOpen this in a browser, signed in as your Gmail account (' + (METADATA ? 'notifications: headers only' : 'the daily job') + '):\n');
 console.log(url.toString() + '\n');
 
 const server = createServer(async (req, res) => {
@@ -65,9 +73,9 @@ const server = createServer(async (req, res) => {
     server.close(); process.exit(1);
   }
   done('Done. The refresh token is in your terminal - close this tab.');
-  console.log('GOOGLE_REFRESH_TOKEN\n');
+  console.log(NAME + '\n');
   console.log(body.refresh_token + '\n');
-  console.log('Add it, the client ID and the client secret as repository secrets:');
+  console.log('Add it as the repository secret ' + NAME + (METADATA ? '' : ', with the client ID and secret as GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET') + ':');
   console.log('  Settings -> Secrets and variables -> Actions -> New repository secret\n');
   server.close();
   process.exit(0);

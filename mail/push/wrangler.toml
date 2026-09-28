@@ -1,0 +1,17 @@
+# Cloudflare Worker for Mail's new-mail notifications. Deployed by
+# .github/workflows/push.yml, which fills in the KV namespace id from the
+# repository variable PUSH_KV_ID and sets the secrets. See mail/README.md.
+name = "mail-push"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["* * * * *"]          # every minute
+
+[[kv_namespaces]]
+binding = "PUSH"
+id = "PUSH_KV_ID"              # replaced at deploy time
+
+[vars]
+ALLOWED_ORIGIN = "https://tomallison24.github.io"
+MARKETING_LABEL = "Marketing"

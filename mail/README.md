@@ -15,7 +15,7 @@ Remind Me, and an unread count on the icon.
 
 Anything in Marketing older than **3 days** (Settings: 1–30) goes to the
 Trash, where Gmail deletes it for good after 30 days. The sweep runs when the
-app opens; `.github/workflows/mail.yml` can run it daily too, so it happens on
+app opens (the Marketing list has a **Clean up now** button to run it at once); `.github/workflows/mail.yml` can run it daily too, so it happens on
 days you never open the app — but only once its Google credentials are set up
 (Setup, step 2). Until then the daily run just logs "No Google credentials set".
 
@@ -183,6 +183,67 @@ Until those secrets exist the workflow runs, finds nothing and exits cleanly.
 > click past; that is expected for a personal app used by its author. The
 > phone app is unaffected either way — it gets a fresh hour-long token each
 > time you connect.
+
+### 3. Notifications (optional)
+
+New mail on the lock screen, even with the app closed — see
+**Notifications** below for what it does. It needs the same Desktop client as
+step 2, a free Cloudflare account, and about 20 minutes on a computer.
+
+1. **Google.** Do step 2's first part (consent screen *In production*, a
+   Desktop client). Then, in a copy of this repository on your computer:
+   ```sh
+   node mail/scripts/get-refresh-token.mjs <client-id> <client-secret> --metadata
+   node mail/push/make-vapid-keys.mjs
+   ```
+   The first prints `PUSH_GOOGLE_REFRESH_TOKEN` — a second token that can only
+   read headers (senders, subjects, labels), never an email's text. The second
+   prints `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, the server's own key pair.
+2. **Cloudflare** (dash.cloudflare.com, free plan):
+   - **Storage & Databases → KV → Create** a namespace, e.g. `mail-push`, and
+     copy its **ID**;
+   - **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"**
+     template, and copy the token;
+   - your **Account ID** (on the Workers & Pages overview).
+3. **GitHub → Settings → Secrets and variables → Actions:**
+   - *Secrets:* `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+     `PUSH_GOOGLE_REFRESH_TOKEN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
+     (plus `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from step 2);
+   - *Variables:* `PUSH_KV_ID` (the KV namespace ID) and
+     `PUSH_ALLOWED_EMAIL` (your Gmail address — the only account the server
+     will serve).
+4. **Actions → Mail push → Run workflow.** The log shows the server's address,
+   `https://mail-push.<your-subdomain>.workers.dev`.
+5. **On the iPhone,** in Mail opened from the Home Screen: **Settings → New-mail
+   notifications**, paste the address, **Save**, pick what to hear about, and
+   **Allow**. **Send a test** checks the whole chain.
+
+`node mail/scripts/push-test.mjs` tests the server without any of the above.
+
+## Notifications
+
+A small server (`mail/push`, a Cloudflare Worker) checks your inbox **every
+minute** and sends a notification to your phone when mail arrives: the sender
+as the title, the subject underneath. Tapping it opens that conversation.
+Several at once arrive as one ("3 new emails") rather than a burst. The icon's
+unread count comes along with it.
+
+**What you hear about** (Settings): everything except Marketing and Gmail's
+Promotions; **Primary only**; or **only mail with one of your tags** (say,
+School). Mail you've already read elsewhere, spam and your own sent mail never
+notify.
+
+**Privacy.** Until now nothing left your phone; this is the one exception, and
+it is kept small:
+- the server's Google token has the **gmail.metadata** scope — senders,
+  subjects and labels, never what an email says;
+- it stores no mail: only your phone's subscription, where it got to in the
+  inbox's history, and a short-lived token;
+- each notification is **encrypted for your phone** (Web Push, RFC 8291), so
+  Apple's push service passes on only ciphertext;
+- it only accepts a phone that proves it is signed in as `PUSH_ALLOWED_EMAIL`
+  (by showing a Google token Gmail says is yours), and only real push services
+  as destinations.
 
 ## How a rule is chosen
 
@@ -479,6 +540,15 @@ secondary sources and my own testing instead:
   the app asks for permission either way;
 - the **grow-from-row** animation on an iPhone. It uses View Transitions,
   which the same data lists for iOS 18+; older iOS gets the plain slide;
+- **Notifications on a real iPhone.** The server's encryption is checked
+  against an independent implementation (and the published `http_ece`
+  library), and the app ↔ server exchange is tested end to end — but not
+  through Apple's push service, which isn't reachable from here. MDN's
+  compatibility data lists the notification *tap* event as unsupported on
+  iOS; if tapping only opens the inbox, that is why (the new mail is at the
+  top). Cloudflare's free-plan limits are from memory (developers.cloudflare.com
+  is blocked here); the server is built to stay far inside them — it writes to
+  storage only when mail arrives;
 - **Gmail's quota numbers.** From Google's usage-limits page as I remember it
   (not re-checked, as developers.google.com is blocked here): 15,000 units per
   user per minute, and 10 units for each conversation fetched — so the old

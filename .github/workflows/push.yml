@@ -1,0 +1,68 @@
+# Deploys the Mail app's notification server (mail/push) to Cloudflare Workers.
+#
+# Does nothing until CLOUDFLARE_API_TOKEN is set, so it is safe to leave on.
+# Setup, and every secret and variable it reads: mail/README.md,
+# "Notifications". Run it by hand from the Actions tab (Mail push -> Run
+# workflow) after adding them; it also runs when mail/push changes.
+name: Mail push
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mail/push/**'
+      - '.github/workflows/push.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mail-push
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to exact commits (version in the comment), as in mail.yml: a tag
+      # can be moved to new code, and this job can read the repo's secrets.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+
+      - name: Deploy the Worker and its secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PUSH_KV_ID: ${{ vars.PUSH_KV_ID }}
+          ALLOWED_EMAIL: ${{ vars.PUSH_ALLOWED_EMAIL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.PUSH_GOOGLE_REFRESH_TOKEN }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        working-directory: mail/push
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "No CLOUDFLARE_API_TOKEN set - nothing to deploy. See mail/README.md, Notifications."
+            exit 0
+          fi
+          missing=""
+          for v in CLOUDFLARE_ACCOUNT_ID PUSH_KV_ID ALLOWED_EMAIL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REFRESH_TOKEN VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing (secrets and variables - see mail/README.md, Notifications)"
+            exit 1
+          fi
+          sed -i "s/id = \"PUSH_KV_ID\"/id = \"$PUSH_KV_ID\"/" wrangler.toml
+          npx --yes wrangler@4.142.0 deploy --var "ALLOWED_EMAIL:$ALLOWED_EMAIL"
+          # The secrets go in after the Worker exists; a file keeps them off the command line.
+          node -e 'const e = process.env; require("fs").writeFileSync("secrets.json", JSON.stringify({
+            GOOGLE_CLIENT_ID: e.GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET: e.GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN: e.GOOGLE_REFRESH_TOKEN,
+            VAPID_PUBLIC_KEY: e.VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY: e.VAPID_PRIVATE_KEY, VAPID_SUBJECT: "mailto:" + e.ALLOWED_EMAIL }), { mode: 0o600 })'
+          npx --yes wrangler@4.142.0 secret bulk secrets.json
+          rm -f secrets.json
+          echo "Deployed. The app needs the Worker's address - it is the https://mail-push.<your-subdomain>.workers.dev line above."
