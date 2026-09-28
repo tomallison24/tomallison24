@@ -1,7 +1,7 @@
 # Refreshes the News app's headlines and publishes the site.
 #
 # build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (News + Weather + Mail + Notes). Runs on any branch, so feed
+#         packages the repo (Home + News + Weather + Mail + Notes). Runs on any branch, so feed
 #         changes can be checked before merging. On the default branch it
 #         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
 #         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits
@@ -22,6 +22,7 @@ on:
       - 'weather/**'
       - 'mail/**'
       - 'notes/**'
+      - 'home/**'
       - '.github/workflows/news.yml'
 
 permissions:
@@ -67,7 +68,7 @@ jobs:
         run: |
           # wrangler is pinned to an exact release for the same reason; it runs
           # with the Cloudflare token.
-          mkdir -p _site && cp -r news weather mail notes _site/
+          mkdir -p _site && cp -r home news weather mail notes _site/
           npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
           npx --yes wrangler@4.131.1 pages deploy _site --project-name=tomallison24-news --branch=main --commit-dirty=true
 
