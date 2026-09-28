@@ -30,7 +30,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -1254,11 +1254,116 @@ function viewSettings() {
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
     '<div class="field"><span>Unread count on the app icon</span><button class="textbtn" data-act="badge" aria-pressed="' + badgeOn() + '">' + (badgeOn() ? 'On' : 'Off') + '</button></div>' +
+    notifyHTML() +
     blockedHTML() +
     '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
     '<button class="btn warn" data-act="signout">Sign out</button>' +
     '<p class="note">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>' +
   '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// New-mail notifications: the phone subscribes to the small server in
+// mail/push, which watches the inbox and sends a Web Push when mail arrives.
+// ---------------------------------------------------------------------------
+const PUSH_URL = '';                  // the Worker's address, once deployed (Settings can set it too)
+const pushUrl = () => (ls.get(K.pushUrl, '') || PUSH_URL).trim().replace(/\/+$/, '');
+const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const notifyMode = () => ls.get(K.notify, '');
+const NOTIFY_MODES = () => [
+  ['all', 'Everything but ' + settings.label + ' and Promotions'],
+  ['primary', 'Primary only'],
+  ['tags', 'Only mail with one of your tags'],
+];
+
+function notifyHTML() {
+  const on = notifyMode(), url = pushUrl();
+  const hr = '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">';
+  if (!url) {
+    return hr + '<div class="field"><span>New-mail notifications</span><span>not set up</span></div>' +
+      '<p class="note">These need the small notification server in <code>mail/push</code> (see the README, “Notifications”). Once it is deployed, paste its address:</p>' +
+      '<div class="field"><input type="url" id="push-url" placeholder="https://mail-push….workers.dev" style="width:100%" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+      '<button class="btn ghost" data-act="push-url-save">Save address</button>';
+  }
+  return hr + '<div class="field"><span>New-mail notifications</span><span>' + (on ? 'On' : 'Off') + '</span></div>' +
+    '<div class="notify-modes" role="radiogroup" aria-label="Notify me about">' +
+      NOTIFY_MODES().map(([id, label]) => '<button class="textbtn" role="radio" data-act="notify-mode" data-mode="' + id + '" aria-checked="' + (on === id) + '">' + esc(label) + '</button>').join('') +
+    '</div>' +
+    (on ? '<div class="field"><button class="textbtn" data-act="notify-test">Send a test</button><button class="textbtn" data-act="notify-off">Turn off</button></div>' : '') +
+    '<p class="note">From ' + esc(url.replace(/^https:\/\//, '')) + '. It sees senders and subjects, never what an email says; the notification itself is encrypted for this phone.</p>' +
+    '<button class="btn ghost" data-act="push-url-change">Change server</button>';
+}
+
+async function pushCall(path, body) {
+  const tok = getToken();
+  if (!tok) throw new AuthError('signed out');
+  const r = await fetch(pushUrl() + path, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + tok.t, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+  }).catch(() => { throw new Error('couldn’t reach the notification server'); });
+  if (!r.ok) throw new Error(r.status === 403 ? 'the server only answers the Gmail account it was set up for' : 'the server answered ' + r.status);
+  return r.json();
+}
+
+async function pushSubscription(create) {
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!create) return sub;
+  const { key } = await (await fetch(pushUrl() + '/key')).json();
+  const want = bytesOf(b64std(key));
+  const had = sub?.options?.applicationServerKey && new Uint8Array(sub.options.applicationServerKey);
+  if (sub && had && (had.length !== want.length || had.some((b, i) => b !== want[i]))) { await sub.unsubscribe(); sub = null; }   // made for another server
+  return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+}
+
+async function turnOnNotifications(mode) {
+  if (!canPush()) return toast('Open Mail from your Home Screen to turn on notifications', { bad: true, ms: 7000 });
+  const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission().catch(() => 'denied');
+  if (perm !== 'granted') return toast('Allow notifications for Mail (iPhone Settings → Notifications → Mail) to turn these on', { bad: true, ms: 8000 });
+  toast(notifyMode() ? 'Changing notifications…' : 'Turning on notifications…', { ms: 20000 });
+  try {
+    const sub = await pushSubscription(true);
+    await pushCall('/subscribe', { subscription: sub.toJSON(), mode, tags: chipTags().map(l => l.id) });
+    ls.set(K.notify, mode);
+    ls.set(K.pushSynced, String(Date.now()));
+    toast('Notifications on: ' + NOTIFY_MODES().find(m => m[0] === mode)[1].toLowerCase());
+    render();
+  } catch (err) {
+    if (err instanceof AuthError) return failed(err);
+    toast('Couldn’t turn on notifications: ' + err.message, { bad: true, ms: 8000 });
+  }
+}
+
+async function turnOffNotifications() {
+  try {
+    const sub = await pushSubscription(false);
+    if (sub) { await pushCall('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+  } catch {}
+  ls.del(K.notify);
+  toast('Notifications off');
+  render();
+}
+
+// Twice a day, on opening: tell the server this phone is still here (and which
+// tags it follows now). iOS can quietly replace a subscription.
+async function syncPush() {
+  if (!notifyMode() || !pushUrl() || !canPush() || Notification.permission !== 'granted') return;
+  if (Date.now() - Number(ls.get(K.pushSynced, 0)) < 12 * 3600e3) return;
+  try {
+    const sub = await pushSubscription(true);
+    await pushCall('/subscribe', { subscription: sub.toJSON(), mode: notifyMode(), tags: chipTags().map(l => l.id) });
+    ls.set(K.pushSynced, String(Date.now()));
+  } catch {}
+}
+
+// A tapped notification opens its conversation - kept on the phone first, so
+// it survives a trip to Google to renew the sign-in.
+async function openThreadById(id) {
+  ls.del(K.openThread);
+  let it = findItem(id);
+  if (!it) { try { [it] = await hydrate([id]); } catch {} }
+  if (!it) return;
+  if (state.reading) await closeReader();
+  openReader(it);
 }
 
 // Blocked senders, each with Unblock. The list is Gmail's own filters.
@@ -3080,6 +3185,23 @@ document.addEventListener('click', async e => {
     }
 
     case 'badge': return toggleBadge();
+    case 'notify-mode': return turnOnNotifications(el.dataset.mode);
+    case 'notify-off': return turnOffNotifications();
+    case 'notify-test':
+      try { const r = await pushCall('/test'); toast(r.sent ? 'Test sent — it should arrive in a moment' : 'The server has no phone to send to — turn notifications off and on', { ms: 6000 }); }
+      catch (err) { if (err instanceof AuthError) failed(err); else toast('Couldn’t send a test: ' + err.message, { bad: true, ms: 7000 }); }
+      return;
+    case 'push-url-save': {
+      const v = ($('#push-url')?.value || '').trim();
+      if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(v)) return toast('That doesn’t look like the server’s https:// address', { bad: true });
+      ls.set(K.pushUrl, v);
+      toast('Saved. Choose what to be notified about.');
+      return render();
+    }
+    case 'push-url-change':
+      if (notifyMode()) await turnOffNotifications();
+      ls.del(K.pushUrl);
+      return render();
     case 'box-menu': return boxMenuOpen() ? closeBoxMenu() : openBoxMenu();
     case 'box-close': return closeBoxMenu();
     case 'box-view': {
@@ -3203,6 +3325,8 @@ function renew() {
 }
 
 (function boot() {
+  const want = new URLSearchParams(location.search).get('thread');
+  if (want) { ls.set(K.openThread, want); history.replaceState(history.state, '', location.pathname); }
   const back = consumeRedirect();
   if (back?.error) {
     // A silent renewal Google couldn't finish just needs one tap, not a warning.
@@ -3222,8 +3346,8 @@ function renew() {
     const waiting = JSON.parse(ls.get(K.pending, 'null'));
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
-  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); }).catch(() => {});
-  loadList();
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
+  loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); });
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
       if (!n) return;
@@ -3253,4 +3377,8 @@ document.addEventListener('visibilitychange', () => {
   if (state.view === 'inbox' || state.view === 'marketing') loadList({ force: true, quiet: true });
 });
 
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // a notification tapped while the app is already open
+  navigator.serviceWorker.addEventListener('message', e => { if (e.data?.open && getToken()) openThreadById(String(e.data.open)); });
+}
