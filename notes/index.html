@@ -430,6 +430,17 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .sw.armed-l .sa.bin .gi,.sw.armed-r .sa.tag .gi{transform:scale(1.18)}
 .sw.armed-l .sa.arch,.sw.armed-r .sa.pin{opacity:.35}
 
+/* ---- "Updated" pill: once, the first time the app opens after an update ---- */
+.updpill{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:40;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 11px;border-radius:999px;
+  font-size:14px;font-weight:600;color:var(--accent-text);background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);
+  box-shadow:var(--lg-rim),0 8px 24px var(--lift);transform:translateX(-50%);animation:updIn .5s var(--ease) both}
+.updpill svg{width:17px;height:17px;color:var(--icon)}
+.updpill.out{animation:updOut .45s ease both}
+@keyframes updIn{from{opacity:0;transform:translate(-50%,-14px) scale(.94)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes updOut{to{opacity:0;transform:translate(-50%,-10px) scale(.96)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.updpill{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
 /* ---- Icons and buttons: the same system as Mail ----
    Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
    ticks and close); icons in a calm slate-teal, while text, dots and
@@ -851,6 +862,9 @@ svg.fs{fill:currentColor}
       </div>
     </div>
   </div>
+
+  <!-- Shown once, the first time the app opens after an update -->
+  <div class="updpill" id="updPill" role="status" hidden><svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Updated</div>
 
   <datalist id="tagList"></datalist>
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
@@ -2155,6 +2169,21 @@ svg.fs{fill:currentColor}
 
   setTab(st.tab === 'rem' ? 'rem' : 'notes');
   checkIncoming();
+  // "Updated": the app fingerprints its own code; when the fingerprint changes
+  // (a new version was published), the pill shows once for 5 seconds. The very
+  // first open only records the fingerprint.
+  (function(){
+    const src = [...document.querySelectorAll('style, script:not([src])')].map(e => e.textContent).join('');
+    let h = 2166136261;
+    for (let i = 0; i < src.length; i++) { h ^= src.charCodeAt(i); h = Math.imul(h, 16777619); }
+    const ver = (h >>> 0).toString(36), VK = KEY + '-version';
+    let prev = null;
+    try { prev = localStorage.getItem(VK); localStorage.setItem(VK, ver); } catch(e) { return; }
+    if (!prev || prev === ver) return;
+    const pill = $('updPill');
+    pill.hidden = false;
+    setTimeout(() => { pill.classList.add('out'); setTimeout(() => { pill.hidden = true; pill.classList.remove('out'); }, 450); }, 5000);
+  })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
