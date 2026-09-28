@@ -196,10 +196,10 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .morebtn:active{transform:scale(.94)}
 
 /* ---- floating capsules: sections + new, as in Mail's toolbar ---- */
-.dock{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 14px;z-index:5;pointer-events:none}
+.dock{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
 .dock > *{pointer-events:auto}
 .tabs{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:999px;box-shadow:inset 0 1px 0 var(--hi),0 10px 30px var(--lift-strong)}
-.tab{height:44px;border-radius:999px;padding:0 16px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted);transition:background .2s,color .2s,transform .18s var(--ease)}
+.tab{height:44px;border-radius:999px;padding:0 13px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted);transition:background .2s,color .2s,transform .18s var(--ease)}
 .tab:active{transform:scale(.94)}
 .tab svg{width:19px;height:19px}
 .tab[aria-selected="true"]{background:var(--pill);color:var(--accent)}
@@ -208,6 +208,12 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
   box-shadow:0 10px 28px var(--lift-strong),inset 0 1px 0 var(--hi);transition:transform .2s var(--ease);animation:popIn .45s var(--ease) both}
 .fab:active{transform:scale(.9)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
+.dockr{display:flex;align-items:center;gap:8px}
+@media (max-width:389px){.tab svg{display:none}.tab{padding:0 14px}}
+.fab.small{width:46px;height:46px}
+.fab.small svg{width:21px;height:21px;stroke-width:1.9}
+.linkbox{width:100%;border:1px solid var(--hair);background:var(--fill);border-radius:12px;padding:9px 11px;font-size:13px;color:var(--muted)}
+#psText{min-height:180px;font-size:15px;color:var(--text)}
 
 /* ---- sheets ---- */
 .sheetwrap{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
@@ -371,9 +377,14 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="6" height="6" rx="2"/><path d="M5 7l1 1 2-2M13 7h7M13 17h7"/><rect x="3.5" y="14" width="6" height="6" rx="2"/></svg>Reminders
       </button>
     </nav>
-    <button class="fab" id="fab" type="button" aria-label="New note">
-      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
+    <div class="dockr">
+      <button class="fab small" id="pasteBtn" type="button" aria-label="Paste from clipboard">
+        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="3"/><path d="M9 4.5V3.8A1.8 1.8 0 0 1 10.8 2h2.4A1.8 1.8 0 0 1 15 3.8v.7"/><path d="M9.5 11h5M9.5 15h3.5"/></svg>
+      </button>
+      <button class="fab" id="fab" type="button" aria-label="New note">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Note editor -->
@@ -501,7 +512,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <div class="rgroup glass">
           <button class="rowbtn" type="button" data-share="link">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>
-            <span>Share link<span class="sub">Messages, WhatsApp, email. Opens as a copy in their app.</span></span>
+            <span>Share link<span class="sub">Send by Messages or email. They copy it, open Notes and tap Paste.</span></span>
           </button>
           <button class="rowbtn" type="button" data-share="file">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/></svg></span>
@@ -568,6 +579,34 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     </div>
   </div>
 
+  <!-- Paste fallback: when the clipboard can't be read directly -->
+  <div class="sheetwrap" id="pasteSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="psLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="psLbl">Paste as a note</h2><div class="acts"><button class="btn" id="psAdd" type="button">Add</button></div></div>
+      <div class="sheetbody">
+        <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste here"></textarea></div>
+        <p class="hint" id="psHint"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- A share link opened in Safari: send it to the home-screen app instead -->
+  <div class="sheetwrap" id="linkSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="lkLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="lkLbl">Add it in your Notes app</h2></div>
+      <div class="sheetbody">
+        <p class="hint">This opened in Safari, which keeps separate notes from the Notes app on your Home Screen. Copy the link, open Notes from your Home Screen, and tap the paste button next to +.</p>
+        <button class="btn" id="lkCopy" type="button">Copy link</button>
+        <input class="linkbox" id="lkLink" readonly hidden aria-label="Share link">
+        <button class="btn quiet" id="lkHere" type="button">Add it here in Safari instead</button>
+      </div>
+    </div>
+  </div>
+
   <datalist id="tagList"></datalist>
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
@@ -604,7 +643,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 
   // ---------- sample data ----------
   const SAMPLE_NOTES = [
-    {id:'n1',title:'Welcome to Notes',body:'Tap + to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,updated:now}
+    {id:'n1',title:'Welcome to Notes',body:'Tap + to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to + to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,updated:now}
   ];
   const SAMPLE_LISTS = [
     {id:'l1',name:'Personal',color:'#3B82F6'},
@@ -832,10 +871,11 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 
   const toLocalInput = s => { const d = new Date(s); return new Date(d.getTime() - d.getTimezoneOffset()*6e4).toISOString().slice(0,16); };
   const noteTags = tagEditor('edTags', 'edTagInput', () => st.editing);
-  function openEditor(id){
+  function openEditor(id, pre){
     const base = id ? notes.find(n => n.id === id) : null;
     st.isNew = !base;
     st.editing = base ? clone(base) : {id:'n'+Date.now().toString(36), title:'', body:'', tags:[...st.sel], color:'none', pinned:false, reminder:null, updated:Date.now()};
+    if (!base && pre) { st.editing.title = pre.title || ''; st.editing.body = pre.body || ''; pre.tags.forEach(t => { if (!st.editing.tags.includes(t)) st.editing.tags.push(t); }); }
     $('edTitle').value = st.editing.title;
     $('edBody').value = st.editing.body;
     $('edTagInput').value = '';
@@ -843,7 +883,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     $('edDelete').hidden = st.isNew;
     renderEditor();
     openSheet('editor');
-    (st.isNew ? $('edTitle') : $('edDone')).focus();
+    (st.isNew && !pre ? $('edTitle') : $('edDone')).focus();
   }
   function renderEditor(){
     const e = st.editing;
@@ -1209,7 +1249,8 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   function offerImport(items, hint){
     pending = (Array.isArray(items) ? items : []).filter(p => p && (p.k === 'note' || p.k === 'todo') && p.d && typeof p.d === 'object');
     if (!pending.length) { toast('Nothing to add from that.'); return; }
-    $('imLbl').textContent = pending.length === 1 ? 'Add this ' + (pending[0].k === 'note' ? 'note' : 'reminder') + '?' : 'Add ' + pending.length + ' items?';
+    const allTodos = pending.every(p => p.k === 'todo');
+    $('imLbl').textContent = pending.length === 1 ? 'Add this ' + (pending[0].k === 'note' ? 'note' : 'reminder') + '?' : 'Add ' + pending.length + (allTodos ? ' reminders?' : ' items?');
     $('imList').innerHTML = pending.map(p => '<li>' + (p.k === 'note' ? 'Note: ' : 'Reminder: ') + esc(p.d.title || 'Untitled') + '</li>').join('');
     $('imHint').textContent = hint || 'They\u2019ll be added as new copies. Nothing you already have is changed.';
     openSheet('importSheet');
@@ -1237,12 +1278,111 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   function checkIncoming(){
     const m = location.hash.match(/^#add=([\w-]+)$/);
     if (!m) return;
+    const link = location.href;
     history.replaceState(null, '', location.pathname + location.search);
     let items;
     try { items = JSON.parse(b64d(m[1])); } catch(e) { toast('That link is damaged. Ask for it to be sent again.'); return; }
-    offerImport(items, 'Shared with you. It\u2019ll be added as a new copy.');
+    if (isIOS && !standalone()) offerOpenInApp(link, items);
+    else offerImport(items, 'Shared with you. It\u2019ll be added as a new copy.');
   }
   window.addEventListener('hashchange', checkIncoming);
+
+  // ---------- paste: from Claude or anywhere ----------
+  // On iPhone a home-screen app keeps its own storage, separate from Safari,
+  // so things get into it by copy and paste rather than by opening links.
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const cleanInline = l => l.replace(/\*\*(.+?)\*\*/g, '$1').replace(/__(.+?)__/g, '$1').replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1 ($2)');
+  const BULLET = /^\s*(?:[-*+•]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/;
+  const isHeading = l => /^\s*#{1,6}\s+\S/.test(l);
+  const isRule = l => /^\s*([-*_])(\s*\1){2,}\s*$/.test(l);
+
+  function textToNote(text){
+    const lines = text.replace(/\r\n?/g, '\n').split('\n');
+    // Title: a markdown heading near the top (skipping a chatty first line), else the first line.
+    let ti = lines.slice(0, 6).findIndex(isHeading), hadHeading = ti >= 0;
+    if (!hadHeading) ti = lines.findIndex(l => l.trim());
+    const title = cleanInline(lines[ti].trim().replace(/^#{1,6}\s+/, '').replace(/[:：]\s*$/, '')).slice(0, 120);
+    const out = [];
+    (hadHeading ? lines.slice(ti + 1) : lines.slice(0, ti).concat(lines.slice(ti + 1))).forEach(raw => {
+      if (isRule(raw)) return;
+      if (isHeading(raw)) { if (out.length && out[out.length - 1] !== '') out.push(''); out.push(cleanInline(raw.trim().replace(/^#{1,6}\s+/, ''))); return; }
+      const indent = raw.match(/^\s*/)[0].length >= 2 ? '   ' : '';
+      const m = raw.match(BULLET);
+      if (m) {
+        const num = raw.trim().match(/^(\d+)[.)]/);
+        out.push(indent + (num ? num[1] + '. ' : '• ') + cleanInline(raw.slice(m[0].length).trim()));
+      } else out.push(cleanInline(raw.trimEnd()));
+    });
+    const body = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    const tags = [];
+    extractTags(text, tags);
+    if (/ingredients/i.test(text) && /(method|instructions|directions|steps|preparation)/i.test(text) && !tags.includes('recipe')) tags.push('recipe');
+    return {title, body, tags};
+  }
+
+  function textToTodos(text){
+    const l = listById(st.rlist || lists[0].id);
+    return text.replace(/\r\n?/g, '\n').split('\n')
+      .filter(x => x.trim() && !isHeading(x) && !isRule(x) && !/:\s*$/.test(x.trim()))
+      .map(x => {
+        const tags = []; extractTags(x, tags);
+        const title = cleanInline(x.replace(BULLET, '').replace(/(^|\s)#[a-z0-9][\w\-]*/gi, ' ')).replace(/\s+/g, ' ').trim().slice(0, 200);
+        return {k:'todo', d:{title, list:l.name, tags, date:st.rview === 'today' ? todayStr() : null, flagged:st.rview === 'flagged'}};
+      })
+      .filter(p => p.d.title);
+  }
+
+  function handlePaste(text){
+    text = (text || '').trim();
+    if (!text) { toast('The clipboard is empty. Copy something first.'); return; }
+    const link = text.match(/#add=([\w-]+)/);
+    if (link) {
+      try { offerImport(JSON.parse(b64d(link[1])), 'Shared with you. It’ll be added as a new copy.'); }
+      catch(e) { toast('That link is damaged. Ask for it to be sent again.'); }
+      return;
+    }
+    if (text[0] === '{') {
+      try { const data = JSON.parse(text); if (data && Array.isArray(data.items)) { offerImport(data.items); return; } } catch(e) {}
+    }
+    if (st.tab === 'rem') {
+      const items = textToTodos(text);
+      if (!items.length) { toast('Nothing to add from that.'); return; }
+      offerImport(items, 'Each line becomes a reminder in ' + items[0].d.list + '.');
+    } else {
+      openEditor(null, textToNote(text));
+    }
+  }
+
+  function openPasteSheet(){
+    $('psLbl').textContent = st.tab === 'rem' ? 'Paste as reminders' : 'Paste as a note';
+    $('psHint').textContent = st.tab === 'rem'
+      ? 'Touch and hold in the box, tap Paste, then Add. Each line becomes a reminder.'
+      : 'Touch and hold in the box, tap Paste, then Add. The first line or heading becomes the title.';
+    $('psText').value = '';
+    openSheet('pasteSheet');
+  }
+  $('pasteBtn').onclick = async () => {
+    let text = '';
+    try { if (navigator.clipboard && navigator.clipboard.readText) text = await navigator.clipboard.readText(); } catch(e) {}
+    if (text && text.trim()) handlePaste(text); else openPasteSheet();
+  };
+  $('psAdd').onclick = () => { const t = $('psText').value; closeSheet('pasteSheet'); handlePaste(t); };
+
+  // A share link opened in Safari on iPhone would land in Safari's copy, not the
+  // home-screen app's, so offer to copy it for pasting there instead.
+  let openHereItems = null;
+  function offerOpenInApp(link, items){
+    openHereItems = items;
+    $('lkLink').value = link;
+    openSheet('linkSheet');
+  }
+  $('lkCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('lkLink').value); toast('Copied. Now open Notes from your Home Screen and tap Paste.'); closeSheet('linkSheet'); }
+    catch(e) { $('lkLink').hidden = false; $('lkLink').select(); toast('Select the link and copy it.'); }
+  };
+  $('lkHere').onclick = () => { closeSheet('linkSheet'); if (openHereItems) offerImport(openHereItems, 'It’ll be added in this browser.'); };
 
   // ---------- backup ----------
   const LAST = KEY + '-backup';
