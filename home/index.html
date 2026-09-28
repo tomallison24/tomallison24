@@ -381,6 +381,9 @@
     if (!app || e.defaultPrevented) return;
     uses[app.dataset.id] = (uses[app.dataset.id] || 0) + 1;
     store.set('uses', uses);
+    // Tells the app it was opened from here, so a swipe up (home/back.js)
+    // comes back. sessionStorage lives as long as this window does.
+    try { sessionStorage.setItem('allisonos.home', location.href); } catch {}
   });
 
   function renderDockList() {
