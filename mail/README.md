@@ -15,7 +15,7 @@ Remind Me, and an unread count on the icon.
 
 Anything in Marketing older than **3 days** (Settings: 1–30) goes to the
 Trash, where Gmail deletes it for good after 30 days. The sweep runs when the
-app opens; `.github/workflows/mail.yml` can run it daily too, so it happens on
+app opens (the Marketing list has a **Clean up now** button to run it at once); `.github/workflows/mail.yml` can run it daily too, so it happens on
 days you never open the app — but only once its Google credentials are set up
 (Setup, step 2). Until then the daily run just logs "No Google credentials set".
 

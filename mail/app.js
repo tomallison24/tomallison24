@@ -1105,8 +1105,9 @@ function paint(html) {
   $('#foot').innerHTML = footHTML();
 }
 
+// The clean-up line belongs to the Marketing bucket, so it shows only there.
 function footHTML() {
-  if (!getToken() || state.view === 'settings') return '';
+  if (!getToken() || state.view !== 'marketing' || state.search) return '';
   const last = Number(ls.get(K.swept, 0));
   const when = !last ? 'Not cleaned yet' : ago(last) === 'now' ? 'Cleaned just now' : 'Cleaned ' + ago(last) + ' ago';
   return '<span>' + when + '</span><button data-act="sweep">Clean up now</button>';
