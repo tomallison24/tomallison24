@@ -144,9 +144,11 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .list{flex:1;overflow-y:auto;padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
 .sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:6px 4px 6px;display:flex;justify-content:space-between}
 .resulthead{font-size:13px;color:var(--faint);margin:0 4px}
-.grid{columns:2;column-gap:10px}
-.grid.listview{columns:1}
-.card{break-inside:avoid;margin:0 0 10px;display:block;width:100%;text-align:left;border-radius:22px;padding:14px 14px 12px;color:var(--text);transition:transform .18s var(--ease)}
+/* Two plain flex columns, not CSS multi-column: Safari can fail to draw
+   frosted-glass cards that sit in the second column of a multi-column box. */
+.grid{display:flex;gap:10px;align-items:flex-start}
+.grid .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card{margin:0;display:block;width:100%;text-align:left;border-radius:22px;padding:14px 14px 12px;color:var(--text);transition:transform .18s var(--ease)}
 .card:active{transform:scale(.98)}
 .card[data-color]:not([data-color="none"]){background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--note-mix),var(--glass));border-color:color-mix(in srgb,var(--tint) 35%,var(--gb-edge))}
 .card h3{margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.3;display:flex;gap:6px;align-items:flex-start}
@@ -244,8 +246,21 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 /* editor pieces */
 .paper{border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:6px}
 .paper[data-color]:not([data-color="none"]){background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--note-mix),var(--glass));border-color:color-mix(in srgb,var(--tint) 35%,var(--gb-edge))}
-.paper input{border:0;background:none;outline:none;font-size:22px;font-weight:700;letter-spacing:-.02em;padding:0}
-.paper textarea{border:0;background:none;outline:none;resize:none;min-height:150px;font-size:16px;line-height:1.5;padding:0}
+.paper #edTitle{resize:none;overflow:hidden;min-height:0;line-height:1.2;border:0;background:none;outline:none;font-size:26px;font-weight:700;letter-spacing:-.02em;padding:0}
+.paper textarea{border:0;background:none;outline:none;resize:none;min-height:40vh;overflow:hidden;font-size:17px;line-height:1.55;padding:0}
+/* The note editor is a full page that slides in, like a message in Mail;
+   the whole note scrolls as one page instead of inside a small box. */
+.sheet.page{height:100%;max-height:none;max-width:none;border-radius:0;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px);
+  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#2E6BFF calc(var(--aurora) * 32%),transparent),transparent 70%),
+    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#9A5BFF calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
+  animation:pageIn .42s var(--ease) both}
+.sheet.page .sheetbody{max-width:680px;width:100%;margin:0 auto}
+#editor .scrim{display:none}
+.pagehead{padding:6px 12px 6px 6px;touch-action:auto}
+.backbtn{display:inline-flex;align-items:center;gap:2px;min-height:44px;padding:0 8px 0 4px;color:var(--accent);font-size:17px;font-weight:500}
+.backbtn svg{width:24px;height:24px;stroke-width:2.2}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@keyframes pageIn{from{transform:translateX(100%)}to{transform:none}}
 .field{display:flex;flex-direction:column;gap:8px}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 4px}
 .box{border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -390,10 +405,10 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   <!-- Note editor -->
   <div class="sheetwrap" id="editor" hidden>
     <div class="scrim" data-close></div>
-    <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="edLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead">
-        <h2 id="edLbl">Note</h2>
+    <div class="sheet page" role="dialog" aria-modal="true" aria-labelledby="edLbl">
+      <div class="sheethead pagehead">
+        <button class="backbtn" id="edBack" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Notes</button>
+        <h2 id="edLbl" class="vh">Note</h2>
         <div class="acts">
           <button class="iconbtn" id="edPin" type="button" aria-pressed="false" aria-label="Pin note"></button>
           <button class="iconbtn" id="edShare" type="button" aria-label="Share note">
@@ -404,12 +419,8 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
       </div>
       <div class="sheetbody">
         <div class="paper glass" id="edPaper">
-          <input id="edTitle" placeholder="Title" aria-label="Title">
+          <textarea id="edTitle" rows="1" placeholder="Title" aria-label="Title" enterkeyhint="next"></textarea>
           <textarea id="edBody" placeholder="Start writing…" aria-label="Note text"></textarea>
-        </div>
-        <div class="field">
-          <p class="label">Color</p>
-          <div class="swatches" id="swatches" role="radiogroup" aria-label="Note color"></div>
         </div>
         <div class="field">
           <p class="label">Tags</p>
@@ -429,6 +440,10 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
               <button class="linkbtn" id="edRemClear" type="button">Clear</button>
             </div>
           </div>
+        </div>
+        <div class="field">
+          <p class="label">Color</p>
+          <div class="swatches" id="swatches" role="radiogroup" aria-label="Note color"></div>
         </div>
         <button class="btn quiet danger" id="edDelete" type="button">Delete note</button>
       </div>
@@ -713,11 +728,12 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
   // When a field in a sheet gets focus, bring it into view inside the sheet.
   document.addEventListener('focusin', e => {
     const el = e.target;
-    if (el.matches && el.matches('input, textarea') && el.closest('.sheetbody')) setTimeout(() => el.scrollIntoView({block:'nearest'}), 350);
+    if (el.matches && el.matches('input') && el.closest('.sheetbody')) setTimeout(() => el.scrollIntoView({block:'nearest'}), 350);
   });
   const closeWrap = w => (closers[w.id] || (() => closeSheet(w.id)))();
   document.querySelectorAll('.sheetwrap').forEach(w => {
     const sheet = w.querySelector('.sheet'), scrim = w.querySelector('.scrim');
+    if (sheet.classList.contains('page')) return;   // full pages close with their back button
     let y0 = null, t0 = 0, dy = 0, fromHead = false, dragging = false, suppressClick = false;
     const reset = () => { sheet.classList.remove('dragging', 'settling'); sheet.style.transform = ''; scrim.style.opacity = ''; };
     function start(y, target){
@@ -860,7 +876,14 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 
     const shown = notes.filter(noteMatches).sort((a,b) => st.remOnly ? new Date(a.reminder) - new Date(b.reminder) : (b.pinned - a.pinned) || (b.updated - a.updated));
     const filtering = st.sel.size || st.remOnly || tokensOf(st.q).length;
-    const gridCls = 'grid' + (st.view === 'list' ? ' listview' : '');
+    // Deal cards into columns, each to whichever column is shorter so far
+    // (by a rough height estimate), keeping the reading order.
+    const est = n => 70 + Math.ceil((n.title || '').length / 16) * 21 + Math.min(6, (n.body || '').split('\n').reduce((k, l) => k + Math.max(1, Math.ceil(l.length / 20)), 0)) * 20 + (n.tags.length || n.reminder ? 34 : 0);
+    const grid = list => {
+      const cols = st.view === 'list' ? [[]] : [[], []], hgt = cols.map(() => 0);
+      list.forEach((n, i) => { const c = hgt.indexOf(Math.min(...hgt)); cols[c].push(card(n, i)); hgt[c] += est(n); });
+      return '<div class="grid">' + cols.map(c => '<div class="col">' + c.join('') + '</div>').join('') + '</div>';
+    };
     let h = needsBackup() ? '<div class="notice glass"><span>' + esc(backupStatus()) + ' Everything lives only in this browser.</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>' : '';
     if (filtering) {
       const parts = [];
@@ -871,9 +894,9 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     if (!shown.length) h += '<div class="empty"><strong>No matching notes</strong>Try a different word, or clear the tag filter.</div>';
     else if (!st.remOnly) {
       const pinned = shown.filter(n => n.pinned), others = shown.filter(n => !n.pinned);
-      if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2><div class="'+gridCls+'">'+pinned.map(card).join('')+'</div></section>';
-      if (others.length) h += '<section>'+(pinned.length ? '<h2 class="sechead">Everything else</h2>' : '')+'<div class="'+gridCls+'">'+others.map(card).join('')+'</div></section>';
-    } else h += '<div class="'+gridCls+'">'+shown.map(card).join('')+'</div>';
+      if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>'+grid(pinned)+'</section>';
+      if (others.length) h += '<section>'+(pinned.length ? '<h2 class="sechead">Everything else</h2>' : '')+''+grid(others)+'</section>';
+    } else h += grid(shown);
     $('list').innerHTML = h;
     $('viewBtn').innerHTML = st.view === 'grid' ? I.rows : I.grid;
     $('viewBtn').setAttribute('aria-label', st.view === 'grid' ? 'Switch to list view' : 'Switch to grid view');
@@ -894,6 +917,8 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     $('edDelete').hidden = st.isNew;
     renderEditor();
     openSheet('editor');
+    $('editor').querySelector('.sheetbody').scrollTop = 0;
+    requestAnimationFrame(growBody);
     (st.isNew && !pre && !isIOS ? $('edTitle') : $('edDone')).focus({preventScroll:true});
   }
   function renderEditor(){
@@ -925,6 +950,15 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     st.editing = null; save(); closeSheet('editor'); render();
   }
   $('edDone').onclick = finishEdit;
+  $('edBack').onclick = finishEdit;
+  // The note text grows with its content, so the page scrolls rather than a box.
+  const grow = t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+  const growBody = () => { grow($('edTitle')); grow($('edBody')); };
+  $('edBody').addEventListener('input', growBody);
+  // The title wraps onto more lines but stays one line of text: Return moves to the note.
+  $('edTitle').addEventListener('input', e => { const t = e.target; if (/\n/.test(t.value)) t.value = t.value.replace(/\s*\n+\s*/g, ' '); grow(t); });
+  $('edTitle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('edBody').focus(); } });
+  window.addEventListener('resize', () => { if (!$('editor').hidden) growBody(); });
   $('edPin').onclick = () => { st.editing.pinned = !st.editing.pinned; renderEditor(); };
   $('edRem').addEventListener('change', e => { st.editing.reminder = e.target.value ? iso(new Date(e.target.value)) : null; renderEditor(); });
   $('edRemClear').onclick = () => { st.editing.reminder = null; renderEditor(); };
