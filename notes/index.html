@@ -903,16 +903,16 @@ svg.fs{fill:currentColor}
       <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
-        <div id="syForm" class="field">
+        <form id="syForm" class="field" autocomplete="on" action="#">
           <div class="box glass">
             <label class="label" for="syUrl">Web app link</label>
-            <input class="plain" id="syUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <input class="plain" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false">
             <label class="label" for="sySecret">Secret code</label>
-            <input class="plain" id="sySecret" type="text" placeholder="The SECRET you set in the script" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <input class="plain" id="sySecret" name="password" type="password" placeholder="The SECRET you set in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false">
           </div>
-          <button class="btn" id="syConnect" type="button">Connect and sync</button>
-          <p class="hint">Set up the Sheet first (steps in the Notes README). If you have a setup link from the other phone, copy it and tap the clipboard button instead.</p>
-        </div>
+          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
+          <p class="hint">Set up the Sheet first (steps in the Notes README). If you have a setup link, copy it and tap the clipboard button instead. If the iPhone offers to save the link and code as a password, say yes: next time, tap the link box and pick it.</p>
+        </form>
         <div id="syOn" class="field" hidden>
           <div class="rgroup glass">
             <button class="rowbtn" type="button" id="syNow">
@@ -921,7 +921,7 @@ svg.fs{fill:currentColor}
             </button>
             <button class="rowbtn" type="button" id="syShare">
               <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
-              <span>Set up the other phone<span class="sub">Copies a setup link with the secret code in it. Send it only to your wife.</span></span>
+              <span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your wife’s phone, or to reconnect this one. Keep it private.</span></span>
             </button>
           </div>
           <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
@@ -988,6 +988,33 @@ svg.fs{fill:currentColor}
   const SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', shadow = new Map();
   let syncCfg = null, graves = {};
   try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch(e) {}
+  // The Sheet link and code are also kept in IndexedDB, so they survive if
+  // localStorage is cleared or full (every AllisonOS app shares its space).
+  const keep = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-notes', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
+    }));
+    return {
+      get: k => tx('readonly', st => st.get(k)).catch(() => null),
+      set: (k, v) => tx('readwrite', st => v == null ? st.delete(k) : st.put(v, k)).catch(() => {})
+    };
+  })();
+  let storeWarned = false;
+  function storeFailed(){
+    if (storeWarned) return; storeWarned = true;
+    setTimeout(() => toast('This phone couldn’t save Notes: storage is full.' + (syncCfg ? ' Your notes are safe in the Google Sheet.' : ' Back up soon.')), 800);
+  }
+  function saveSyncCfg(){
+    try { syncCfg ? localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)) : localStorage.removeItem(SYNC_KEY); } catch(e) { storeFailed(); }
+    keep.set('sync', syncCfg ? {url:syncCfg.url, secret:syncCfg.secret} : null);
+  }
   try { graves = JSON.parse(localStorage.getItem(GRAVE_KEY)) || {}; } catch(e) {}
   let notes = saved ? saved.notes : clone(SAMPLE_NOTES);
   // Every note has a creation time (older notes: read from their id), an
@@ -1036,7 +1063,7 @@ svg.fs{fill:currentColor}
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
   function save(){ track(); persist(); if (syncCfg) scheduleSync(); }
-  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){} }
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } }
 
   function countTags(items){
     const m = new Map();
@@ -2256,7 +2283,7 @@ svg.fs{fill:currentColor}
     const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
       : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
     $('bkSheetSub').textContent = line;
-    $('syStatus').textContent = on ? line : 'Connect this phone to the shared Google Sheet. Both phones use the same link and secret code.';
+    $('syStatus').textContent = on ? line : 'Not connected in ' + place() + '. Notes opened from its own icon, from AllisonOS Home and in Safari each keep their own copy, so each needs connecting once.';
     $('syForm').hidden = on; $('syOn').hidden = !on;
     if (st.tab === 'notes' && !st.coll && !tokensOf(st.q).length) $('notesSub').textContent = plural(shelf().length, 'note') + syncLabel();
     syncPill();
@@ -2281,6 +2308,11 @@ svg.fs{fill:currentColor}
       pillTimer = setTimeout(hide, 1200);
     }, Math.max(0, 1000 - (Date.now() - pillAt)));
   }
+  const place = () => {
+    let home = false; try { home = !!sessionStorage.getItem('allisonos.home'); } catch(e) {}
+    const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+    return home ? 'AllisonOS Home' : app ? 'the Notes app' : 'this browser';
+  };
   function openSyncSheet(pre){
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : '';
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
@@ -2290,7 +2322,8 @@ svg.fs{fill:currentColor}
     openSheet('syncSheet');
   }
   $('bkSheet').onclick = () => { closeSheet('backupSheet'); openSyncSheet(); };
-  $('syConnect').onclick = async () => {
+  $('syForm').onsubmit = async e => {
+    e.preventDefault();
     const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
     if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
     if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
@@ -2300,21 +2333,21 @@ svg.fs{fill:currentColor}
     const ok = await sync(true);
     $('syConnect').disabled = false;
     if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
-    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch(e) {}
+    saveSyncCfg();
     renderSyncStatus();
     toast('Connected. ' + plural(alive().length, 'note') + ' and ' + plural(todos.length, 'reminder') + ' now in the Sheet.');
   };
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   $('syShare').onclick = async () => {
     const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify({u:syncCfg.url, s:syncCfg.secret}));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Send it only to your wife: she copies it, opens Notes and taps the clipboard button.'); }
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. To use it, copy it, open Notes and tap the clipboard button. Only send it to your wife.'); }
     catch(e) { toast('Copy isn’t available here.'); }
   };
   $('syOff').onclick = () => {
     const b = $('syOff');
     if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
     delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; try { localStorage.removeItem(SYNC_KEY); } catch(e) {}
+    syncCfg = null; syncState = 'off'; saveSyncCfg();
     renderSyncStatus(); toast('Disconnected. Your notes stay on this phone and in the Sheet.');
   };
   function takeSetupLink(text){
@@ -2428,7 +2461,14 @@ svg.fs{fill:currentColor}
   setTab(st.tab === 'rem' ? 'rem' : 'notes');
   checkIncoming();
   renderSyncStatus();
-  if (syncCfg) setTimeout(() => sync(false), 600);
+  if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
+  else keep.get('sync').then(c => {
+    if (syncCfg || !c || !c.url || !c.secret) return;
+    syncCfg = {url:c.url, secret:c.secret}; syncState = 'idle';
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch(e) {}
+    renderSyncStatus(); sync(false);
+    toast('Reconnected to the Google Sheet from this phone’s backup copy.');
+  });
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
   // first open only records the fingerprint.
