@@ -109,6 +109,17 @@
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   a { color: inherit; text-decoration: none; }
 
+  /* ---- Top clearance ----
+     Since iOS 26, iOS draws its own Liquid Glass blur over the top of a
+     home-screen web app, reaching about 40pt below the status bar; no CSS or
+     meta tag turns it off. So in the installed app (portrait) the page keeps
+     that band clear: the date starts below it, the tab bar pins below it,
+     and while pinned the band is a plain strip with nothing in it to blur. */
+  :root { --top-clear: 0px; --inset-top: calc(env(safe-area-inset-top) + var(--top-clear)); }
+  @media (display-mode: standalone) and (orientation: portrait) {
+    @supports (-webkit-touch-callout: none) { :root { --top-clear: 2.5rem; } }
+  }
+
   /* ---- Backdrop: soft colour fields for the glass to blur ---- */
   .backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
   .blob { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
@@ -133,7 +144,7 @@
   .wrap { max-width: 560px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
 
   /* ---- Large title (scrolls away, like iOS) ---- */
-  .masthead { padding-top: calc(env(safe-area-inset-top) + 18px); padding-bottom: 10px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .masthead { padding-top: calc(env(safe-area-inset-top) + max(18px, var(--top-clear) + 6px)); padding-bottom: 10px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
   .masthead .date { margin: 0 0 2px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
   .masthead h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
   .brand { display: flex; align-items: center; gap: 10px; }
@@ -148,14 +159,14 @@
      panel floating just inside the screen's edges, as in the Mail app, with
      a solid strip under the clock so stories don't show behind it.
      The panel is drawn behind the bar, so the bar never changes height. */
-  /* Solid behind the clock, down to the panel's top edge: a see-through
-     fade here left half-hidden headlines looking smeared as they scrolled by. */
+  /* Solid behind the clock and the blur band, down to the panel's top edge,
+     so no headline scrolls through the band iOS blurs. */
   .statusbar {
-    position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 4px); z-index: 11; pointer-events: none;
+    position: fixed; top: 0; left: 0; right: 0; height: calc(var(--inset-top) + 4px); z-index: 11; pointer-events: none;
     background: var(--bg);
     opacity: 0; transition: opacity 0.25s;
   }
-  .topbar { position: sticky; top: env(safe-area-inset-top); z-index: 10; }
+  .topbar { position: sticky; top: var(--inset-top); z-index: 10; }
   .topbar::before {
     content: ''; position: absolute; z-index: -1; pointer-events: none;
     top: 4px; bottom: 0; left: max(8px, calc(50% - 288px)); right: max(8px, calc(50% - 288px));
