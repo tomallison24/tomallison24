@@ -23,20 +23,26 @@ public feeds:
 | Topic    | Sources |
 |----------|---------|
 | UK       | BBC News, The Guardian, Sky News |
-| World    | BBC News, The Guardian, Sky News, Al Jazeera, NPR |
-| US       | BBC News, The Guardian, Sky News, NPR, PBS News |
-| Business | BBC News, The Guardian, Sky News, NPR |
-| Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica |
+| World    | BBC News, The Guardian, Sky News, Al Jazeera, NPR, ABC News, CBS News |
+| US       | BBC News, The Guardian, Sky News, NPR (news and politics), PBS News (headlines and politics), ABC News (US and politics), CBS News (US and politics), The Hill |
+| Business | BBC News, The Guardian, Sky News, NPR, ABC News, CBS News MoneyWatch |
+| Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica, ABC News, CBS News, Engadget |
 | AI       | The Guardian, Ars Technica, TechCrunch, plus any story from the other feeds with AI in its headline (AI stories are taken out of Tech) |
-| Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation |
+| Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation, CBS News, NASA |
 | Stem cells | The Niche, ScienceDaily, Stem Cell Reports, open-access papers and preprints (bioRxiv, medRxiv) via Europe PMC, plus matching stories from the other topics. Only stem cell stories are kept (pluripotent/iPSC/hESC, organoids, embryo models, mesenchymal and haematopoietic stem cells and any other "stem cell" mention), for up to 30 days |
-| Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport) |
+| Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport), CBS Sports, Yahoo Sports |
 
 Not included:
 
 - **Reuters** has had a paywall since October 2024 and stopped publishing RSS
   feeds in 2020.
 - **Associated Press** is free to read but has no official RSS feed.
+- **CNN** has had a metered paywall since October 2024.
+- **NBC News** and **CNBC** were reported in 2026 to have put much of their
+  reporting behind a paywall.
+- **Politico** asks for sign-up after 10 articles, and **Axios** needs an
+  account to read.
+- **Space.com**'s feed returned no stories when tested.
 - **BBC News** is free in the UK. Since mid-2025, readers in the US hit a
   paywall after reading a certain amount. Remove the BBC lines from
   `feeds.json` if that matters where you read.
