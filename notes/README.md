@@ -41,8 +41,8 @@ Mail and News. Free, no accounts, no server.
 
 - **No build step.** `index.html` is the whole app; `sw.js` keeps it working
   offline; `manifest.webmanifest` and the icons make it installable.
-- **Data** lives in the browser's `localStorage` on each device. Clearing the
-  browser's data deletes it, which is why backups exist.
+- **Data** lives in the browser's `localStorage` on each device, and, once
+  connected, in a Google Sheet you both share (below).
 - Published with the other apps by `.github/workflows/news.yml`.
 
 Design notes and decisions: `tomallison24/Notes-Allison-OS`, `docs/DESIGN.md`.
@@ -54,3 +54,59 @@ Same icons and buttons as Mail: line icons on a 24px grid with a 1.7 stroke
 blue kept for text, dots and switches; every button and bar in the same clear
 Liquid Glass (`--lg-bg`, `--lg-filter`, `--lg-rim`). New note uses Mail's
 compose (pencil) icon.
+
+## Google Sheet sync
+
+One Google Sheet shared by both phones. Every change is sent a couple of
+seconds after you make it (and when the app opens); the newest change to each
+note, reminder or list wins. If a phone is wiped, connecting again loads
+everything back. Free: it runs as a small Apps Script in your own Google
+account (`google-sheet-sync.gs` in this folder).
+
+The Sheet gets one tab per tag (`#recipe`, `#home`, ... and `No tag`, newest
+note first), one per reminder list (`✓ Groceries`, ...), and hidden `_notes`,
+`_reminders`, `_lists` and `_deleted` tabs that the app reads back from. The
+tag and list tabs are rebuilt on every change, so make edits in the app.
+
+### Set up (once, on a computer)
+
+1. Go to [sheets.new](https://sheets.new) (signed in to the Google account you
+   want to use) and name the Sheet, e.g. **Notes**.
+2. In the Sheet: **Extensions → Apps Script**.
+3. Delete everything in `Code.gs`, then paste the whole of
+   [`google-sheet-sync.gs`](google-sheet-sync.gs).
+4. On the line `const SECRET = 'CHANGE-ME';` replace `CHANGE-ME` with your own
+   long phrase, e.g. `maple-otter-47-lantern-quiet`. Keep the quotes.
+5. Click **Save** (the disk icon).
+6. **Deploy → New deployment**. Click the gear next to "Select type" and
+   choose **Web app**. Set **Execute as: Me** and **Who has access: Anyone**,
+   then **Deploy**.
+7. Google asks you to authorise: **Authorize access**, pick your account. If
+   it says "Google hasn't verified this app", click **Advanced → Go to …
+   (unsafe)** (it is your own script) and **Allow**.
+8. Copy the **Web app URL** (it ends in `/exec`).
+
+### Connect the phones
+
+1. On your phone, open Notes → the **download** button (top right) → **Google
+   Sheet sync**. Paste the Web app URL and type the secret phrase, then
+   **Connect and sync**.
+2. Still there, tap **Set up the other phone**. It copies a setup link with
+   the URL and secret in it. Send it to your wife (only her).
+3. On her phone: copy the link, open Notes from the Home Screen, tap the
+   **clipboard** button next to the pencil, then **Connect and sync**.
+
+### Changing the script later
+
+Edit it, **Save**, then **Deploy → Manage deployments → ✏️ Edit → Version:
+New version → Deploy**. The URL stays the same.
+
+### Keep in mind
+
+- Anyone with both the URL and the secret can read and change the notes, so
+  keep them private.
+- Free Google accounts have daily Apps Script limits; two people syncing notes
+  are far below them. If a limit is ever hit, sync pauses and tries again;
+  nothing is charged.
+- A single note over about 45,000 characters is split across several cells in
+  the hidden `_notes` tab; the `#tag` tab shows the first 45,000.

@@ -760,9 +760,15 @@ svg.fs{fill:currentColor}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="bkLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="bkLbl">Backup and import</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="bkLbl">Backup and sync</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
       <div class="sheetbody">
         <p class="hint" id="bkStatus"></p>
+        <div class="rgroup glass">
+          <button class="rowbtn" type="button" id="bkSheet">
+            <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
+            <span>Google Sheet sync<span class="sub" id="bkSheetSub">Not connected</span></span>
+          </button>
+        </div>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="bkExport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
@@ -866,6 +872,41 @@ svg.fs{fill:currentColor}
   <!-- Shown once, the first time the app opens after an update -->
   <div class="updpill" id="updPill" role="status" hidden><svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Updated</div>
 
+  <!-- Google Sheet sync -->
+  <div class="sheetwrap" id="syncSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <div id="syForm" class="field">
+          <div class="box glass">
+            <label class="label" for="syUrl">Web app link</label>
+            <input class="plain" id="syUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <label class="label" for="sySecret">Secret code</label>
+            <input class="plain" id="sySecret" type="text" placeholder="The SECRET you set in the script" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <button class="btn" id="syConnect" type="button">Connect and sync</button>
+          <p class="hint">Set up the Sheet first (steps in the Notes README). If you have a setup link from the other phone, copy it and tap the clipboard button instead.</p>
+        </div>
+        <div id="syOn" class="field" hidden>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="syNow">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
+              <span>Sync now<span class="sub">Sends this phone’s changes and loads the other phone’s</span></span>
+            </button>
+            <button class="rowbtn" type="button" id="syShare">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
+              <span>Set up the other phone<span class="sub">Copies a setup link with the secret code in it. Send it only to your wife.</span></span>
+            </button>
+          </div>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <datalist id="tagList"></datalist>
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
@@ -905,13 +946,13 @@ svg.fs{fill:currentColor}
 
   // ---------- sample data ----------
   const SAMPLE_NOTES = [
-    {id:'n1',title:'Welcome to Notes',body:'Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,updated:now}
+    {id:'n1',title:'Welcome to Notes',body:'Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,created:now,updated:1}
   ];
   const SAMPLE_LISTS = [
-    {id:'l1',name:'Personal',color:'#3B82F6'},
-    {id:'l2',name:'Home',color:'#F59E0B'},
-    {id:'l3',name:'Groceries',color:'#10B981'},
-    {id:'l4',name:'Family',color:'#8B5CF6'}
+    {id:'l1',updated:1,name:'Personal',color:'#3B82F6'},
+    {id:'l2',updated:1,name:'Home',color:'#F59E0B'},
+    {id:'l3',updated:1,name:'Groceries',color:'#10B981'},
+    {id:'l4',updated:1,name:'Family',color:'#8B5CF6'}
   ];
   let _c = 0;
   const T = (list, title, o={}) => ({id:'t'+(++_c), list, title, notes:'', date:null, time:null, prio:0, flagged:false, done:false, doneAt:null, tags:[], created:now-_c*H, ...o});
@@ -919,17 +960,42 @@ svg.fs{fill:currentColor}
 
   const clone = x => JSON.parse(JSON.stringify(x));
   const saved = load();
+  // Google Sheet sync (see "Google Sheet sync" further down).
+  const SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', shadow = new Map();
+  let syncCfg = null, graves = {};
+  try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch(e) {}
+  try { graves = JSON.parse(localStorage.getItem(GRAVE_KEY)) || {}; } catch(e) {}
   let notes = saved ? saved.notes : clone(SAMPLE_NOTES);
   // Every note has a creation time (older notes: read from their id), an
   // archived flag and a deletedAt time for Trash; Trash empties after 30 days.
   function fixNotes(){
     const idTime = id => { const m = /^n([0-9a-z]{8})/.exec(id || ''); const t = m ? parseInt(m[1], 36) : 0; return t > 1.5e12 && t < 4e12 ? t : 0; };
     notes.forEach(n => { if (!n.created) n.created = idTime(n.id) || n.updated || Date.now(); if (n.archived === undefined) n.archived = false; if (n.deletedAt === undefined) n.deletedAt = null; });
-    notes = notes.filter(n => !n.deletedAt || Date.now() - n.deletedAt < 30 * 864e5);
+    notes = notes.filter(n => { const keep = !n.deletedAt || Date.now() - n.deletedAt < 30 * 864e5; if (!keep) graves['notes:' + n.id] = Date.now(); return keep; });
   }
   fixNotes();
   let lists = saved ? saved.lists : clone(SAMPLE_LISTS);
   let todos = saved ? saved.todos : clone(SAMPLE_TODOS);
+  // What each item looked like at the last save, so any change anywhere in
+  // the app stamps it with a new 'updated' time, and anything that vanished
+  // is recorded as deleted (a "grave") for the other phone.
+  function initShadow(){
+    shadow.clear();
+    [['notes', notes], ['todos', todos], ['lists', lists]].forEach(([kind, arr]) => arr.forEach(it => {
+      if (!it.updated) it.updated = it.created || 1;
+      const {updated, ...rest} = it; shadow.set(kind + ':' + it.id, JSON.stringify(rest));
+    }));
+  }
+  function track(){
+    const now = Date.now(), seen = new Set();
+    [['notes', notes], ['todos', todos], ['lists', lists]].forEach(([kind, arr]) => arr.forEach(it => {
+      const k = kind + ':' + it.id, {updated, ...rest} = it, j = JSON.stringify(rest);
+      seen.add(k);
+      if (shadow.get(k) !== j) { it.updated = now; shadow.set(k, j); delete graves[k]; }
+    }));
+    shadow.forEach((j, k) => { if (!seen.has(k)) { graves[k] = now; shadow.delete(k); } });
+  }
+  initShadow();
   const st = { tab:'notes', sel:new Set(), remOnly:false, q:'', view:'grid', editing:null, isNew:false,
                coll:null, rview:'today', rlist:null, rq:'', rsearch:false, showDone:false, todo:null, listEdit:null, shareFrom:null };
   try { st.view = localStorage.getItem(KEY+'-view') || 'grid'; st.tab = localStorage.getItem(KEY+'-tab') || 'notes'; } catch(e){}
@@ -945,7 +1011,8 @@ svg.fs{fill:currentColor}
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); } catch(e){} }
+  function save(){ track(); persist(); if (syncCfg) scheduleSync(); }
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){} }
 
   function countTags(items){
     const m = new Map();
@@ -1180,7 +1247,7 @@ svg.fs{fill:currentColor}
       $('notesSub').textContent = plural(res.length, 'result') + (c ? ' in ' + collName(c) : '');
       h += res.length ? grid(res, {date:true, flagArchived:true}) : '<div class="empty glass"><strong>No matching notes</strong>Try a different word or #tag.</div>';
     } else if (!c) {
-      $('notesSub').textContent = plural(live.length, 'note');
+      $('notesSub').textContent = plural(live.length, 'note') + syncLabel();
       const pinned = live.filter(n => n.pinned).sort(byCreated);
       if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>' + grid(pinned) + '</section>';
       const tags = countTags(live), untagged = live.filter(n => !n.tags.length);
@@ -1794,6 +1861,7 @@ svg.fs{fill:currentColor}
     toast('Added ' + plural(n, 'item'));
   };
   function checkIncoming(){
+    if (/^#sync=/.test(location.hash)) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); takeSetupLink(h); return; }
     const m = location.hash.match(/^#add=([\w-]+)$/);
     if (!m) return;
     const link = location.href;
@@ -1855,6 +1923,7 @@ svg.fs{fill:currentColor}
   function handlePaste(text){
     text = (text || '').trim();
     if (!text) { toast('The clipboard is empty. Copy something first.'); return; }
+    if (takeSetupLink(text)) return;
     const link = text.match(/#add=([\w-]+)/);
     if (link) {
       try { offerImport(JSON.parse(b64d(link[1])), 'Shared with you. It’ll be added as a new copy.'); }
@@ -2067,10 +2136,136 @@ svg.fs{fill:currentColor}
     else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeCook(); }
   }, true);
 
+  // ---------- Google Sheet sync: one shared Sheet for both phones ----------
+  // The app sends everything to a small Apps Script in the Sheet a couple of
+  // seconds after each change (and when it opens); the script merges it with
+  // what the other phone sent (newest change wins) and sends the whole lot
+  // back. Deleted-for-good items travel as "graves" so they stay deleted.
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
+  let lastSyncAt = 0;
+  try { lastSyncAt = +localStorage.getItem(SYNC_KEY + '-at') || 0; } catch(e) {}
+  const SYNC_ERRORS = {
+    'wrong-secret':'The secret code doesn’t match the SECRET in the script.',
+    'secret-not-set':'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
+    'busy':'The Sheet was busy. Trying again shortly.',
+    'bad-request':'The Sheet didn’t understand the request.',
+    'network':'Couldn’t reach the Sheet. Check the link, or you may be offline.',
+    'not-json':'That link didn’t answer like the Notes script. Check it ends in /exec and “Who has access” is Anyone.'
+  };
+  const syncLabel = () => ({off:'', idle:'', syncing:' · Syncing…', ok:' · Synced', error:' · Not synced', offline:' · Offline'})[syncState] || '';
+  const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+
+  function applyRemote(res){
+    Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
+    let localNewer = false;
+    const mergeKind = (kind, local, remote) => {
+      const map = new Map(local.map(x => [x.id, x]));
+      (remote || []).forEach(r => {
+        if (!r || typeof r.id !== 'string') return;
+        const l = map.get(r.id);
+        if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
+        else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
+      });
+      const remoteIds = new Set((remote || []).map(r => r && r.id));
+      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
+      return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
+    };
+    notes = mergeKind('notes', notes, res.notes);
+    todos = mergeKind('todos', todos, res.todos);
+    lists = mergeKind('lists', lists, res.lists);
+    if (!lists.length) lists = clone(SAMPLE_LISTS);
+    todos.forEach(t => { if (!lists.some(l => l.id === t.list)) t.list = lists[0].id; });
+    fixNotes(); initShadow(); persist();
+    if (localNewer) syncAgain = true;
+    render();
+  }
+
+  async function sync(loud){
+    if (!syncCfg) return false;
+    if (syncing) { syncAgain = true; return false; }
+    if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
+    syncing = true; syncState = 'syncing'; renderSyncStatus();
+    let ok = false;
+    try {
+      track(); persist();
+      let r, res;
+      try {
+        r = await fetch(syncCfg.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, redirect:'follow', cache:'no-store',
+          body: JSON.stringify({secret:syncCfg.secret, action:'sync', v:1, notes, todos, lists, graves})});
+      } catch(e) { throw new Error('network'); }
+      try { res = await r.json(); } catch(e) { throw new Error('not-json'); }
+      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      lastSyncAt = Date.now(); try { localStorage.setItem(SYNC_KEY + '-at', String(lastSyncAt)); } catch(e) {}
+      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      applyRemote(res);
+    } catch(e) {
+      syncState = 'error'; syncErr = e.message;
+      if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+    } finally {
+      syncing = false; renderSyncStatus();
+      if (syncAgain) { syncAgain = false; scheduleSync(800); }
+    }
+    return ok;
+  }
+  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
+
+  function renderSyncStatus(){
+    const on = !!syncCfg;
+    const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
+    $('bkSheetSub').textContent = line;
+    $('syStatus').textContent = on ? line : 'Connect this phone to the shared Google Sheet. Both phones use the same link and secret code.';
+    $('syForm').hidden = on; $('syOn').hidden = !on;
+    if (st.tab === 'notes' && !st.coll && !tokensOf(st.q).length) $('notesSub').textContent = plural(shelf().length, 'note') + syncLabel();
+  }
+  function openSyncSheet(pre){
+    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : '';
+    $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
+    if (pre && syncCfg) { $('syForm').hidden = false; $('syOn').hidden = true; }
+    renderSyncStatus();
+    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
+    openSheet('syncSheet');
+  }
+  $('bkSheet').onclick = () => { closeSheet('backupSheet'); openSyncSheet(); };
+  $('syConnect').onclick = async () => {
+    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
+    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
+    const before = syncCfg;
+    syncCfg = {url, secret};
+    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
+    const ok = await sync(true);
+    $('syConnect').disabled = false;
+    if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch(e) {}
+    renderSyncStatus();
+    toast('Connected. ' + plural(alive().length, 'note') + ' and ' + plural(todos.length, 'reminder') + ' now in the Sheet.');
+  };
+  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
+  $('syShare').onclick = async () => {
+    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify({u:syncCfg.url, s:syncCfg.secret}));
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Send it only to your wife: she copies it, opens Notes and taps the clipboard button.'); }
+    catch(e) { toast('Copy isn’t available here.'); }
+  };
+  $('syOff').onclick = () => {
+    const b = $('syOff');
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
+    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
+    syncCfg = null; syncState = 'off'; try { localStorage.removeItem(SYNC_KEY); } catch(e) {}
+    renderSyncStatus(); toast('Disconnected. Your notes stay on this phone and in the Sheet.');
+  };
+  function takeSetupLink(text){
+    const m = text.match(/#sync=([\w-]+)/); if (!m) return false;
+    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSyncSheet(c); return true; } } catch(e) {}
+    toast('That setup link is damaged. Copy it again.'); return true;
+  }
+  document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
+  window.addEventListener('online', () => { if (syncCfg) sync(false); });
+
   // ---------- backup ----------
   const LAST = KEY + '-backup';
   const lastBackup = () => { try { return +localStorage.getItem(LAST) || 0; } catch(e) { return 0; } };
-  const needsBackup = () => (notes.length + todos.length > 3) && Date.now() - lastBackup() > 7 * D;
+  const needsBackup = () => (notes.length + todos.length > 3) && Date.now() - lastBackup() > 7 * D && !(syncCfg && Date.now() - lastSyncAt < 7 * D);
   function backupStatus(){
     const t = lastBackup();
     if (!t) return 'Not backed up yet.';
@@ -2169,6 +2364,8 @@ svg.fs{fill:currentColor}
 
   setTab(st.tab === 'rem' ? 'rem' : 'notes');
   checkIncoming();
+  renderSyncStatus();
+  if (syncCfg) setTimeout(() => sync(false), 600);
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
   // first open only records the fingerprint.
