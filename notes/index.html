@@ -315,6 +315,51 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
 }
+
+/* ---- recipes: tidy + step by step ---- */
+.recipebar{display:flex;gap:8px;flex-wrap:wrap}
+.pillbtn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border-radius:999px;font-weight:600;font-size:15px;color:var(--text);transition:transform .18s var(--ease)}
+.pillbtn:active{transform:scale(.95)}
+.pillbtn svg{width:18px;height:18px}
+.pillbtn.primary{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 85%,transparent);border:1px solid rgba(255,255,255,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px color-mix(in srgb,var(--accent) 22%,transparent)}
+#cook{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(16px,env(safe-area-inset-left,0px));
+  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#FF7A3D calc(var(--aurora) * 30%),transparent),transparent 70%),
+    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#18C3A5 calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
+  animation:fadeIn .25s ease both}
+#cook > *{width:100%;max-width:640px;margin-left:auto;margin-right:auto}
+.cooktop{display:flex;align-items:center;gap:10px}
+.cooktop .ct{flex:1;min-width:0;text-align:center;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cooktop .cn{min-width:52px;text-align:right;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.cookbar{height:4px;border-radius:2px;background:var(--fill);margin:12px 0 14px;overflow:hidden}
+.cookbar i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .35s var(--ease)}
+.cookcard{flex:1;min-height:0;overflow-y:auto;border-radius:28px;padding:26px 22px;display:flex;flex-direction:column;gap:12px}
+.cookcard.from-r{animation:fromR .32s var(--ease) both}
+.cookcard.from-l{animation:fromL .32s var(--ease) both}
+.cookcard .k{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.cookcard .sub{margin:0;font-size:15px;color:var(--muted)}
+.cookcard .big{margin:0;font-size:26px;line-height:1.35;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.cookcard .btn{align-self:flex-start;margin-top:8px}
+.ingl{list-style:none;margin:0;padding:0}
+.ingl .gh{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:16px 0 4px}
+.ingl button{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:11px 0;font-size:18px;line-height:1.35;border-top:1px solid var(--hair-2)}
+.ingl li:first-child button{border-top:0}
+.ingl .bx{width:24px;height:24px;border-radius:8px;border:2px solid var(--ring);flex:none;display:grid;place-items:center;color:#fff;margin-top:1px}
+.ingl .bx svg{width:14px;height:14px;stroke-width:3;opacity:0}
+.ingl [aria-pressed="true"] .bx{background:var(--accent);border-color:var(--accent)}
+.ingl [aria-pressed="true"] .bx svg{opacity:1}
+.ingl [aria-pressed="true"] span:last-child{color:var(--faint);text-decoration:line-through}
+.cooknav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+.arrow{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;color:var(--accent);flex:none;transition:transform .18s var(--ease),opacity .2s}
+.arrow:active{transform:scale(.9)}
+.arrow:disabled{opacity:.3}
+.arrow svg{width:30px;height:30px;stroke-width:2.4}
+.cookdots{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap}
+.cookdots i{width:7px;height:7px;border-radius:4px;background:var(--ring);transition:width .25s var(--ease),background .25s}
+.cookdots i.on{width:20px;background:var(--accent)}
+@keyframes fromR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes fromL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -418,6 +463,14 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         </div>
       </div>
       <div class="sheetbody">
+        <div class="recipebar" id="edRecipe" hidden>
+          <button class="pillbtn primary" id="edCook" type="button">
+            <svg viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z" style="fill:currentColor"/></svg>Step by step
+          </button>
+          <button class="pillbtn glass" id="edConvert" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Convert
+          </button>
+        </div>
         <div class="paper glass" id="edPaper">
           <textarea id="edTitle" rows="1" placeholder="Title" aria-label="Title" enterkeyhint="next"></textarea>
           <textarea id="edBody" placeholder="Start writing…" aria-label="Note text"></textarea>
@@ -619,6 +672,22 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
         <input class="linkbox" id="lkLink" readonly hidden aria-label="Share link">
         <button class="btn quiet" id="lkHere" type="button">Add it here in Safari instead</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Recipe: step by step -->
+  <div id="cook" hidden role="dialog" aria-modal="true" aria-labelledby="ckTitle">
+    <div class="cooktop">
+      <button class="iconbtn glass" id="ckClose" type="button" aria-label="Close step by step"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <div class="ct" id="ckTitle"></div>
+      <div class="cn" id="ckCount"></div>
+    </div>
+    <div class="cookbar"><i id="ckBar"></i></div>
+    <div class="cookcard glass" id="ckCard" aria-live="polite"></div>
+    <div class="cooknav">
+      <button class="arrow glass" id="ckPrev" type="button" aria-label="Previous step"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="cookdots" id="ckDots" aria-hidden="true"></div>
+      <button class="arrow glass" id="ckNext" type="button" aria-label="Next step"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
   </div>
 
@@ -919,6 +988,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     openSheet('editor');
     $('editor').querySelector('.sheetbody').scrollTop = 0;
     requestAnimationFrame(growBody);
+    updateRecipeBar();
     (st.isNew && !pre && !isIOS ? $('edTitle') : $('edDone')).focus({preventScroll:true});
   }
   function renderEditor(){
@@ -1428,6 +1498,171 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
     catch(e) { $('lkLink').hidden = false; $('lkLink').select(); toast('Select the link and copy it.'); }
   };
   $('lkHere').onclick = () => { closeSheet('linkSheet'); if (openHereItems) offerImport(openHereItems, 'It’ll be added in this browser.'); };
+
+  // ---------- recipes: tidy into ingredients + method, and cook step by step ----------
+  // Rule-based, on the phone: section headings, quantities and cooking verbs.
+  const QTY = /^(?:\d+[\d\/.,\s-]*|[½⅓⅔¼¾⅛⅜⅝⅞]|a |an |one |two |three |four |five |six |half |pinch|handful|dash|splash|few |some |knob|sprig|bunch|clove|zest|juice|salt|pepper|oil)/i;
+  const ING_HEAD = /^(ingredients?|what you(?:'|’)?ll need|you(?:'|’)?ll need|you will need|shopping list)\b[\s:：]*$/i;
+  const STEP_HEAD = /^(method|instructions?|directions?|steps?|preparation|how to make(?: it)?)\b[\s:：]*$/i;
+  const NOTE_HEAD = /^(notes?|tips?|to serve|serving suggestions?|storage|variations?)\b[\s:：]*$/i;
+  const META = /\b(serves|servings?|makes|yields?|prep(?:aration)? time|cook(?:ing)? time|total time|minutes|mins?|hours?|hrs?)\b/i;
+  const VERB = /^(preheat|heat|warm|add|mix|stir|whisk|combine|place|put|pour|bring|boil|simmer|cook|bake|roast|fry|saut[eé]|chop|slice|dice|cut|season|serve|transfer|remove|return|cover|leave|let|drain|toss|fold|beat|melt|spread|sprinkle|garnish|arrange|blend|grill|reduce|taste|finish|meanwhile|once|when|then|in a|using|line|grease|knead|rest|marinate|pat|trim|peel|grate|squeeze|scatter|spoon|divide|top|layer|allow|check|turn|lower|increase|set|start|wash|rinse|soak|mash|shred|roll|shape|brush|pre-heat|microwave|refrigerate|chill|freeze|store|enjoy)\b/i;
+  const stripMark = l => l.replace(/^\s*(?:[-*+•·▪◦]|\d+\s*[.)]|step\s*\d+\s*[:.)\-–]?)\s*/i, '').replace(/^\[[ xX]\]\s*/, '').trim();
+  const isSubHead = l => /[:：]\s*$/.test(l) && l.length <= 40 && !QTY.test(stripMark(l)) || /^for the\b/i.test(l) && l.length <= 40 && !/\d/.test(l);
+  const looksIngredient = l => { const s = stripMark(l); return s.length <= 70 && QTY.test(s) && !VERB.test(s) && !/[.!?]\s+\S/.test(s); };
+  const looksStep = l => { const s = stripMark(l); return VERB.test(s) || s.length > 70 || /^\s*(?:\d+\s*[.)]|step\s*\d)/i.test(l); };
+  function pushSteps(steps, text){
+    if (text.length <= 240) { steps.push({text}); return; }
+    // A long paragraph becomes a few shorter steps, two sentences at a time.
+    const sentences = (text.match(/[^.!?]+[.!?]+["')\]]*(?:\s+|$)|[^.!?]+$/g) || [text]).map(x => x.trim()).filter(Boolean);
+    for (let i = 0; i < sentences.length; i += 2) steps.push({text: sentences.slice(i, i + 2).join(' ')});
+  }
+  function parseRecipe(body){
+    const r = {meta:[], intro:[], groups:[{name:'', items:[]}], steps:[], notes:[], sections:false};
+    let mode = 'pre';
+    body.replace(/\r\n?/g, '\n').split('\n').forEach(raw => {
+      const line = raw.trim();
+      if (!line || /^([-*_])(\s*\1){2,}$/.test(line)) return;
+      const bare = line.replace(/[:：]\s*$/, '').trim();
+      if (ING_HEAD.test(line)) { mode = 'ing'; r.sections = true; return; }
+      if (STEP_HEAD.test(line)) { mode = 'steps'; r.sections = true; return; }
+      if (NOTE_HEAD.test(line)) { mode = 'notes'; r.sections = true; return; }
+      if (mode === 'pre') { (META.test(line) && line.length < 60 && !VERB.test(stripMark(line)) ? r.meta : r.intro).push(line); return; }
+      if (mode === 'ing') {
+        if (isSubHead(line)) r.groups.push({name:bare, items:[]});
+        else r.groups[r.groups.length - 1].items.push(stripMark(line));
+        return;
+      }
+      if (mode === 'steps') { if (isSubHead(line)) r.steps.push({head:bare}); else pushSteps(r.steps, stripMark(line)); return; }
+      r.notes.push(stripMark(line));
+    });
+    if (!r.sections) {
+      // No headings: sort lines by what they look like, keeping the order.
+      const lines = r.intro; r.intro = [];
+      let started = false;
+      lines.forEach(l => {
+        const s = stripMark(l);
+        if (!r.steps.length && looksIngredient(l)) { r.groups[0].items.push(s); started = true; }
+        else if (looksStep(l) && (started || VERB.test(s))) { pushSteps(r.steps, s); started = true; }
+        else if (!started) r.intro.push(l);
+        else if (r.steps.length) pushSteps(r.steps, s);
+        else r.groups[0].items.push(s);
+      });
+    }
+    r.groups = r.groups.filter(g => g.items.length);
+    return r;
+  }
+  function formatRecipe(r){
+    const out = [];
+    if (r.meta.length) out.push(r.meta.join(' · '));
+    if (r.intro.length) out.push('', r.intro.join('\n'));
+    if (r.groups.length) {
+      out.push('', 'INGREDIENTS');
+      r.groups.forEach(g => { if (g.name) out.push('', g.name + ':'); g.items.forEach(x => out.push('• ' + x)); });
+    }
+    let n = 0;
+    if (r.steps.some(s => s.text)) {
+      out.push('', 'METHOD');
+      r.steps.forEach((s, i) => { if (i) out.push(''); out.push(s.head ? s.head + ':' : ++n + '. ' + s.text); });
+    }
+    if (r.notes.length) { out.push('', 'NOTES'); r.notes.forEach(x => out.push('• ' + x)); }
+    return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  const countRecipe = r => ({ings: r.groups.reduce((k, g) => k + g.items.length, 0), steps: r.steps.filter(s => s.text).length});
+  function looksLikeRecipe(body, tags){
+    if (tags.includes('recipe')) return true;
+    if (/\bingredients?\b/i.test(body) && /\b(method|instructions?|directions?|steps?)\b/i.test(body)) return true;
+    const lines = body.split('\n');
+    return lines.filter(l => looksIngredient(l)).length >= 3 && lines.some(l => VERB.test(stripMark(l)));
+  }
+  function updateRecipeBar(){ if (st.editing) $('edRecipe').hidden = !looksLikeRecipe($('edBody').value, st.editing.tags); }
+  $('edBody').addEventListener('input', updateRecipeBar);
+
+  $('edConvert').onclick = () => {
+    const before = $('edBody').value, r = parseRecipe(before), c = countRecipe(r);
+    if (!c.ings && !c.steps) { toast('Couldn’t find ingredients or steps in this note.'); return; }
+    $('edBody').value = formatRecipe(r);
+    const addedTag = !st.editing.tags.includes('recipe');
+    if (addedTag) { st.editing.tags.push('recipe'); noteTags.render(); }
+    growBody(); updateRecipeBar();
+    $('editor').querySelector('.sheetbody').scrollTop = 0;
+    toast('Tidied: ' + plural(c.ings, 'ingredient') + ', ' + plural(c.steps, 'step'), () => {
+      $('edBody').value = before;
+      if (addedTag && st.editing) { st.editing.tags = st.editing.tags.filter(t => t !== 'recipe'); noteTags.render(); }
+      growBody(); updateRecipeBar();
+    });
+  };
+
+  // Step by step: ingredients checklist first, then one step per screen.
+  let cook = null, wake = null;
+  async function keepAwake(){ try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch(e) { wake = null; } }
+  function letSleep(){ try { if (wake) wake.release(); } catch(e) {} wake = null; }
+  document.addEventListener('visibilitychange', () => { if (cook && document.visibilityState === 'visible') keepAwake(); });
+
+  $('edCook').onclick = () => {
+    const r = parseRecipe($('edBody').value);
+    const screens = [];
+    if (r.groups.length) screens.push({type:'ing'});
+    let head = '';
+    r.steps.forEach(s => { if (s.head) head = s.head; else screens.push({type:'step', text:s.text, head}); });
+    if (!screens.some(s => s.type === 'step')) { toast('Couldn’t find the steps. Try Convert first.'); return; }
+    screens.push({type:'done'});
+    cook = {r, screens, i:0, ticked:new Set(), title:$('edTitle').value.trim() || 'Recipe', nSteps:screens.filter(s => s.type === 'step').length};
+    $('ckTitle').textContent = cook.title;
+    $('cook').hidden = false;
+    renderCook(0);
+    keepAwake();
+    $('ckNext').focus({preventScroll:true});
+  };
+  function closeCook(){ $('cook').hidden = true; cook = null; letSleep(); $('edCook').focus({preventScroll:true}); }
+  function renderCook(dir){
+    const c = cook, sc = c.screens[c.i], last = c.screens.length - 1;
+    const stepNo = c.screens.slice(0, c.i + 1).filter(s => s.type === 'step').length;
+    $('ckCount').textContent = sc.type === 'step' ? stepNo + ' / ' + c.nSteps : sc.type === 'ing' ? 'Prep' : 'Done';
+    $('ckBar').style.width = (last ? c.i / last * 100 : 100) + '%';
+    let h;
+    if (sc.type === 'ing') {
+      h = '<p class="k">Before you start</p><h2 class="big">Ingredients</h2><p class="sub">Tap each one as you get it out.</p><ul class="ingl">'
+        + c.r.groups.map((g, gi) => (g.name ? '<li class="gh">' + esc(g.name) + '</li>' : '')
+          + g.items.map((x, xi) => { const k = gi + '-' + xi, on = c.ticked.has(k);
+              return '<li><button type="button" data-ing="' + k + '" aria-pressed="' + on + '"><span class="bx">' + I.check + '</span><span>' + esc(x) + '</span></button></li>'; }).join('')).join('')
+        + '</ul>';
+    } else if (sc.type === 'step') {
+      h = '<p class="k">Step ' + stepNo + ' of ' + c.nSteps + '</p>' + (sc.head ? '<p class="sub">' + esc(sc.head) + '</p>' : '') + '<p class="big">' + esc(sc.text) + '</p>';
+    } else {
+      h = '<p class="k">All done</p><p class="big">Enjoy your ' + esc(c.title) + '.</p><button class="btn" type="button" id="ckFinish">Back to the recipe</button>';
+    }
+    const card = $('ckCard');
+    card.innerHTML = h; card.scrollTop = 0;
+    card.classList.remove('from-l', 'from-r'); void card.offsetWidth;
+    if (dir) card.classList.add(dir > 0 ? 'from-r' : 'from-l');
+    $('ckPrev').disabled = c.i === 0;
+    $('ckNext').disabled = c.i === last;
+    $('ckDots').innerHTML = c.screens.length <= 16 ? c.screens.map((s, i) => '<i' + (i === c.i ? ' class="on"' : '') + '></i>').join('') : '';
+  }
+  const go = d => { if (!cook) return; const i = cook.i + d; if (i < 0 || i >= cook.screens.length) return; cook.i = i; renderCook(d); };
+  $('ckPrev').onclick = () => go(-1);
+  $('ckNext').onclick = () => go(1);
+  $('ckClose').onclick = closeCook;
+  $('ckCard').addEventListener('click', e => {
+    const b = e.target.closest('[data-ing]');
+    if (b) { const k = b.dataset.ing; cook.ticked.has(k) ? cook.ticked.delete(k) : cook.ticked.add(k); b.setAttribute('aria-pressed', cook.ticked.has(k)); return; }
+    if (e.target.closest('#ckFinish')) closeCook();
+  });
+  // Swipe sideways on the card to move between steps.
+  let sx = null, sy = 0;
+  $('ckCard').addEventListener('touchstart', e => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, {passive:true});
+  $('ckCard').addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+  });
+  document.addEventListener('keydown', e => {
+    if (!cook) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeCook(); }
+  }, true);
 
   // ---------- backup ----------
   const LAST = KEY + '-backup';
