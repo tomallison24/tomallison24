@@ -71,7 +71,7 @@ tag and list tabs are rebuilt on every change, so make edits in the app.
 ### Set up (once, on a computer)
 
 1. Go to [sheets.new](https://sheets.new) (signed in to the Google account you
-   want to use) and name the Sheet, e.g. **Notes**.
+   want to use) and name the Sheet, e.g. **AllisonOS - Notes**.
 2. In the Sheet: **Extensions → Apps Script**.
 3. Delete everything in `Code.gs`, then paste the whole of
    [`google-sheet-sync.gs`](google-sheet-sync.gs).
