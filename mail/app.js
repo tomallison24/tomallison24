@@ -30,7 +30,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -788,10 +788,16 @@ const tagSender = (item, name) => applyRule(ruleFor(item), name, { item });
 
 // One conversation back to the inbox, leaving the rule alone.
 async function unbucket(item) {
+  const tid = tidyId();
+  if (tid && item.labelIds.includes(tid)) {                 // tidied, not bucketed: just back to the inbox
+    await relabelThread(item.threadId, ['INBOX'], [tid]);
+    return tid;
+  }
   const label = await bucketLabel();
   await relabelThread(item.threadId, ['INBOX'], [label.id]);
   return label.id;
 }
+const tidied = item => { const tid = tidyId(); return !!tid && item.labelIds.includes(tid) && !item.labelIds.includes('INBOX'); };
 
 // Opening a message is reading it: Gmail marks it read, and so does the list.
 async function markRead(item) {
@@ -821,6 +827,179 @@ async function sweep() {
   }
   ls.set(K.swept, String(Date.now()));
   return done;
+}
+
+// ---------------------------------------------------------------------------
+// Tidy: unread mail that has sat in the inbox for 60 days is archived under
+// "Tidied" - but only when it looks automated and comes from nobody you have
+// ever written to. Archived, not deleted: it stays searchable, and Undo or its
+// Inbox button puts it back.
+// ---------------------------------------------------------------------------
+const TIDY_DAYS = 60, TIDY_LABEL = 'Tidied', TIDY_EVERY = 24 * 3600e3, TIDY_CAP = 400;
+const tidyOn = () => ls.get(K.tidy, '') === 'on';
+const tidyId = () => [...labelsById.values()].find(l => l.name.toLowerCase() === TIDY_LABEL.toLowerCase())?.id || null;
+// People write from these; a business's own domain is matched as a whole
+// (write to anyone at a school, and all its staff count as people you know).
+const FREEMAIL = new Set(['gmail.com', 'googlemail.com', 'icloud.com', 'me.com', 'mac.com', 'outlook.com', 'hotmail.com', 'hotmail.co.uk',
+  'live.com', 'live.co.uk', 'msn.com', 'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.net',
+  'btinternet.com', 'sky.com', 'virginmedia.com', 'comcast.net', 'verizon.net', 'att.net']);
+const AUTO_FROM = /^(no-?reply|do-?not-?reply|donotreply|newsletters?|notifications?|notify|marketing|mailer|digest|deals|offers|promo(tions)?)\b/i;
+const AUTO_CATS = ['CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_SOCIAL', 'CATEGORY_FORUMS'];
+
+// Why a conversation looks automated, or '' when it doesn't.
+function automated(t, email) {
+  const msgs = t.messages || [];
+  const has = n => msgs.some(m => hdr(m, n));
+  if (has('list-unsubscribe')) return 'a mailing list';
+  if (has('list-id') || msgs.some(m => /^(bulk|list)$/i.test(hdr(m, 'precedence').trim()))) return 'a mailing list';
+  const cat = AUTO_CATS.find(c => msgs.some(m => (m.labelIds || []).includes(c)));
+  if (cat) return 'in ' + cat.slice(9).toLowerCase().replace(/^./, c => c.toUpperCase());
+  if (AUTO_FROM.test(email)) return 'a no-reply sender';
+  return '';
+}
+
+// Whether you have ever written to this address - or, for a business, to
+// anyone at its domain. One tiny search each, remembered for this visit only.
+const wroteTo = new Map();
+function knownSender(email) {
+  const host = email.split('@')[1] || '';
+  const key = FREEMAIL.has(host) || !host ? email : host;
+  if (!wroteTo.has(key)) {
+    wroteTo.set(key, api('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } })
+      .then(r => !!(r.messages || []).length)
+      .catch(e => { wroteTo.delete(key); throw e; }));
+  }
+  return wroteTo.get(key);
+}
+
+// What Tidy would do now. Nothing is changed. Flagged, Important and tagged
+// mail (tags, reminders, Marketing) is left out by the search itself.
+async function tidyPlan() {
+  const cutoff = Date.now() - TIDY_DAYS * 86400e3;
+  const ids = [];
+  let pageToken;
+  do {
+    const r = await threadPage('in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels',
+      { pageToken, max: Math.min(100, TIDY_CAP - ids.length) });
+    ids.push(...r.ids); pageToken = r.next;
+  } while (pageToken && ids.length < TIDY_CAP);
+  const me = (state.me || '').toLowerCase();
+  const tidy = [], keep = [];
+  let stop = null;
+  await pool(ids, 3, async id => {
+    if (stop) return;
+    try {
+      const t = await api('/threads/' + id, {
+        params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
+      });
+      const item = buildRow(t);
+      if (!item) return;
+      const msgs = t.messages || [];
+      const ids = msgs.map(m => m.id);
+      if (msgs.some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return keep.push({ item, why: 'you wrote in it' });
+      if (msgs.some(m => Number(m.internalDate) > cutoff)) return;              // something newer arrived: not stale
+      const why = automated(t, item.email);
+      if (!why) return keep.push({ item, why: 'looks like a person' });
+      if (await knownSender(item.email)) return keep.push({ item, why: 'you’ve written to them' });
+      tidy.push({ item, ids, why });
+    } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) stop = e; }
+  });
+  if (stop) throw stop;
+  const byDate = (a, b) => b.item.date - a.item.date;
+  return { tidy: tidy.sort(byDate), keep: keep.sort(byDate), looked: ids.length };
+}
+
+// Archives what the plan found, under the Tidied label. Returns what Undo needs.
+async function tidyApply(plan) {
+  const label = await labelNamed(TIDY_LABEL, { create: true });
+  const ids = plan.tidy.flatMap(x => x.ids);
+  await relabel(ids, [label.id], ['INBOX']);
+  ls.set(K.tidied, String(Date.now()));
+  const threads = new Set(plan.tidy.map(x => x.item.threadId));
+  patch(it => threads.has(it.threadId), [label.id], ['INBOX']);
+  return { ids, label: label.id, threads };
+}
+
+async function untidy(back) {
+  await relabel(back.ids, ['INBOX'], [back.label]);
+  patch(it => back.threads.has(it.threadId), ['INBOX'], [back.label]);
+}
+
+// Once a day, when Tidy is on, as the app opens.
+async function tidyDaily() {
+  if (!tidyOn() || Date.now() - Number(ls.get(K.tidied, 0)) < TIDY_EVERY || slowed()) return;
+  ls.set(K.tidied, String(Date.now()));          // one try a day, even if it fails part-way
+  const plan = await tidyPlan();
+  if (!plan.tidy.length) return;
+  const back = await tidyApply(plan);
+  const n = plan.tidy.length;
+  toast('Tidied ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails'), { action: () => undoTidy(back), label: 'Undo', ms: 9000 });
+  await settle('right');
+}
+
+async function undoTidy(back) {
+  try { toast('Putting them back…', { ms: 60000 }); await untidy(back); toast('Back in the inbox'); state.lists = {}; go({ force: true }); }
+  catch (err) { failed(err); }
+}
+
+function tidyHTML() {
+  const last = Number(ls.get(K.tidied, 0));
+  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
+    '<div class="field"><span>Tidy old unread mail</span><span>' + (tidyOn() ? 'On' + (last ? ' · ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') : '') : 'Off') + '</span></div>' +
+    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Flagged, Important and tagged mail is never touched.</p>' +
+    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button>' +
+      (tidyOn() ? '<button class="textbtn" data-act="tidy-off">Turn off</button>' : '') +
+      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>';
+}
+
+// The preview: what would go, grouped by sender, and what is kept and why.
+let tidyPreview = null;
+async function openTidyPreview() {
+  const el = $('#sheet');
+  state.sheet = { tidy: true };
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Tidy preview">' +
+    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note">' + ICON.spin + ' Nothing is changed yet.</p></div>';
+  el.classList.remove('hide', 'leaving');
+  let plan;
+  try { plan = await tidyPlan(); }
+  catch (err) { if (state.sheet?.tidy) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a minute') : err); }
+  if (!state.sheet?.tidy) return;                     // closed while looking
+  tidyPreview = plan;
+  const groups = new Map();
+  for (const x of plan.tidy) {
+    const g = groups.get(x.item.email) || { name: x.item.name, email: x.item.email, n: 0, why: x.why };
+    g.n++; groups.set(x.item.email, g);
+  }
+  const rows = [...groups.values()].sort((a, b) => b.n - a.n).map(g =>
+    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span></li>').join('');
+  const kept = plan.keep.slice(0, 12).map(k =>
+    '<li><span class="tw"><b>' + esc(k.item.name) + '</b><small>' + esc(k.item.subject) + '</small></span><span class="tk">' + esc(k.why) + '</span></li>').join('');
+  const n = plan.tidy.length;
+  el.querySelector('.sheet').innerHTML = '<div class="grab"></div>' +
+    '<h3>' + (n ? 'Tidy ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails') + '?' : 'Nothing to tidy') + '</h3>' +
+    '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days. ' +
+      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted.' : 'None of them look automated from a stranger.') + '</p>' +
+    (n ? '<ul class="tidylist">' + rows + '</ul>' : '') +
+    (kept ? '<h4 class="tidyh">Kept</h4><ul class="tidylist keeps">' + kept + '</ul>' + (plan.keep.length > 12 ? '<p class="note">…and ' + (plan.keep.length - 12) + ' more.</p>' : '') : '') +
+    (n ? '<button class="btn" data-act="tidy-now">Tidy ' + n + ' now</button>' : '') +
+    (tidyOn() ? '' : '<button class="btn ghost" data-act="tidy-on">' + (n ? 'Tidy now, and every day' : 'Tidy every day from now on') + '</button>') +
+    '<button class="btn ghost" data-act="sheet-close">' + (n ? 'Not now' : 'Close') + '</button>';
+}
+
+async function runTidy(turnOn) {
+  const plan = tidyPreview;
+  closeSheet();
+  if (turnOn) ls.set(K.tidy, 'on');
+  if (!plan?.tidy.length) { if (turnOn) toast('Tidy is on — it runs once a day as the app opens'); return render(); }
+  toast('Tidying…', { ms: 60000 });
+  try {
+    const back = await tidyApply(plan);
+    tidyPreview = null;
+    const n = plan.tidy.length;
+    toast('Tidied ' + n + ' ' + (n === 1 ? 'email' : 'emails') + (turnOn ? ' — and every day from now' : ''), { action: () => undoTidy(back), label: 'Undo', ms: 9000 });
+    state.lists = {};
+    render();
+  } catch (err) { failed(err); }
 }
 
 // ---------------------------------------------------------------------------
@@ -953,7 +1132,7 @@ function tagChips(labelIds, skip) {
 
 let freshFrom = Infinity;   // rows from here on animate in even on a quiet repaint
 function rowHTML(item, i, key) {
-  const inBucket = item.labelIds.includes(bucketId());
+  const inBucket = item.labelIds.includes(bucketId()) || tidied(item);
   let meta;
   if (key === 'mkt') {
     const left = settings.days - (Date.now() - item.date) / 86400e3;
@@ -1269,6 +1448,7 @@ function viewSettings() {
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
     '<div class="field"><span>Unread count on the app icon</span><button class="textbtn" data-act="badge" aria-pressed="' + badgeOn() + '">' + (badgeOn() ? 'On' : 'Off') + '</button></div>' +
+    tidyHTML() +
     notifyHTML() +
     blockedHTML() +
     '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
@@ -1479,7 +1659,7 @@ function fadeReadDots() {
 function renderReader() {
   const r = state.reading;
   if (!r) return;
-  const it = r.item, inBucket = it.labelIds.includes(bucketId());
+  const it = r.item, inBucket = it.labelIds.includes(bucketId()) || tidied(it);
   $('#reader').innerHTML = '<div class="wrap">' +
     '<div class="rtop">' +
       '<button class="iconbtn" data-act="close-reader" aria-label="Back">' + ICON.chev + '</button>' +
@@ -2984,11 +3164,12 @@ async function doBucket(item, btn, li) {
 async function doRestore(item, btn, li) {
   if (btn) { btn.disabled = true; confirmTap(btn, li, 'blue'); btn.innerHTML = ICON.spin; }
   try {
+    const wasTidied = tidied(item);
     const labelId = await unbucket(item);
     await closeReader();
     patch(it => it.threadId === item.threadId, ['INBOX'], [labelId]);
     await settle('left');
-    toast('Back in the inbox. The rule is still on — remove it under Rules.');
+    toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.back; }
     if (state.reading) renderReader();
@@ -3220,6 +3401,15 @@ document.addEventListener('click', async e => {
     }
 
     case 'badge': return toggleBadge();
+    case 'tidy-preview': return openTidyPreview();
+    case 'tidy-now': return runTidy(false);
+    case 'tidy-on': return runTidy(true);
+    case 'tidy-off': ls.del(K.tidy); toast('Tidy is off'); return render();
+    case 'tidy-see':
+      state.view = 'inbox'; state.tag = null;
+      state.search = 'label:' + TIDY_LABEL; state.showSearch = true;
+      if ($('#q')) $('#q').value = state.search;
+      return go();
     case 'notify-mode': return turnOnNotifications(el.dataset.mode);
     case 'notify-off': return turnOffNotifications();
     case 'notify-test':
@@ -3382,7 +3572,8 @@ function renew() {
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
-  loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); });
+  loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
+    .then(() => sleep(1500)).then(() => tidyDaily()).catch(() => {});
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
       if (!n) return;
