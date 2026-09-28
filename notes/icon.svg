@@ -2,14 +2,14 @@
   <!-- Home-screen icon: the note is the whole icon, laid out like News, on its own colour. Full-bleed square: iOS rounds the corners itself. -->
   <defs>
     <linearGradient id="page" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#FFD86B"/>
-      <stop offset="0.5" stop-color="#FFB23F"/>
-      <stop offset="1" stop-color="#F5841F"/>
+      <stop offset="0" stop-color="#5EF0C0"/>
+      <stop offset="0.5" stop-color="#1FC8B4"/>
+      <stop offset="1" stop-color="#0E8FA8"/>
     </linearGradient>
   </defs>
   <rect width="1024" height="1024" fill="url(#page)"/>
   <rect x="170" y="249" width="90" height="90" rx="28" fill="#FFFFFF"/>
-  <path d="M192 295l21 21 26-38" fill="none" stroke="#F5841F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M192 295l21 21 26-38" fill="none" stroke="#0E8FA8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="300" y="249" width="554" height="90" rx="45" fill="#FFFFFF"/>
   <rect x="170" y="419" width="684" height="56" rx="28" fill="#FFFFFF" fill-opacity="0.55"/>
   <rect x="170" y="519" width="520" height="56" rx="28" fill="#FFFFFF" fill-opacity="0.55"/>
