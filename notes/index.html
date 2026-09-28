@@ -37,6 +37,8 @@
   --tint-mix:16%; --note-mix:30%; --tl:32%; --aurora:.40; --mark:rgba(255,204,0,.45);
   --blur:blur(30px) saturate(180%); --ease:cubic-bezier(.22,1,.36,1);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --flag-tint:#C8913F; --arch-tint:#8C79CF; --bin-tint:#C9625B; --tag-tint:#7B6CF6;
+  --flag-ink:#855412; --arch-ink:#5A45B0; --bin-ink:#9E3A32; --tag-ink:#4A3FC4; --gi-mix:18%;
   --icon:#0E7C8C; --accent-text:#0059C8; --danger-text:#AE2117;
   --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(248,248,251,.97);
   --seg-thumb:rgba(255,255,255,.92); --gb-shadow:0 4px 14px rgba(40,40,80,.10);
@@ -54,6 +56,7 @@
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
+  --flag-ink:#EBC68F; --arch-ink:#CDBEF3; --bin-ink:#F0A9A3; --tag-ink:#D9D3FF; --gi-mix:30%;
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
@@ -68,6 +71,7 @@
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
+  --flag-ink:#EBC68F; --arch-ink:#CDBEF3; --bin-ink:#F0A9A3; --tag-ink:#D9D3FF; --gi-mix:30%;
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
@@ -371,6 +375,61 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 @keyframes fromR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
 @keyframes fromL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
 
+/* ---- Notes home: collections, recent, archive, trash, tidy up ---- */
+#collBack{margin-right:2px}
+.ctiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ctile{--h:211;display:flex;flex-direction:column;gap:3px;min-height:82px;padding:11px 14px 10px;border-radius:22px;text-align:left;color:var(--text);transition:transform .18s var(--ease)}
+.ctile:active{transform:scale(.97)}
+.ctile .ctop{display:flex;align-items:center;justify-content:space-between}
+.ctile i{width:10px;height:10px;border-radius:50%;background:hsl(var(--h) 90% 62%);box-shadow:0 0 10px hsl(var(--h) 90% 62% / .6)}
+.ctile.plain i{background:var(--ring);box-shadow:none}
+.ctile .cn{font-size:20px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ctile .cname{font-size:16px;font-weight:600;letter-spacing:-.01em;margin-top:auto}
+.ctile .clast{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px}
+.nlist{display:flex;flex-direction:column}
+.nlist > .sw + .sw,.nlist > .trow + .trow{border-top:1px solid var(--hair-2)}
+.nrow{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t d" "s s";gap:2px 10px;width:100%;text-align:left;padding:12px 16px;color:var(--text);background:var(--glass)}
+.nrow .nt{grid-area:t;font-size:16px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:6px;align-items:center}
+.nrow .nt svg{width:13px;height:13px;color:var(--flag);flex:none}
+.nrow .ns{grid-area:s;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nrow .ns:empty{display:none}
+.nrow .nd{grid-area:d;font-size:12px;color:var(--faint);align-self:center}
+.cdate{display:block;margin-top:8px;font-size:11px;color:var(--faint)}
+.morechips{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
+.chip .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-grid;place-items:center;background:var(--accent);color:#fff;font-size:11px;font-weight:700}
+.trow{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 16px}
+.trow .tt,.tidyrow .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.trow .nt,.tidyrow .nt{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .nd{font-size:12px;color:var(--faint)}
+.iconbtn.danger{color:var(--danger-text)}
+.tidyrow{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 16px;border-top:1px solid var(--hair-2)}
+.tidyrow:first-child{border-top:0}
+.tidyrow .nt{white-space:normal}
+.tidyrow .ns{font-size:13px;color:var(--muted);line-height:1.4}
+.tidyrow .textbtn{flex:none;max-width:48%;height:auto;min-height:36px;padding:6px 12px;line-height:1.2;white-space:normal;text-align:center;font-size:14px}
+.empty.glass{border-radius:22px}
+/* swiping a note, as in Mail */
+.sw{position:relative}
+.sw > .card,.sw > .nrow{position:relative;z-index:1;transition:transform .3s var(--ease)}
+.sw-acts{position:absolute;inset:0;z-index:0}
+.sw-l,.sw-r{position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:4px;opacity:0;pointer-events:none;transition:opacity .15s}
+.sw-l{left:6px}
+.sw-r{right:6px}
+.sw.open-r .sw-l,.sw.open-l .sw-r{pointer-events:auto}
+.sw.show-l .sw-l,.sw.open-r .sw-l,.sw.show-r .sw-r,.sw.open-l .sw-r{opacity:1}
+.sa{width:52px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)}
+.sa .gi{width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);
+  background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--gi-mix),transparent);border:1px solid color-mix(in srgb,var(--tint) 42%,var(--gb-edge));
+  box-shadow:inset 0 1px 0 var(--hi),0 4px 12px var(--lift);transition:transform .3s var(--ease)}
+.sa .gi svg{width:22px;height:22px}
+.sa:active .gi{transform:scale(.9)}
+.sa.pin{--tint:var(--flag-tint);--ink:var(--flag-ink)}
+.sa.tag{--tint:var(--tag-tint);--ink:var(--tag-ink)}
+.sa.arch{--tint:var(--arch-tint);--ink:var(--arch-ink)}
+.sa.bin{--tint:var(--bin-tint);--ink:var(--bin-ink)}
+.sw.armed-l .sa.bin .gi,.sw.armed-r .sa.tag .gi{transform:scale(1.18)}
+.sw.armed-l .sa.arch,.sw.armed-r .sa.pin{opacity:.35}
+
 /* ---- Icons and buttons: the same system as Mail ----
    Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
    ticks and close); icons in a calm slate-teal, while text, dots and
@@ -448,7 +507,8 @@ svg.fs{fill:currentColor}
   <section class="view" id="notesView" aria-label="Notes">
     <header class="top">
       <div class="titlerow">
-        <h1 class="title">Notes<small id="notesSub"></small></h1>
+        <button class="iconbtn" id="collBack" type="button" aria-label="Back to all notes" hidden><svg viewBox="0 0 24 24" class="b"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg></button>
+        <h1 class="title"><span id="notesTitle">Notes</span><small id="notesSub"></small></h1>
         <div class="acts">
           <button class="iconbtn glass" id="viewBtn" type="button" aria-label="Switch to list view"></button>
 <button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
@@ -464,7 +524,6 @@ svg.fs{fill:currentColor}
         <input id="q" type="search" placeholder="Search notes or #tag" autocomplete="off" aria-label="Search notes">
         <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </label>
-      <div class="chips" id="chips" role="toolbar" aria-label="Filter notes by tag"></div>
     </header>
     <main class="list" id="list"></main>
   </section>
@@ -767,6 +826,32 @@ svg.fs{fill:currentColor}
     </div>
   </div>
 
+  <!-- Tag a note (swipe right) -->
+  <div class="sheetwrap" id="qtSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="qtLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="qtLbl">Tag note</h2><div class="acts"><button class="textbtn" id="qtDone" type="button">Done</button></div></div>
+      <div class="sheetbody">
+        <div class="box glass"><div class="tagedit" id="qtTags"><input id="qtInput" list="tagList" placeholder="New tag" aria-label="New tag" enterkeyhint="done"></div></div>
+        <div class="field"><p class="label">Your tags</p><div class="opts" id="qtAll"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tidy up -->
+  <div class="sheetwrap" id="tidySheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="tdyLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="tdyLbl">Tidy up</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheetbody">
+        <div id="tidyBody"></div>
+        <p class="hint">Deleted notes go to Trash for 30 days. Every change can be undone from the message at the bottom.</p>
+      </div>
+    </div>
+  </div>
+
   <datalist id="tagList"></datalist>
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
@@ -787,6 +872,9 @@ svg.fs{fill:currentColor}
     x:'<svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     trash:'<svg viewBox="0 0 24 24"><path d="M3.4 6.2h17.2"/><path d="M8.8 6.2V5.1a2 2 0 0 1 2-2h2.4a2 2 0 0 1 2 2v1.1"/><path d="M5.5 6.2l.8 12.2a2.8 2.8 0 0 0 2.8 2.6h5.8a2.8 2.8 0 0 0 2.8-2.6l.8-12.2"/><path d="M10 10.6v5.8M14 10.6v5.8"/></svg>',
     flag:'<svg viewBox="0 0 24 24"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg>',
+    archive:'<svg viewBox="0 0 24 24"><rect x="2.8" y="3.4" width="18.4" height="5.4" rx="2.2"/><path d="M4.6 8.8v8.2a3.2 3.2 0 0 0 3.2 3.2h8.4a3.2 3.2 0 0 0 3.2-3.2V8.8"/><path d="M9.8 12.6h4.4"/></svg>',
+    tag:'<svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>',
+    sparkle:'<svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>',
     check:'<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus:'<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>'
   };
@@ -818,10 +906,18 @@ svg.fs{fill:currentColor}
   const clone = x => JSON.parse(JSON.stringify(x));
   const saved = load();
   let notes = saved ? saved.notes : clone(SAMPLE_NOTES);
+  // Every note has a creation time (older notes: read from their id), an
+  // archived flag and a deletedAt time for Trash; Trash empties after 30 days.
+  function fixNotes(){
+    const idTime = id => { const m = /^n([0-9a-z]{8})/.exec(id || ''); const t = m ? parseInt(m[1], 36) : 0; return t > 1.5e12 && t < 4e12 ? t : 0; };
+    notes.forEach(n => { if (!n.created) n.created = idTime(n.id) || n.updated || Date.now(); if (n.archived === undefined) n.archived = false; if (n.deletedAt === undefined) n.deletedAt = null; });
+    notes = notes.filter(n => !n.deletedAt || Date.now() - n.deletedAt < 30 * 864e5);
+  }
+  fixNotes();
   let lists = saved ? saved.lists : clone(SAMPLE_LISTS);
   let todos = saved ? saved.todos : clone(SAMPLE_TODOS);
   const st = { tab:'notes', sel:new Set(), remOnly:false, q:'', view:'grid', editing:null, isNew:false,
-               rview:'today', rlist:null, rq:'', rsearch:false, showDone:false, todo:null, listEdit:null, shareFrom:null };
+               coll:null, rview:'today', rlist:null, rq:'', rsearch:false, showDone:false, todo:null, listEdit:null, shareFrom:null };
   try { st.view = localStorage.getItem(KEY+'-view') || 'grid'; st.tab = localStorage.getItem(KEY+'-tab') || 'notes'; } catch(e){}
 
   const $ = id => document.getElementById(id);
@@ -979,7 +1075,7 @@ svg.fs{fill:currentColor}
   };
 
   function render(){
-    $('tagList').innerHTML = countTags([...notes, ...todos]).map(([t]) => '<option value="'+esc(t)+'">').join('');
+    $('tagList').innerHTML = countTags([...notes.filter(n => !n.deletedAt), ...todos]).map(([t]) => '<option value="'+esc(t)+'">').join('');
     if (st.tab === 'notes') renderNotes(); else renderRem();
   }
 
@@ -995,65 +1091,291 @@ svg.fs{fill:currentColor}
     if (diff === 1) return {txt:'Tomorrow '+t};
     return {txt:d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})};
   }
-  const noteMatches = n => {
-    for (const t of st.sel) if (!n.tags.includes(t)) return false;
-    if (st.remOnly && !n.reminder) return false;
-    return matchQuery(st.q, (n.title+'\n'+n.body+'\n'+n.tags.join(' ')).toLowerCase(), n.tags);
-  };
-  function card(n, i){
-    const rem = n.reminder ? fmtRem(n.reminder) : null;
-    const meta = (rem ? '<span class="tchip bare'+(rem.over?' over':'')+'">'+I.bell+esc(rem.txt)+'</span>' : '')
-      + n.tags.map(t => tchip(t, st.q)).join('');
-    return '<button class="card glass" type="button" style="--i:'+(i||0)+'" data-id="'+esc(n.id)+'" data-color="'+esc(n.color)+'">'
-      + (n.title ? '<h3><span>'+hl(n.title, st.q)+'</span>'+(n.pinned ? I.pinFill : '')+'</h3>' : '')
-      + (n.body ? '<p>'+hl(n.body, st.q)+'</p>' : '')
-      + (meta ? '<div class="meta">'+meta+'</div>' : '')
-      + '</button>';
+  // ---------- where notes live: home, collections (tags), archive, trash ----------
+  // st.coll: null = home; 'tag:<name>', 'untagged', 'all', 'nudges', 'archive', 'trash'.
+  const TRASH_DAYS = 30;
+  const alive = () => notes.filter(n => !n.deletedAt);
+  const shelf = () => alive().filter(n => !n.archived);
+  const byCreated = (a, b) => (b.created || 0) - (a.created || 0);
+  const collName = c => c === 'untagged' ? 'No tag' : c === 'all' ? 'All notes' : c === 'nudges' ? 'Nudges' : c === 'archive' ? 'Archive' : c === 'trash' ? 'Trash'
+    : c.slice(4).replace(/-/g, ' ').replace(/^./, x => x.toUpperCase());
+  function inColl(n, c){
+    if (c === 'trash') return !!n.deletedAt;
+    if (n.deletedAt) return false;
+    if (c === 'archive') return !!n.archived;
+    if (n.archived) return false;
+    if (c === 'all') return true;
+    if (c === 'untagged') return !n.tags.length;
+    if (c === 'nudges') return !!n.reminder;
+    return n.tags.includes(c.slice(4));
   }
-  function renderNotes(){
-    $('notesSub').textContent = plural(notes.length, 'note');
-    const counts = countTags(notes);
-    const remCount = notes.filter(n => n.reminder).length;
-    let c = '<button class="chip glass" type="button" data-chip="all" aria-pressed="'+(!st.sel.size && !st.remOnly)+'">All</button>';
-    c += '<button class="chip glass" type="button" data-chip="rem" aria-pressed="'+st.remOnly+'">'+I.bell+'Nudges <span class="n">'+remCount+'</span></button>';
-    counts.forEach(([t,k]) => { c += '<button class="chip glass" type="button" style="--h:'+hue(t)+'" data-chip="tag" data-tag="'+esc(t)+'" aria-pressed="'+st.sel.has(t)+'"><i></i>'+esc(t)+' <span class="n">'+k+'</span></button>'; });
-    $('chips').innerHTML = c;
+  const noteMatches = n => !n.deletedAt && matchQuery(st.q, (n.title + '\n' + n.body + '\n' + n.tags.join(' ')).toLowerCase(), n.tags);
+  const fmtDay = t => {
+    const d = new Date(t), today = new Date(); today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - new Date(d).setHours(0, 0, 0, 0)) / D);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return d.toLocaleDateString([], {weekday:'long'});
+    return d.toLocaleDateString([], {day:'numeric', month:'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric'});
+  };
+  const monthOf = t => new Date(t).toLocaleDateString([], {month:'long', year:'numeric'});
 
-    const shown = notes.filter(noteMatches).sort((a,b) => st.remOnly ? new Date(a.reminder) - new Date(b.reminder) : (b.pinned - a.pinned) || (b.updated - a.updated));
-    const filtering = st.sel.size || st.remOnly || tokensOf(st.q).length;
-    // Deal cards into columns, each to whichever column is shorter so far
-    // (by a rough height estimate), keeping the reading order.
-    const est = n => 70 + Math.ceil((n.title || '').length / 16) * 21 + Math.min(6, (n.body || '').split('\n').reduce((k, l) => k + Math.max(1, Math.ceil(l.length / 20)), 0)) * 20 + (n.tags.length || n.reminder ? 34 : 0);
-    const grid = list => {
-      const cols = st.view === 'list' ? [[]] : [[], []], hgt = cols.map(() => 0);
-      list.forEach((n, i) => { const c = hgt.indexOf(Math.min(...hgt)); cols[c].push(card(n, i)); hgt[c] += est(n); });
-      return '<div class="grid">' + cols.map(c => '<div class="col">' + c.join('') + '</div>').join('') + '</div>';
-    };
-    let h = needsBackup() ? '<div class="notice glass"><span>' + esc(backupStatus()) + ' Everything lives only in this browser.</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>' : '';
-    if (filtering) {
-      const parts = [];
-      if (st.remOnly) parts.push('with a nudge');
-      if (st.sel.size) parts.push([...st.sel].map(t => '#'+t).join(' + '));
-      h += '<p class="resulthead">'+plural(shown.length, 'note')+(parts.length ? ' · '+esc(parts.join(' · ')) : '')+'</p>';
+  function card(n, i, opts = {}){
+    const rem = n.reminder ? fmtRem(n.reminder) : null;
+    const meta = (n.archived && opts.flagArchived ? '<span class="tchip bare">' + I.archive + 'Archived</span>' : '')
+      + (rem ? '<span class="tchip bare' + (rem.over ? ' over' : '') + '">' + I.bell + esc(rem.txt) + '</span>' : '')
+      + n.tags.map(t => tchip(t, st.q)).join('');
+    return '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
+      + '<button class="card glass" type="button" style="--i:' + (i || 0) + '" data-id="' + esc(n.id) + '" data-color="' + esc(n.color) + '">'
+      + (n.title ? '<h3><span>' + hl(n.title, st.q) + '</span>' + (n.pinned ? I.pinFill : '') + '</h3>' : '')
+      + (n.body ? '<p>' + hl(n.body, st.q) + '</p>' : '')
+      + (meta ? '<div class="meta">' + meta + '</div>' : '')
+      + (opts.date ? '<span class="cdate">' + esc(fmtDay(n.created)) + '</span>' : '')
+      + '</button></div>';
+  }
+  // Swipe actions behind each note, as in Mail: right shows Pin and Tag, left shows Archive and Delete.
+  const swipeActs = () => st.coll === 'trash' ? '' : '<div class="sw-acts" aria-hidden="true">'
+    + '<div class="sw-l"><button type="button" class="sa pin" data-sw-act="pin" tabindex="-1"><span class="gi">' + I.pin + '</span><span class="sl">Pin</span></button>'
+    + '<button type="button" class="sa tag" data-sw-act="tag" tabindex="-1"><span class="gi">' + I.tag + '</span><span class="sl">Tag</span></button></div>'
+    + '<div class="sw-r"><button type="button" class="sa arch" data-sw-act="archive" tabindex="-1"><span class="gi">' + I.archive + '</span><span class="sl">' + (st.coll === 'archive' ? 'Restore' : 'Archive') + '</span></button>'
+    + '<button type="button" class="sa bin" data-sw-act="trash" tabindex="-1"><span class="gi">' + I.trash + '</span><span class="sl">Delete</span></button></div></div>';
+
+  // Deal cards into columns, each to whichever column is shorter so far
+  // (by a rough height estimate), keeping the reading order.
+  const est = n => 70 + Math.ceil((n.title || '').length / 16) * 21 + Math.min(6, (n.body || '').split('\n').reduce((k, l) => k + Math.max(1, Math.ceil(l.length / 20)), 0)) * 20 + (n.tags.length || n.reminder ? 34 : 0);
+  function grid(list, opts){
+    const cols = st.view === 'list' ? [[]] : [[], []], hgt = cols.map(() => 0);
+    list.forEach((n, i) => { const c = hgt.indexOf(Math.min(...hgt)); cols[c].push(card(n, i, opts)); hgt[c] += est(n) + (opts && opts.date ? 18 : 0); });
+    return '<div class="grid">' + cols.map(c => '<div class="col">' + c.join('') + '</div>').join('') + '</div>';
+  }
+  const snippet = n => (n.body || '').split('\n').map(l => l.trim().replace(/^[•*-]\s*/, '')).filter(l => l && !/^[A-Z][A-Z &]+:?$/.test(l))[0] || '';
+  const nrow = (n, i) => '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
+    + '<button class="nrow" type="button" style="--i:' + i + '" data-id="' + esc(n.id) + '"><span class="nt">' + esc(n.title || snippet(n) || 'Untitled')
+    + (n.pinned ? I.pinFill : '') + '</span><span class="ns">' + esc(n.title ? snippet(n) : '') + '</span><span class="nd">' + esc(fmtDay(n.created)) + '</span></button></div>';
+
+  function renderNotes(){
+    const c = st.coll, searching = tokensOf(st.q).length > 0;
+    const live = shelf();
+    $('collBack').hidden = !c;
+    $('notesTitle').textContent = c ? collName(c) : 'Notes';
+    let h = '';
+    if (!c && !searching && needsBackup()) h += '<div class="notice glass"><span>' + esc(backupStatus()) + ' Everything lives only in this browser.</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>';
+
+    if (searching) {
+      const res = alive().filter(n => (!c || c === 'trash' ? true : inColl(n, c) || (c === 'archive' && n.archived)) && noteMatches(n)).sort(byCreated);
+      $('notesSub').textContent = plural(res.length, 'result') + (c ? ' in ' + collName(c) : '');
+      h += res.length ? grid(res, {date:true, flagArchived:true}) : '<div class="empty glass"><strong>No matching notes</strong>Try a different word or #tag.</div>';
+    } else if (!c) {
+      $('notesSub').textContent = plural(live.length, 'note');
+      const pinned = live.filter(n => n.pinned).sort(byCreated);
+      if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>' + grid(pinned) + '</section>';
+      const tags = countTags(live), untagged = live.filter(n => !n.tags.length);
+      const latest = t => live.filter(n => t ? n.tags.includes(t) : !n.tags.length).sort(byCreated)[0];
+      const tile = (coll, name, count, h, last, i) => '<button class="ctile glass" type="button" style="--h:' + h + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
+        + '<span class="ctop"><i></i><span class="cn">' + count + '</span></span><span class="cname">' + esc(name) + '</span>'
+        + '<span class="clast">' + esc(last ? (last.title || snippet(last) || 'Untitled') : '') + '</span></button>';
+      const tiles = tags.map(([t, k], i) => tile('tag:' + t, collName('tag:' + t), k, hue(t), latest(t), i));
+      if (untagged.length) tiles.push(tile('untagged', 'No tag', untagged.length, 0, latest(null), tiles.length).replace('class="ctile glass"', 'class="ctile glass plain"'));
+      if (tiles.length) h += '<section><h2 class="sechead">Collections</h2><div class="ctiles">' + tiles.join('') + '</div></section>';
+      const recent = live.slice().sort(byCreated).slice(0, 5);
+      if (recent.length) h += '<section><h2 class="sechead">Recent</h2><div class="rgroup glass nlist">' + recent.map(nrow).join('') + '</div></section>';
+      if (!live.length) h += '<div class="empty glass"><strong>No notes yet</strong>Tap the pencil to write one, or the clipboard to paste.</div>';
+      const arch = alive().filter(n => n.archived).length, trash = notes.filter(n => n.deletedAt).length, nudges = live.filter(n => n.reminder).length, tidy = tidySuggestions().length;
+      h += '<div class="morechips">'
+        + '<button class="chip glass" type="button" data-coll="all">All notes <span class="n">' + live.length + '</span></button>'
+        + (nudges ? '<button class="chip glass" type="button" data-coll="nudges">' + I.bell + 'Nudges <span class="n">' + nudges + '</span></button>' : '')
+        + (arch ? '<button class="chip glass" type="button" data-coll="archive">' + I.archive + 'Archive <span class="n">' + arch + '</span></button>' : '')
+        + (trash ? '<button class="chip glass" type="button" data-coll="trash">' + I.trash + 'Trash <span class="n">' + trash + '</span></button>' : '')
+        + '<button class="chip glass" type="button" id="tidyBtn">' + I.sparkle + 'Tidy up' + (tidy ? ' <span class="badge">' + tidy + '</span>' : '') + '</button>'
+        + '</div>';
+    } else if (c === 'trash') {
+      const list = notes.filter(n => n.deletedAt).sort((a, b) => b.deletedAt - a.deletedAt);
+      $('notesSub').textContent = plural(list.length, 'note') + ' · deleted for good after ' + TRASH_DAYS + ' days';
+      if (list.length) {
+        h += '<button class="btn danger" type="button" id="emptyTrash">Empty Trash</button>';
+        h += '<div class="rgroup glass nlist">' + list.map((n, i) => {
+          const left = Math.max(0, TRASH_DAYS - Math.floor((Date.now() - n.deletedAt) / D));
+          return '<div class="trow" style="--i:' + i + '"><span class="tt"><span class="nt">' + esc(n.title || snippet(n) || 'Untitled') + '</span><span class="nd">' + plural(left, 'day') + ' left</span></span>'
+            + '<button class="textbtn" type="button" data-restore="' + esc(n.id) + '">Restore</button>'
+            + '<button class="iconbtn danger" type="button" data-purge="' + esc(n.id) + '" aria-label="Delete for good">' + I.trash + '</button></div>';
+        }).join('') + '</div>';
+      } else h += '<div class="empty glass"><strong>Trash is empty</strong>Deleted notes stay here for ' + TRASH_DAYS + ' days.</div>';
+    } else {
+      const list = alive().filter(n => inColl(n, c)).sort(c === 'nudges' ? (a, b) => new Date(a.reminder) - new Date(b.reminder) : byCreated);
+      $('notesSub').textContent = plural(list.length, 'note') + (c === 'nudges' ? ' · soonest first' : ' · newest first');
+      if (!list.length) h += '<div class="empty glass"><strong>Nothing here</strong>' + (c === 'archive' ? 'Swipe a note left and tap Archive to keep it out of the way.' : 'Notes you add here will show newest first.') + '</div>';
+      else if (c === 'nudges') h += grid(list);
+      else {
+        // Newest first, in month groups.
+        const groups = [];
+        list.forEach(n => { const m = monthOf(n.created); if (!groups.length || groups[groups.length - 1].m !== m) groups.push({m, items:[]}); groups[groups.length - 1].items.push(n); });
+        h += groups.map(g => '<section><h2 class="sechead">' + esc(g.m) + '</h2>' + grid(g.items, {date:true}) + '</section>').join('');
+      }
     }
-    if (!shown.length) h += '<div class="empty"><strong>No matching notes</strong>Try a different word, or clear the tag filter.</div>';
-    else if (!st.remOnly) {
-      const pinned = shown.filter(n => n.pinned), others = shown.filter(n => !n.pinned);
-      if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>'+grid(pinned)+'</section>';
-      if (others.length) h += '<section>'+(pinned.length ? '<h2 class="sechead">Everything else</h2>' : '')+''+grid(others)+'</section>';
-    } else h += grid(shown);
     $('list').innerHTML = h;
     $('viewBtn').innerHTML = st.view === 'grid' ? I.rows : I.grid;
     $('viewBtn').setAttribute('aria-label', st.view === 'grid' ? 'Switch to list view' : 'Switch to grid view');
     $('qClear').hidden = !st.q;
+    $('q').placeholder = c ? 'Search ' + collName(c) : 'Search notes or #tag';
   }
+  function openColl(c){ st.coll = c; st.q = ''; $('q').value = ''; closeSwipe(); animateIn($('list')); render(); $('list').scrollTop = 0; }
+  $('collBack').onclick = () => openColl(null);
+
+  // ---------- note actions (swipe buttons, trash) ----------
+  const findNote = id => notes.find(n => n.id === id);
+  function withUndo(msg, fn){
+    const before = clone(notes);
+    fn(); save(); render();
+    toast(msg, () => { notes = before; save(); render(); });
+  }
+  function noteAction(act, id){
+    const n = findNote(id); if (!n) return;
+    const name = '“' + (n.title || snippet(n) || 'Untitled').slice(0, 40) + '”';
+    if (act === 'pin') withUndo(n.pinned ? 'Unpinned ' + name : 'Pinned ' + name, () => { n.pinned = !n.pinned; });
+    else if (act === 'archive') withUndo(n.archived ? 'Moved back to notes' : 'Archived ' + name, () => { n.archived = !n.archived; n.pinned = n.archived ? false : n.pinned; });
+    else if (act === 'trash') withUndo('Moved to Trash', () => { n.deletedAt = Date.now(); n.pinned = false; });
+    else if (act === 'tag') openQuickTag(id);
+  }
+
+  // ---------- swiping a note, as in Mail ----------
+  let swOpen = null;
+  function closeSwipe(){ if (swOpen) { swOpen.classList.remove('open-l', 'open-r', 'swiping', 'show-l', 'show-r', 'armed-l', 'armed-r'); swOpen.querySelector('.card, .nrow').style.transform = ''; swOpen = null; } }
+  (function(){
+    const list = $('list');
+    let sw = null, el = null, x0 = 0, y0 = 0, dx = 0, mode = null, base = 0, suppress = false;
+    const W = () => el.offsetWidth, REVEAL = () => Math.min(116, W() - 40);
+    list.addEventListener('touchstart', e => {
+      const s = e.target.closest('.sw'); if (!s || e.touches.length !== 1 || !s.querySelector('.sw-acts')) { sw = null; return; }
+      if (swOpen && swOpen !== s) closeSwipe();
+      sw = s; el = s.querySelector('.card, .nrow'); x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; mode = null;
+      base = s.classList.contains('open-l') ? -REVEAL() : s.classList.contains('open-r') ? REVEAL() : 0;
+    }, {passive:true});
+    list.addEventListener('touchmove', e => {
+      if (!sw) return;
+      const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (!mode) { if (Math.abs(mx) < 10 && Math.abs(my) < 10) return; mode = Math.abs(mx) > Math.abs(my) * 1.2 ? 'x' : 'y'; if (mode === 'y') { sw = null; return; } sw.classList.add('swiping'); el.style.transition = 'none'; }
+      e.preventDefault();
+      dx = base + mx;
+      const lim = W() * 0.9; dx = Math.max(-lim, Math.min(lim, dx));
+      el.style.transform = 'translateX(' + dx + 'px)';
+      sw.classList.toggle('armed-l', dx < -W() * 0.6);
+      sw.classList.toggle('armed-r', dx > W() * 0.6);
+      sw.classList.toggle('show-l', dx > 0);
+      sw.classList.toggle('show-r', dx < 0);
+    }, {passive:false});
+    const end = () => {
+      if (!sw || mode !== 'x') { sw = null; return; }
+      const s = sw, id = s.dataset.id; sw = null; suppress = true; setTimeout(() => { suppress = false; }, 80);
+      el.style.transition = ''; s.classList.remove('armed-l', 'armed-r');
+      if (dx < -W() * 0.6) { el.style.transform = 'translateX(-110%)'; setTimeout(() => { swOpen = null; noteAction('trash', id); }, 180); return; }
+      if (dx > W() * 0.6) { el.style.transform = ''; s.classList.remove('swiping', 'show-l'); swOpen = null; noteAction('tag', id); return; }
+      if (dx < -48) { el.style.transform = 'translateX(' + -REVEAL() + 'px)'; s.classList.add('open-l'); s.classList.remove('open-r', 'show-l'); swOpen = s; }
+      else if (dx > 48) { el.style.transform = 'translateX(' + REVEAL() + 'px)'; s.classList.add('open-r'); s.classList.remove('open-l', 'show-r'); swOpen = s; }
+      else { swOpen = s; closeSwipe(); }
+    };
+    list.addEventListener('touchend', end);
+    list.addEventListener('touchcancel', end);
+    list.addEventListener('click', e => {
+      if (suppress) { e.preventDefault(); e.stopPropagation(); return; }
+      const a = e.target.closest('[data-sw-act]');
+      if (a) { const id = a.closest('.sw').dataset.id; closeSwipe(); noteAction(a.dataset.swAct, id); return; }
+      if (swOpen) { closeSwipe(); return; }
+      const coll = e.target.closest('[data-coll]'); if (coll) { openColl(coll.dataset.coll); return; }
+      if (e.target.closest('#tidyBtn')) { openTidy(); return; }
+      const r = e.target.closest('[data-restore]');
+      if (r) { const n = findNote(r.dataset.restore); withUndo('Restored', () => { n.deletedAt = null; n.archived = false; }); return; }
+      const pg = e.target.closest('[data-purge]');
+      if (pg) { const id = pg.dataset.purge; withUndo('Deleted for good', () => { notes = notes.filter(n => n.id !== id); }); return; }
+      const et = e.target.closest('#emptyTrash');
+      if (et) {
+        if (!et.dataset.armed) { et.dataset.armed = '1'; et.textContent = 'Tap again to delete ' + plural(notes.filter(n => n.deletedAt).length, 'note') + ' for good'; setTimeout(() => { if (et.isConnected) { delete et.dataset.armed; et.textContent = 'Empty Trash'; } }, 3500); return; }
+        withUndo('Trash emptied', () => { notes = notes.filter(n => !n.deletedAt); }); return;
+      }
+      const c = e.target.closest('.card, .nrow'); if (c) openEditor(c.dataset.id);
+    }, true);
+    document.addEventListener('touchstart', e => { if (swOpen && !swOpen.contains(e.target)) closeSwipe(); }, {passive:true});
+  })();
+
+  // ---------- quick tag (swipe right) ----------
+  let qt = null;
+  const qtTags = tagEditor('qtTags', 'qtInput', () => qt);
+  function openQuickTag(id){
+    const n = findNote(id); if (!n) return;
+    qt = {id, tags:[...n.tags]};
+    $('qtLbl').textContent = 'Tag “' + (n.title || snippet(n) || 'Untitled').slice(0, 30) + '”';
+    renderQuickTag(); openSheet('qtSheet');
+  }
+  function renderQuickTag(){
+    qtTags.render();
+    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="--lc:hsl(' + hue(t) + ' 90% 62%)"><span class="sw"></span>' + esc(t) + '</button>').join('');
+  }
+  $('qtAll').addEventListener('click', e => { const b = e.target.closest('[data-qt]'); if (!b) return; const t = b.dataset.qt; qt.tags = qt.tags.includes(t) ? qt.tags.filter(x => x !== t) : [...qt.tags, t]; renderQuickTag(); });
+  function finishQuickTag(){
+    if (!qt) { closeSheet('qtSheet'); return; }
+    qtTags.flush();
+    const n = findNote(qt.id), tags = qt.tags; qt = null; closeSheet('qtSheet');
+    if (n && JSON.stringify(n.tags) !== JSON.stringify(tags)) withUndo('Tags updated', () => { n.tags = tags; n.updated = Date.now(); });
+  }
+  $('qtDone').onclick = finishQuickTag;
+  closers.qtSheet = finishQuickTag;
+
+  // ---------- tidy up ----------
+  const bodyKey = n => (n.title + '\n' + n.body).toLowerCase().replace(/\s+/g, ' ').trim();
+  function tidySuggestions(){
+    const live = shelf(), out = [], names = list => list.slice(0, 3).map(n => '“' + (n.title || snippet(n) || 'Untitled').slice(0, 32) + '”').join(', ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
+    const groups = new Map();
+    live.forEach(n => { const k = bodyKey(n); if (k.length >= 3) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); } });
+    const dups = [...groups.values()].filter(g => g.length > 1), extra = dups.reduce((k, g) => k + g.length - 1, 0);
+    if (dups.length) out.push({id:'dups', head:plural(extra, 'duplicate note'), detail:names(dups.map(g => g[0])), act:'Keep newest, delete the rest',
+      run(){ dups.forEach(g => g.slice().sort(byCreated).slice(1).forEach(n => { n.deletedAt = Date.now(); n.pinned = false; })); }});
+    const empty = live.filter(n => !n.title.trim() && n.body.trim().length < 3);
+    if (empty.length) out.push({id:'empty', head:plural(empty.length, 'empty note'), detail:'Nothing written in ' + (empty.length === 1 ? 'it' : 'them') + '.', act:'Delete',
+      run(){ empty.forEach(n => { n.deletedAt = Date.now(); }); }});
+    const untitled = live.filter(n => !n.title.trim() && n.body.trim().length >= 3);
+    if (untitled.length) out.push({id:'untitled', head:plural(untitled.length, 'note') + ' without a title', detail:names(untitled), act:'Use first line as title',
+      run(){ untitled.forEach(n => { const lines = n.body.split('\n'), i = lines.findIndex(l => l.trim()); n.title = lines[i].trim().replace(/^#+\s*/, '').slice(0, 80); n.body = lines.slice(i + 1).join('\n').trim(); n.updated = Date.now(); }); }});
+    const recipes = live.filter(n => !n.tags.includes('recipe') && looksLikeRecipe(n.body, n.tags));
+    if (recipes.length) out.push({id:'recipes', head:plural(recipes.length, 'recipe') + ' without the recipe tag', detail:names(recipes), act:'Tag as recipe',
+      run(){ recipes.forEach(n => n.tags.push('recipe')); }});
+    // Tags that are the same word: recipe / recipes, to-do / todo. Merge the less used into the more used.
+    const tc = countTags(live), used = new Map(tc), squash = t => t.replace(/[-_]/g, '');
+    const same = (a, b) => { const x = squash(a), y = squash(b); return x === y || x + 's' === y || x + 'es' === y || y + 's' === x || y + 'es' === x; };
+    const merges = [];
+    tc.forEach(([a]) => tc.forEach(([b]) => {
+      if (a === b || !same(a, b) || merges.some(m => m.from === a || m.from === b)) return;
+      const keepB = used.get(b) > used.get(a) || (used.get(b) === used.get(a) && b.length < a.length);
+      if (keepB) merges.push({from:a, to:b});
+    }));
+    if (merges.length) out.push({id:'merge', head:merges.length === 1 ? 'Two tags that look the same' : merges.length + ' pairs of tags that look the same', detail:merges.map(m => '#' + m.from + ' → #' + m.to).join(', '), act:'Merge',
+      run(){ merges.forEach(m => notes.forEach(n => { if (n.tags.includes(m.from)) n.tags = [...new Set(n.tags.map(t => t === m.from ? m.to : t))]; })); }});
+    const stale = live.filter(n => !n.pinned && !n.reminder && Date.now() - (n.updated || n.created) > 182 * D);
+    if (stale.length) out.push({id:'stale', head:plural(stale.length, 'note') + ' untouched for 6 months', detail:names(stale), act:'Archive',
+      run(){ stale.forEach(n => { n.archived = true; }); }});
+    const untagged = live.filter(n => !n.tags.length);
+    if (untagged.length >= 3) out.push({id:'untagged', head:plural(untagged.length, 'note') + ' without a tag', detail:'Tag them so they land in a collection.', act:'Show them', open:'untagged'});
+    return out;
+  }
+  function openTidy(){ renderTidy(); openSheet('tidySheet'); }
+  function renderTidy(){
+    const list = tidySuggestions();
+    $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns">' + esc(s.detail) + '</span></span>'
+      + '<button class="textbtn" type="button" data-tidy="' + s.id + '">' + esc(s.act) + '</button></div>').join('') + '</div>'
+      : '<div class="empty glass"><strong>All tidy</strong>No duplicates, empty notes or stray tags.</div>';
+  }
+  $('tidyBody').addEventListener('click', e => {
+    const b = e.target.closest('[data-tidy]'); if (!b) return;
+    const s = tidySuggestions().find(x => x.id === b.dataset.tidy); if (!s) return;
+    if (s.open) { closeSheet('tidySheet'); openColl(s.open); return; }
+    withUndo('Done: ' + s.act.toLowerCase(), s.run);
+    renderTidy();
+  });
 
   const toLocalInput = s => { const d = new Date(s); return new Date(d.getTime() - d.getTimezoneOffset()*6e4).toISOString().slice(0,16); };
   const noteTags = tagEditor('edTags', 'edTagInput', () => st.editing);
   function openEditor(id, pre){
     const base = id ? notes.find(n => n.id === id) : null;
     st.isNew = !base;
-    st.editing = base ? clone(base) : {id:'n'+Date.now().toString(36), title:'', body:'', tags:[...st.sel], color:'none', pinned:false, reminder:null, updated:Date.now()};
+    st.editing = base ? clone(base) : {id:'n'+Date.now().toString(36), title:'', body:'', tags: st.coll && st.coll.startsWith('tag:') ? [st.coll.slice(4)] : [], color:'none', pinned:false, reminder:null, created:Date.now(), updated:Date.now(), archived:false, deletedAt:null};
     if (!base && pre) { st.editing.title = pre.title || ''; st.editing.body = pre.body || ''; pre.tags.forEach(t => { if (!st.editing.tags.includes(t)) st.editing.tags.push(t); }); }
     $('edTitle').value = st.editing.title;
     $('edBody').value = st.editing.body;
@@ -1118,18 +1440,9 @@ svg.fs{fill:currentColor}
   });
   $('swatches').addEventListener('click', e => { const b = e.target.closest('[data-sw]'); if (b) { st.editing.color = b.dataset.sw; renderEditor(); } });
   $('edDelete').onclick = () => {
-    const i = notes.findIndex(n => n.id === st.editing.id), removed = notes[i];
-    notes.splice(i, 1); st.editing = null; save(); closeSheet('editor'); render();
-    toast('Note deleted', () => { notes.splice(i, 0, removed); save(); render(); });
+    const id = st.editing.id; st.editing = null; closeSheet('editor');
+    withUndo('Moved to Trash', () => { const n = notes.find(x => x.id === id); if (n) { n.deletedAt = Date.now(); n.pinned = false; } });
   };
-  $('chips').addEventListener('click', e => {
-    const b = e.target.closest('[data-chip]'); if (!b) return;
-    if (b.dataset.chip === 'all') { st.sel.clear(); st.remOnly = false; }
-    else if (b.dataset.chip === 'rem') st.remOnly = !st.remOnly;
-    else { const t = b.dataset.tag; st.sel.has(t) ? st.sel.delete(t) : st.sel.add(t); }
-    render();
-  });
-  $('list').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openEditor(c.dataset.id); });
   $('q').addEventListener('input', e => { st.q = e.target.value; render(); });
   $('qClear').onclick = () => { st.q = ''; $('q').value = ''; render(); $('q').focus(); };
   $('viewBtn').onclick = () => { st.view = st.view === 'grid' ? 'list' : 'grid'; try { localStorage.setItem(KEY+'-view', st.view); } catch(e){} render(); };
@@ -1454,7 +1767,7 @@ svg.fs{fill:currentColor}
       if (k === 'note') {
         const rem = str(d.reminder);
         notes.unshift({id:newId('n'), title:str(d.title), body:str(d.body), tags:tagsOf(d.tags), color:COLORS.includes(d.color) ? d.color : 'none',
-          pinned:false, reminder:rem && !isNaN(new Date(rem)) ? rem : null, updated:Date.now()});
+          pinned:false, reminder:rem && !isNaN(new Date(rem)) ? rem : null, created:Date.now(), updated:Date.now(), archived:false, deletedAt:null});
       } else {
         const l = lists.find(x => x.name.toLowerCase() === str(d.list).toLowerCase()) || lists[0];
         todos.push({id:newId('t'), list:l.id, title:str(d.title, 'Reminder') || 'Reminder', notes:str(d.notes),
@@ -1778,7 +2091,7 @@ svg.fs{fill:currentColor}
       const addL = data.lists.filter(l => okList(l) && !haveL.has(l.id));
       const addN = data.notes.filter(n => okNote(n) && !haveN.has(n.id));
       const addT = data.todos.filter(t => okTodo(t) && !haveT.has(t.id));
-      lists.push(...addL); notes.push(...addN); todos.push(...addT);
+      lists.push(...addL); notes.push(...addN); todos.push(...addT); fixNotes();
       const known = new Set(lists.map(l => l.id)); todos.forEach(t => { if (!known.has(t.list)) t.list = lists[0].id; });
       save(); render();
       toast('Restored ' + plural(addN.length, 'note') + ' and ' + plural(addT.length, 'reminder'));
@@ -1808,8 +2121,8 @@ svg.fs{fill:currentColor}
 
   // ---------- tags manager ----------
   function renderTagRows(){
-    const nc = new Map(countTags(notes)), tc = new Map(countTags(todos));
-    const all = countTags([...notes, ...todos]);
+    const nc = new Map(countTags(alive())), tc = new Map(countTags(todos));
+    const all = countTags([...alive(), ...todos]);
     $('tagRows').innerHTML = all.length ? all.map(([t], i) => {
       const parts = []; if (nc.get(t)) parts.push(plural(nc.get(t), 'note')); if (tc.get(t)) parts.push(plural(tc.get(t), 'reminder'));
       return '<div class="tagrow"><span class="grow"><input class="plain" id="tg'+i+'" value="'+esc(t)+'" data-old="'+esc(t)+'" aria-label="Rename tag '+esc(t)+'" style="font-weight:700"><span class="sub">'+parts.join(' · ')+'</span></span>'
@@ -1823,17 +2136,17 @@ svg.fs{fill:currentColor}
     const from = inp.dataset.old, to = normTag(inp.value);
     if (!to || to === from) { inp.value = from; return; }
     [...notes, ...todos].forEach(n => { if (n.tags.includes(from)) n.tags = [...new Set(n.tags.map(t => t === from ? to : t))]; });
-    if (st.sel.delete(from)) st.sel.add(to);
+    if (st.coll === 'tag:' + from) st.coll = 'tag:' + to;
     save(); render(); renderTagRows(); toast('Renamed #'+from+' to #'+to);
   });
   $('tagRows').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.old) e.target.blur(); });
   $('tagRows').addEventListener('click', e => {
     const f = e.target.closest('[data-filter]'), d = e.target.closest('[data-del]');
-    if (f) { st.sel = new Set([f.dataset.filter]); st.remOnly = false; closeSheet('tagsSheet'); setTab('notes'); }
+    if (f) { closeSheet('tagsSheet'); setTab('notes'); openColl('tag:' + f.dataset.filter); }
     if (d) {
       const t = d.dataset.del, before = new Map([...notes, ...todos].map(n => [n.id, [...n.tags]]));
       [...notes, ...todos].forEach(n => { n.tags = n.tags.filter(x => x !== t); });
-      st.sel.delete(t); save(); render(); renderTagRows();
+      if (st.coll === 'tag:' + t) st.coll = null; save(); render(); renderTagRows();
       toast('Deleted #'+t+'. Items kept.', () => {
         [...notes, ...todos].forEach(n => { if (before.has(n.id)) n.tags = before.get(n.id); }); save(); render(); renderTagRows();
       });

@@ -5,6 +5,17 @@ Mail and News. Free, no accounts, no server.
 
 - **Notes**: colour, pin, tags (type `#tag` anywhere), search (`#work budget`),
   and a "nudge" date shown on the card.
+- **Home**: pinned notes, then **Collections** (one tile per tag, plus
+  "No tag"), a short **Recent** list, and links to All notes, Nudges,
+  Archive, Trash and Tidy up. Inside a collection, notes are newest-created
+  first, grouped by month.
+- **Swipe a note** as in Mail: left shows Archive and Delete (all the way
+  left moves it to Trash); right shows Pin and Tag (all the way right opens
+  Tag). Undo in the message at the bottom.
+- **Trash** keeps deleted notes for 30 days, with Restore and Empty Trash.
+- **Tidy up** finds duplicates, empty notes, notes without a title, recipes
+  without the recipe tag, tags that are the same word (recipe / recipes),
+  notes untouched for 6 months, and untagged notes; one tap each, with Undo.
 - **Reminders**: lists, Today / Upcoming / Flagged / All, priority, flag, tags.
   Quick add understands `today`, `tomorrow` and `#tags`
   (`Call mom tomorrow #family`).
