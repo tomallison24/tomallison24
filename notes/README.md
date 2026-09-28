@@ -8,10 +8,17 @@ Mail and News. Free, no accounts, no server.
 - **Reminders**: lists, Today / Upcoming / Flagged / All, priority, flag, tags.
   Quick add understands `today`, `tomorrow` and `#tags`
   (`Call mom tomorrow #family`).
+- **Paste from Claude (or anywhere)**: copy a reply, tap the clipboard button
+  next to **+**. On Notes it becomes a note (the heading or first line is the
+  title, markdown is tidied, `#tags` kept, recipes tagged `recipe`). On
+  Reminders each line becomes a reminder in the chosen list. If the clipboard
+  can't be read, a box opens to paste into. Pasting a share link imports it.
 - **Share a copy**: a link with the note packed into the part after the `#`
   (browsers never send that part to a server), or a small `.json` file to
   save to iCloud Drive or Google Drive. The other person's app asks
   "Add this note?" and keeps its own copy; later edits don't sync.
+  On iPhone a Home Screen app keeps separate storage from Safari, so a link
+  opened in Safari offers to copy it for pasting into the Home Screen app.
 - **Backup**: the download button makes one `.json` file with everything.
   **Import** restores it, or opens a shared file. A banner appears when the
   last backup is more than 7 days old.
