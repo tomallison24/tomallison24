@@ -916,26 +916,26 @@ function failed(err) {
 }
 
 const ICON = {
-  bell: '<svg class="i s" width="12" height="12" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
-  more: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>',
-  block: '<svg class="i s" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
-  tag: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3.5 12.1V4.6a1 1 0 0 1 1-1h7.5a1 1 0 0 1 .7.3l7.7 7.7a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-7.7-7.7a1 1 0 0 1-.3-.7z"/><circle cx="8" cy="8" r="1.4"/></svg>',
-  mkt: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M3.5 10.5v3a1 1 0 0 0 1 1H7l8.5 4.5v-14L7 9.5H4.5a1 1 0 0 0-1 1z"/><path d="M7 14.5l1.3 4.4a.9.9 0 0 0 .9.6h1.3"/><path d="M19 10v4"/></svg>',
-  eye: '<svg class="i s" width="15" height="15" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-  label: '<svg class="i s" width="17" height="17" viewBox="0 0 24 24"><path d="M3.5 12.1V4.6a1 1 0 0 1 1-1h7.5a1 1 0 0 1 .7.3l7.7 7.7a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-7.7-7.7a1 1 0 0 1-.3-.7z"/><circle cx="8" cy="8" r="1.4"/></svg>',
-  back: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>',
-  chev: '<svg class="i s bold" width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  bin: '<svg class="i s" width="17" height="17" viewBox="0 0 24 24"><path d="M4 6.5h16"/><path d="M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1.7"/><path d="M6 6.5l.9 12.6a1.5 1.5 0 0 0 1.5 1.4h7.2a1.5 1.5 0 0 0 1.5-1.4L18 6.5"/><path d="M10 10.5v6M14 10.5v6"/></svg>',
-  reply: '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M9.5 6L4 11.5 9.5 17"/><path d="M4.5 11.5H14a6 6 0 0 1 6 6v1"/></svg>',
-  compose: '<svg class="i s" width="21" height="21" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>',
-  up: '<svg class="i s bold" width="20" height="20" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>',
-  flag: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M5.5 21V4"/><path d="M5.5 4.5h11.2a.6.6 0 0 1 .5.9L15.5 9l1.7 3.6a.6.6 0 0 1-.5.9H5.5z"/></svg>',
-  archive: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12.5h4"/></svg>',
-  trash: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M4 6.5h16"/><path d="M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1.7"/><path d="M6 6.5l.9 12.6a1.5 1.5 0 0 0 1.5 1.4h7.2a1.5 1.5 0 0 0 1.5-1.4L18 6.5"/><path d="M10 10.5v6M14 10.5v6"/></svg>',
-  clip: '<svg class="i s clip" width="13" height="13" viewBox="0 0 24 24"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.3-8.3a3.3 3.3 0 0 1 4.7 4.7l-8.2 8.2a1.7 1.7 0 0 1-2.4-2.4l7.4-7.4"/></svg>',
-  img: '<svg class="i s" width="18" height="18" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8.5 8.5"/></svg>',
+  bell: '<svg class="i s" width="12" height="12" viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg>',
+  more: '<svg class="i" width="20" height="20" viewBox="0 0 24 24"><circle cx="5.2" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="18.8" cy="12" r="2.2"/></svg>',
+  block: '<svg class="i s" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.8 5.8l12.4 12.4"/></svg>',
+  tag: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>',
+  mkt: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M3.2 10.3v3.4a2 2 0 0 0 2 2h1.9l7.7 4.1a1.3 1.3 0 0 0 1.9-1.1V5.3a1.3 1.3 0 0 0-1.9-1.1L7.1 8.3H5.2a2 2 0 0 0-2 2z"/><path d="M7.1 15.7l1.1 3.6a1.6 1.6 0 0 0 1.5 1.1h.4a1.3 1.3 0 0 0 1.2-1.7l-.6-1.9"/><path d="M19.4 9.4a3.8 3.8 0 0 1 0 5.2"/></svg>',
+  eye: '<svg class="i s" width="15" height="15" viewBox="0 0 24 24"><path d="M2.2 12c1.8-3.9 5.4-6.6 9.8-6.6s8 2.7 9.8 6.6c-1.8 3.9-5.4 6.6-9.8 6.6S4 15.9 2.2 12z"/><circle cx="12" cy="12" r="3.2"/></svg>',
+  label: '<svg class="i s" width="17" height="17" viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>',
+  back: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M19.8 12H4.6"/><path d="M10.6 5.6L4.8 11.3a1 1 0 0 0 0 1.4l5.8 5.7"/></svg>',
+  chev: '<svg class="i s bold" width="22" height="22" viewBox="0 0 24 24"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg>',
+  bin: '<svg class="i s" width="17" height="17" viewBox="0 0 24 24"><path d="M3.4 6.2h17.2"/><path d="M8.8 6.2V5.1a2 2 0 0 1 2-2h2.4a2 2 0 0 1 2 2v1.1"/><path d="M5.5 6.2l.8 12.2a2.8 2.8 0 0 0 2.8 2.6h5.8a2.8 2.8 0 0 0 2.8-2.6l.8-12.2"/><path d="M10 10.6v5.8M14 10.6v5.8"/></svg>',
+  reply: '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M9.6 5.2L4.2 10.6a1.3 1.3 0 0 0 0 1.8l5.4 5.4"/><path d="M4.6 11.5h8.9a6.9 6.9 0 0 1 6.9 6.9v.8"/></svg>',
+  compose: '<svg class="i s" width="21" height="21" viewBox="0 0 24 24"><path d="M11.5 3.8H7.6a3.8 3.8 0 0 0-3.8 3.8v8.8a3.8 3.8 0 0 0 3.8 3.8h8.8a3.8 3.8 0 0 0 3.8-3.8v-3.9"/><path d="M17.5 3.6a2.1 2.1 0 0 1 3 3l-7.4 7.4a2.4 2.4 0 0 1-1.1.6l-3 .8.8-3a2.4 2.4 0 0 1 .6-1.1z"/></svg>',
+  up: '<svg class="i s bold" width="20" height="20" viewBox="0 0 24 24"><path d="M12 19.4V4.8"/><path d="M5.8 10.6l5.5-5.5a1 1 0 0 1 1.4 0l5.5 5.5"/></svg>',
+  flag: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg>',
+  archive: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><rect x="2.8" y="3.4" width="18.4" height="5.4" rx="2.2"/><path d="M4.6 8.8v8.2a3.2 3.2 0 0 0 3.2 3.2h8.4a3.2 3.2 0 0 0 3.2-3.2V8.8"/><path d="M9.8 12.6h4.4"/></svg>',
+  trash: '<svg class="i s" width="20" height="20" viewBox="0 0 24 24"><path d="M3.4 6.2h17.2"/><path d="M8.8 6.2V5.1a2 2 0 0 1 2-2h2.4a2 2 0 0 1 2 2v1.1"/><path d="M5.5 6.2l.8 12.2a2.8 2.8 0 0 0 2.8 2.6h5.8a2.8 2.8 0 0 0 2.8-2.6l.8-12.2"/><path d="M10 10.6v5.8M14 10.6v5.8"/></svg>',
+  clip: '<svg class="i s clip" width="13" height="13" viewBox="0 0 24 24"><path d="M20.2 11.3l-7.7 7.7a5.3 5.3 0 0 1-7.5-7.5l8.1-8.1a3.5 3.5 0 0 1 5 5l-8 8a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3"/></svg>',
+  img: '<svg class="i s" width="18" height="18" viewBox="0 0 24 24"><rect x="2.8" y="3.8" width="18.4" height="16.4" rx="4"/><circle cx="8.8" cy="9.4" r="1.8"/><path d="M3.2 17.2l3.6-3.2a1.8 1.8 0 0 1 2.4 0l1.6 1.4"/><path d="M9.2 20l5.9-5.6a1.8 1.8 0 0 1 2.5 0l3.4 3.2"/></svg>',
   spin: '<svg class="i s spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
-  out: '<svg class="i s" width="13" height="13" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>',
+  out: '<svg class="i s" width="13" height="13" viewBox="0 0 24 24"><path d="M14 3.6h5.4a1 1 0 0 1 1 1V10"/><path d="M20 4l-8.6 8.6"/><path d="M18.4 13.8v3.4a3.2 3.2 0 0 1-3.2 3.2H6.8a3.2 3.2 0 0 1-3.2-3.2V8.8a3.2 3.2 0 0 1 3.2-3.2h3.4"/></svg>',
 };
 
 function listSkeleton(n = 6) {
@@ -997,11 +997,11 @@ function rowHTML(item, i, key) {
 // categories, your tags, then Marketing and the Tags page - one list in place
 // of a row of chips that ran off the side of the screen.
 const MENU_ICON = {
-  inbox: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3.5 13.5l2.2-7.4a1.5 1.5 0 0 1 1.4-1.1h9.8a1.5 1.5 0 0 1 1.4 1.1l2.2 7.4V18a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2z"/><path d="M3.5 13.5h4.8l1.2 2.2h5l1.2-2.2h4.8"/></svg>',
-  'cat:primary': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5a7 7 0 0 1 14 0"/></svg>',
-  'cat:promotions': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M6 18L18 6"/><circle cx="7.5" cy="7.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/></svg>',
-  'cat:updates': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.7v.1"/></svg>',
-  tick: '<svg class="i s bold" width="16" height="16" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  inbox: '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M3 13.6l2-6.6a2.8 2.8 0 0 1 2.7-2h8.6a2.8 2.8 0 0 1 2.7 2l2 6.6v3.4a3.2 3.2 0 0 1-3.2 3.2H6.2A3.2 3.2 0 0 1 3 17z"/><path d="M3.2 13.4h4.3a1.1 1.1 0 0 1 1 .6l.6 1.2a1.1 1.1 0 0 0 1 .6h3.8a1.1 1.1 0 0 0 1-.6l.6-1.2a1.1 1.1 0 0 1 1-.6h4.3"/></svg>',
+  'cat:primary': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="4"/><path d="M4.4 20a7.6 7.6 0 0 1 15.2 0"/></svg>',
+  'cat:promotions': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><path d="M5.6 18.4L18.4 5.6"/><circle cx="7.2" cy="7.2" r="2.4"/><circle cx="16.8" cy="16.8" r="2.4"/></svg>',
+  'cat:updates': '<svg class="i s" width="19" height="19" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.4"/><path d="M12 7.6v.1"/></svg>',
+  tick: '<svg class="i s bold" width="16" height="16" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
 };
 
 // What the title says: the mailbox or tag on screen.
