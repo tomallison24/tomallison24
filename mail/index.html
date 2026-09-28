@@ -976,7 +976,7 @@
   /* As in iOS Mail: no bar, just frosted-glass capsules floating over the
      message - Trash, Archive and Flag on the left, Reply and New on the right. */
   .rbar {
-    position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 3;
+    position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 21;   /* just above the message page */
     max-width: 708px; margin: 0 auto; padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
     display: flex; justify-content: space-between; align-items: center; gap: 10px; pointer-events: none;
   }
@@ -987,6 +987,9 @@
     box-shadow: inset 0 1px 0 var(--hi), 0 10px 30px var(--lift-strong);
     animation: pop .4s var(--ease) both;
   }
+  .rbar { transition: opacity .2s ease; }
+  .rbar.leaving { opacity: 0; pointer-events: none; }
+  .rbar.leaving .rgroup { pointer-events: none; }
   .rb {
     width: 50px; height: 44px; flex: none; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
     color: var(--accent); transition: transform .18s var(--ease), background .2s;
@@ -1110,6 +1113,7 @@
   <div class="foot" id="foot"></div>
 </main>
 <div id="reader" class="hide" role="dialog" aria-label="Message"></div>
+<div id="rbar" class="rbar hide" role="toolbar" aria-label="Message actions"></div>
 <div id="compose" class="hide" role="dialog" aria-label="New message"></div>
 <button id="fab" class="fab hide" data-act="compose-new" aria-label="New message">
   <svg class="i s" width="28" height="28" viewBox="0 0 24 24"><path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5"/><path d="M17.8 3.7a1.9 1.9 0 0 1 2.7 2.7l-8.1 8.1-3.4 1 1-3.4z"/></svg>
