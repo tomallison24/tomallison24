@@ -144,6 +144,14 @@ the details), with **its own Sheet and script**:
    **Connect and sync**. Then **Copy setup link** and open it on the other
    phone with the clipboard button.
 
+**"The secret code doesn't match"** when you're sure it does: (1) Apps
+Script runs the *deployed* copy, so after changing `SECRET` choose **Deploy →
+Manage deployments → ✏️ → Version: New version → Deploy**; (2) make sure the
+link is the Travel Sheet's, not Notes'; (3) make sure the iPhone didn't fill
+in the Notes code from its saved passwords. Spaces at the ends and the
+phone's curly quotes and long dashes don't count against you, and Travel
+says so when it can tell the link is Notes' or the script is an old copy.
+
 The Sheet gets a readable **Bookings** tab (soonest first) and hidden
 `_bookings`, `_trips` and `_deleted` tabs the app reads back. Newest change
 wins. Each phone reads its own Gmail; the same booking found by both is

@@ -202,6 +202,25 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
+// Google Sheet: a "wrong secret" says which link it was.
+await step('a Notes Sheet link is recognised, and an old Travel script is named', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  let app = 'allison-notes-sync';
+  await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
+    ? route.fulfill({ json: { ok: false, error: 'wrong-secret' } })
+    : route.fulfill({ json: { ok: true, app, v: 1 } }));
+  await page.goto(BASE + '/travel/');
+  await page.click('#setBtn'); await page.click('#stSheet');
+  await page.fill('#syUrl', 'https://script.google.com/macros/s/abc/exec'); await page.fill('#sySecret', 'maple-otter');
+  await page.click('#syConnect');
+  await page.waitForFunction(() => /Notes Sheet/.test(document.getElementById('syStatus').textContent));
+  app = 'allison-travel-sync';
+  await page.click('#syConnect');
+  await page.waitForFunction(() => /old copy of the script/.test(document.getElementById('syStatus').textContent));
+  await ctx.close();
+});
+
 // Without the server function (GitHub Pages): no lookups, a clear message.
 await step('without the flight status server, it says so', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });

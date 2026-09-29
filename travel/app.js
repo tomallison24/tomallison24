@@ -1110,13 +1110,14 @@ if (window.top !== window.self) {
   let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   const SYNC_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the SECRET in the script.',
+    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes code.',
+    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
     'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
     'busy': 'The Sheet was busy. Trying again shortly.',
     'bad-request': 'The Sheet didn’t understand the request.',
     'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
     'not-json': 'That link didn’t answer like the Travel script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That link is a different app’s Sheet (Notes?). Travel needs its own Sheet and script.',
+    'wrong-app': 'That’s the Notes Sheet’s link. Travel needs the web app link from the AllisonOS - Travel Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
   };
   function saveSyncCfg() {
     if (syncCfg) ls.set(K.sync, JSON.stringify(syncCfg)); else ls.del(K.sync);
@@ -1159,6 +1160,7 @@ if (window.top !== window.self) {
       } catch { throw new Error('network'); }
       try { res = await r.json(); } catch { throw new Error('not-json'); }
       if (res && res.ok && res.app && res.app !== 'allison-travel-sync') throw new Error('wrong-app');
+      if (res && res.error === 'wrong-secret' && res.app !== 'allison-travel-sync') throw new Error(await whichScript(syncCfg.url));
       if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
@@ -1172,6 +1174,19 @@ if (window.top !== window.self) {
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
+  }
+  // A "wrong secret" from a script that doesn't say it's Travel's: ask the
+  // link which app it belongs to (every script answers a plain GET with its
+  // name). Notes' means the wrong link; Travel's means the deployed copy is
+  // older than this change, which added the name to that answer.
+  async function whichScript(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+      const d = await r.json();
+      if (d && d.app && d.app !== 'allison-travel-sync') return 'wrong-app';
+      if (d && d.app === 'allison-travel-sync') return 'old-script';
+    } catch {}
+    return 'wrong-secret';
   }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
   function renderSyncStatus() {
