@@ -1,0 +1,14 @@
+{
+  "name": "Podcasts",
+  "short_name": "Podcasts",
+  "description": "Follow podcasts and play audio and video episodes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08080B",
+  "theme_color": "#08080B",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

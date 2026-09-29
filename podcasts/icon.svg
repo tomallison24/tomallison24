@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Home-screen icon: a signal on its own colour, laid out like News and Notes. Full-bleed square: iOS rounds the corners itself. -->
+  <defs>
+    <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#FF7AAE"/>
+      <stop offset="0.5" stop-color="#C04BF2"/>
+      <stop offset="1" stop-color="#6A35E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-width="56">
+    <path d="M358 648a220 220 0 1 1 308 0"/>
+    <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+  </g>
+  <circle cx="512" cy="492" r="86" fill="#FFFFFF"/>
+  <rect x="478" y="600" width="68" height="236" rx="34" fill="#FFFFFF"/>
+</svg>
