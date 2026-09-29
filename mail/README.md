@@ -26,11 +26,16 @@ days you never open the app — but only once its Google credentials are set up
   **Promotions**, **Updates** — the inbox as Gmail sorted it); your tags;
   **Marketing**; and **Manage Tags**. The one you're on is ticked, and the
   title changes to match. Tap outside it to close it.
+- **Home** (the house, left of the magnifier) is on every page and goes
+  straight back to the inbox as the app opens: All mail, no tag, no search,
+  at the top. It hides while you're selecting, as search does.
+- A **long title** (a long tag name, or Marketing on a smaller phone) steps
+  down a size or two to fit beside the buttons before it's cut short.
 - **Pull the list down** from the top: a short pull shows the search bar, a
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
 - The header **stays at the top** as you scroll: the large title shrinks to a
-  compact one on a rounded, see-through Liquid Glass bar, with the mailbox menu, search, **Edit** and
+  compact one on a rounded, see-through Liquid Glass bar, with the mailbox menu, Home, search, **Edit** and
   Settings still to hand. (Tapping the iPhone's status bar, at the very top,
   scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.

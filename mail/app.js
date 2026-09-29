@@ -1534,6 +1534,7 @@ function renderChrome() {
   const searching = !!(state.showSearch || state.search);
   $('#search').classList.toggle('hide', !main || !!sel || !searching);
   $('#find').classList.toggle('hide', !main || !!sel || searching || state.view === 'rules');
+  $('#home').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
   $('#edit').classList.toggle('hide', !listView || (!items.length && !sel));
@@ -1542,6 +1543,7 @@ function renderChrome() {
   const all = sel && items.length && items.every(it => sel.has(it.id));
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
+  fitTitle();
   $('#boxbtn').disabled = !main || !!sel;
   if ($('#boxbtn').disabled) closeBoxMenu(true);
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
@@ -3348,6 +3350,41 @@ function clearSearch(reload = true) {
   if (reload) go();
 }
 
+// The large title steps down a size or two when it wouldn't fit beside the
+// buttons (a long tag name, Marketing on a small phone), before it is cut off.
+function fitTitle() {
+  const h1 = $('header h1'), t = $('#title');
+  const was = h1.classList.contains('fit2') ? 'fit2' : h1.classList.contains('fit1') ? 'fit1' : '';
+  h1.style.transition = 'none';                    // measure the sizes themselves, not a step of the animation
+  h1.classList.remove('fit1', 'fit2');
+  let fit = '';
+  if (!document.body.classList.contains('scrolled')) {
+    for (const c of ['fit1', 'fit2']) {
+      if (t.scrollWidth <= t.clientWidth + 1) break;
+      h1.classList.remove('fit1'); h1.classList.add(c); fit = c;
+    }
+  }
+  h1.classList.remove('fit1', 'fit2');
+  if (was) h1.classList.add(was);
+  void h1.offsetWidth;
+  h1.style.transition = '';
+  h1.classList.remove('fit1', 'fit2');
+  if (fit) h1.classList.add(fit);
+}
+
+// Home: the inbox as the app opens - All, no tag, no search, at the top -
+// from any page.
+function goHome() {
+  const away = state.view !== 'inbox';
+  closeBoxMenu(true);
+  screen.classList.toggle('back', away);
+  state.view = 'inbox'; state.tag = null; state.unread = false; state.showSearch = false;
+  clearSearch(false);
+  $('#q').blur();
+  go();
+  window.scrollTo({ top: 0, behavior: reduced || away ? 'auto' : 'smooth' });
+}
+
 // Fetches what's on screen afresh (pull to refresh).
 async function refresh() {
   await dueReminders().catch(() => 0);
@@ -3779,6 +3816,7 @@ document.addEventListener('click', async e => {
       if (notifyMode()) await turnOffNotifications();
       ls.del(K.pushUrl);
       return render();
+    case 'home': return goHome();
     case 'box-menu': return boxMenuOpen() ? closeBoxMenu() : openBoxMenu();
     case 'box-close': return closeBoxMenu();
     case 'box-view': {
