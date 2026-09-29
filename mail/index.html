@@ -722,6 +722,9 @@
   .textbtn:active { transform: scale(0.93); }
   #selall { font-weight: 500; }
   #edit { color: var(--icon-text); }
+  /* an On/Off switch (Tidy, auto-tags): filled when on, so its state reads at a glance */
+  .textbtn[data-act$="-toggle"] { min-width: 58px; }
+  .textbtn[data-act$="-toggle"][aria-pressed="true"] { color: #fff; background: #0066CC; border-color: transparent; }   /* 5.6:1; the lighter accent blue is under 4.5:1 */
   /* no text selection or iOS callout on a long press */
   ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .check {
