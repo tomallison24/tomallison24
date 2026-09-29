@@ -294,6 +294,8 @@
   body.scrolled header { --hh: 40px; margin-bottom: 14px; padding-bottom: 6px; padding-left: 12px; padding-right: 8px; }
   body.scrolled header::before { opacity: 1; transform: none; }
   body.scrolled header::after { opacity: 1; }
+  header h1.fit1 { font-size: 28px; }       /* a long title steps down before it would be cut off */
+  header h1.fit2 { font-size: 24px; }
   body.scrolled header h1 { font-size: 21px; letter-spacing: -0.02em; }
   body.scrolled header .sub { opacity: 0; max-height: 0; margin-top: 0; }
   body.scrolled .boxbtn svg { width: 18px; height: 18px; margin-top: 2px; }
@@ -722,6 +724,9 @@
   .textbtn:active { transform: scale(0.93); }
   #selall { font-weight: 500; }
   #edit { color: var(--icon-text); }
+  /* an On/Off switch (Tidy, auto-tags): filled when on, so its state reads at a glance */
+  .textbtn[data-act$="-toggle"] { min-width: 58px; }
+  .textbtn[data-act$="-toggle"][aria-pressed="true"] { color: #fff; background: #0066CC; border-color: transparent; }   /* 5.6:1; the lighter accent blue is under 4.5:1 */
   /* no text selection or iOS callout on a long press */
   ul.list > li { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .check {
@@ -1120,6 +1125,7 @@
   <header>
     <h1><button class="boxbtn" id="boxbtn" data-act="box-menu" aria-haspopup="menu" aria-expanded="false" disabled><span id="title">Mail</span><svg class="i s bold" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.8 9.2l5.5 5.6a1 1 0 0 0 1.4 0l5.5-5.6"/></svg></button><span class="sub" id="sub">&nbsp;</span></h1>
     <button class="textbtn hide" id="selall">Select All</button>
+    <button class="iconbtn hide" id="home" data-act="home" aria-label="Back to the inbox"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M3.8 11.2 12 4.2l8.2 7"/><path d="M6 9.6v8.9a1.5 1.5 0 0 0 1.5 1.5h2.9v-5.1a1 1 0 0 1 1-1h1.2a1 1 0 0 1 1 1V20h2.9a1.5 1.5 0 0 0 1.5-1.5V9.6"/></svg></button>
     <button class="iconbtn hide" id="find" aria-label="Search"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg></button>
     <button class="textbtn hide" id="edit">Edit</button>
     <button class="iconbtn hide" id="gear" aria-label="Settings">

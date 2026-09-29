@@ -44,7 +44,7 @@ if (window.top !== window.self) {
   const KEY = 'allison-travel-v1';
   const K = {
     token: 'travel.token', state: 'travel.state', silent: 'travel.silent', silentFail: 'travel.silentFail', lastAuth: 'travel.lastAuth', hint: 'travel.hint', me: 'travel.me',
-    seen: KEY + '-seen', lastScan: KEY + '-scan', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
+    seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
   };
   const FIRST_SCAN = 'newer_than:1y';
@@ -56,7 +56,10 @@ if (window.top !== window.self) {
     'britishairways.com', 'virginatlantic.com', 'marriott.com', 'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com'];
   const SUBJECTS = ['confirmation', 'confirmed', 'itinerary', 'reservation', 'booking', 'eticket', '"e-ticket"', 'receipt', '"your trip"',
     '"your flight"', '"your stay"', '"check in"', 'cancelled', 'canceled', 'cancellation'];
-  const QUERY = '-in:chats -in:spam -in:trash -category:promotions {' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
+  // Plus anything Mail's Travel auto-tag has labelled (rides, Hopper, gate and
+  // delay notices): Gmail keeps that label up to date as mail arrives.
+  const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
+  const QUERY_V = '2';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
 
   const I = {
     flight: '<svg viewBox="0 0 24 24"><path d="M3.2 13.6l5.4 1.3L6 19.6l1.9.5 4.4-4.3 5.6 1.4a2 2 0 0 0 2.4-1.5v0a2 2 0 0 0-1.4-2.4l-5.6-1.4-1.6-6-1.9-.5-.4 5.4-3.1-.8-1.5-2-1.4-.4.5 3.5z"/></svg>',
@@ -188,13 +191,19 @@ if (window.top !== window.self) {
   // Where people usually fly from: the most common first departure of a trip.
   let homeAirport = '';
   function groupTrips() {
-    const list = alive().sort((a, b) => startOf(a).localeCompare(startOf(b)));
+    const list = alive().filter(b => !b.ride).sort((a, b) => startOf(a).localeCompare(startOf(b)));
     const groups = [];
     let cur = null;
     for (const b of list) {
       const s = startOf(b), e = endOf(b);
       if (cur && (dOf(s) - dOf(cur.end)) / D <= 1) { cur.items.push(b); if (e > cur.end) cur.end = e; }
       else { cur = { items: [b], start: s, end: e }; groups.push(cur); }
+    }
+    // An Uber or Lyft ride joins the trip it was taken on (a day either side,
+    // for the ride to the airport); a ride at home isn't a trip, so it isn't shown.
+    for (const r of alive().filter(b => b.ride)) {
+      const t = +dOf(startOf(r)), g = groups.find(g => t >= +dOf(g.start) - D && t <= +dOf(g.end) + D);
+      if (g) g.items.push(r);
     }
     const origins = {};
     groups.forEach(g => { const f = g.items.find(b => b.type === 'flight' && b.from); if (f) origins[f.from] = (origins[f.from] || 0) + 1; });
@@ -363,7 +372,7 @@ if (window.top !== window.self) {
   }
   function heroHTML(groups) {
     const now = Date.now();
-    const soon = alive().filter(b => b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
+    const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
     const flightsIn = d => soon.filter(f => f.type === 'flight' && (f.dep || '').slice(0, 10) === d && startT(f) > now - 30 * 6e4);
     // On the day you fly in, the flight comes before the hotel check-in.
     const key = b => b.type === 'hotel' && startT(b) > now && flightsIn(b.checkIn).length ? Math.max(startT(b), ...flightsIn(b.checkIn).map(endT)) + 1 : startT(b);
@@ -479,7 +488,7 @@ if (window.top !== window.self) {
     } else { t = b.title || 'Booking'; s = b.place || ''; }
     const meta = [statusPill(b), b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
     return '<button class="ev ' + b.type + cx + '" type="button" data-bk="' + esc(b.id) + '">'
-      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(fmtDay(at)) + '</small>' : '') + '</span><span class="ic">' + (I[b.type] || I.other) + '</span>'
+      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(fmtDay(at)) + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
       + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
   function tripById(id) { return groupTrips().find(g => g.id === id || g.items.some(b => b.id === id)); }
@@ -541,8 +550,7 @@ if (window.top !== window.self) {
   $('tpBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'tpName') e.target.blur(); });
   $('tpCal').onclick = async () => {
     const g = tripById(st.trip); if (!g) return;
-    const r = await shareOut(new File([ics(g.live)], fileName(g.name) + '.ics', { type: 'text/calendar' }), g.name);
-    if (r === 'downloaded') toast('Calendar file saved. Open it to add the trip to your calendar.');
+    await addToCalendar(ics(g.live), g.name, 'the trip');
   };
 
   // ---------------------------------------------------------------------
@@ -640,7 +648,7 @@ if (window.top !== window.self) {
       renderBooking(); toast('Thanks. Marked as checked.'); return;
     }
     if (e.target.closest('#bkCx')) { b.status = b.status === 'cancelled' ? 'confirmed' : 'cancelled'; renderBooking(); return; }
-    if (e.target.closest('#bkCal')) { readFields(); const r = await shareOut(new File([ics([b])], fileName(titleOf(b)) + '.ics', { type: 'text/calendar' }), titleOf(b)); if (r === 'downloaded') toast('Calendar file saved. Open it to add it to your calendar.'); return; }
+    if (e.target.closest('#bkCal')) { readFields(); await addToCalendar(ics([b]), titleOf(b), 'it'); return; }
     if (e.target.closest('#bkLiveGo')) { refreshLive(b, true).then(renderLiveBox); renderLiveBox(true); return; }
     if (e.target.closest('#bkDel')) {
       const del = $('bkDel');
@@ -702,7 +710,8 @@ if (window.top !== window.self) {
   // Merge a booking found in an email
   // ---------------------------------------------------------------------
   const INFO_KEYS = ['conf', 'traveller', 'airline', 'airlineCode', 'flightNo', 'from', 'fromName', 'to', 'toName', 'dep', 'depIso', 'arr', 'arrIso', 'terminal', 'gate', 'seat',
-    'name', 'address', 'city', 'phone', 'checkIn', 'checkInTime', 'checkOut', 'checkOutTime', 'company', 'carClass', 'pickupPlace', 'pickup', 'pickupIso', 'dropPlace', 'dropoff', 'dropoffIso'];
+    'name', 'address', 'city', 'phone', 'checkIn', 'checkInTime', 'checkOut', 'checkOutTime', 'company', 'carClass', 'pickupPlace', 'pickup', 'pickupIso', 'dropPlace', 'dropoff', 'dropoffIso',
+    'title', 'place', 'start', 'end'];
   const num = n => String(n || '').replace(/^0+(?=\d)/, '');
   const day = b => String(b.dep || '').slice(0, 10);
   const sameFlight = (a, b) => a.type === 'flight' && b.type === 'flight' && a.airlineCode === b.airlineCode && num(a.flightNo) === num(b.flightNo) && day(a) === day(b);
@@ -847,7 +856,7 @@ if (window.top !== window.self) {
     st.scanning = true; scanErr = ''; render();
     busyPill('Reading Gmail');
     const startedAt = Date.now();
-    const last = +ls.get(K.lastScan, 0);
+    const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
     let added = 0, changed = 0, cancelled = 0, read = 0;
     try {
@@ -875,7 +884,7 @@ if (window.top !== window.self) {
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
       });
-      ls.set(K.lastScan, String(startedAt));
+      ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V);
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
@@ -896,6 +905,8 @@ if (window.top !== window.self) {
     }
   }
   $('scanBtn').onclick = () => scan({ loud: true });
+  // Due every half hour, and straight away once the search has widened.
+  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Live flight status (travel/api/flight, a Cloudflare Pages Function)
@@ -982,8 +993,26 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
-  // Calendar files
+  // Calendar files, and the Family calendar
   // ---------------------------------------------------------------------
+  // Where the site is on Cloudflare, the Calendar app's function puts the
+  // events straight into the iCloud Family calendar (calendar/README.md);
+  // anywhere else, or if that fails, a calendar file as before.
+  const CAL_API = new URL('../calendar/api/', location.href).href;
+  let calAvail = null;
+  async function addToCalendar(text, title, what) {
+    if (calAvail !== false) {
+      try {
+        const r = await fetch(CAL_API + 'import', { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
+        let d = null; try { d = await r.json(); } catch {}
+        if (r.ok && d && d.ok) { calAvail = true; toast('Added ' + what + ' to the ' + (d.calendar && d.calendar.name || 'Family') + ' calendar.'); return; }
+        if (r.status === 404 || (d && d.error === 'no-account')) calAvail = false;
+        else if (d && d.error) toast('The Family calendar couldn’t take it (' + d.error + '). Saving a calendar file instead.');
+      } catch {}
+    }
+    const r = await shareOut(new File([text], fileName(title) + '.ics', { type: 'text/calendar' }), title);
+    if (r === 'downloaded') toast('Calendar file saved. Open it to add ' + what + ' to your calendar.');
+  }
   const fileName = s => (s || 'trip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'trip';
   function ics(list) {
     const e2 = v => String(v || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
@@ -1273,7 +1302,7 @@ if (window.top !== window.self) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
-    if (getToken() && Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4) scan();
+    if (getToken() && scanDue()) scan();
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
   });
@@ -1291,7 +1320,7 @@ if (window.top !== window.self) {
     else toast('Gmail needs one tap to sign in again: Settings → Connect Gmail.', null, 6000);
   }
   // Read Gmail on open: always after a sign-in, else if it's been a while.
-  if (getToken() && (back && back.ok || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4)) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
+  if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
