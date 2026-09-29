@@ -1047,16 +1047,16 @@ async function undoTidy(back) {
   catch (err) { failed(err); }
 }
 
+let showKeeps = false;                // Settings: the always-kept list, folded away until asked for
 function tidyHTML() {
-  const last = Number(ls.get(K.tidied, 0));
+  const last = Number(ls.get(K.tidied, 0)), keeps = tidyKeeps(), on = tidyOn();
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><span>Tidy old unread mail</span><span>' + (tidyOn() ? 'On' + (last ? ' · ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') : '') : 'Off') + '</span></div>' +
-    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Banks, alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
-    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button>' +
-      (tidyOn() ? '<button class="textbtn" data-act="tidy-off">Turn off</button>' : '') +
-      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
-    (tidyKeeps().length ? '<div class="field"><span>Always kept</span><span>' + tidyKeeps().length + '</span></div>' +
-      tidyKeeps().map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '');
+    '<div class="field"><span>Tidy old unread mail</span><button class="textbtn" data-act="tidy-toggle" aria-pressed="' + on + '">' + (on ? 'On' : 'Off') + '</button></div>' +
+    '<p class="note">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger. Banks, alerts, receipts and people always stay.' +
+      (on && last ? ' Last run ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') + '.' : '') + '</p>' +
+    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button><button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
+    (keeps.length ? '<div class="field"><span>Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
+      (showKeeps ? keeps.map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '');
 }
 
 // The preview: what would go, grouped by sender, and what is kept and why.
@@ -3558,6 +3558,13 @@ document.addEventListener('click', async e => {
     case 'tidy-now': return runTidy(false);
     case 'tidy-on': return runTidy(true);
     case 'tidy-off': ls.del(K.tidy); toast('Tidy is off'); return render();
+    case 'tidy-toggle':
+      if (tidyOn()) { ls.del(K.tidy); toast('Tidy is off'); return render(); }
+      ls.set(K.tidy, 'on'); ls.del(K.tidied);     // due now: the first run starts in the background, gently
+      toast('Tidy is on — it works through old mail in the background, a little each day', { ms: 5000 });
+      render();
+      return tidyDaily().catch(() => {});
+    case 'tidy-keeps': showKeeps = !showKeeps; return render();
     case 'tidy-see':
       state.view = 'inbox'; state.tag = null;
       state.search = 'label:' + TIDY_LABEL; state.showSearch = true;
