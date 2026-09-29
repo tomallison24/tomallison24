@@ -358,6 +358,43 @@ on a pull to refresh). The daily GitHub job does the same once it has its
 credentials; without them, a reminder waits until you next open the app. The
 labels are the app's own bookkeeping and never show up as tags.
 
+## Tidy
+
+**Settings → Tidy old unread mail**. Unread mail that has sat in the inbox
+for **60 days** is archived under a **Tidied** label, but only when both of
+these are true:
+
+- **It looks automated.** It is a mailing list (it carries `List-Unsubscribe`,
+  `List-Id` or `Precedence: bulk`), or Gmail filed it under Promotions,
+  Updates, Social or Forums, or it comes from a no-reply-style address.
+- **It comes from a stranger.** You have never written to that address. For a
+  business, "that address" means its whole domain, so writing to one person at
+  a school counts for all of its staff. Personal addresses (Gmail, iCloud,
+  Outlook and so on) are matched one by one.
+
+**Automated mail that is yours always stays.** That covers alerts, receipts,
+statements, bills and payments, orders and deliveries, bookings, sign-in codes
+and security notices, account and policy changes, and health messages. These
+are recognised from the subject ("receipt", "statement", "sign-in", "health"
+and so on) or the sender (`alerts@`, `billing@`, `mychart@`, a `care.` or
+`ealerts.` domain, and anything from a `.gov` or `.edu` address). Gmail's
+Purchases and Reservations mail is left out too. When in doubt, it is kept: a
+promotion that happens to mention an "order" stays in the inbox.
+
+It never touches Flagged, Important or tagged mail (tags, reminders,
+Marketing), anything newer than 60 days, or any conversation you have replied
+in.
+
+**Preview** shows what would go, grouped by sender with the reason, and what is
+kept and why. Nothing changes until you tap **Tidy now**, or **Tidy now, and
+every day**. When it is on, it runs once a day as the app opens.
+
+Tidied mail is **archived, not deleted**. It stays unread and searchable,
+**Undo** puts back a whole run, **See tidied mail** lists it, and an opened
+tidied email has an **Inbox** button. Whether you have written to someone is
+looked up with a one-result search of your Sent mail, and is only remembered
+until the app closes.
+
 ## The unread count on the icon
 
 **Settings → Unread count on the app icon**. The count is Gmail's own —

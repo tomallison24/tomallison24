@@ -409,7 +409,7 @@
   .who .dot.fade { animation: none; }
   .who .dot.fade.go { animation: dotOut .55s var(--ease) forwards; }
   @keyframes dotOut { 60% { transform: scale(1.4); opacity: .5; } to { transform: scale(0); opacity: 0; width: 0; margin-right: -7px; } }
-  .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; align-self: center; box-shadow: 0 0 10px rgba(10,132,255,0.8); animation: breathe 2.6s ease-in-out infinite; }
+  .who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--icon); flex: none; align-self: center; box-shadow: 0 0 10px color-mix(in srgb, var(--icon) 75%, transparent); animation: breathe 2.6s ease-in-out infinite; }
   .subj { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .snip { font-size: 13px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
@@ -890,8 +890,8 @@
   }
   .seg button[aria-checked="true"] { color: var(--text); }
   .seg button:active { transform: scale(0.95); }
-  .seg .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .55; transition: opacity .25s, box-shadow .25s; }
-  .seg.on .udot { opacity: 1; box-shadow: 0 0 8px rgba(10,132,255,0.8); }
+  .seg .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--icon); opacity: .55; transition: opacity .25s, box-shadow .25s; }
+  .seg.on .udot { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, var(--icon) 75%, transparent); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .seg { background: var(--bar-solid); }
   }
@@ -1078,6 +1078,17 @@
   }
   /* Settings: what to be notified about */
   .notify-modes { display: flex; flex-direction: column; gap: 8px; }
+  /* the Tidy preview */
+  .tidylist { list-style: none; margin: 0; padding: 0; max-height: 38vh; overflow-y: auto; border-radius: 16px; border: 1px solid var(--hair); }
+  .tidylist li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--hair-2); }
+  .tidylist li:first-child { border-top: 0; }
+  .tidylist .tw { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .tidylist .tw b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tidylist .tw small { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tidylist .tn { font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tidylist .tk { flex: none; font-size: 11px; color: var(--icon-text); }
+  .tidylist.keeps { max-height: 22vh; }
+  .tidyh { margin: 4px 0 -4px; font-size: 12px; font-weight: 600; color: var(--faint); letter-spacing: .04em; text-transform: uppercase; }
   .notify-modes .textbtn { height: auto; min-height: 40px; padding: 9px 14px; text-align: left; font-weight: 500; color: var(--text); }
   .notify-modes .textbtn[aria-checked="true"] { color: var(--sel-ink, var(--accent)); font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--accent); }
 
