@@ -113,7 +113,7 @@ for (const scheme of ['light', 'dark']) {
   await page.goto(BASE + '/travel/');
 
   await step(scheme + ': reads Gmail and finds the bookings', async () => {
-    await page.waitForFunction(() => window.__travel && window.__travel.bookings.length >= 5, null, { timeout: 8000 });
+    await page.waitForFunction(() => window.__travel && window.__travel.bookings.length >= 7, null, { timeout: 8000 });
     const b = await page.evaluate(() => window.__travel.bookings.map(x => ({ type: x.type, id: x.id, guess: x.guess, flightNo: x.flightNo, name: x.name, company: x.company })));
     assert.equal(b.filter(x => x.type === 'flight').length, 3, JSON.stringify(b));
     assert.equal(b.filter(x => x.type === 'hotel').length, 1);
