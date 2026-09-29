@@ -11,6 +11,8 @@
 //   POST   /calendar/api/import                     .ics text with one or more VEVENTs (Travel, Notes):
 //                                                   each becomes its own file named after its UID.
 //   POST   /calendar/api/forget                     forget where the calendar is, look it up again.
+//   GET    /calendar/api/diagnose                   the three lookups, step by step, with numbers and
+//                                                   long ids masked, for when the calendar isn't found.
 //
 // A browser can't talk to iCloud's CalDAV server itself (it refuses pages
 // from other sites, and the password would have to live on the phone), so
@@ -58,6 +60,12 @@ export async function onRequest(ctx) {
   if (!configured) return reply({ error: 'no-account' }, 503);
   try {
     if (route === 'forget' && method === 'POST') { await caches.default.delete(discoveryKey(acct)); return reply({ ok: true }); }
+    if (route === 'diagnose' && method === 'GET') {
+      const trace = [];
+      let found = null, failed = null;
+      try { found = await findCalendar(acct, trace); } catch (e) { failed = code(e); }
+      return reply({ ok: true, found: found ? { name: found.name, color: found.color } : null, failed, trace });
+    }
     const cal = await discover(acct);
     if (route === 'events' && method === 'GET') return reply(await listEvents(cal, acct, q.get('start'), q.get('end')));
     if (route === 'event' && method === 'PUT') return reply(await putEvent(cal, acct, q.get('name'), await readBody(request), request.headers.get('If-Match'), q.get('overwrite') === '1'));
@@ -132,17 +140,24 @@ async function discover(acct) {
   await cache.put(key, new Response(JSON.stringify(cal), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + DISCOVERY_S } }));
   return cal;
 }
-async function findCalendar(acct) {
+// Numbers and long ids replaced, so a trace can be read without giving
+// away the account's ids.
+const mask = s => String(s == null ? '' : s).replace(/[0-9A-Fa-f]{8,}/g, '…').replace(/\d{3,}/g, '#').slice(0, 2500);
+async function findCalendar(acct, trace) {
+  const note = (step, r, text, extra) => { if (trace) trace.push(Object.assign({ step, host: new URL(r.url).host, status: r.res.status, responses: responses(text).length, sample: mask(text) }, extra || {})); };
   const r1 = await propfind(ROOT, acct, 0, '<d:current-user-principal/>');
   const t1 = await r1.res.text();
   const principal = unxml(tag(tag(t1, 'current-user-principal') || '', 'href') || '').trim();
+  note('principal', r1, t1, { principal: mask(principal) });
   if (!principal) throw err('bad-upstream');
   const r2 = await propfind(new URL(principal, r1.url).href, acct, 0, '<c:calendar-home-set/>');
   const t2 = await r2.res.text();
   const home = unxml(tag(tag(t2, 'calendar-home-set') || '', 'href') || '').trim();
+  note('home', r2, t2, { home: mask(home) });
   if (!home) throw err('bad-upstream');
   const r3 = await propfind(new URL(home, r2.url).href, acct, 1, '<d:displayname/><d:resourcetype/><c:supported-calendar-component-set/><a:calendar-color/><cs:getctag/>');
   const t3 = await r3.res.text();
+  note('calendars', r3, t3);
   const cals = [];
   for (const r of responses(t3)) {
     if (!hasTag(r.props, 'calendar') || !r.href) continue;

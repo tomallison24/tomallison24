@@ -156,7 +156,7 @@ if (window.top !== window.self) {
       st.apiDetail = { path, status: res.status, ctype: ctype.split(';')[0].trim(), text: raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) };
       throw Object.assign(new Error('unavailable'), { code: 'unavailable', status: res.status });
     }
-    if (!res.ok || (data && data.error)) throw Object.assign(new Error(data && data.error || 'http-' + res.status), { code: data && data.error || 'http-' + res.status, status: res.status, data });
+    if (!res.ok) throw Object.assign(new Error(data && data.error || 'http-' + res.status), { code: data && data.error || 'http-' + res.status, status: res.status, data });
     return data;
   }
   const API_ERRORS = {
