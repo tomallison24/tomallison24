@@ -542,8 +542,7 @@ if (window.top !== window.self) {
   $('tpBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'tpName') e.target.blur(); });
   $('tpCal').onclick = async () => {
     const g = tripById(st.trip); if (!g) return;
-    const r = await shareOut(new File([ics(g.live)], fileName(g.name) + '.ics', { type: 'text/calendar' }), g.name);
-    if (r === 'downloaded') toast('Calendar file saved. Open it to add the trip to your calendar.');
+    await addToCalendar(ics(g.live), g.name, 'the trip');
   };
 
   // ---------------------------------------------------------------------
@@ -640,7 +639,7 @@ if (window.top !== window.self) {
       renderBooking(); toast('Thanks. Marked as checked.'); return;
     }
     if (e.target.closest('#bkCx')) { b.status = b.status === 'cancelled' ? 'confirmed' : 'cancelled'; renderBooking(); return; }
-    if (e.target.closest('#bkCal')) { readFields(); const r = await shareOut(new File([ics([b])], fileName(titleOf(b)) + '.ics', { type: 'text/calendar' }), titleOf(b)); if (r === 'downloaded') toast('Calendar file saved. Open it to add it to your calendar.'); return; }
+    if (e.target.closest('#bkCal')) { readFields(); await addToCalendar(ics([b]), titleOf(b), 'it'); return; }
     if (e.target.closest('#bkLiveGo')) { refreshLive(b, true).then(renderLiveBox); renderLiveBox(true); return; }
     if (e.target.closest('#bkDel')) {
       const del = $('bkDel');
@@ -970,8 +969,26 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
-  // Calendar files
+  // Calendar files, and the Family calendar
   // ---------------------------------------------------------------------
+  // Where the site is on Cloudflare, the Calendar app's function puts the
+  // events straight into the iCloud Family calendar (calendar/README.md);
+  // anywhere else, or if that fails, a calendar file as before.
+  const CAL_API = new URL('../calendar/api/', location.href).href;
+  let calAvail = null;
+  async function addToCalendar(text, title, what) {
+    if (calAvail !== false) {
+      try {
+        const r = await fetch(CAL_API + 'import', { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
+        let d = null; try { d = await r.json(); } catch {}
+        if (r.ok && d && d.ok) { calAvail = true; toast('Added ' + what + ' to the ' + (d.calendar && d.calendar.name || 'Family') + ' calendar.'); return; }
+        if (r.status === 404 || (d && d.error === 'no-account')) calAvail = false;
+        else if (d && d.error) toast('The Family calendar couldn’t take it (' + d.error + '). Saving a calendar file instead.');
+      } catch {}
+    }
+    const r = await shareOut(new File([text], fileName(title) + '.ics', { type: 'text/calendar' }), title);
+    if (r === 'downloaded') toast('Calendar file saved. Open it to add ' + what + ' to your calendar.');
+  }
   const fileName = s => (s || 'trip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'trip';
   function ics(list) {
     const e2 = v => String(v || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
