@@ -381,6 +381,17 @@ and so on) or the sender (`alerts@`, `billing@`, `mychart@`, a `care.` or
 Purchases and Reservations mail is left out too. When in doubt, it is kept: a
 promotion that happens to mention an "order" stays in the inbox.
 
+**Banks always stay.** Everything from a bank, card issuer, lender or broker is
+kept, their offers included. That covers Chase, Citi, American Express, Bank of
+America, Pennymac, NatWest, Robinhood (Snacks too), GreenSky, Synchrony and a
+few dozen more, plus any sender whose domain names a bank, credit union,
+mortgage or lender.
+
+**Always keep a sender.** Tap **Keep** beside a sender in the Preview, choose
+**… → Never Tidy This Sender** on an email, or tap **Always Keep** in the toast
+after putting a tidied email back with **Inbox**. The list is under Settings →
+**Always kept**, where **Remove** undoes it. It is kept on this device.
+
 It never touches Flagged, Important or tagged mail (tags, reminders,
 Marketing), anything newer than 60 days, or any conversation you have replied
 in.

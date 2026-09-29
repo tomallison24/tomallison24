@@ -30,7 +30,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied', tidyKeep: 'mail.tidyKeep',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -859,6 +859,30 @@ const TX_SUBJECT = new RegExp('\\b(' + [
 ].join('|') + ')\\b', 'i');
 const TX_FROM = /(^|[.@+_-])(e?alerts?|billing|invoices?|receipts?|statements?|security|accounts?|myaccount|notices?|orders?|payments?|banking|onlinebanking|mychart|care|health|healthcare|pharmacy|clinic|hospital|medical|patient)([.@+_-]|$)|\.(gov|edu|nhs\.uk|ac\.uk)$/i;
 const transactional = item => TX_FROM.test(item.email) || TX_SUBJECT.test(item.subject);
+// Banks, card issuers, lenders and brokers: everything from them stays - their
+// offers too. By domain (and any subdomain), plus any sender whose domain
+// names a bank, credit union, mortgage or lender.
+const BANKS = ['chase.com', 'citi.com', 'citibank.com', 'americanexpress.com', 'aexp.com', 'bankofamerica.com', 'bofa.com', 'wellsfargo.com',
+  'capitalone.com', 'discover.com', 'usbank.com', 'pnc.com', 'truist.com', 'ally.com', 'sofi.com', 'chime.com', 'synchrony.com',
+  'synchronybank.com', 'mysynchrony.com', 'barclays.com', 'barclaycardus.com', 'barclays.co.uk', 'goldmansachs.com', 'marcus.com', 'schwab.com',
+  'fidelity.com', 'vanguard.com', 'etrade.com', 'robinhood.com', 'paypal.com', 'venmo.com', 'zellepay.com', 'wise.com', 'revolut.com',
+  'monzo.com', 'starlingbank.com', 'natwest.com', 'rbs.co.uk', 'lloydsbank.co.uk', 'lloydsbank.com', 'halifax.co.uk', 'hsbc.com', 'hsbc.co.uk',
+  'santander.co.uk', 'santander.com', 'nationwide.co.uk', 'tsb.co.uk', 'firstdirect.com', 'pennymac.com', 'rocketmortgage.com', 'mrcooper.com',
+  'greenskycredit.com', 'greensky.com', 'affirm.com', 'klarna.com', 'afterpay.com', 'navyfederal.org', 'penfed.org', 'usaa.com', 'amex.com'];
+const BANKISH = /(bank|creditunion|mortgage|lending|loans?)[^.]*\.[a-z.]+$|(^|\.)[a-z0-9-]*fcu\.(org|com)$/;
+function isBank(email) {
+  const host = (email.split('@')[1] || '').toLowerCase();
+  return BANKS.some(d => host === d || host.endsWith('.' + d)) || BANKISH.test(host);
+}
+
+// Senders you chose to keep out of Tidy, on this device.
+const tidyKeeps = () => { try { return JSON.parse(ls.get(K.tidyKeep, '[]')); } catch { return []; } };
+const tidyKept = email => tidyKeeps().includes(String(email).toLowerCase());
+function setTidyKeep(email, on) {
+  const e = String(email).toLowerCase(), list = tidyKeeps().filter(x => x !== e);
+  if (on) list.push(e);
+  ls.set(K.tidyKeep, JSON.stringify(list.sort()));
+}
 
 // Why a conversation looks automated, or '' when it doesn't.
 function automated(t, email) {
@@ -912,6 +936,8 @@ async function tidyPlan() {
       const ids = msgs.map(m => m.id);
       if (msgs.some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return keep.push({ item, why: 'you wrote in it' });
       if (msgs.some(m => Number(m.internalDate) > cutoff)) return;              // something newer arrived: not stale
+      if (tidyKept(item.email)) return keep.push({ item, why: 'you chose to keep' });
+      if (isBank(item.email)) return keep.push({ item, why: 'a bank' });
       const why = automated(t, item.email);
       if (!why) return keep.push({ item, why: 'looks like a person' });
       if (transactional(item)) return keep.push({ item, why: 'alert or receipt' });
@@ -961,10 +987,12 @@ function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0));
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Tidy old unread mail</span><span>' + (tidyOn() ? 'On' + (last ? ' · ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') : '') : 'Off') + '</span></div>' +
-    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
+    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Banks, alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
     '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button>' +
       (tidyOn() ? '<button class="textbtn" data-act="tidy-off">Turn off</button>' : '') +
-      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>';
+      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
+    (tidyKeeps().length ? '<div class="field"><span>Always kept</span><span>' + tidyKeeps().length + '</span></div>' +
+      tidyKeeps().map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '');
 }
 
 // The preview: what would go, grouped by sender, and what is kept and why.
@@ -980,20 +1008,27 @@ async function openTidyPreview() {
   catch (err) { if (state.sheet?.tidy) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a minute') : err); }
   if (!state.sheet?.tidy) return;                     // closed while looking
   tidyPreview = plan;
+  drawTidyPreview();
+}
+
+function drawTidyPreview() {
+  const plan = tidyPreview, box = $('#sheet .sheet');
+  if (!plan || !box) return;
   const groups = new Map();
   for (const x of plan.tidy) {
     const g = groups.get(x.item.email) || { name: x.item.name, email: x.item.email, n: 0, why: x.why };
     g.n++; groups.set(x.item.email, g);
   }
   const rows = [...groups.values()].sort((a, b) => b.n - a.n).map(g =>
-    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span></li>').join('');
+    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span>' +
+    '<button class="tkeep" data-act="tidy-keep" data-email="' + esc(g.email) + '" aria-label="Always keep mail from ' + esc(g.email) + '">Keep</button></li>').join('');
   const kept = plan.keep.slice(0, 12).map(k =>
     '<li><span class="tw"><b>' + esc(k.item.name) + '</b><small>' + esc(k.item.subject) + '</small></span><span class="tk">' + esc(k.why) + '</span></li>').join('');
   const n = plan.tidy.length;
-  el.querySelector('.sheet').innerHTML = '<div class="grab"></div>' +
+  box.innerHTML = '<div class="grab"></div>' +
     '<h3>' + (n ? 'Tidy ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails') + '?' : 'Nothing to tidy') + '</h3>' +
     '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days. ' +
-      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted.' : 'None of them look automated from a stranger.') + '</p>' +
+      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted. Tap Keep to leave a sender in the inbox for good.' : 'None of them look automated from a stranger.') + '</p>' +
     (n ? '<ul class="tidylist">' + rows + '</ul>' : '') +
     (kept ? '<h4 class="tidyh">Kept</h4><ul class="tidylist keeps">' + kept + '</ul>' + (plan.keep.length > 12 ? '<p class="note">…and ' + (plan.keep.length - 12) + ' more.</p>' : '') : '') +
     (n ? '<button class="btn" data-act="tidy-now">Tidy ' + n + ' now</button>' : '') +
@@ -2395,8 +2430,15 @@ async function readerMore() {
   const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), options: [
     { id: 'remind', label: 'Remind Me', primary: true },
     ...(last ? [{ id: 'unsub', label: 'Unsubscribe' }] : []),
+    tidyKept(who.email) ? { id: 'tidy-allow', label: 'Let Tidy Tidy This Sender' } : { id: 'tidy-keep', label: 'Never Tidy This Sender' },
     { id: 'block', label: 'Block Sender', danger: true },
   ] });
+  if (pick === 'tidy-keep') {
+    setTidyKeep(who.email, true);
+    if (tidied(r.item)) return doRestore(r.item, null, null, { keep: true });
+    toast('Tidy will always keep mail from ' + who.email);
+  }
+  if (pick === 'tidy-allow') { setTidyKeep(who.email, false); toast('Tidy can tidy ' + who.email + ' again'); }
   if (pick === 'remind') {
     const item = r.item, opts = remindChoices();
     const when = await choiceSheet({ title: 'Remind Me', body: 'It leaves the inbox now and comes back to the top of it, unread, on the day.',
@@ -3176,7 +3218,7 @@ async function doBucket(item, btn, li) {
   }
 }
 
-async function doRestore(item, btn, li) {
+async function doRestore(item, btn, li, { keep = false } = {}) {
   if (btn) { btn.disabled = true; confirmTap(btn, li, 'blue'); btn.innerHTML = ICON.spin; }
   try {
     const wasTidied = tidied(item);
@@ -3184,7 +3226,9 @@ async function doRestore(item, btn, li) {
     await closeReader();
     patch(it => it.threadId === item.threadId, ['INBOX'], [labelId]);
     await settle('left');
-    toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
+    if (wasTidied && keep) toast('Back in the inbox — Tidy will always keep mail from ' + item.email);
+    else if (wasTidied && !tidyKept(item.email)) toast('Back in the inbox', { action: () => { setTidyKeep(item.email, true); toast('Tidy will always keep mail from ' + item.email); }, label: 'Always Keep', ms: 8000 });
+    else toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.back; }
     if (state.reading) renderReader();
@@ -3417,6 +3461,18 @@ document.addEventListener('click', async e => {
 
     case 'badge': return toggleBadge();
     case 'tidy-preview': return openTidyPreview();
+    case 'tidy-keep': {
+      const email = el.dataset.email;
+      setTidyKeep(email, true);
+      if (tidyPreview) {
+        const out = tidyPreview.tidy.filter(x => x.item.email === email);
+        tidyPreview.tidy = tidyPreview.tidy.filter(x => x.item.email !== email);
+        tidyPreview.keep = out.map(x => ({ item: x.item, why: 'you chose to keep' })).concat(tidyPreview.keep);
+        drawTidyPreview();
+      }
+      return toast('Tidy will always keep mail from ' + email);
+    }
+    case 'tidy-unkeep': setTidyKeep(el.dataset.email, false); toast('Tidy can tidy ' + el.dataset.email + ' again'); return render();
     case 'tidy-now': return runTidy(false);
     case 'tidy-on': return runTidy(true);
     case 'tidy-off': ls.del(K.tidy); toast('Tidy is off'); return render();
