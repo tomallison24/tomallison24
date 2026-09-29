@@ -360,7 +360,7 @@ labels are the app's own bookkeeping and never show up as tags.
 
 ## Tidy
 
-**Settings → Tidy old unread mail**. Unread mail that has sat in the inbox
+**Settings → Tidy old unread mail** has an **On/Off** switch. Turning it on starts the first run straight away, in the background. Unread mail that has sat in the inbox
 for **60 days** is archived under a **Tidied** label, but only when both of
 these are true:
 
