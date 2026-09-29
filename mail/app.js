@@ -30,7 +30,7 @@ const SCOPES = [
 const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
-  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied',
+  hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied', tidyKeep: 'mail.tidyKeep',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -821,9 +821,9 @@ async function sweep() {
   let done = 0;
   if (label) {
     const ids = await allIds('older_than:' + settings.days + 'd', { labelIds: [label.id], cap: 1000 });
-    await pool(ids, 5, async id => {
-      try { await api('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch {}
-    });
+    for (const id of ids) {                       // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
+      try { await bgCall('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
+    }
   }
   ls.set(K.swept, String(Date.now()));
   return done;
@@ -859,6 +859,30 @@ const TX_SUBJECT = new RegExp('\\b(' + [
 ].join('|') + ')\\b', 'i');
 const TX_FROM = /(^|[.@+_-])(e?alerts?|billing|invoices?|receipts?|statements?|security|accounts?|myaccount|notices?|orders?|payments?|banking|onlinebanking|mychart|care|health|healthcare|pharmacy|clinic|hospital|medical|patient)([.@+_-]|$)|\.(gov|edu|nhs\.uk|ac\.uk)$/i;
 const transactional = item => TX_FROM.test(item.email) || TX_SUBJECT.test(item.subject);
+// Banks, card issuers, lenders and brokers: everything from them stays - their
+// offers too. By domain (and any subdomain), plus any sender whose domain
+// names a bank, credit union, mortgage or lender.
+const BANKS = ['chase.com', 'citi.com', 'citibank.com', 'americanexpress.com', 'aexp.com', 'bankofamerica.com', 'bofa.com', 'wellsfargo.com',
+  'capitalone.com', 'discover.com', 'usbank.com', 'pnc.com', 'truist.com', 'ally.com', 'sofi.com', 'chime.com', 'synchrony.com',
+  'synchronybank.com', 'mysynchrony.com', 'barclays.com', 'barclaycardus.com', 'barclays.co.uk', 'goldmansachs.com', 'marcus.com', 'schwab.com',
+  'fidelity.com', 'vanguard.com', 'etrade.com', 'robinhood.com', 'paypal.com', 'venmo.com', 'zellepay.com', 'wise.com', 'revolut.com',
+  'monzo.com', 'starlingbank.com', 'natwest.com', 'rbs.co.uk', 'lloydsbank.co.uk', 'lloydsbank.com', 'halifax.co.uk', 'hsbc.com', 'hsbc.co.uk',
+  'santander.co.uk', 'santander.com', 'nationwide.co.uk', 'tsb.co.uk', 'firstdirect.com', 'pennymac.com', 'rocketmortgage.com', 'mrcooper.com',
+  'greenskycredit.com', 'greensky.com', 'affirm.com', 'klarna.com', 'afterpay.com', 'navyfederal.org', 'penfed.org', 'usaa.com', 'amex.com'];
+const BANKISH = /(bank|creditunion|mortgage|lending|loans?)[^.]*\.[a-z.]+$|(^|\.)[a-z0-9-]*fcu\.(org|com)$/;
+function isBank(email) {
+  const host = (email.split('@')[1] || '').toLowerCase();
+  return BANKS.some(d => host === d || host.endsWith('.' + d)) || BANKISH.test(host);
+}
+
+// Senders you chose to keep out of Tidy, on this device.
+const tidyKeeps = () => { try { return JSON.parse(ls.get(K.tidyKeep, '[]')); } catch { return []; } };
+const tidyKept = email => tidyKeeps().includes(String(email).toLowerCase());
+function setTidyKeep(email, on) {
+  const e = String(email).toLowerCase(), list = tidyKeeps().filter(x => x !== e);
+  if (on) list.push(e);
+  ls.set(K.tidyKeep, JSON.stringify(list.sort()));
+}
 
 // Why a conversation looks automated, or '' when it doesn't.
 function automated(t, email) {
@@ -875,51 +899,84 @@ function automated(t, email) {
 // Whether you have ever written to this address - or, for a business, to
 // anyone at its domain. One tiny search each, remembered for this visit only.
 const wroteTo = new Map();
-function knownSender(email) {
+function knownSender(email, onPause) {
   const host = email.split('@')[1] || '';
   const key = FREEMAIL.has(host) || !host ? email : host;
   if (!wroteTo.has(key)) {
-    wroteTo.set(key, api('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } })
+    wroteTo.set(key, bgCall('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } }, onPause)
       .then(r => !!(r.messages || []).length)
       .catch(e => { wroteTo.delete(key); throw e; }));
   }
   return wroteTo.get(key);
 }
 
+// Tidy's Gmail calls are paced: Gmail allows each person only so many quota
+// units a minute, and a first look through a couple of hundred old
+// conversations at full speed spent several times what opening the app does,
+// in a few seconds - enough for Gmail to say "slow down", which then held up
+// the rest of the app too. Paced to a few calls a second, it stays well under
+// the limit while you keep using the app; if Gmail asks for a pause anyway,
+// Tidy waits it out and carries on rather than failing.
+const BG_GAP = 160;                   // ms between the starts of Tidy's calls: ~6 a second, ~60 units - a third or less of any limit reported
+const TIDY_DELAY = Number(localStorage.getItem('mail.tidyDelay')) || 20000;   // the daily run waits this long after opening (the tests shorten it)
+let bgNext = 0;
+async function bgTurn(onPause) {
+  for (let waits = 0; slowed(); waits++) {
+    if (waits >= 3) throw new QuotaError('Gmail asked the app to slow down for a minute');
+    onPause?.();
+    await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
+  }
+  const wait = bgNext - Date.now();
+  bgNext = Math.max(Date.now(), bgNext) + BG_GAP;
+  if (wait > 0) await sleep(wait);
+}
+async function bgCall(path, opts, onPause) {
+  for (let tries = 0; ; tries++) {
+    await bgTurn(onPause);
+    try { return await api(path, opts); }
+    catch (e) { if (!(e instanceof QuotaError) || tries >= 2) throw e; }   // the pause is waited out on the next turn
+  }
+}
+
 // What Tidy would do now. Nothing is changed. Flagged, Important and tagged
 // mail (tags, reminders, Marketing) is left out by the search itself.
-async function tidyPlan() {
+// progress(done, of) reports as it goes; alive() false stops it early.
+async function tidyPlan({ progress, alive = () => true, onPause } = {}) {
   const cutoff = Date.now() - TIDY_DAYS * 86400e3;
   const ids = [];
   let pageToken;
   do {
-    const r = await threadPage('in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
-      { pageToken, max: Math.min(100, TIDY_CAP - ids.length) });
-    ids.push(...r.ids); pageToken = r.next;
-  } while (pageToken && ids.length < TIDY_CAP);
+    const r = await bgCall('/threads', { params: {
+      q: 'in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
+      maxResults: Math.min(100, TIDY_CAP - ids.length), pageToken } }, onPause);
+    ids.push(...(r.threads || []).map(t => t.id)); pageToken = r.nextPageToken;
+  } while (pageToken && ids.length < TIDY_CAP && alive());
   const me = (state.me || '').toLowerCase();
   const tidy = [], keep = [];
-  let stop = null;
-  await pool(ids, 3, async id => {
-    if (stop) return;
-    try {
-      const t = await api('/threads/' + id, {
+  let done = 0;
+  progress?.(0, ids.length);
+  for (const id of ids) {
+    if (!alive()) break;
+    await (async () => {
+      const t = await bgCall('/threads/' + id, {
         params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
-      });
-      const item = buildRow(t);
+      }, onPause).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
+      const item = t && buildRow(t);
       if (!item) return;
       const msgs = t.messages || [];
       const ids = msgs.map(m => m.id);
       if (msgs.some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return keep.push({ item, why: 'you wrote in it' });
       if (msgs.some(m => Number(m.internalDate) > cutoff)) return;              // something newer arrived: not stale
+      if (tidyKept(item.email)) return keep.push({ item, why: 'you chose to keep' });
+      if (isBank(item.email)) return keep.push({ item, why: 'a bank' });
       const why = automated(t, item.email);
       if (!why) return keep.push({ item, why: 'looks like a person' });
       if (transactional(item)) return keep.push({ item, why: 'alert or receipt' });
-      if (await knownSender(item.email)) return keep.push({ item, why: 'you’ve written to them' });
+      if (await knownSender(item.email, onPause)) return keep.push({ item, why: 'you’ve written to them' });
       tidy.push({ item, ids, why });
-    } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) stop = e; }
-  });
-  if (stop) throw stop;
+    })();
+    progress?.(++done, ids.length);
+  }
   const byDate = (a, b) => b.item.date - a.item.date;
   return { tidy: tidy.sort(byDate), keep: keep.sort(byDate), looked: ids.length };
 }
@@ -961,10 +1018,12 @@ function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0));
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Tidy old unread mail</span><span>' + (tidyOn() ? 'On' + (last ? ' · ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') : '') : 'Off') + '</span></div>' +
-    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
+    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Banks, alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
     '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button>' +
       (tidyOn() ? '<button class="textbtn" data-act="tidy-off">Turn off</button>' : '') +
-      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>';
+      '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
+    (tidyKeeps().length ? '<div class="field"><span>Always kept</span><span>' + tidyKeeps().length + '</span></div>' +
+      tidyKeeps().map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '');
 }
 
 // The preview: what would go, grouped by sender, and what is kept and why.
@@ -973,27 +1032,43 @@ async function openTidyPreview() {
   const el = $('#sheet');
   state.sheet = { tidy: true };
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Tidy preview">' +
-    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note">' + ICON.spin + ' Nothing is changed yet.</p></div>';
+    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note" id="tidy-progress">' + ICON.spin + ' Nothing is changed yet.</p>' +
+    '<p class="note">It goes gently, a few emails a second, so Gmail doesn’t ask the app to slow down. You can close this and keep using Mail.</p></div>';
   el.classList.remove('hide', 'leaving');
+  const mine = state.sheet, alive = () => state.sheet === mine;
+  const say = t => { const p = $('#tidy-progress'); if (p && alive()) p.innerHTML = ICON.spin + ' ' + t; };
   let plan;
-  try { plan = await tidyPlan(); }
-  catch (err) { if (state.sheet?.tidy) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a minute') : err); }
+  try {
+    plan = await tidyPlan({
+      alive,
+      progress: (d, n) => say(n ? 'Looked at ' + d + ' of ' + n + ' · nothing is changed yet' : 'Nothing is changed yet.'),
+      onPause: () => say('Gmail asked for a short pause — carrying on in a minute…'),
+    });
+  }
+  catch (err) { if (alive()) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a few minutes') : err); }
   if (!state.sheet?.tidy) return;                     // closed while looking
   tidyPreview = plan;
+  drawTidyPreview();
+}
+
+function drawTidyPreview() {
+  const plan = tidyPreview, box = $('#sheet .sheet');
+  if (!plan || !box) return;
   const groups = new Map();
   for (const x of plan.tidy) {
     const g = groups.get(x.item.email) || { name: x.item.name, email: x.item.email, n: 0, why: x.why };
     g.n++; groups.set(x.item.email, g);
   }
   const rows = [...groups.values()].sort((a, b) => b.n - a.n).map(g =>
-    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span></li>').join('');
+    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span>' +
+    '<button class="tkeep" data-act="tidy-keep" data-email="' + esc(g.email) + '" aria-label="Always keep mail from ' + esc(g.email) + '">Keep</button></li>').join('');
   const kept = plan.keep.slice(0, 12).map(k =>
     '<li><span class="tw"><b>' + esc(k.item.name) + '</b><small>' + esc(k.item.subject) + '</small></span><span class="tk">' + esc(k.why) + '</span></li>').join('');
   const n = plan.tidy.length;
-  el.querySelector('.sheet').innerHTML = '<div class="grab"></div>' +
+  box.innerHTML = '<div class="grab"></div>' +
     '<h3>' + (n ? 'Tidy ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails') + '?' : 'Nothing to tidy') + '</h3>' +
     '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days. ' +
-      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted.' : 'None of them look automated from a stranger.') + '</p>' +
+      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted. Tap Keep to leave a sender in the inbox for good.' : 'None of them look automated from a stranger.') + '</p>' +
     (n ? '<ul class="tidylist">' + rows + '</ul>' : '') +
     (kept ? '<h4 class="tidyh">Kept</h4><ul class="tidylist keeps">' + kept + '</ul>' + (plan.keep.length > 12 ? '<p class="note">…and ' + (plan.keep.length - 12) + ' more.</p>' : '') : '') +
     (n ? '<button class="btn" data-act="tidy-now">Tidy ' + n + ' now</button>' : '') +
@@ -2395,8 +2470,15 @@ async function readerMore() {
   const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), options: [
     { id: 'remind', label: 'Remind Me', primary: true },
     ...(last ? [{ id: 'unsub', label: 'Unsubscribe' }] : []),
+    tidyKept(who.email) ? { id: 'tidy-allow', label: 'Let Tidy Tidy This Sender' } : { id: 'tidy-keep', label: 'Never Tidy This Sender' },
     { id: 'block', label: 'Block Sender', danger: true },
   ] });
+  if (pick === 'tidy-keep') {
+    setTidyKeep(who.email, true);
+    if (tidied(r.item)) return doRestore(r.item, null, null, { keep: true });
+    toast('Tidy will always keep mail from ' + who.email);
+  }
+  if (pick === 'tidy-allow') { setTidyKeep(who.email, false); toast('Tidy can tidy ' + who.email + ' again'); }
   if (pick === 'remind') {
     const item = r.item, opts = remindChoices();
     const when = await choiceSheet({ title: 'Remind Me', body: 'It leaves the inbox now and comes back to the top of it, unread, on the day.',
@@ -3176,7 +3258,7 @@ async function doBucket(item, btn, li) {
   }
 }
 
-async function doRestore(item, btn, li) {
+async function doRestore(item, btn, li, { keep = false } = {}) {
   if (btn) { btn.disabled = true; confirmTap(btn, li, 'blue'); btn.innerHTML = ICON.spin; }
   try {
     const wasTidied = tidied(item);
@@ -3184,7 +3266,9 @@ async function doRestore(item, btn, li) {
     await closeReader();
     patch(it => it.threadId === item.threadId, ['INBOX'], [labelId]);
     await settle('left');
-    toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
+    if (wasTidied && keep) toast('Back in the inbox — Tidy will always keep mail from ' + item.email);
+    else if (wasTidied && !tidyKept(item.email)) toast('Back in the inbox', { action: () => { setTidyKeep(item.email, true); toast('Tidy will always keep mail from ' + item.email); }, label: 'Always Keep', ms: 8000 });
+    else toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.back; }
     if (state.reading) renderReader();
@@ -3417,6 +3501,18 @@ document.addEventListener('click', async e => {
 
     case 'badge': return toggleBadge();
     case 'tidy-preview': return openTidyPreview();
+    case 'tidy-keep': {
+      const email = el.dataset.email;
+      setTidyKeep(email, true);
+      if (tidyPreview) {
+        const out = tidyPreview.tidy.filter(x => x.item.email === email);
+        tidyPreview.tidy = tidyPreview.tidy.filter(x => x.item.email !== email);
+        tidyPreview.keep = out.map(x => ({ item: x.item, why: 'you chose to keep' })).concat(tidyPreview.keep);
+        drawTidyPreview();
+      }
+      return toast('Tidy will always keep mail from ' + email);
+    }
+    case 'tidy-unkeep': setTidyKeep(el.dataset.email, false); toast('Tidy can tidy ' + el.dataset.email + ' again'); return render();
     case 'tidy-now': return runTidy(false);
     case 'tidy-on': return runTidy(true);
     case 'tidy-off': ls.del(K.tidy); toast('Tidy is off'); return render();
@@ -3588,7 +3684,7 @@ function renew() {
   } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
   loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
-    .then(() => sleep(1500)).then(() => tidyDaily()).catch(() => {});
+    .then(() => sleep(TIDY_DELAY)).then(() => tidyDaily()).catch(() => {});   // after opening's own calls, not on top of them
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
       if (!n) return;

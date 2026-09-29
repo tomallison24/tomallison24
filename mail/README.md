@@ -381,6 +381,17 @@ and so on) or the sender (`alerts@`, `billing@`, `mychart@`, a `care.` or
 Purchases and Reservations mail is left out too. When in doubt, it is kept: a
 promotion that happens to mention an "order" stays in the inbox.
 
+**Banks always stay.** Everything from a bank, card issuer, lender or broker is
+kept, their offers included. That covers Chase, Citi, American Express, Bank of
+America, Pennymac, NatWest, Robinhood (Snacks too), GreenSky, Synchrony and a
+few dozen more, plus any sender whose domain names a bank, credit union,
+mortgage or lender.
+
+**Always keep a sender.** Tap **Keep** beside a sender in the Preview, choose
+**… → Never Tidy This Sender** on an email, or tap **Always Keep** in the toast
+after putting a tidied email back with **Inbox**. The list is under Settings →
+**Always kept**, where **Remove** undoes it. It is kept on this device.
+
 It never touches Flagged, Important or tagged mail (tags, reminders,
 Marketing), anything newer than 60 days, or any conversation you have replied
 in.
@@ -505,6 +516,21 @@ the minute rolls over. So the app:
 - **when Gmail says slow down,** it retries once, then pauses for a minute
   with the list left on screen, sends nothing in the meantime, and reloads by
   itself afterwards.
+- **paces its background work.** Tidy and the Marketing clean-up send at most
+  about six requests a second (roughly 60 quota units), however much there is
+  to look through. A first Tidy Preview of about 200 old conversations costs
+  about 2,400 units, which used to go out in a few seconds (about 240 units a
+  second, measured against a fake Gmail with a phone-like 120 ms round trip).
+  That was the likely cause of a "slow down" soon after Tidy arrived. It now
+  takes about 45 seconds, with progress shown, and you can close it and keep
+  using the app; closing it stops it. If Gmail still asks for a pause, Tidy
+  waits it out and carries on. The daily Tidy starts 20 seconds after the app
+  opens, not on top of opening's own requests.
+
+Gmail's published per-user limit, and what each call costs, couldn't be
+checked from here: Google's page is blocked, and secondary sources disagree.
+They give 15,000 or 6,000 units a minute, and 10 or 40 units to fetch a
+conversation. The pace above stays well under the lowest of these.
 
 ## Staying signed in
 
