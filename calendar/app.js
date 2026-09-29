@@ -177,7 +177,11 @@ if (window.top !== window.self) {
       if (!d.configured) { st.api = 'unconfigured'; return; }
       if (d.error) { st.api = 'error'; st.apiError = d.error; st.calendars = d.calendars || null; return; }
       st.api = 'ok'; st.calendar = d.calendar || null; st.apiError = '';
-    } catch (e) { st.api = e.code === 'offline' ? 'offline' : 'off'; }
+    } catch (e) {
+      st.api = e.code === 'offline' ? 'offline' : 'off';
+      // A JSON answer with an error the app doesn't know (the function ran, but said no).
+      if (e.code !== 'offline' && e.code !== 'unavailable') st.apiDetail = { path: 'ping', status: e.status || 0, ctype: 'json', text: e.code };
+    }
   }
 
   // The window of events kept on the phone: three months back, a year on
@@ -448,6 +452,7 @@ if (window.top !== window.self) {
     const d = st.apiDetail;
     if (/github\.io$/i.test(location.hostname)) return 'This is the GitHub Pages copy of the site (' + location.hostname + '), which has no iCloud connection. Open Calendar from the Cloudflare address for the Family calendar; the layers still show here.';
     let w = 'The iCloud connection isn’t answering at ' + location.hostname + '/calendar/api/.';
+    if (d && d.ctype === 'json') return w + ' The function is running but answered with the error “' + d.text + '” (' + d.status + ')' + (d.text === 'not-found' ? ', which means the request reached it without the app’s own header, or a route it doesn’t know' : '') + '.';
     if (d) w += ' It answered ' + d.status + (d.ctype ? ' (' + d.ctype + ')' : '') + (d.text ? ': “' + d.text + '”' : '') + '.';
     w += d && d.status === 404 ? ' A 404 here means the Pages Functions bundle on Cloudflare doesn’t include calendar/api yet: run the News workflow on the default branch and check its “Publish to Cloudflare Pages” step uploads the Functions bundle.'
       : d && d.status >= 500 ? ' An error like this means the function itself failed on Cloudflare; the text above is Cloudflare’s own page.'

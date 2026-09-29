@@ -1,0 +1,20 @@
+# Temporary: asks the deployed site's functions how they answer, from a
+# runner that can reach it. To be removed once the Calendar connection is
+# confirmed.
+name: Probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ask each function
+        run: |
+          for p in travel/api/ping calendar/api/ping podcasts/api/top?cc=gb calendar/index.html calendar/api/nothing; do
+            echo "===== $p"
+            curl -sS -m 20 -o body.txt -w 'status=%{http_code} type=%{content_type} redirect=%{redirect_url}\n' -H 'X-Travel: 1' -H 'X-Calendar: 1' -H 'X-Podcasts: 1' "https://tomallison24-news.pages.dev/$p" || true
+            head -c 300 body.txt | tr '\n' ' '; echo
+          done
