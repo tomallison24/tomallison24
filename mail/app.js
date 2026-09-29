@@ -821,8 +821,9 @@ async function sweep() {
   let done = 0;
   if (label) {
     const ids = await allIds('older_than:' + settings.days + 'd', { labelIds: [label.id], cap: 1000 });
-    for (const id of ids) {                       // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
-      try { await bgCall('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
+    const call = pacer({ maxWaits: 1 });          // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
+    for (const id of ids) {
+      try { await call('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
     }
   }
   ls.set(K.swept, String(Date.now()));
@@ -899,11 +900,11 @@ function automated(t, email) {
 // Whether you have ever written to this address - or, for a business, to
 // anyone at its domain. One tiny search each, remembered for this visit only.
 const wroteTo = new Map();
-function knownSender(email, onPause) {
+function knownSender(email, call = api) {
   const host = email.split('@')[1] || '';
   const key = FREEMAIL.has(host) || !host ? email : host;
   if (!wroteTo.has(key)) {
-    wroteTo.set(key, bgCall('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } }, onPause)
+    wroteTo.set(key, call('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } })
       .then(r => !!(r.messages || []).length)
       .catch(e => { wroteTo.delete(key); throw e; }));
   }
@@ -917,68 +918,100 @@ function knownSender(email, onPause) {
 // the rest of the app too. Paced to a few calls a second, it stays well under
 // the limit while you keep using the app; if Gmail asks for a pause anyway,
 // Tidy waits it out and carries on rather than failing.
-const BG_GAP = 160;                   // ms between the starts of Tidy's calls: ~6 a second, ~60 units - a third or less of any limit reported
+const BG_GAP = Number(localStorage.getItem('mail.tidyPace')) || 160;   // ms between the starts of Tidy's calls (the tests shorten it)
 const TIDY_DELAY = Number(localStorage.getItem('mail.tidyDelay')) || 20000;   // the daily run waits this long after opening (the tests shorten it)
-let bgNext = 0;
-async function bgTurn(onPause) {
-  for (let waits = 0; slowed(); waits++) {
-    if (waits >= 3) throw new QuotaError('Gmail asked the app to slow down for a minute');
-    onPause?.();
-    await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
+const TIDY_DAILY = 100;               // the daily run looks at no more than this; the Preview at TIDY_CAP
+// One paced run: calls start `gap` ms apart, and each "slow down" doubles the
+// gap for the rest of the run, so it doesn't walk straight back into the limit.
+function pacer({ onPause, maxWaits = 3 } = {}) {
+  let gap = BG_GAP, next = 0;
+  async function turn() {
+    for (let waits = 0; slowed(); waits++) {
+      if (waits >= maxWaits) throw new QuotaError('Gmail asked the app to slow down for a minute');
+      onPause?.(slowUntil);
+      await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
+    }
+    const wait = next - Date.now();
+    next = Math.max(Date.now(), next) + gap;
+    if (wait > 0) await sleep(wait);
   }
-  const wait = bgNext - Date.now();
-  bgNext = Math.max(Date.now(), bgNext) + BG_GAP;
-  if (wait > 0) await sleep(wait);
+  return async function call(path, opts) {
+    for (let tries = 0; ; tries++) {
+      await turn();
+      try { return await api(path, opts); }
+      catch (e) {
+        if (!(e instanceof QuotaError) || tries >= maxWaits) throw e;
+        gap = Math.min(gap * 2, 2000);            // slower from here on
+      }
+    }
+  };
 }
-async function bgCall(path, opts, onPause) {
-  for (let tries = 0; ; tries++) {
-    await bgTurn(onPause);
-    try { return await api(path, opts); }
-    catch (e) { if (!(e instanceof QuotaError) || tries >= 2) throw e; }   // the pause is waited out on the next turn
-  }
+
+// Conversations Tidy has already looked at and kept, by id and Gmail's
+// historyId for them - ids only, nothing about the mail. A later run skips
+// them unless something in the conversation changed, so each run spends
+// Gmail's allowance on mail it hasn't judged yet. "You chose to keep" isn't
+// remembered here: that list can change.
+const SEEN_KEY = 'mail.tidySeen.v1', SEEN_MAX = 4000;
+const tidySeen = () => { try { return new Map(Object.entries(JSON.parse(ls.get(SEEN_KEY, '{}')))); } catch { return new Map(); } };
+function saveSeen(map) {
+  const all = [...map.entries()];
+  ls.set(SEEN_KEY, JSON.stringify(Object.fromEntries(all.slice(Math.max(0, all.length - SEEN_MAX)))));
 }
 
 // What Tidy would do now. Nothing is changed. Flagged, Important and tagged
-// mail (tags, reminders, Marketing) is left out by the search itself.
-// progress(done, of) reports as it goes; alive() false stops it early.
-async function tidyPlan({ progress, alive = () => true, onPause } = {}) {
+// mail (tags, reminders, Marketing) is left out by the search itself. The
+// oldest conversations are looked at first, and those already kept on an
+// earlier run are skipped. progress(done, of) reports as it goes; alive()
+// false stops it early.
+async function tidyPlan({ progress, alive = () => true, onPause, limit = TIDY_CAP, maxWaits = 3 } = {}) {
+  const call = pacer({ onPause, maxWaits });
   const cutoff = Date.now() - TIDY_DAYS * 86400e3;
-  const ids = [];
+  const all = [];
   let pageToken;
   do {
-    const r = await bgCall('/threads', { params: {
+    const r = await call('/threads', { params: {
       q: 'in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
-      maxResults: Math.min(100, TIDY_CAP - ids.length), pageToken } }, onPause);
-    ids.push(...(r.threads || []).map(t => t.id)); pageToken = r.nextPageToken;
-  } while (pageToken && ids.length < TIDY_CAP && alive());
+      maxResults: 500, pageToken } });
+    all.push(...(r.threads || [])); pageToken = r.nextPageToken;
+  } while (pageToken && all.length < 5000 && alive());
+  const seen = tidySeen();
+  for (const id of [...seen.keys()]) if (!all.some(t => t.id === id)) seen.delete(id);   // gone from the inbox, or read
+  const fresh = all.filter(t => seen.get(t.id) !== String(t.historyId)).reverse();        // oldest first
+  const todo = fresh.slice(0, limit);
+  const plan = { tidy: [], keep: [], looked: 0, skipped: all.length - fresh.length, left: fresh.length - todo.length, total: todo.length };
   const me = (state.me || '').toLowerCase();
-  const tidy = [], keep = [];
-  let done = 0;
-  progress?.(0, ids.length);
-  for (const id of ids) {
-    if (!alive()) break;
-    await (async () => {
-      const t = await bgCall('/threads/' + id, {
-        params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
-      }, onPause).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
-      const item = t && buildRow(t);
-      if (!item) return;
-      const msgs = t.messages || [];
-      const ids = msgs.map(m => m.id);
-      if (msgs.some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return keep.push({ item, why: 'you wrote in it' });
-      if (msgs.some(m => Number(m.internalDate) > cutoff)) return;              // something newer arrived: not stale
-      if (tidyKept(item.email)) return keep.push({ item, why: 'you chose to keep' });
-      if (isBank(item.email)) return keep.push({ item, why: 'a bank' });
-      const why = automated(t, item.email);
-      if (!why) return keep.push({ item, why: 'looks like a person' });
-      if (transactional(item)) return keep.push({ item, why: 'alert or receipt' });
-      if (await knownSender(item.email, onPause)) return keep.push({ item, why: 'you’ve written to them' });
-      tidy.push({ item, ids, why });
-    })();
-    progress?.(++done, ids.length);
-  }
   const byDate = (a, b) => b.item.date - a.item.date;
-  return { tidy: tidy.sort(byDate), keep: keep.sort(byDate), looked: ids.length };
+  const kept = (t, item, why, remember = true) => { plan.keep.push({ item, why }); if (remember) seen.set(t.id, String(t.historyId)); };
+  progress?.(0, todo.length);
+  for (const { id } of todo) {
+    if (!alive()) break;
+    const t = await call('/threads/' + id, {
+      params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
+    }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
+    const item = t && buildRow(t);
+    if (item) {
+      const msgs = t.messages || [], ids = msgs.map(m => m.id);
+      if (msgs.some(m => (m.labelIds || []).includes('SENT')) || item.email === me) kept(t, item, 'you wrote in it');
+      else if (msgs.some(m => Number(m.internalDate) > cutoff)) { /* something newer arrived: not stale */ }
+      else if (tidyKept(item.email)) kept(t, item, 'you chose to keep', false);
+      else if (isBank(item.email)) kept(t, item, 'a bank');
+      else {
+        const why = automated(t, item.email);
+        if (!why) kept(t, item, 'looks like a person');
+        else if (transactional(item)) kept(t, item, 'alert or receipt');
+        else if (await knownSender(item.email, call)) kept(t, item, 'you’ve written to them');
+        else plan.tidy.push({ item, ids, why });
+      }
+    }
+    plan.looked++;
+    if (plan.looked % 10 === 0) saveSeen(seen);
+    progress?.(plan.looked, todo.length);
+  }
+  saveSeen(seen);
+  plan.left += todo.length - plan.looked;          // stopped early: those wait for next time
+  plan.tidy.sort(byDate); plan.keep.sort(byDate);
+  return plan;
 }
 
 // Archives what the plan found, under the Tidied label. Returns what Undo needs.
@@ -1001,7 +1034,7 @@ async function untidy(back) {
 async function tidyDaily() {
   if (!tidyOn() || Date.now() - Number(ls.get(K.tidied, 0)) < TIDY_EVERY || slowed()) return;
   ls.set(K.tidied, String(Date.now()));          // one try a day, even if it fails part-way
-  const plan = await tidyPlan();
+  const plan = await tidyPlan({ limit: TIDY_DAILY, maxWaits: 1 });
   if (!plan.tidy.length) return;
   const back = await tidyApply(plan);
   const n = plan.tidy.length;
@@ -1037,15 +1070,22 @@ async function openTidyPreview() {
   el.classList.remove('hide', 'leaving');
   const mine = state.sheet, alive = () => state.sheet === mine;
   const say = t => { const p = $('#tidy-progress'); if (p && alive()) p.innerHTML = ICON.spin + ' ' + t; };
+  let tick = null;
+  const stopTick = () => { clearInterval(tick); tick = null; };
   let plan;
   try {
     plan = await tidyPlan({
-      alive,
-      progress: (d, n) => say(n ? 'Looked at ' + d + ' of ' + n + ' · nothing is changed yet' : 'Nothing is changed yet.'),
-      onPause: () => say('Gmail asked for a short pause — carrying on in a minute…'),
+      alive, maxWaits: 6,
+      progress: (d, n) => { stopTick(); say(n ? 'Looked at ' + d + ' of ' + n + ' · nothing is changed yet' : 'Nothing is changed yet.'); },
+      onPause: until => {
+        stopTick();
+        const show = () => say('Gmail asked for a pause — carrying on in ' + Math.max(1, Math.ceil((until - Date.now()) / 1000)) + ' s, a little slower');
+        show(); tick = setInterval(() => (alive() ? show() : stopTick()), 1000);
+      },
     });
   }
-  catch (err) { if (alive()) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a few minutes') : err); }
+  catch (err) { stopTick(); if (alive()) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a few minutes') : err); }
+  stopTick();
   if (!state.sheet?.tidy) return;                     // closed while looking
   tidyPreview = plan;
   drawTidyPreview();
@@ -1067,7 +1107,9 @@ function drawTidyPreview() {
   const n = plan.tidy.length;
   box.innerHTML = '<div class="grab"></div>' +
     '<h3>' + (n ? 'Tidy ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails') + '?' : 'Nothing to tidy') + '</h3>' +
-    '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days. ' +
+    '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days, oldest first' +
+      (plan.skipped ? ' (' + plan.skipped + ' kept on an earlier look were skipped)' : '') + '. ' +
+      (plan.left ? plan.left + ' more wait for the next look. ' : '') +
       (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted. Tap Keep to leave a sender in the inbox for good.' : 'None of them look automated from a stranger.') + '</p>' +
     (n ? '<ul class="tidylist">' + rows + '</ul>' : '') +
     (kept ? '<h4 class="tidyh">Kept</h4><ul class="tidylist keeps">' + kept + '</ul>' + (plan.keep.length > 12 ? '<p class="note">…and ' + (plan.keep.length - 12) + ' more.</p>' : '') : '') +
