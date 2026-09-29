@@ -161,8 +161,9 @@ async function findCalendar(acct, trace) {
   const cals = [];
   for (const r of responses(t3)) {
     if (!hasTag(r.props, 'calendar') || !r.href) continue;
+    // iCloud writes the list with single quotes: <comp name='VEVENT' .../>
     const comps = tag(r.props, 'supported-calendar-component-set');
-    if (comps && !/name="VEVENT"/i.test(comps)) continue;
+    if (comps && !/name=["']VEVENT["']/i.test(comps)) continue;
     const name = unxml(tag(r.props, 'displayname') || '').trim();
     const color = unxml(tag(r.props, 'calendar-color') || '').trim().slice(0, 9);
     cals.push({ url: new URL(r.href, r3.url).href.replace(/\/?$/, '/'), name, color: /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color) ? color.slice(0, 7) : '' });
