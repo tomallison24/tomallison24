@@ -625,7 +625,7 @@ if (window.top !== window.self) {
   $('bkBody').addEventListener('click', async e => {
     const b = st.booking; if (!b) return;
     if (e.target.closest('#bkOk')) {
-      readFields(); b.guess = false;
+      readFields(); b.guess = false; b.checked = true;
       const i = bookings.findIndex(x => x.id === b.id);
       if (i >= 0) { bookings[i] = JSON.parse(JSON.stringify(b)); save(); }   // a copy: the sheet keeps editing its own
       renderBooking(); toast('Thanks. Marked as checked.'); return;
@@ -694,18 +694,33 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const INFO_KEYS = ['conf', 'traveller', 'airline', 'airlineCode', 'flightNo', 'from', 'fromName', 'to', 'toName', 'dep', 'depIso', 'arr', 'arrIso', 'terminal', 'gate', 'seat',
     'name', 'address', 'city', 'phone', 'checkIn', 'checkInTime', 'checkOut', 'checkOutTime', 'company', 'carClass', 'pickupPlace', 'pickup', 'pickupIso', 'dropPlace', 'dropoff', 'dropoffIso'];
+  const num = n => String(n || '').replace(/^0+(?=\d)/, '');
+  const day = b => String(b.dep || '').slice(0, 10);
+  const sameFlight = (a, b) => a.type === 'flight' && b.type === 'flight' && a.airlineCode === b.airlineCode && num(a.flightNo) === num(b.flightNo) && day(a) === day(b);
+  const when = b => (b && b.source && b.source.date) || 0;
+  let revive = new Set();   // ids "Read the last year again" cleared, which may come back
   function upsert(b, byHand) {
-    if (graves['bookings:' + b.id]) return 'gone';                       // deleted on purpose: stays deleted
-    const cur = bookings.find(x => x.id === b.id);
+    if (graves['bookings:' + b.id] && !revive.has(b.id)) return 'gone';  // deleted on purpose: stays deleted
+    let cur = bookings.find(x => x.id === b.id);
+    // A gate or time update that doesn't name the airports belongs to that flight.
+    if (!cur && b.type === 'flight' && (!b.from || !b.to)) cur = bookings.find(x => sameFlight(x, b));
+    // The same flight number on another day in the same booking: the flight
+    // was moved, and the newest email about it decides which day is right.
+    if (b.type === 'flight' && b.conf) {
+      const moved = bookings.filter(x => x !== cur && x.type === 'flight' && x.conf === b.conf && x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && day(x) !== day(b));
+      if (moved.some(x => x.edited || when(x) > when(b))) return 'old';
+      if (moved.length) bookings = bookings.filter(x => !moved.includes(x));
+    }
     if (!cur) { bookings.push({ ...b, created: Date.now(), notes: '', ...(byHand ? { source: null } : {}) }); return 'new'; }
     if (b.status === 'cancelled' && cur.status !== 'cancelled') { cur.status = 'cancelled'; return 'changed'; }
     if (cur.edited) return 'same';                                        // what you typed wins over any email
     let changed = false;
-    const newer = !b.guess && (cur.guess || (b.source && cur.source && b.source.date >= cur.source.date));
+    // A later email wins, except a best-guess read over exact booking data.
+    const newer = when(b) >= when(cur) && (!b.guess || cur.guess);
     for (const k of INFO_KEYS) {
       if (b[k] && (newer ? cur[k] !== b[k] : !cur[k])) { cur[k] = b[k]; changed = true; }
     }
-    if (newer && cur.guess) { cur.guess = false; changed = true; }
+    if (newer && cur.guess && !b.guess) { cur.guess = false; changed = true; }
     if (newer && b.source) cur.source = b.source;
     return changed ? 'changed' : 'same';
   }
@@ -855,7 +870,7 @@ if (window.top !== window.self) {
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      saveSeen(); save();
+      saveSeen(); save(); revive = new Set();
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -1050,7 +1065,7 @@ if (window.top !== window.self) {
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
         + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' : 'Not checked yet.') + ' It also checks each time Travel opens.</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Finds anything missed. Bookings you deleted stay deleted.</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Reads every booking email afresh and replaces what was read before. Bookings you edited, checked or deleted stay as they are.</span></span></button>';
       if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
@@ -1079,7 +1094,16 @@ if (window.top !== window.self) {
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
     else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
-    else if (e.target.closest('#stRescan')) { seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true }); }
+    else if (e.target.closest('#stRescan')) {
+      // Start over: bookings read from email (and not edited or checked by
+      // you) are cleared and read again, so an improved reader replaces its
+      // old mistakes. Anything not found again stays gone, on both phones.
+      const auto = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked);
+      revive = new Set(auto.map(b => b.id));
+      bookings = bookings.filter(b => !revive.has(b.id));
+      save();
+      seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });
+    }
     else if (e.target.closest('#stOut')) signOut();
   });
   $('stSheet').onclick = () => { closeSheet('setSheet'); openSyncSheet(); };

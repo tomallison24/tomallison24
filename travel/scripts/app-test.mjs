@@ -180,6 +180,34 @@ for (const scheme of ['light', 'dark']) {
     const cars = await page.evaluate(() => window.__travel.bookings.filter(x => x.type === 'car').length);
     assert.equal(cars, 0);
   });
+  await step(scheme + ': a flight moved to another day keeps only the newest day', async () => {
+    const r = await page.evaluate(() => {
+      const t = window.__travel, src = (d, id) => ({ msgId: id, threadId: id, subject: 's', from: 'f', date: d });
+      const mk = (dep, d, id) => ({ type: 'flight', status: 'confirmed', conf: 'MOVED1', airlineCode: 'F9', airline: 'Frontier', flightNo: '3073', from: 'RDU', to: 'CLE', dep, arr: '', guess: true, source: src(d, id), id: 'f-test-' + dep.slice(0, 10) });
+      t.upsert(mk('2027-03-06T15:32', 1000, 'old'));
+      t.upsert(mk('2027-03-07T15:32', 2000, 'new'));
+      t.upsert(mk('2027-03-06T15:32', 1000, 'old'));          // the old email read again later
+      return t.bookings.filter(b => b.conf === 'MOVED1').map(b => b.dep);
+    });
+    assert.deepEqual(r, ['2027-03-07T15:32']);
+  });
+  await step(scheme + ': "Read the last year again" replaces old mistakes and keeps your edits', async () => {
+    await page.evaluate(() => {
+      const t = window.__travel;
+      t.bookings.push({ id: 'f-wrong', type: 'flight', status: 'confirmed', conf: 'KQ7T2M', airlineCode: 'UA', flightNo: '555', from: 'BOS', to: 'DEN', dep: '2030-01-01T10:00', guess: true,
+        source: { msgId: 'm1', threadId: 't1', subject: 'x', from: 'x', date: 1 } });
+      t.save(); t.render();
+    });
+    await page.click('#setBtn');
+    await page.click('#stRescan');
+    await page.waitForFunction(() => !document.getElementById('syncPill').hidden, null, { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(() => document.getElementById('syncPill').hidden, null, { timeout: 8000 });
+    const b = await page.evaluate(() => window.__travel.bookings.map(x => ({ id: x.id, flightNo: x.flightNo, seat: x.seat, dep: x.dep })));
+    assert.ok(!b.some(x => x.id === 'f-wrong'), 'old mistake gone');
+    assert.equal(b.filter(x => x.flightNo === '1234').length, 1, 'no duplicates');
+    assert.equal(b.find(x => x.flightNo === '1234').seat, '23C', 'your edit kept');
+    assert.equal(b.filter(x => x.flightNo === '987').length, 1);
+  });
   await step(scheme + ': Explore builds the search links', async () => {
     await page.click('[data-tab="explore"]');
     await page.fill('#exFrom', 'DEN'); await page.fill('#exTo', 'BOS'); await page.fill('#exOut', '2026-12-01'); await page.fill('#exBack', '2026-12-05');
