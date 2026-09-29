@@ -834,7 +834,7 @@ async function sweep() {
 // ---------------------------------------------------------------------------
 // Auto-tags: ready-made tags that Gmail itself puts on mail the moment it
 // arrives, through a filter - so it happens with the app closed too, and other
-// apps can rely on it (the Travel app can read the "Travel" label). Each is a Gmail
+// apps can rely on it (the Travel app reads the "Travel" label). Each is a Gmail
 // search: the senders that send that kind of mail, narrowed by subject where a
 // sender also sends offers. Tagged mail stays in the inbox; Tidy never touches
 // it (its search skips anything tagged), nor does the Marketing clean-up.
@@ -850,7 +850,7 @@ const PRESETS = [
     'subject:' + any(['confirmation', 'confirmed', 'itinerary', 'booking', 'reservation', '"check in"', '"check-in"', 'boarding', 'gate',
       'delayed', 'canceled', 'cancelled', 'flight', 'trip', 'stay', 'rental', 'ride', 'receipt', 'departure', '"e-ticket"']),
     '-from:' + any(['marketing.lyftmail.com', 'discover@airbnb.com', 'mkt.flyfrontier.com', 'marriott-vacations.com']),
-    '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off']),
+    '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off', 'miles', 'mileageplus']),
   ].join(' ') },
   { name: 'Money', about: 'Statements, bills, bank alerts', query: [
     '{from:' + any(['email.monarch.com', 'ealerts.bankofamerica.com', 'servicing.synchrony.com']),
@@ -931,6 +931,31 @@ async function presetUndo(back) {
   await relabel(back.added, [], [back.label]);
   await relabel(back.rescued, [back.tidy], ['INBOX']);
   state.lists = {};
+}
+
+// When an update refines a rule, the filter Gmail has is swapped for the new
+// one as the app opens, so new mail follows it without turning the tag off and
+// on. Mail already tagged keeps its tag. If a swap stopped half-way, the next
+// run finishes it: one filter with today's rule stays, any others go.
+async function upgradePresets() {
+  if (!canFilter()) return 0;
+  let n = 0;
+  for (const p of PRESETS) {
+    const l = labelByName(p.name);
+    const ours = l ? (filtersCache || []).filter(f => f.criteria?.query && !f.criteria.from && (f.action?.addLabelIds || []).includes(l.id)) : [];
+    if (!ours.length || (ours.length === 1 && ours[0].criteria.query === p.query)) continue;
+    let keep = ours.find(f => f.criteria.query === p.query);
+    if (!keep) {
+      keep = await api('/settings/filters', { method: 'POST', once: true, body: { criteria: { query: p.query }, action: { addLabelIds: [l.id] } } });
+      filtersCache.push(keep);
+    }
+    for (const f of ours.filter(f => f !== keep)) {
+      await api('/settings/filters/' + f.id, { method: 'DELETE' });
+      filtersCache = filtersCache.filter(x => x.id !== f.id);
+    }
+    n++;
+  }
+  return n;
 }
 
 // Off stops the tagging of new mail; what is tagged keeps its tag.
@@ -3898,7 +3923,7 @@ function renew() {
     const waiting = JSON.parse(ls.get(K.pending, 'null'));
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
-  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); return upgradePresets(); }).catch(() => {});
   loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
     .then(() => sleep(TIDY_DELAY)).then(() => tidyDaily()).catch(() => {});   // after opening's own calls, not on top of them
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {

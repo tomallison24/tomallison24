@@ -456,6 +456,48 @@
   }
 
   // ---------------------------------------------------------------------
+  // Rides: Uber and Lyft receipts. They reach the app through the Travel
+  // label that Mail's auto-tag keeps. One ride each: the pickup and drop-off
+  // (a time, then the address after it), the day, and the fare. Nothing else
+  // from these senders is a booking - not Uber Eats, not offers.
+  // ---------------------------------------------------------------------
+  const rideCompany = from => {
+    const host = ((/<([^>]+)>/.exec(from) || [])[1] || from).split('@').pop().toLowerCase().trim();
+    return /(^|\.)uber\.com$/.test(host) ? 'Uber' : /(^|\.)lyft(mail)?\.com$/.test(host) ? 'Lyft' : '';
+  };
+  function rideFromText(text, subject, company, ref) {
+    const receipt = company === 'Uber' ? /\btrip with uber\b/i.test(subject) && !/\beats\b/i.test(subject) : /\bride with\b/i.test(subject);
+    if (!receipt) return [];
+    // Table cells come out as double spaces, rows as new lines: split on both.
+    const bits = text.split(/\n|\s{2,}|\|/).map(x => x.replace(/^[\s#:]+|[\s:]+$/g, '')).filter(Boolean);
+    const timeRe = /^(?:(pick-?\s?up|drop-?\s?off)\s+)?(\d{1,2}:\d{2}\s*[ap]\.?m\.?)$/i;
+    const addrish = x => x.length >= 6 && x.length <= 160 && /,/.test(x) && /[a-z]/i.test(x) && !/\$|\d{1,2}:\d{2}/.test(x);
+    const stops = [];
+    for (let i = 0; i < bits.length - 1 && stops.length < 2; i++) {
+      const m = timeRe.exec(bits[i]);
+      if (m && addrish(bits[i + 1])) { stops.push({ time: findTimes(m[2])[0].time, place: bits[i + 1] }); i++; }
+    }
+    const day = (findDates(text, ref)[0] || {}).date || new Date(ref).toISOString().slice(0, 10);
+    const headTime = (findTimes(text.slice(0, 300))[0] || {}).time || '';
+    const short = a => {
+      const code = /\(([A-Z]{3})\)/.exec(a);
+      if (code && AIRPORTS[code[1]]) return AIRPORTS[code[1]] + ' airport';
+      return a.split(',')[0].trim();
+    };
+    const fare = ((/\btotal\b[\s|:]*((?:[A-Z]{1,3})?\$\s?\d[\d,]*\.\d\d)/i.exec(text) || /((?:[A-Z]{1,3})?\$\s?\d[\d,]*\.\d\d)/.exec(text) || [])[1] || '').replace(/\s/g, '');
+    const [pu, dr] = stops;
+    const start = day + ((pu && pu.time) || headTime ? 'T' + ((pu && pu.time) || headTime) : '');
+    let end = '';
+    if (dr) end = (dr.time < (pu ? pu.time : '') ? addDays(day, 1) : day) + 'T' + dr.time;
+    return [{
+      type: 'other', ride: true, status: 'confirmed', conf: '', company,
+      title: company + ' ride' + (fare ? ' · ' + fare : ''),
+      place: [pu && short(pu.place), dr && short(dr.place)].filter(Boolean).join(' → '),
+      start, end, guess: false,
+    }];
+  }
+
+  // ---------------------------------------------------------------------
   // Everything together
   // ---------------------------------------------------------------------
   // msg: {html, text, subject, from, date (ms), id, threadId, doc?}
@@ -467,8 +509,10 @@
     const full = (html ? htmlToText(html) : '') || text;
     const ref = msg.date || Date.now();
     const cancelled = /\bcancel(?:l?ed|lation)\b/i.test(subject) || /your (?:reservation|booking|flight|trip) (?:has been|is|was) cancel/i.test(full.slice(0, 1500));
-    let found = fromSchema([...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])]);
-    if (!found.length) {
+    const company = rideCompany(from);
+    let found = company ? rideFromText(full.length > text.length ? full : text, subject, company, ref)
+      : fromSchema([...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])]);
+    if (!found.length && !company) {
       const body = full.length > text.length ? full : text;
       found = [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
       // A hotel or car email that mentions a flight number (e.g. "for your
@@ -489,7 +533,7 @@
   // Parses text pasted by hand (a forwarded confirmation, say).
   const parseText = (text, ref) => parseEmail({ text, subject: '', from: '', date: ref || Date.now() });
 
-  const api = { parseEmail, parseText, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
+  const api = { parseEmail, parseText, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -160,4 +160,39 @@ test('dates in many shapes', () => {
   assert.deepEqual(d('Jan 5'), ['2027-01-05']);   // no year, after the email -> next January
 });
 
+// Rides: the shapes of real Uber and Lyft receipts (cells and rows as the
+// app's HTML reader leaves them), which reach the app through the Travel label.
+const UBER = 'Jul 7, 2026 12:58 PM\nThanks for riding, Tom  We hope you enjoyed your ride this afternoon.\nTotal  $24.96\nTrip fare  CA$23.90\n' +
+  'Trip details\nUberX PIN\n19.20 kilometers, 20 minutes\n1:40 PM\nAéroport international Pierre-Elliott-Trudeau de Montréal (YUL), Dorval, QC H4Y 1G7, CA\n' +
+  '2:01 PM\n340 rue de la Gauchetière O, Montréal, QC H2Z 0C3, CA\n1:40 PM\nAéroport international (YUL), Dorval, QC\n2:01 PM\n340 rue de la Gauchetière O, Montréal';
+test('Uber ride receipt -> a ride, pickup to drop-off', () => {
+  const { b, r } = one({ text: UBER, subject: '[Personal] Your Tuesday afternoon trip with Uber', from: 'Uber Receipts <noreply@uber.com>' });
+  assert.equal(r.bookings.length, 1);
+  assert.equal(b.type, 'other'); assert.equal(b.ride, true); assert.equal(b.guess, false);
+  assert.equal(b.title, 'Uber ride · $24.96');
+  assert.equal(b.place, 'Montreal airport → 340 rue de la Gauchetière O');
+  assert.equal(b.start, '2026-07-07T13:40'); assert.equal(b.end, '2026-07-07T14:01');
+});
+test('the charge summary and the receipt for one Uber ride are one booking', () => {
+  const a = one({ text: UBER, subject: '[Personal] Your Tuesday afternoon trip with Uber', from: 'noreply@uber.com' }).b;
+  const c = one({ text: UBER.replace('Thanks for riding', 'This is your charge summary'), subject: '[Personal] Your Tuesday afternoon trip with Uber', from: 'noreply@uber.com' }).b;
+  assert.equal(a.id, c.id);
+});
+test('Lyft ride receipt -> a ride', () => {
+  const text = 'Lyft\nThanks for riding with Ahmad Jawad!\nYOUR RIDE TO 975 BOULEVARD ROMÉO-VACHON N ON JULY 11, 2026 AT 10:36 AM\nApple Pay (Visa)  CA$28.96\n' +
+    'Standard fare (19.40km, 23m 17s)  CA$24.29\nYour trip\nPickup 10:36 AM\n345 Rue de la Gauchetière O, Montréal, QC H2Z, Canada\n' +
+    'Drop-off 10:59 AM\n975 Boulevard Roméo-Vachon N, Dorval, QC H4Y, Canada\nReceipt #2239722285473282210';
+  const { b } = one({ text, subject: 'Your ride with Ahmad Jawad on July 11', from: 'Lyft <no-reply@lyftmail.com>' });
+  assert.equal(b.title, 'Lyft ride · CA$28.96');
+  assert.equal(b.place, '345 Rue de la Gauchetière O → 975 Boulevard Roméo-Vachon N');
+  assert.equal(b.start, '2026-07-11T10:36'); assert.equal(b.end, '2026-07-11T10:59');
+});
+test('other Uber and Lyft mail is never a booking', () => {
+  for (const [subject, from, text] of [
+    ['Your Tuesday evening order with Uber Eats', 'Uber Eats <noreply@uber.com>', 'Pickup 7:10 PM\n12 Main St, Apex, NC 27502\nTotal $31.00'],
+    ['Reservation confirmed for Wednesday, June 3', 'Uber <no-reply@uber.com>', 'Pickup is at 1:20pm from 503 Samara St, Raleigh, NC\nVehicle: Toyota Camry'],
+    ['20% off your next ride', 'Lyft <no-reply@marketing.lyftmail.com>', 'Rental car deals, pick up Oct 3, 2026 10:00 AM'],
+  ]) assert.equal(one({ subject, from, text }).r.bookings.length, 0, subject);
+});
+
 console.log(n + ' passed');

@@ -36,10 +36,17 @@ Travel reads Gmail **on the phone, read-only** (`gmail.readonly`: it can't
 send, change or delete anything). The first time, it looks back a year; after
 that, every time it opens (at most every 30 minutes) for anything new. It
 only opens emails whose subject looks like a booking (confirmation,
-itinerary, reservation, e-ticket, cancelled, …) or that come from the
-airlines, Marriott, National and the other big car hire firms. Promotions are
-skipped. Each email is read once; **Read the last year again** in Settings
-starts over.
+itinerary, reservation, e-ticket, cancelled, …), that come from the
+airlines, Marriott, National and the other big car hire firms, or that carry
+Gmail's **Travel** label. Promotions are skipped. Each email is read once;
+**Read the last year again** in Settings starts over.
+
+The **Travel** label is Mail's auto-tag (Mail → Tags → Auto-tags → Travel).
+Gmail puts it on flight, hotel, rental and ride mail as it arrives, so
+Travel picks up what its own search doesn't cover (Uber and Lyft rides,
+Hopper, some airlines' gate and delay notices). If the auto-tag is off, the
+label simply matches nothing. When the search widened to include it, the
+next open looked back a year once more; mail already read isn't opened again.
 
 Two ways of reading, best first:
 
@@ -62,6 +69,16 @@ Country), **Frontier (F9)** and **Breeze (MX)**, plus Air Canada, WestJet and
 the big European, Middle East and Asian carriers (`AIRLINES` in `parse.js`).
 Hotels: any, with Marriott's brands recognised by name. Car hire: National,
 Enterprise, Alamo, Hertz, Avis, Budget, Sixt.
+
+**Rides.** Uber and Lyft receipts become a ride: pickup to drop-off, the
+times and the fare (**Uber ride · $24.96**, *Montreal airport → 340 rue de la
+Gauchetière O*), with a car icon. A ride shows on the trip it was taken on,
+the day before or after included (the ride to the airport); a ride at home
+isn't a trip, so it isn't shown. Uber's charge summary and its receipt for
+the same ride are one ride. Nothing else from Uber or Lyft is read as a
+booking (Uber Eats, scheduled-pickup notices, offers). Rides are read from
+the receipt's layout as it is today, checked against real receipts; if Uber
+or Lyft change it, a ride may come out without its addresses.
 
 Rules that keep it tidy:
 
