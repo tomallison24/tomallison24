@@ -821,9 +821,9 @@ async function sweep() {
   let done = 0;
   if (label) {
     const ids = await allIds('older_than:' + settings.days + 'd', { labelIds: [label.id], cap: 1000 });
-    await pool(ids, 5, async id => {
-      try { await api('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch {}
-    });
+    for (const id of ids) {                       // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
+      try { await bgCall('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
+    }
   }
   ls.set(K.swept, String(Date.now()));
   return done;
@@ -899,38 +899,69 @@ function automated(t, email) {
 // Whether you have ever written to this address - or, for a business, to
 // anyone at its domain. One tiny search each, remembered for this visit only.
 const wroteTo = new Map();
-function knownSender(email) {
+function knownSender(email, onPause) {
   const host = email.split('@')[1] || '';
   const key = FREEMAIL.has(host) || !host ? email : host;
   if (!wroteTo.has(key)) {
-    wroteTo.set(key, api('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } })
+    wroteTo.set(key, bgCall('/messages', { params: { q: 'in:sent to:' + key, maxResults: 1 } }, onPause)
       .then(r => !!(r.messages || []).length)
       .catch(e => { wroteTo.delete(key); throw e; }));
   }
   return wroteTo.get(key);
 }
 
+// Tidy's Gmail calls are paced: Gmail allows each person only so many quota
+// units a minute, and a first look through a couple of hundred old
+// conversations at full speed spent several times what opening the app does,
+// in a few seconds - enough for Gmail to say "slow down", which then held up
+// the rest of the app too. Paced to a few calls a second, it stays well under
+// the limit while you keep using the app; if Gmail asks for a pause anyway,
+// Tidy waits it out and carries on rather than failing.
+const BG_GAP = 160;                   // ms between the starts of Tidy's calls: ~6 a second, ~60 units - a third or less of any limit reported
+const TIDY_DELAY = Number(localStorage.getItem('mail.tidyDelay')) || 20000;   // the daily run waits this long after opening (the tests shorten it)
+let bgNext = 0;
+async function bgTurn(onPause) {
+  for (let waits = 0; slowed(); waits++) {
+    if (waits >= 3) throw new QuotaError('Gmail asked the app to slow down for a minute');
+    onPause?.();
+    await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
+  }
+  const wait = bgNext - Date.now();
+  bgNext = Math.max(Date.now(), bgNext) + BG_GAP;
+  if (wait > 0) await sleep(wait);
+}
+async function bgCall(path, opts, onPause) {
+  for (let tries = 0; ; tries++) {
+    await bgTurn(onPause);
+    try { return await api(path, opts); }
+    catch (e) { if (!(e instanceof QuotaError) || tries >= 2) throw e; }   // the pause is waited out on the next turn
+  }
+}
+
 // What Tidy would do now. Nothing is changed. Flagged, Important and tagged
 // mail (tags, reminders, Marketing) is left out by the search itself.
-async function tidyPlan() {
+// progress(done, of) reports as it goes; alive() false stops it early.
+async function tidyPlan({ progress, alive = () => true, onPause } = {}) {
   const cutoff = Date.now() - TIDY_DAYS * 86400e3;
   const ids = [];
   let pageToken;
   do {
-    const r = await threadPage('in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
-      { pageToken, max: Math.min(100, TIDY_CAP - ids.length) });
-    ids.push(...r.ids); pageToken = r.next;
-  } while (pageToken && ids.length < TIDY_CAP);
+    const r = await bgCall('/threads', { params: {
+      q: 'in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
+      maxResults: Math.min(100, TIDY_CAP - ids.length), pageToken } }, onPause);
+    ids.push(...(r.threads || []).map(t => t.id)); pageToken = r.nextPageToken;
+  } while (pageToken && ids.length < TIDY_CAP && alive());
   const me = (state.me || '').toLowerCase();
   const tidy = [], keep = [];
-  let stop = null;
-  await pool(ids, 3, async id => {
-    if (stop) return;
-    try {
-      const t = await api('/threads/' + id, {
+  let done = 0;
+  progress?.(0, ids.length);
+  for (const id of ids) {
+    if (!alive()) break;
+    await (async () => {
+      const t = await bgCall('/threads/' + id, {
         params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
-      });
-      const item = buildRow(t);
+      }, onPause).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
+      const item = t && buildRow(t);
       if (!item) return;
       const msgs = t.messages || [];
       const ids = msgs.map(m => m.id);
@@ -941,11 +972,11 @@ async function tidyPlan() {
       const why = automated(t, item.email);
       if (!why) return keep.push({ item, why: 'looks like a person' });
       if (transactional(item)) return keep.push({ item, why: 'alert or receipt' });
-      if (await knownSender(item.email)) return keep.push({ item, why: 'you’ve written to them' });
+      if (await knownSender(item.email, onPause)) return keep.push({ item, why: 'you’ve written to them' });
       tidy.push({ item, ids, why });
-    } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) stop = e; }
-  });
-  if (stop) throw stop;
+    })();
+    progress?.(++done, ids.length);
+  }
   const byDate = (a, b) => b.item.date - a.item.date;
   return { tidy: tidy.sort(byDate), keep: keep.sort(byDate), looked: ids.length };
 }
@@ -1001,11 +1032,20 @@ async function openTidyPreview() {
   const el = $('#sheet');
   state.sheet = { tidy: true };
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Tidy preview">' +
-    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note">' + ICON.spin + ' Nothing is changed yet.</p></div>';
+    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note" id="tidy-progress">' + ICON.spin + ' Nothing is changed yet.</p>' +
+    '<p class="note">It goes gently, a few emails a second, so Gmail doesn’t ask the app to slow down. You can close this and keep using Mail.</p></div>';
   el.classList.remove('hide', 'leaving');
+  const mine = state.sheet, alive = () => state.sheet === mine;
+  const say = t => { const p = $('#tidy-progress'); if (p && alive()) p.innerHTML = ICON.spin + ' ' + t; };
   let plan;
-  try { plan = await tidyPlan(); }
-  catch (err) { if (state.sheet?.tidy) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a minute') : err); }
+  try {
+    plan = await tidyPlan({
+      alive,
+      progress: (d, n) => say(n ? 'Looked at ' + d + ' of ' + n + ' · nothing is changed yet' : 'Nothing is changed yet.'),
+      onPause: () => say('Gmail asked for a short pause — carrying on in a minute…'),
+    });
+  }
+  catch (err) { if (alive()) closeSheet(); return failed(err instanceof QuotaError ? new Error('Gmail asked the app to slow down — try the preview again in a few minutes') : err); }
   if (!state.sheet?.tidy) return;                     // closed while looking
   tidyPreview = plan;
   drawTidyPreview();
@@ -3644,7 +3684,7 @@ function renew() {
   } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
   loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
-    .then(() => sleep(1500)).then(() => tidyDaily()).catch(() => {});
+    .then(() => sleep(TIDY_DELAY)).then(() => tidyDaily()).catch(() => {});   // after opening's own calls, not on top of them
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
       if (!n) return;

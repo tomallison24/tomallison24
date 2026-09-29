@@ -516,6 +516,21 @@ the minute rolls over. So the app:
 - **when Gmail says slow down,** it retries once, then pauses for a minute
   with the list left on screen, sends nothing in the meantime, and reloads by
   itself afterwards.
+- **paces its background work.** Tidy and the Marketing clean-up send at most
+  about six requests a second (roughly 60 quota units), however much there is
+  to look through. A first Tidy Preview of about 200 old conversations costs
+  about 2,400 units, which used to go out in a few seconds (about 240 units a
+  second, measured against a fake Gmail with a phone-like 120 ms round trip).
+  That was the likely cause of a "slow down" soon after Tidy arrived. It now
+  takes about 45 seconds, with progress shown, and you can close it and keep
+  using the app; closing it stops it. If Gmail still asks for a pause, Tidy
+  waits it out and carries on. The daily Tidy starts 20 seconds after the app
+  opens, not on top of opening's own requests.
+
+Gmail's published per-user limit, and what each call costs, couldn't be
+checked from here: Google's page is blocked, and secondary sources disagree.
+They give 15,000 or 6,000 units a minute, and 10 or 40 units to fetch a
+conversation. The pace above stays well under the lowest of these.
 
 ## Staying signed in
 
