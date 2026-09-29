@@ -834,7 +834,7 @@ async function sweep() {
 // ---------------------------------------------------------------------------
 // Auto-tags: ready-made tags that Gmail itself puts on mail the moment it
 // arrives, through a filter - so it happens with the app closed too, and other
-// apps can rely on it (the Travel app can read the "Travel" label). Each is a Gmail
+// apps can rely on it (the Travel app reads the "Travel" label). Each is a Gmail
 // search: the senders that send that kind of mail, narrowed by subject where a
 // sender also sends offers. Tagged mail stays in the inbox; Tidy never touches
 // it (its search skips anything tagged), nor does the Marketing clean-up.

@@ -334,8 +334,8 @@ send that kind of mail, narrowed by subject where a sender also sends offers
 (a Lyft ride receipt is Travel; "20% off your next ride" isn't). Gmail applies
 it the moment mail arrives, **even with the app closed**, so another app can
 rely on the label. The label is named exactly `Travel`, `Money`, `Health` or
-`Orders`. (The Travel app in this repo still runs its own Gmail search; reading
-`label:Travel` as well would bring in the rides it doesn't look for.)
+`Orders`. The Travel app reads `label:Travel` alongside its own search, which
+is how it gets Uber and Lyft rides.
 
 - **Preview** (while off) runs the search, so you see what it would tag, and
   changes nothing. **Show** (while on) opens the tag.
