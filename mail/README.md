@@ -527,6 +527,14 @@ the minute rolls over. So the app:
   waits it out and carries on. The daily Tidy starts 20 seconds after the app
   opens, not on top of opening's own requests.
 
+Tidy also **doesn't repeat work.** It looks at the **oldest** conversations
+first, up to 400 per Preview and 100 per daily run. Conversations it has
+already kept are remembered on the device, by their ids and Gmail's change
+marker only, never their content, and skipped next time unless something in
+them changed. A first pass through a big backlog may take a few Previews or
+days. After that, each run only checks newly old mail. If Gmail asks for a
+pause, the Preview shows a countdown and then carries on more slowly.
+
 Gmail's published per-user limit, and what each call costs, couldn't be
 checked from here: Google's page is blocked, and secondary sources disagree.
 They give 15,000 or 6,000 units a minute, and 10 or 40 units to fetch a
