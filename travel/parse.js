@@ -94,7 +94,7 @@
   // HTML to plain text with the line breaks a reader would see: block ends
   // and <br> become new lines, table cells become spaced columns.
   function htmlToText(html) {
-    return decodeEntities(String(html || '')
+    return decodeEntities(String(html || '').replace(/\r\n?/g, '\n')
       .replace(/<(script|style|head|title)[\s\S]*?<\/\1\s*>/gi, ' ')
       .replace(/<!--[\s\S]*?-->/g, ' ')
       .replace(/<br\s*\/?>/gi, '\n')
@@ -103,7 +103,7 @@
       .replace(/<[^>]+>/g, ' '))
       .replace(/[\u00a0\u2007\u202f]/g, ' ')
       .replace(/[\u200b-\u200d\ufeff\u034f\u00ad]/g, '')
-      .replace(/[ \t\f\v]+/g, ' ')
+      .replace(/[ \t\f\v\r]+/g, ' ')
       .replace(/ *\n */g, '\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
@@ -194,7 +194,7 @@
     let m;
     while ((m = TIME_RE.exec(text))) {
       let h, mi;
-      if (m[1] !== undefined) { h = +m[1] % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0); mi = +(m[2] || 0); if (+m[1] > 12 || +m[1] === 0) continue; }
+      if (m[1] !== undefined) { if (+m[1] > 12) continue; h = +m[1] % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0); mi = +(m[2] || 0); }
       else { h = +m[4]; mi = +m[5]; }
       out.push({ i: m.index, end: m.index + m[0].length, time: pad(h) + ':' + pad(mi) });
     }
@@ -209,7 +209,9 @@
       const d = findDates(s)[0], t = findTimes(s)[0];
       return { at: d ? d.date + (t ? 'T' + t.time : '') : '', iso: '' };
     }
-    return { at: m[1] + (m[2] ? 'T' + m[2] : ''), iso: /[T ]\d\d:\d\d.*(Z|[+-]\d\d:?\d\d)$/.test(s) ? s.replace(' ', 'T') : '' };
+    // Only a written offset (-04:00) counts as a time zone. A bare "Z" isn't
+    // trusted: American Airlines, for one, writes local times and adds a Z.
+    return { at: m[1] + (m[2] ? 'T' + m[2] : ''), iso: /[T ]\d\d:\d\d(:\d\d(\.\d+)?)?[+-]\d\d:?\d\d$/.test(s) ? s.replace(' ', 'T') : '' };
   }
   const addDays = (date, n) => { const d = new Date(date + 'T12:00'); d.setDate(d.getDate() + n); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
 
@@ -256,8 +258,11 @@
         const pre = /^([A-Z0-9]{2})(\d{1,4}[A-Z]?)$/i.exec(no);
         const airlineCode = code || (pre && AIRLINES[pre[1].toUpperCase()] ? pre[1].toUpperCase() : '');
         if (pre && (!code || pre[1].toUpperCase() === code)) no = pre[2];
+        no = no.replace(/^0+(?=\d)/, '');
         const da = f.departureAirport || {}, aa = f.arrivalAirport || {};
-        const dep = wall(f.departureTime), arr = wall(f.arrivalTime);
+        const dep = wall(f.departureTime);
+        let arr = wall(f.arrivalTime);
+        if (arr.at === dep.at) arr = { at: '', iso: '' };   // Frontier repeats the take-off time
         out.push({
           type: 'flight', status, conf, traveller: who,
           airline: str(al) || AIRLINES[airlineCode] || '', airlineCode, flightNo: no,
@@ -333,33 +338,62 @@
       while ((m = re2.exec(text))) if (!hits.some(h => Math.abs(h.i - m.index) < 20)) hits.push({ i: m.index, end: m.index + m[0].length, code: sender, no: m[1] });
     }
     hits.sort((a, b) => a.i - b.i);
+    // The first mention of a flight is the itinerary; later ones (a
+    // traveller or seats section) repeat it with the wrong things nearby.
+    const seenNo = new Set();
+    for (let k = hits.length - 1; k >= 0; k--) hits[k].key = hits[k].code + hits[k].no.replace(/^0+(?=\d)/, '');
+    const firsts = hits.filter(h => !seenNo.has(h.key) && seenNo.add(h.key));
     const conf = findConf(text);
     const dates = findDates(text, ref);
-    hits.forEach((h, k) => {
-      const next = hits[k + 1] ? hits[k + 1].i : text.length;
-      const lo = Math.max(0, h.i - 260, k ? hits[k - 1].end : 0), hi = Math.min(text.length, Math.max(h.end + 60, Math.min(next, h.end + 420)));
-      // Details usually follow the flight number, so look there first (up to
-      // the next flight) and only then just before it.
-      const aft = text.slice(h.end, hi), pre = text.slice(lo, h.i);
-      const airportsIn = win => {
-        // "BOS to DEN", "(BOS) … (DEN)", or two stand-alone codes.
-        let pair = /\b([A-Z]{3})\b\)?\s*(?:to|-|–|—|→|›|>|=>|✈)\s*(?:[A-Za-z ,.'’]{0,40}\()?\b([A-Z]{3})\b/.exec(win);
-        if (pair && (NOT_AIRPORT.has(pair[1]) || NOT_AIRPORT.has(pair[2]) || pair[1] === pair[2])) pair = null;
-        if (pair) return [pair[1], pair[2]];
-        const par = [...win.matchAll(/\(([A-Z]{3})\)/g)].map(x => x[1]).filter(c => !NOT_AIRPORT.has(c));
-        const bare = [...win.matchAll(/\b([A-Z]{3})\b/g)].map(x => x[1]).filter(c => !NOT_AIRPORT.has(c));
-        const known = bare.filter(c => AIRPORTS[c]);
-        const uniq = [...new Set(par.length >= 2 ? par : known.length >= 2 ? known : bare)];
-        return uniq.length >= 2 ? uniq.slice(0, 2) : null;
-      };
-      const [fromA = '', toA = ''] = airportsIn(aft) || airportsIn(pre) || [];
-      // Date: the nearest one after the flight number, else the nearest before it.
-      const inWin = dates.filter(d => d.i >= lo && d.i < hi);
-      const after = inWin.find(d => d.i >= h.i), beforeD = [...inWin].reverse().find(d => d.i < h.i);
-      const date = (after && (!beforeD || after.i - h.end < h.i - beforeD.end + 40) ? after : beforeD || after || {}).date || '';
-      const notDate = base => t => !inWin.some(d => t.i + base >= d.i && t.i + base < d.end);
-      let times = findTimes(aft).filter(notDate(h.end)), tWin = aft;
-      if (!times.length) { times = findTimes(pre).filter(notDate(lo)).slice(-2); tWin = pre; }
+    const inDate = i => dates.some(d => i >= d.i && i < d.end);
+    const timesIn = (a, b) => findTimes(text.slice(a, b)).map(t => ({ ...t, i: a + t.i, end: a + t.end })).filter(t => !inDate(t.i));
+    // Which way round the email is written: details after each flight number
+    // (most), or before it, with the number last (Frontier's check-in mails).
+    const first = firsts[0];
+    const detailsBefore = !!first && timesIn(Math.max(0, first.i - 400), first.i).length >= 2;
+    // Pairs of airports in a stretch of text, each with where it starts.
+    const pairsIn = (a, b) => {
+      const w = text.slice(a, b), out = [];
+      const ok = (x, y) => x !== y && !NOT_AIRPORT.has(x) && !NOT_AIRPORT.has(y);
+      for (const m of w.matchAll(/\b([A-Z]{3})\b\)?\s*(?:to|-|–|—|→|›|>|=>|✈)\s*(?:[A-Za-z ,.'’]{0,40}\()?\b([A-Z]{3})\b/g)) if (ok(m[1], m[2])) out.push({ i: a + m.index, end: a + m.index + m[0].length, from: m[1], to: m[2] });
+      const codes = [...w.matchAll(/\(\s*([A-Z]{3})\s*\)|\b([A-Z]{3})\b/g)].map(m => ({ c: m[1] || m[2], i: a + m.index, end: a + m.index + m[0].length, par: !!m[1] }))
+        .filter(x => !NOT_AIRPORT.has(x.c) && (x.par || AIRPORTS[x.c] || /^[A-Z]{3}$/.test(x.c)));
+      for (let k = 0; k + 1 < codes.length; k++) {
+        const x = codes[k], y = codes[k + 1];
+        if (ok(x.c, y.c) && y.i - x.end <= 80 && (x.par === y.par || AIRPORTS[x.c] || AIRPORTS[y.c])) out.push({ i: x.i, end: y.end, from: x.c, to: y.c });
+      }
+      return out.sort((p, q) => p.i - q.i);
+    };
+    const clean = (a, b) => !findTimes(text.slice(a, b)).length && !dates.some(d => d.i >= a && d.i < b);
+    firsts.forEach((h, k) => {
+      const prevEnd = k ? firsts[k - 1].end : 0, nextStart = firsts[k + 1] ? firsts[k + 1].i : text.length;
+      let segA, segB, fromA = '', toA = '', date = '', times;
+      if (detailsBefore) {
+        segA = Math.max(prevEnd, h.i - 600); segB = h.i;
+        const pr = pairsIn(segA, segB)[0];
+        if (pr) { fromA = pr.from; toA = pr.to; }
+        const ds = dates.filter(d => d.i >= segA && d.i < segB);
+        date = (ds[0] || {}).date || '';
+        times = timesIn(ds[0] ? ds[0].i : segA, segB);
+      } else {
+        segA = h.end; segB = Math.min(nextStart, h.end + 500);
+        // Airports written just before the number (JetBlue) count when nothing
+        // but the airports sits between them and it; else the first pair after.
+        const near = pairsIn(Math.max(prevEnd, h.i - 120), h.i).filter(p => clean(p.end, h.i)).pop();
+        const pr = near || pairsIn(segA, segB)[0];
+        if (pr) { fromA = pr.from; toA = pr.to; }
+        const before = dates.filter(d => d.i >= Math.max(prevEnd, h.i - 160) && d.i < h.i).pop();
+        const after = dates.find(d => d.i >= segA && d.i < segB);
+        const pick = after && (!before || after.i - h.end < h.i - before.end + 40) ? after : before || after;
+        date = pick ? pick.date : '';
+        times = timesIn(segA, segB);
+      }
+      const tWin = text;
+      // A terminal or gate written with the flight (JetBlue: "2:59 PM Terminal: 2"):
+      // the first one in its part of the email is the departure's.
+      const seg = text.slice(segA, segB);
+      const term = /\bterminal\s*[:#]?\s*([A-Z]?\d{1,2}[A-Z]?|[A-Z]|North|South|East|West|Main|International|Domestic)\b/i.exec(seg);
+      const gate = /\bgate\s*[:#]?\s*([A-Z]{0,2}\d{1,3}[A-Z]?)\b/i.exec(seg);
       const depT = (times[0] || {}).time || '', arrT = (times[1] || {}).time || '';
       let arrDate = date;
       if (date && depT && arrT) {
@@ -369,10 +403,10 @@
       }
       const b = {
         type: 'flight', status: 'confirmed', conf, traveller: '',
-        airline: AIRLINES[h.code] || '', airlineCode: h.code, flightNo: h.no,
+        airline: AIRLINES[h.code] || '', airlineCode: h.code, flightNo: h.no.replace(/^0+(?=\d)/, ''),
         from: fromA, fromName: AIRPORTS[fromA] || '', to: toA, toName: AIRPORTS[toA] || '',
         dep: date ? date + (depT ? 'T' + depT : '') : '', depIso: '', arr: date && arrT ? arrDate + 'T' + arrT : '', arrIso: '',
-        terminal: '', gate: '', seat: '', guess: true,
+        terminal: term ? term[1] : '', gate: gate ? gate[1].toUpperCase() : '', seat: '', guess: true,
       };
       if (!b.dep) return;                                   // no date: not enough to be useful
       if (out.some(o => o.airlineCode === b.airlineCode && o.flightNo === b.flightNo && o.dep.slice(0, 10) === b.dep.slice(0, 10))) return;
@@ -383,13 +417,16 @@
 
   // Finds the date (and time) written just after a label such as "Check-in".
   function dateAfter(text, labelRe, ref, span = 120) {
-    const m = labelRe.exec(text);
-    if (!m) return null;
-    const seg = text.slice(m.index + m[0].length, m.index + m[0].length + span);
-    const d = findDates(seg, ref)[0];
-    if (!d) return null;
-    const t = findTimes(seg).find(x => x.i > d.i - 30);
-    return { date: d.date, time: t ? t.time : '', rest: seg, at: m.index };
+    const re = new RegExp(labelRe.source, labelRe.flags.includes('g') ? labelRe.flags : labelRe.flags + 'g');
+    let m;
+    while ((m = re.exec(text))) {
+      const seg = text.slice(m.index + m[0].length, m.index + m[0].length + span);
+      const d = findDates(seg, ref)[0];
+      if (!d || d.i > 60) continue;              // the label's own date follows it closely
+      const t = findTimes(seg).find(x => x.i > d.i - 30);
+      return { date: d.date, time: t ? t.time : '', rest: seg, at: m.index };
+    }
+    return null;
   }
   function lineAfter(text, labelRe) {
     const m = labelRe.exec(text);
@@ -417,8 +454,9 @@
     const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
     const brand = new RegExp('(' + MARRIOTT_BRANDS.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'i');
     let name = '';
-    const subjAt = /\b(?:at|for)\s+(?:the\s+)?(.{4,80}?)(?:\s*[-–|,(]|$)/i.exec(subject || '');
-    if (subjAt && !/\d{5,}|your|reservation|stay|trip/i.test(subjAt[1])) name = subjAt[1].trim();
+    const subj = String(subject || '').replace(/\s+on\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b.*$/i, '');
+    const subjAt = /\bstay\s+at\s+(?:the\s+)?(.{4,90})$/i.exec(subj) || /\b(?:at|for)\s+(?!your\b)(?:the\s+)?(.{4,90}?)(?:\s*[|(–]|$)/i.exec(subj);
+    if (subjAt && !/\d{5,}|\byour\b|reservation|\bstay\b|\btrip\b/i.test(subjAt[1])) name = subjAt[1].trim();
     if (!name) name = (lines.slice(0, 40).find(l => brand.test(l) && l.length < 90 && !/reward|bonvoy account|member|points|app/i.test(l)) || '').trim();
     if (!name) name = /marriott/i.test(from) ? 'Marriott' : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Hotel').trim();
     const nameAt = lines.findIndex(l => l === name || l.includes(name));
@@ -428,6 +466,26 @@
     return [{
       type: 'hotel', status: 'confirmed', conf, traveller: '', name, address, city: '', phone: '',
       checkIn, checkInTime: ci && ci.time || '', checkOut, checkOutTime: co && co.time || '', guess: true,
+    }];
+  }
+
+  const CAR_CLASSES = 'economy|compact|intermediate|mid-?size|standard|full-?size|premium|luxury|(?:small |mid-?size |standard |full-?size |large |premium )?suv|minivan|pickup|truck|convertible|electric';
+  function carClassIn(text) {
+    const m = new RegExp('reserved an? (' + CAR_CLASSES + ')\\b', 'i').exec(text)
+      || new RegExp('(?:vehicle|car)(?:\\s+(?:class|type))?\\s*[:\\-]?\\s*(' + CAR_CLASSES + ')\\b', 'i').exec(text);
+    return m ? m[1].replace(/\b\w/g, c => c.toUpperCase()) : '';
+  }
+  // Airport and other parking: "Arrival Date & Time … Exit Date & Time".
+  function parkingFromText(text, subject, from, ref) {
+    if (!/\bpark(?:ing)?\b/i.test(from + ' ' + subject)) return [];
+    const a = dateAfter(text, /(?:arrival|entry|drop[- ]?off|check[- ]?in|start)(?:\s+date)?(?:\s*(?:&|and)\s*time)?\s*[:\-]?/i, ref, 80);
+    const e = dateAfter(text, /(?:exit|departure|pick[- ]?up|check[- ]?out|end|return)(?:\s+date)?(?:\s*(?:&|and)\s*time)?\s*[:\-]?/i, ref, 80);
+    if (!a) return [];
+    const lot = (/(?:reserving for|reserved|lot|facility|airport)\s*[:\-]?\s*(?:<[^>]*>)?\s*([A-Z][\w&' .-]{2,40}?)(?:\s*[.\n]|$)/.exec(text) || [])[1] || '';
+    return [{
+      type: 'other', status: 'confirmed', conf: findConf(text) || ((/booking\s+([A-Z0-9]{5,8})\b/i.exec(subject) || [])[1] || ''), traveller: '',
+      title: 'Parking' + (lot ? ' · ' + lot.trim() : ''), place: lot.trim(),
+      start: a.date + (a.time ? 'T' + a.time : ''), end: e ? e.date + (e.time ? 'T' + e.time : '') : '', guess: true,
     }];
   }
 
@@ -448,10 +506,52 @@
     const airport = /\(([A-Z]{3})\)|\b([A-Z]{3})\s+airport/i.exec(pu.rest || '');
     return [{
       type: 'car', status: 'confirmed', conf: findConf(text) || ((/(?:confirmation|reservation)\s*(?:number|#|no\.?)?\s*[:#]?\s*(\d{6,12}|[A-Z0-9]{8,12})/i.exec(text) || [])[1] || ''),
-      traveller: '', company, carClass: ((/(?:vehicle|car)\s*(?:class|type)\s*[:\-]?\s*([^\n]{3,60})/i.exec(text) || [])[1] || '').trim(),
+      traveller: '', company, carClass: carClassIn(text),
       pickupPlace: place(pu.rest) || lineAfter(text, /pick[- ]?up\s+location\s*[:\-]?/i), city: airport ? (AIRPORTS[(airport[1] || airport[2]).toUpperCase()] || '') : '',
       pickup: pu.date + (pu.time ? 'T' + pu.time : ''), pickupIso: '',
       dropPlace: dr ? place(dr.rest) : '', dropoff: dr ? dr.date + (dr.time ? 'T' + dr.time : '') : '', dropoffIso: '', guess: true,
+    }];
+  }
+
+  // ---------------------------------------------------------------------
+  // Rides: Uber and Lyft receipts. They reach the app through the Travel
+  // label that Mail's auto-tag keeps. One ride each: the pickup and drop-off
+  // (a time, then the address after it), the day, and the fare. Nothing else
+  // from these senders is a booking - not Uber Eats, not offers.
+  // ---------------------------------------------------------------------
+  const rideCompany = from => {
+    const host = ((/<([^>]+)>/.exec(from) || [])[1] || from).split('@').pop().toLowerCase().trim();
+    return /(^|\.)uber\.com$/.test(host) ? 'Uber' : /(^|\.)lyft(mail)?\.com$/.test(host) ? 'Lyft' : '';
+  };
+  function rideFromText(text, subject, company, ref) {
+    const receipt = company === 'Uber' ? /\btrip with uber\b/i.test(subject) && !/\beats\b/i.test(subject) : /\bride with\b/i.test(subject);
+    if (!receipt) return [];
+    // Table cells come out as double spaces, rows as new lines: split on both.
+    const bits = text.split(/\n|\s{2,}|\|/).map(x => x.replace(/^[\s#:]+|[\s:]+$/g, '')).filter(Boolean);
+    const timeRe = /^(?:(pick-?\s?up|drop-?\s?off)\s+)?(\d{1,2}:\d{2}\s*[ap]\.?m\.?)$/i;
+    const addrish = x => x.length >= 6 && x.length <= 160 && /,/.test(x) && /[a-z]/i.test(x) && !/\$|\d{1,2}:\d{2}/.test(x);
+    const stops = [];
+    for (let i = 0; i < bits.length - 1 && stops.length < 2; i++) {
+      const m = timeRe.exec(bits[i]);
+      if (m && addrish(bits[i + 1])) { stops.push({ time: findTimes(m[2])[0].time, place: bits[i + 1] }); i++; }
+    }
+    const day = (findDates(text, ref)[0] || {}).date || new Date(ref).toISOString().slice(0, 10);
+    const headTime = (findTimes(text.slice(0, 300))[0] || {}).time || '';
+    const short = a => {
+      const code = /\(([A-Z]{3})\)/.exec(a);
+      if (code && AIRPORTS[code[1]]) return AIRPORTS[code[1]] + ' airport';
+      return a.split(',')[0].trim();
+    };
+    const fare = ((/\btotal\b[\s|:]*((?:[A-Z]{1,3})?\$\s?\d[\d,]*\.\d\d)/i.exec(text) || /((?:[A-Z]{1,3})?\$\s?\d[\d,]*\.\d\d)/.exec(text) || [])[1] || '').replace(/\s/g, '');
+    const [pu, dr] = stops;
+    const start = day + ((pu && pu.time) || headTime ? 'T' + ((pu && pu.time) || headTime) : '');
+    let end = '';
+    if (dr) end = (dr.time < (pu ? pu.time : '') ? addDays(day, 1) : day) + 'T' + dr.time;
+    return [{
+      type: 'other', ride: true, status: 'confirmed', conf: '', company,
+      title: company + ' ride' + (fare ? ' · ' + fare : ''),
+      place: [pu && short(pu.place), dr && short(dr.place)].filter(Boolean).join(' → '),
+      start, end, guess: false,
     }];
   }
 
@@ -467,10 +567,13 @@
     const full = (html ? htmlToText(html) : '') || text;
     const ref = msg.date || Date.now();
     const cancelled = /\bcancel(?:l?ed|lation)\b/i.test(subject) || /your (?:reservation|booking|flight|trip) (?:has been|is|was) cancel/i.test(full.slice(0, 1500));
-    let found = fromSchema([...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])]);
-    if (!found.length) {
+    const company = rideCompany(from);
+    let found = company ? rideFromText(full.length > text.length ? full : text, subject, company, ref)
+      : fromSchema([...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])]);
+    if (!found.length && !company) {
       const body = full.length > text.length ? full : text;
-      found = [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
+      const parking = parkingFromText(body, subject, from, ref);
+      found = parking.length ? parking : [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
       // A hotel or car email that mentions a flight number (e.g. "for your
       // arrival on UA123") shouldn't also make a flight, and vice versa.
       const sender = airlineFromSender(from);
@@ -489,7 +592,7 @@
   // Parses text pasted by hand (a forwarded confirmation, say).
   const parseText = (text, ref) => parseEmail({ text, subject: '', from: '', date: ref || Date.now() });
 
-  const api = { parseEmail, parseText, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
+  const api = { parseEmail, parseText, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

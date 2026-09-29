@@ -44,7 +44,7 @@ if (window.top !== window.self) {
   const KEY = 'allison-travel-v1';
   const K = {
     token: 'travel.token', state: 'travel.state', silent: 'travel.silent', silentFail: 'travel.silentFail', lastAuth: 'travel.lastAuth', hint: 'travel.hint', me: 'travel.me',
-    seen: KEY + '-seen', lastScan: KEY + '-scan', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
+    seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
   };
   const FIRST_SCAN = 'newer_than:1y';
@@ -56,7 +56,10 @@ if (window.top !== window.self) {
     'britishairways.com', 'virginatlantic.com', 'marriott.com', 'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com'];
   const SUBJECTS = ['confirmation', 'confirmed', 'itinerary', 'reservation', 'booking', 'eticket', '"e-ticket"', 'receipt', '"your trip"',
     '"your flight"', '"your stay"', '"check in"', 'cancelled', 'canceled', 'cancellation'];
-  const QUERY = '-in:chats -in:spam -in:trash -category:promotions {' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
+  // Plus anything Mail's Travel auto-tag has labelled (rides, Hopper, gate and
+  // delay notices): Gmail keeps that label up to date as mail arrives.
+  const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
+  const QUERY_V = '2';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
 
   const I = {
     flight: '<svg viewBox="0 0 24 24"><path d="M3.2 13.6l5.4 1.3L6 19.6l1.9.5 4.4-4.3 5.6 1.4a2 2 0 0 0 2.4-1.5v0a2 2 0 0 0-1.4-2.4l-5.6-1.4-1.6-6-1.9-.5-.4 5.4-3.1-.8-1.5-2-1.4-.4.5 3.5z"/></svg>',
@@ -170,8 +173,10 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // Bookings -> trips
   // ---------------------------------------------------------------------
-  const startOf = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '15:00') : '') : b.type === 'car' ? b.pickup : b.start;
-  const endOf = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '11:00') : '') : b.type === 'car' ? b.dropoff : b.end) || startOf(b);
+  // A check-in with no time given sorts after that day's flights, and a
+  // check-out with none before them: you arrive, then check in.
+  const startOf = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '23:00') : '') : b.type === 'car' ? b.pickup : b.start;
+  const endOf = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '06:00') : '') : b.type === 'car' ? b.dropoff : b.end) || startOf(b);
   const startT = b => b.type === 'flight' ? moment(b.dep, b.depIso) : b.type === 'car' ? moment(b.pickup, b.pickupIso) : moment(startOf(b));
   const endT = b => b.type === 'flight' ? moment(b.arr || b.dep, b.arr ? b.arrIso : b.depIso) : b.type === 'car' ? moment(b.dropoff || b.pickup, b.dropoff ? b.dropoffIso : b.pickupIso) : moment(endOf(b));
   const alive = () => bookings.filter(b => startOf(b));
@@ -186,13 +191,19 @@ if (window.top !== window.self) {
   // Where people usually fly from: the most common first departure of a trip.
   let homeAirport = '';
   function groupTrips() {
-    const list = alive().sort((a, b) => startOf(a).localeCompare(startOf(b)));
+    const list = alive().filter(b => !b.ride).sort((a, b) => startOf(a).localeCompare(startOf(b)));
     const groups = [];
     let cur = null;
     for (const b of list) {
       const s = startOf(b), e = endOf(b);
       if (cur && (dOf(s) - dOf(cur.end)) / D <= 1) { cur.items.push(b); if (e > cur.end) cur.end = e; }
       else { cur = { items: [b], start: s, end: e }; groups.push(cur); }
+    }
+    // An Uber or Lyft ride joins the trip it was taken on (a day either side,
+    // for the ride to the airport); a ride at home isn't a trip, so it isn't shown.
+    for (const r of alive().filter(b => b.ride)) {
+      const t = +dOf(startOf(r)), g = groups.find(g => t >= +dOf(g.start) - D && t <= +dOf(g.end) + D);
+      if (g) g.items.push(r);
     }
     const origins = {};
     groups.forEach(g => { const f = g.items.find(b => b.type === 'flight' && b.from); if (f) origins[f.from] = (origins[f.from] || 0) + 1; });
@@ -361,8 +372,11 @@ if (window.top !== window.self) {
   }
   function heroHTML(groups) {
     const now = Date.now();
-    const next = alive().filter(b => b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D)
-      .sort((a, b) => startT(a) - startT(b))[0];
+    const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
+    const flightsIn = d => soon.filter(f => f.type === 'flight' && (f.dep || '').slice(0, 10) === d && startT(f) > now - 30 * 6e4);
+    // On the day you fly in, the flight comes before the hotel check-in.
+    const key = b => b.type === 'hotel' && startT(b) > now && flightsIn(b.checkIn).length ? Math.max(startT(b), ...flightsIn(b.checkIn).map(endT)) + 1 : startT(b);
+    const next = soon.sort((a, b) => key(a) - key(b))[0];
     if (!next) return '';
     const s = startT(next), going = s <= now;
     const k = going ? 'Now' : 'Next · ' + until(s);
@@ -374,8 +388,9 @@ if (window.top !== window.self) {
       h += '<div class="when">' + esc(flightName(next)) + ' · ' + esc(fmtDay(next.dep)) + (fmtTime(next.dep) ? ' · ' + esc(fmtTime(next.dep)) : '') + '</div>';
       const l = liveView(next);
       const bits = [];
-      if (l && l.gate) bits.push('Gate ' + l.gate);
-      if (l && l.terminal) bits.push('Terminal ' + l.terminal);
+      const gate = (l && l.gate) || next.gate, term = (l && l.terminal) || next.terminal;
+      if (term) bits.push('Terminal ' + term);
+      if (gate) bits.push('Gate ' + gate);
       if (next.seat) bits.push('Seat ' + next.seat);
       if (next.conf) bits.push('Conf. ' + next.conf);
       if (bits.length) h += '<div class="sub">' + esc(bits.join(' · ')) + '</div>';
@@ -460,7 +475,9 @@ if (window.top !== window.self) {
     let t = '', s = '', time = fmtTime(at) || (b.type === 'hotel' ? (side === 'start' ? 'Check in' : 'Check out') : 'All day');
     if (b.type === 'flight') {
       t = flightName(b) + ' · ' + (b.from || '?') + ' → ' + (b.to || '?');
-      s = [[b.fromName || city(b.from), b.toName || city(b.to)].filter(Boolean).join(' → '), b.arr ? 'lands ' + fmtTime(b.arr) + (b.arr.slice(0, 10) !== (b.dep || '').slice(0, 10) ? ' ' + fmtDay(b.arr, { weekday: undefined }) : '') : ''].filter(Boolean).join(' · ');
+      const lv = liveView(b), term = (lv && lv.terminal) || b.terminal, gate = (lv && lv.gate) || b.gate;
+      s = [[b.fromName || city(b.from), b.toName || city(b.to)].filter(Boolean).join(' → '), b.arr ? 'lands ' + fmtTime(b.arr) + (b.arr.slice(0, 10) !== (b.dep || '').slice(0, 10) ? ' ' + fmtDay(b.arr, { weekday: undefined }) : '') : '',
+        term ? 'Terminal ' + term : '', gate ? 'Gate ' + gate : ''].filter(Boolean).join(' · ');
     } else if (b.type === 'hotel') {
       t = (side === 'start' ? 'Check in · ' : 'Check out · ') + (b.name || 'Hotel');
       if (!fmtTime(at)) time = side === 'start' ? 'In' : 'Out';
@@ -471,7 +488,7 @@ if (window.top !== window.self) {
     } else { t = b.title || 'Booking'; s = b.place || ''; }
     const meta = [statusPill(b), b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
     return '<button class="ev ' + b.type + cx + '" type="button" data-bk="' + esc(b.id) + '">'
-      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(fmtDay(at)) + '</small>' : '') + '</span><span class="ic">' + (I[b.type] || I.other) + '</span>'
+      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(fmtDay(at)) + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
       + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
   function tripById(id) { return groupTrips().find(g => g.id === id || g.items.some(b => b.id === id)); }
@@ -541,7 +558,8 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const FIELDS = {
     flight: [['airlineCode', 'Airline code', 'UA'], ['flightNo', 'Flight number', '1234'], ['from', 'From (airport)', 'DEN'], ['to', 'To (airport)', 'BOS'],
-      ['dep', 'Departs', '', 'datetime-local'], ['arr', 'Lands', '', 'datetime-local'], ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveller', '', '', 'w']],
+      ['dep', 'Departs', '', 'datetime-local'], ['arr', 'Lands', '', 'datetime-local'], ['terminal', 'Terminal', ''], ['gate', 'Gate', ''],
+      ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveller', '', '', 'w']],
     hotel: [['name', 'Hotel', 'Courtyard Boston', '', 'w'], ['address', 'Address', '', '', 'w'], ['city', 'City', ''], ['conf', 'Confirmation', ''],
       ['checkIn', 'Check in', '', 'date'], ['checkInTime', 'From', '', 'time'], ['checkOut', 'Check out', '', 'date'], ['checkOutTime', 'By', '', 'time'], ['phone', 'Phone', '', 'tel', 'w']],
     car: [['company', 'Company', 'National'], ['conf', 'Confirmation', ''], ['pickupPlace', 'Pick up at', '', '', 'w'], ['pickup', 'Pick up', '', 'datetime-local'],
@@ -624,7 +642,7 @@ if (window.top !== window.self) {
   $('bkBody').addEventListener('click', async e => {
     const b = st.booking; if (!b) return;
     if (e.target.closest('#bkOk')) {
-      readFields(); b.guess = false;
+      readFields(); b.guess = false; b.checked = true;
       const i = bookings.findIndex(x => x.id === b.id);
       if (i >= 0) { bookings[i] = JSON.parse(JSON.stringify(b)); save(); }   // a copy: the sheet keeps editing its own
       renderBooking(); toast('Thanks. Marked as checked.'); return;
@@ -692,19 +710,35 @@ if (window.top !== window.self) {
   // Merge a booking found in an email
   // ---------------------------------------------------------------------
   const INFO_KEYS = ['conf', 'traveller', 'airline', 'airlineCode', 'flightNo', 'from', 'fromName', 'to', 'toName', 'dep', 'depIso', 'arr', 'arrIso', 'terminal', 'gate', 'seat',
-    'name', 'address', 'city', 'phone', 'checkIn', 'checkInTime', 'checkOut', 'checkOutTime', 'company', 'carClass', 'pickupPlace', 'pickup', 'pickupIso', 'dropPlace', 'dropoff', 'dropoffIso'];
+    'name', 'address', 'city', 'phone', 'checkIn', 'checkInTime', 'checkOut', 'checkOutTime', 'company', 'carClass', 'pickupPlace', 'pickup', 'pickupIso', 'dropPlace', 'dropoff', 'dropoffIso',
+    'title', 'place', 'start', 'end'];
+  const num = n => String(n || '').replace(/^0+(?=\d)/, '');
+  const day = b => String(b.dep || '').slice(0, 10);
+  const sameFlight = (a, b) => a.type === 'flight' && b.type === 'flight' && a.airlineCode === b.airlineCode && num(a.flightNo) === num(b.flightNo) && day(a) === day(b);
+  const when = b => (b && b.source && b.source.date) || 0;
+  let revive = new Set();   // ids "Read the last year again" cleared, which may come back
   function upsert(b, byHand) {
-    if (graves['bookings:' + b.id]) return 'gone';                       // deleted on purpose: stays deleted
-    const cur = bookings.find(x => x.id === b.id);
+    if (graves['bookings:' + b.id] && !revive.has(b.id)) return 'gone';  // deleted on purpose: stays deleted
+    let cur = bookings.find(x => x.id === b.id);
+    // A gate or time update that doesn't name the airports belongs to that flight.
+    if (!cur && b.type === 'flight' && (!b.from || !b.to)) cur = bookings.find(x => sameFlight(x, b));
+    // The same flight number on another day in the same booking: the flight
+    // was moved, and the newest email about it decides which day is right.
+    if (b.type === 'flight' && b.conf) {
+      const moved = bookings.filter(x => x !== cur && x.type === 'flight' && x.conf === b.conf && x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && day(x) !== day(b));
+      if (moved.some(x => x.edited || when(x) > when(b))) return 'old';
+      if (moved.length) bookings = bookings.filter(x => !moved.includes(x));
+    }
     if (!cur) { bookings.push({ ...b, created: Date.now(), notes: '', ...(byHand ? { source: null } : {}) }); return 'new'; }
     if (b.status === 'cancelled' && cur.status !== 'cancelled') { cur.status = 'cancelled'; return 'changed'; }
     if (cur.edited) return 'same';                                        // what you typed wins over any email
     let changed = false;
-    const newer = !b.guess && (cur.guess || (b.source && cur.source && b.source.date >= cur.source.date));
+    // A later email wins, except a best-guess read over exact booking data.
+    const newer = when(b) >= when(cur) && (!b.guess || cur.guess);
     for (const k of INFO_KEYS) {
       if (b[k] && (newer ? cur[k] !== b[k] : !cur[k])) { cur[k] = b[k]; changed = true; }
     }
-    if (newer && cur.guess) { cur.guess = false; changed = true; }
+    if (newer && cur.guess && !b.guess) { cur.guess = false; changed = true; }
     if (newer && b.source) cur.source = b.source;
     return changed ? 'changed' : 'same';
   }
@@ -822,7 +856,7 @@ if (window.top !== window.self) {
     st.scanning = true; scanErr = ''; render();
     busyPill('Reading Gmail');
     const startedAt = Date.now();
-    const last = +ls.get(K.lastScan, 0);
+    const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
     let added = 0, changed = 0, cancelled = 0, read = 0;
     try {
@@ -850,11 +884,11 @@ if (window.top !== window.self) {
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
       });
-      ls.set(K.lastScan, String(startedAt));
+      ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V);
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      saveSeen(); save();
+      saveSeen(); save(); revive = new Set();
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -871,6 +905,8 @@ if (window.top !== window.self) {
     }
   }
   $('scanBtn').onclick = () => scan({ loud: true });
+  // Due every half hour, and straight away once the search has widened.
+  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Live flight status (travel/api/flight, a Cloudflare Pages Function)
@@ -1067,7 +1103,7 @@ if (window.top !== window.self) {
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
         + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' : 'Not checked yet.') + ' It also checks each time Travel opens.</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Finds anything missed. Bookings you deleted stay deleted.</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Reads every booking email afresh and replaces what was read before. Bookings you edited, checked or deleted stay as they are.</span></span></button>';
       if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
@@ -1096,7 +1132,16 @@ if (window.top !== window.self) {
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
     else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
-    else if (e.target.closest('#stRescan')) { seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true }); }
+    else if (e.target.closest('#stRescan')) {
+      // Start over: bookings read from email (and not edited or checked by
+      // you) are cleared and read again, so an improved reader replaces its
+      // old mistakes. Anything not found again stays gone, on both phones.
+      const auto = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked);
+      revive = new Set(auto.map(b => b.id));
+      bookings = bookings.filter(b => !revive.has(b.id));
+      save();
+      seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });
+    }
     else if (e.target.closest('#stOut')) signOut();
   });
   $('stSheet').onclick = () => { closeSheet('setSheet'); openSyncSheet(); };
@@ -1127,13 +1172,14 @@ if (window.top !== window.self) {
   let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   const SYNC_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the SECRET in the script.',
+    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes code.',
+    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
     'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
     'busy': 'The Sheet was busy. Trying again shortly.',
     'bad-request': 'The Sheet didn’t understand the request.',
     'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
     'not-json': 'That link didn’t answer like the Travel script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That link is a different app’s Sheet (Notes?). Travel needs its own Sheet and script.',
+    'wrong-app': 'That’s the Notes Sheet’s link. Travel needs the web app link from the AllisonOS - Travel Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
   };
   function saveSyncCfg() {
     if (syncCfg) ls.set(K.sync, JSON.stringify(syncCfg)); else ls.del(K.sync);
@@ -1176,6 +1222,7 @@ if (window.top !== window.self) {
       } catch { throw new Error('network'); }
       try { res = await r.json(); } catch { throw new Error('not-json'); }
       if (res && res.ok && res.app && res.app !== 'allison-travel-sync') throw new Error('wrong-app');
+      if (res && res.error === 'wrong-secret' && res.app !== 'allison-travel-sync') throw new Error(await whichScript(syncCfg.url));
       if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
@@ -1189,6 +1236,19 @@ if (window.top !== window.self) {
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
+  }
+  // A "wrong secret" from a script that doesn't say it's Travel's: ask the
+  // link which app it belongs to (every script answers a plain GET with its
+  // name). Notes' means the wrong link; Travel's means the deployed copy is
+  // older than this change, which added the name to that answer.
+  async function whichScript(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+      const d = await r.json();
+      if (d && d.app && d.app !== 'allison-travel-sync') return 'wrong-app';
+      if (d && d.app === 'allison-travel-sync') return 'old-script';
+    } catch {}
+    return 'wrong-secret';
   }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
   function renderSyncStatus() {
@@ -1242,7 +1302,7 @@ if (window.top !== window.self) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
-    if (getToken() && Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4) scan();
+    if (getToken() && scanDue()) scan();
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
   });
@@ -1260,7 +1320,7 @@ if (window.top !== window.self) {
     else toast('Gmail needs one tap to sign in again: Settings → Connect Gmail.', null, 6000);
   }
   // Read Gmail on open: always after a sign-in, else if it's been a while.
-  if (getToken() && (back && back.ok || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4)) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
+  if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }

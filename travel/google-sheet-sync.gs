@@ -27,6 +27,14 @@ const GRAVES = '_deleted';
 const KEEP_DELETED_DAYS = 400;   // longer than the year of email the app reads
 const CHUNK = 45000;             // a Sheet cell holds up to 50,000 characters
 
+// The phrase as typed on a phone and as typed here can differ in ways you
+// can't see: spaces at the ends, and a phone's "smart" curly quotes and long
+// dashes. Those don't count.
+function same(s) {
+  return String(s == null ? '' : s).normalize('NFKC').trim()
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u2033]/g, '"').replace(/[\u2010-\u2015\u2212]/g, '-');
+}
+
 function doGet() {
   return out({ok: true, app: APP, v: VERSION});
 }
@@ -35,7 +43,7 @@ function doPost(e) {
   let req;
   try { req = JSON.parse(e.postData.contents); } catch (err) { return out({ok: false, error: 'bad-request'}); }
   if (SECRET === 'CHANGE-ME') return out({ok: false, error: 'secret-not-set'});
-  if (!req || req.secret !== SECRET) return out({ok: false, error: 'wrong-secret'});
+  if (!req || same(req.secret) !== same(SECRET)) return out({ok: false, app: APP, error: 'wrong-secret'});
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(25000)) return out({ok: false, error: 'busy'});
   try {

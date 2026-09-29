@@ -26,11 +26,16 @@ days you never open the app — but only once its Google credentials are set up
   **Promotions**, **Updates** — the inbox as Gmail sorted it); your tags;
   **Marketing**; and **Manage Tags**. The one you're on is ticked, and the
   title changes to match. Tap outside it to close it.
+- **Home** (the house, left of the magnifier) is on every page and goes
+  straight back to the inbox as the app opens: All mail, no tag, no search,
+  at the top. It hides while you're selecting, as search does.
+- A **long title** (a long tag name, or Marketing on a smaller phone) steps
+  down a size or two to fit beside the buttons before it's cut short.
 - **Pull the list down** from the top: a short pull shows the search bar, a
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
 - The header **stays at the top** as you scroll: the large title shrinks to a
-  compact one on a rounded, see-through Liquid Glass bar, with the mailbox menu, search, **Edit** and
+  compact one on a rounded, see-through Liquid Glass bar, with the mailbox menu, Home, search, **Edit** and
   Settings still to hand. (Tapping the iPhone's status bar, at the very top,
   scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.
@@ -334,8 +339,8 @@ send that kind of mail, narrowed by subject where a sender also sends offers
 (a Lyft ride receipt is Travel; "20% off your next ride" isn't). Gmail applies
 it the moment mail arrives, **even with the app closed**, so another app can
 rely on the label. The label is named exactly `Travel`, `Money`, `Health` or
-`Orders`. (The Travel app in this repo still runs its own Gmail search; reading
-`label:Travel` as well would bring in the rides it doesn't look for.)
+`Orders`. The Travel app reads `label:Travel` alongside its own search, which
+is how it gets Uber and Lyft rides.
 
 - **Preview** (while off) runs the search, so you see what it would tag, and
   changes nothing. **Show** (while on) opens the tag.
@@ -346,6 +351,10 @@ rely on the label. The label is named exactly `Travel`, `Money`, `Health` or
 - **Off** removes the filter. Mail already tagged keeps its tag.
 - Tagged mail **stays in the inbox**, **Tidy never touches it** (Tidy skips
   anything tagged), and the Marketing clean-up won't delete it.
+- When an update **refines a rule** (say, leaving out airline miles promos),
+  the app swaps the filter Gmail has for the new one the next time it opens,
+  so there's no need to turn a tag off and on. Mail already tagged keeps its
+  tag.
 
 The rules were checked against this mailbox's real mail before shipping. Each
 one catches what it should, and the offers and newsletters it once caught are

@@ -834,7 +834,7 @@ async function sweep() {
 // ---------------------------------------------------------------------------
 // Auto-tags: ready-made tags that Gmail itself puts on mail the moment it
 // arrives, through a filter - so it happens with the app closed too, and other
-// apps can rely on it (the Travel app can read the "Travel" label). Each is a Gmail
+// apps can rely on it (the Travel app reads the "Travel" label). Each is a Gmail
 // search: the senders that send that kind of mail, narrowed by subject where a
 // sender also sends offers. Tagged mail stays in the inbox; Tidy never touches
 // it (its search skips anything tagged), nor does the Marketing clean-up.
@@ -850,7 +850,7 @@ const PRESETS = [
     'subject:' + any(['confirmation', 'confirmed', 'itinerary', 'booking', 'reservation', '"check in"', '"check-in"', 'boarding', 'gate',
       'delayed', 'canceled', 'cancelled', 'flight', 'trip', 'stay', 'rental', 'ride', 'receipt', 'departure', '"e-ticket"']),
     '-from:' + any(['marketing.lyftmail.com', 'discover@airbnb.com', 'mkt.flyfrontier.com', 'marriott-vacations.com']),
-    '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off']),
+    '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off', 'miles', 'mileageplus']),
   ].join(' ') },
   { name: 'Money', about: 'Statements, bills, bank alerts', query: [
     '{from:' + any(['email.monarch.com', 'ealerts.bankofamerica.com', 'servicing.synchrony.com']),
@@ -931,6 +931,31 @@ async function presetUndo(back) {
   await relabel(back.added, [], [back.label]);
   await relabel(back.rescued, [back.tidy], ['INBOX']);
   state.lists = {};
+}
+
+// When an update refines a rule, the filter Gmail has is swapped for the new
+// one as the app opens, so new mail follows it without turning the tag off and
+// on. Mail already tagged keeps its tag. If a swap stopped half-way, the next
+// run finishes it: one filter with today's rule stays, any others go.
+async function upgradePresets() {
+  if (!canFilter()) return 0;
+  let n = 0;
+  for (const p of PRESETS) {
+    const l = labelByName(p.name);
+    const ours = l ? (filtersCache || []).filter(f => f.criteria?.query && !f.criteria.from && (f.action?.addLabelIds || []).includes(l.id)) : [];
+    if (!ours.length || (ours.length === 1 && ours[0].criteria.query === p.query)) continue;
+    let keep = ours.find(f => f.criteria.query === p.query);
+    if (!keep) {
+      keep = await api('/settings/filters', { method: 'POST', once: true, body: { criteria: { query: p.query }, action: { addLabelIds: [l.id] } } });
+      filtersCache.push(keep);
+    }
+    for (const f of ours.filter(f => f !== keep)) {
+      await api('/settings/filters/' + f.id, { method: 'DELETE' });
+      filtersCache = filtersCache.filter(x => x.id !== f.id);
+    }
+    n++;
+  }
+  return n;
 }
 
 // Off stops the tagging of new mail; what is tagged keeps its tag.
@@ -1509,6 +1534,7 @@ function renderChrome() {
   const searching = !!(state.showSearch || state.search);
   $('#search').classList.toggle('hide', !main || !!sel || !searching);
   $('#find').classList.toggle('hide', !main || !!sel || searching || state.view === 'rules');
+  $('#home').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
   $('#edit').classList.toggle('hide', !listView || (!items.length && !sel));
@@ -1517,6 +1543,7 @@ function renderChrome() {
   const all = sel && items.length && items.every(it => sel.has(it.id));
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
+  fitTitle();
   $('#boxbtn').disabled = !main || !!sel;
   if ($('#boxbtn').disabled) closeBoxMenu(true);
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
@@ -3323,6 +3350,41 @@ function clearSearch(reload = true) {
   if (reload) go();
 }
 
+// The large title steps down a size or two when it wouldn't fit beside the
+// buttons (a long tag name, Marketing on a small phone), before it is cut off.
+function fitTitle() {
+  const h1 = $('header h1'), t = $('#title');
+  const was = h1.classList.contains('fit2') ? 'fit2' : h1.classList.contains('fit1') ? 'fit1' : '';
+  h1.style.transition = 'none';                    // measure the sizes themselves, not a step of the animation
+  h1.classList.remove('fit1', 'fit2');
+  let fit = '';
+  if (!document.body.classList.contains('scrolled')) {
+    for (const c of ['fit1', 'fit2']) {
+      if (t.scrollWidth <= t.clientWidth + 1) break;
+      h1.classList.remove('fit1'); h1.classList.add(c); fit = c;
+    }
+  }
+  h1.classList.remove('fit1', 'fit2');
+  if (was) h1.classList.add(was);
+  void h1.offsetWidth;
+  h1.style.transition = '';
+  h1.classList.remove('fit1', 'fit2');
+  if (fit) h1.classList.add(fit);
+}
+
+// Home: the inbox as the app opens - All, no tag, no search, at the top -
+// from any page.
+function goHome() {
+  const away = state.view !== 'inbox';
+  closeBoxMenu(true);
+  screen.classList.toggle('back', away);
+  state.view = 'inbox'; state.tag = null; state.unread = false; state.showSearch = false;
+  clearSearch(false);
+  $('#q').blur();
+  go();
+  window.scrollTo({ top: 0, behavior: reduced || away ? 'auto' : 'smooth' });
+}
+
 // Fetches what's on screen afresh (pull to refresh).
 async function refresh() {
   await dueReminders().catch(() => 0);
@@ -3754,6 +3816,7 @@ document.addEventListener('click', async e => {
       if (notifyMode()) await turnOffNotifications();
       ls.del(K.pushUrl);
       return render();
+    case 'home': return goHome();
     case 'box-menu': return boxMenuOpen() ? closeBoxMenu() : openBoxMenu();
     case 'box-close': return closeBoxMenu();
     case 'box-view': {
@@ -3898,7 +3961,7 @@ function renew() {
     const waiting = JSON.parse(ls.get(K.pending, 'null'));
     if (waiting) { ls.del(K.pending); openCompose(waiting, { note: 'This message wasn’t sent — the app closed while it was waiting. Check it and send again.' }); }
   } catch { ls.del(K.pending); }
-  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); }).catch(() => {});
+  Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); return upgradePresets(); }).catch(() => {});
   loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
     .then(() => sleep(TIDY_DELAY)).then(() => tidyDaily()).catch(() => {});   // after opening's own calls, not on top of them
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {

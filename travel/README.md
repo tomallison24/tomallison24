@@ -36,10 +36,19 @@ Travel reads Gmail **on the phone, read-only** (`gmail.readonly`: it can't
 send, change or delete anything). The first time, it looks back a year; after
 that, every time it opens (at most every 30 minutes) for anything new. It
 only opens emails whose subject looks like a booking (confirmation,
-itinerary, reservation, e-ticket, cancelled, …) or that come from the
-airlines, Marriott, National and the other big car hire firms. Promotions are
-skipped. Each email is read once; **Read the last year again** in Settings
-starts over.
+itinerary, reservation, e-ticket, cancelled, …), that come from the
+airlines, Marriott, National and the other big car hire firms, or that carry
+Gmail's **Travel** label. Promotions are skipped. Each email is read once;
+**Read the last year again** in Settings starts over,
+replacing everything read from email except bookings you edited, checked or
+deleted.
+
+The **Travel** label is Mail's auto-tag (Mail → Tags → Auto-tags → Travel).
+Gmail puts it on flight, hotel, rental and ride mail as it arrives, so
+Travel picks up what its own search doesn't cover (Uber and Lyft rides,
+Hopper, some airlines' gate and delay notices). If the auto-tag is off, the
+label simply matches nothing. When the search widened to include it, the
+next open looked back a year once more; mail already read isn't opened again.
 
 Two ways of reading, best first:
 
@@ -61,10 +70,34 @@ American, Southwest, Alaska, JetBlue, Hawaiian, Spirit, Allegiant, Sun
 Country), **Frontier (F9)** and **Breeze (MX)**, plus Air Canada, WestJet and
 the big European, Middle East and Asian carriers (`AIRLINES` in `parse.js`).
 Hotels: any, with Marriott's brands recognised by name. Car hire: National,
-Enterprise, Alamo, Hertz, Avis, Budget, Sixt.
+Enterprise, Alamo, Hertz, Avis, Budget, Sixt. Parking (e.g. ParkRDU) shows as
+its own entry in the trip.
+
+It works out which way round each email is written: details after the flight
+number (most airlines), airports just before it (JetBlue), or everything
+before it with the number last (Frontier's check-in emails). A later mention
+of the same flight (a seats or traveller list) is ignored.
+
+A terminal or gate written with a flight (JetBlue lists each departure's
+terminal) is kept and shown until live status has fresher ones.
+
+Booking data that says a time is UTC ("…Z") isn't trusted, because American
+Airlines writes local times that way; only a written offset (`-04:00`) counts.
+
+**Rides.** Uber and Lyft receipts become a ride: pickup to drop-off, the
+times and the fare (**Uber ride · $24.96**, *Montreal airport → 340 rue de la
+Gauchetière O*), with a car icon. A ride shows on the trip it was taken on,
+the day before or after included (the ride to the airport); a ride at home
+isn't a trip, so it isn't shown. Uber's charge summary and its receipt for
+the same ride are one ride. Nothing else from Uber or Lyft is read as a
+booking (Uber Eats, scheduled-pickup notices, offers). Rides are read from
+the receipt's layout as it is today, checked against real receipts; if Uber
+or Lyft change it, a ride may come out without its addresses.
 
 Rules that keep it tidy:
 
+- A flight moved to another day (same booking, same flight number, new
+  date): the newest email decides, and the old day disappears.
 - The same booking seen twice (two emails, a change of plans, or both
   phones reading their own Gmail) is one booking: flights are matched on
   airline, number, date and airport; hotels and cars on the confirmation
@@ -146,6 +179,14 @@ the details), with **its own Sheet and script**:
    **Connect and sync**. Then **Copy setup link** and open it on the other
    phone with the clipboard button.
 
+**"The secret code doesn't match"** when you're sure it does: (1) Apps
+Script runs the *deployed* copy, so after changing `SECRET` choose **Deploy →
+Manage deployments → ✏️ → Version: New version → Deploy**; (2) make sure the
+link is the Travel Sheet's, not Notes'; (3) make sure the iPhone didn't fill
+in the Notes code from its saved passwords. Spaces at the ends and the
+phone's curly quotes and long dashes don't count against you, and Travel
+says so when it can tell the link is Notes' or the script is an old copy.
+
 The Sheet gets a readable **Bookings** tab (soonest first) and hidden
 `_bookings`, `_trips` and `_deleted` tabs the app reads back. Newest change
 wins. Each phone reads its own Gmail; the same booking found by both is
@@ -181,7 +222,7 @@ site.
 ## Tests
 
 ```sh
-node travel/scripts/parse-test.mjs   # the email reader, on made-up emails
+node travel/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts
 node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed
 node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed
 node travel/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg
@@ -194,11 +235,12 @@ The last two need Playwright with Chromium (`npm i -g playwright`).
 This was built where Google, RapidAPI, AeroDataBox, Duffel and most travel
 sites were blocked by the network, and without a real inbox. So:
 
-- **The email reader was tested on made-up emails** written in the layouts
-  airlines, Marriott and National use, not on real ones. Real emails will
-  differ; expect some **Check details** at first. Send me a few that come
-  out wrong (with personal details removed) and the reader can be taught
-  them.
+- **The email reader was checked against ten real booking emails** (JetBlue,
+  Frontier booking, check-in and update emails, American, Marriott, National,
+  airport parking), all read correctly after the fixes they prompted. The
+  tests copy those layouts with made-up names and codes; no real email is in
+  the repository. Other airlines' layouts haven't been seen yet, so expect
+  some **Check details** from them.
 - **AeroDataBox's answer format** was taken from its documentation as quoted
   in search results and in other people's code, not from a live call. The
   function reads it defensively, but the first real lookup is the real test.
