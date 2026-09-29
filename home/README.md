@@ -4,8 +4,8 @@ The AllisonOS launcher, laid out like the iPhone's home screen: a grid of app
 icons with their names underneath, over the same drifting colour fields that
 sit behind the glass in Mail and News.
 
-- **Apps**: four to a row (Mail, News, Weather, Notes), each with its own
-  icon, plus **Settings**.
+- **Apps**: four to a row (Mail, News, Weather, Notes, Podcasts), each with
+  its own icon, plus **Settings**.
 - **Dock**: a frosted pill along the bottom with up to four apps and no
   names, as on an iPhone. **Most used** (the default) fills it with the apps
   you open most, counted from taps here; turn it off in Settings to choose
