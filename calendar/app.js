@@ -117,7 +117,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const st = {
     view: ls.get(K.view, 'month'), sel: today(), search: '', searching: false,
-    api: 'checking', calendar: null, apiError: '', calendars: null,
+    api: 'checking', calendar: null, apiError: '', calendars: null, apiDetail: null,
     items: new Map(),             // file name -> {etag, ics, cal}
     win: null,                    // {from, to} ms loaded from iCloud
     occ: [],                      // occurrences in the window (Family + layers)
@@ -146,7 +146,16 @@ if (window.top !== window.self) {
       res = await fetch(API + path, { method: opts.method || 'GET', body: opts.body, cache: 'no-store', headers: Object.assign({ 'X-Calendar': '1' }, opts.headers || {}) });
     } catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let data = null;
-    try { data = await res.json(); } catch { throw Object.assign(new Error('unavailable'), { code: 'unavailable' }); }
+    const ctype = res.headers.get('Content-Type') || '';
+    let raw = '';
+    try { raw = await res.text(); data = JSON.parse(raw); }
+    catch {
+      // Not the function's JSON: a 404 page (the GitHub Pages copy, or the
+      // function missing from the deploy), a Cloudflare error page, or a
+      // sign-in page. Keep what came back so Settings can say which.
+      st.apiDetail = { path, status: res.status, ctype: ctype.split(';')[0].trim(), text: raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) };
+      throw Object.assign(new Error('unavailable'), { code: 'unavailable', status: res.status });
+    }
     if (!res.ok || (data && data.error)) throw Object.assign(new Error(data && data.error || 'http-' + res.status), { code: data && data.error || 'http-' + res.status, status: res.status, data });
     return data;
   }
@@ -158,7 +167,7 @@ if (window.top !== window.self) {
     'bad-host': 'iCloud sent the request somewhere unexpected, so it was stopped.',
     changed: 'That event was changed elsewhere in the meantime; it has been reloaded.',
     offline: 'You’re offline. Showing the events last seen.',
-    unavailable: 'Not available on this copy of the site. Calendar’s iCloud connection works on the Cloudflare copy (Calendar README).',
+    unavailable: 'The iCloud connection isn’t answering on this copy of the site.',
   };
   const errText = e => API_ERRORS[e && e.code] || (e && /^upstream-/.test(e.code) ? 'iCloud answered with an error (' + e.code.slice(9) + ').' : 'Something went wrong talking to iCloud.');
 
@@ -427,11 +436,23 @@ if (window.top !== window.self) {
   }
   function notice() {
     if (st.api === 'ok' || st.api === 'checking') return '';
-    const words = st.api === 'off' ? 'iCloud isn’t reachable from this copy of the site. Open the Cloudflare copy for the Family calendar; the layers still show here.'
+    const words = st.api === 'off' ? offWords()
       : st.api === 'unconfigured' ? 'The Family calendar isn’t connected yet: add the ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD secrets (Calendar README, “Set up”).'
       : st.api === 'offline' ? 'Offline. Showing the events last seen.'
       : errText({ code: st.apiError }) + (st.calendars && st.calendars.length ? ' Calendars there: ' + st.calendars.join(', ') + '.' : '');
     return '<div class="notice glass"><span>' + esc(words) + '</span><button class="textbtn" type="button" data-act="retry">Retry</button></div>';
+  }
+  // Why the function didn't answer: the GitHub Pages copy has no functions
+  // at all; on Cloudflare, the status and page that came back say what's up.
+  function offWords() {
+    const d = st.apiDetail;
+    if (/github\.io$/i.test(location.hostname)) return 'This is the GitHub Pages copy of the site (' + location.hostname + '), which has no iCloud connection. Open Calendar from the Cloudflare address for the Family calendar; the layers still show here.';
+    let w = 'The iCloud connection isn’t answering at ' + location.hostname + '/calendar/api/.';
+    if (d) w += ' It answered ' + d.status + (d.ctype ? ' (' + d.ctype + ')' : '') + (d.text ? ': “' + d.text + '”' : '') + '.';
+    w += d && d.status === 404 ? ' A 404 here means the Pages Functions bundle on Cloudflare doesn’t include calendar/api yet: run the News workflow on the default branch and check its “Publish to Cloudflare Pages” step uploads the Functions bundle.'
+      : d && d.status >= 500 ? ' An error like this means the function itself failed on Cloudflare; the text above is Cloudflare’s own page.'
+      : ' The layers still show here.';
+    return w;
   }
   const wxLine = (day, small) => { const w = wxFor(day); return w ? '<span class="wx" title="' + esc(w.words) + '">' + ICON[w.icon] + (small ? esc(w.hi) : esc(w.hi) + ' / ' + esc(w.lo)) + '</span>' : ''; };
   const kindColor = x => 'style="--c:' + esc(x.color) + '"';
@@ -1197,7 +1218,7 @@ if (window.top !== window.self) {
   function renderSettings() {
     const status = st.api === 'ok' ? { cls: 'ok', text: '<b>Connected</b> to the ' + esc(st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud.' + (st.lastRefresh ? ' Last checked ' + esc(ago(st.lastRefresh)) + '.' : '') }
       : st.api === 'checking' ? { cls: '', text: 'Checking…' }
-      : st.api === 'off' ? { cls: 'bad', text: 'Not available on this copy of the site. The iCloud connection works on the Cloudflare copy (Calendar README).' }
+      : st.api === 'off' ? { cls: 'bad', text: esc(offWords()) }
       : st.api === 'unconfigured' ? { cls: 'bad', text: 'Not set up yet: add the ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD secrets, then run the News workflow (Calendar README, “Set up”).' }
       : st.api === 'offline' ? { cls: 'bad', text: 'Offline. Showing the events last seen' + (st.lastRefresh ? ', ' + esc(ago(st.lastRefresh)) : '') + '.' }
       : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
