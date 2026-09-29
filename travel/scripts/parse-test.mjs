@@ -160,6 +160,97 @@ test('dates in many shapes', () => {
   assert.deepEqual(d('Jan 5'), ['2027-01-05']);   // no year, after the email -> next January
 });
 
+// ---- Layouts seen in real booking emails (2026), with made-up names and codes ----
+// Blocks of HTML table cells with Windows line endings, as the airlines send them.
+const rows = (...cells) => '<table>\r\n' + cells.map(c => '<tr>\r\n  <td>\r\n    ' + c + '\r\n  </td>\r\n</tr>\r\n\r\n\r\n').join('') + '</table>';
+
+test('JetBlue: airports before "Flight 1184", times after, and a traveller section that repeats the numbers', () => {
+  const html = '<html><body>' + rows('Your JetBlue confirmation code is ZXQWER',
+    'RDU', 'BOS', 'Flight 1184', 'Wed, Jun 3', '2:59 PM', 'Terminal: 2', '-', 'Wed, Jun 3', '4:59 PM',
+    'BOS', 'LHR', 'Flight 1620', 'Wed, Jun 3', '6:30 PM', 'Terminal: C', '-', 'Thu, Jun 4', '6:30 AM',
+    'LHR', 'JFK', 'Flight 0020', 'Wed, Jun 10', '11:55 AM', 'Terminal: 2', '-', 'Wed, Jun 10', '3:07 PM',
+    'Your Traveler Details', 'Boston', 'BOS', 'London-Heathrow', 'LHR', 'Flight #', '1620', 'Seat:', '22D',
+    'New York', 'JFK', 'Raleigh/Durham', 'RDU', 'Flight #', '0020', 'Seat:', '8D') + '</body></html>';
+  const { list } = one({ html, subject: 'JetBlue booking confirmation - ZXQWER', from: 'JetBlue <jetblueairways@needtoknow.jetblue.com>', date: Date.parse('2026-03-01') }, 'flight');
+  assert.deepEqual(list.map(b => [b.flightNo, b.from, b.to, b.dep, b.arr]), [
+    ['1184', 'RDU', 'BOS', '2026-06-03T14:59', '2026-06-03T16:59'],
+    ['1620', 'BOS', 'LHR', '2026-06-03T18:30', '2026-06-04T06:30'],
+    ['20', 'LHR', 'JFK', '2026-06-10T11:55', '2026-06-10T15:07'],
+  ]);
+  assert.deepEqual(list.map(b => b.terminal), ['2', 'C', '2'], 'the departure terminal written with each flight');
+});
+
+test('Frontier check-in: each flight\'s details come before "Flight Number:"', () => {
+  const html = rows('Your Flight Details', 'DEPARTING FLIGHT', 'RDU to CLE', 'Monday, June 15, 2026', 'Trip Time: 1 hrs., 45 min.',
+    '3:18 PM', 'Raleigh-Durham, NC (RDU)', '5:03 PM', 'Cleveland, OH (CLE)', 'Flight Number: 3073',
+    'RETURN FLIGHT', 'CLE to RDU', 'Friday, June 19, 2026', 'Trip Time: 1 hrs., 31 min.',
+    '1:02 PM', 'Cleveland, OH (CLE)', '2:33 PM', 'Raleigh-Durham, NC (RDU)', 'Flight Number: 3074',
+    'Book flight', '©2026 Frontier Airlines. 4545 Airport Way | Denver, CO 80239', '06/14/26 01:33 PM');
+  const { list } = one({ html, subject: "It's time to check in for your flight to Cleveland", from: 'flights@emails.flyfrontier.com', date: Date.parse('2026-06-14') }, 'flight');
+  assert.deepEqual(list.map(b => [b.flightNo, b.from, b.to, b.dep, b.arr]), [
+    ['3073', 'RDU', 'CLE', '2026-06-15T15:18', '2026-06-15T17:03'],
+    ['3074', 'CLE', 'RDU', '2026-06-19T13:02', '2026-06-19T14:33'],
+  ]);
+});
+
+test('Frontier booking: "Departs CLE … Arrives RDU", not the seats list below ("RDU-CLE 13F")', () => {
+  const html = rows('Booking Confirmation: MNBVCX', 'Departing Flight: September 7, 2026', 'Flight', '#3073', 'Departs', 'RDU', '3:32 PM', 'Raleigh/Durham',
+    'Arrives', 'CLE', '5:15 PM', 'Cleveland', 'Return Trip: September 11, 2026', 'Flight', '#3074', 'Departs', 'CLE', '1:34 PM', 'Cleveland',
+    'Arrives', 'RDU', '3:09 PM', 'Raleigh/Durham', 'Outbound Seats', 'RDU-CLE 13F', 'Return Seats', 'CLE-RDU 18A');
+  const { list } = one({ html, subject: 'Booking Confirmation: MNBVCX. Your Upcoming Trip to CLE', from: 'flights@t.flyfrontier.com', date: Date.parse('2026-08-31') }, 'flight');
+  assert.deepEqual(list.map(b => [b.flightNo, b.from, b.to, b.dep, b.arr, b.conf]), [
+    ['3073', 'RDU', 'CLE', '2026-09-07T15:32', '2026-09-07T17:15', 'MNBVCX'],
+    ['3074', 'CLE', 'RDU', '2026-09-11T13:34', '2026-09-11T15:09', 'MNBVCX'],
+  ]);
+});
+
+test('booking data with a bare "Z" (American) is read as the local time it really is', () => {
+  const ld = [{ '@context': 'http://schema.org', '@type': 'FlightReservation', reservationNumber: 'QWERTY', reservationStatus: 'Confirmed',
+    reservationFor: { '@type': 'Flight', flightNumber: 'AA 2379', airline: { name: 'American Airlines', iataCode: 'AA' },
+      departureAirport: { name: 'Raleigh-Durham', iataCode: 'RDU' }, departureTime: '2026-06-15T18:25Z',
+      arrivalAirport: { name: 'Charlotte', iataCode: 'CLT' }, arrivalTime: '2026-06-15T19:45Z' } }];
+  const { b } = one({ html: '<script type="application/ld+json">' + JSON.stringify(ld) + '</script><p>6:25 PM AA 2379</p>' }, 'flight');
+  assert.equal(b.flightNo, '2379'); assert.equal(b.dep, '2026-06-15T18:25'); assert.equal(b.depIso, '');
+});
+
+test('booking data with a landing time equal to take-off (Frontier) has no landing time', () => {
+  const ld = { '@context': 'http://schema.org', '@type': 'FlightReservation', reservationNumber: 'ASDFGH',
+    reservationFor: { '@type': 'Flight', flightNumber: '3074', airline: { name: 'Frontier Airlines', iataCode: 'F9' },
+      departureAirport: { iataCode: 'CLE' }, departureTime: '2026-06-19T13:02', arrivalAirport: { iataCode: 'RDU' }, arrivalTime: '2026-06-19T13:02' } };
+  const { b } = one({ html: '<script type="application/ld+json">' + JSON.stringify(ld) + '</script>' }, 'flight');
+  assert.equal(b.dep, '2026-06-19T13:02'); assert.equal(b.arr, '');
+});
+
+test('Marriott "Plan for your upcoming stay": an earlier "check in" in the text is not the check-in', () => {
+  const html = rows('Humaniti Hotel Montreal, Autograph Collection', '340 de la Gauchetiere O Montreal, Quebec H2Z0C3 Canada',
+    'Message your hotel, check in, order food, and more with the Marriott Bonvoy App.', 'Plan Your Activities',
+    'Confirmation Number', '12345678', 'Check-In', 'Tue, Jul 07, 2026', '04:00 PM', 'Check-Out', 'Sat, Jul 11, 2026', '12:00 PM');
+  const { b } = one({ html, subject: 'Plan for your upcoming stay at Humaniti Hotel Montreal, Autograph Collection on Tuesday, July 7, 2026',
+    from: 'reservations@res-marriott.com', date: Date.parse('2026-07-02') }, 'hotel');
+  assert.equal(b.name, 'Humaniti Hotel Montreal, Autograph Collection'); assert.equal(b.conf, '12345678');
+  assert.equal(b.checkIn, '2026-07-07'); assert.equal(b.checkOut, '2026-07-11'); assert.equal(b.checkInTime, '16:00');
+  assert.match(b.address, /Gauchetiere/);
+});
+
+test('National: the car class, not the sentence about car classes', () => {
+  const html = rows('Confirmation:', '11223344', 'Thanks for choosing National. You reserved a Midsize vehicle on September 7, 2026 at CLEVELAND INTL ARPT .',
+    'If one is specifically needed, please reserve the appropriate car class to ensure the location will have one ready.',
+    'PICK UP', 'CLEVELAND INTL ARPT ( CLE )', 'Mon, September 7, 2026', '5:30 PM', 'RETURN', 'CLEVELAND INTL ARPT ( CLE )', 'Fri, September 11, 2026', '1:00 PM',
+    'Vehicle', 'Midsize', 'Toyota Corolla or similar');
+  const { b } = one({ html, subject: 'Confirmed: National Car Rental Reservation at CLEVELAND INTL ARPT on September 7, 2026 (CLE)', from: 'reservations@nationalcar.com', date: Date.parse('2026-08-31') }, 'car');
+  assert.equal(b.carClass, 'Midsize'); assert.equal(b.pickup, '2026-09-07T17:30'); assert.equal(b.dropoff, '2026-09-11T13:00'); assert.equal(b.conf, '11223344');
+});
+
+test('airport parking is parking, not a hotel ("00:30 AM" included)', () => {
+  const html = rows('Thank you for reserving for <strong>ParkRDU Central</strong>. Your confirmation number is <strong>ABCDE</strong>.',
+    'Booking Reference&#58;', 'ABCDE', 'Arrival Date &#38; Time&#58;', '02/04/26 06:00 AM', 'Exit Date &#38; Time&#58;', '02/06/26 00:30 AM');
+  const { r } = one({ html, subject: 'Booking ABCDE Parking Confirmation', from: 'noreply@parkrdu.com', date: Date.parse('2026-02-02') });
+  assert.equal(r.bookings.length, 1);
+  const b = r.bookings[0];
+  assert.equal(b.type, 'other'); assert.match(b.title, /^Parking/); assert.equal(b.conf, 'ABCDE');
+  assert.equal(b.start, '2026-02-04T06:00'); assert.equal(b.end, '2026-02-06T00:30');
+});
+
 // Rides: the shapes of real Uber and Lyft receipts (cells and rows as the
 // app's HTML reader leaves them), which reach the app through the Travel label.
 const UBER = 'Jul 7, 2026 12:58 PM\nThanks for riding, Tom  We hope you enjoyed your ride this afternoon.\nTotal  $24.96\nTrip fare  CA$23.90\n' +
