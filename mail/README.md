@@ -346,6 +346,10 @@ is how it gets Uber and Lyft rides.
 - **Off** removes the filter. Mail already tagged keeps its tag.
 - Tagged mail **stays in the inbox**, **Tidy never touches it** (Tidy skips
   anything tagged), and the Marketing clean-up won't delete it.
+- When an update **refines a rule** (say, leaving out airline miles promos),
+  the app swaps the filter Gmail has for the new one the next time it opens,
+  so there's no need to turn a tag off and on. Mail already tagged keeps its
+  tag.
 
 The rules were checked against this mailbox's real mail before shipping. Each
 one catches what it should, and the offers and newsletters it once caught are
