@@ -372,6 +372,15 @@ these are true:
   a school counts for all of its staff. Personal addresses (Gmail, iCloud,
   Outlook and so on) are matched one by one.
 
+**Automated mail that is yours always stays.** That covers alerts, receipts,
+statements, bills and payments, orders and deliveries, bookings, sign-in codes
+and security notices, account and policy changes, and health messages. These
+are recognised from the subject ("receipt", "statement", "sign-in", "health"
+and so on) or the sender (`alerts@`, `billing@`, `mychart@`, a `care.` or
+`ealerts.` domain, and anything from a `.gov` or `.edu` address). Gmail's
+Purchases and Reservations mail is left out too. When in doubt, it is kept: a
+promotion that happens to mention an "order" stays in the inbox.
+
 It never touches Flagged, Important or tagged mail (tags, reminders,
 Marketing), anything newer than 60 days, or any conversation you have replied
 in.

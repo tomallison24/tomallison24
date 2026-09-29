@@ -845,6 +845,20 @@ const FREEMAIL = new Set(['gmail.com', 'googlemail.com', 'icloud.com', 'me.com',
   'btinternet.com', 'sky.com', 'virginmedia.com', 'comcast.net', 'verizon.net', 'att.net']);
 const AUTO_FROM = /^(no-?reply|do-?not-?reply|donotreply|newsletters?|notifications?|notify|marketing|mailer|digest|deals|offers|promo(tions)?)\b/i;
 const AUTO_CATS = ['CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_SOCIAL', 'CATEGORY_FORUMS'];
+// Automated but yours: alerts, receipts, statements, bills, orders, bookings,
+// sign-in and security notices, health messages. These always stay - when in
+// doubt, keep. Read from the subject and the sender's address; government and
+// university senders (hospitals, libraries, schools, the council) always stay.
+const TX_SUBJECT = new RegExp('\\b(' + [
+  'receipts?', 'invoices?', 'statements?', 'bills?', 'billing', 'payments?', 'paid', 'refunds?', 'charges?', 'autopay', 'due', 'overdue',
+  'orders?', 'shipped', 'shipping', 'dispatched', 'deliver(y|ed|ing)?', 'tracking', 'confirm(ed|ation)?', 'appointments?', 'bookings?',
+  'reservations?', 'itinerar(y|ies)', 'tickets?', 'check-?in', 'alerts?', 'security', 'sign-?in', 'log-?in', 'verif(y|ied|ication)',
+  'codes?', 'passwords?', 'passcode', 'key', 'accounts?', 'polic(y|ies)', 'claims?', 'coverage', 'prescriptions?', 'pharmacy', 'results?',
+  'health', 'medical', 'mychart', 'care team', 'doctor', 'clinic', 'patient', 'tax', 'taxes', '1099', 'w-?2', 'terms', 'renewal', 'renews?',
+  'subscription', 'expir(es|ing|ed)', 'library', 'school',
+].join('|') + ')\\b', 'i');
+const TX_FROM = /(^|[.@+_-])(e?alerts?|billing|invoices?|receipts?|statements?|security|accounts?|myaccount|notices?|orders?|payments?|banking|onlinebanking|mychart|care|health|healthcare|pharmacy|clinic|hospital|medical|patient)([.@+_-]|$)|\.(gov|edu|nhs\.uk|ac\.uk)$/i;
+const transactional = item => TX_FROM.test(item.email) || TX_SUBJECT.test(item.subject);
 
 // Why a conversation looks automated, or '' when it doesn't.
 function automated(t, email) {
@@ -879,7 +893,7 @@ async function tidyPlan() {
   const ids = [];
   let pageToken;
   do {
-    const r = await threadPage('in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels',
+    const r = await threadPage('in:inbox is:unread older_than:' + TIDY_DAYS + 'd -is:starred -is:important -has:userlabels -category:purchases -category:reservations',
       { pageToken, max: Math.min(100, TIDY_CAP - ids.length) });
     ids.push(...r.ids); pageToken = r.next;
   } while (pageToken && ids.length < TIDY_CAP);
@@ -900,6 +914,7 @@ async function tidyPlan() {
       if (msgs.some(m => Number(m.internalDate) > cutoff)) return;              // something newer arrived: not stale
       const why = automated(t, item.email);
       if (!why) return keep.push({ item, why: 'looks like a person' });
+      if (transactional(item)) return keep.push({ item, why: 'alert or receipt' });
       if (await knownSender(item.email)) return keep.push({ item, why: 'you’ve written to them' });
       tidy.push({ item, ids, why });
     } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) stop = e; }
@@ -946,7 +961,7 @@ function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0));
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Tidy old unread mail</span><span>' + (tidyOn() ? 'On' + (last ? ' · ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') : '') : 'Off') + '</span></div>' +
-    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Flagged, Important and tagged mail is never touched.</p>' +
+    '<p class="note">Once a day, unread mail left in the inbox for ' + TIDY_DAYS + ' days is archived under “' + TIDY_LABEL + '” — only when it looks automated (a mailing list, Promotions, Updates, Social or Forums, or a no-reply address) and comes from nobody you have ever written to. Alerts, receipts, statements, orders, bookings, security and health emails always stay, as do Flagged, Important and tagged mail.</p>' +
     '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button>' +
       (tidyOn() ? '<button class="textbtn" data-act="tidy-off">Turn off</button>' : '') +
       '<button class="textbtn" data-act="tidy-see">See tidied mail</button></div>';
