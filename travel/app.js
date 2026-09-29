@@ -170,8 +170,10 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // Bookings -> trips
   // ---------------------------------------------------------------------
-  const startOf = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '15:00') : '') : b.type === 'car' ? b.pickup : b.start;
-  const endOf = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '11:00') : '') : b.type === 'car' ? b.dropoff : b.end) || startOf(b);
+  // A check-in with no time given sorts after that day's flights, and a
+  // check-out with none before them: you arrive, then check in.
+  const startOf = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '23:00') : '') : b.type === 'car' ? b.pickup : b.start;
+  const endOf = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '06:00') : '') : b.type === 'car' ? b.dropoff : b.end) || startOf(b);
   const startT = b => b.type === 'flight' ? moment(b.dep, b.depIso) : b.type === 'car' ? moment(b.pickup, b.pickupIso) : moment(startOf(b));
   const endT = b => b.type === 'flight' ? moment(b.arr || b.dep, b.arr ? b.arrIso : b.depIso) : b.type === 'car' ? moment(b.dropoff || b.pickup, b.dropoff ? b.dropoffIso : b.pickupIso) : moment(endOf(b));
   const alive = () => bookings.filter(b => startOf(b));
@@ -361,8 +363,11 @@ if (window.top !== window.self) {
   }
   function heroHTML(groups) {
     const now = Date.now();
-    const next = alive().filter(b => b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D)
-      .sort((a, b) => startT(a) - startT(b))[0];
+    const soon = alive().filter(b => b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
+    const flightsIn = d => soon.filter(f => f.type === 'flight' && (f.dep || '').slice(0, 10) === d && startT(f) > now - 30 * 6e4);
+    // On the day you fly in, the flight comes before the hotel check-in.
+    const key = b => b.type === 'hotel' && startT(b) > now && flightsIn(b.checkIn).length ? Math.max(startT(b), ...flightsIn(b.checkIn).map(endT)) + 1 : startT(b);
+    const next = soon.sort((a, b) => key(a) - key(b))[0];
     if (!next) return '';
     const s = startT(next), going = s <= now;
     const k = going ? 'Now' : 'Next · ' + until(s);
@@ -374,8 +379,9 @@ if (window.top !== window.self) {
       h += '<div class="when">' + esc(flightName(next)) + ' · ' + esc(fmtDay(next.dep)) + (fmtTime(next.dep) ? ' · ' + esc(fmtTime(next.dep)) : '') + '</div>';
       const l = liveView(next);
       const bits = [];
-      if (l && l.gate) bits.push('Gate ' + l.gate);
-      if (l && l.terminal) bits.push('Terminal ' + l.terminal);
+      const gate = (l && l.gate) || next.gate, term = (l && l.terminal) || next.terminal;
+      if (term) bits.push('Terminal ' + term);
+      if (gate) bits.push('Gate ' + gate);
       if (next.seat) bits.push('Seat ' + next.seat);
       if (next.conf) bits.push('Conf. ' + next.conf);
       if (bits.length) h += '<div class="sub">' + esc(bits.join(' · ')) + '</div>';
@@ -460,7 +466,9 @@ if (window.top !== window.self) {
     let t = '', s = '', time = fmtTime(at) || (b.type === 'hotel' ? (side === 'start' ? 'Check in' : 'Check out') : 'All day');
     if (b.type === 'flight') {
       t = flightName(b) + ' · ' + (b.from || '?') + ' → ' + (b.to || '?');
-      s = [[b.fromName || city(b.from), b.toName || city(b.to)].filter(Boolean).join(' → '), b.arr ? 'lands ' + fmtTime(b.arr) + (b.arr.slice(0, 10) !== (b.dep || '').slice(0, 10) ? ' ' + fmtDay(b.arr, { weekday: undefined }) : '') : ''].filter(Boolean).join(' · ');
+      const lv = liveView(b), term = (lv && lv.terminal) || b.terminal, gate = (lv && lv.gate) || b.gate;
+      s = [[b.fromName || city(b.from), b.toName || city(b.to)].filter(Boolean).join(' → '), b.arr ? 'lands ' + fmtTime(b.arr) + (b.arr.slice(0, 10) !== (b.dep || '').slice(0, 10) ? ' ' + fmtDay(b.arr, { weekday: undefined }) : '') : '',
+        term ? 'Terminal ' + term : '', gate ? 'Gate ' + gate : ''].filter(Boolean).join(' · ');
     } else if (b.type === 'hotel') {
       t = (side === 'start' ? 'Check in · ' : 'Check out · ') + (b.name || 'Hotel');
       if (!fmtTime(at)) time = side === 'start' ? 'In' : 'Out';
@@ -542,7 +550,8 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const FIELDS = {
     flight: [['airlineCode', 'Airline code', 'UA'], ['flightNo', 'Flight number', '1234'], ['from', 'From (airport)', 'DEN'], ['to', 'To (airport)', 'BOS'],
-      ['dep', 'Departs', '', 'datetime-local'], ['arr', 'Lands', '', 'datetime-local'], ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveller', '', '', 'w']],
+      ['dep', 'Departs', '', 'datetime-local'], ['arr', 'Lands', '', 'datetime-local'], ['terminal', 'Terminal', ''], ['gate', 'Gate', ''],
+      ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveller', '', '', 'w']],
     hotel: [['name', 'Hotel', 'Courtyard Boston', '', 'w'], ['address', 'Address', '', '', 'w'], ['city', 'City', ''], ['conf', 'Confirmation', ''],
       ['checkIn', 'Check in', '', 'date'], ['checkInTime', 'From', '', 'time'], ['checkOut', 'Check out', '', 'date'], ['checkOutTime', 'By', '', 'time'], ['phone', 'Phone', '', 'tel', 'w']],
     car: [['company', 'Company', 'National'], ['conf', 'Confirmation', ''], ['pickupPlace', 'Pick up at', '', '', 'w'], ['pickup', 'Pick up', '', 'datetime-local'],

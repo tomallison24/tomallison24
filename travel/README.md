@@ -68,6 +68,9 @@ number (most airlines), airports just before it (JetBlue), or everything
 before it with the number last (Frontier's check-in emails). A later mention
 of the same flight (a seats or traveller list) is ignored.
 
+A terminal or gate written with a flight (JetBlue lists each departure's
+terminal) is kept and shown until live status has fresher ones.
+
 Booking data that says a time is UTC ("…Z") isn't trusted, because American
 Airlines writes local times that way; only a written offset (`-04:00`) counts.
 

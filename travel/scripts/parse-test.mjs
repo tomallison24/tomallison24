@@ -177,6 +177,7 @@ test('JetBlue: airports before "Flight 1184", times after, and a traveller secti
     ['1620', 'BOS', 'LHR', '2026-06-03T18:30', '2026-06-04T06:30'],
     ['20', 'LHR', 'JFK', '2026-06-10T11:55', '2026-06-10T15:07'],
   ]);
+  assert.deepEqual(list.map(b => b.terminal), ['2', 'C', '2'], 'the departure terminal written with each flight');
 });
 
 test('Frontier check-in: each flight\'s details come before "Flight Number:"', () => {

@@ -389,6 +389,11 @@
         times = timesIn(segA, segB);
       }
       const tWin = text;
+      // A terminal or gate written with the flight (JetBlue: "2:59 PM Terminal: 2"):
+      // the first one in its part of the email is the departure's.
+      const seg = text.slice(segA, segB);
+      const term = /\bterminal\s*[:#]?\s*([A-Z]?\d{1,2}[A-Z]?|[A-Z]|North|South|East|West|Main|International|Domestic)\b/i.exec(seg);
+      const gate = /\bgate\s*[:#]?\s*([A-Z]{0,2}\d{1,3}[A-Z]?)\b/i.exec(seg);
       const depT = (times[0] || {}).time || '', arrT = (times[1] || {}).time || '';
       let arrDate = date;
       if (date && depT && arrT) {
@@ -401,7 +406,7 @@
         airline: AIRLINES[h.code] || '', airlineCode: h.code, flightNo: h.no.replace(/^0+(?=\d)/, ''),
         from: fromA, fromName: AIRPORTS[fromA] || '', to: toA, toName: AIRPORTS[toA] || '',
         dep: date ? date + (depT ? 'T' + depT : '') : '', depIso: '', arr: date && arrT ? arrDate + 'T' + arrT : '', arrIso: '',
-        terminal: '', gate: '', seat: '', guess: true,
+        terminal: term ? term[1] : '', gate: gate ? gate[1].toUpperCase() : '', seat: '', guess: true,
       };
       if (!b.dep) return;                                   // no date: not enough to be useful
       if (out.some(o => o.airlineCode === b.airlineCode && o.flightNo === b.flightNo && o.dep.slice(0, 10) === b.dep.slice(0, 10))) return;

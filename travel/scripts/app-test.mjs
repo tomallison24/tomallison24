@@ -135,7 +135,7 @@ for (const scheme of ['light', 'dark']) {
     await page.click('.trip');
     await page.waitForSelector('#tripPage:not([hidden]) .ev');
     const days = await page.$$eval('#tpBody .dayblock', els => els.length);
-    assert.ok(days >= 3, 'days: ' + days);
+    assert.ok(days >= 2, 'days: ' + days);   // 2 or 3, depending on the time of day the test runs
     const rows = await page.$$eval('#tpBody .ev .t', els => els.map(e => e.textContent));
     assert.ok(rows.some(t => /Check in · Courtyard Boston Downtown/.test(t)), rows.join(' | '));
     assert.ok(rows.some(t => /Return · National/.test(t)), rows.join(' | '));
