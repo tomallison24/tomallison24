@@ -33,9 +33,11 @@ Mail and News. Free, no accounts, no server.
 - **Backup**: the download button makes one `.json` file with everything.
   **Import** restores it, or opens a shared file. A banner appears when the
   last backup is more than 7 days old.
-- **Add to calendar**: reminders with a date can be saved as a calendar file,
-  so the phone's calendar does the alerting. A web app can't alert on its own
-  while closed without a push server, and this app has no server.
+- **Add to calendar**: a reminder with a date goes straight into the iCloud
+  Family calendar where the site is on Cloudflare (through the Calendar app's
+  function, see `calendar/README.md`), so the phone's calendar does the
+  alerting; elsewhere it is saved as a calendar file to open. A web app can't
+  alert on its own while closed without a push server, and this app has none.
 
 ## How it's built
 

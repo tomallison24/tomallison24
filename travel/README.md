@@ -13,7 +13,9 @@ with the details filled in.
   bookings that need a look (below).
 - **A trip** is a timeline, day by day: flights, check-in and check-out,
   pick-up and return. **Add to calendar** (top) puts the whole trip in the
-  phone's calendar, so the calendar does the reminding. At the bottom,
+  iCloud Family calendar (through the Calendar app's function, where the site
+  is on Cloudflare; elsewhere it saves a calendar file), so the calendar does
+  the reminding. At the bottom,
   **Find more for this trip** opens Google Flights, Google Hotels, Marriott,
   Kayak car hire and National with the trip's places and dates filled in.
 - **A booking**: every detail can be edited. A flight shows **live status**
