@@ -820,7 +820,8 @@ async function sweep() {
   const label = await labelNamed(settings.label);
   let done = 0;
   if (label) {
-    const ids = await allIds('older_than:' + settings.days + 'd', { labelIds: [label.id], cap: 1000 });
+    const tagged = PRESETS.filter(p => labelByName(p.name)).map(p => ' -label:' + p.name).join('');   // an auto-tag's mail is never cleaned up
+    const ids = await allIds('older_than:' + settings.days + 'd' + tagged, { labelIds: [label.id], cap: 1000 });
     const call = pacer({ maxWaits: 1 });          // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
     for (const id of ids) {
       try { await call('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
@@ -828,6 +829,132 @@ async function sweep() {
   }
   ls.set(K.swept, String(Date.now()));
   return done;
+}
+
+// ---------------------------------------------------------------------------
+// Auto-tags: ready-made tags that Gmail itself puts on mail the moment it
+// arrives, through a filter - so it happens with the app closed too, and other
+// apps can rely on it (the Travel app can read the "Travel" label). Each is a Gmail
+// search: the senders that send that kind of mail, narrowed by subject where a
+// sender also sends offers. Tagged mail stays in the inbox; Tidy never touches
+// it (its search skips anything tagged), nor does the Marketing clean-up.
+// In a Gmail search {a b} means a OR b, and (a b) means a AND b.
+// ---------------------------------------------------------------------------
+const any = list => '(' + list.join(' OR ') + ')';
+const PRESETS = [
+  { name: 'Travel', about: 'Flights, hotels, rentals, rides', query: [
+    'from:' + any(['flyfrontier.com', 'aa.com', 'jetblue.com', 'delta.com', 'united.com', 'southwest.com', 'aircanada.com', 'alaskaair.com',
+      'spirit.com', 'britishairways.com', 'marriott.com', 'res-marriott.com', 'hilton.com', 'hyatt.com', 'ihg.com', 'airbnb.com', 'booking.com',
+      'expedia.com', 'hotels.com', 'vrbo.com', 'hopper.com', 'nationalcar.com', 'enterprise.com', 'hertz.com', 'avis.com', 'alamo.com',
+      'uber.com', 'lyftmail.com', 'lyft.com', 'amtrak.com', 'cbp.dhs.gov', 'tsa.gov']),
+    'subject:' + any(['confirmation', 'confirmed', 'itinerary', 'booking', 'reservation', '"check in"', '"check-in"', 'boarding', 'gate',
+      'delayed', 'canceled', 'cancelled', 'flight', 'trip', 'stay', 'rental', 'ride', 'receipt', 'departure', '"e-ticket"']),
+    '-from:' + any(['marketing.lyftmail.com', 'discover@airbnb.com', 'mkt.flyfrontier.com', 'marriott-vacations.com']),
+    '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off']),
+  ].join(' ') },
+  { name: 'Money', about: 'Statements, bills, bank alerts', query: [
+    '{from:' + any(['email.monarch.com', 'ealerts.bankofamerica.com', 'servicing.synchrony.com']),
+    '(from:' + any(['chase.com', 'citi.com', 'americanexpress.com', 'bankofamerica.com', 'capitalone.com', 'discover.com', 'wellsfargo.com',
+      'fidelity.com', 'vanguard.com', 'schwab.com', 'robinhood.com', 'paypal.com', 'venmo.com', 'troweprice.com', 'pnmac.com', 'synchrony.com',
+      'apexnc.org', 'enbridgegas.com', 'dominionenergy.com', 'duke-energy.com', 'gfiber.com', 'ncfbins.com', 'geico.com', 'statefarm.com',
+      'progressive.com', 'allstate.com', 'irs.gov']),
+    'subject:' + any(['statement', 'autopay', 'bill', 'payment', 'deposit', '"tax document"', '1099', '"trade confirmations"', 'transaction',
+      'purchase', '"account information"']) + ')}',
+    '-subject:' + any(['offer', 'offers', 'deal', 'deals', 'bonus', 'giveaway', 'earn', 'rewards', '"balance transfer"']),
+  ].join(' ') },
+  { name: 'Health', about: 'Visits, results, prescriptions', query: [
+    '{from:' + any(['mychart', 'myuncchart', 'unchealth.unc.edu', 'labcorp.com', 'questdiagnostics.com', 'dukehealth.org', 'wakemed.org',
+      'eclinicalmail.com', 'includedhealth.com', 'letsgetchecked.com']),
+    '(from:' + any(['uhc.com', 'unitedhealthcare.com', 'cvs.com', 'walgreens.com', 'optum.com', 'bcbsnc.com', 'goodrx.com']),
+    'subject:' + any(['prescription', 'pharmacy', 'appointment', 'results', 'claim', '"health statement"', '"explanation of benefits"',
+      '"care team"', 'minuteclinic', 'visit', 'refill', 'pickup', 'coverage']) + ')}',
+    '-subject:' + any(['sale', 'deals', 'offer', 'off', 'coupon', 'coupons', 'save', 'savings', 'store']),
+  ].join(' ') },
+  { name: 'Orders', about: 'Orders, receipts, deliveries', query: [
+    'subject:' + any(['"your order"', '"order confirmation"', '"order confirmed"', '"order received"', '"order number"', '"order with"',
+      '"has shipped"', '"have shipped"', '"out for delivery"', '"was delivered"', '"been delivered"', '"your receipt"', '"your purchase"',
+      '"thanks for your order"', '"thank you for your order"', '"ready for pickup"', '"your invoice"']),
+    '-from:' + any(['newsletter', 'newsletters', 'parentsquare.com', 'robinhood.com', 'ncfbins.com', 'eclinicalmail.com', 'letsgetchecked.com',
+      'includedhealth.com', 'nationalcar.com', 'enterprise.com', 'lyftmail.com']),
+    '-subject:' + any(['sale', 'deals', 'offer', 'off']),
+  ].join(' ') },
+];
+const PRESET_CAP = 2000;              // older mail tagged when one is turned on (newest first)
+const labelByName = name => [...labelsById.values()].find(l => l.name.toLowerCase() === name.toLowerCase()) || null;
+
+// The filter that is this auto-tag: one that adds its label by a search
+// rather than by sender (the app's own tags are all by sender).
+function presetFilter(p) {
+  const l = labelByName(p.name);
+  return (l && (filtersCache || []).find(f => f.criteria?.query && !f.criteria.from && (f.action?.addLabelIds || []).includes(l.id))) || null;
+}
+const presetOfFilter = f => PRESETS.find(p => presetFilter(p)?.id === f.id) || null;
+
+// Turns one on: the label, the filter for new mail, then the mail already
+// here - and anything of it Tidy archived goes back to the inbox. Returns what
+// Undo needs.
+async function presetOn(p) {
+  const label = await labelNamed(p.name, { create: true });
+  const back = { name: p.name, label: label.id, filterId: null, added: [], rescued: [], tidy: tidyId() };
+  const ours = f => f.criteria?.query && !f.criteria.from && (f.action?.addLabelIds || []).includes(label.id);
+  if (!(await refreshFilters(true)).some(ours)) {
+    try {
+      const made = await api('/settings/filters', {
+        method: 'POST', once: true, body: { criteria: { query: p.query }, action: { addLabelIds: [label.id] } },
+      });
+      filtersCache.push(made);
+      back.filterId = made.id;
+    } catch (e) {
+      if (e instanceof AuthError) throw e;
+      const now = (await refreshFilters(true)).find(ours);   // made after all?
+      if (!now) throw e;
+      back.filterId = now.id;
+    }
+  }
+  const [all, had] = await Promise.all([allIds(p.query, { cap: PRESET_CAP }), allIds(p.query, { labelIds: [label.id], cap: PRESET_CAP })]);
+  const hadSet = new Set(had);
+  back.added = all.filter(id => !hadSet.has(id));
+  await relabel(back.added, [label.id]);
+  if (back.tidy) {
+    back.rescued = await allIds(p.query, { labelIds: [back.tidy], cap: PRESET_CAP });
+    await relabel(back.rescued, ['INBOX'], [back.tidy]);
+  }
+  state.lists = {};
+  return back;
+}
+
+async function presetUndo(back) {
+  if (back.filterId) {
+    await api('/settings/filters/' + back.filterId, { method: 'DELETE' });
+    if (filtersCache) filtersCache = filtersCache.filter(f => f.id !== back.filterId);
+  }
+  await relabel(back.added, [], [back.label]);
+  await relabel(back.rescued, [back.tidy], ['INBOX']);
+  state.lists = {};
+}
+
+// Off stops the tagging of new mail; what is tagged keeps its tag.
+async function presetOff(p) {
+  const f = presetFilter(p);
+  if (!f) return;
+  await api('/settings/filters/' + f.id, { method: 'DELETE' });
+  filtersCache = filtersCache.filter(x => x.id !== f.id);
+}
+
+const presetBusy = new Set();
+function autoTagsHTML() {
+  const counts = state.labelCounts || {};
+  return '<div class="card"><h2>Auto-tags</h2>' +
+    '<p class="cnote">Gmail tags these the moment mail arrives, even with the app closed. They stay in your inbox, and Tidy never touches them. Tap one to see what it tags.</p>' +
+    '<ul class="list">' + PRESETS.map(p => {
+      const on = !!presetFilter(p), busy = presetBusy.has(p.name), n = counts[labelByName(p.name)?.id];
+      const line = esc(p.about) + (on && n ? ' · ' + n.toLocaleString() : '');
+      return '<li data-preset="' + esc(p.name) + '"><div class="rowtop"><span class="open" data-act="preset-see" role="button" tabindex="0" aria-label="' +
+        esc((on ? 'Show ' : 'Preview ') + p.name) + '"><span class="who">' +
+        '<span class="tchip" style="--h:' + hue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
+        '<span class="gtools"><button class="textbtn" data-act="preset-toggle" aria-pressed="' + on + '" aria-label="' + esc(p.name) + ' auto-tag ' + (on ? 'on' : 'off') + '"' +
+          (busy ? ' disabled>' + ICON.spin : '>' + (on ? 'On' : 'Off')) + '</button></span></div></li>';
+    }).join('') + '</ul></div>';
 }
 
 // ---------------------------------------------------------------------------
@@ -1536,7 +1663,7 @@ function viewRules() {
       '<span class="gcount">' + meta + '</span>' +
       (isBucket ? '' : '<span class="gtools">' + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
       (rules.length ? '<ul class="list">' + rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
-        '<span class="open"><span class="who"><span class="name">' + esc(f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
+        '<span class="open"><span class="who"><span class="name">' + esc(presetOfFilter(f) ? 'Auto-tag: ' + presetOfFilter(f).about.toLowerCase() : f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
         '<span class="snip">' + ((f.action?.removeLabelIds || []).includes('INBOX') ? 'Skips the inbox' : 'Stays in the inbox') + '</span></span>' +
         '<button class="act warn" data-act="del-rule" aria-label="Delete rule">' + ICON.bin + '</button></div></li>').join('') + '</ul>' : '') +
       '</div>';
@@ -1565,7 +1692,7 @@ function viewRules() {
     '</div>' : '';
 
   const none = yours.length ? '' : '<div class="card"><div class="empty">No tags yet.<br>Swipe right on an email from the school — or anyone — to tag everything they send.</div></div>';
-  return form + none + yours.map(tagCard).join('') + otherCard + leftCard;
+  return autoTagsHTML() + form + none + yours.map(tagCard).join('') + otherCard + leftCard;
 }
 
 function viewSettings() {
@@ -3565,6 +3692,46 @@ document.addEventListener('click', async e => {
       render();
       return tidyDaily().catch(() => {});
     case 'tidy-keeps': showKeeps = !showKeeps; return render();
+    case 'preset-toggle': {
+      const p = PRESETS.find(x => x.name === li?.dataset.preset);
+      if (!p || presetBusy.has(p.name)) return;
+      presetBusy.add(p.name); render();
+      try {
+        if (presetFilter(p)) {
+          await presetOff(p);
+          toast(p.name + ' is off. Mail already tagged keeps the tag.');
+        } else {
+          toast('Turning on ' + p.name + ' · tagging the mail already here…', { ms: 60000 });
+          const back = await presetOn(p);
+          const n = back.added.length, r = back.rescued.length;
+          toast(p.name + ' is on' + (n ? ' · tagged ' + n.toLocaleString() + ' email' + (n === 1 ? '' : 's') : '') +
+            (r ? ' · ' + r + ' back from Tidied' : ''), {
+            label: 'Undo', ms: 9000,
+            action: async () => {
+              try { toast('Undoing…', { ms: 60000 }); await presetUndo(back); toast(p.name + ' is off again'); loadRules({ force: true }); }
+              catch (err) { failed(err); }
+            },
+          });
+        }
+      } catch (err) { failed(err); }
+      presetBusy.delete(p.name);
+      return loadRules({ force: true });
+    }
+    case 'preset-see': {
+      const p = PRESETS.find(x => x.name === li?.dataset.preset);
+      if (!p) return;
+      const l = presetFilter(p) && labelByName(p.name);
+      state.view = 'inbox';
+      clearSearch(false);
+      if (l) state.tag = l.id;                    // on: the tag itself
+      else {                                      // off: what it would tag, as a search
+        state.tag = null;
+        state.search = p.query; state.showSearch = true;
+        if ($('#q')) $('#q').value = state.search;
+        toast('What ' + p.name + ' would tag', { ms: 3000 });
+      }
+      return go();
+    }
     case 'tidy-see':
       state.view = 'inbox'; state.tag = null;
       state.search = 'label:' + TIDY_LABEL; state.showSearch = true;

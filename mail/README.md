@@ -315,6 +315,43 @@ emails themselves stay. It can't be undone, which is why the app asks first.
 There's also a **New tag** form for when you know the domain but have no email
 to hand (`tmsa.org` → *Sofia's school*).
 
+### Auto-tags
+
+At the top of the Tags page are four ready-made tags, each with an **On/Off**
+switch and a **Preview**:
+
+- **Travel**: flight bookings, check-ins, gate, delay and cancellation notices,
+  hotel stays, car rentals, Uber and Lyft rides, Hopper, CBP/TSA.
+- **Money**: bank and card statements and alerts, bills (utilities, the town,
+  insurance), trade confirmations and Monarch's expense alerts.
+- **Health**: MyChart messages, visit summaries, lab results, prescriptions,
+  MinuteClinic visits, insurance statements and Explanations of Benefits.
+- **Orders**: order confirmations, shipping and delivery notices, pickups and
+  receipts.
+
+Each one is a **Gmail filter** with a Gmail search behind it: the senders that
+send that kind of mail, narrowed by subject where a sender also sends offers
+(a Lyft ride receipt is Travel; "20% off your next ride" isn't). Gmail applies
+it the moment mail arrives, **even with the app closed**, so another app can
+rely on the label. The label is named exactly `Travel`, `Money`, `Health` or
+`Orders`. (The Travel app in this repo still runs its own Gmail search; reading
+`label:Travel` as well would bring in the rides it doesn't look for.)
+
+- **Preview** (while off) runs the search, so you see what it would tag, and
+  changes nothing. **Show** (while on) opens the tag.
+- **On** creates the label and the filter, then tags the mail already there
+  (up to the newest 2,000 matches). Any of it that Tidy had archived goes back
+  to the inbox. The toast says how many were tagged and how many came back,
+  with **Undo**.
+- **Off** removes the filter. Mail already tagged keeps its tag.
+- Tagged mail **stays in the inbox**, **Tidy never touches it** (Tidy skips
+  anything tagged), and the Marketing clean-up won't delete it.
+
+The rules were checked against this mailbox's real mail before shipping. Each
+one catches what it should, and the offers and newsletters it once caught are
+now excluded. A sender it doesn't know yet (a new airline, a new
+bank) won't be tagged; tag them by hand, or tell me and I'll add them.
+
 ## Tapping a message
 
 Each row is a **conversation**, as in Mail (the number shows how many
@@ -620,6 +657,12 @@ secondary sources and my own testing instead:
   top). Cloudflare's free-plan limits are from memory (developers.cloudflare.com
   is blocked here); the server is built to stay far inside them — it writes to
   storage only when mail arrives;
+- that a **Gmail filter matches exactly as Gmail search does**. The API's
+  discovery document says a filter's `query` "supports the same query format
+  as the Gmail search box", and every auto-tag rule was run as a search on the
+  real mailbox; that new mail is tagged the same way is Gmail's promise, not
+  something I could watch happen here. Gmail's limit on a filter's length
+  isn't in the discovery document; the longest rule is about 900 characters;
 - **Gmail's quota numbers.** From Google's usage-limits page as I remember it
   (not re-checked, as developers.google.com is blocked here): 15,000 units per
   user per minute, and 10 units for each conversation fetched — so the old
