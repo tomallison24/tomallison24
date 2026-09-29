@@ -13,8 +13,10 @@ jobs:
     steps:
       - name: Ask each function
         run: |
-          for p in calendar/api/ping calendar/api/diagnose; do
-            echo "===== $p"
-            curl -sS -m 20 -o body.txt -w 'status=%{http_code} type=%{content_type} redirect=%{redirect_url}\n' -H 'X-Travel: 1' -H 'X-Calendar: 1' -H 'X-Podcasts: 1' "https://tomallison24-news.pages.dev/$p" || true
-            head -c 9000 body.txt; echo
-          done
+          echo "===== ping"
+          curl -sS -m 20 -H 'X-Calendar: 1' "https://tomallison24-news.pages.dev/calendar/api/ping"; echo
+          # The events of this month and next: only how many, and how big; nothing of them is printed.
+          s=$(date -u +%Y%m01T000000Z); e=$(date -u -d "$(date -u +%Y-%m-01) +2 months" +%Y%m%dT000000Z)
+          echo "===== events $s..$e"
+          curl -sS -m 30 -o body.txt -w 'status=%{http_code} type=%{content_type} bytes=%{size_download}\n' -H 'X-Calendar: 1' "https://tomallison24-news.pages.dev/calendar/api/events?start=$s&end=$e" || true
+          jq -c '{ok, error, calendar, items: (.items|length), withEtag: ([.items[]?|select(.etag!="")]|length), sampleName: (.items[0].name|tostring|gsub("[0-9A-Fa-f]{8,}";"…"))}' body.txt || head -c 300 body.txt
