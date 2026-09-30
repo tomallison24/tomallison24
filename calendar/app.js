@@ -60,6 +60,7 @@ if (window.top !== window.self) {
     refresh: '<svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>',
     busy: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M7.5 15.5l9-2"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
+    close: '<svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg>',
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
     hotel: '<svg viewBox="0 0 24 24"><path d="M3.2 19.6V6.4"/><path d="M3.2 15.2h17.6v4.4"/><path d="M20.8 15.2v-3.4a3 3 0 0 0-3-3h-6.6v6.4"/><circle cx="7.4" cy="11.4" r="2"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
@@ -421,8 +422,55 @@ if (window.top !== window.self) {
   // Rendering
   // ---------------------------------------------------------------------
   const main = $('main');
+  // A glass thumb that slides to the chosen option of a switch (the view bar,
+  // the Day view's week strip, Settings' segmented choices), stretching on the
+  // way (further for a longer trip), as iOS 26's do; an icon it lands on gives
+  // a small bounce. `key` names the switch, so a thumb drawn afresh by a
+  // re-render still slides from where the last one stood, and one that comes
+  // mid-slide (the events arriving from iCloud) carries on from where it was.
+  // A change of `group` (the strip's week) or `jump` places it without moving.
+  const slid = {}, SLIDE_MS = 560;
+  function slide(box, sel, key, { group = '', target, jump } = {}) {
+    if (!box.offsetWidth) return;   // hidden: nothing to measure yet
+    let th = box.querySelector(':scope > .slthumb');
+    const fresh = !th || !th.style.width;
+    if (!th) { th = document.createElement('span'); th.className = 'slthumb'; th.setAttribute('aria-hidden', 'true'); box.prepend(th); }
+    box.classList.add('slides');
+    th.classList.toggle('off', !sel);
+    if (!sel) return;
+    th.classList.toggle('today', sel.classList.contains('today'));
+    const el = target ? target(sel) : sel;
+    let x = 0, y = 0;
+    for (let e = el; e && e !== box; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+    const to = { x, y, w: el.offsetWidth, h: el.offsetHeight, group }, last = slid[key], now = performance.now();
+    const kf = p => ({ transform: 'translate(' + p.x + 'px,' + p.y + 'px)', width: p.w + 'px', height: p.h + 'px' });
+    let move = null;
+    if (!jump && last && last.group === group) {
+      const hops = Math.hypot(to.x - last.x, to.y - last.y) / Math.max(1, to.w);
+      if (last.x !== to.x || last.y !== to.y) {
+        const cs = getComputedStyle(th);   // mid-slide, this is where it is now
+        move = { from: fresh ? kf(last) : { transform: cs.transform, width: cs.width, height: cs.height }, t0: now, hops };
+      } else if (fresh && last.move && now - last.move.t0 < SLIDE_MS) move = last.move;
+    }
+    for (const a of th.getAnimations()) if (!(window.CSSTransition && a instanceof CSSTransition)) a.cancel();
+    Object.assign(th.style, kf(to));
+    slid[key] = Object.assign(to, { move });
+    if (!move || !th.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const at = now - move.t0;
+    const sx = 1 + Math.min(0.36, 0.1 + move.hops * 0.07), sy = 1 - Math.min(0.14, 0.04 + move.hops * 0.025);
+    th.animate([move.from, kf(to)], { duration: SLIDE_MS, easing: 'cubic-bezier(.3,1.25,.45,1)' }).currentTime = at;
+    th.animate([{ scale: '1 1' }, { scale: sx + ' ' + sy, offset: 0.35 }, { scale: '1 1' }], { duration: SLIDE_MS, easing: 'cubic-bezier(.3,.7,.4,1)' }).currentTime = at;
+    const ic = sel.querySelector('svg');
+    if (ic && !at) ic.animate([{ scale: '1' }, { scale: '1.18', offset: 0.5 }, { scale: '1' }], { duration: 380, delay: 200, easing: 'ease-out' });
+  }
+  const tabBar = document.querySelector('.tabs');
+  const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
+  window.addEventListener('resize', () => slideTabs(true));
+  let lastView = null;
   function render() {
     for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.view === st.view && !st.searching));
+    slideTabs();
+    const sameView = lastView === st.view; lastView = st.searching ? null : st.view;
     $('todayBtn').hidden = st.searching;
     if (st.searching) { renderSearch(); return; }
     const p = partsOf(st.sel);
@@ -435,6 +483,10 @@ if (window.top !== window.self) {
     else { t.firstChild.textContent = MONTHS[p.m - 1]; sub.textContent = st.view === 'list' ? 'Coming up from ' + medDate(listFrom || st.sel) : String(p.y); }
     $('titleBtn').disabled = st.view === 'year';
     main.innerHTML = notice() + ({ day: renderDay, week: renderWeek, month: renderMonth, year: renderYear, list: renderList }[st.view])();
+    // The week strip keeps still (no fade in) when only the chosen day moved,
+    // so its thumb can be seen sliding.
+    const strip = main.querySelector('.strip');
+    if (strip) { if (sameView && slid.strip && slid.strip.group === strip.dataset.week) strip.classList.add('keep'); slide(strip, strip.querySelector('[aria-selected="true"]'), 'strip', { group: strip.dataset.week, target: b => b.querySelector('b') }); }
     afterRender();
     animateIn(main);
   }
@@ -518,7 +570,7 @@ if (window.top !== window.self) {
       const d = addDays(ws, i), has = eventsOn(d).length > 0;
       strip += '<button type="button" data-day="' + d + '" class="' + (d === today() ? 'today' : '') + '" aria-selected="' + (d === st.sel) + '" aria-label="' + esc(longDate(d)) + '"><span>' + esc(shortDay(d).slice(0, 1)) + '</span><b>' + +d.slice(8) + '</b><i class="' + (has ? '' : 'none') + '"></i></button>';
     }
-    return '<div class="strip glass" data-swipe="week">' + strip + '</div>' + timeGrid([st.sel]);
+    return '<div class="strip glass" data-swipe="week" data-week="' + ws + '">' + strip + '</div>' + timeGrid([st.sel]);
   }
   function timeGrid(days) {
     const tod = today(), one = days.length === 1;
@@ -910,7 +962,7 @@ if (window.top !== window.self) {
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
         : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '<span class="sub">' + esc(x.kind === 'holiday' ? '' : 'Where it comes from') + '</span></span></a>' : '') + (x.kind !== 'family' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar<span class="sub">A copy, as an event of its own</span></span></button>' : '') + '</div>');
-    $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="textbtn" type="button" data-close>Done</button>';
+    $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="iconbtn" type="button" data-close aria-label="Done">' + ICON.close + '</button>';
     openSheet('evSheet');
     const del = $('evDelete'); if (del) del.onclick = () => deleteEvent(x);
     const ed = $('evEdit'); if (ed) ed.onclick = () => { closeSheet('evSheet'); openEditor({ occ: x }); };
@@ -951,7 +1003,7 @@ if (window.top !== window.self) {
     const f = occ ? formFrom(occ) : copyOf ? Object.assign(formFrom(copyOf), { rule: '', ruleEnd: { type: 'never' }, alarms: copyOf.allDay ? (settings.alertAllDay ? [settings.alertAllDay] : []) : (settings.alertTimed ? [settings.alertTimed] : []) }) : formFrom(null, start);
     ed = { f, occ: occ || null, isNew: !occ, custom: f.rule && !REPEATS.some(r => r[0] === f.rule) };
     $('edLbl').textContent = occ ? 'Edit Event' : 'New Event';
-    $('edSave').textContent = occ ? 'Done' : 'Add';
+    $('edSave').setAttribute('aria-label', occ ? 'Done' : 'Add');
     renderEditor();
     openSheet('edSheet');
     if (!occ) setTimeout(() => { const t = $('edTitle'); if (t) t.focus(); }, 350);
@@ -1253,6 +1305,7 @@ if (window.top !== window.self) {
       + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored or sent anywhere.</p>';
     $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadMail(true); loadWeather(true); }); };
     const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
+    slideSegs();
     $('stDayStart').onchange = e => { settings.dayStart = +e.target.value; saveSettings(); };
     $('stDur').onchange = e => { settings.duration = +e.target.value; saveSettings(); };
     $('stAlert').onchange = e => { settings.alertTimed = e.target.value; saveSettings(); };
@@ -1269,7 +1322,8 @@ if (window.top !== window.self) {
     const b = e.target.closest('[data-set]');
     if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; saveSettings(); render(); renderSettings(); }
   });
-  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));
+  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
   const ago = t => { const m = Math.round((Date.now() - t) / MIN); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
 
   // ---------------------------------------------------------------------
