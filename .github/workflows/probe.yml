@@ -1,0 +1,73 @@
+# Temporary: checks candidate stem cell feed URLs from a GitHub runner (the
+# dev container can't reach the publishers). Remove once feeds.json is set.
+name: Probe
+
+on:
+  push:
+    branches: [claude/stemcell-news-sources]
+    paths: ['.github/workflows/probe.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - name: Probe feeds
+        shell: bash
+        run: |
+          cat > probe.mjs <<'JS'
+          const urls = `
+          https://www.nature.com/nature.rss
+          https://www.nature.com/subjects/stem-cells.rss
+          https://www.nature.com/subjects/stem-cells/nature.rss
+          https://www.nature.com/subjects/stem-cells/ncomms.rss
+          https://www.nature.com/subjects/pluripotent-stem-cells.rss
+          https://www.nature.com/subjects/induced-pluripotent-stem-cells.rss
+          https://www.nature.com/subjects/organoids.rss
+          https://www.nature.com/neuro.rss
+          https://www.nature.com/ncb.rss
+          https://www.nature.com/nbt.rss
+          https://www.nature.com/nm.rss
+          https://www.nature.com/npjregenmed.rss
+          https://www.cell.com/cell/inpress.rss
+          https://www.cell.com/cell/current.rss
+          https://www.cell.com/cell-stem-cell/inpress.rss
+          https://www.cell.com/cell-stem-cell/current.rss
+          https://www.cell.com/stem-cell-reports/inpress.rss
+          https://www.cell.com/stem-cell-reports/current.rss
+          https://www.cell.com/developmental-cell/inpress.rss
+          https://www.cell.com/neuron/inpress.rss
+          https://www.stemcellsciencenews.com/
+          https://www.stemcellsciencenews.com/feed
+          https://www.stemcellsciencenews.com/feed/
+          https://www.stemcellsciencenews.com/rss
+          https://www.stemcellsciencenews.com/rss.xml
+          https://www.stemcell.com/about-us/news.html
+          https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science
+          https://www.science.org/action/showFeed?type=axatoc&feed=rss&jc=science
+          https://stemcellres.biomedcentral.com/articles/most-recent/rss.xml
+          https://journals.biologists.com/rss/site_1000005/1000005.xml
+          `.trim().split(/\s+/);
+          for (const u of urls) {
+            try {
+              const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'news-home-screen-app/1.0 (personal RSS reader)', Accept: 'application/rss+xml, application/xml, text/xml' } });
+              const t = await r.text();
+              const items = t.match(/<item[\s>][\s\S]*?<\/item>/gi) || t.match(/<entry[\s>][\s\S]*?<\/entry>/gi) || [];
+              const root = (t.match(/<(rss|rdf:RDF|feed|html)\b/i) || [])[1] || '?';
+              console.log(`\n== ${r.status} ${root} ${items.length} items ${r.headers.get('content-type')} ${u} -> ${r.url}`);
+              if (root === 'html') for (const [l] of t.matchAll(/<link[^>]+(rss|atom)\+xml[^>]*>/gi)) console.log('   feedlink:', l);
+              for (const it of items.slice(0, 2)) {
+                const tags = [...new Set([...it.matchAll(/<([\w:]+)[\s>\/]/g)].map(m => m[1]))].join(' ');
+                console.log('   tags:', tags);
+                console.log('   ' + it.replace(/\s+/g, ' ').slice(0, 900));
+              }
+            } catch (e) { console.log(`\n== ERR ${u} ${e.message}`); }
+          }
+          JS
+          node probe.mjs
