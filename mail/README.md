@@ -39,6 +39,13 @@ days you never open the app — but only once its Google credentials are set up
   Settings still to hand. (Tapping the iPhone's status bar, at the very top,
   scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.
+- **Sheets** (tagging, Unsubscribe, a file, Tidy's preview, every question)
+  are Liquid Glass, as in iOS 26: clear glass floating just inside the
+  screen's edges with the mail blurred through it, glass buttons and fields,
+  and the main action filled blue. A message and New Message stay full pages
+  with the same glass (✕ to cancel, a blue ↑ to send), Settings has iOS 26's
+  switches, and **All | Unread**, the tag picker and *Notify me about* have a
+  glass thumb that slides to your choice.
 - Rows show the sender, subject and preview, plus your own tags — no buttons
   and no domain chips; the actions live under the swipes.
 

@@ -977,8 +977,8 @@ function autoTagsHTML() {
       return '<li data-preset="' + esc(p.name) + '"><div class="rowtop"><span class="open" data-act="preset-see" role="button" tabindex="0" aria-label="' +
         esc((on ? 'Show ' : 'Preview ') + p.name) + '"><span class="who">' +
         '<span class="tchip" style="--h:' + hue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
-        '<span class="gtools"><button class="textbtn" data-act="preset-toggle" aria-pressed="' + on + '" aria-label="' + esc(p.name) + ' auto-tag ' + (on ? 'on' : 'off') + '"' +
-          (busy ? ' disabled>' + ICON.spin : '>' + (on ? 'On' : 'Off')) + '</button></span></div></li>';
+        '<span class="gtools"><button class="switch' + (busy ? ' busy' : '') + '" role="switch" data-act="preset-toggle" aria-checked="' + on + '" aria-label="' + esc(p.name) + ' auto-tag"' +
+          (busy ? ' disabled' : '') + '></button></span></div></li>';
     }).join('') + '</ul></div>';
 }
 
@@ -1203,7 +1203,7 @@ let showKeeps = false;                // Settings: the always-kept list, folded 
 function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0)), keeps = tidyKeeps(), on = tidyOn();
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><span>Tidy old unread mail</span><button class="textbtn" data-act="tidy-toggle" aria-pressed="' + on + '">' + (on ? 'On' : 'Off') + '</button></div>' +
+    '<div class="field"><span>Tidy old unread mail</span><button class="switch" role="switch" data-act="tidy-toggle" aria-checked="' + on + '" aria-label="Tidy old unread mail"></button></div>' +
     '<p class="note">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger. Banks, alerts, receipts and people always stay.' +
       (on && last ? ' Last run ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') + '.' : '') + '</p>' +
     '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button><button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
@@ -1398,6 +1398,7 @@ const ICON = {
   clip: '<svg class="i s clip" width="13" height="13" viewBox="0 0 24 24"><path d="M20.2 11.3l-7.7 7.7a5.3 5.3 0 0 1-7.5-7.5l8.1-8.1a3.5 3.5 0 0 1 5 5l-8 8a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3"/></svg>',
   img: '<svg class="i s" width="18" height="18" viewBox="0 0 24 24"><rect x="2.8" y="3.8" width="18.4" height="16.4" rx="4"/><circle cx="8.8" cy="9.4" r="1.8"/><path d="M3.2 17.2l3.6-3.2a1.8 1.8 0 0 1 2.4 0l1.6 1.4"/><path d="M9.2 20l5.9-5.6a1.8 1.8 0 0 1 2.5 0l3.4 3.2"/></svg>',
   spin: '<svg class="i s spin" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
+  x: '<svg class="i s bold" width="20" height="20" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   out: '<svg class="i s" width="13" height="13" viewBox="0 0 24 24"><path d="M14 3.6h5.4a1 1 0 0 1 1 1V10"/><path d="M20 4l-8.6 8.6"/><path d="M18.4 13.8v3.4a3.2 3.2 0 0 1-3.2 3.2H6.8a3.2 3.2 0 0 1-3.2-3.2V8.8a3.2 3.2 0 0 1 3.2-3.2h3.4"/></svg>',
 };
 
@@ -1521,6 +1522,29 @@ function closeBoxMenu(instant) {
 }
 const boxMenuOpen = () => !$('#boxmenu').classList.contains('hide');
 
+// Switches with a sliding glass thumb: All | Unread, the tag sheet's tags and
+// Settings' "Notify me about" - the shared AllisonOS one (home/slide.js). If
+// that file never loaded (offline, before it was saved), the chosen option
+// keeps its own fill and nothing slides.
+const slide = window.AllisonOS?.slide || (() => {});
+let segOn = null;
+function slideSeg(jump) {
+  const seg = $('#seg'), on = seg.querySelector('[aria-checked="true"]');
+  // The bar is never redrawn, so a render that changes nothing leaves it be (placing it again would stop a slide).
+  if (!seg.offsetWidth || (!jump && on === segOn && seg.querySelector('.slthumb'))) return;
+  segOn = on;
+  slide(seg, on, 'unread', { jump });
+}
+function slideNotify(jump) {
+  const g = screen.querySelector('.notify-modes');
+  if (g) slide(g, g.querySelector('[aria-checked="true"]'), 'notify', { jump });
+}
+let tagPicks = 0;                   // each tag sheet starts afresh: its thumb appears where it's picked
+function slideTags(jump) {
+  const g = $('#sheet .tagpick');
+  if (g) slide(g, g.querySelector('.chip2.on'), 'tagpick', { group: String(tagPicks), jump });
+}
+
 // Everything around the list: the header, its title menu, and the select bar.
 function renderChrome() {
   const signedIn = !!getToken() && !!clientId();
@@ -1552,6 +1576,7 @@ function renderChrome() {
   $('#seg').classList.toggle('hide', !listView || !!sel);
   $('#seg').classList.toggle('on', !!state.unread);
   for (const b of $('#seg').querySelectorAll('button')) b.setAttribute('aria-checked', String((b.dataset.on === '1') === !!state.unread));
+  slideSeg();
   screen.classList.toggle('selecting', !!sel);
   document.body.classList.toggle('selecting', !!sel);
   $('#selbar').classList.toggle('hide', !sel);
@@ -1578,6 +1603,7 @@ function paint(html) {
   screen.classList.toggle('quiet', quietOnce);
   quietOnce = false;
   screen.innerHTML = html;
+  slideNotify();
   openRow = null;
   freshFrom = Infinity;
   $('#foot').innerHTML = footHTML();
@@ -1733,7 +1759,7 @@ function viewSettings() {
     '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
-    '<div class="field"><span>Unread count on the app icon</span><button class="textbtn" data-act="badge" aria-pressed="' + badgeOn() + '">' + (badgeOn() ? 'On' : 'Off') + '</button></div>' +
+    '<div class="field"><span>Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div>' +
     tidyHTML() +
     notifyHTML() +
     blockedHTML() +
@@ -2293,7 +2319,7 @@ function openCompose(job, { note } = {}) {
   const c = state.compose, el = $('#compose');
   el.innerHTML = '<div class="cwrap">' +
     '<div class="ctop">' +
-      '<button class="textbtn" data-act="compose-cancel">Cancel</button>' +
+      '<button class="iconbtn" data-act="compose-cancel" aria-label="Cancel">' + ICON.x + '</button>' +
       '<span class="ctitle">' + esc(COMPOSE_TITLE[c.mode] || 'New Message') + '</span>' +
       '<button class="send" data-act="compose-send" aria-label="Send">' + ICON.up + '</button>' +
     '</div>' +
@@ -2833,6 +2859,7 @@ function openSheet(item) {
       '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
     '</div>';
   el.classList.remove('hide', 'leaving');
+  tagPicks++; slideTags();
   if (!list.length) setTimeout(() => $('#newtag')?.focus(), 350);
 }
 
@@ -3696,6 +3723,7 @@ document.addEventListener('click', async e => {
     case 'pick-tag':
       $('#newtag').value = el.dataset.name;
       for (const b of $('#sheet').querySelectorAll('.chip2')) b.classList.toggle('on', b === el);
+      slideTags();
       return;
     case 'apply-tag': {
       const sheet = state.sheet;
@@ -3983,7 +4011,7 @@ document.addEventListener('pointerdown', e => {
   b.style.setProperty('--y', (e.clientY - r.top) + 'px');
 }, { passive: true });
 
-addEventListener('resize', () => closeBoxMenu(true));
+addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideNotify(true); slideTags(true); });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out
