@@ -9,7 +9,7 @@ in the same frosted glass as Mail, Notes and News.
 - **Library**: your **Shows** as a grid of artwork, **Saved** episodes and
   **History**. The gear opens Settings.
 - **Search** (the round button next to the tabs, as on iOS 26): Apple's
-  **Top shows** chart for your country, search by name, or paste a show's
+  **Top shows** chart for your country (the US unless changed in Settings), search by name, or paste a show's
   RSS feed link. Private and premium feeds (Patreon, Supercast and the like)
   work too.
 - **A show**: artwork, Follow, the description, and its episodes, with
