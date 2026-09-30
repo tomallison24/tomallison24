@@ -421,8 +421,34 @@ if (window.top !== window.self) {
   // Rendering
   // ---------------------------------------------------------------------
   const main = $('main');
+  // The view switch's glass thumb slides to the chosen view, stretching on
+  // the way (further for a longer trip), and the icon it lands on gives a
+  // small bounce. The first placing, and one after a resize, just jump.
+  const tabBar = document.querySelector('.tabs'), thumb = $('tabThumb');
+  let thumbAt = null;
+  function placeThumb(jump) {
+    const b = tabBar.querySelector('.tab[aria-selected="true"]');
+    thumb.classList.toggle('off', !b);
+    if (!b) return;
+    jump = jump || thumbAt === null;
+    const from = thumbAt === null ? null : tabBar.querySelector('.tab[data-view="' + thumbAt + '"]');
+    if (jump) thumb.classList.add('still');
+    thumb.style.width = b.offsetWidth + 'px';
+    thumb.style.transform = 'translateX(' + b.offsetLeft + 'px)';
+    if (jump) { void thumb.offsetWidth; thumb.classList.remove('still'); }
+    else if (from && from !== b && thumb.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const hops = Math.abs(b.offsetLeft - from.offsetLeft) / Math.max(1, b.offsetWidth);
+      const sx = 1 + Math.min(0.36, 0.1 + hops * 0.07), sy = 1 - Math.min(0.14, 0.04 + hops * 0.025);
+      thumb.animate([{ scale: '1 1' }, { scale: sx + ' ' + sy, offset: 0.35 }, { scale: '1 1' }], { duration: 560, easing: 'cubic-bezier(.3,.7,.4,1)' });
+      const ic = b.querySelector('svg');
+      if (ic) ic.animate([{ scale: '1' }, { scale: '1.18', offset: 0.5 }, { scale: '1' }], { duration: 380, delay: 200, easing: 'ease-out' });
+    }
+    thumbAt = b.dataset.view;
+  }
+  window.addEventListener('resize', () => placeThumb(true));
   function render() {
     for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.view === st.view && !st.searching));
+    placeThumb();
     $('todayBtn').hidden = st.searching;
     if (st.searching) { renderSearch(); return; }
     const p = partsOf(st.sel);
@@ -951,7 +977,7 @@ if (window.top !== window.self) {
     const f = occ ? formFrom(occ) : copyOf ? Object.assign(formFrom(copyOf), { rule: '', ruleEnd: { type: 'never' }, alarms: copyOf.allDay ? (settings.alertAllDay ? [settings.alertAllDay] : []) : (settings.alertTimed ? [settings.alertTimed] : []) }) : formFrom(null, start);
     ed = { f, occ: occ || null, isNew: !occ, custom: f.rule && !REPEATS.some(r => r[0] === f.rule) };
     $('edLbl').textContent = occ ? 'Edit Event' : 'New Event';
-    $('edSave').textContent = occ ? 'Done' : 'Add';
+    $('edSave').setAttribute('aria-label', occ ? 'Done' : 'Add');
     renderEditor();
     openSheet('edSheet');
     if (!occ) setTimeout(() => { const t = $('edTitle'); if (t) t.focus(); }, 350);

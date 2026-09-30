@@ -4,8 +4,8 @@
 // weather stubbed: the month grid, the day and week grids, opening an event,
 // editing it (the write carries the etag), a new event (with its time zone
 // block), deleting one occurrence of a repeating event (an EXDATE), search,
-// the layers, settings, and that nothing trips the page's Content Security
-// Policy. Screenshots go to the folder given as the second argument.
+// the view switch's sliding thumb, the layers, settings, and that nothing
+// trips the page's Content Security Policy. Screenshots go to the folder given as the second argument.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node calendar/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -241,6 +241,18 @@ await test('the year and list views', async () => {
   const t = await page.textContent('#main');
   assert.ok(t.includes('Today') && t.includes('Grandma visiting'), t.slice(0, 300));
   await shot(page, '08-list');
+});
+
+await test('the view switch: its glass thumb slides under the chosen view, and hides while searching', async () => {
+  const under = () => { const t = document.getElementById('tabThumb'), b = document.querySelector('.tab[aria-selected="true"]'); if (!b) return false; const r = t.getBoundingClientRect(), q = b.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1; };
+  await page.click('.tab[data-view="week"]');
+  assert.equal(await page.evaluate(under), false, 'still on its way');
+  await page.waitForFunction(under, null, { timeout: 3000 });
+  await page.click('#searchBtn');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('tabThumb')).opacity === '0', null, { timeout: 3000 });
+  await page.click('#searchBtn');
+  await page.click('.tab[data-view="list"]');
+  await page.waitForFunction(under, null, { timeout: 3000 });
 });
 
 await test('settings: the layers switch off and on, and the week can start on Sunday', async () => {

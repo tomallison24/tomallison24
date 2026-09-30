@@ -9,7 +9,8 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
   you back; tap the big title for the year. In Month, tap a day to see it
   listed underneath, tap it again for the Day view. In Day and Week the
   current time is a red line, and the day opens at 7am (Settings) or at the
-  first event.
+  first event. The chosen view sits in a glass thumb that slides across the
+  bar to whichever view you tap, stretching on the way.
 - **Events**: tap one for its details: when, how it repeats, the place (opens
   in Maps), travel time, alerts, URL, notes, and who was invited. **Edit** and
   **Delete Event** are there for Family events. A repeating event asks whether
@@ -21,6 +22,9 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
   chosen weekdays, on a day of the month or the nth weekday; ending never, on
   a date, or after so many times), travel time, two alerts, busy or free,
   URL and notes. New events get a 15-minute alert (Settings changes it).
+  The editor is a Liquid Glass sheet, as in iOS 26: clear glass floating
+  just inside the screen's edges with the calendar blurred through it, glass
+  rows and fields, and round ✕ (cancel) and ✓ (add or done) buttons.
 - **Drag** an event in Day or Week to move it (press and hold first on a
   phone), or drag its bottom edge to make it longer or shorter. Times snap to
   15 minutes; in Week you can drag to another day.

@@ -694,6 +694,71 @@ button.kvrow:active{background:var(--fill)}
 .pickrow:active{background:var(--fill)}
 a.rowbtn{color:var(--text);text-decoration:none}
 .sheetbody > *{flex-shrink:0}
+
+/* ---- the view switch: one glass thumb that slides to the chosen view ----
+   The tabs themselves stay clear; the thumb under them glides across,
+   stretching as it goes (app.js sets its place and the stretch). */
+.tabs{position:relative;isolation:isolate}
+.tab{position:relative;z-index:1}
+.tab[aria-selected="true"]{background:none;box-shadow:none;color:var(--accent-text)}
+.tab[aria-selected="true"] svg{color:var(--accent-text)}
+.tabthumb{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:transform .55s cubic-bezier(.3,1.25,.45,1),width .55s cubic-bezier(.3,1.25,.45,1),opacity .25s ease,scale .25s var(--ease)}
+.tabthumb.still{transition:none}
+.tabthumb.off{opacity:0;scale:.7}
+@media (max-width:389px){.tab svg{display:block}.tab{padding:0 11px}}
+
+/* ---- New Event: Liquid Glass ----
+   The editor is one sheet of clear glass floating just inside the screen's
+   edges: the calendar blurs and brightens through it, a lit rim runs round
+   it, and the rows, fields and buttons are lighter glass on top. The rows
+   don't blur again (the sheet already has), which keeps it smooth on a phone. */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+#edSheet .scrim{background:var(--lgs-scrim)}
+#edSheet .sheet{width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;height:calc(100% - env(safe-area-inset-top,0px) - 32px);
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 -2px 0 rgba(255,255,255,.04),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
+@media (min-width:576px){#edSheet .sheet{margin:0 auto 8px;max-width:544px}}
+#edSheet .sheethead{padding:6px 12px 10px}
+#edSheet .sheethead h2{font-size:17px;font-weight:600}
+#edSheet .sheethead .iconbtn{width:44px;height:44px}
+#edSheet .sheethead .iconbtn svg{width:22px;height:22px}
+#edSheet .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+#edSheet .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
+#edSheet .okbtn[disabled]{opacity:.6}
+#edSheet .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+#edSheet .rgroup{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+#edSheet .frow{border-top-color:var(--hair-2)}
+#edSheet .frow > label{flex:1 0 auto;white-space:nowrap}
+#edSheet .frow input.txt:focus-visible,#edSheet .frow textarea:focus-visible{outline:0}
+#edSheet .frow.big input{font-size:22px;font-weight:700;letter-spacing:-.02em}
+#edSheet .frow input[type="date"],#edSheet .frow input[type="datetime-local"],#edSheet .frow input[type="number"],#edSheet .frow select{
+  border:0;border-radius:999px;padding:7px 13px;background-color:var(--lgs-field);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift);transition:box-shadow .2s}
+#edSheet .frow select{padding-right:30px;background-position:right 11px center}
+#edSheet .frow input:not(.txt):focus-visible,#edSheet .frow select:focus-visible{outline:0;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+/* iOS 26's switch: a pill-shaped knob that swells into a clear lens while pressed */
+#edSheet .switch{width:58px;height:30px;border:0;background:var(--fill);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 2px var(--lift)}
+#edSheet .switch::after{top:3px;left:3px;width:34px;height:24px;border-radius:999px;transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s var(--ease),background .2s}
+#edSheet .switch[aria-checked="true"]{background:var(--n-green)}
+#edSheet .switch[aria-checked="true"]::after{transform:translateX(18px)}
+#edSheet .switch:active::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+#edSheet .wdays button{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
+#edSheet .wdays button:active{transform:scale(.9)}
+#edSheet .wdays button[aria-pressed="true"]{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 3px 10px color-mix(in srgb,var(--accent) 30%,transparent)}
+#edSheet .btn.danger{border-radius:26px}
+#edSheet .hint{text-align:center;margin:0 12px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){#edSheet .sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){#edSheet .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 </style>
 </head>
 <body>
@@ -729,6 +794,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   <!-- DOCK: the views, and New Event -->
   <div class="dock">
     <nav class="tabs glass" role="tablist" aria-label="Views">
+      <span class="tabthumb" id="tabThumb" aria-hidden="true"></span>
       <button class="tab" type="button" role="tab" data-view="day" aria-selected="false" aria-label="Day"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M8 14h8"/></svg></button>
       <button class="tab" type="button" role="tab" data-view="week" aria-selected="false" aria-label="Week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M9.2 9.6v11M14.8 9.6v11"/></svg></button>
       <button class="tab" type="button" role="tab" data-view="month" aria-selected="true" aria-label="Month"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M3.4 15.1h17.2M9.2 9.6v11M14.8 9.6v11"/></svg></button>
@@ -757,7 +823,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
     <div class="scrim"></div>
     <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="edLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><button class="textbtn" id="edCancel" type="button">Cancel</button><h2 id="edLbl">New Event</h2><div class="acts"><button class="textbtn" id="edSave" type="button">Add</button></div></div>
+      <div class="sheethead"><button class="iconbtn" id="edCancel" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="edLbl">New Event</h2><div class="acts"><button class="iconbtn okbtn" id="edSave" type="button" aria-label="Add"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody" id="edBody"></div>
     </div>
   </div>
