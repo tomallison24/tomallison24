@@ -13,7 +13,10 @@ sit behind the glass in Mail and News.
   the four yourself. Apps in the dock leave the grid.
 - **Settings** (its icon, or press and hold anywhere on the screen, as on an
   iPhone): the dock, the order, take an app off the screen, and choose Auto,
-  Light or Dark. Auto follows the phone.
+  Light or Dark. Auto follows the phone. It is an iOS 26 "Liquid Glass"
+  sheet: clear glass floating just inside the screen's edges, with lighter
+  glass rows, a round ✕ to close, and a glass thumb that slides between
+  Auto, Light and Dark (`slide.js`, which every app loads for its switches).
 - **Swipe up to come home**: in an app opened from here, a swipe up from
   the band just above the phone's home indicator returns to this screen, as
   the iPhone's own gesture returns to its home screen. `back.js` does this;
