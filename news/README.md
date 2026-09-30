@@ -75,6 +75,20 @@ that links on to the paper), which beats a preprint (each feed's `"rank"` in
 copy's picture or summary if it has none. The job log says how many
 duplicates each topic lost and why.
 
+## Stem cells: sources and time
+
+Stories are newest first. The bar under the tabs on Stem cells narrows them:
+
+- **All · Today · 7 days · 30 days**: stories from today, or from today and
+  the days before it (by date; a journal's day-only date counts as that day).
+- **Sources**: a list of every source on the tab, with how many stories each
+  has in the chosen time range, most first, and a search box. Tick any to see
+  only those; Europe PMC's "Stem cell reports" and the journal's own "Stem
+  Cell Reports" count as one. The × next to the button shows all sources again.
+
+Both are saved on each device. To give another tab the same bar, add
+`"filters": true` to its topic in `feeds.json`.
+
 ## Sport filters
 
 On the Sport tab, **Filter** opens a panel with a search box and three lists:
