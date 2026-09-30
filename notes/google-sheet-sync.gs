@@ -41,6 +41,7 @@ function doPost(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const db = load(ss);
+    if (req.action === 'due') return out(due(db));
     const changed = req.action === 'sync' ? merge(db, req) : false;
     if (changed || req.action === 'rebuild') { store(ss, db); views(ss, db); }
     return out({
@@ -51,6 +52,19 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// For the notification server (notes/push): only what it needs to alert.
+// Open reminders with a date, and nudges on notes; titles, never note text.
+// Changes nothing. (An older copy of this script answers "due" with
+// everything, which the server trims itself, so updating is optional.)
+function due(db) {
+  const todos = Array.from(db.todos.values()).filter(t => t.date && !t.done && !t.deletedAt)
+    .map(t => ({id: t.id, title: t.title, list: t.list, date: t.date, time: t.time || null, alert: t.alert == null ? null : t.alert}));
+  const notes = Array.from(db.notes.values()).filter(n => n.reminder && !n.deletedAt && !n.archived)
+    .map(n => ({id: n.id, title: n.title || String(n.body || '').split('\n')[0].slice(0, 120), reminder: n.reminder}));
+  const lists = Array.from(db.lists.values()).map(l => ({id: l.id, name: l.name}));
+  return {ok: true, app: APP, v: VERSION, at: Date.now(), todos: todos, notes: notes, lists: lists};
 }
 
 // A "Notes" menu in the Sheet, to rebuild the tag and list tabs by hand.

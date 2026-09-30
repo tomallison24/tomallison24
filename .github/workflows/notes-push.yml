@@ -1,0 +1,80 @@
+# Deploys Notes' reminder notification server (notes/push) to Cloudflare Workers.
+#
+# Needs only the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets the
+# site already uses, once the token is allowed to edit Workers and KV (see
+# notes/README.md, "Notifications"). It makes the KV namespace "notes-push"
+# the first time; the Worker makes its own push keys. Does nothing until the
+# token is set, so it is safe to leave on. Runs by hand from the Actions tab
+# (Notes push -> Run workflow), and when notes/push changes on the default
+# branch.
+name: Notes push
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'notes/push/**'
+      - 'mail/push/webpush.js'
+      - '.github/workflows/notes-push.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notes-push
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to exact commits (version in the comment), as in the other
+      # workflows: a tag can be moved to new code, and this job can read the
+      # repo's secrets.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+
+      - name: Test the Worker
+        run: node notes/scripts/push-test.mjs
+
+      - name: Deploy the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: notes/push
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "No CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID set - nothing to deploy. See notes/README.md, Notifications."
+            exit 0
+          fi
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/storage/kv/namespaces"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          # The KV namespace: found by its title, made if it isn't there yet.
+          find_kv() { curl -sS -H "$auth" "$api?per_page=100" | node -e '
+            let s = ""; process.stdin.on("data", d => s += d).on("end", () => {
+              const r = JSON.parse(s || "{}");
+              if (!r.success) { console.error(JSON.stringify(r.errors || r)); process.exit(3); }
+              const n = (r.result || []).find(x => x.title === "notes-push");
+              process.stdout.write(n ? n.id : "");
+            });'; }
+          if ! id=$(find_kv); then
+            echo "::error::The Cloudflare token can't read Workers KV. Give it Account > Workers KV Storage > Edit and Account > Workers Scripts > Edit (notes/README.md, Notifications)."
+            exit 1
+          fi
+          if [ -z "$id" ]; then
+            curl -sS -X POST -H "$auth" -H "Content-Type: application/json" --data '{"title":"notes-push"}' "$api" > /dev/null
+            id=$(find_kv)
+          fi
+          if [ -z "$id" ]; then
+            echo "::error::Couldn't make the notes-push KV namespace. Check the token has Account > Workers KV Storage > Edit."
+            exit 1
+          fi
+          echo "KV namespace notes-push: $id"
+          sed -i "s/id = \"NOTES_PUSH_KV_ID\"/id = \"$id\"/" wrangler.toml
+          # wrangler pinned to an exact release, as in push.yml; it runs with the token.
+          npx --yes wrangler@4.142.0 deploy
+          echo "Deployed. Paste the https://notes-push.<your-subdomain>.workers.dev address above into Notes: Reminders -> bell -> Server address."

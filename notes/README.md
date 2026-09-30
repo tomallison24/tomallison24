@@ -36,13 +36,102 @@ Mail and News. Free, no accounts, no server.
 - **Add to calendar**: a reminder with a date goes straight into the iCloud
   Family calendar where the site is on Cloudflare (through the Calendar app's
   function, see `calendar/README.md`), so the phone's calendar does the
-  alerting; elsewhere it is saved as a calendar file to open. A web app can't
-  alert on its own while closed without a push server, and this app has none.
+  alerting; elsewhere it is saved as a calendar file to open.
+- **Notifications**: the bell at the top of Reminders. Once on, a reminder
+  alerts the phone at its **Alert** time even with Notes closed, and so does a
+  note's nudge. Each phone picks which lists alert it. See *Notifications*
+  below; it needs the Google Sheet sync and a small free server.
+
+## Notifications
+
+A web app can't wake itself up on a timer, so a small server does it:
+`notes/push`, a Cloudflare Worker (free). Every minute it checks what is due
+and sends a notification to each phone that turned them on. Tapping one opens
+that reminder or note.
+
+- **Per reminder**: in a reminder's details, **Alert** is *At time*, 5, 15 or
+  30 minutes, 1 or 2 hours, 1 or 2 days or 1 week before, or *None*. A
+  reminder with a date but no time alerts *On the day* (or 1, 2 or 7 days
+  before) at 9:00 AM; the bell's sheet changes that time. New and existing
+  reminders alert *At time* until you choose otherwise. In the list, a bell
+  instead of a clock marks the reminders that will alert this phone.
+- **Per phone** (the bell): which lists alert this phone, whether note nudges
+  do, and the "no time" time. Your wife's phone makes its own choices.
+- **Several at once**: up to three arrive separately; more arrive as one
+  ("4 reminders").
+- Done reminders never alert. A reminder already overdue by more than 10
+  minutes when it is added doesn't alert either.
+- **Private notes** never leave the phone, so their nudges can't notify.
+
+**How it knows**: it reads the Google Sheet the phones sync with. After a
+phone syncs a change it pings the server, which reads the Sheet again within
+seconds; it also reads it every 15 minutes anyway. It keeps only what it needs
+to alert: each open reminder's title, list, date, time and alert, and each
+nudge's title and time. It never keeps note text. Each notification is
+encrypted for the phone it's going to (the same code as Mail's), so Apple's
+push service carries only ciphertext.
+
+**Who can use it**: only a phone that has the Sheet's web app link and secret
+code. The first phone's pair is kept; after that the server refuses any other
+Sheet, so nobody can point it at their own. If you change the secret in the
+script, the old pair stops working and the next phone to turn notifications
+on with the new one takes over.
+
+### Set up (once)
+
+1. **Cloudflare token.** The repo's `CLOUDFLARE_API_TOKEN` secret (the one the
+   site and Travel already use) also needs to deploy Workers. In Cloudflare:
+   **My Profile → API Tokens**, edit that token, and add **Account → Workers
+   Scripts → Edit** and **Account → Workers KV Storage → Edit**. If
+   Cloudflare gives you a new token value, paste it into the GitHub secret
+   `CLOUDFLARE_API_TOKEN`.
+2. **A workers.dev address.** If you've never used Workers, open **Workers &
+   Pages** in the Cloudflare dashboard once. It asks you to pick a
+   `workers.dev` subdomain.
+3. **Deploy.** In GitHub: **Actions → Notes push → Run workflow**. It runs the
+   tests, makes the storage it needs (a KV namespace called `notes-push`), and
+   deploys. The end of the log shows the address:
+   `https://notes-push.<your-subdomain>.workers.dev`. It deploys again by
+   itself whenever `notes/push` changes on the default branch.
+4. **Optional: update the Sheet's script.** Paste the new
+   `google-sheet-sync.gs` over the old one and deploy a new version (steps in
+   *Changing the script later*). The server then gets just the titles and
+   dates it needs instead of everything. It works without this step.
+
+### Turn it on (each phone)
+
+1. Open Notes **from its Home Screen icon** (iPhone only allows
+   notifications for Home Screen apps, on iOS 16.4 or later). The Google Sheet
+   must be connected.
+2. **Reminders → bell**. Paste the server address, tap **Turn on
+   notifications**, then **Allow**.
+3. Tap **Send a test**.
+4. For your wife's phone: **Copy setup link** (download button → Google Sheet
+   sync) now includes the server address. Set up her phone with it as before,
+   then on her phone go to **Reminders → bell → Turn on notifications**.
+
+Each place Notes opens (its own icon, AllisonOS Home, Safari) is separate on
+an iPhone, so notifications are turned on in each one you want them in.
+
+### Keep in mind
+
+- Alerts can be up to a minute late (the server checks once a minute), and
+  Apple may hold them back a little in Low Power Mode or Focus.
+- Cloudflare's free plan covers this comfortably: about 1,500 runs a day of a
+  few milliseconds each, a handful of reads of the Sheet an hour.
+- Turning notifications off on the phone (Settings → Notifications → Notes,
+  or **Turn off on this phone**) makes the server forget that phone.
+- `node notes/scripts/push-test.mjs` tests the server (time zones and clock
+  changes, who may subscribe, what's sent, and that only the phone can
+  read it). `node notes/scripts/push-app-test.mjs` drives the app's side in
+  headless Chromium. Neither can test a real iPhone.
 
 ## How it's built
 
 - **No build step.** `index.html` is the whole app; `sw.js` keeps it working
-  offline; `manifest.webmanifest` and the icons make it installable.
+  offline and shows notifications; `manifest.webmanifest` and the icons make
+  it installable. `push/` is the notification server (a Cloudflare Worker),
+  deployed by `.github/workflows/notes-push.yml`.
 - **Data** lives in the browser's `localStorage` on each device, and, once
   connected, in a Google Sheet you both share (below).
 - Published with the other apps by `.github/workflows/news.yml`.
