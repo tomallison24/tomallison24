@@ -78,7 +78,7 @@
     --muted: rgba(235, 235, 245, 0.62);
     --faint: rgba(235, 235, 245, 0.38);
     --accent: #0A84FF;
-    --icon: #4A9BA6;                          /* the icons: a calm slate-teal (text, dots and switches keep the blue) */
+    --icon: #4A9BA6;                          /* the icons and switches: a calm slate-teal (text and dots keep the blue) */
     --icon-text: #4FA2AD;                     /* the teal as a word (Edit / Done): a hair lighter, 4.8:1 on glass (#4A9BA6 is 4.4) */
     --tag: #FF9F0A;
     --danger: #FF453A;
@@ -1253,7 +1253,7 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
   .send:active { background: var(--gb-shine), var(--accent); }
-  /* iOS 26's switch (the icon's count, Tidy, auto-tags): blue when on, and a
+  /* iOS 26's switch (the icon's count, Tidy, auto-tags): Mail's teal when on, and a
      pill-shaped knob that swells into a clear lens while pressed */
   .switch {
     position: relative; flex: none; width: 58px; height: 30px; border-radius: 999px;
@@ -1265,7 +1265,7 @@
     background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 0 .5px rgba(0, 0, 0, 0.04);
     transition: transform .3s cubic-bezier(.3, 1.3, .5, 1), scale .2s var(--ease), background .2s;
   }
-  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"] { background: var(--icon); }
   .switch[aria-checked="true"]::after { transform: translateX(18px); }
   .switch:not([disabled]):active::after { scale: 1.18; background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.22); }
   .switch[disabled] { opacity: .6; }
