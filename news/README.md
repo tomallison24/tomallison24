@@ -18,7 +18,10 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
 ## Sources
 
 Only sources that are free to read are included, and only through their own
-public feeds:
+public feeds, with one exception: on Stem cells, the journals (Nature, Cell,
+Science and their sister journals) are there by request, and many of their
+papers need a subscription (Stem Cell Reports, npj Regenerative Medicine and
+the Europe PMC papers are open access):
 
 | Topic    | Sources |
 |----------|---------|
@@ -29,7 +32,7 @@ public feeds:
 | Tech     | BBC News, The Guardian, Sky News, NPR, Ars Technica, ABC News, CBS News, Engadget |
 | AI       | The Guardian, Ars Technica, TechCrunch, plus any story from the other feeds with AI in its headline (AI stories are taken out of Tech) |
 | Science  | BBC News, The Guardian, NPR, ScienceDaily, The Conversation, CBS News, NASA |
-| Stem cells | The Niche, ScienceDaily, Stem Cell Reports, open-access papers and preprints (bioRxiv, medRxiv) via Europe PMC, plus matching stories from the other topics. Only stem cell stories are kept (pluripotent/iPSC/hESC, organoids, embryo models, mesenchymal and haematopoietic stem cells and any other "stem cell" mention), for up to 30 days |
+| Stem cells | Journals: Nature, Nature Neuroscience, Nature Cell Biology, Nature Biotechnology, Nature Medicine, npj Regenerative Medicine, Nature Portfolio's stem cell subject feeds, Cell, Cell Stem Cell, Stem Cell Reports, Developmental Cell, Science, Development. News: STEMCELL Science News (its ESC & iPSC, Organoid, Mesenchymal, Hematopoiesis, Cancer Stem Cell, Neural, Intestinal, Cell Therapy and Muscle newsletters), The Niche, ScienceDaily. Open-access papers and preprints (bioRxiv, medRxiv) via Europe PMC, plus matching stories from the other topics. Only stem cell stories are kept (pluripotent/iPSC/hESC, organoids, embryo models, mesenchymal and haematopoietic stem cells and any other "stem cell" mention), for up to 30 days; journals and newsletters that only cover stem cells (Cell Stem Cell, Stem Cell Reports, the subject feeds, ESC & iPSC, Organoid, Mesenchymal) are kept whole. Correction and retraction notices are left out. See "Duplicates" below |
 | Sport    | BBC Sport, The Guardian, Sky Sports (general feeds plus one per sport), CBS Sports, Yahoo Sports |
 
 Not included:
@@ -46,6 +49,29 @@ Not included:
 - **BBC News** is free in the UK. Since mid-2025, readers in the US hit a
   paywall after reading a certain amount. Remove the BBC lines from
   `feeds.json` if that matters where you read.
+
+## Duplicates
+
+Every topic shows each story once, however many feeds carry it. Two
+stories count as the same when they have:
+
+- the same link (BBC's UK and World feeds, a paper moving from a journal's
+  "in press" list to its current issue),
+- the same DOI (a Cell Stem Cell paper from the journal's feed and from
+  Europe PMC), or
+- the same headline, ignoring case, punctuation and accents (a STEMCELL
+  Science News item that reuses the paper's title).
+
+Stem cells (`"fuzzyDedupe"` in `feeds.json`) also merges near-identical
+headlines, which catches most preprints once they're published: 75% of their
+words the same, headlines of 6 or more words only. It is strict on purpose;
+news write-ups of a paper under a different headline still show separately.
+
+The copy kept is the publisher's own: a journal or news site beats Europe
+PMC, STEMCELL Science News and Nature's subject feeds, which beat preprints
+(each feed's `"rank"` in `feeds.json`; lower wins). It picks up the other
+copy's picture or summary if it has none. The job log says how many
+duplicates each topic lost and why.
 
 ## Sport filters
 
@@ -110,7 +136,10 @@ days before.
 ## Add or change sources
 
 Edit `feeds.json`. Each feed needs a `topic` (one of the ids in `topics`), a
-`source` name and an RSS `url`. Topics show up as tabs in A to Z order after Latest.
+`source` name and an RSS `url`. Optional: `"trusted": true` keeps every
+story from it even when its topic has a `filter`; `"max"` reads more than
+25 items (for a whole-journal feed that's filtered down to one topic);
+`"rank"` (see Duplicates). Topics show up as tabs in A to Z order after Latest.
 A feed that fails is skipped for that run and counted in the app's footer;
 the job logs list each feed's result.
 

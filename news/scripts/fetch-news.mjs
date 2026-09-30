@@ -130,25 +130,47 @@ function canonical(url) {
   } catch { return url; }
 }
 
+// A paper's DOI, lower-cased: Nature and Science put it in <prism:doi> or
+// <dc:identifier>doi:…</dc:identifier>, Cell Press in <dc:identifier>,
+// Europe PMC in its doi.org links. The same paper from two feeds then counts
+// once (see dedupe below).
+function doiOf(...texts) {
+  for (const t of texts) {
+    const m = String(t || '').match(/\b(10\.\d{4,9}\/[^\s"<>?#]+)/);
+    if (m) return m[1].replace(/[.,;]+$/, '').toLowerCase();
+  }
+  return null;
+}
+
 function parse(xml, feed) {
   // RSS 2.0 <item>s, or Atom <entry>s (The Conversation).
   const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || xml.match(/<entry[\s>][\s\S]*?<\/entry>/gi) || [];
-  return items.slice(0, PER_FEED).map(item => {
+  // "max": a broad journal feed (Nature, Cell) whose stories are filtered
+  // down to one topic can read more than PER_FEED items.
+  return items.slice(0, feed.max || PER_FEED).map(item => {
     const url = itemLink(item);
     const title = text(item, 'title');
     if (!title || !/^https?:\/\//i.test(url)) return null;
-    const date = new Date(text(item, 'pubDate') || text(item, 'dc:date') || text(item, 'published') || text(item, 'updated'));
+    const date = new Date(text(item, 'pubDate') || text(item, 'dc:date') || text(item, 'prism:publicationDate') || text(item, 'published') || text(item, 'updated'));
     const link = canonical(url);
     const tags = feed.tags ? categories(item) : [];
+    const doi = doiOf(text(item, 'prism:doi'), text(item, 'dc:identifier'), link);
+    // Nature's journal feeds only have <content:encoded>, which opens with
+    // "Nature, Published online: 29 September 2026; doi:…"; Science's
+    // description is just "Science, Volume 393, Issue 6818…". Neither is a summary.
+    const summary = (text(item, 'description') || text(item, 'summary') || text(item, 'content') || text(item, 'content:encoded'))
+      .replace(/^[^;]{0,120}, Published online: [^;]*; doi:\S+\s*/i, '')
+      .replace(/^Science, (Volume \d+, Issue \d+, Page [\d-]+, \w+ \d{4}|Ahead of Print)\.\s*$/i, '');
     return {
       id: createHash('sha1').update(link).digest('hex').slice(0, 12),
       topic: feed.topic,
       source: feed.source,
       title,
-      summary: clip((text(item, 'description') || text(item, 'summary') || text(item, 'content')).replace(/\s*Continue reading(\.\.\.|\u2026)\s*$/i, ''), 220),
+      summary: clip(summary.replace(/\s*Continue reading(\.\.\.|\u2026)\s*$/i, ''), 220),
       url: link,
       image: image(item),
       published: Number.isNaN(date.getTime()) ? null : date.toISOString(),
+      ...(doi ? { doi } : {}),
       ...(tags.length ? { tags } : {}),
     };
   }).filter(Boolean);
@@ -179,9 +201,16 @@ async function europePmc(feed) {
       url: link,
       image: null,
       published: Number.isNaN(date.getTime()) ? null : date.toISOString(),
+      ...(r.doi ? { doi: String(r.doi).toLowerCase() } : {}),
     };
   }).filter(Boolean);
 }
+
+// A feed's "rank" (0 when absent) says which copy of a duplicate to keep:
+// lower wins. The publisher's own feed is 0; digests and indexes that point
+// back to it (Europe PMC, STEMCELL Science News, Nature's subject feeds) are
+// 1; preprints are 2.
+const ranked = (feed, stories) => feed.rank ? stories.map(s => ({ ...s, rank: feed.rank })) : stories;
 
 async function fetchFeed(feed) {
   const started = Date.now();
@@ -189,16 +218,25 @@ async function fetchFeed(feed) {
     if (feed.type === 'europepmc') {
       const stories = await europePmc(feed);
       if (!stories.length) throw new Error('no items found');
-      return { ...feed, url: 'https://europepmc.org', ok: true, count: stories.length, ms: Date.now() - started, stories };
+      return { ...feed, url: 'https://europepmc.org', ok: true, count: stories.length, ms: Date.now() - started, stories: ranked(feed, stories) };
     }
-    const res = await fetch(feed.url, {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'User-Agent': 'news-home-screen-app/1.0 (personal RSS reader)', Accept: 'application/rss+xml, application/xml, text/xml' },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const stories = parse(await res.text(), feed);
+    // nature.com now and then sends a request through its sign-in service
+    // (idp.nature.com) and answers with a web page instead of the feed; the
+    // same request a moment later gets the feed. So a feed that turns into
+    // a page on another site is tried once more.
+    let stories = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch(feed.url, {
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { 'User-Agent': 'news-home-screen-app/1.0 (personal RSS reader)', Accept: 'application/rss+xml, application/xml, text/xml' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      stories = parse(await res.text(), feed);
+      if (stories.length || new URL(res.url).host === new URL(feed.url).host) break;
+      await new Promise(r => setTimeout(r, 2000));
+    }
     if (!stories.length) throw new Error('no items found');
-    return { ...feed, ok: true, count: stories.length, ms: Date.now() - started, stories };
+    return { ...feed, ok: true, count: stories.length, ms: Date.now() - started, stories: ranked(feed, stories) };
   } catch (err) {
     return { ...feed, ok: false, count: 0, ms: Date.now() - started, error: String(err.message || err), stories: [] };
   }
@@ -228,13 +266,18 @@ function termMatcher(terms, withSummary) {
 }
 
 // A topic with "filter" terms keeps only its own feeds' stories that use one
-// of them (Stem cells: only pluripotent stem cell stories).
+// of them (Stem cells: only pluripotent stem cell stories). A feed marked
+// "trusted" is about the topic already (Cell Stem Cell, Nature's stem cell
+// subject feeds), so all its stories stay. "skipTitles" drops notices whose
+// headline starts with one of them ("Author Correction: …"), trusted or not.
 let all = results.flatMap(r => r.stories);
-for (const { id, filter, matchSummary } of config.topics) {
-  if (!filter) continue;
-  const ok = termMatcher(filter, matchSummary);
+const trusted = new Set(results.filter(r => r.trusted).flatMap(r => r.stories));
+for (const { id, filter, matchSummary, skipTitles } of config.topics) {
+  if (!filter && !skipTitles) continue;
+  const ok = filter ? termMatcher(filter, matchSummary) : () => true;
+  const skip = skipTitles ? new RegExp(`^(${skipTitles.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i') : null;
   const before = all.filter(s => s.topic === id).length;
-  all = all.filter(s => s.topic !== id || ok(s));
+  all = all.filter(s => s.topic !== id || ((trusted.has(s) || ok(s)) && !skip?.test(s.title)));
   console.log(`${id}: ${all.filter(s => s.topic === id).length} of ${before} stories pass the filter`);
 }
 
@@ -284,11 +327,64 @@ if (config.topics.some(t => t.keepDays)) {
   }
 }
 
-for (const { id, keep } of config.topics) {
-  const seen = new Set();
+// One story per article or paper within a topic, however many feeds carry
+// it: the same link (BBC's UK and World feeds), the same DOI (a Cell Stem
+// Cell paper from its journal feed and from Europe PMC), or the same
+// headline once case, punctuation and accents are ignored. Topics with
+// "fuzzyDedupe" also treat near-identical headlines as one (a preprint and
+// its published version often differ by a word or two): at least 75% of
+// all their words shared. Only headlines of 6 or more words (not counting
+// "the", "of" and so on) are compared. Kept strict on purpose: "X reaches
+// Y" and "X fails to reach Y without Z" share most words but are different
+// papers, and hiding a real paper is worse than showing one twice.
+// The copy kept is the one with the lowest rank (the publisher's own, see
+// fetchFeed), then the newest; it takes over the other copy's picture,
+// summary or DOI when it has none.
+const doiIn = s => s.doi || doiOf(s.url);
+const titleKey = s => s.title.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const STOP = new Set('a an and are as at by for from in into is its of on or than that the their this to via with'.split(' '));
+const words = s => new Set(titleKey(s).split(' ').filter(w => w.length > 1 && !STOP.has(w)));
+// Stories saved before ranks existed: Europe PMC links go to doi.org or europepmc.org.
+const rankOf = s => s.rank ?? (/ \(preprint\)$/.test(s.source) ? 2 : /^https:\/\/(doi\.org|europepmc\.org)\//.test(s.url) ? 1 : 0);
+function similar(a, b) {
+  if (a.size < 6 || b.size < 6) return false;
+  let both = 0;
+  for (const w of a) if (b.has(w)) both++;
+  return both / (a.size + b.size - both) >= 0.75;
+}
+function dedupe(id, list, fuzzy) {
+  const kept = [];
+  const byKey = new Map();
+  const dropped = { link: 0, doi: 0, headline: 0, similar: 0 };
+  // Best copy first.
+  for (const s of [...list].sort((a, b) => rankOf(a) - rankOf(b) || byTime(a, b))) {
+    const doi = doiIn(s);
+    const keys = [['link', s.url], ['doi', doi && `doi:${doi}`], ['headline', `t:${titleKey(s)}`]].filter(([, k]) => k);
+    let [why, twin] = keys.map(([w, k]) => [w, byKey.get(k)]).find(([, t]) => t) || [];
+    const w = fuzzy ? words(s) : null;
+    if (!twin && fuzzy) [why, twin] = ['similar', kept.find(k => similar(w, k.words))];
+    if (twin) {
+      dropped[why]++;
+      const k = twin.story;
+      if (!k.image && s.image) k.image = s.image;
+      if (!k.summary && s.summary) k.summary = s.summary;
+      if (!k.doi && doi) k.doi = doi;
+      for (const [, key] of keys) if (!byKey.has(key)) byKey.set(key, twin);
+      continue;
+    }
+    const entry = { story: { ...s }, words: w };
+    kept.push(entry);
+    for (const [, key] of keys) byKey.set(key, entry);
+  }
+  const n = Object.values(dropped).reduce((a, b) => a + b, 0);
+  const label = { link: 'same link', doi: 'same DOI', headline: 'same headline', similar: 'near-identical headline' };
+  if (n) console.log(`${id}: ${n} duplicates removed (${Object.entries(dropped).filter(([, v]) => v).map(([k, v]) => `${v} ${label[k]}`).join(', ')})`);
+  return kept.map(k => k.story);
+}
+
+for (const { id, keep, fuzzyDedupe } of config.topics) {
   const gone = moved.get(id) || new Set();
-  stories.push(...[...all.filter(s => s.topic === id && !gone.has(s.url)), ...(collected[id] || []), ...(carried[id] || [])]
-    .filter(s => !seen.has(s.url) && seen.add(s.url))
+  stories.push(...dedupe(id, [...all.filter(s => s.topic === id && !gone.has(s.url)), ...(collected[id] || []), ...(carried[id] || [])], fuzzyDedupe)
     .sort(byTime)
     .slice(0, keep || PER_TOPIC));
 }
@@ -304,7 +400,7 @@ await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify({
   generatedAt: new Date().toISOString(),
   topics: config.topics,
-  feeds: results.map(({ stories: _, tags: __, ...r }) => r),
+  feeds: results.map(({ stories: _, tags: __, trusted: ___, max: ____, rank: _____, ...r }) => r),
   stories,
 }));
 console.log(`Wrote ${stories.length} stories (${results.length - failed}/${results.length} feeds ok) to ${OUT}`);
