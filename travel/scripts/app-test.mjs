@@ -139,6 +139,24 @@ for (const scheme of ['light', 'dark']) {
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 
+  await step(scheme + ': switches: a glass thumb slides under the chosen section and filter', async () => {
+    // true once the thumb in `box` sits exactly over its chosen option
+    const under = ([box, chosen]) => { const b = document.querySelector(box), t = b && b.querySelector(':scope > .slthumb'), c = b && b.querySelector(chosen); if (!t || !c) return false; const q = c.getBoundingClientRect(), r = t.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1 && Math.abs(r.top - q.top) < 1; };
+    const tabs = ['.tabs', '.tab[aria-selected="true"]'], when = ['#whenChips', '[aria-pressed="true"]'];
+    // Counts the slides started (a thumb animating its move), so "it slid"
+    // doesn't depend on catching it mid-way on a slow machine.
+    await page.evaluate(() => { const a = Element.prototype.animate; window.__slides = 0; Element.prototype.animate = function (k, o) { if (this.classList.contains('slthumb') && k[0] && k[0].transform) window.__slides++; return a.call(this, k, o); }; });
+    const slides = () => page.evaluate(() => window.__slides);
+    await page.waitForFunction(under, tabs, { timeout: 3000 });
+    await page.waitForFunction(under, when, { timeout: 3000 });
+    for (const [sel, sw] of [['[data-tab="explore"]', tabs], ['[data-tab="trips"]', tabs], ['[data-when="past"]', when], ['[data-when="upcoming"]', when]]) {
+      const n = await slides();
+      await page.click(sel);
+      assert.ok(await slides() > n, 'the thumb slid to ' + sel);
+      await page.waitForFunction(under, sw, { timeout: 3000 });
+    }
+  });
+
   await step(scheme + ': a trip page is a day-by-day timeline with search links', async () => {
     await page.click('.trip');
     await page.waitForSelector('#tripPage:not([hidden]) .ev');

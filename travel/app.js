@@ -292,6 +292,13 @@ if (window.top !== window.self) {
     const open = [...document.querySelectorAll('.sheetwrap')].reverse().find(w => !w.hidden);
     if (open) closeWrap(open);
   });
+  // Switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js),
+  // for the section bar and the Trips filter.
+  const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
+  const tabBar = document.querySelector('.tabs'), whenBox = $('whenChips');
+  const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
+  const slideWhen = jump => slide(whenBox, whenBox.querySelector('[aria-pressed="true"]'), 'when', { jump });
+  window.addEventListener('resize', () => { slideTabs(true); slideWhen(true); });
   let toastTimer;
   function toast(msg, undo, ms) {
     $('toastMsg').textContent = msg;
@@ -428,6 +435,7 @@ if (window.top !== window.self) {
     if (check) chips.push(['check', 'To check', check]);
     if (st.when === 'check' && !check) st.when = 'upcoming';
     $('whenChips').innerHTML = chips.map(([k, t, n]) => '<button class="chip glass" type="button" data-when="' + k + '" aria-pressed="' + (st.when === k) + '">' + esc(t) + ' <span class="n">' + n + '</span></button>').join('');
+    slideWhen();
     const sub = [];
     if (up.length) sub.push(plural(up.length, 'trip') + ' coming up');
     if (st.scanning) sub.push('Reading Gmail…');
@@ -1089,6 +1097,8 @@ if (window.top !== window.self) {
     $('tripsView').hidden = t !== 'trips';
     $('exploreView').hidden = t !== 'explore';
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    slideTabs();
+    if (t === 'trips') slideWhen();   // hidden until now, so not measured
     if (t === 'explore') renderExplore(); else animateIn($('list'));
   }
   document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });

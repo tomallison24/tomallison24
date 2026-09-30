@@ -584,6 +584,68 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .swap{align-self:center;margin:-6px 0}
 .progress{height:3px;border-radius:2px;background:var(--fill);overflow:hidden}
 .progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s var(--ease)}
+
+/* ---- switches with a sliding glass thumb ----
+   The section bar and the Trips filter: the options stay clear, and one
+   thumb under them glides to the chosen one, stretching as it goes, as
+   iOS 26's do (home/slide.js). The filter's thumb is the blue glass a chosen
+   chip had, and rides inside the scrolling row. */
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease),background-color .3s}
+.slthumb.off{opacity:0;scale:.7}
+.tabs.slides .tab[aria-selected="true"]{background:none;box-shadow:none}
+.chips.slides .chip[aria-pressed="true"]{background:none;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.chips > .slthumb{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+
+/* ---- the sheets: Liquid Glass ----
+   A booking, Add, Settings, the Google Sheet and Paste are each one sheet of
+   clear glass floating just inside the screen's edges: the trips blur and
+   brighten through it, a lit rim runs round it, and the rows, fields and
+   buttons are lighter glass on top. The rows don't blur again (the sheet
+   already has), which keeps it smooth on a phone. The trip page stays a
+   whole page that slides in, with the same glass rows and buttons. */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet:not(.page){width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
+.lg .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 32px)}
+@media (min-width:576px){.lg .sheet:not(.page){margin:0 auto 8px;max-width:544px}}
+.lg .sheethead{padding:6px 12px 10px}
+.lg .pagehead{padding:6px 12px}
+.lg .sheethead h2{font-size:17px;font-weight:600}
+#bkLbl,#adLbl,#stLbl,#syLbl{padding-left:8px}
+.lg .sheethead .iconbtn{width:44px;height:44px}
+.lg .sheethead .iconbtn svg{width:22px;height:22px}
+.lg .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
+.lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.lg .rgroup,.lg .tl,.lg .box,.lg .live,.lg .typepick button{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .typepick button{transition:transform .18s var(--ease)}
+.lg .rowbtn:active,.lg .ev:active{background:var(--lgs-field)}
+.lg .verify{border:0;border-radius:26px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 34%,transparent),inset 0 1px 1px var(--lgs-rim)}
+.lg .sheetbody > .label{margin:4px 8px -6px}
+.lg .sheetbody > .hint{margin:0 12px}
+.lg .kv label{padding:0 10px}
+.lg .kv input,.lg .kv textarea,.lg .box input.plain{border:0;border-radius:999px;padding:8px 14px;background-color:var(--lgs-field);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift);transition:box-shadow .2s}
+.lg .kv textarea{border-radius:20px}
+.lg .kv input:focus-visible,.lg .kv textarea:focus-visible,.lg .box input.plain:focus-visible{outline:0;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.lg .btn.danger{border-radius:26px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet:not(.page){background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.lg .sheet:not(.page){background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 </style>
 </head>
 <body>
@@ -656,7 +718,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   </div>
 
   <!-- A trip: every booking in it, day by day -->
-  <div class="sheetwrap" id="tripPage" hidden>
+  <div class="sheetwrap lg" id="tripPage" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet page" role="dialog" aria-modal="true" aria-labelledby="tpLbl">
       <div class="sheethead pagehead">
@@ -666,7 +728,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
           <button class="iconbtn" id="tpCal" type="button" aria-label="Add the whole trip to your calendar">
             <svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M12 12.6v5M9.5 15.1h5"/></svg>
           </button>
-          <button class="textbtn" id="tpDone" type="button">Done</button>
+          <button class="iconbtn okbtn" id="tpDone" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button>
         </div>
       </div>
       <div class="sheetbody" id="tpBody"></div>
@@ -674,21 +736,21 @@ a.rowbtn{color:var(--text);text-decoration:none}
   </div>
 
   <!-- One booking: live status, details, links -->
-  <div class="sheetwrap" id="bkSheet" hidden>
+  <div class="sheetwrap lg" id="bkSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="bkLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="bkLbl">Booking</h2><div class="acts"><button class="textbtn" id="bkDone" type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="bkLbl">Booking</h2><div class="acts"><button class="iconbtn okbtn" id="bkDone" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody" id="bkBody"></div>
     </div>
   </div>
 
   <!-- Add: which kind -->
-  <div class="sheetwrap" id="addSheet" hidden>
+  <div class="sheetwrap lg" id="addSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="adLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="adLbl">Add a booking</h2><div class="acts"><button class="textbtn" data-close type="button">Cancel</button></div></div>
+      <div class="sheethead"><h2 id="adLbl">Add a booking</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="typepick" id="addTypes"></div>
         <div class="rgroup glass">
@@ -702,11 +764,11 @@ a.rowbtn{color:var(--text);text-decoration:none}
   </div>
 
   <!-- Settings -->
-  <div class="sheetwrap" id="setSheet" hidden>
+  <div class="sheetwrap lg" id="setSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="stLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="stLbl">Settings</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="stLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="label">Gmail</p>
         <div class="rgroup glass" id="stGmail"></div>
@@ -738,11 +800,11 @@ a.rowbtn{color:var(--text);text-decoration:none}
   </div>
 
   <!-- Google Sheet sync -->
-  <div class="sheetwrap" id="syncSheet" hidden>
+  <div class="sheetwrap lg" id="syncSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
         <form id="syForm" class="field" autocomplete="on" action="#">
@@ -773,11 +835,11 @@ a.rowbtn{color:var(--text);text-decoration:none}
   </div>
 
   <!-- Paste fallback: when the clipboard can't be read directly -->
-  <div class="sheetwrap" id="pasteSheet" hidden>
+  <div class="sheetwrap lg" id="pasteSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="psLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="psLbl">Paste a confirmation</h2><div class="acts"><button class="textbtn" id="psAdd" type="button">Read it</button></div></div>
+      <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="psLbl">Paste a confirmation</h2><div class="acts"><button class="iconbtn okbtn" id="psAdd" type="button" aria-label="Read it"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste the booking email here" style="min-height:200px;color:var(--text)"></textarea></div>
         <p class="hint" id="psHint">The text of a flight, hotel or car hire confirmation. Nothing is sent anywhere; it is read on this phone.</p>
@@ -792,6 +854,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
+<script src="../home/slide.js"></script>
 <script src="parse.js"></script>
 <script src="app.js"></script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
