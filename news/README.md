@@ -14,6 +14,8 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
+- **Newest first** on every tab. The top story is shown large when it has
+  a picture; an older story with a picture never jumps ahead of it.
 
 ## Sources
 

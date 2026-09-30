@@ -609,7 +609,8 @@
     return [...list].sort((a, b) => a.label.localeCompare(b.label, 'en-GB'));
   }
   function topicLabel(id) { return (topics().find(t => t.id === id) || {}).label || id; }
-  function topicStories(id) { return (data && Array.isArray(data.stories)) ? data.stories.filter(s => s.topic === id) : []; }
+  // Newest first on every tab, whatever order the data lists them in.
+  function topicStories(id) { return (data && Array.isArray(data.stories)) ? data.stories.filter(s => s.topic === id).sort(byTime) : []; }
 
   // ---- sport matching ----
   const slug = s => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -825,10 +826,10 @@
       return;
     }
 
-    // Lead: the newest story with a picture, if one is near the top.
-    const leadIdx = stories.slice(0, 5).findIndex(s => safeUrl(s.image));
-    const lead = leadIdx >= 0 ? stories[leadIdx] : null;
-    const rest = stories.filter((_, i) => i !== leadIdx);
+    // Lead: the newest story, shown large when it has a picture. Only the
+    // newest, so the list stays strictly newest first.
+    const lead = safeUrl(stories[0].image) ? stories[0] : null;
+    const rest = lead ? stories.slice(1) : stories;
 
     let html = '';
     if (lead) {
