@@ -288,6 +288,11 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .opt[aria-checked="true"],.opt[aria-pressed="true"]{color:var(--sel-ink);font-weight:600;background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);border-color:color-mix(in srgb,var(--accent) 40%,var(--gb-edge))}
 .opt .sw{width:8px;height:8px;border-radius:50%;background:var(--lc);box-shadow:0 0 8px var(--lc)}
 .inrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* four buttons beside "Reminders": the title steps down a little on narrower phones so they fit */
+#remView .title{font-size:clamp(28px,8vw,34px)}
+#remView .titlerow .acts{gap:6px}
+#remBellBtn{position:relative}
+#remBellBtn .bdot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
 .inrow input[type="date"],.inrow input[type="time"],.inrow input[type="datetime-local"]{border:1px solid var(--hair);background:var(--fill);border-radius:12px;padding:7px 10px;font-size:15px;min-width:0}
 .plain{border:0;background:none;outline:none;width:100%;padding:0;font-size:16px}
 textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
@@ -653,6 +658,9 @@ svg.fs{fill:currentColor}
           <button class="iconbtn glass" id="remSearchBtn" type="button" aria-label="Search reminders" aria-pressed="false">
             <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
           </button>
+          <button class="iconbtn glass" id="remBellBtn" type="button" aria-label="Notifications">
+            <svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg><i class="bdot" id="remBellDot" hidden></i>
+          </button>
 <button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
             <svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg>
           </button>
@@ -788,6 +796,11 @@ svg.fs{fill:currentColor}
               <button class="linkbtn" id="tdCal" type="button">Add to calendar</button>
             </div>
           </div>
+        </div>
+        <div class="field" id="tdAlertField" hidden>
+          <p class="label">Alert</p>
+          <div class="opts" id="tdAlert" role="radiogroup" aria-label="Alert"></div>
+          <p class="hint" id="tdAlertHint"></p>
         </div>
         <div class="field">
           <p class="label">Priority</p>
@@ -1018,6 +1031,41 @@ svg.fs{fill:currentColor}
     </div>
   </div>
 
+  <!-- Notifications -->
+  <div class="sheetwrap lg" id="pushSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="puLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="puLbl">Notifications</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <p class="hint" id="puStatus"></p>
+        <div id="puOff" class="field">
+          <div class="box glass">
+            <label class="label" for="puServer">Server address</label>
+            <input class="plain" id="puServer" type="url" inputmode="url" placeholder="https://notes-push.….workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <button class="btn" id="puOn" type="button">Turn on notifications</button>
+          <p class="hint">The server is set up once (steps in the Notes README, “Notifications”). Its address comes with the Google Sheet setup link, too.</p>
+        </div>
+        <div id="puOnBox" class="field" hidden>
+          <p class="label">Lists that alert this phone</p>
+          <div class="opts" id="puLists" aria-label="Lists that alert this phone"></div>
+          <div class="rgroup glass"><button class="swrow" id="puNudges" type="button" role="switch" aria-checked="true"><svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg><span class="grow">Note nudges</span><span class="switch" aria-hidden="true"></span></button></div>
+          <p class="label">Reminders with a date but no time</p>
+          <div class="box glass"><div class="inrow"><span style="flex:1;font-size:15px">Alert at</span><input type="time" id="puMorning" value="09:00" aria-label="Alert time for reminders without a time"></div></div>
+          <p class="hint">Each reminder has its own Alert (at the time, or before it) in its details. Other phones choose their own lists.</p>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="puTest">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg></span>
+              <span>Send a test<span class="sub">A notification to this phone, now</span></span>
+            </button>
+          </div>
+          <button class="btn danger" id="puOffBtn" type="button">Turn off on this phone</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <datalist id="tagList"></datalist>
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
@@ -1076,6 +1124,12 @@ svg.fs{fill:currentColor}
   // Google Sheet sync (see "Google Sheet sync" further down).
   const SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', shadow = new Map();
   let syncCfg = null, graves = {};
+  // Notifications (see "notifications" further down): this phone's choices.
+  const PUSH_KEY = KEY + '-push';
+  const push = {server:'', on:false, skip:[], nudges:true, morning:'09:00', tz:''};
+  try { Object.assign(push, JSON.parse(localStorage.getItem(PUSH_KEY)) || {}); } catch(e) {}
+  const savePush = () => { try { localStorage.setItem(PUSH_KEY, JSON.stringify(push)); } catch(e) {} };
+  let pushDirty = false, pendingOpen = null;
   try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch(e) {}
   // The Sheet link and code are also kept in IndexedDB, so they survive if
   // localStorage is cleared or full (every AllisonOS app shares its space).
@@ -1151,7 +1205,7 @@ svg.fs{fill:currentColor}
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
-  function save(){ track(); persist(); if (syncCfg) scheduleSync(); }
+  function save(){ track(); persist(); if (syncCfg) scheduleSync(); pushDirty = true; }
   function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } }
 
   function countTags(items){
@@ -1719,7 +1773,7 @@ svg.fs{fill:currentColor}
   function todoRow(t, i){
     const l = listById(t.list);
     const meta = [];
-    if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+I.clock+esc(fmtDue(t))+'</span>');
+    if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+(alertsHere(t) ? I.bell : I.clock)+esc(fmtDue(t))+'</span>');
     if (!st.rlist) meta.push('<span class="tchip lst">'+esc(l.name)+'</span>');
     t.tags.forEach(x => meta.push(tchip(x, st.rq)));
     return '<div class="todo'+(t.done ? ' done' : '')+'" style="--lc:'+l.color+';--i:'+(i||0)+'">'
@@ -1852,6 +1906,16 @@ svg.fs{fill:currentColor}
     $('tdTime').value = t.time || '';
     $('tdTime').disabled = !t.date;
     $('tdCal').hidden = !t.date;
+    $('tdAlertField').hidden = !t.date;
+    if (t.date) {
+      let a = alertOf(t);
+      if (!t.time && a > 0) a = Math.round(a / 1440) * 1440;
+      $('tdAlert').innerHTML = (t.time ? ALERTS_TIMED : ALERTS_DAY)
+        .map(([m, n]) => '<button class="opt" type="button" role="radio" data-a="'+m+'" aria-checked="'+(a === m)+'">'+n+'</button>').join('');
+      $('tdAlertHint').textContent = !push.on ? 'Turn on notifications with the bell at the top of Reminders to get this alert on this phone.'
+        : push.skip.includes(t.list) ? 'This phone doesn\u2019t get alerts for ' + listById(t.list).name + '. Change it with the bell at the top of Reminders.'
+        : !t.time && a >= 0 ? 'Without a time, it alerts at ' + fmtClock(push.morning) + (a ? '' : ' on the day') + '.' : '';
+    }
     $('tdPrio').innerHTML = ['None','Low','Medium','High'].map((p, i) => '<button class="opt" type="button" role="radio" data-p="'+i+'" aria-checked="'+(t.prio === i)+'">'+p+'</button>').join('');
     $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+l.id+'" style="--lc:'+l.color+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
@@ -1859,7 +1923,7 @@ svg.fs{fill:currentColor}
     slideTodo();
   }
   // When, Priority and List slide their thumbs; a newly opened reminder places them without moving.
-  const slideTodo = jump => ['tdQuick', 'tdPrio', 'tdList'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), id, { jump }));
+  const slideTodo = jump => ['tdQuick', 'tdAlert', 'tdPrio', 'tdList'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), id, { jump }));
   window.addEventListener('resize', () => { slideTabs(true); slideRem(true); slideTodo(true); });
   function finishTodo(){
     const t = st.todo;
@@ -1878,7 +1942,8 @@ svg.fs{fill:currentColor}
     renderTodo();
   });
   $('tdDate').addEventListener('change', e => { st.todo.date = e.target.value || null; if (!st.todo.date) st.todo.time = null; renderTodo(); });
-  $('tdTime').addEventListener('change', e => { st.todo.time = e.target.value || null; });
+  $('tdTime').addEventListener('change', e => { st.todo.time = e.target.value || null; renderTodo(); });
+  $('tdAlert').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { st.todo.alert = +b.dataset.a; renderTodo(); } });
   $('tdPrio').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { st.todo.prio = +b.dataset.p; renderTodo(); } });
   $('tdList').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (b) { st.todo.list = b.dataset.l; renderTodo(); } });
   $('tdFlag').onclick = () => { st.todo.flagged = !st.todo.flagged; renderTodo(); };
@@ -2382,6 +2447,8 @@ svg.fs{fill:currentColor}
       lastSyncAt = Date.now(); try { localStorage.setItem(SYNC_KEY + '-at', String(lastSyncAt)); } catch(e) {}
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
       applyRemote(res);
+      if (pushDirty) { pushDirty = false; pokePush(); }
+      if (pendingOpen) { const w = pendingOpen; pendingOpen = null; openFrom(w, true); }
     } catch(e) {
       syncState = 'error'; syncErr = e.message;
       if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
@@ -2454,7 +2521,7 @@ svg.fs{fill:currentColor}
   };
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify({u:syncCfg.url, s:syncCfg.secret}));
+    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify(Object.assign({u:syncCfg.url, s:syncCfg.secret}, push.server ? {p:push.server} : {})));
     try { await navigator.clipboard.writeText(link); toast('Setup link copied. To use it, copy it, open Notes and tap the clipboard button. Only send it to your wife.'); }
     catch(e) { toast('Copy isn’t available here.'); }
   };
@@ -2467,11 +2534,160 @@ svg.fs{fill:currentColor}
   };
   function takeSetupLink(text){
     const m = text.match(/#sync=([\w-]+)/); if (!m) return false;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSyncSheet(c); return true; } } catch(e) {}
+    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { if (typeof c.p === 'string' && okServer(c.p) && !push.on) { push.server = c.p; savePush(); } openSyncSheet(c); return true; } } catch(e) {}
     toast('That setup link is damaged. Copy it again.'); return true;
   }
   document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
   window.addEventListener('online', () => { if (syncCfg) sync(false); });
+
+  // ---------- notifications (notes/push; notes/README.md, "Notifications") ----------
+  // The server alerts this phone when a reminder is due, or a note's nudge
+  // comes round, even with Notes closed. It reads them from the Google Sheet,
+  // so it needs the Sheet connected; this phone tells it its time zone, which
+  // lists to alert for, whether to include nudges, and when "no time" is.
+  const okServer = u => /^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?(\/[\w.\/-]*)?$/.test(u);
+  const pushable = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const zone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(e) { return ''; } };
+  const serverUrl = p => new URL(p, push.server.replace(/\/*$/, '/')).href;
+  const keyBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+  const bytesKey = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const fmtClock = hm => new Date('2000-01-01T' + (hm || '09:00')).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  const PUSH_ERRORS = {
+    'no-sheet':'Connect the Google Sheet first (the download button, then Google Sheet sync). The server reads your reminders from it.',
+    'wrong-secret':'The server says the Sheet’s secret code is wrong. Reconnect the Google Sheet, then try again.',
+    'other-sheet':'This server already alerts for a different Google Sheet. Use the setup link from the phone that set it up.',
+    'sheet-network':'The server couldn’t reach the Google Sheet. Try again in a minute.',
+    'sheet-not-json':'The server couldn’t read the Google Sheet. Check that Sync now works, then try again.',
+    'sheet-busy':'The Google Sheet was busy. Try again in a moment.',
+    'sheet-secret-not-set':'The Sheet’s script still has CHANGE-ME as its secret.',
+    'bad-subscription':'The server didn’t accept this phone. Turn notifications off and on again.',
+    'not-subscribed':'This phone isn’t signed up any more. Turn notifications on again.',
+    'network':'Couldn’t reach the server. Check the address, or you may be offline.',
+    'denied':'Notifications are turned off for Notes. Allow them in the iPhone’s Settings → Notifications → Notes, then try again.',
+    'no-key':'That address didn’t answer like the Notes server. Check it (it ends in workers.dev).'
+  };
+  const pushErr = e => PUSH_ERRORS[e && e.message] || 'That didn’t work (' + ((e && e.message) || 'unknown') + ').';
+  async function pushPost(path, body){
+    let r, d = null;
+    try { r = await fetch(serverUrl(path), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), cache:'no-store'}); }
+    catch(e) { throw new Error('network'); }
+    try { d = await r.json(); } catch(e) {}
+    if (!r.ok || !d || !d.ok) throw new Error((d && d.error) || 'server-' + r.status);
+    return d;
+  }
+  async function pushReg(){ await navigator.serviceWorker.register('sw.js'); return navigator.serviceWorker.ready; }
+  async function currentSub(){ if (!pushable()) return null; try { return (await pushReg()).pushManager.getSubscription(); } catch(e) { return null; } }
+  const alertOf = t => t.alert == null ? 0 : +t.alert;
+  const alertsHere = t => push.on && !t.done && !!t.date && alertOf(t) >= 0 && !push.skip.includes(t.list);
+  const ALERTS_TIMED = [[0,'At time'],[5,'5 min before'],[15,'15 min before'],[30,'30 min before'],[60,'1 hour before'],[120,'2 hours before'],[1440,'1 day before'],[2880,'2 days before'],[10080,'1 week before'],[-1,'None']];
+  const ALERTS_DAY = [[0,'On the day'],[1440,'1 day before'],[2880,'2 days before'],[10080,'1 week before'],[-1,'None']];
+
+  function pushPrefs(){ return {tz:zone(), lang:navigator.language || 'en-US', morning:push.morning, skip:push.skip, nudges:push.nudges}; }
+  async function subscribeHere(sub){
+    await pushPost('subscribe', {subscription:sub.toJSON(), sheet:{url:syncCfg.url, secret:syncCfg.secret}, prefs:pushPrefs()});
+    push.tz = zone(); savePush();
+  }
+  function renderPush(){
+    $('remBellDot').hidden = !push.on;
+    const on = push.on;
+    $('puOff').hidden = on; $('puOnBox').hidden = !on;
+    $('puStatus').textContent = !pushable()
+      ? (isIOS && !standalone() ? 'On iPhone, notifications only work in Notes opened from its own Home Screen icon. Open it from there and turn them on.' : 'This browser can’t show notifications.')
+      : !syncCfg ? PUSH_ERRORS['no-sheet']
+      : on ? 'On in ' + place() + '. Reminders alert here at their Alert time, even with Notes closed.'
+      : 'Get an alert on this phone when a reminder is due or a note’s nudge comes round, even with Notes closed.';
+    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+l.id+'" style="--lc:'+l.color+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('puNudges').setAttribute('aria-checked', push.nudges);
+    $('puMorning').value = push.morning;
+  }
+  function openPush(){ $('puServer').value = push.server; renderPush(); openSheet('pushSheet'); }
+  $('remBellBtn').onclick = openPush;
+
+  $('puOn').onclick = async () => {
+    const server = $('puServer').value.trim().replace(/\/+$/, '');
+    if (!pushable()) { renderPush(); return; }
+    if (!syncCfg) { $('puStatus').textContent = PUSH_ERRORS['no-sheet']; return; }
+    if (!okServer(server)) { $('puStatus').textContent = 'Enter the server address. It starts with https:// and ends in workers.dev.'; return; }
+    $('puOn').disabled = true; $('puStatus').textContent = 'Turning on…';
+    try {
+      // First, while the tap still counts: iPhone only asks from a tap.
+      const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      if (perm !== 'granted') throw new Error('denied');
+      push.server = server;
+      let key = null;
+      try { key = (await (await fetch(serverUrl('key'), {cache:'no-store'})).json()).key; } catch(e) { throw new Error('no-key'); }
+      if (!key) throw new Error('no-key');
+      const reg = await pushReg();
+      let sub = await reg.pushManager.getSubscription();
+      const had = sub && sub.options && sub.options.applicationServerKey;
+      if (sub && (!had || bytesKey(had) !== key)) { await sub.unsubscribe(); sub = null; }   // made for another server
+      if (!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:keyBytes(key)});
+      await subscribeHere(sub);
+      push.on = true; savePush(); renderPush(); render();
+      toast('Notifications on for this phone');
+    } catch(e) {
+      savePush(); $('puStatus').textContent = pushErr(e);
+    } finally { $('puOn').disabled = false; }
+  };
+  // A change of lists, nudges or morning time goes to the server a moment later.
+  let prefsTimer = null;
+  function prefsChanged(){
+    savePush(); renderPush(); render();
+    clearTimeout(prefsTimer);
+    prefsTimer = setTimeout(async () => {
+      const sub = await currentSub();
+      if (!sub) { push.on = false; savePush(); renderPush(); render(); toast(PUSH_ERRORS['not-subscribed']); return; }
+      try { await subscribeHere(sub); } catch(e) { toast(pushErr(e)); }
+    }, 700);
+  }
+  $('puLists').addEventListener('click', e => {
+    const b = e.target.closest('[data-pl]'); if (!b) return;
+    const id = b.dataset.pl;
+    push.skip = push.skip.includes(id) ? push.skip.filter(x => x !== id) : [...push.skip, id];
+    prefsChanged();
+  });
+  $('puNudges').onclick = () => { push.nudges = !push.nudges; prefsChanged(); };
+  $('puMorning').addEventListener('change', e => { if (/^\d{2}:\d{2}$/.test(e.target.value)) { push.morning = e.target.value; prefsChanged(); } });
+  $('puTest').onclick = async () => {
+    const sub = await currentSub();
+    if (!sub) { push.on = false; savePush(); renderPush(); $('puStatus').textContent = PUSH_ERRORS['not-subscribed']; return; }
+    try { await pushPost('test', {endpoint:sub.endpoint}); toast('Test sent. It should arrive in a few seconds.'); }
+    catch(e) { if (e.message === 'not-subscribed') { push.on = false; savePush(); renderPush(); } toast(pushErr(e)); }
+  };
+  $('puOffBtn').onclick = async () => {
+    const sub = await currentSub();
+    push.on = false; savePush(); renderPush(); render();
+    if (sub) { pushPost('unsubscribe', {endpoint:sub.endpoint}).catch(() => {}); sub.unsubscribe().catch(() => {}); }
+    toast('Notifications off for this phone');
+  };
+  // After this phone syncs a change, the server reads the Sheet again, so a
+  // new or moved reminder alerts on time rather than at the next 15-minute read.
+  function pokePush(){
+    if (!push.on || !push.server) return;
+    currentSub().then(sub => {
+      if (!sub) return;
+      return pushPost('refresh', {endpoint:sub.endpoint}).catch(e => { if (e.message === 'not-subscribed' && syncCfg) return subscribeHere(sub); });
+    }).catch(() => {});
+  }
+  // Opening a notification: the reminder or note it's about. If it isn't on
+  // this phone yet (added on the other phone), after the next sync.
+  function openFrom(what, late){
+    if (!what) return;
+    if (what === 'rem') { setTab('rem'); return; }
+    const i = what.indexOf(':'), kind = what.slice(0, i), id = what.slice(i + 1);
+    if (kind === 'todo' && todos.some(t => t.id === id)) { setTab('rem'); if (!$('todoSheet').hidden) finishTodo(); openTodo(id); return; }
+    if (kind === 'note' && notes.some(n => n.id === id)) { setTab('notes'); if (!$('editor').hidden) finishEdit(); openEditor(id); return; }
+    if (!late && syncCfg) { pendingOpen = what; sync(false); return; }
+    toast(kind === 'note' ? 'That note isn’t here any more.' : 'That reminder isn’t here any more.');
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && typeof e.data.open === 'string') openFrom(e.data.open); });
+  // Opening the app: still allowed to notify? Moved time zone?
+  function checkPush(){
+    renderPush();
+    if (!push.on) return;
+    if (!pushable() || Notification.permission === 'denied') { push.on = false; savePush(); renderPush(); render(); return; }
+    if (push.tz !== zone()) prefsChanged();
+  }
 
   // ---------- backup ----------
   const LAST = KEY + '-backup';
@@ -2576,6 +2792,13 @@ svg.fs{fill:currentColor}
   setTab(st.tab === 'rem' ? 'rem' : 'notes');
   checkIncoming();
   renderSyncStatus();
+  checkPush();
+  (function(){
+    const q = new URLSearchParams(location.search).get('open');
+    if (!q) return;
+    history.replaceState(null, '', location.pathname + location.hash);
+    openFrom(q);
+  })();
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
     if (syncCfg || !c || !c.url || !c.secret) return;

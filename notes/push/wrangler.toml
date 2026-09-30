@@ -1,0 +1,17 @@
+# Cloudflare Worker for Notes' reminder notifications. Deployed by
+# .github/workflows/notes-push.yml, which finds (or makes) the KV namespace
+# "notes-push" and fills in its id. See notes/README.md, "Notifications".
+name = "notes-push"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["* * * * *"]          # every minute
+
+[[kv_namespaces]]
+binding = "PUSH"
+id = "NOTES_PUSH_KV_ID"        # replaced at deploy time
+
+[vars]
+ALLOWED_ORIGIN = "https://tomallison24.github.io,https://tomallison24-news.pages.dev"
+VAPID_SUBJECT = "https://tomallison24.github.io/tomallison24/notes/"
