@@ -356,6 +356,7 @@ function dedupe(id, list, fuzzy) {
   const kept = [];
   const byKey = new Map();
   const dropped = { link: 0, doi: 0, headline: 0, similar: 0 };
+  const shown = [];   // a few merges by headline, for the job log
   // Best copy first.
   for (const s of [...list].sort((a, b) => rankOf(a) - rankOf(b) || byTime(a, b))) {
     const doi = doiIn(s);
@@ -366,6 +367,7 @@ function dedupe(id, list, fuzzy) {
     if (twin) {
       dropped[why]++;
       const k = twin.story;
+      if ((why === 'headline' || why === 'similar') && shown.length < 8) shown.push(`  ${why === 'similar' ? '≈' : '='} ${k.source}: ${k.title.slice(0, 70)} | ${s.source}: ${s.title.slice(0, 70)}`);
       if (!k.image && s.image) k.image = s.image;
       if (!k.summary && s.summary) k.summary = s.summary;
       if (!k.doi && doi) k.doi = doi;
@@ -378,7 +380,7 @@ function dedupe(id, list, fuzzy) {
   }
   const n = Object.values(dropped).reduce((a, b) => a + b, 0);
   const label = { link: 'same link', doi: 'same DOI', headline: 'same headline', similar: 'near-identical headline' };
-  if (n) console.log(`${id}: ${n} duplicates removed (${Object.entries(dropped).filter(([, v]) => v).map(([k, v]) => `${v} ${label[k]}`).join(', ')})`);
+  if (n) console.log(`${id}: ${n} duplicates removed (${Object.entries(dropped).filter(([, v]) => v).map(([k, v]) => `${v} ${label[k]}`).join(', ')})\n${shown.join('\n')}`.trimEnd());
   return kept.map(k => k.story);
 }
 
