@@ -76,6 +76,11 @@ aurora, the Liquid Glass buttons (`--lg-bg`, `--lg-filter`, `--lg-rim`), line
 icons in slate-teal on a 24px grid, the sheets you drag down, the toast with
 Undo and the "Updated" pill. Now Playing takes its glow from the episode's
 artwork, and the artwork shrinks a little while paused, as on the iPhone.
+The sheets (an episode, Settings, the choices and Now Playing) are iOS 26's
+Liquid Glass, as in Calendar: clear glass floating inside the screen's
+edges, with round ✕ and ✓ buttons. The tabs, the filter chips and Settings'
+choices have one glass thumb that slides to the chosen option
+(`home/slide.js`, shared with the other apps).
 
 The icon (`icon.svg`, drawn as `icon-512.png` and `icon-180.png`) is a white
 signal on a pink-to-violet gradient.
