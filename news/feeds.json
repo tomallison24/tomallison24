@@ -126,16 +126,16 @@
     {"topic": "stemcells", "source": "Science", "url": "https://www.science.org/action/showFeed?type=axatoc&feed=rss&jc=science", "max": 100},
     {"topic": "stemcells", "source": "Science", "url": "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science", "max": 100},
     {"topic": "stemcells", "source": "Development", "url": "https://journals.biologists.com/rss/site_1000005/1000005.xml"},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/esc-ipsc-news/feed/", "trusted": true, "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/organoid-news/feed/", "trusted": true, "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/mesenchymal-cell-news/feed/", "trusted": true, "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/hematopoiesis-news/feed/", "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/cancer-stem-cell-news/feed/", "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/neural-cell-news/feed/", "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/intestinal-cell-news/feed/", "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/cell-therapy-news/feed/", "rank": 1},
-    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/muscle-cell-news/feed/", "rank": 1},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/esc-ipsc-news/feed/", "trusted": true, "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/organoid-news/feed/", "trusted": true, "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/mesenchymal-cell-news/feed/", "trusted": true, "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/hematopoiesis-news/feed/", "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/cancer-stem-cell-news/feed/", "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/neural-cell-news/feed/", "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/intestinal-cell-news/feed/", "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/cell-therapy-news/feed/", "rank": 2},
+    {"topic": "stemcells", "source": "STEMCELL Science News", "url": "https://www.stemcellsciencenews.com/newsletter/muscle-cell-news/feed/", "rank": 2},
     {"topic": "stemcells", "source": "Europe PMC", "type": "europepmc", "rank": 1, "query": "(TITLE_ABS:\"stem cell\" OR TITLE_ABS:\"stem cells\" OR TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"organoid\" OR TITLE_ABS:\"organoids\" OR TITLE_ABS:\"embryo model\" OR TITLE_ABS:\"blastoid\" OR TITLE_ABS:\"mesenchymal\" OR TITLE_ABS:\"haematopoietic\" OR TITLE_ABS:\"hematopoietic\") AND OPEN_ACCESS:y AND SRC:MED"},
-    {"topic": "stemcells", "source": "Preprint", "type": "europepmc", "rank": 2, "query": "(TITLE_ABS:\"stem cell\" OR TITLE_ABS:\"stem cells\" OR TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"organoid\" OR TITLE_ABS:\"organoids\" OR TITLE_ABS:\"embryo model\" OR TITLE_ABS:\"blastoid\" OR TITLE_ABS:\"mesenchymal\" OR TITLE_ABS:\"haematopoietic\" OR TITLE_ABS:\"hematopoietic\") AND SRC:PPR"}
+    {"topic": "stemcells", "source": "Preprint", "type": "europepmc", "rank": 3, "query": "(TITLE_ABS:\"stem cell\" OR TITLE_ABS:\"stem cells\" OR TITLE_ABS:\"pluripotent\" OR TITLE_ABS:\"iPSC\" OR TITLE_ABS:\"iPSCs\" OR TITLE_ABS:\"organoid\" OR TITLE_ABS:\"organoids\" OR TITLE_ABS:\"embryo model\" OR TITLE_ABS:\"blastoid\" OR TITLE_ABS:\"mesenchymal\" OR TITLE_ABS:\"haematopoietic\" OR TITLE_ABS:\"hematopoietic\") AND SRC:PPR"}
   ]
 }

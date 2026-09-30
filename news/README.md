@@ -60,16 +60,18 @@ stories count as the same when they have:
 - the same DOI (a Cell Stem Cell paper from the journal's feed and from
   Europe PMC), or
 - the same headline, ignoring case, punctuation and accents (a STEMCELL
-  Science News item that reuses the paper's title).
+  Science News item that reuses the paper's title). Headlines under 4 words
+  only match by link, so each "Tech Life" episode still shows.
 
 Stem cells (`"fuzzyDedupe"` in `feeds.json`) also merges near-identical
 headlines, which catches most preprints once they're published: 75% of their
 words the same, headlines of 6 or more words only. It is strict on purpose;
 news write-ups of a paper under a different headline still show separately.
 
-The copy kept is the publisher's own: a journal or news site beats Europe
-PMC, STEMCELL Science News and Nature's subject feeds, which beat preprints
-(each feed's `"rank"` in `feeds.json`; lower wins). It picks up the other
+The copy kept is the publisher's own: a journal or news site beats Nature's
+subject feeds and Europe PMC, which beat STEMCELL Science News (a summary
+that links on to the paper), which beats a preprint (each feed's `"rank"` in
+`feeds.json`; lower wins). It picks up the other
 copy's picture or summary if it has none. The job log says how many
 duplicates each topic lost and why.
 

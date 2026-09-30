@@ -207,9 +207,9 @@ async function europePmc(feed) {
 }
 
 // A feed's "rank" (0 when absent) says which copy of a duplicate to keep:
-// lower wins. The publisher's own feed is 0; digests and indexes that point
-// back to it (Europe PMC, STEMCELL Science News, Nature's subject feeds) are
-// 1; preprints are 2.
+// lower wins. The journal's own feed is 0; indexes that link to the same
+// paper (Nature's subject feeds, Europe PMC) are 1; STEMCELL Science News,
+// whose items are summaries that link on to the paper, is 2; preprints are 3.
 const ranked = (feed, stories) => feed.rank ? stories.map(s => ({ ...s, rank: feed.rank })) : stories;
 
 async function fetchFeed(feed) {
@@ -330,7 +330,9 @@ if (config.topics.some(t => t.keepDays)) {
 // One story per article or paper within a topic, however many feeds carry
 // it: the same link (BBC's UK and World feeds), the same DOI (a Cell Stem
 // Cell paper from its journal feed and from Europe PMC), or the same
-// headline once case, punctuation and accents are ignored. Topics with
+// headline once case, punctuation and accents are ignored. Headlines of
+// fewer than 4 words (not counting "the", "of" and so on) only match by
+// link: BBC names every episode of a programme "Tech Life". Topics with
 // "fuzzyDedupe" also treat near-identical headlines as one (a preprint and
 // its published version often differ by a word or two): at least 75% of
 // all their words shared. Only headlines of 6 or more words (not counting
@@ -345,7 +347,7 @@ const titleKey = s => s.title.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').
 const STOP = new Set('a an and are as at by for from in into is its of on or than that the their this to via with'.split(' '));
 const words = s => new Set(titleKey(s).split(' ').filter(w => w.length > 1 && !STOP.has(w)));
 // Stories saved before ranks existed: Europe PMC links go to doi.org or europepmc.org.
-const rankOf = s => s.rank ?? (/ \(preprint\)$/.test(s.source) ? 2 : /^https:\/\/(doi\.org|europepmc\.org)\//.test(s.url) ? 1 : 0);
+const rankOf = s => s.rank ?? (/ \(preprint\)$/.test(s.source) ? 3 : /^https:\/\/(doi\.org|europepmc\.org)\//.test(s.url) ? 1 : 0);
 function similar(a, b) {
   if (a.size < 6 || b.size < 6) return false;
   let both = 0;
@@ -360,9 +362,9 @@ function dedupe(id, list, fuzzy) {
   // Best copy first.
   for (const s of [...list].sort((a, b) => rankOf(a) - rankOf(b) || byTime(a, b))) {
     const doi = doiIn(s);
-    const keys = [['link', s.url], ['doi', doi && `doi:${doi}`], ['headline', `t:${titleKey(s)}`]].filter(([, k]) => k);
+    const w = words(s);
+    const keys = [['link', s.url], ['doi', doi && `doi:${doi}`], ['headline', w.size >= 4 && `t:${titleKey(s)}`]].filter(([, k]) => k);
     let [why, twin] = keys.map(([w, k]) => [w, byKey.get(k)]).find(([, t]) => t) || [];
-    const w = fuzzy ? words(s) : null;
     if (!twin && fuzzy) [why, twin] = ['similar', kept.find(k => similar(w, k.words))];
     if (twin) {
       dropped[why]++;
