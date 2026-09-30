@@ -24,6 +24,8 @@
   Look: a quiet gradient backdrop that drifts slowly, with frosted glass
   (backdrop-filter) only on a few large surfaces: the tab bar, the lead story
   and the story list. Few glass layers keep scrolling smooth on iPhone.
+  The filter panels are Liquid Glass sheets, as in the Calendar, and every
+  switch has the sliding glass thumb from ../home/slide.js.
 -->
 <style>
   :root {
@@ -412,6 +414,154 @@
   /* ---- Loading skeleton ---- */
   .sk { background: var(--skeleton); border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.5; } }
+
+  /* ---- Switches with a sliding glass thumb ----
+     The topic tabs, News | Scores, the time range, the one-tap teams and the
+     filter panel's Sports | Competitions | Teams: the options stay clear, and
+     one thumb under them glides to the chosen one, stretching as it goes, as
+     iOS 26's do (home/slide.js). The tick lists are not switches (tick any
+     number), so they keep their ticks. */
+  .slides { position: relative; isolation: isolate; }
+  .slides > :not(.slthumb) { position: relative; z-index: 1; }
+  .slthumb {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 0; pointer-events: none;
+    border-radius: 999px;
+    transition: opacity 0.25s ease, scale 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .slthumb.off { opacity: 0; scale: 0.7; }
+  /* A label newly chosen keeps its old ink until the thumb gets to it, so
+     white-on-dark never shows white on the light bar. */
+  .slides > .ink { animation: ink 0.22s ease-in both; }
+  @keyframes ink { from { color: var(--text); } }
+  @media (prefers-reduced-motion: reduce) { .slides > .ink { animation: none; } }
+  /* Topic tabs at the top, and the one-tap teams: a dark capsule, as before. */
+  .tabs.slides .tab[aria-selected="true"], .teams.slides .chip.team[aria-pressed="true"] { background: none; }
+  .tabs > .slthumb, .teams > .slthumb {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 60%), var(--chip-on-bg);
+    box-shadow: 0 3px 10px var(--bar-lift);
+  }
+  /* The bottom tab bar: a brighter glass capsule, the label in the accent colour. */
+  .bottom-bar .tabs.slides .tab[aria-selected="true"] { background: none; box-shadow: none; }
+  .bottom-bar .tabs > .slthumb {
+    background: var(--lg-sel);
+    box-shadow: inset 0 0 0 0.5px var(--lg-rim), inset 0 1px 0 var(--bar-hi), 0 1px 4px var(--bar-lift);
+  }
+  /* Segmented choices: the white segment, now sliding. */
+  .modes.slides .seg[aria-selected="true"], .segmented.slides .seg[aria-selected="true"] { background: none; box-shadow: none; }
+  .modes > .slthumb, .segmented > .slthumb {
+    border-radius: 7px;
+    background: var(--seg-on);
+    box-shadow: inset 0 0.5px 0 var(--bar-hi), 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  /* ---- The sheets: Liquid Glass ----
+     Sport filters and Sources are each one sheet of clear glass floating
+     just inside the screen's edges: the stories blur and brighten through it,
+     a lit rim runs round it, and the search field, the lists and the buttons
+     are lighter glass on top. The lists don't blur again (the sheet already
+     has), which keeps it smooth on a phone. */
+  :root {
+    --lgs-top: rgba(255, 255, 255, 0.68);
+    --lgs-bottom: rgba(255, 255, 255, 0.50);
+    --lgs-rim: rgba(255, 255, 255, 0.92);
+    --lgs-edge: rgba(255, 255, 255, 0.62);
+    --lgs-row: rgba(255, 255, 255, 0.44);
+    --lgs-field: rgba(255, 255, 255, 0.62);
+    --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
+    --lgs-scrim: rgba(0, 0, 0, 0.10);
+    --lgs-lift: rgba(40, 40, 80, 0.16);
+    /* the slate-teal fill of the Show button: the light one in both modes,
+       so its white label stays easy to read */
+    --lgs-ok: rgba(14, 124, 140, 0.90);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --lgs-top: rgba(44, 44, 52, 0.60);
+      --lgs-bottom: rgba(22, 22, 28, 0.52);
+      --lgs-rim: rgba(255, 255, 255, 0.20);
+      --lgs-edge: rgba(255, 255, 255, 0.12);
+      --lgs-row: rgba(255, 255, 255, 0.07);
+      --lgs-field: rgba(255, 255, 255, 0.10);
+      --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
+      --lgs-scrim: rgba(0, 0, 0, 0.30);
+      --lgs-lift: rgba(0, 0, 0, 0.50);
+    }
+  }
+  .lg .scrim { background: var(--lgs-scrim); }
+  .lg .sheet {
+    flex: 1; width: auto; max-width: 544px; margin: 0 8px 8px;
+    max-height: calc(100% - env(safe-area-inset-top) - 32px);
+    border: 0; border-radius: 34px; overflow: hidden;
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
+    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px var(--lgs-lift), 0 2px 8px var(--bar-lift);
+    transform: translateY(calc(100% + 16px));
+  }
+  .lg .grabber { background: var(--hairline); }
+  .lg .sheet-head { padding: 4px 12px 10px 20px; }
+  .lg .close-btn {
+    width: 44px; height: 44px;
+    background: var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 2px 8px var(--bar-lift);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .lg .close-btn:active { transform: scale(0.92); }
+  .lg .close-btn svg { width: 20px; height: 20px; }
+  /* The search box: a glass capsule, lit in the accent colour while typing. */
+  .lg .search-wrap { margin: 0 12px 10px; }
+  .lg .search-wrap svg { left: 13px; }
+  .lg .search {
+    height: 40px; padding: 0 16px 0 38px; border-radius: 999px;
+    background: var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--bar-lift);
+    transition: box-shadow 0.2s;
+  }
+  .lg .search:focus-visible {
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .lg .segmented {
+    margin: 0 12px 4px; padding: 3px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--bar-lift);
+  }
+  .lg .seg, .lg .segmented > .slthumb { border-radius: 999px; }
+  /* A soft fade where the lists scroll under the search box and the buttons. */
+  .lg .sheet-body {
+    padding: 0 12px 16px;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 12px, #000 calc(100% - 16px), transparent);
+  }
+  .lg .sect h3 { margin: 18px 16px 6px; }
+  .lg .sheet-note { margin: 14px 16px 0; }
+  .lg .card {
+    border: 0; border-radius: 26px;
+    background: var(--lgs-row);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--bar-lift);
+  }
+  .lg .opt { min-height: 48px; padding: 11px 16px; }
+  .lg .opt + .opt::before { left: 16px; }
+  .lg .opt:active { background: var(--lgs-field); }
+  .lg .sheet-foot { border-top: 0; padding: 6px 12px calc(env(safe-area-inset-bottom) + 12px); }
+  .lg .text-btn {
+    height: 44px; padding: 0 20px; border-radius: 999px;
+    background: var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 2px 8px var(--bar-lift);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .lg .text-btn:disabled { color: var(--muted); }
+  /* Show N stories: the sheet's Done, filled with the accent colour. */
+  .lg .okbtn {
+    color: #FFFFFF;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), var(--lgs-ok);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--lgs-ok) 34%, transparent);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .lg .okbtn:active, .lg .text-btn:not(:disabled):active { transform: scale(0.96); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .lg .sheet { background: var(--lg-solid); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .lg .sheet { background: var(--lg-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
 </style>
 </head>
 <body>
@@ -442,7 +592,7 @@
   <main id="feed" aria-live="polite"></main>
 </div>
 
-<div class="sheet-wrap" id="sheet" hidden>
+<div class="sheet-wrap lg" id="sheet" hidden>
   <div class="scrim" data-action="close-sheet"></div>
   <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
     <div class="grabber" aria-hidden="true"></div>
@@ -460,13 +610,13 @@
     <div class="sheet-body" id="sheet-body"></div>
     <footer class="sheet-foot">
       <button class="text-btn" id="sheet-reset" data-action="reset-picks">Reset</button>
-      <button class="show-btn" id="sheet-show" data-action="close-sheet">Show all sport</button>
+      <button class="show-btn okbtn" id="sheet-show" data-action="close-sheet">Show all sport</button>
     </footer>
   </section>
 </div>
 
 <!-- Sources for topics with "filters" in feeds.json (Stem cells). -->
-<div class="sheet-wrap" id="src-sheet" hidden>
+<div class="sheet-wrap lg" id="src-sheet" hidden>
   <div class="scrim" data-action="close-src"></div>
   <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="src-title" tabindex="-1">
     <div class="grabber" aria-hidden="true"></div>
@@ -483,13 +633,15 @@
     <div class="sheet-body" id="src-body"></div>
     <footer class="sheet-foot">
       <button class="text-btn" id="src-reset" data-action="src-reset">Reset</button>
-      <button class="show-btn" id="src-show" data-action="close-src">Show all sources</button>
+      <button class="show-btn okbtn" id="src-show" data-action="close-src">Show all sources</button>
     </footer>
   </section>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-text"></span><button id="toast-undo">Undo</button></div>
 
+<!-- The switches' sliding glass thumb, shared by the AllisonOS apps. -->
+<script src="../home/slide.js"></script>
 <script>
 (() => {
   'use strict';
@@ -751,6 +903,24 @@
     return `<div class="meta">${html}</div>`;
   }
 
+  // ---- switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js) ----
+  // Called after each redraw; a label newly chosen gets .ink (see the CSS).
+  const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
+  let shownTopic = null, shownQuick = null;
+  const slideTabs = jump => slide(tabsEl, tabsEl.querySelector('[aria-selected="true"]'), 'tabs', { jump });
+  // The Sport and Stem cells bar: News | Scores or the time range, and the one-tap teams.
+  function slideBar(jump) {
+    const modes = filterEl.querySelector('.modes'), teams = filterEl.querySelector('.teams');
+    if (modes) slide(modes, modes.querySelector('[aria-selected="true"]'), `modes:${topic}`, { jump });
+    if (!teams) return;
+    const on = teams.querySelector('[aria-pressed="true"]'), was = shownQuick;
+    shownQuick = on ? quick : null;
+    if (on && was && was !== quick) on.classList.add('ink');
+    slide(teams, on, 'teams', { jump: jump || !was });   // from none, it appears where it is
+  }
+  const slideSeg = jump => slide(segEl, segEl.querySelector('[aria-selected="true"]'), 'sheet-seg', { jump });
+  window.addEventListener('resize', () => { slideTabs(true); slideBar(true); if (sheetOpen) slideSeg(true); });
+
   // ---- render ----
   function renderTabs() {
     const list = [LATEST, ...topics()];
@@ -760,6 +930,9 @@
     ).join('');
     const on = tabsEl.querySelector('[aria-selected="true"]');
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
+    if (on && shownTopic && shownTopic !== topic) on.classList.add('ink');
+    shownTopic = topic;
+    slideTabs();
   }
 
   // Sport tab: a News | Scores switch, then one line saying what is
@@ -794,6 +967,7 @@
         if (over > 0) row.scrollLeft += over + 8;
       }
     }
+    slideBar();
   }
 
   function renderFeed() {
@@ -931,6 +1105,7 @@
          <span class="fb-summary">${esc(names.join(', '))}</span>`
       : `<button class="chip" data-action="edit-sources">${ICON.sliders}All sources</button>`;
     filterEl.innerHTML = windows + `<div class="fb-row">${chip}</div>`;
+    slideBar();
   }
 
   function setListFilters(id, next) {
@@ -1050,6 +1225,7 @@
     sheetReset.disabled = !picks.length;
     const n = pickList.length ? sportMatches().length : 0;
     sheetShow.textContent = !pickList.length ? 'Show all sport' : n ? `Show ${n} ${n === 1 ? 'story' : 'stories'}` : 'Done';
+    slideSeg();
   }
 
   function openSheet() {
@@ -1062,6 +1238,7 @@
     if (!catalog && !catalogFailed) loadCatalog();
     renderSheet(true);
     sheetWrap.hidden = false;
+    slideSeg(true);                 // hidden until now, so nothing to measure before
     document.documentElement.classList.add('locked');
     requestAnimationFrame(() => requestAnimationFrame(() => sheetWrap.classList.add('open')));
     sheetEl.focus({ preventScroll: true });

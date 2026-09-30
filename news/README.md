@@ -14,6 +14,10 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
+- **Liquid Glass**, as in iOS 26 and the Calendar app: the Sport filters and
+  Sources panels float as clear glass sheets, and every switch (the topic
+  tabs, News | Scores, the time range, the team buttons) has a glass thumb
+  that slides to what you pick (`../home/slide.js`, shared by the apps).
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
 
