@@ -398,6 +398,7 @@
   .meta { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; }
   .meta .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .meta .sep { opacity: 0.6; }
+  .meta .new { flex: none; padding: 1px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
 
   .notice { border-radius: 24px; padding: 28px 20px; text-align: center; }
   .notice h2 { margin: 0; font-size: 17px; font-weight: 600; }
@@ -536,10 +537,23 @@
   const safeUrl = u => (typeof u === 'string' && /^https?:\/\//i.test(u)) ? u : null;
   const byTime = (a, b) => (b.published || '').localeCompare(a.published || '');
 
+  // Journals date papers by day only ("2026-09-29", read as midnight UTC):
+  // those show by that date (Today, Yesterday, 29 Sep), not a time of day.
+  const dateOnly = iso => /T00:00:00(\.000)?Z$/.test(iso || '');
+  const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   function ago(iso, now = Date.now()) {
     if (!iso) return '';
     const t = new Date(iso).getTime();
     if (Number.isNaN(t)) return '';
+    if (dateOnly(iso)) {
+      const today = new Date(now), y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const day = iso.slice(0, 10);
+      if (day === dayKey(today)) return 'Today';
+      if (day === dayKey(y)) return 'Yesterday';
+      return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    }
     const m = Math.max(0, Math.round((now - t) / 60000));
     if (m < 1) return 'Just now';
     if (m < 60) return `${m}m ago`;
@@ -688,15 +702,27 @@
       .slice(0, 80);
   }
 
+  // "New" tag: on topics with "newTag" in feeds.json (Stem cells), stories
+  // published on today's date (a day-only date counts as that date),
+  // wherever they show. Gone once the day is.
+  function isToday(iso, now = new Date()) {
+    if (!iso) return false;
+    return (dateOnly(iso) ? iso.slice(0, 10) : dayKey(new Date(iso))) === dayKey(now);
+  }
+  const tagsNew = s => !!(data?.topics || []).find(t => t.id === s.topic)?.newTag && isToday(s.published);
+
   function meta(s, showTopic) {
     const parts = [];
+    if (tagsNew(s)) parts.push('<span class="new">New</span>');
     const pick = s.topic === SPORT && pickList.length ? firstMatch(s, pickList) : null;
     if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
     else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
     parts.push(`<span>${esc(s.source)}</span>`);
     const when = ago(s.published);
     if (when) parts.push(`<span>${esc(when)}</span>`);
-    return `<div class="meta">${parts.join('<span class="sep">·</span>')}</div>`;
+    // No dot between the tag and what follows.
+    const html = parts[0]?.startsWith('<span class="new">') ? parts[0] + ' ' + parts.slice(1).join('<span class="sep">·</span>') : parts.join('<span class="sep">·</span>');
+    return `<div class="meta">${html}</div>`;
   }
 
   // ---- render ----
@@ -1310,7 +1336,22 @@
   }, { threshold: 1 })
     .observe(document.querySelector('.masthead'));
 
+  // Redraw when the date changes, so yesterday's "New" tags go: at midnight
+  // if the app is open, or on coming back to it on a later day.
+  let shownDay = dayKey(new Date());
+  function redrawIfNewDay() {
+    if (dayKey(new Date()) === shownDay) return;
+    shownDay = dayKey(new Date());
+    $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    render();
+  }
+  (function atMidnight() {
+    const next = new Date(); next.setHours(24, 0, 1, 0);
+    setTimeout(() => { redrawIfNewDay(); atMidnight(); }, next - Date.now());
+  })();
+
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') redrawIfNewDay();
     if (document.visibilityState === 'visible' && Date.now() - lastFetch > STALE_MS) load();
     if (document.visibilityState === 'visible' && topic === SPORT && sportMode === 'scores') fetchScores();
     else clearTimeout(scoresTimer);
