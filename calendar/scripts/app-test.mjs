@@ -253,6 +253,8 @@ await test('switches: a glass thumb slides under the chosen view, day and settin
   const slides = () => page.evaluate(() => window.__slides);
   await page.click('.tab[data-view="week"]');
   assert.equal(await slides(), 1, 'the thumb slid to Week');
+  // a redraw mid-slide (events arriving from iCloud) lets the slide run on
+  assert.ok(await page.evaluate(() => { const t = document.getElementById('tabThumb'), n = t.getAnimations().length; window.__calendar.render(); return n > 0 && t.getAnimations().length > 0; }), 'the slide survives a redraw');
   await page.waitForFunction(under, tabs, { timeout: 3000 });
   await page.click('#searchBtn');
   await page.waitForFunction(() => getComputedStyle(document.getElementById('tabThumb')).opacity === '0', null, { timeout: 3000 });

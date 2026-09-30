@@ -45,9 +45,11 @@
         move = { from: fresh ? kf(last) : { transform: cs.transform, width: cs.width, height: cs.height }, t0: now, hops };
       } else if (fresh && last.move && now - last.move.t0 < MS) move = last.move;
     }
-    if (th.getAnimations) for (const a of th.getAnimations()) if (!(window.CSSTransition && a instanceof CSSTransition)) a.cancel();
+    // A new move (or a jump) replaces any slide under way; a redraw that
+    // changes nothing leaves one running.
+    if ((move || jump) && th.getAnimations) for (const a of th.getAnimations()) if (!(window.CSSTransition && a instanceof CSSTransition)) a.cancel();
     Object.assign(th.style, kf(to));
-    slid[key] = Object.assign(to, { move });
+    slid[key] = Object.assign(to, { move: move || (!jump && last && last.move && now - last.move.t0 < MS ? last.move : null) });
     if (!move || !th.animate || calm()) return;
     const at = now - move.t0;
     const sx = 1 + Math.min(0.36, 0.1 + move.hops * 0.07), sy = 1 - Math.min(0.14, 0.04 + move.hops * 0.025);
