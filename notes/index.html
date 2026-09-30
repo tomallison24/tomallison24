@@ -172,7 +172,6 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .card h3 span{flex:1;overflow-wrap:anywhere}
 .card h3 svg{width:14px;height:14px;color:var(--flag);margin-top:3px}
 .card h3 svg.lk,.nrow .nt svg.lk{color:var(--icon)}
-.opt svg.lk{width:15px;height:15px}
 .card p{margin:0;color:var(--muted);font-size:14px;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
 mark{background:var(--mark);color:inherit;border-radius:3px}
@@ -288,7 +287,6 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .opt:active{transform:scale(.93)}
 .opt[aria-checked="true"],.opt[aria-pressed="true"]{color:var(--sel-ink);font-weight:600;background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);border-color:color-mix(in srgb,var(--accent) 40%,var(--gb-edge))}
 .opt .sw{width:8px;height:8px;border-radius:50%;background:var(--lc);box-shadow:0 0 8px var(--lc)}
-.opt.flagopt[aria-pressed="true"]{color:var(--flag);background:color-mix(in srgb,var(--flag) 16%,transparent);border-color:color-mix(in srgb,var(--flag) 40%,var(--gb-edge))}
 .inrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .inrow input[type="date"],.inrow input[type="time"],.inrow input[type="datetime-local"]{border:1px solid var(--hair);background:var(--fill);border-radius:12px;padding:7px 10px;font-size:15px;min-width:0}
 .plain{border:0;background:none;outline:none;width:100%;padding:0;font-size:16px}
@@ -301,7 +299,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .swatches{display:flex;gap:12px;flex-wrap:wrap}
 .swatch{width:34px;height:34px;border-radius:50%;border:1px solid var(--gb-edge);background:color-mix(in srgb,var(--tint) 55%,var(--glass-2));box-shadow:inset 0 1px 0 var(--hi)}
 .swatch[data-color="none"]{background:var(--glass-2)}
-.swatch.list{background:var(--lc)}
+.swatch.list{padding:0;background:var(--lc)}
 .swatch[aria-checked="true"]{outline:2.5px solid var(--accent);outline-offset:2px}
 .rowbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;font-size:15px;font-weight:600;border-top:1px solid var(--hair-2)}
 .rowbtn:first-child{border-top:0}
@@ -523,6 +521,96 @@ svg.fs{fill:currentColor}
 @media (prefers-reduced-transparency:reduce){
   .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* ---- switches with a sliding glass thumb ----
+   The section bar, Reminders' views and list chips, and a reminder's When,
+   Priority and List: the options stay clear, and one thumb under them
+   glides to the chosen one, stretching as it goes, as iOS 26's do
+   (home/slide.js). A chip or option thumb keeps the blue tint. */
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease),background-color .3s}
+.slthumb.off{opacity:0;scale:.7}
+.tabs.slides .tab[aria-selected="true"]{background:none;box-shadow:none;color:var(--accent-text)}
+.tabs.slides .tab[aria-selected="true"] svg{color:var(--accent-text)}
+.seg.slides button[aria-pressed="true"]{background:none;box-shadow:none}
+.seg > .slthumb{border-radius:17px}
+.chips > .slthumb,.opts > .slthumb{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--glass));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+.chips > .slthumb{-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+.chips.slides .chip[aria-pressed="true"]{background:none;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.opts.slides .opt[aria-checked="true"]{background:none;border-color:transparent;box-shadow:none}
+
+/* ---- the sheets: Liquid Glass ----
+   A reminder, a list, Share, Tags, Backup, Google Sheet, Tidy up and the
+   rest are each one sheet of clear glass floating just inside the screen's
+   edges: the notes blur and brighten through it, a lit rim runs round it,
+   and the rows, fields and buttons are lighter glass on top. The rows don't
+   blur again (the sheet already has), which keeps it smooth on a phone. The
+   note editor stays a full page, with the same rows, fields and buttons. */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet:not(.page){width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
+.lg .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 32px)}
+@media (min-width:576px){.lg .sheet:not(.page){margin:0 auto 8px;max-width:544px}}
+.lg .sheethead{padding:6px 12px 10px}
+.lg .sheethead h2{font-size:17px;font-weight:600}
+.lg .sheethead > h2:first-child{padding-left:8px}
+.lg .sheethead > .iconbtn + h2{flex:1;text-align:center}
+.lg .sheethead .iconbtn{width:44px;height:44px}
+.lg .sheethead .iconbtn svg{width:22px;height:22px}
+.lg .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
+.lg .sheetbody{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.lg .sheet:not(.page) .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px))}
+.lg .sheetbody > *{flex-shrink:0}
+.lg .rgroup,.lg .box,.lg .empty.glass{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .box{padding:12px 16px}
+.lg .paper{border:0;border-radius:26px;box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .paper[data-color="none"]{background:var(--lgs-row)}
+.lg .rowbtn:active{background:var(--lgs-field)}
+.lg .rgroup > :focus-visible{outline-offset:-3px}
+.lg .field > .label,.lg .field > .hint,.lg .sheetbody > .hint{margin:0 10px}
+.lg .box:has(.plain:focus-visible,.tagedit input:focus-visible){
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.lg .inrow input[type="date"],.lg .inrow input[type="time"],.lg .inrow input[type="datetime-local"],.lg .linkbox{
+  border:0;border-radius:999px;padding:7px 13px;background:var(--lgs-field);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift);transition:box-shadow .2s}
+.lg .inrow input:focus-visible,.lg .linkbox:focus-visible{outline:0;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.lg .opt{height:34px;border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
+.lg .opt[aria-checked="true"],.lg .opt[aria-pressed="true"]{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 1px var(--lgs-rim)}
+.lg .swatch{border:0;box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 2px 6px var(--lift)}
+.lg .btn{background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none}
+.lg .btn.danger{border-radius:26px;background:var(--lgs-row)}
+/* a row with iOS 26's switch: a pill-shaped knob that swells into a clear lens while pressed */
+.swrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 12px 10px 16px;text-align:left;font-size:16px;font-weight:600;color:var(--text)}
+.swrow .grow{flex:1;min-width:0}
+.swrow > svg{width:22px;height:22px;color:var(--icon)}
+#tdFlag > svg{color:var(--flag)}
+.switch{position:relative;flex:none;width:58px;height:30px;border-radius:999px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 2px var(--lift);transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:34px;height:24px;border-radius:999px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);
+  transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s var(--ease),background .2s}
+[aria-checked="true"] > .switch{background:var(--n-green)}
+[aria-checked="true"] > .switch::after{transform:translateX(18px)}
+.swrow:active > .switch::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet:not(.page){background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){
+  .lg .sheet:not(.page){background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .chips > .slthumb{background:color-mix(in srgb,var(--accent) var(--tint-mix),var(--bar-solid));-webkit-backdrop-filter:none;backdrop-filter:none}
+}
 </style>
 </head>
 <body>
@@ -611,7 +699,7 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Note editor -->
-  <div class="sheetwrap" id="editor" hidden>
+  <div class="sheetwrap lg" id="editor" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet page" role="dialog" aria-modal="true" aria-labelledby="edLbl">
       <div class="sheethead pagehead">
@@ -622,7 +710,7 @@ svg.fs{fill:currentColor}
           <button class="iconbtn" id="edShare" type="button" aria-label="Share note">
             <svg viewBox="0 0 24 24"><path d="M12 14.4V3.6"/><path d="M8.2 7l3.1-3.1a1 1 0 0 1 1.4 0L15.8 7"/><path d="M8.6 10.2H7.4a3.2 3.2 0 0 0-3.2 3.2v4.4A3.2 3.2 0 0 0 7.4 21h9.2a3.2 3.2 0 0 0 3.2-3.2v-4.4a3.2 3.2 0 0 0-3.2-3.2h-1.2"/></svg>
           </button>
-          <button class="textbtn" id="edDone" type="button">Done</button>
+          <button class="iconbtn okbtn" id="edDone" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button>
         </div>
       </div>
       <div class="sheetbody">
@@ -663,7 +751,7 @@ svg.fs{fill:currentColor}
         </div>
         <div class="field">
           <p class="label">Privacy</p>
-          <div class="opts"><button class="opt" id="edPrivate" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" class="lk"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>Private</button></div>
+          <div class="rgroup glass"><button class="swrow" id="edPrivate" type="button" role="switch" aria-checked="false"><svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg><span class="grow">Private</span><span class="switch" aria-hidden="true"></span></button></div>
           <p class="hint" id="edPrivHint"></p>
         </div>
         <button class="btn quiet danger" id="edDelete" type="button">Delete note</button>
@@ -672,7 +760,7 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Reminder details -->
-  <div class="sheetwrap" id="todoSheet" hidden>
+  <div class="sheetwrap lg" id="todoSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="tdLbl">
       <div class="grab" aria-hidden="true"></div>
@@ -682,7 +770,7 @@ svg.fs{fill:currentColor}
           <button class="iconbtn" id="tdShare" type="button" aria-label="Share reminder">
             <svg viewBox="0 0 24 24"><path d="M12 14.4V3.6"/><path d="M8.2 7l3.1-3.1a1 1 0 0 1 1.4 0L15.8 7"/><path d="M8.6 10.2H7.4a3.2 3.2 0 0 0-3.2 3.2v4.4A3.2 3.2 0 0 0 7.4 21h9.2a3.2 3.2 0 0 0 3.2-3.2v-4.4a3.2 3.2 0 0 0-3.2-3.2h-1.2"/></svg>
           </button>
-          <button class="textbtn" id="tdDone" type="button">Done</button>
+          <button class="iconbtn okbtn" id="tdDone" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button>
         </div>
       </div>
       <div class="sheetbody">
@@ -713,9 +801,9 @@ svg.fs{fill:currentColor}
           <p class="label">Tags</p>
           <div class="box glass"><div class="tagedit" id="tdTags"><input id="tdTagInput" list="tagList" placeholder="Add tag" aria-label="Add tag" enterkeyhint="done"></div></div>
         </div>
-        <div class="opts">
-          <button class="opt flagopt" id="tdFlag" type="button" aria-pressed="false">
-            <svg viewBox="0 0 24 24" class="fs"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg>Flag
+        <div class="rgroup glass">
+          <button class="swrow" id="tdFlag" type="button" role="switch" aria-checked="false">
+            <svg viewBox="0 0 24 24" class="fs"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg><span class="grow">Flag</span><span class="switch" aria-hidden="true"></span>
           </button>
         </div>
         <button class="btn quiet danger" id="tdDelete" type="button">Delete reminder</button>
@@ -724,11 +812,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- List editor -->
-  <div class="sheetwrap" id="listSheet" hidden>
+  <div class="sheetwrap lg" id="listSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="lsLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="lsLbl">New list</h2><div class="acts"><button class="textbtn" id="lsSave" type="button">Save</button></div></div>
+      <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button><h2 id="lsLbl">New list</h2><div class="acts"><button class="iconbtn okbtn" id="lsSave" type="button" aria-label="Save"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><input class="plain" id="lsName" placeholder="List name" aria-label="List name" style="font-size:18px;font-weight:700"></div>
         <div class="field"><p class="label">Color</p><div class="swatches" id="lsColors" role="radiogroup" aria-label="List color"></div></div>
@@ -738,11 +826,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Share -->
-  <div class="sheetwrap" id="share" hidden>
+  <div class="sheetwrap lg" id="share" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="shLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="shLbl">Share a copy</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="shLbl">Share a copy</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="shWhat"></p>
         <div class="rgroup glass">
@@ -765,11 +853,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Tags manager -->
-  <div class="sheetwrap" id="tagsSheet" hidden>
+  <div class="sheetwrap lg" id="tagsSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="tgLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="tgLbl">Tags</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="tgLbl">Tags</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="rgroup glass" id="tagRows"></div>
         <p class="hint">Tags are shared by notes and reminders. Rename to update everything; rename onto an existing tag to merge. Deleting a tag keeps the items.</p>
@@ -778,11 +866,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Backup and import -->
-  <div class="sheetwrap" id="backupSheet" hidden>
+  <div class="sheetwrap lg" id="backupSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="bkLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="bkLbl">Backup and sync</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="bkLbl">Backup and sync</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="bkStatus"></p>
         <div class="rgroup glass">
@@ -808,11 +896,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Confirm an import -->
-  <div class="sheetwrap" id="importSheet" hidden>
+  <div class="sheetwrap lg" id="importSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="imLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="imLbl">Add shared items?</h2><div class="acts"><button class="textbtn" id="imAdd" type="button">Add</button></div></div>
+      <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Not now"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button><h2 id="imLbl">Add shared items?</h2><div class="acts"><button class="iconbtn okbtn" id="imAdd" type="button" aria-label="Add"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><ul class="implist" id="imList"></ul></div>
         <p class="hint" id="imHint">They'll be added as new copies. Nothing you already have is changed.</p>
@@ -822,11 +910,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Paste fallback: when the clipboard can't be read directly -->
-  <div class="sheetwrap" id="pasteSheet" hidden>
+  <div class="sheetwrap lg" id="pasteSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="psLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="psLbl">Paste as a note</h2><div class="acts"><button class="textbtn" id="psAdd" type="button">Add</button></div></div>
+      <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button><h2 id="psLbl">Paste as a note</h2><div class="acts"><button class="iconbtn okbtn" id="psAdd" type="button" aria-label="Add"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste here"></textarea></div>
         <p class="hint" id="psHint"></p>
@@ -835,7 +923,7 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- A share link opened in Safari: send it to the home-screen app instead -->
-  <div class="sheetwrap" id="linkSheet" hidden>
+  <div class="sheetwrap lg" id="linkSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="lkLbl">
       <div class="grab" aria-hidden="true"></div>
@@ -866,11 +954,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Tag a note (swipe right) -->
-  <div class="sheetwrap" id="qtSheet" hidden>
+  <div class="sheetwrap lg" id="qtSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="qtLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="qtLbl">Tag note</h2><div class="acts"><button class="textbtn" id="qtDone" type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="qtLbl">Tag note</h2><div class="acts"><button class="iconbtn okbtn" id="qtDone" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><div class="tagedit" id="qtTags"><input id="qtInput" list="tagList" placeholder="New tag" aria-label="New tag" enterkeyhint="done"></div></div>
         <div class="field"><p class="label">Your tags</p><div class="opts" id="qtAll"></div></div>
@@ -879,11 +967,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Tidy up -->
-  <div class="sheetwrap" id="tidySheet" hidden>
+  <div class="sheetwrap lg" id="tidySheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="tdyLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="tdyLbl">Tidy up</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="tdyLbl">Tidy up</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div id="tidyBody"></div>
         <p class="hint">Deleted notes go to Trash for 30 days. Every change can be undone from the message at the bottom.</p>
@@ -896,11 +984,11 @@ svg.fs{fill:currentColor}
   <div class="updpill syncpill" id="syncPill" role="status" hidden><svg class="spin" viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg><svg class="tick b" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg><span id="syncPillTxt">Syncing</span></div>
 
   <!-- Google Sheet sync -->
-  <div class="sheetwrap" id="syncSheet" hidden>
+  <div class="sheetwrap lg" id="syncSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="textbtn" data-close type="button">Close</button></div></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
         <form id="syForm" class="field" autocomplete="on" action="#">
@@ -934,6 +1022,7 @@ svg.fs{fill:currentColor}
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
+<script src="../home/slide.js"></script>
 <script>
 (function(){
   const KEY = 'allison-notes-v1';
@@ -1191,6 +1280,11 @@ svg.fs{fill:currentColor}
   }
 
   // ---------- tabs ----------
+  // Switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js).
+  const slide = window.AllisonOS.slide;
+  const tabBar = document.querySelector('.tabs');
+  const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
+  const slideRem = jump => { slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'seg', { jump }); slide($('listChips'), $('listChips').querySelector('.chip[aria-pressed="true"]'), 'lists', { jump }); };
   function setTab(t){
     if (st.tab !== t) window.scrollTo(0, 0);
     st.tab = t;
@@ -1199,6 +1293,7 @@ svg.fs{fill:currentColor}
     animateIn(t === 'notes' ? $('list') : $('remBody'));
     $('remView').hidden = t !== 'rem';
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+    slideTabs();
     $('fab').setAttribute('aria-label', t === 'notes' ? 'New note' : 'New reminder');
     render();
   }
@@ -1532,7 +1627,7 @@ svg.fs{fill:currentColor}
     $('edRem').value = e.reminder ? toLocalInput(e.reminder) : '';
     $('edRemClear').hidden = !e.reminder;
     $('swatches').innerHTML = COLORS.map(c => '<button class="swatch" type="button" role="radio" data-color="'+c+'" data-sw="'+c+'" aria-label="'+(c === 'none' ? 'Clear glass' : c)+'" aria-checked="'+(e.color === c)+'"></button>').join('');
-    $('edPrivate').setAttribute('aria-pressed', !!e.private);
+    $('edPrivate').setAttribute('aria-checked', !!e.private);
     $('edPrivHint').textContent = e.private ? 'Only on this phone. Not sent to the Google Sheet or anyone else\u2019s phone.'
       : syncCfg ? 'Synced to the Google Sheet and the other phones. Turn on Private to keep it on this phone only.'
       : 'Private notes stay on this phone, even once Google Sheet sync is on.';
@@ -1660,6 +1755,7 @@ svg.fs{fill:currentColor}
     });
     c += '<button class="chip ghost" type="button" id="addList">'+I.plus+'List</button>';
     $('listChips').innerHTML = c;
+    slideRem();
     $('rqWrap').hidden = !st.rsearch;
     $('rqClear').hidden = !st.rq;
     $('remSearchBtn').setAttribute('aria-pressed', st.rsearch);
@@ -1744,6 +1840,7 @@ svg.fs{fill:currentColor}
     $('tdNotes').value = st.todo.notes;
     renderTodo();
     openSheet('todoSheet');
+    slideTodo(true);
     $('tdDone').focus();
   }
   function renderTodo(){
@@ -1757,9 +1854,13 @@ svg.fs{fill:currentColor}
     $('tdCal').hidden = !t.date;
     $('tdPrio').innerHTML = ['None','Low','Medium','High'].map((p, i) => '<button class="opt" type="button" role="radio" data-p="'+i+'" aria-checked="'+(t.prio === i)+'">'+p+'</button>').join('');
     $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+l.id+'" style="--lc:'+l.color+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
-    $('tdFlag').setAttribute('aria-pressed', t.flagged);
+    $('tdFlag').setAttribute('aria-checked', t.flagged);
     todoTags.render();
+    slideTodo();
   }
+  // When, Priority and List slide their thumbs; a newly opened reminder places them without moving.
+  const slideTodo = jump => ['tdQuick', 'tdPrio', 'tdList'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), id, { jump }));
+  window.addEventListener('resize', () => { slideTabs(true); slideRem(true); slideTodo(true); });
   function finishTodo(){
     const t = st.todo;
     t.title = $('tdTitle').value.trim() || t.title;
