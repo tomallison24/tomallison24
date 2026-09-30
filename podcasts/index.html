@@ -756,7 +756,7 @@ svg.fs{fill:currentColor}
   // =====================================================================
   // STATE: localStorage (small things) + IndexedDB (each show's episodes)
   // =====================================================================
-  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'gb'};
+  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'us'};
   const okSnap = e => !!(e && typeof e.k === 'string' && typeof e.u === 'string');
   const S = (function(){
     let v = null;
@@ -768,7 +768,12 @@ svg.fs{fill:currentColor}
       prog: v.prog && typeof v.prog === 'object' ? v.prog : {},
       saved: arr(v.saved, okSnap), queue: arr(v.queue, okSnap), hist: arr(v.hist, okSnap),
       now: okSnap(v.now) ? v.now : null,
-      set: Object.assign({}, DEF_SET, v.set && typeof v.set === 'object' ? v.set : {}),
+      set: (s => {
+        // The US is the default. The first version defaulted to the UK and
+        // saved it, so move those to the US unless the UK was chosen in Settings.
+        if (s.cc === 'gb' && !s.ccChosen) s.cc = 'us';
+        return s;
+      })(Object.assign({}, DEF_SET, v.set && typeof v.set === 'object' ? v.set : {})),
       lastRefresh: +v.lastRefresh || 0, lastClean: +v.lastClean || 0
     };
   })();
@@ -1264,14 +1269,14 @@ svg.fs{fill:currentColor}
       + '<span class="stx"><b>' + esc(r.title) + '</b><span>' + esc(r.feed ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
       + '<button class="fbtn" type="button" data-fres="' + i + '" aria-pressed="' + !!on + '" aria-label="' + (on ? 'Following ' : 'Follow ') + esc(r.title) + '"' + (r.feed ? '' : ' disabled') + '>' + (on ? I.check : I.plus) + '</button></div>';
   }
-  const CC = {gb:'the UK', us:'the US', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
+  const CC = {us:'the US', gb:'the UK', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
   function renderSearch(){
     const q = st.q.trim();
     $('qClear').hidden = !st.q;
     let h = '';
     if (!q) {
       st.list = st.top || [];
-      h += '<section><p class="sechead">Top shows in ' + esc(CC[S.set.cc] || 'the UK') + '</p>';
+      h += '<section><p class="sechead">Top shows in ' + esc(CC[S.set.cc] || 'the US') + '</p>';
       if (st.topErr) h += '<div class="notice glass"><span>' + esc(st.topErr) + '</span><button class="linkbtn" type="button" data-act="top-retry">Try again</button></div>';
       else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
       else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
@@ -1933,7 +1938,7 @@ svg.fs{fill:currentColor}
     opts('setBack', [[10, '10 sec'], [15, '15 sec'], [30, '30 sec']], S.set.back, v => { S.set.back = +v; });
     opts('setFwd', [[15, '15 sec'], [30, '30 sec'], [45, '45 sec'], [60, '60 sec']], S.set.fwd, v => { S.set.fwd = +v; });
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
-    opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; st.top = null; });
+    opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
     slideOpts();
   }
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.

@@ -4,7 +4,7 @@
 //
 //   /podcasts/api/feed?url=<RSS feed>     the feed, as text
 //   /podcasts/api/search?term=<words>     Apple Podcasts search (shows)
-//   /podcasts/api/top?cc=gb               Apple's top shows for a country
+//   /podcasts/api/top?cc=us               Apple's top shows for a country
 //
 // It runs only where the site is on Cloudflare Pages (behind Cloudflare
 // Access, like the rest of it). Wrangler picks up this functions/ folder when
@@ -114,7 +114,7 @@ async function feed(raw) {
   return r;
 }
 
-const cc = raw => COUNTRIES.has(String(raw || '').toLowerCase()) ? String(raw).toLowerCase() : 'gb';
+const cc = raw => COUNTRIES.has(String(raw || '').toLowerCase()) ? String(raw).toLowerCase() : 'us';
 
 async function itunes(path) {
   const { res } = await get('https://itunes.apple.com/' + path, 'application/json');
