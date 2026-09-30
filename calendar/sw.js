@@ -4,7 +4,7 @@
 // a cached answer would be a stale calendar. The events themselves are kept by
 // the app in localStorage for reading offline.
 const CACHE = 'calendar-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'ical.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/back.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'ical.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/back.js', '../home/slide.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

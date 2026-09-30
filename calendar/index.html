@@ -698,7 +698,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
 /* ---- switches with a sliding glass thumb ----
    The view bar, the Day view's week strip and Settings' segmented choices:
    the options stay clear, and one thumb under them glides to the chosen
-   one, stretching as it goes, as iOS 26's do (app.js, slide()). */
+   one, stretching as it goes, as iOS 26's do (home/slide.js). */
 .slides{position:relative;isolation:isolate}
 .slides > :not(.slthumb){position:relative;z-index:1}
 .slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
@@ -873,6 +873,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
+<script src="../home/slide.js"></script>
 <script src="ical.js"></script>
 <script src="app.js"></script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
