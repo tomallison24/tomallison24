@@ -126,7 +126,7 @@ if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '2-on.png') });
 await page.click('#puTest');
 await page.waitForTimeout(400);
 ok('Send a test asks the server for this phone only', calls.at(-1).path === '/test' && calls.at(-1).body.endpoint.startsWith('https://web.push.apple.com/'));
-await page.click('#pushSheet .textbtn[data-close]');
+await page.click('#pushSheet .okbtn[data-close]');
 await page.waitForTimeout(400);
 
 // ---- the rows and the Alert choice ----

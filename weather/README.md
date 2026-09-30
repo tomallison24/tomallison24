@@ -8,6 +8,10 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.
 - No build step. `index.html` is the whole app; `sw.js` keeps it working
   offline, and the last forecast is kept in `localStorage`.
+- The Location sheet is iOS 26 "Liquid Glass": clear glass floating just
+  inside the screen's edges, the sky blurring through it, with a round ✕ to
+  close and a glass thumb that slides between the units (`home/slide.js`,
+  shared by every app).
 - Needs HTTPS for location (GitHub Pages is fine). On iPhone: open the page
   in Safari → Share → Add to Home Screen.
 

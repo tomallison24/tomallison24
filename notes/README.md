@@ -146,6 +146,14 @@ blue kept for text, dots and switches; every button and bar in the same clear
 Liquid Glass (`--lg-bg`, `--lg-filter`, `--lg-rim`). New note uses Mail's
 compose (pencil) icon.
 
+Sheets are iOS 26 Liquid Glass, as in the Calendar: each floats just inside
+the screen's edges with a lit rim, rows and fields are lighter glass on top,
+✕ closes and a blue ✓ saves, and Private and Flag are iOS 26 switches (the
+note editor stays a full page, with the same rows and buttons). Every
+one-choice switch (the Notes / Reminders bar, the reminder views, the list
+chips, a reminder's When, Priority and List) has one glass thumb that slides
+to the chosen option, from the shared `home/slide.js`.
+
 ## Google Sheet sync
 
 One Google Sheet shared by both phones. Every change is sent a couple of

@@ -3,7 +3,7 @@
 // when offline. The other apps' icons are same-origin too, so they are kept
 // the same way.
 const CACHE = 'home-v6';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'back.js', 'icon-180.png', 'icon-512.png'];
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'back.js', 'slide.js', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

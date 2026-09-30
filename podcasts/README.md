@@ -9,7 +9,7 @@ in the same frosted glass as Mail, Notes and News.
 - **Library**: your **Shows** as a grid of artwork, **Saved** episodes and
   **History**. The gear opens Settings.
 - **Search** (the round button next to the tabs, as on iOS 26): Apple's
-  **Top shows** chart for your country, search by name, or paste a show's
+  **Top shows** chart for your country (the US unless changed in Settings), search by name, or paste a show's
   RSS feed link. Private and premium feeds (Patreon, Supercast and the like)
   work too.
 - **A show**: artwork, Follow, the description, and its episodes, with
@@ -76,6 +76,11 @@ aurora, the Liquid Glass buttons (`--lg-bg`, `--lg-filter`, `--lg-rim`), line
 icons in slate-teal on a 24px grid, the sheets you drag down, the toast with
 Undo and the "Updated" pill. Now Playing takes its glow from the episode's
 artwork, and the artwork shrinks a little while paused, as on the iPhone.
+The sheets (an episode, Settings, the choices and Now Playing) are iOS 26's
+Liquid Glass, as in Calendar: clear glass floating inside the screen's
+edges, with round ✕ and ✓ buttons. The tabs, the filter chips and Settings'
+choices have one glass thumb that slides to the chosen option
+(`home/slide.js`, shared with the other apps).
 
 The icon (`icon.svg`, drawn as `icon-512.png` and `icon-180.png`) is a white
 signal on a pink-to-violet gradient.

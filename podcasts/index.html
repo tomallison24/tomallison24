@@ -445,6 +445,70 @@ svg.fs{fill:currentColor}
 @media (prefers-reduced-transparency:reduce){
   .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* ---- switches with a sliding glass thumb ----
+   The tabs, the filter chips where one is chosen (Library, New Episodes, a
+   show's episodes) and Settings' choices: the options stay clear, and one
+   thumb under them glides to the chosen one, stretching as it goes, as iOS
+   26's do (home/slide.js). */
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease),background-color .3s}
+.slthumb.off{opacity:0;scale:.7}
+.tabs.slides .tab[aria-selected="true"]{background:none;box-shadow:none}
+.chips > .slthumb,.opts > .slthumb{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--glass-2));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+.chips.slides .chip[aria-pressed="true"]{background:none;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.opts.slides .opt[aria-checked="true"]{background:none;border-color:transparent;box-shadow:none}
+
+/* ---- the sheets: Liquid Glass ----
+   An episode, Settings, the choices and Now Playing are each one sheet of
+   clear glass floating just inside the screen's edges: the app blurs and
+   brightens through it, a lit rim runs round it, and the rows, notes and
+   buttons are lighter glass on top. The rows don't blur again (the sheet
+   already has), which keeps it smooth on a phone. Now Playing keeps its
+   glow from the artwork, over the glass. */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet{width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
+.lg .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 32px)}
+.lg .sheet.np{height:calc(100% - env(safe-area-inset-top,0px) - 20px);max-height:none}
+@media (min-width:576px){.lg .sheet{margin:0 auto 8px;max-width:544px}}
+.lg .sheethead{padding:6px 12px 10px}
+.lg .sheethead h2{font-size:17px;font-weight:600}
+#epLbl,#setLbl,#actLbl{padding-left:8px}
+.lg .sheethead .iconbtn{width:44px;height:44px}
+.lg .sheethead .iconbtn svg{width:22px;height:22px}
+.lg .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
+.lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.lg .npbody{padding-top:8px;gap:18px}
+.lg .rgroup,.lg .notes{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .rowbtn:active,.lg .qrow:active{background:var(--lgs-field)}
+.lg .label{margin:0 8px}
+.lg .hint{text-align:center;margin:0 12px}
+.lg .ephead{padding:4px 4px 0}
+.lg .opt{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
+.lg .opt[aria-checked="true"]{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--lgs-field));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--lgs-edge))}
+.lg .opts.slides .opt[aria-checked="true"]{background:none;box-shadow:none}
+/* Now Playing's controls: lighter glass capsules, and a clear lens under a button while it's pressed */
+.lg .pillbtn{background:var(--lgs-field);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 2px 8px var(--lift)}
+.lg .pillbtn:active{background:var(--glass-2)}
+.lg .ctl{transition:transform .18s var(--ease),background .2s,box-shadow .2s}
+.lg .ctl:active{background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 14px var(--lift)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 </style>
 </head>
 <body>
@@ -536,17 +600,17 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- An episode: its notes, and what you can do with it -->
-  <div class="sheetwrap" id="epSheet" hidden>
+  <div class="sheetwrap lg" id="epSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="epLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="epLbl">Episode</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="epLbl">Episode</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody" id="epBody"></div>
     </div>
   </div>
 
   <!-- Now Playing -->
-  <div class="sheetwrap" id="np" hidden>
+  <div class="sheetwrap lg" id="np" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet np" role="dialog" aria-modal="true" aria-labelledby="npLbl">
       <div class="npbg" id="npBg" aria-hidden="true"></div>
@@ -595,11 +659,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Settings -->
-  <div class="sheetwrap" id="setSheet" hidden>
+  <div class="sheetwrap lg" id="setSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="setLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="textbtn" data-close type="button">Done</button></div></div>
+      <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="field"><p class="label">Skip back</p><div class="opts" id="setBack" role="radiogroup" aria-label="Skip back"></div></div>
         <div class="field"><p class="label">Skip forward</p><div class="opts" id="setFwd" role="radiogroup" aria-label="Skip forward"></div></div>
@@ -627,11 +691,11 @@ svg.fs{fill:currentColor}
   </div>
 
   <!-- Choices: episode and show menus, speed, sleep timer -->
-  <div class="sheetwrap" id="actSheet" hidden>
+  <div class="sheetwrap lg" id="actSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="actLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="actLbl"></h2><div class="acts"><button class="textbtn" data-close type="button">Cancel</button></div></div>
+      <div class="sheethead"><h2 id="actLbl"></h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody"><div class="rgroup glass" id="actRows"></div></div>
     </div>
   </div>
@@ -646,6 +710,7 @@ svg.fs{fill:currentColor}
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
+<script src="../home/slide.js"></script>
 <script>
 (function(){
   'use strict';
@@ -653,6 +718,9 @@ svg.fs{fill:currentColor}
   const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
   const MAX_EPS = 250;                     // newest episodes kept for each show
   const $ = id => document.getElementById(id);
+  // Switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js).
+  // Without it, the chosen option keeps its own background.
+  const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const I = {
     play:'<svg viewBox="0 0 24 24" class="f"><path d="M7.4 4.8v14.4a1.1 1.1 0 0 0 1.7.9l11.2-7.2a1.1 1.1 0 0 0 0-1.8L9.1 3.9a1.1 1.1 0 0 0-1.7.9z"/></svg>',
@@ -688,7 +756,7 @@ svg.fs{fill:currentColor}
   // =====================================================================
   // STATE: localStorage (small things) + IndexedDB (each show's episodes)
   // =====================================================================
-  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'gb'};
+  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'us'};
   const okSnap = e => !!(e && typeof e.k === 'string' && typeof e.u === 'string');
   const S = (function(){
     let v = null;
@@ -700,7 +768,12 @@ svg.fs{fill:currentColor}
       prog: v.prog && typeof v.prog === 'object' ? v.prog : {},
       saved: arr(v.saved, okSnap), queue: arr(v.queue, okSnap), hist: arr(v.hist, okSnap),
       now: okSnap(v.now) ? v.now : null,
-      set: Object.assign({}, DEF_SET, v.set && typeof v.set === 'object' ? v.set : {}),
+      set: (s => {
+        // The US is the default. The first version defaulted to the UK and
+        // saved it, so move those to the US unless the UK was chosen in Settings.
+        if (s.cc === 'gb' && !s.ccChosen) s.cc = 'us';
+        return s;
+      })(Object.assign({}, DEF_SET, v.set && typeof v.set === 'object' ? v.set : {})),
       lastRefresh: +v.lastRefresh || 0, lastClean: +v.lastClean || 0
     };
   })();
@@ -1127,6 +1200,8 @@ svg.fs{fill:currentColor}
     + '<div class="upbar">' + pill(e) + '<span class="upd">' + esc(day(e.d)) + '</span></div></article>';
   const chip = (act, label, on, n) => '<button class="chip glass" type="button" data-act="' + act + '" aria-pressed="' + !!on + '">' + label + (n != null ? ' <span class="n">' + n + '</span>' : '') + '</button>';
   const emptyCard = (title, text, btn) => '<div class="empty glass">' + I.headph + '<strong>' + title + '</strong><span>' + text + '</span>' + (btn || '') + '</div>';
+  // A row of filter chips where one is chosen: its thumb (a new show's jumps).
+  const slideChips = (el, key, opt) => { const c = el.querySelector('.chips'); if (c) slide(c, c.querySelector('.chip[aria-pressed="true"]:not([data-act="sort"])'), key, opt); };
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function renderHome(){
@@ -1153,11 +1228,13 @@ svg.fs{fill:currentColor}
       h += '</section>';
     }
     $('homeBody').innerHTML = h;
+    slideChips($('homeBody'), 'new');
   }
 
   function renderLib(){
     const tabs = [['shows', 'Shows', S.follows.length], ['saved', 'Saved', S.saved.length], ['hist', 'History', null]];
     $('libChips').innerHTML = tabs.map(([id, label, n]) => chip('lib:' + id, label, st.lib === id, n || null)).join('');
+    slideChips($('libView'), 'lib');
     $('libSub').textContent = '';
     let h = '';
     if (st.lib === 'saved') {
@@ -1192,14 +1269,14 @@ svg.fs{fill:currentColor}
       + '<span class="stx"><b>' + esc(r.title) + '</b><span>' + esc(r.feed ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
       + '<button class="fbtn" type="button" data-fres="' + i + '" aria-pressed="' + !!on + '" aria-label="' + (on ? 'Following ' : 'Follow ') + esc(r.title) + '"' + (r.feed ? '' : ' disabled') + '>' + (on ? I.check : I.plus) + '</button></div>';
   }
-  const CC = {gb:'the UK', us:'the US', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
+  const CC = {us:'the US', gb:'the UK', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
   function renderSearch(){
     const q = st.q.trim();
     $('qClear').hidden = !st.q;
     let h = '';
     if (!q) {
       st.list = st.top || [];
-      h += '<section><p class="sechead">Top shows in ' + esc(CC[S.set.cc] || 'the UK') + '</p>';
+      h += '<section><p class="sechead">Top shows in ' + esc(CC[S.set.cc] || 'the US') + '</p>';
       if (st.topErr) h += '<div class="notice glass"><span>' + esc(st.topErr) + '</span><button class="linkbtn" type="button" data-act="top-retry">Try again</button></div>';
       else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
       else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
@@ -1275,6 +1352,7 @@ svg.fs{fill:currentColor}
       if (list.length > st.showLimit) h += '<button class="morebtn" type="button" data-act="show-more">Show more</button>';
     }
     $('showBody').innerHTML = h;
+    slideChips($('showBody'), 'sf', {group: st.show});
   }
 
   function render(){
@@ -1304,7 +1382,13 @@ svg.fs{fill:currentColor}
     $('showView').hidden = !st.show;
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
     $('searchTab').setAttribute('aria-pressed', String(st.tab === 'search'));
+    slideTabs();
   }
+  // The tab bar's thumb; it goes while Search (its own button) is chosen.
+  const slideTabs = jump => { const t = document.querySelector('.tabs'); slide(t, t.querySelector('.tab[aria-selected="true"]'), 'tabs', {jump}); };
+  window.addEventListener('resize', () => {
+    slideTabs(true); slideChips($('libView'), 'lib', {jump:true}); slideChips($('homeBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
+  });
   function setTab(t){
     if (st.show) { st.show = null; }
     else if (t === st.tab) { window.scrollTo({top:0, behavior:'smooth'}); return; }
@@ -1395,7 +1479,7 @@ svg.fs{fill:currentColor}
       suppressClick = true; setTimeout(() => { suppressClick = false; }, 50);
       const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
       sheet.classList.remove('dragging'); sheet.classList.add('settling');
-      if (dy > 110 || (fast && dy > 30)) { sheet.style.transform = 'translateY(100%)'; scrim.style.opacity = '0'; setTimeout(() => { closeSheet(w.id); reset(); }, 260); }
+      if (dy > 110 || (fast && dy > 30)) { sheet.style.transform = 'translateY(calc(100% + 16px))'; scrim.style.opacity = '0'; setTimeout(() => { closeSheet(w.id); reset(); }, 260); }
       else { sheet.style.transform = ''; scrim.style.opacity = ''; setTimeout(reset, 300); }
     }
     sheet.addEventListener('touchstart', e => { if (e.touches.length === 1) start(e.touches[0].clientY, e.target); }, {passive:true});
@@ -1854,9 +1938,12 @@ svg.fs{fill:currentColor}
     opts('setBack', [[10, '10 sec'], [15, '15 sec'], [30, '30 sec']], S.set.back, v => { S.set.back = +v; });
     opts('setFwd', [[15, '15 sec'], [30, '30 sec'], [45, '45 sec'], [60, '60 sec']], S.set.fwd, v => { S.set.fwd = +v; });
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
-    opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; st.top = null; });
+    opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
+    slideOpts();
   }
-  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
+  const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
+  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
   $('setExport').onclick = () => {
     if (!S.follows.length) { toast('You’re not following any shows yet.'); return; }
     const body = S.follows.map(f => '    <outline type="rss" text="' + esc(f.title) + '" title="' + esc(f.title) + '" xmlUrl="' + esc(f.feed) + '"/>').join('\n');

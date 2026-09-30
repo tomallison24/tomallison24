@@ -422,47 +422,8 @@ if (window.top !== window.self) {
   // Rendering
   // ---------------------------------------------------------------------
   const main = $('main');
-  // A glass thumb that slides to the chosen option of a switch (the view bar,
-  // the Day view's week strip, Settings' segmented choices), stretching on the
-  // way (further for a longer trip), as iOS 26's do; an icon it lands on gives
-  // a small bounce. `key` names the switch, so a thumb drawn afresh by a
-  // re-render still slides from where the last one stood, and one that comes
-  // mid-slide (the events arriving from iCloud) carries on from where it was.
-  // A change of `group` (the strip's week) or `jump` places it without moving.
-  const slid = {}, SLIDE_MS = 560;
-  function slide(box, sel, key, { group = '', target, jump } = {}) {
-    if (!box.offsetWidth) return;   // hidden: nothing to measure yet
-    let th = box.querySelector(':scope > .slthumb');
-    const fresh = !th || !th.style.width;
-    if (!th) { th = document.createElement('span'); th.className = 'slthumb'; th.setAttribute('aria-hidden', 'true'); box.prepend(th); }
-    box.classList.add('slides');
-    th.classList.toggle('off', !sel);
-    if (!sel) return;
-    th.classList.toggle('today', sel.classList.contains('today'));
-    const el = target ? target(sel) : sel;
-    let x = 0, y = 0;
-    for (let e = el; e && e !== box; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
-    const to = { x, y, w: el.offsetWidth, h: el.offsetHeight, group }, last = slid[key], now = performance.now();
-    const kf = p => ({ transform: 'translate(' + p.x + 'px,' + p.y + 'px)', width: p.w + 'px', height: p.h + 'px' });
-    let move = null;
-    if (!jump && last && last.group === group) {
-      const hops = Math.hypot(to.x - last.x, to.y - last.y) / Math.max(1, to.w);
-      if (last.x !== to.x || last.y !== to.y) {
-        const cs = getComputedStyle(th);   // mid-slide, this is where it is now
-        move = { from: fresh ? kf(last) : { transform: cs.transform, width: cs.width, height: cs.height }, t0: now, hops };
-      } else if (fresh && last.move && now - last.move.t0 < SLIDE_MS) move = last.move;
-    }
-    for (const a of th.getAnimations()) if (!(window.CSSTransition && a instanceof CSSTransition)) a.cancel();
-    Object.assign(th.style, kf(to));
-    slid[key] = Object.assign(to, { move });
-    if (!move || !th.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const at = now - move.t0;
-    const sx = 1 + Math.min(0.36, 0.1 + move.hops * 0.07), sy = 1 - Math.min(0.14, 0.04 + move.hops * 0.025);
-    th.animate([move.from, kf(to)], { duration: SLIDE_MS, easing: 'cubic-bezier(.3,1.25,.45,1)' }).currentTime = at;
-    th.animate([{ scale: '1 1' }, { scale: sx + ' ' + sy, offset: 0.35 }, { scale: '1 1' }], { duration: SLIDE_MS, easing: 'cubic-bezier(.3,.7,.4,1)' }).currentTime = at;
-    const ic = sel.querySelector('svg');
-    if (ic && !at) ic.animate([{ scale: '1' }, { scale: '1.18', offset: 0.5 }, { scale: '1' }], { duration: 380, delay: 200, easing: 'ease-out' });
-  }
+  // Switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js).
+  const slide = window.AllisonOS.slide;
   const tabBar = document.querySelector('.tabs');
   const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
   window.addEventListener('resize', () => slideTabs(true));
@@ -486,7 +447,7 @@ if (window.top !== window.self) {
     // The week strip keeps still (no fade in) when only the chosen day moved,
     // so its thumb can be seen sliding.
     const strip = main.querySelector('.strip');
-    if (strip) { if (sameView && slid.strip && slid.strip.group === strip.dataset.week) strip.classList.add('keep'); slide(strip, strip.querySelector('[aria-selected="true"]'), 'strip', { group: strip.dataset.week, target: b => b.querySelector('b') }); }
+    if (strip) { if (sameView && slide.last('strip') && slide.last('strip').group === strip.dataset.week) strip.classList.add('keep'); slide(strip, strip.querySelector('[aria-selected="true"]'), 'strip', { group: strip.dataset.week, target: b => b.querySelector('b') }); }
     afterRender();
     animateIn(main);
   }

@@ -3,7 +3,7 @@
 // is only the fallback when offline. Story images come from the publishers
 // and are left to the browser's own cache.
 const CACHE = 'news-v22';
-const SHELL = ['./', 'index.html', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=3', 'icon-180.png?v=3', 'icon-512.png?v=3'];
+const SHELL = ['./', 'index.html', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=3', 'icon-180.png?v=3', 'icon-512.png?v=3', '../home/slide.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

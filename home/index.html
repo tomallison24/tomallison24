@@ -48,7 +48,7 @@
     --chip-on-bg: #0B0B0F;
     --chip-on-text: #FFFFFF;
     --accent: #0A64E0;
-    --scrim: rgba(15, 18, 30, 0.28);
+    --scrim: rgba(15, 18, 30, 0.10);
     --sheet: rgba(246, 247, 251, 0.94);
     --field: rgba(118, 118, 128, 0.12);
     --seg-on: #FFFFFF;
@@ -57,6 +57,18 @@
     --blob-2: rgba(255, 158, 118, 0.62);
     --blob-3: rgba(168, 138, 255, 0.62);
     --blob-4: rgba(96, 208, 178, 0.55);
+    /* Liquid Glass for the Settings sheet: clear glass, a lit rim, lighter glass rows */
+    --lgs-top: rgba(255, 255, 255, 0.68);
+    --lgs-bottom: rgba(255, 255, 255, 0.50);
+    --lgs-rim: rgba(255, 255, 255, 0.92);
+    --lgs-edge: rgba(255, 255, 255, 0.62);
+    --lgs-row: rgba(255, 255, 255, 0.44);
+    --lgs-field: rgba(255, 255, 255, 0.62);
+    --lgs-thumb: rgba(255, 255, 255, 0.92);
+    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%);
+    --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
+    --lgs-lift: rgba(31, 38, 64, 0.08);
+    --lgs-lift-strong: rgba(31, 38, 64, 0.16);
     color-scheme: light;
   }
   /* Dark: the phone's own setting, unless Settings forces one or the other. */
@@ -75,7 +87,7 @@
       --chip-on-bg: #F5F5F7;
       --chip-on-text: #0B0B0F;
       --accent: #5AA2FF;
-      --scrim: rgba(0, 0, 0, 0.45);
+      --scrim: rgba(0, 0, 0, 0.30);
       --sheet: rgba(22, 23, 30, 0.94);
       --field: rgba(118, 118, 128, 0.24);
       --seg-on: #636366;
@@ -84,6 +96,17 @@
       --blob-2: rgba(200, 80, 40, 0.45);
       --blob-3: rgba(110, 60, 210, 0.50);
       --blob-4: rgba(20, 150, 120, 0.42);
+      --lgs-top: rgba(44, 44, 52, 0.60);
+      --lgs-bottom: rgba(22, 22, 28, 0.52);
+      --lgs-rim: rgba(255, 255, 255, 0.20);
+      --lgs-edge: rgba(255, 255, 255, 0.12);
+      --lgs-row: rgba(255, 255, 255, 0.07);
+      --lgs-field: rgba(255, 255, 255, 0.10);
+      --lgs-thumb: rgba(255, 255, 255, 0.16);
+      --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+      --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
+      --lgs-lift: rgba(0, 0, 0, 0.38);
+      --lgs-lift-strong: rgba(0, 0, 0, 0.5);
       color-scheme: dark;
     }
   }
@@ -101,7 +124,7 @@
     --chip-on-bg: #F5F5F7;
     --chip-on-text: #0B0B0F;
     --accent: #5AA2FF;
-    --scrim: rgba(0, 0, 0, 0.45);
+    --scrim: rgba(0, 0, 0, 0.30);
     --sheet: rgba(22, 23, 30, 0.94);
     --field: rgba(118, 118, 128, 0.24);
     --seg-on: #636366;
@@ -110,6 +133,17 @@
     --blob-2: rgba(200, 80, 40, 0.45);
     --blob-3: rgba(110, 60, 210, 0.50);
     --blob-4: rgba(20, 150, 120, 0.42);
+    --lgs-top: rgba(44, 44, 52, 0.60);
+    --lgs-bottom: rgba(22, 22, 28, 0.52);
+    --lgs-rim: rgba(255, 255, 255, 0.20);
+    --lgs-edge: rgba(255, 255, 255, 0.12);
+    --lgs-row: rgba(255, 255, 255, 0.07);
+    --lgs-field: rgba(255, 255, 255, 0.10);
+    --lgs-thumb: rgba(255, 255, 255, 0.16);
+    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+    --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
+    --lgs-lift: rgba(0, 0, 0, 0.38);
+    --lgs-lift-strong: rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 
@@ -192,18 +226,24 @@
   .install .later { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--muted); }
   .install .later svg { width: 14px; height: 14px; }
 
-  /* ---- Settings sheet ---- */
+  /* ---- Settings sheet: Liquid Glass ----
+     One sheet of clear glass floating just inside the screen's edges, as
+     iOS 26's are: the home screen blurs and brightens through it, a lit rim
+     runs round it, and the rows and buttons are lighter glass on top. The
+     rows don't blur again (the sheet already has), which keeps it smooth. */
   html.locked, html.locked body { overflow: hidden; }
   .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
   .sheet-wrap[hidden] { display: none; }
   .scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.25s; touch-action: none; }
   .sheet {
-    position: relative; width: 100%; max-width: 560px;
-    max-height: min(88dvh, 760px);
-    display: flex; flex-direction: column;
-    border-radius: 20px 20px 0 0; border-width: 0.5px 0.5px 0;
-    background: var(--sheet);
-    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative; width: calc(100% - 16px); max-width: 544px; margin: 0 0 8px;
+    max-height: min(calc(100dvh - env(safe-area-inset-top) - 32px), 760px);
+    display: flex; flex-direction: column; overflow: hidden;
+    border: 0; border-radius: 34px;
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
+    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px var(--lgs-lift-strong), 0 2px 8px var(--lgs-lift);
+    transform: translateY(calc(100% + 24px)); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
     -webkit-user-select: text; user-select: text;
   }
   .sheet:focus { outline: none; }
@@ -211,34 +251,80 @@
   .sheet-wrap.open .sheet { transform: none; }
   @media (min-width: 640px) {
     .sheet-wrap { align-items: center; }
-    .sheet { border-radius: 20px; border-width: 0.5px; max-height: min(720px, calc(100dvh - 48px)); }
+    .sheet { max-height: min(720px, calc(100dvh - 48px)); }
   }
   @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
   .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--field); margin: 6px auto 0; flex: none; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 6px; flex: none; }
-  .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
-  .close-btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--muted); }
-  .close-btn svg { width: 14px; height: 14px; }
-  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px calc(env(safe-area-inset-bottom) + 20px); }
-  .sect h3 { margin: 18px 4px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-  .group { border-radius: 12px; overflow: hidden; background: var(--glass-strong); border: 0.5px solid var(--glass-edge); }
-  .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 14px; text-align: left; font-size: 16px; }
-  .opt + .opt::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 12px 10px 20px; flex: none; }
+  .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  /* Close: a round glass button, as iOS 26's sheets have */
+  .close-btn {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text);
+    background: var(--lgs-shine), var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lgs-lift);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .close-btn:active { transform: scale(0.9); }
+  .close-btn svg { width: 16px; height: 16px; }
+  /* The list fades in under the header rather than being cut off by it. */
+  .sheet-body {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px calc(env(safe-area-inset-bottom) + 16px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
+  }
+  .sect h3 { margin: 18px 8px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .group {
+    border-radius: 26px; overflow: hidden; background: var(--lgs-row);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift);
+  }
+  .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px 8px 16px; text-align: left; font-size: 16px; }
+  .opt + .opt::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--hairline); }
   .opt .label { flex: 1; min-width: 0; }
   .opt .sub { display: block; color: var(--muted); font-size: 13px; }
   .opt img { width: 28px; height: 28px; border-radius: 22.5%; flex: none; }
   .opt.dim .label, .opt.dim img { opacity: 0.45; }
-  .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 9px; background: var(--field); }
-  .seg { height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .segmented {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border-radius: 999px; background: var(--field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift);
+  }
+  .seg { height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
   .seg[aria-pressed="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
-  .mini { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--text); flex: none; }
+  .mini {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--text); flex: none;
+    background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim);
+  }
   .mini:disabled { opacity: 0.3; cursor: default; }
   .mini svg { width: 14px; height: 14px; }
-  .switch { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--field); flex: none; transition: background-color 0.2s; }
-  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s; }
+  /* iOS 26's switch: a pill-shaped knob that swells into a clear lens while pressed */
+  .switch {
+    position: relative; width: 58px; height: 30px; border-radius: 999px; background: var(--field); flex: none; transition: background-color 0.2s;
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 34px; height: 24px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s cubic-bezier(0.3, 1.3, 0.5, 1), scale 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s;
+  }
   .switch[aria-checked="true"] { background: #34C759; }
   .switch[aria-checked="true"]::after { transform: translateX(18px); }
-  .sheet-note { margin: 10px 4px 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .switch:not([disabled]):active::after { scale: 1.18; background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.22); }
+  .switch:disabled { cursor: default; }
+  .sheet-note { margin: 10px 8px 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--sheet); } }
+  @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--sheet); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+  /* ---- A switch with a sliding glass thumb ----
+     Appearance's Auto / Light / Dark: the options stay clear, and one thumb
+     under them glides to the chosen one, stretching as it goes, as iOS 26's
+     do (slide.js). */
+  .slides { position: relative; isolation: isolate; }
+  .slides > :not(.slthumb) { position: relative; z-index: 1; }
+  .slthumb {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 999px; z-index: 0; pointer-events: none;
+    background: var(--lgs-shine), var(--lgs-thumb);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 0 var(--lgs-rim), 0 3px 10px var(--lgs-lift);
+    transition: opacity 0.25s ease, scale 0.25s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s;
+  }
+  .slthumb.off { opacity: 0; scale: 0.7; }
+  .segmented.slides .seg[aria-pressed="true"] { background: none; box-shadow: none; }
 </style>
 </head>
 <body>
@@ -296,6 +382,7 @@
   </section>
 </div>
 
+<script src="slide.js"></script>
 <script>
 (() => {
   'use strict';
@@ -322,6 +409,9 @@
   };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  // The sliding glass thumb under Appearance's choice (slide.js, loaded first).
+  const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
+  const slideTheme = jump => slide($('theme'), $('theme').querySelector('[aria-pressed="true"]'), 'theme', { jump });
 
   // ---- settings ----
   const DOCK_MAX = 4;
@@ -345,6 +435,7 @@
     const dark = settings.theme === 'dark' || (settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = dark ? '#07080B' : '#EEF0F4';
     for (const b of document.querySelectorAll('#theme .seg')) b.setAttribute('aria-pressed', String(b.dataset.theme === settings.theme));
+    slideTheme();   // hidden until Settings opens; openSheet places it then
   }
 
   // ---- the grid ----
@@ -488,6 +579,7 @@
     lastFocus = document.activeElement;
     renderAppList(); renderDockList();
     sheetWrap.hidden = false;
+    slideTheme(true);
     document.documentElement.classList.add('locked');
     requestAnimationFrame(() => { sheetWrap.classList.add('open'); sheetEl.focus(); });
   }
@@ -506,6 +598,7 @@
     settings.theme = b.dataset.theme; save(); applyTheme();
   });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  window.addEventListener('resize', () => slideTheme(true));
 
   // Press and hold the home screen to open Settings, as holding the iPhone's
   // does. A finger that moves is a scroll, not a hold; a hold that fires
