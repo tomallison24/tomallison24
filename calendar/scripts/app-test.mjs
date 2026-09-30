@@ -247,8 +247,12 @@ await test('switches: a glass thumb slides under the chosen view, day and settin
   // true once the thumb in `box` sits exactly over its chosen option (or that option's `inner`)
   const under = ([box, chosen, inner]) => { const b = document.querySelector(box), t = b && b.querySelector(':scope > .slthumb'), c = b && b.querySelector(chosen); if (!t || !c) return false; const q = (inner ? c.querySelector(inner) : c).getBoundingClientRect(), r = t.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1 && Math.abs(r.top - q.top) < 1; };
   const tabs = ['.tabs', '.tab[aria-selected="true"]'];
+  // Counts the slides started (a thumb animating its move), so "it slid"
+  // doesn't depend on catching it mid-way on a slow machine.
+  await page.evaluate(() => { const a = Element.prototype.animate; window.__slides = 0; Element.prototype.animate = function (k, o) { if (this.classList.contains('slthumb') && k[0] && k[0].transform) window.__slides++; return a.call(this, k, o); }; });
+  const slides = () => page.evaluate(() => window.__slides);
   await page.click('.tab[data-view="week"]');
-  assert.equal(await page.evaluate(under, tabs), false, 'still on its way');
+  assert.equal(await slides(), 1, 'the thumb slid to Week');
   await page.waitForFunction(under, tabs, { timeout: 3000 });
   await page.click('#searchBtn');
   await page.waitForFunction(() => getComputedStyle(document.getElementById('tabThumb')).opacity === '0', null, { timeout: 3000 });
@@ -260,15 +264,17 @@ await test('switches: a glass thumb slides under the chosen view, day and settin
   await page.click('.tab[data-view="day"]');
   await page.waitForFunction(under, strip, { timeout: 3000 });
   const other = await page.$eval('.strip button[aria-selected="false"]', b => b.dataset.day);
+  let n = await slides();
   await page.click('.strip button[data-day="' + other + '"]');
-  assert.equal(await page.evaluate(under, strip), false, 'the circle is on its way');
+  assert.ok(await slides() > n, 'the circle slid to the day');
   await page.waitForFunction(under, strip, { timeout: 3000 });
   // Settings' segmented choices
   const seg = ['#stBody .seg:has([data-set="clock"])', '[aria-pressed="true"]'];
   await page.click('#setBtn');
   await page.waitForFunction(under, seg, { timeout: 3000 });
+  n = await slides();
   await page.click('[data-set="clock"][data-val="24"]');
-  assert.equal(await page.evaluate(under, seg), false, 'the choice is on its way');
+  assert.ok(await slides() > n, 'the choice slid');
   await page.waitForFunction(under, seg, { timeout: 3000 });
   await page.click('[data-set="clock"][data-val="auto"]');
   await page.click('#setSheet .sheethead [data-close]');
