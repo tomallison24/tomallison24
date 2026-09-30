@@ -4,7 +4,7 @@
 // weather stubbed: the month grid, the day and week grids, opening an event,
 // editing it (the write carries the etag), a new event (with its time zone
 // block), deleting one occurrence of a repeating event (an EXDATE), search,
-// the view switch's sliding thumb, the layers, settings, and that nothing
+// the switches' sliding thumbs, the layers, settings, and that nothing
 // trips the page's Content Security Policy. Screenshots go to the folder given as the second argument.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -243,16 +243,36 @@ await test('the year and list views', async () => {
   await shot(page, '08-list');
 });
 
-await test('the view switch: its glass thumb slides under the chosen view, and hides while searching', async () => {
-  const under = () => { const t = document.getElementById('tabThumb'), b = document.querySelector('.tab[aria-selected="true"]'); if (!b) return false; const r = t.getBoundingClientRect(), q = b.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1; };
+await test('switches: a glass thumb slides under the chosen view, day and setting, and hides while searching', async () => {
+  // true once the thumb in `box` sits exactly over its chosen option (or that option's `inner`)
+  const under = ([box, chosen, inner]) => { const b = document.querySelector(box), t = b && b.querySelector(':scope > .slthumb'), c = b && b.querySelector(chosen); if (!t || !c) return false; const q = (inner ? c.querySelector(inner) : c).getBoundingClientRect(), r = t.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1 && Math.abs(r.top - q.top) < 1; };
+  const tabs = ['.tabs', '.tab[aria-selected="true"]'];
   await page.click('.tab[data-view="week"]');
-  assert.equal(await page.evaluate(under), false, 'still on its way');
-  await page.waitForFunction(under, null, { timeout: 3000 });
+  assert.equal(await page.evaluate(under, tabs), false, 'still on its way');
+  await page.waitForFunction(under, tabs, { timeout: 3000 });
   await page.click('#searchBtn');
   await page.waitForFunction(() => getComputedStyle(document.getElementById('tabThumb')).opacity === '0', null, { timeout: 3000 });
   await page.click('#searchBtn');
   await page.click('.tab[data-view="list"]');
-  await page.waitForFunction(under, null, { timeout: 3000 });
+  await page.waitForFunction(under, tabs, { timeout: 3000 });
+  // the Day view's week strip: the circle slides to the day tapped
+  const strip = ['.strip', 'button[aria-selected="true"]', 'b'];
+  await page.click('.tab[data-view="day"]');
+  await page.waitForFunction(under, strip, { timeout: 3000 });
+  const other = await page.$eval('.strip button[aria-selected="false"]', b => b.dataset.day);
+  await page.click('.strip button[data-day="' + other + '"]');
+  assert.equal(await page.evaluate(under, strip), false, 'the circle is on its way');
+  await page.waitForFunction(under, strip, { timeout: 3000 });
+  // Settings' segmented choices
+  const seg = ['#stBody .seg:has([data-set="clock"])', '[aria-pressed="true"]'];
+  await page.click('#setBtn');
+  await page.waitForFunction(under, seg, { timeout: 3000 });
+  await page.click('[data-set="clock"][data-val="24"]');
+  assert.equal(await page.evaluate(under, seg), false, 'the choice is on its way');
+  await page.waitForFunction(under, seg, { timeout: 3000 });
+  await page.click('[data-set="clock"][data-val="auto"]');
+  await page.click('#setSheet .sheethead [data-close]');
+  await page.click('.tab[data-view="list"]');
 });
 
 await test('settings: the layers switch off and on, and the week can start on Sunday', async () => {
