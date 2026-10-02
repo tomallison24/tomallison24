@@ -518,6 +518,13 @@ opens, which moves it within seconds.
 All the background jobs (this, Tidy, the clean-up) share one pace, so running
 together they stay as gentle on Gmail's limit as one alone.
 
+**What you tap comes first.** The automatic jobs wait while you are tapping
+and carry on a couple of seconds after you stop. If Gmail asks a background
+job to slow down, only the background jobs pause: tagging, archiving and the
+rest still go through. If Gmail refuses something you did, the message shows
+above everything (at the top of the screen while a sheet is open) and in the
+Tag sheet itself, which stays open so you can try again.
+
 ## The unread count on the icon
 
 **Settings → Unread count on the app icon**. The count is Gmail's own —
