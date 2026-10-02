@@ -105,6 +105,13 @@ class QuotaError extends Error {}
 const COOLDOWN = Number(localStorage.getItem('mail.cooldown')) || 60000;   // (the tests shorten this)
 let slowUntil = 0;
 const slowed = () => Date.now() < slowUntil;
+// When Gmail says "slow down" to a background job (the marketing sort, Tidy,
+// the clean-up), only the background jobs pause: what you tap - tagging,
+// archiving - still goes through, and if Gmail refuses that too, it is told
+// plainly. A refusal of something you did pauses everything, as before.
+let bgSlowUntil = 0;
+const bgPause = () => Math.max(slowUntil, bgSlowUntil);
+const bgSlowed = () => Date.now() < bgPause();
 
 function redirectUri() {
   return location.origin + location.pathname.replace(/index\.html$/, '');
@@ -199,16 +206,16 @@ const TIMEOUT = Number(ls.get('mail.timeout', '')) || 20000;
 // once: for requests that create something. If the answer is lost the thing
 // may have been made anyway, so they are never sent twice blindly; the caller
 // looks for it instead.
-async function api(path, { method = 'GET', body, params, tries = 0, once = false } = {}) {
+async function api(path, { method = 'GET', body, params, tries = 0, once = false, bg = false } = {}) {
   const tok = getToken();
   if (!tok) throw new AuthError('signed out');
-  if (slowed()) throw new QuotaError('Gmail asked the app to slow down for a minute');   // nothing more until the pause is over
+  if (bg ? bgSlowed() : slowed()) throw new QuotaError('Gmail asked the app to slow down for a minute');   // nothing more until the pause is over
   const url = new URL(API + path);
   for (const [k, v] of Object.entries(params || {})) {
     if (v == null) continue;
     for (const one of Array.isArray(v) ? v : [v]) url.searchParams.append(k, one);
   }
-  const again = () => api(path, { method, body, params, tries: tries + 1, once });
+  const again = () => api(path, { method, body, params, tries: tries + 1, once, bg });
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT);
   let res, text;
@@ -231,7 +238,7 @@ async function api(path, { method = 'GET', body, params, tries = 0, once = false
     const quota = res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text));
     if (quota) {
       if (tries < 1) { await sleep(1500 + Math.random() * 1000); return again(); }
-      slowUntil = Date.now() + COOLDOWN;
+      if (bg) bgSlowUntil = Date.now() + COOLDOWN; else slowUntil = Date.now() + COOLDOWN;
       throw new QuotaError('Gmail asked the app to slow down for a minute');
     }
     if (res.status >= 500 && tries < 3) { await sleep(600 * 2 ** tries + Math.random() * 300); return again(); }
@@ -826,7 +833,7 @@ async function sweep() {
   if (label) {
     const tagged = PRESETS.filter(p => labelByName(p.name)).map(p => ' -label:' + p.name).join('');   // an auto-tag's mail is never cleaned up
     const ids = await allIds('older_than:' + settings.days + 'd' + tagged, { labelIds: [label.id], cap: 1000 });
-    const call = pacer({ maxWaits: 1 });          // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
+    const call = pacer({ maxWaits: 1, yieldToUser: true });          // paced, like Tidy: a big bucket mustn't use up Gmail's allowance
     for (const id of ids) {
       try { await call('/messages/' + id + '/trash', { method: 'POST' }); done++; } catch (e) { if (e instanceof QuotaError || e instanceof AuthError) break; }
     }
@@ -1098,14 +1105,18 @@ const TIDY_DAILY = 100;               // the daily run looks at no more than thi
 // gap for the rest of the run, so it doesn't walk straight back into the limit.
 // All the background runs (Tidy, the marketing sort, the clean-up) take turns
 // from one clock, so two at once share the pace rather than add up.
-let bgNext = 0;
-function pacer({ onPause, maxWaits = 3 } = {}) {
+// An automatic run (not one you started) also steps aside while you are
+// tapping, so what you are doing gets Gmail's allowance first.
+let bgNext = 0, lastTouch = 0;
+addEventListener('pointerdown', () => { lastTouch = Date.now(); }, { capture: true, passive: true });
+function pacer({ onPause, maxWaits = 3, yieldToUser = false } = {}) {
   let gap = BG_GAP;
   async function turn() {
-    for (let waits = 0; slowed(); waits++) {
+    for (let i = 0; yieldToUser && Date.now() - lastTouch < 2500 && i < 40; i++) await sleep(300);
+    for (let waits = 0; bgSlowed(); waits++) {
       if (waits >= maxWaits) throw new QuotaError('Gmail asked the app to slow down for a minute');
-      onPause?.(slowUntil);
-      await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
+      onPause?.(bgPause());
+      await sleep(bgPause() - Date.now() + 500 + Math.random() * 1000);
     }
     const wait = bgNext - Date.now();
     bgNext = Math.max(Date.now(), bgNext) + gap;
@@ -1114,7 +1125,7 @@ function pacer({ onPause, maxWaits = 3 } = {}) {
   return async function call(path, opts) {
     for (let tries = 0; ; tries++) {
       await turn();
-      try { return await api(path, opts); }
+      try { return await api(path, { ...opts, bg: true }); }
       catch (e) {
         if (!(e instanceof QuotaError) || tries >= maxWaits) throw e;
         gap = Math.min(gap * 2, 2000);            // slower from here on
@@ -1140,8 +1151,8 @@ function saveSeen(map) {
 // oldest conversations are looked at first, and those already kept on an
 // earlier run are skipped. progress(done, of) reports as it goes; alive()
 // false stops it early.
-async function tidyPlan({ progress, alive = () => true, onPause, limit = TIDY_CAP, maxWaits = 3 } = {}) {
-  const call = pacer({ onPause, maxWaits });
+async function tidyPlan({ progress, alive = () => true, onPause, limit = TIDY_CAP, maxWaits = 3, yieldToUser = false } = {}) {
+  const call = pacer({ onPause, maxWaits, yieldToUser });
   const cutoff = Date.now() - TIDY_DAYS * 86400e3;
   const all = [];
   let pageToken;
@@ -1208,9 +1219,9 @@ async function untidy(back) {
 
 // Once a day, when Tidy is on, as the app opens.
 async function tidyDaily() {
-  if (!tidyOn() || Date.now() - Number(ls.get(K.tidied, 0)) < TIDY_EVERY || slowed()) return;
+  if (!tidyOn() || Date.now() - Number(ls.get(K.tidied, 0)) < TIDY_EVERY || bgSlowed()) return;
   ls.set(K.tidied, String(Date.now()));          // one try a day, even if it fails part-way
-  const plan = await tidyPlan({ limit: TIDY_DAILY, maxWaits: 1 });
+  const plan = await tidyPlan({ limit: TIDY_DAILY, maxWaits: 1, yieldToUser: true });
   if (!plan.tidy.length) return;
   const back = await tidyApply(plan);
   const n = plan.tidy.length;
@@ -1265,7 +1276,7 @@ async function mktKeepReason(t, item, call) {
 let mktRunning = null;
 // One run. progress(moved) as it goes; returns what Undo needs.
 async function marketingSort({ progress, alive = () => true } = {}) {
-  const call = pacer({ maxWaits: 3 });
+  const call = pacer({ maxWaits: 3, yieldToUser: true });
   const label = await bucketLabel();
   const all = [];
   let pageToken;
@@ -1311,7 +1322,7 @@ async function marketingSort({ progress, alive = () => true } = {}) {
 
 // As the app opens, and when it comes back after a while.
 async function sortMarketingNow({ force } = {}) {
-  if (!mktSortOn() || mktRunning || slowed() || !getToken()) return;
+  if (!mktSortOn() || mktRunning || bgSlowed() || !getToken()) return;
   if (!force && Date.now() - Number(ls.get(K.mktSorted, 0)) < MKT_EVERY) return;
   let shown = false;
   mktRunning = marketingSort({
@@ -3009,6 +3020,7 @@ function openSheet(item) {
       (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + hue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
       '<input type="text" id="newtag" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="' + (list.length ? 'Or a new tag' : 'New tag') + ' — e.g. Sofia’s school">' +
       '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
+      '<p class="note hide" id="tagerr" role="alert" style="color:var(--bad-text);text-align:center"></p>' +
     '</div>';
   el.classList.remove('hide', 'leaving');
   tagPicks++; slideTags();
@@ -3887,6 +3899,7 @@ document.addEventListener('click', async e => {
       const sheet = state.sheet;
       if (!sheet) return;
       const name = $('#newtag').value.trim();
+      $('#tagerr')?.classList.add('hide');
       if (!name) return toast('Pick a tag, or type a new one', { bad: true });
       if (name.toLowerCase() === settings.label.toLowerCase()) { closeSheet(); return doBucket(sheet.item); }
       el.disabled = true;
@@ -3912,6 +3925,8 @@ document.addEventListener('click', async e => {
         el.disabled = false;
         el.innerHTML = ICON.label + 'Tag';
         failed(err);
+        const box = $('#tagerr');                                    // in the sheet, where it can't be missed
+        if (box) { box.textContent = 'Not tagged: ' + (err instanceof QuotaError ? 'Gmail asked the app to slow down. Try again in a minute.' : err.message); box.classList.remove('hide'); }
       }
       return;
     }
