@@ -3,7 +3,7 @@
 #
 # The app sweeps when it is opened; this does the same daily so mail is
 # cleared whether or not the phone app is opened. Everything in the bucket
-# older than DELETE_AFTER_DAYS (default 3) goes to the Trash, where Gmail
+# older than DELETE_AFTER_DAYS (default 30) goes to the Trash, where Gmail
 # deletes it for good after 30 days.
 #
 # Does nothing until the three Google secrets exist, so it is safe to leave
