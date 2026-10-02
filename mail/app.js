@@ -31,6 +31,7 @@ const K = {
   clientId: 'mail.clientId', token: 'mail.token', state: 'mail.state',
   lastAuth: 'mail.lastAuth', days: 'mail.days', label: 'mail.label', swept: 'mail.swept',
   hint: 'mail.hint', silent: 'mail.silent', chips: 'mail.chips', swipeHint: 'mail.swipeHint', pending: 'mail.pending', unsubbed: 'mail.unsubbed', badge: 'mail.badge', notify: 'mail.notify', pushUrl: 'mail.pushUrl', pushSynced: 'mail.pushSynced', openThread: 'mail.openThread', tidy: 'mail.tidy', tidied: 'mail.tidied', tidyKeep: 'mail.tidyKeep',
+  daysMonthly: 'mail.daysMonthly', mktSort: 'mail.mktSort', mktSorted: 'mail.mktSorted',
 };
 const SWEEP_EVERY = 6 * 3600e3;   // don't re-sweep on every open
 const PAGE = 40;                  // conversations shown per list
@@ -68,11 +69,14 @@ function ago(ms) {
 }
 
 const settings = {
-  get days() { const n = parseInt(ls.get(K.days, '3'), 10); return Number.isFinite(n) && n >= 1 && n <= 30 ? n : 3; },
+  get days() { const n = parseInt(ls.get(K.days, '30'), 10); return Number.isFinite(n) && n >= 1 && n <= 30 ? n : 30; },
   set days(v) { ls.set(K.days, String(v)); },
   get label() { return ls.get(K.label, 'Marketing') || 'Marketing'; },
   set label(v) { ls.set(K.label, v); },
 };
+// Marketing used to be emptied after 3 days; it is now a month, since mail is
+// sorted into it automatically. Once, on this device: the old setting moves on.
+if (!ls.get(K.daysMonthly, '')) { ls.set(K.days, '30'); ls.set(K.daysMonthly, '1'); }
 
 // A client ID is only letters, digits, dots and dashes. Copying one through
 // Messages, Notes or an email can add characters that can't be seen - a
@@ -852,15 +856,21 @@ const PRESETS = [
     '-from:' + any(['marketing.lyftmail.com', 'discover@airbnb.com', 'mkt.flyfrontier.com', 'marriott-vacations.com']),
     '-subject:' + any(['deal', 'deals', 'sale', 'save', 'savings', 'offer', 'offers', 'off', 'miles', 'mileageplus']),
   ].join(' ') },
-  { name: 'Money', about: 'Statements, bills, bank alerts', query: [
-    '{from:' + any(['email.monarch.com', 'ealerts.bankofamerica.com', 'servicing.synchrony.com']),
-    '(from:' + any(['chase.com', 'citi.com', 'americanexpress.com', 'bankofamerica.com', 'capitalone.com', 'discover.com', 'wellsfargo.com',
-      'fidelity.com', 'vanguard.com', 'schwab.com', 'robinhood.com', 'paypal.com', 'venmo.com', 'troweprice.com', 'pnmac.com', 'synchrony.com',
-      'apexnc.org', 'enbridgegas.com', 'dominionenergy.com', 'duke-energy.com', 'gfiber.com', 'ncfbins.com', 'geico.com', 'statefarm.com',
-      'progressive.com', 'allstate.com', 'irs.gov']),
-    'subject:' + any(['statement', 'autopay', 'bill', 'payment', 'deposit', '"tax document"', '1099', '"trade confirmations"', 'transaction',
-      'purchase', '"account information"']) + ')}',
-    '-subject:' + any(['offer', 'offers', 'deal', 'deals', 'bonus', 'giveaway', 'earn', 'rewards', '"balance transfer"']),
+  // Everything from a bank, card issuer, lender or broker is Money, their
+  // offers included, so none of it is ever sorted out as marketing. Bills
+  // from the town, utilities and insurers only when the subject says so.
+  { name: 'Money', about: 'Banks, statements, bills', query: [
+    '{from:' + any(['chase.com', 'citi.com', 'citibank.com', 'americanexpress.com', 'aexp.com', 'amex.com', 'bankofamerica.com', 'capitalone.com',
+      'discover.com', 'wellsfargo.com', 'usbank.com', 'pnc.com', 'truist.com', 'ally.com', 'sofi.com', 'chime.com', 'synchrony.com',
+      'synchronybank.com', 'mysynchrony.com', 'goldmansachs.com', 'marcus.com', 'schwab.com', 'fidelity.com', 'vanguard.com', 'etrade.com',
+      'robinhood.com', 'paypal.com', 'venmo.com', 'troweprice.com', 'pennymac.com', 'pnmac.com', 'rocketmortgage.com', 'mrcooper.com',
+      'greensky.com', 'greenskycredit.com', 'affirm.com', 'klarna.com', 'afterpay.com', 'navyfederal.org', 'penfed.org', 'usaa.com',
+      'email.monarch.com']),
+    '(from:' + any(['apexnc.org', 'enbridgegas.com', 'dominionenergy.com', 'duke-energy.com', 'gfiber.com', 'ncfbins.com', 'geico.com',
+      'statefarm.com', 'progressive.com', 'allstate.com', 'irs.gov']),
+    'subject:' + any(['statement', 'autopay', 'bill', 'payment', 'deposit', '"tax document"', '1099', 'transaction', 'purchase',
+      '"account information"']),
+    '-subject:' + any(['offer', 'offers', 'deal', 'deals', 'save', 'rebate', 'rebates']) + ')}',
   ].join(' ') },
   { name: 'Health', about: 'Visits, results, prescriptions', query: [
     '{from:' + any(['mychart', 'myuncchart', 'unchealth.unc.edu', 'labcorp.com', 'questdiagnostics.com', 'dukehealth.org', 'wakemed.org',
@@ -911,16 +921,25 @@ async function presetOn(p) {
       back.filterId = now.id;
     }
   }
-  const [all, had] = await Promise.all([allIds(p.query, { cap: PRESET_CAP }), allIds(p.query, { labelIds: [label.id], cap: PRESET_CAP })]);
-  const hadSet = new Set(had);
-  back.added = all.filter(id => !hadSet.has(id));
-  await relabel(back.added, [label.id]);
-  if (back.tidy) {
-    back.rescued = await allIds(p.query, { labelIds: [back.tidy], cap: PRESET_CAP });
-    await relabel(back.rescued, ['INBOX'], [back.tidy]);
-  }
+  Object.assign(back, await presetBackfill(p, label.id));
   state.lists = {};
   return back;
+}
+
+// The mail already here that the rule matches gets the tag (newest first, up
+// to PRESET_CAP), and any of it Tidy had archived goes back to the inbox.
+async function presetBackfill(p, labelId) {
+  const tidy = tidyId();
+  const [all, had] = await Promise.all([allIds(p.query, { cap: PRESET_CAP }), allIds(p.query, { labelIds: [labelId], cap: PRESET_CAP })]);
+  const hadSet = new Set(had);
+  const added = all.filter(id => !hadSet.has(id));
+  await relabel(added, [labelId]);
+  let rescued = [];
+  if (tidy) {
+    rescued = await allIds(p.query, { labelIds: [tidy], cap: PRESET_CAP });
+    await relabel(rescued, ['INBOX'], [tidy]);
+  }
+  return { added, rescued };
 }
 
 async function presetUndo(back) {
@@ -935,7 +954,7 @@ async function presetUndo(back) {
 
 // When an update refines a rule, the filter Gmail has is swapped for the new
 // one as the app opens, so new mail follows it without turning the tag off and
-// on. Mail already tagged keeps its tag. If a swap stopped half-way, the next
+// on. Mail the new rule matches is tagged too; mail already tagged keeps its tag. If a swap stopped half-way, the next
 // run finishes it: one filter with today's rule stays, any others go.
 async function upgradePresets() {
   if (!canFilter()) return 0;
@@ -953,6 +972,7 @@ async function upgradePresets() {
       await api('/settings/filters/' + f.id, { method: 'DELETE' });
       filtersCache = filtersCache.filter(x => x.id !== f.id);
     }
+    await presetBackfill(p, l.id);              // a wider rule: what it now matches is tagged too
     n++;
   }
   return n;
@@ -1072,19 +1092,23 @@ function knownSender(email, call = api) {
 // Tidy waits it out and carries on rather than failing.
 const BG_GAP = Number(localStorage.getItem('mail.tidyPace')) || 160;   // ms between the starts of Tidy's calls (the tests shorten it)
 const TIDY_DELAY = Number(localStorage.getItem('mail.tidyDelay')) || 20000;   // the daily run waits this long after opening (the tests shorten it)
+const MKT_DELAY = Number(localStorage.getItem('mail.mktDelay')) || 2500;      // the marketing sort starts this long after opening (the tests shorten it)
 const TIDY_DAILY = 100;               // the daily run looks at no more than this; the Preview at TIDY_CAP
 // One paced run: calls start `gap` ms apart, and each "slow down" doubles the
 // gap for the rest of the run, so it doesn't walk straight back into the limit.
+// All the background runs (Tidy, the marketing sort, the clean-up) take turns
+// from one clock, so two at once share the pace rather than add up.
+let bgNext = 0;
 function pacer({ onPause, maxWaits = 3 } = {}) {
-  let gap = BG_GAP, next = 0;
+  let gap = BG_GAP;
   async function turn() {
     for (let waits = 0; slowed(); waits++) {
       if (waits >= maxWaits) throw new QuotaError('Gmail asked the app to slow down for a minute');
       onPause?.(slowUntil);
       await sleep(slowUntil - Date.now() + 500 + Math.random() * 1000);
     }
-    const wait = next - Date.now();
-    next = Math.max(Date.now(), next) + gap;
+    const wait = bgNext - Date.now();
+    bgNext = Math.max(Date.now(), bgNext) + gap;
     if (wait > 0) await sleep(wait);
   }
   return async function call(path, opts) {
@@ -1197,6 +1221,127 @@ async function tidyDaily() {
 async function undoTidy(back) {
   try { toast('Putting them back…', { ms: 60000 }); await untidy(back); toast('Back in the inbox'); state.lists = {}; go({ force: true }); }
   catch (err) { failed(err); }
+}
+
+// ---------------------------------------------------------------------------
+// Marketing sort: Gmail's Promotions in the inbox go to the Marketing bucket
+// (out of the inbox; emptied after "Delete after" days) as the app opens -
+// the whole inbox the first time, then whatever came in since. Tidy's rules
+// decide what stays: a thread you wrote in, a sender you chose to keep, a
+// bank, an alert or receipt, someone you have written to. Tagged mail (the
+// auto-tags, your tags) and Flagged mail are left out by the search itself;
+// Gmail's Important flag is not, as it marks plenty of promotions.
+// ---------------------------------------------------------------------------
+const MKT_Q = 'in:inbox category:promotions -is:starred -has:userlabels -in:chats';
+const MKT_SEEN = 'mail.mktSeen.v1', MKT_EVERY = 15 * 60e3;
+const mktSortOn = () => ls.get(K.mktSort, 'on') === 'on';
+// Threads looked at and kept, by id: their historyId; 'k:' + sender + ':' +
+// historyId for one kept because you always keep that sender (looked at again
+// only if you stop); or 'keep' for one you put back (kept whatever happens).
+const mktSeen = () => { try { return new Map(Object.entries(JSON.parse(ls.get(MKT_SEEN, '{}')))); } catch { return new Map(); } };
+function saveMktSeen(map) {
+  const all = [...map.entries()];
+  ls.set(MKT_SEEN, JSON.stringify(Object.fromEntries(all.slice(Math.max(0, all.length - 8000)))));
+}
+function mktKeepThread(threadId) { const m = mktSeen(); m.set(threadId, 'keep'); saveMktSeen(m); }
+
+// Why a Promotions conversation stays in the inbox, or '' when it can go.
+async function mktKeepReason(t, item, call) {
+  const me = (state.me || '').toLowerCase();
+  if ((t.messages || []).some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return 'you wrote in it';
+  if (tidyKept(item.email)) return 'you chose to keep';
+  if (isBank(item.email)) return 'a bank';
+  if (transactional(item)) return 'alert or receipt';
+  if (await knownSender(item.email, call)) return 'you’ve written to them';
+  return '';
+}
+
+let mktRunning = null;
+// One run. progress(moved) as it goes; returns what Undo needs.
+async function marketingSort({ progress, alive = () => true } = {}) {
+  const call = pacer({ maxWaits: 3 });
+  const label = await bucketLabel();
+  const all = [];
+  let pageToken;
+  do {
+    const r = await call('/threads', { params: { q: MKT_Q, maxResults: 500, pageToken } });
+    all.push(...(r.threads || [])); pageToken = r.nextPageToken;
+  } while (pageToken && all.length < 20000 && alive());
+  const seen = mktSeen(), here = new Set(all.map(t => t.id));
+  for (const id of [...seen.keys()]) if (!here.has(id)) seen.delete(id);       // left the inbox, or tagged since
+  const known = (t, v = seen.get(t.id) || '') => v === 'keep' || v === String(t.historyId) ||
+    (v.startsWith('k:') && v.endsWith(':' + t.historyId) && tidyKept(v.slice(2, v.lastIndexOf(':'))));
+  const todo = all.filter(t => !known(t));                                       // newest first
+  const back = { ids: [], threads: new Set(), label: label.id };
+  let batch = [], looked = 0;
+  const flush = async () => {
+    if (!batch.length) return;
+    const ids = batch.flatMap(x => x.ids), threads = new Set(batch.map(x => x.threadId));
+    batch = [];
+    await relabel(ids, [label.id], ['INBOX']);
+    back.ids.push(...ids); threads.forEach(t => back.threads.add(t));
+    patch(it => threads.has(it.threadId), [label.id], ['INBOX']);
+    progress?.(back.threads.size);
+  };
+  for (const { id } of todo) {
+    if (!alive()) break;
+    const t = await call('/threads/' + id, {
+      params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
+    }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
+    const item = t && buildRow(t);
+    if (item) {
+      const why = await mktKeepReason(t, item, call);
+      if (why) seen.set(t.id, (why === 'you chose to keep' ? 'k:' + item.email + ':' : '') + String(t.historyId));
+      else batch.push({ ids: (t.messages || []).map(m => m.id), threadId: t.id });
+    }
+    if (batch.length >= 50) await flush();
+    if (++looked % 20 === 0) saveMktSeen(seen);
+  }
+  await flush();
+  saveMktSeen(seen);
+  ls.set(K.mktSorted, String(Date.now()));
+  return back;
+}
+
+// As the app opens, and when it comes back after a while.
+async function sortMarketingNow({ force } = {}) {
+  if (!mktSortOn() || mktRunning || slowed() || !getToken()) return;
+  if (!force && Date.now() - Number(ls.get(K.mktSorted, 0)) < MKT_EVERY) return;
+  let shown = false;
+  mktRunning = marketingSort({
+    progress: n => { if (n >= 50) { shown = true; toast('Moving marketing out of the inbox… ' + n.toLocaleString() + ' so far', { ms: 60000 }); } },
+  });
+  try {
+    const back = await mktRunning;
+    const n = back.threads.size;
+    if (n) {
+      toast('Moved ' + n.toLocaleString() + ' marketing ' + (n === 1 ? 'email' : 'emails') + ' to ' + settings.label,
+        { label: 'Undo', action: () => undoMarketing(back), ms: 9000 });
+      await settle('right');
+    } else if (shown) toast('Marketing sorted');
+  } catch (e) { if (shown) failed(e); }
+  finally { mktRunning = null; }
+}
+
+async function undoMarketing(back) {
+  try {
+    toast('Putting them back…', { ms: 60000 });
+    await relabel(back.ids, ['INBOX'], [back.label]);
+    const seen = mktSeen();
+    back.threads.forEach(t => seen.set(t, 'keep'));                // and they stay put
+    saveMktSeen(seen);
+    patch(it => back.threads.has(it.threadId), ['INBOX'], [back.label]);
+    toast('Back in the inbox');
+    state.lists = {}; go({ force: true });
+  } catch (err) { failed(err); }
+}
+
+function mktHTML() {
+  const on = mktSortOn(), last = Number(ls.get(K.mktSorted, 0));
+  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
+    '<div class="field"><span>Move marketing out of the inbox</span><button class="switch" role="switch" data-act="mkt-toggle" aria-checked="' + on + '" aria-label="Move marketing out of the inbox"></button></div>' +
+    '<p class="note">As the app opens, Gmail’s Promotions go to ' + esc(settings.label) + '. Banks, receipts, alerts, tagged mail and people you’ve written to stay.' +
+      (on && last ? ' Last sorted ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') + '.' : '') + '</p>';
 }
 
 let showKeeps = false;                // Settings: the always-kept list, folded away until asked for
@@ -1760,6 +1905,7 @@ function viewSettings() {
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
     '<div class="field"><span>Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div>' +
+    mktHTML() +
     tidyHTML() +
     notifyHTML() +
     blockedHTML() +
@@ -3521,12 +3667,18 @@ async function doRestore(item, btn, li, { keep = false } = {}) {
   try {
     const wasTidied = tidied(item);
     const labelId = await unbucket(item);
+    mktKeepThread(item.threadId);                     // brought back on purpose: the marketing sort leaves it
     await closeReader();
     patch(it => it.threadId === item.threadId, ['INBOX'], [labelId]);
     await settle('left');
+    // Bucketed by a sender rule, or sorted there as marketing (no rule)?
+    const match = ruleFor(item).match;
+    const ruled = !wasTidied && (filtersCache || []).some(f => (f.action?.addLabelIds || []).includes(labelId) &&
+      String(f.criteria?.from || '').toLowerCase() === match);
     if (wasTidied && keep) toast('Back in the inbox — Tidy will always keep mail from ' + item.email);
-    else if (wasTidied && !tidyKept(item.email)) toast('Back in the inbox', { action: () => { setTidyKeep(item.email, true); toast('Tidy will always keep mail from ' + item.email); }, label: 'Always Keep', ms: 8000 });
-    else toast(wasTidied ? 'Back in the inbox' : 'Back in the inbox. The rule is still on — remove it under Rules.');
+    else if (ruled) toast('Back in the inbox. The rule is still on — remove it under Rules.');
+    else if (!tidyKept(item.email)) toast('Back in the inbox', { action: () => { setTidyKeep(item.email, true); toast('Mail from ' + item.email + ' will always stay in the inbox'); }, label: 'Always Keep', ms: 8000 });
+    else toast('Back in the inbox');
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = ICON.back; }
     if (state.reading) renderReader();
@@ -3782,6 +3934,12 @@ document.addEventListener('click', async e => {
       render();
       return tidyDaily().catch(() => {});
     case 'tidy-keeps': showKeeps = !showKeeps; return render();
+    case 'mkt-toggle':
+      if (mktSortOn()) { ls.set(K.mktSort, 'off'); toast('Marketing stays in the inbox'); return render(); }
+      ls.set(K.mktSort, 'on');
+      toast('Marketing will move out of the inbox — starting now', { ms: 4000 });
+      render();
+      return sortMarketingNow({ force: true });
     case 'preset-toggle': {
       const p = PRESETS.find(x => x.name === li?.dataset.preset);
       if (!p || presetBusy.has(p.name)) return;
@@ -3991,6 +4149,7 @@ function renew() {
   } catch { ls.del(K.pending); }
   Promise.all([refreshLabels(), refreshFilters()]).then(() => { render(); bringBackReminders(); syncPush(); return upgradePresets(); }).catch(() => {});
   loadList().then(() => { const t = ls.get(K.openThread, ''); if (t) openThreadById(t); })
+    .then(() => sleep(MKT_DELAY)).then(() => sortMarketingNow({ force: true }))
     .then(() => sleep(TIDY_DELAY)).then(() => tidyDaily()).catch(() => {});   // after opening's own calls, not on top of them
   if (Date.now() - Number(ls.get(K.swept, 0)) > SWEEP_EVERY) {
     sweep().then(n => {
@@ -4019,6 +4178,7 @@ document.addEventListener('visibilitychange', () => {
   const list = state.lists[currentList().key];
   if (list?.at && Date.now() - list.at < 30000) return;                 // loaded moments ago
   if (state.view === 'inbox' || state.view === 'marketing') loadList({ force: true, quiet: true });
+  sortMarketingNow();                                               // at most every 15 minutes
 });
 
 if ('serviceWorker' in navigator) {

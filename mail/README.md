@@ -13,8 +13,14 @@ Remind Me, and an unread count on the icon.
    from now on — server-side, whether or not the app is open;
 3. sweeps the mail **already in the mailbox** from that domain into Marketing.
 
-Anything in Marketing older than **3 days** (Settings: 1–30) goes to the
-Trash, where Gmail deletes it for good after 30 days. The sweep runs when the
+**Marketing also fills itself:** as the app opens, Gmail's Promotions in the
+inbox move there (see *Moving marketing out of the inbox* below).
+
+Anything in Marketing older than **30 days** (Settings: 1–30) goes to the
+Trash, where Gmail deletes it for good after 30 more days. It was 3 days
+before marketing was sorted there automatically; phones that had the old
+setting moved to 30 once. Mail with an auto-tag (Travel, Money, Health,
+Orders) is never emptied out. The sweep runs when the
 app opens (the Marketing list has a **Clean up now** button to run it at once); `.github/workflows/mail.yml` can run it daily too, so it happens on
 days you never open the app — but only once its Google credentials are set up
 (Setup, step 2). Until then the daily run just logs "No Google credentials set".
@@ -180,7 +186,8 @@ nobody to tap "allow".
 3. Repository **Settings → Secrets and variables → Actions**, add secrets
    `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`.
    Optional *variables*: `MARKETING_LABEL` (default `Marketing`),
-   `DELETE_AFTER_DAYS` (default `3`).
+   `DELETE_AFTER_DAYS` (default `30`). If you set that variable to 3 before, change it
+   to 30 there too: the variable wins over the default.
 
 Until those secrets exist the workflow runs, finds nothing and exits cleanly.
 
@@ -334,8 +341,10 @@ switch and a **Preview**:
 
 - **Travel**: flight bookings, check-ins, gate, delay and cancellation notices,
   hotel stays, car rentals, Uber and Lyft rides, Hopper, CBP/TSA.
-- **Money**: bank and card statements and alerts, bills (utilities, the town,
-  insurance), trade confirmations and Monarch's expense alerts.
+- **Money**: everything from banks, card issuers, lenders and brokers (their
+  offers too, so they stay in the inbox rather than going to Marketing), bills
+  from the town, utilities and insurers, trade confirmations and Monarch's
+  expense alerts.
 - **Health**: MyChart messages, visit summaries, lab results, prescriptions,
   MinuteClinic visits, insurance statements and Explanations of Benefits.
 - **Orders**: order confirmations, shipping and delivery notices, pickups and
@@ -458,6 +467,45 @@ Tidied mail is **archived, not deleted**. It stays unread and searchable,
 tidied email has an **Inbox** button. Whether you have written to someone is
 looked up with a one-result search of your Sent mail, and is only remembered
 until the app closes.
+
+## Moving marketing out of the inbox
+
+**Settings → Move marketing out of the inbox** (on). As the app opens, and
+when it comes back after 15 minutes or more, Gmail's **Promotions** in the
+inbox move to **Marketing**: the whole inbox the first time, then only what
+arrived since. It goes a few emails a second in the background, so a big
+first run can take a few minutes with the app open; it picks up where it
+stopped next time. The toast says how many moved, with **Undo**.
+
+What stays in the inbox follows Tidy's rules:
+
+- a conversation you wrote in, or a sender you've written to (for a business,
+  anyone at its domain);
+- **banks, card issuers, lenders and brokers** — their offers too. The
+  **Money** auto-tag now covers everything they send, so bank promos stay in
+  the inbox tagged Money;
+- alerts, receipts, statements, orders, bookings, sign-in codes, health
+  messages and anything from a `.gov` or `.edu` address;
+- **tagged** mail (the auto-tags and your own tags) and **Flagged** mail;
+- senders under Settings → **Always kept**.
+
+Gmail's **Important** flag is ignored: it marks plenty of promotions.
+
+Moved mail is in **Marketing**, emptied after 30 days (above). That counts
+from each email's own date, so the older marketing moved on the first run goes
+on to the Trash at the next clean-up, where Gmail keeps it 30 days before
+deleting it: everything moved stays recoverable for at least a month. Open one and tap
+**Inbox** to bring it back: it stays in the inbox from then on, and the toast
+offers **Always Keep** for that sender. Undo does the same for a whole run.
+
+Only Gmail's Promotions category is looked at; newsletters Gmail files under
+Updates stay where they are (Tidy deals with old unread ones). This runs in
+the app, not as a Gmail filter: a filter can't check whom you've written to or
+your Always kept list. So new marketing waits in the inbox until the app next
+opens, which moves it within seconds.
+
+All the background jobs (this, Tidy, the clean-up) share one pace, so running
+together they stay as gentle on Gmail's limit as one alone.
 
 ## The unread count on the icon
 

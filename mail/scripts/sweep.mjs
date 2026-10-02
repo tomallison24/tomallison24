@@ -12,14 +12,14 @@
 //   GOOGLE_REFRESH_TOKEN  from: node mail/scripts/get-refresh-token.mjs
 // Variables (optional):
 //   MARKETING_LABEL       default "Marketing"
-//   DELETE_AFTER_DAYS     default 3
+//   DELETE_AFTER_DAYS     default 30
 //
 // Exits 0 and does nothing when the secrets are absent, so the workflow is
 // harmless until it is set up.
 
 const { GOOGLE_CLIENT_ID: ID, GOOGLE_CLIENT_SECRET: SECRET, GOOGLE_REFRESH_TOKEN: REFRESH } = process.env;
 const LABEL = process.env.MARKETING_LABEL || 'Marketing';
-const DAYS = Math.max(1, Math.min(365, Number(process.env.DELETE_AFTER_DAYS) || 3));
+const DAYS = Math.max(1, Math.min(365, Number(process.env.DELETE_AFTER_DAYS) || 30));
 const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
 if (!ID || !SECRET || !REFRESH) {
@@ -102,7 +102,10 @@ const run = async () => {
 
   // Matched by label id, not by name in the search: a name with spaces or an
   // apostrophe needs quoting that Gmail's search is fussy about.
-  const q = `older_than:${DAYS}d`;
+  // Mail with one of the app's auto-tags (Travel, Money, Health, Orders) is
+  // never emptied out, as in the app.
+  const tagged = ['Travel', 'Money', 'Health', 'Orders'].filter(n => labels.some(l => l.name === n)).map(n => ' -label:' + n).join('');
+  const q = `older_than:${DAYS}d${tagged}`;
   const ids = [];
   let pageToken;
   do {
