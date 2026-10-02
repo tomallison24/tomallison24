@@ -1232,7 +1232,13 @@ async function undoTidy(back) {
 // auto-tags, your tags) and Flagged mail are left out by the search itself;
 // Gmail's Important flag is not, as it marks plenty of promotions.
 // ---------------------------------------------------------------------------
-const MKT_Q = 'in:inbox category:promotions -is:starred -has:userlabels -in:chats';
+// Senders whose "alerts" are really advertising (saved-search and price-drop
+// mailings): sorted as marketing whatever Gmail's category, and not kept for
+// having "Alert" in the subject. Banks, people you've written to and Always
+// kept senders still win.
+const MKT_ALWAYS = ['emalert.cars.com'];
+const MKT_Q = 'in:inbox {category:promotions from:(' + MKT_ALWAYS.join(' OR ') + ')} -is:starred -has:userlabels -in:chats';
+const marketingSender = email => { const h = (email.split('@')[1] || '').toLowerCase(); return MKT_ALWAYS.some(d => h === d || h.endsWith('.' + d)); };
 const MKT_SEEN = 'mail.mktSeen.v1', MKT_EVERY = 15 * 60e3;
 const mktSortOn = () => ls.get(K.mktSort, 'on') === 'on';
 // Threads looked at and kept, by id: their historyId; 'k:' + sender + ':' +
@@ -1251,7 +1257,7 @@ async function mktKeepReason(t, item, call) {
   if ((t.messages || []).some(m => (m.labelIds || []).includes('SENT')) || item.email === me) return 'you wrote in it';
   if (tidyKept(item.email)) return 'you chose to keep';
   if (isBank(item.email)) return 'a bank';
-  if (transactional(item)) return 'alert or receipt';
+  if (!marketingSender(item.email) && transactional(item)) return 'alert or receipt';
   if (await knownSender(item.email, call)) return 'you’ve written to them';
   return '';
 }
@@ -1336,22 +1342,23 @@ async function undoMarketing(back) {
   } catch (err) { failed(err); }
 }
 
-function mktHTML() {
-  const on = mktSortOn(), last = Number(ls.get(K.mktSorted, 0));
-  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><span>Move marketing out of the inbox</span><button class="switch" role="switch" data-act="mkt-toggle" aria-checked="' + on + '" aria-label="Move marketing out of the inbox"></button></div>' +
-    '<p class="note">As the app opens, Gmail’s Promotions go to ' + esc(settings.label) + '. Banks, receipts, alerts, tagged mail and people you’ve written to stay.' +
-      (on && last ? ' Last sorted ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') + '.' : '') + '</p>';
-}
-
 let showKeeps = false;                // Settings: the always-kept list, folded away until asked for
+// Settings: Marketing and Tidy are one section, "Inbox clean-up": two
+// switches, one note on what always stays, and Tidy's own buttons.
 function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0)), keeps = tidyKeeps(), on = tidyOn();
+  const mon = mktSortOn(), mlast = Number(ls.get(K.mktSorted, 0));
+  const since = t => ' Last run ' + (ago(t) === 'now' ? 'just now' : ago(t) + ' ago') + '.';
   return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
+    '<div class="field"><b>Inbox clean-up</b></div>' +
+    '<div class="field"><span>Move marketing out of the inbox</span><button class="switch" role="switch" data-act="mkt-toggle" aria-checked="' + mon + '" aria-label="Move marketing out of the inbox"></button></div>' +
+    '<p class="note">As the app opens, Gmail’s Promotions (and Cars.com’s saved-search alerts) go to ' + esc(settings.label) + ', which is emptied after ' + settings.days + ' days.' +
+      (mon && mlast ? since(mlast) : '') + '</p>' +
     '<div class="field"><span>Tidy old unread mail</span><button class="switch" role="switch" data-act="tidy-toggle" aria-checked="' + on + '" aria-label="Tidy old unread mail"></button></div>' +
-    '<p class="note">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger. Banks, alerts, receipts and people always stay.' +
-      (on && last ? ' Last run ' + (ago(last) === 'now' ? 'just now' : ago(last) + ' ago') + '.' : '') + '</p>' +
-    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview</button><button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
+    '<p class="note">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger, under “' + TIDY_LABEL + '” (kept, never deleted).' +
+      (on && last ? since(last) : '') + '</p>' +
+    '<p class="note">Banks, alerts, receipts, tagged mail and people you’ve written to always stay.</p>' +
+    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview Tidy</button><button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
     (keeps.length ? '<div class="field"><span>Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
       (showKeeps ? keeps.map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '');
 }
@@ -1905,7 +1912,6 @@ function viewSettings() {
     '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
     '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
     '<div class="field"><span>Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div>' +
-    mktHTML() +
     tidyHTML() +
     notifyHTML() +
     blockedHTML() +

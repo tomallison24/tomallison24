@@ -422,7 +422,7 @@ labels are the app's own bookkeeping and never show up as tags.
 
 ## Tidy
 
-**Settings → Tidy old unread mail** has an **On/Off** switch. Turning it on starts the first run straight away, in the background. Unread mail that has sat in the inbox
+**Settings → Inbox clean-up → Tidy old unread mail** has an **On/Off** switch. Turning it on starts the first run straight away, in the background. Unread mail that has sat in the inbox
 for **60 days** is archived under a **Tidied** label, but only when both of
 these are true:
 
@@ -458,7 +458,7 @@ It never touches Flagged, Important or tagged mail (tags, reminders,
 Marketing), anything newer than 60 days, or any conversation you have replied
 in.
 
-**Preview** shows what would go, grouped by sender with the reason, and what is
+**Preview Tidy** shows what would go, grouped by sender with the reason, and what is
 kept and why. Nothing changes until you tap **Tidy now**, or **Tidy now, and
 every day**. When it is on, it runs once a day as the app opens.
 
@@ -470,7 +470,7 @@ until the app closes.
 
 ## Moving marketing out of the inbox
 
-**Settings → Move marketing out of the inbox** (on). As the app opens, and
+**Settings → Inbox clean-up → Move marketing out of the inbox** (on). As the app opens, and
 when it comes back after 15 minutes or more, Gmail's **Promotions** in the
 inbox move to **Marketing**: the whole inbox the first time, then only what
 arrived since. It goes a few emails a second in the background, so a big
@@ -498,8 +498,19 @@ deleting it: everything moved stays recoverable for at least a month. Open one a
 **Inbox** to bring it back: it stays in the inbox from then on, and the toast
 offers **Always Keep** for that sender. Undo does the same for a whole run.
 
-Only Gmail's Promotions category is looked at; newsletters Gmail files under
-Updates stay where they are (Tidy deals with old unread ones). This runs in
+Only Gmail's Promotions category is looked at, plus a short list of senders
+whose "alerts" are really advertising, which are sorted as marketing wherever
+Gmail files them and aren't kept for having "Alert" in the subject. For now
+that is Cars.com's saved-search mail (`emalert.cars.com`: "Inventory Alert",
+"Price drop!"); `MKT_ALWAYS` in `app.js` is the list. Other newsletters Gmail
+files under Updates stay where they are (Tidy deals with old unread ones).
+
+**How it fits with Tidy.** The two sit side by side in Settings under **Inbox
+clean-up**, with one note on what always stays. The sort handles Promotions of
+any age, read or unread, and Marketing is emptied after 30 days. Tidy handles
+what the sort doesn't: old (60 days) unread automated mail from other
+categories, which it **archives under Tidied and never deletes**. Anything the
+sort has already moved is out of the inbox, so Tidy never sees it. This runs in
 the app, not as a Gmail filter: a filter can't check whom you've written to or
 your Always kept list. So new marketing waits in the inbox until the app next
 opens, which moves it within seconds.
