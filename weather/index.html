@@ -622,10 +622,10 @@ async function getJSON(url, opts) {
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 15000);
   try {
     const r = await fetch(url, Object.assign({ headers: { Accept: 'application/geo+json' } }, opts, { signal: ac.signal }));
-    if (!r.ok) { const e = new Error(`${new URL(url).hostname} ${r.status}`); e.status = r.status; throw e; }
+    if (!r.ok) { const e = new Error(`${new URL(url, location.href).hostname} ${r.status}`); e.status = r.status; throw e; }
     return await r.json();
   } catch (e) {
-    if (e.name === 'AbortError') throw new Error(`${new URL(url).hostname} did not answer`);
+    if (e.name === 'AbortError') throw new Error(`${new URL(url, location.href).hostname} did not answer`);
     throw e;
   } finally { clearTimeout(timer); }
 }
@@ -1240,21 +1240,23 @@ function w3Hours(m) {
 // ---- Radar: NEXRAD reflectivity over a dark map, the last 50 minutes on a loop ----
 // Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
 // mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
-const R = { z: 7, idx: 11, playing: false, timer: null, touched: false, place: '', offs: [], hrrr: null };
-// Minutes ago, oldest first. The last 50 minutes come from IEM's ready-made tiles. The hour
-// before that comes from IEM's time-based map service (WMS-T), which this code could not test
-// against the live service: any of those frames that do not load are dropped, leaving the 50.
-const RADAR_OFFSETS = [110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
-const MERC = 20037508.342789244;
-// The next two hours are a forecast, not radar: the NWS HRRR model's simulated reflectivity,
-// which IEM draws every 15 minutes out to 18 hours. Frames are numbered from the model run's
-// start, so the run's time is read first (refd_1080.json, model_init_utc); without it there are
-// no forecast frames rather than mislabelled ones. Negative offsets are minutes ahead.
+const R = { z: 7, idx: 0, playing: false, timer: null, touched: false, place: '', offs: [], hrrr: null };
+// The loop is "Now" (the latest NEXRAD radar, IEM's ready-made tiles) and then the next two
+// hours, which are a forecast, not radar: the NWS HRRR model's simulated reflectivity, which
+// IEM draws every 15 minutes out to 18 hours. Offsets are minutes: 0 is now, negative is ahead.
+const RADAR_OFFSETS = [0];
 const RADAR_AHEAD = [15, 30, 45, 60, 75, 90, 105, 120];
+// Forecast frames are numbered from the model run's start, so that time is read first
+// (IEM's refd_1080.json, model_init_utc). IEM doesn't let other sites read that file, so it
+// comes through this site's own helper (functions/weather/api, on Cloudflare); a direct read
+// is tried first in case that ever changes. Without it there are no forecast frames rather
+// than mislabelled ones.
 async function hrrrInit() {
   if (R.hrrr && Date.now() - R.hrrr.at < 10 * 60000) return R.hrrr.init;
-  const j = await getJSON('https://mesonet.agron.iastate.edu/data/gis/images/4326/hrrr/refd_1080.json', { headers: {} });
-  const v = String(j.model_init_utc || '');
+  let j = null;
+  try { j = await getJSON('https://mesonet.agron.iastate.edu/data/gis/images/4326/hrrr/refd_1080.json', { headers: {} }); }
+  catch (e) { j = await getJSON('api/hrrr', { headers: { 'X-Weather': '1' }, cache: 'no-store', credentials: 'same-origin' }); }
+  const v = String((j && j.model_init_utc) || '');
   const init = /^\d{12}$/.test(v) ? Date.UTC(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8), +v.slice(8, 10), +v.slice(10, 12)) : Date.parse(v);
   if (!Number.isFinite(init)) throw new Error('No HRRR run time');
   R.hrrr = { init, at: Date.now() };
@@ -1266,14 +1268,7 @@ function hrrrTile(ahead, init, z, x, y) {
   const run = new Date(init).toISOString().slice(0, 16).replace(/[-T:]/g, '');
   return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFD-F${String(f).padStart(4, '0')}-${run}/${z}/${x}/${y}.png`;
 }
-function radarTile(off, z, x, y) {
-  if (off <= 50) return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
-  const size = 2 * MERC / 2 ** z, minx = -MERC + x * size, maxy = MERC - y * size;
-  const t = Math.floor((Date.now() / 1000 - off * 60) / 300) * 300;           // the service keeps a picture every 5 minutes
-  return 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q-t.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=nexrad-n0q-wmst&STYLES='
-    + `&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX=${minx.toFixed(2)},${(maxy - size).toFixed(2)},${(minx + size).toFixed(2)},${maxy.toFixed(2)}`
-    + `&TIME=${new Date(t * 1000).toISOString().slice(0, 19)}Z`;
-}
+const radarTile = (off, z, x, y) => `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/${z}/${x}/${y}.png`;
 const spanLabel = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 ? ' ' + m % 60 + 'm' : ''}`;
 const agoLabel = off => !off ? 'Now' : off > 0 ? `${spanLabel(off)} ago` : `in ${spanLabel(-off)}`;
 // CARTO has required a (free) key since late August 2026; without one every tile is
@@ -1378,7 +1373,11 @@ function radarSync() {
       const at = R.offs.indexOf(showing);
       if (at >= 0) R.idx = at; else radarShow(Math.min(R.idx, R.offs.length - 1));
     }, 9000);
-  }).catch(() => { /* no run time: the radar stays past-only rather than guess the forecast's times */ });
+  }).catch(() => {
+    // No run time: show the latest radar on its own, and say why the loop is missing.
+    if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
+    box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">The two-hour forecast isn’t available right now, so this is the latest radar only.</div>');
+  });
   // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
   if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || (R.touched && !wasPlaying)) return;
