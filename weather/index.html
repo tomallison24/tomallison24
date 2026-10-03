@@ -259,6 +259,34 @@
   .hx-col[data-hour] { cursor: pointer; -webkit-user-select: none; user-select: none; }
   .hx-col[data-hour]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
   @media (prefers-reduced-motion: reduce) { .hd-hero, .hd-tile { animation: none; } .dot i, .dot svg { transition: none; } }
+  /* ---- The day sheet: the hour popup's glass, with the day drawn hour by hour ---- */
+  .hd-temp em { font-style: normal; font-size: 38px; letter-spacing: -1.2px; opacity: 0.72; margin-left: 6px; }
+  .hd-tile.full { grid-column: 1 / -1; }
+  .dd-chart { display: block; width: 100%; height: auto; margin-top: 6px; overflow: visible; }
+  .dd-chart text { font: 600 11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; fill: rgba(255,255,255,0.62); }
+  .dd-chart .lbl { font-size: 13px; font-weight: 700; fill: #fff; }
+  .dd-key { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .dd-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .dd-none { padding: 18px 0 8px; font-size: 16px; color: var(--muted); }
+  .dd-txt { margin-top: 8px; font-size: 16px; line-height: 1.42; }
+  .dd-txt + .dd-txt { margin-top: 10px; }
+  .dd-txt b { display: block; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .dc[data-day] { cursor: pointer; -webkit-user-select: none; user-select: none; border-radius: 16px; }
+  .dc[data-day]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
+  .dc[data-day]:active { background: rgba(255,255,255,0.08); }
+
+
+  /* ---- 7-day: a column per day, the high over a bar down to the low ---- */
+  .dcols { display: flex; padding-top: 2px; }
+  .dc { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+  .dc-n { margin-top: 8px; font-size: 13px; font-weight: 700; letter-spacing: -0.3px; white-space: nowrap; }
+  .dc-ic { height: 30px; display: flex; align-items: center; }
+  .dc-r { height: 14px; font-size: 11px; font-weight: 700; line-height: 14px; color: #BFE3FF; white-space: nowrap; }
+  .dc-area { position: relative; width: 100%; }
+  .dc-hi, .dc-lo { position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dc-lo { font-weight: 500; opacity: 0.75; }
+  .dc-bar { position: absolute; left: 50%; width: 12px; margin-left: -6px; border-radius: 7px; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
+  .dc-now { position: absolute; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); }
 
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
   .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: rgba(255,255,255,0.8); padding: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
@@ -388,6 +416,15 @@
     <div class="grab"></div>
     <h2><span id="hourTitle">Hour</span><span class="hnav"><button data-hstep="-1" aria-label="Previous hour"></button><button data-hstep="1" aria-label="Next hour"></button><button data-close aria-label="Close"></button></span></h2>
     <div class="sheet-body" id="hourBody"></div>
+  </section>
+</div>
+
+<div id="dayWrap">
+  <div class="scrim" data-close></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dayTitle">
+    <div class="grab"></div>
+    <h2><span id="dayTitle">Day</span><span class="hnav"><button data-dstep="-1" aria-label="Previous day"></button><button data-dstep="1" aria-label="Next day"></button><button data-close aria-label="Close"></button></span></h2>
+    <div class="sheet-body" id="dayBody"></div>
   </section>
 </div>
 
@@ -723,14 +760,15 @@ async function fromNWS(lat, lon, retried) {
     t: Date.parse(p.startTime) / 1000, day: p.isDaytime,
     temp: p.temperatureUnit === 'C' ? Math.round(cToF(p.temperature)) : p.temperature,
     c: nwsCondition(p.icon, p.shortForecast),
-    r: (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0
+    r: (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0,
+    tx: typeof p.detailedForecast === 'string' ? p.detailedForecast.slice(0, 600) : ''
   }));
   const byDate = {};
   for (const p of P) {
     const k = ymd(p.t, tz);
     const d = byDate[k] || (byDate[k] = { t: p.t, key: k });
-    if (p.day) { d.hF = p.temp; d.c = p.c; d.r = p.r; d.t = p.t; }
-    else { d.lF = p.temp; d.cn = p.c; d.r = Math.max(d.r || 0, p.r); }
+    if (p.day) { d.hF = p.temp; d.c = p.c; d.r = p.r; d.t = p.t; d.dt = p.tx; }
+    else { d.lF = p.temp; d.cn = p.c; d.r = Math.max(d.r || 0, p.r); d.nt = p.tx; }
   }
   const today = ymd(now, tz);
   const days = Object.values(byDate).sort((a, b) => a.t - b.t).filter(d => d.key >= today);
@@ -750,12 +788,12 @@ async function fromNWS(lat, lon, retried) {
     days[0].c = days[0].cn;
   }
   const daily = days.filter(d => d.hF != null && d.lF != null).slice(0, 7)
-    .map(d => ({ t: d.t, c: d.c || d.cn, hF: d.hF, lF: d.lF, r: d.r || 0 }));
+    .map(d => ({ t: d.t, c: d.c || d.cn, hF: d.hF, lF: d.lF, r: d.r || 0, dt: d.dt || '', nt: d.nt || '' }));
   // The last day often has a high but no night yet; use the hourly low for it.
   const last = days[days.length - 1];
   if (daily.length < 7 && last && last.hF != null && last.lF == null) {
     const hs = HP.filter(h => ymd(h.t, tz) === last.key).map(h => h.pF);
-    if (hs.length) daily.push({ t: last.t, c: last.c, hF: last.hF, lF: Math.min.apply(null, hs), r: last.r || 0 });
+    if (hs.length) daily.push({ t: last.t, c: last.c, hF: last.hF, lF: Math.min.apply(null, hs), r: last.r || 0, dt: last.dt || '', nt: '' });
   }
 
   const alerts = ((al && al.features) || []).map(f => f.properties)
@@ -766,8 +804,8 @@ async function fromNWS(lat, lon, retried) {
 
   return {
     src: 'NWS', lat, lon, tz, place: pt.city, rKind: 'pop', cur,
-    hourly: HP.slice(0, 24).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r, fF: feelsF(h.pF, h.hum, h.mph), hum: h.hum, mph: h.mph, deg: h.deg })),
-    daily, alerts, v: 2
+    hourly: HP.slice(0, 168).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r, fF: feelsF(h.pF, h.hum, h.mph), hum: h.hum, mph: h.mph, deg: h.deg })),
+    daily, alerts, v: 3
   };
 }
 
@@ -787,7 +825,7 @@ async function fromOpenMeteo(lat, lon) {
   // WMO has no wind code; a strong sustained wind under a dry sky is `windy`.
   if (cur.wind_speed_10m >= 25 && cur.weather_code <= 3) c = 'windy';
   const hourly = [];
-  for (let i = 0; i < H.time.length && hourly.length < 24; i++) {
+  for (let i = 0; i < H.time.length && hourly.length < 168; i++) {
     if (H.time[i] > now - 3600) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]),
       fF: H.apparent_temperature ? Math.round(H.apparent_temperature[i]) : null, hum: H.relative_humidity_2m ? H.relative_humidity_2m[i] : null,
       mph: H.wind_speed_10m ? Math.round(H.wind_speed_10m[i]) : null, deg: H.wind_direction_10m ? H.wind_direction_10m[i] : null });
@@ -801,7 +839,7 @@ async function fromOpenMeteo(lat, lon) {
     src: 'Open-Meteo', lat, lon, tz: om.timezone, place: null, rKind: 'in',
     cur: { tF: cur.temperature_2m, hum: cur.relative_humidity_2m, mph: cur.wind_speed_10m, deg: cur.wind_direction_10m, c,
       fF: cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : feelsF(cur.temperature_2m, cur.relative_humidity_2m, cur.wind_speed_10m) },
-    hourly, daily, alerts: [], v: 2
+    hourly, daily, alerts: [], v: 3
   };
 }
 
@@ -836,7 +874,7 @@ async function fetchBase(lat, lon) {
 
 async function refresh(force) {
   if (!S.loc || (S.loading && Date.now() - S.loadingSince < 45000)) return render();   // a request that has been out for 45s is treated as lost
-  const fresh = S.data && S.data.v === 2 && S.data.key === locKey() && Date.now() - S.data.fetchedAt < 10 * 60 * 1000;
+  const fresh = S.data && S.data.v === 3 && S.data.key === locKey() && Date.now() - S.data.fetchedAt < 10 * 60 * 1000;
   if (fresh && !force) return render();
   const seq = ++S.seq;
   S.loading = true; S.loadingSince = Date.now(); S.error = null; render();
@@ -879,7 +917,7 @@ async function prefetchOthers() {
     const list = [S.here && { lat: S.here.lat, lon: S.here.lon }].concat(S.places).filter(Boolean);
     for (const p of list) {
       const key = keyOf(p), c = S.cache[key];
-      if (key === locKey() || (c && c.v === 2 && Date.now() - c.fetchedAt < 30 * 60 * 1000)) continue;
+      if (key === locKey() || (c && c.v === 3 && Date.now() - c.fetchedAt < 30 * 60 * 1000)) continue;
       try {
         const base = await fetchBase(p.lat, p.lon);
         if (base) { S.cache[key] = Object.assign(base, { fetchedAt: Date.now(), key }); saveCache(); }   // saved as we go: iOS may suspend the app mid-loop
@@ -981,7 +1019,7 @@ function model(b) {
   const hourly = b.hourly.filter(h => h.t > now - 3600).map(h => ({ t: h.t, c: nightFace(h.c, !isDayAt(ev, h.t + 1800)), p: Ti(h.pF), r: rr(h.r), dark: !isDayAt(ev, h.t + 1800),
     fl: h.fF == null ? null : Ti(h.fF), hum: h.hum == null ? null : Math.round(h.hum), w: h.mph == null ? null : Math.round(h.mph * kmh), deg: h.deg == null ? null : h.deg }));
   const today = ymd(now, b.tz);
-  const daily = b.daily.filter(d => ymd(d.t, b.tz) >= today).map(d => ({ t: d.t, c: d.c, h: Ti(d.hF), l: Ti(d.lF), r: rr(d.r) }));
+  const daily = b.daily.filter(d => ymd(d.t, b.tz) >= today).map(d => ({ t: d.t, c: d.c, h: Ti(d.hF), l: Ti(d.lF), r: rr(d.r), dt: d.dt || '', nt: d.nt || '' }));
   const next = k => ev.filter(e => !e.polar).map(e => e[k]).filter(t => t > now).sort((x, y) => x - y)[0];
   return {
     entity: {
@@ -1111,7 +1149,8 @@ const LINE = {
   smile: '<circle cx="12" cy="12" r="9.5"/><path d="M8 14.2s1.5 2.3 4 2.3 4-2.3 4-2.3"/><path d="M9 9.4h.01M15 9.4h.01"/>',
   drop: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
   wind: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>',
-  radar: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.8"/><path d="M12 12L18.6 5.4"/>'
+  radar: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.8"/><path d="M12 12L18.6 5.4"/>',
+  text: '<path d="M4 6h16M4 12h16M4 18h10"/>'
 };
 const line = (n, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LINE[n]}</svg>`;
 function viewHead(m) {
@@ -1128,6 +1167,12 @@ const hrFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'nume
 const minFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: tz }).replace(/\s/g, '');
 const hrOf = (t, tz) => +new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).slice(0, 2) % 24;
 const dayFmt = (t, tz) => new Date(t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
+const dayLong = (t, tz) => new Date(t * 1000).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz });
+// Hours since that place's midnight, minutes included (6:30PM is 18.5).
+const hourFrac = (t, tz) => {
+  const [h, mi] = new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).split(':');
+  return (+h % 24) + (+mi) / 60;
+};
 const compassLong = d => d == null ? '' : ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(d / 45) % 8];
 
 // The next 24 hours as the timeline and the popup both read them: each hour with
@@ -1406,18 +1451,13 @@ function radarSync() {
   }, 9000);
 }
 
-// Range bars against the week's own min/max, coloured by ABSOLUTE
-// temperature through the five-stop Celsius ramp; a dot on Today marks now.
-function wDays(m) {
-  const { entity, fc, tz } = m;
-  const days = (fc.daily || []).slice(0, 7);
-  if (!days.length) return '';
-  const unit = entity.attributes.precipitation_unit || '';
-  const f = (entity.attributes.temperature_unit || '').indexOf('F') >= 0;
-  const toC = t => f ? (t - 32) * 5 / 9 : t;
+// A temperature's colour on the five-stop Celsius ramp: cold blue through green to hot orange.
+// Absolute, so 30° looks the same in any week.
+function rampOf(m) {
+  const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
   const stops = [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]];
-  const ramp = t => {
-    const c = toC(t);
+  return t => {
+    const c = f ? (t - 32) * 5 / 9 : t;
     if (c <= stops[0][0]) return `rgb(${stops[0][1]})`;
     for (let i = 1; i < stops.length; i++) {
       if (c <= stops[i][0]) {
@@ -1428,30 +1468,43 @@ function wDays(m) {
     }
     return `rgb(${stops[stops.length - 1][1]})`;
   };
+}
+
+// Range bars against the week's own min/max, coloured by ABSOLUTE
+// temperature through the five-stop Celsius ramp; a dot on Today marks now.
+function wDays(m) {
+  const { entity, fc, tz } = m;
+  const days = (fc.daily || []).slice(0, 7);
+  if (!days.length) return '';
+  const unit = entity.attributes.precipitation_unit || '';
+  const ramp = rampOf(m);
   const min = Math.min.apply(null, days.map(d => d.l));
   const max = Math.max.apply(null, days.map(d => d.h));
   const span = Math.max(1, max - min);
-  const pct = t => ((t - min) / span * 100).toFixed(1);
+  // A column per day: the high over a bar that runs down to the low, every bar on the same
+  // scale (the week's own lowest low to highest high), so the week's shape shows at a glance.
+  const CH = 128;                                     // px of bar for the week's whole range
+  const yOf = t => (1 - (t - min) / span) * CH;
   const cur = entity.attributes.temperature;
-  const rows = days.map((d, i) => {
+  const cols = days.map((d, i) => {
     const name = i === 0 ? 'Today' : new Date(d.t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
     const icon = V.icons[d.c] || 'weather-cloudy';
     const tint = V.tints[d.c] || '#FFFFFF';
-    const rain = wet(m, d.r) ? `<div style="font-size:11px;font-weight:700;color:#BFE3FF;line-height:1;margin-top:1px;">${d.r}${unit}</div>` : '';
-    const dot = (i === 0 && cur != null)
-      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
-      : '';
-    return `<div style="display:grid;grid-template-columns:54px 34px 38px 1fr 38px;align-items:center;column-gap:10px;height:46px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
-      <div style="font-size:16px;font-weight:600;letter-spacing:-0.2px;">${name}</div>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 24, `color:${tint};`)}${rain}</div>
-      <div style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.65;">${d.l}°</div>
-      <div style="position:relative;height:5px;border-radius:999px;background:rgba(0,0,0,0.28);">
-        <div style="position:absolute;top:0;bottom:0;left:${pct(d.l)}%;width:${((d.h - d.l) / span * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,${ramp(d.l)},${ramp(d.h)});"></div>${dot}
+    const top = yOf(d.h), len = Math.max(6, yOf(d.l) - top);
+    const now = i === 0 && cur != null && d.h > d.l
+      ? `<i class="dc-now" style="top:${((1 - (Math.min(Math.max(cur, d.l), d.h) - d.l) / (d.h - d.l)) * 100).toFixed(1)}%"></i>` : '';
+    return `<div class="dc" data-day="${i}" role="button" tabindex="0" aria-label="Details for ${i === 0 ? 'today' : dayLong(d.t, tz)}">
+      <div class="dc-n">${name}</div>
+      <div class="dc-ic">${svg(icon, 24, `color:${tint};`)}</div>
+      <div class="dc-r">${wet(m, d.r) ? d.r + unit : ''}</div>
+      <div class="dc-area" style="height:${CH + 48}px">
+        <div class="dc-hi" style="top:${top.toFixed(1)}px">${d.h}°</div>
+        <div class="dc-bar" style="top:${(top + 22).toFixed(1)}px;height:${len.toFixed(1)}px;background:linear-gradient(0deg,${ramp(d.l)},${ramp(d.h)})">${now}</div>
+        <div class="dc-lo" style="top:${(top + 26 + len).toFixed(1)}px">${d.l}°</div>
       </div>
-      <div style="font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
     </div>`;
   });
-  return `<div class="w3-dhead">7-day forecast</div><div>${rows.join('')}</div>`;
+  return `<div class="w3-dhead">7-day forecast</div><div class="dcols">${cols.join('')}</div>`;
 }
 
 // Active NWS watches/warnings/advisories for this point, most severe first.
@@ -1637,7 +1690,7 @@ function fillHour() {
   const x = hrs[i], tz = m.tz, a = m.entity.attributes, metric = (a.temperature_unit || '').indexOf('C') >= 0;
   S.hourT = x.t;
   hourTitle.textContent = x.now ? 'Now' : `${dayFmt(x.t, tz)} ${hrFmt(x.t, tz)}`;
-  hourNav[0].disabled = i === 0; hourNav[1].disabled = i === hrs.length - 1;
+  navState(hourNav, i === 0, i === hrs.length - 1);
   const sky = (x.dark && V.vivid[x.c + '-night']) || V.vivid[x.c] || V.vivid.cloudy;
   const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
   const tint = V.tints[x.c] || '#FFFFFF';
@@ -1667,6 +1720,152 @@ function stepHour(dir) {
   const i = hrs.findIndex(x => x.t >= S.hourT), n = Math.max(0, Math.min(hrs.length - 1, (i < 0 ? hrs.length - 1 : i) + dir));
   S.hourT = hrs[n].t; fillHour();
 }
+
+const dayWrap = document.getElementById('dayWrap');
+const dayBody = document.getElementById('dayBody');
+const dayTitle = document.getElementById('dayTitle');
+const dayNav = dayWrap.querySelectorAll('[data-dstep]');
+dayNav[0].innerHTML = hourNav[0].innerHTML; dayNav[1].innerHTML = hourNav[1].innerHTML;
+dayWrap.querySelector('.hnav [data-close]').innerHTML = svg('close', 18);
+
+// One day, hour by hour, on a midnight-to-midnight axis: the temperature as a line in the
+// ramp's colours, rain as bars along the bottom, night shaded, and Now marked on today
+// (whose line starts at the current hour - the hours gone are not in the forecast).
+function dayChart(m, hrs, rise, set) {
+  const tz = m.tz, ramp = rampOf(m), metric = (m.entity.attributes.temperature_unit || '').indexOf('C') >= 0;
+  const X0 = 6, X1 = 314, YT = 34, YB = 96, RB = 134, RH = 26;
+  const x = f => X0 + f / 24 * (X1 - X0);
+  const seen = new Set(), pts = [];
+  for (const h of hrs) {                               // a clock-change day repeats an hour; keep the first
+    const f = hourFrac(h.t, tz), k = Math.floor(f);
+    if (h.p == null || seen.has(k)) continue;
+    seen.add(k); pts.push({ f: k, h });
+  }
+  if (pts.length < 2) return '<div class="dd-none">Hour-by-hour detail isn\'t available for this day yet.</div>';
+  const vs = pts.map(p => p.h.p), lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+  const span = Math.max(metric ? 4 : 7, hi - lo), base = lo - (span - (hi - lo)) / 2;   // a quiet day stays flat
+  const y = v => YB - (v - base) / span * (YB - YT);
+  const P = pts.map(p => [x(p.f + 0.5), y(p.h.p)]);
+  // A smooth curve through every hour (whole degrees would otherwise look like stairs), flat
+  // at each peak and trough so it never bulges past the day's real high or low.
+  const ms = P.slice(1).map((q, i) => (q[1] - P[i][1]) / (q[0] - P[i][0]));
+  const tg = P.map((q, i) => i === 0 ? ms[0] : i === P.length - 1 ? ms[i - 1] : ms[i - 1] * ms[i] < 0 ? 0 : (ms[i - 1] + ms[i]) / 2);
+  let d = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for (let i = 1; i < P.length; i++) {
+    const [x0, y0] = P[i - 1], [x1, y1] = P[i], k = (x1 - x0) / 3;
+    d += ` C${(x0 + k).toFixed(1)},${(y0 + tg[i - 1] * k).toFixed(1)} ${(x1 - k).toFixed(1)},${(y1 - tg[i] * k).toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const area = `${d} L${P[P.length - 1][0].toFixed(1)},${RB} L${P[0][0].toFixed(1)},${RB} Z`;
+  const grad = [0, 1, 2, 3, 4].map(k => `<stop offset="${k / 4}" stop-color="${ramp(base + span * k / 4)}"/>`).join('');
+  // Night: from the sun when it rises and sets that day, else hour by hour.
+  let night = '';
+  const band = (a, b) => b > a ? `<rect x="${x(a).toFixed(1)}" y="${YT - 26}" width="${(x(b) - x(a)).toFixed(1)}" height="${RB - YT + 26}" rx="6" fill="rgba(0,8,30,0.22)"/>` : '';
+  if (rise && set) night = band(0, hourFrac(rise, tz)) + band(hourFrac(set, tz), 24);
+  else night = pts.filter(p => p.h.dark).map(p => band(p.f, p.f + 1)).join('');
+  const wetH = h => m.rKind === 'pop' ? h.r / 100 : Math.min(1, h.r / (metric ? 5 : 0.2));
+  const bars = pts.filter(p => p.h.r > 0).map(p => {
+    const hgt = Math.max(2, wetH(p.h) * RH);
+    return `<rect x="${(x(p.f) + 1.5).toFixed(1)}" y="${(RB - hgt).toFixed(1)}" width="${(x(1) - X0 - 3).toFixed(1)}" height="${hgt.toFixed(1)}" rx="2" fill="#5AC8FA" opacity="${(0.45 + 0.5 * wetH(p.h)).toFixed(2)}"/>`;
+  }).join('');
+  const hiP = pts.reduce((b, p) => p.h.p > b.h.p ? p : b), loP = pts.reduce((b, p) => p.h.p < b.h.p ? p : b);
+  const cx = p => Math.min(X1 - 14, Math.max(X0 + 14, x(p.f + 0.5)));
+  const mark = (p, above) => `<circle cx="${x(p.f + 0.5).toFixed(1)}" cy="${y(p.h.p).toFixed(1)}" r="4" fill="#fff"/>`
+    + `<text class="lbl" x="${cx(p).toFixed(1)}" y="${(y(p.h.p) + (above ? -10 : 20)).toFixed(1)}" text-anchor="middle">${p.h.p}°</text>`;
+  const marks = hi === lo ? mark(hiP, true) : mark(hiP, true) + mark(loP, false);
+  const clock = H => new Date(Date.UTC(2000, 0, 1, H)).toLocaleTimeString([], { hour: 'numeric', timeZone: 'UTC' }).replace(/\s/g, '');
+  const ticks = [6, 12, 18].map(H => `<line x1="${x(H)}" x2="${x(H)}" y1="${RB}" y2="${RB + 4}" stroke="rgba(255,255,255,0.3)"/><text x="${x(H)}" y="${RB + 17}" text-anchor="middle">${clock(H)}</text>`).join('');
+  const nowF = hourFrac(Date.now() / 1000, tz);
+  const nowM = ymd(Date.now() / 1000, tz) === ymd(pts[0].h.t, tz)
+    ? `<line x1="${x(nowF).toFixed(1)}" x2="${x(nowF).toFixed(1)}" y1="${YT - 18}" y2="${RB}" stroke="#fff" stroke-width="1.5" stroke-dasharray="2 3" opacity="0.75"/><text x="${Math.max(X0 + 12, x(nowF)).toFixed(1)}" y="${YT - 22}" text-anchor="middle">Now</text>` : '';
+  return `<svg class="dd-chart" viewBox="0 0 320 156" role="img" aria-label="Temperature from ${lo}° to ${hi}° through the day">
+      <defs><linearGradient id="ddT" gradientUnits="userSpaceOnUse" x1="0" y1="${YB}" x2="0" y2="${YT}">${grad}</linearGradient>
+        <linearGradient id="ddA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+      ${night}
+      <line x1="${X0}" x2="${X1}" y1="${RB}" y2="${RB}" stroke="rgba(255,255,255,0.22)"/>
+      ${bars}
+      <path d="${area}" fill="url(#ddA)"/>
+      <path d="${d}" fill="none" stroke="url(#ddT)" stroke-width="3.5" stroke-linecap="round"/>
+      ${nowM}${marks}${ticks}
+    </svg>
+    <div class="dd-key"><span><i style="background:linear-gradient(90deg,${ramp(lo)},${ramp(hi)})"></i>Temperature</span><span><i style="background:#5AC8FA"></i>${m.rKind === 'pop' ? 'Chance of rain' : 'Rain'}</span><span><i style="background:rgba(0,8,30,0.45)"></i>Night</span></div>`;
+}
+
+// Tap a day: the hour popup's Liquid Glass sheet, for a whole day, with arrows to step through the week.
+function fillDay() {
+  if (!S.data) return closeSheet();
+  const m = model(S.data), tz = m.tz, days = (m.fc.daily || []).slice(0, 7);
+  if (!days.length) return closeSheet();
+  let i = days.findIndex(d => ymd(d.t, tz) === S.dayKey);
+  if (i < 0) i = S.dayKey < ymd(days[0].t, tz) ? 0 : days.length - 1;   // the day you opened may have passed since
+  const d = days[i], key = ymd(d.t, tz), a = m.entity.attributes;
+  const today = key === ymd(Date.now() / 1000, tz);
+  S.dayKey = key;
+  dayTitle.textContent = today ? 'Today' : dayLong(d.t, tz);
+  navState(dayNav, i === 0, i === days.length - 1);
+  const hrs = (m.fc.hourly || []).filter(h => ymd(h.t, tz) === key);
+  const ev = sunEvents(S.data.lat, S.data.lon, Date.now(), 9).filter(e => !e.polar);
+  const rise = ev.map(e => e.rise).find(t => ymd(t, tz) === key), set = ev.map(e => e.set).find(t => ymd(t, tz) === key);
+  const sky = V.vivid[d.c] || V.vivid.cloudy, icon = V.icons[d.c] || 'weather-cloudy', tint = V.tints[d.c] || '#FFFFFF';
+  const tile = (k, ico, label, value, sub) => `<div class="hd-tile" style="--k:${k}"><div class="hd-k">${ico}${label}</div><div class="hd-v">${value}</div><div class="hd-s">${sub || '&nbsp;'}</div></div>`;
+  const most = k => hrs.filter(h => h[k] != null).reduce((b, h) => !b || h[k] > b[k] ? h : b, null);
+  const vals = k => hrs.map(h => h[k]).filter(v => v != null);
+  const tiles = [];
+
+  const top = most('r');
+  if (m.rKind === 'pop') tiles.push(tile(2, svg('umbrella-outline', 17, ''), 'Chance of rain', `${Math.round(d.r)}%`,
+    wet(m, d.r) && top && top.r >= 20 ? `Most likely around ${hrFmt(top.t, tz)}` : 'Unlikely'));
+  else tiles.push(tile(2, svg('umbrella-outline', 17, ''), 'Rain', d.r > 0 ? `${d.r}<small> ${a.precipitation_unit || ''}</small>` : 'None',
+    d.r > 0 ? (top && top.r > 0 ? `Heaviest around ${hrFmt(top.t, tz)}` : 'Total for the day') : 'A dry day'));
+  const w = most('w');
+  if (w) tiles.push(tile(3, line('wind', 17), 'Wind',
+    `${w.deg == null ? '' : `<span class="hd-arrow" style="transform:rotate(${(w.deg + 180) % 360}deg)">${svg('navigation', 22, '')}</span>`}${w.w}<small> ${a.wind_speed_unit || 'mph'}</small>`,
+    `Strongest at ${hrFmt(w.t, tz)}${w.deg == null ? '' : `, from the ${compass(w.deg)}`}`));
+  const hu = vals('hum');
+  if (hu.length) {
+    const avg = Math.round(hu.reduce((s, v) => s + v, 0) / hu.length), hlo = Math.min.apply(null, hu), hhi = Math.max.apply(null, hu);
+    tiles.push(tile(4, line('drop', 17), 'Humidity', `${avg}%`, hlo === hhi ? dampWord(avg) : `${dampWord(avg)}, ${hlo}–${hhi}%`));
+  }
+  const fl = vals('fl');
+  if (fl.length) {
+    const flo = Math.min.apply(null, fl), fhi = Math.max.apply(null, fl);
+    tiles.push(tile(5, line('smile', 17), 'Feels like', `${fhi}°`, flo === fhi ? 'All day' : `Down to ${flo}°`));
+  }
+  if (rise && set) {
+    const len = Math.round((set - rise) / 60);
+    tiles.push(`<div class="hd-tile wide" style="--k:6"><div class="hd-k">${svg('weather-sunset-up', 18, 'color:#FFD60A;')}Sunrise</div><div class="hd-v">${minFmt(rise, tz)}</div></div><div class="hd-tile wide" style="--k:6"><div class="hd-k">${svg('weather-sunset-down', 18, 'color:#FFD60A;')}Sunset</div><div class="hd-v">${minFmt(set, tz)}</div><div class="hd-s">${Math.floor(len / 60)}h ${len % 60}m of daylight</div></div>`);
+  }
+  if (d.dt || d.nt) tiles.push(`<div class="hd-tile full" style="--k:7"><div class="hd-k">${line('text', 17)}Forecast</div>`
+    + (d.dt ? `<p class="dd-txt"><b>${today ? 'Today' : 'Day'}</b>${esc(d.dt)}</p>` : '')
+    + (d.nt ? `<p class="dd-txt"><b>${today ? 'Tonight' : 'Night'}</b>${esc(d.nt)}</p>` : '')
+    + '<div class="hd-s">National Weather Service</div></div>');
+
+  dayBody.innerHTML = `<div class="hd-hero" style="background:${sky};--k:0">
+      <div><div class="hd-temp" aria-label="High ${d.h}°, low ${d.l}°">${d.h}<span>°</span><em>${d.l}°</em></div><div class="hd-words">${V.words[d.c] || d.c}</div></div>
+      ${svg(icon, 76, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}
+    </div>
+    <div class="hd-grid"><div class="hd-tile full" style="--k:1"><div class="hd-k">${line('thermo', 17)}Through the day</div>${dayChart(m, hrs, rise, set)}</div>${tiles.join('')}</div>`;
+  dayBody.scrollTop = 0;
+}
+function openDay(i) {
+  if (!S.data) return;
+  const m = model(S.data), d = (m.fc.daily || [])[i];
+  if (!d) return;
+  S.dayKey = ymd(d.t, m.tz); fillDay(); dayWrap.classList.add('open'); lockBehind(dayWrap);
+}
+function stepDay(dir) {
+  const m = model(S.data), days = (m.fc.daily || []).slice(0, 7);
+  const i = days.findIndex(d => ymd(d.t, m.tz) === S.dayKey), n = Math.max(0, Math.min(days.length - 1, (i < 0 ? 0 : i) + dir));
+  S.dayKey = ymd(days[n].t, m.tz); fillDay();
+}
+
+// Disable a sheet's arrow at the first or last item without losing keyboard focus: a
+// focused button that becomes disabled drops focus out of the sheet.
+function navState(btns, atStart, atEnd) {
+  const lost = (atStart && document.activeElement === btns[0]) || (atEnd && document.activeElement === btns[1]);
+  btns[0].disabled = atStart; btns[1].disabled = atEnd;
+  if (lost) (btns[atStart ? 1 : 0].disabled ? btns[0].closest('.sheet') : btns[atStart ? 1 : 0]).focus({ preventScroll: true });
+}
+
 let lastFocus = null;
 function lockBehind(sheetWrap) {
   lastFocus = document.activeElement;
@@ -1674,7 +1873,7 @@ function lockBehind(sheetWrap) {
   const sh = sheetWrap.querySelector('.sheet'); sh.tabIndex = -1; sh.focus({ preventScroll: true });
 }
 function closeSheet() {
-  wrap.classList.remove('open'); hourWrap.classList.remove('open'); q.blur();
+  wrap.classList.remove('open'); hourWrap.classList.remove('open'); dayWrap.classList.remove('open'); q.blur();
   if (app.inert) { app.inert = false; if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); lastFocus = null; }
 }
 // The sliding glass thumb under the units switch (home/slide.js, loaded first).
@@ -1709,7 +1908,7 @@ q.addEventListener('input', () => {
 
 // ---- Events ----
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay],[data-hour],[data-hstep]');
+  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay],[data-hour],[data-hstep],[data-day],[data-dstep]');
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
   if (t.dataset.view) {
@@ -1718,6 +1917,8 @@ document.addEventListener('click', e => {
   }
   if (t.dataset.hour) return openHour(+t.dataset.hour);
   if (t.dataset.hstep) return stepHour(+t.dataset.hstep);
+  if (t.dataset.day != null) return openDay(+t.dataset.day);
+  if (t.dataset.dstep) return stepDay(+t.dataset.dstep);
   if (t.dataset.rz) { R.touched = true; R.z = Math.max(5, Math.min(9, R.z + +t.dataset.rz)); return radarSync(); }
   if (t.hasAttribute('data-rplay')) { R.touched = true; return radarPlay(!R.playing); }
   if (t.dataset.alert != null) { S.alertOpen[t.dataset.alert] = !S.alertOpen[t.dataset.alert]; return render(); }
@@ -1742,8 +1943,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeSheet();
-  const h = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-hour]');
-  if (h) { e.preventDefault(); openHour(+h.dataset.hour); }
+  const h = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-hour],[data-day]');
+  if (h) { e.preventDefault(); h.dataset.hour ? openHour(+h.dataset.hour) : openDay(+h.dataset.day); }
 });
 document.addEventListener('input', e => { if (e.target.id === 'rdScrub') { R.touched = true; radarPlay(false); radarShow(+e.target.value); } });
 

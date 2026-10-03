@@ -61,8 +61,26 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   the 24) and the 7-day forecast sit directly on it, with no card edge. A new
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
-  14px chips, 16px day rows, 12-17px in the hourly columns.
-- **Hourly tray**: the next 24 hours, scrolling sideways, straight on the sky
+  14px chips, 12-17px in the hourly columns and the 7-day columns.
+- **7-day forecast**: a column per day, side by side: the day, its icon, the
+  chance of rain (20% and up), then the high over a bar that runs down to the
+  low. Every bar is on the same scale (the week's lowest low to its highest
+  high), so the week's shape shows at a glance; the bar's colour follows the
+  temperature, and a white dot on Today's bar marks the temperature now.
+- **Day sheet**: tap a day for the same Liquid Glass sheet as the hour popup,
+  with arrows to step through the week. It shows the high and low, then the day
+  drawn hour by hour on a midnight-to-midnight chart: the temperature as a
+  smooth line (flat at the peak and trough, so it never passes the real high or
+  low) in the 7-day bars' colours, rain as bars along the bottom, night shaded
+  from that day's sunrise and sunset, and Now marked on today. Under it: chance
+  of rain (and the hour it is most likely) or the day's total, the strongest
+  wind and when, humidity, the feels-like high and low, sunrise, sunset and
+  hours of daylight, and, for US places, the NWS's own written forecast for the
+  day and the night. To draw this, the app keeps a week of hourly forecast
+  (where the hourly forecast stops short of the last day, that day says its
+  hours aren't available yet) and the NWS `detailedForecast` text; the saved data's
+  version went to 3, so older saved forecasts are fetched again.
+- **Hourly tray**: the next 24 hours (of the week kept), scrolling sideways, straight on the sky
   (no panel behind it) in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and a rain
