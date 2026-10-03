@@ -19,6 +19,25 @@ Mail and News. Free, no accounts, no server.
 - **Reminders**: lists, Today / Upcoming / Flagged / All, priority, flag, tags.
   Quick add understands `today`, `tomorrow` and `#tags`
   (`Call mom tomorrow #family`).
+- **Grocery sections**: a grocery list shows its items under store sections
+  in supermarket order: Produce, Bakery, Deli, Meat, Seafood, Dairy & Eggs,
+  Frozen, Pantry, Snacks & Sweets, Drinks, Household, Personal Care, Baby,
+  Pets, then Other. Type `Milk` and it lands under Dairy & Eggs. It's on by
+  itself for a list called Groceries or Shopping (or a store's name); any
+  list can turn it on or off with **Sort into store sections** (tap the
+  list's chip again to edit it). Choosing the list shows all of it, not just
+  today's.
+  - Worked out on the phone from a word list (`aisles.js`): the last word
+    usually names the thing (`chocolate milk` is milk, `chicken soup` is
+    soup), with two-word names such as `peanut butter` and `ice cream` known
+    as phrases. Quantities and notes are ignored (`2 lbs carrots (organic)`).
+    Nothing is sent anywhere.
+  - **It learns.** If something lands in the wrong place, open it and pick
+    its **Section**. That item moves, and the list remembers the name, so
+    next time it goes there by itself, however it's typed. What a list has
+    learned travels with it in the Google Sheet, so both phones sort alike.
+    **Auto** puts it back and forgets.
+  - Things it doesn't know go under **Other** until you place them once.
 - **Paste from Claude (or anywhere)**: copy a reply, tap the clipboard button
   next to the pencil. On Notes it becomes a note (the heading or first line is the
   title, markdown is tidied, `#tags` kept, recipes tagged `recipe`). On
@@ -128,7 +147,8 @@ an iPhone, so notifications are turned on in each one you want them in.
 
 ## How it's built
 
-- **No build step.** `index.html` is the whole app; `sw.js` keeps it working
+- **No build step.** `index.html` is the whole app (with `aisles.js`, the
+  grocery sections' word list); `sw.js` keeps it working
   offline and shows notifications; `manifest.webmanifest` and the icons make
   it installable. `push/` is the notification server (a Cloudflare Worker),
   deployed by `.github/workflows/notes-push.yml`.
