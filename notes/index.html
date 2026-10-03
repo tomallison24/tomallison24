@@ -810,6 +810,11 @@ svg.fs{fill:currentColor}
           <p class="label">List</p>
           <div class="opts" id="tdList" role="radiogroup" aria-label="List"></div>
         </div>
+        <div class="field" id="tdAisleField" hidden>
+          <p class="label">Section</p>
+          <div class="opts" id="tdAisle" role="radiogroup" aria-label="Store section"></div>
+          <p class="hint">Choosing one teaches the list: next time this item goes there by itself.</p>
+        </div>
         <div class="field">
           <p class="label">Tags</p>
           <div class="box glass"><div class="tagedit" id="tdTags"><input id="tdTagInput" list="tagList" placeholder="Add tag" aria-label="Add tag" enterkeyhint="done"></div></div>
@@ -833,6 +838,10 @@ svg.fs{fill:currentColor}
       <div class="sheetbody">
         <div class="box glass"><input class="plain" id="lsName" placeholder="List name" aria-label="List name" style="font-size:18px;font-weight:700"></div>
         <div class="field"><p class="label">Color</p><div class="swatches" id="lsColors" role="radiogroup" aria-label="List color"></div></div>
+        <div class="field">
+          <div class="rgroup glass"><button class="swrow" id="lsGrocery" type="button" role="switch" aria-checked="false"><svg viewBox="0 0 24 24"><path d="M3.4 4.4h2.2l2.3 10.4a1.6 1.6 0 0 0 1.6 1.2h8.2a1.6 1.6 0 0 0 1.6-1.2l1.3-6.2H6.6"/><circle cx="10" cy="19.6" r="1.3"/><circle cx="17.4" cy="19.6" r="1.3"/></svg><span class="grow">Sort into store sections</span><span class="switch" aria-hidden="true"></span></button></div>
+          <p class="hint">Groups the list by section (Produce, Meat, Dairy & Eggs…) in supermarket order. On by itself for lists called Groceries or Shopping.</p>
+        </div>
         <button class="btn quiet danger" id="lsDelete" type="button">Delete list and its reminders</button>
       </div>
     </div>
@@ -1071,6 +1080,7 @@ svg.fs{fill:currentColor}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="aisles.js"></script>
 <script>
 (function(){
   const KEY = 'allison-notes-v1';
@@ -1794,6 +1804,22 @@ svg.fs{fill:currentColor}
     return (b.prio - a.prio) || (a.created - b.created);
   }
 
+  // ---------- grocery sections (aisles.js) ----------
+  // A grocery list shows its items under store sections in supermarket order.
+  // An item's section is the one chosen for it, else what the list has learned
+  // for that name, else worked out from the words.
+  const AISLE = window.NotesAisles;
+  const isGrocery = l => !!l && (l.grocery != null ? !!l.grocery : AISLE.groceryName(l.name));
+  const aisleOf = t => t.aisle && AISLE.NAMES[t.aisle] ? t.aisle : AISLE.sectionOf(t.title, (lists.find(l => l.id === t.list) || {}).learn);
+  function learnAisle(t, aisle){
+    const l = lists.find(x => x.id === t.list), k = AISLE.key(t.title); if (!l || !k) return;
+    const learn = Object.assign({}, l.learn);
+    delete learn[k];
+    if (aisle) learn[k] = aisle;
+    const ks = Object.keys(learn); ks.slice(0, Math.max(0, ks.length - 300)).forEach(x => delete learn[x]);   // the newest 300
+    l.learn = learn;
+  }
+
   function renderRem(){
     const open = todos.filter(t => !t.done);
     const dueToday = open.filter(t => t.date && t.date <= todayStr()).length;
@@ -1830,8 +1856,9 @@ svg.fs{fill:currentColor}
         + (searching ? 'Try a different word or #tag.' : st.rview === 'today' ? 'Nothing due today. Enjoy it.' : 'Add one above.') + '</div>';
     } else {
       const groups = new Map();
-      items.forEach(t => { const b = t.done && !recentlyDone(t) ? 'done' : bucket(t); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(t); });
-      [...BUCKETS, ['done','Completed']].forEach(([k, label]) => {
+      const aisles = !searching && st.rlist && isGrocery(listById(st.rlist));
+      items.forEach(t => { const b = t.done && !recentlyDone(t) ? 'done' : aisles ? aisleOf(t) : bucket(t); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(t); });
+      [...(aisles ? AISLE.SECTIONS.map(x => [x.id, x.name]) : BUCKETS), ['done','Completed']].forEach(([k, label]) => {
         const g = groups.get(k); if (!g) return;
         h += '<section class="rgroup glass"><h2 class="sechead'+(k === 'overdue' ? ' over' : '')+'"><span>'+label+'</span><span>'+g.length+'</span></h2>'
           + g.map(todoRow).join('')+'</section>';
@@ -1849,7 +1876,7 @@ svg.fs{fill:currentColor}
     if (l) {
       const id = l.dataset.list || null;
       if (id && st.rlist === id) openListEditor(id);
-      else { st.rlist = id; animateIn($('remBody')); render(); }
+      else { st.rlist = id; if (id && isGrocery(listById(id))) st.rview = 'all'; animateIn($('remBody')); render(); }
       return;
     }
     if (e.target.closest('#addList')) { openListEditor(null); return; }
@@ -1917,19 +1944,27 @@ svg.fs{fill:currentColor}
         : !t.time && a >= 0 ? 'Without a time, it alerts at ' + fmtClock(push.morning) + (a ? '' : ' on the day') + '.' : '';
     }
     $('tdPrio').innerHTML = ['None','Low','Medium','High'].map((p, i) => '<button class="opt" type="button" role="radio" data-p="'+i+'" aria-checked="'+(t.prio === i)+'">'+p+'</button>').join('');
+    const groc = isGrocery(listById(t.list));
+    $('tdAisleField').hidden = !groc;
+    if (groc) {
+      const auto = AISLE.sectionOf($('tdTitle').value || t.title, listById(t.list).learn), cur = t.aisle && AISLE.NAMES[t.aisle] ? t.aisle : '';
+      $('tdAisle').innerHTML = '<button class="opt" type="button" role="radio" data-ai="" aria-checked="'+!cur+'">Auto · '+esc(AISLE.NAMES[auto])+'</button>'
+        + AISLE.SECTIONS.map(x => '<button class="opt" type="button" role="radio" data-ai="'+x.id+'" aria-checked="'+(cur === x.id)+'">'+esc(x.name)+'</button>').join('');
+    }
     $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+l.id+'" style="--lc:'+l.color+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
     todoTags.render();
     slideTodo();
   }
   // When, Priority and List slide their thumbs; a newly opened reminder places them without moving.
-  const slideTodo = jump => ['tdQuick', 'tdAlert', 'tdPrio', 'tdList'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), id, { jump }));
+  const slideTodo = jump => ['tdQuick', 'tdAlert', 'tdPrio', 'tdList', 'tdAisle'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), id, { jump }));
   window.addEventListener('resize', () => { slideTabs(true); slideRem(true); slideTodo(true); });
   function finishTodo(){
     const t = st.todo;
     t.title = $('tdTitle').value.trim() || t.title;
     t.notes = $('tdNotes').value.replace(/\s+$/,'');
     todoTags.flush();
+    if (t.aisleSet !== undefined) { learnAisle(t, t.aisleSet); delete t.aisleSet; }
     todos[todos.findIndex(x => x.id === t.id)] = t;
     st.todo = null; save(); closeSheet('todoSheet'); render();
   }
@@ -1946,6 +1981,13 @@ svg.fs{fill:currentColor}
   $('tdAlert').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { st.todo.alert = +b.dataset.a; renderTodo(); } });
   $('tdPrio').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { st.todo.prio = +b.dataset.p; renderTodo(); } });
   $('tdList').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (b) { st.todo.list = b.dataset.l; renderTodo(); } });
+  $('tdAisle').addEventListener('click', e => {
+    const b = e.target.closest('[data-ai]'); if (!b) return;
+    const a = b.dataset.ai || null;
+    if (a) st.todo.aisle = a; else delete st.todo.aisle;
+    st.todo.aisleSet = a;                     // learned when the reminder is saved
+    renderTodo();
+  });
   $('tdFlag').onclick = () => { st.todo.flagged = !st.todo.flagged; renderTodo(); };
   // Where the site is on Cloudflare, the Calendar app's function puts the
   // reminder straight into the iCloud Family calendar (calendar/README.md);
@@ -1980,13 +2022,17 @@ svg.fs{fill:currentColor}
     $('lsLbl').textContent = l ? 'Edit list' : 'New list';
     $('lsName').value = st.listEdit.name;
     $('lsDelete').hidden = !l || lists.length < 2;
-    renderListColors();
+    renderListColors(); renderListGrocery();
     openSheet('listSheet');
     $('lsName').focus();
   }
   function renderListColors(){
     $('lsColors').innerHTML = LIST_COLORS.map(c => '<button class="swatch list" type="button" role="radio" data-c="'+c+'" style="--lc:'+c+'" aria-label="Color '+c+'" aria-checked="'+(st.listEdit.color === c)+'"></button>').join('');
   }
+  const editGrocery = () => isGrocery(Object.assign({}, st.listEdit, {name: $('lsName').value}));
+  function renderListGrocery(){ $('lsGrocery').setAttribute('aria-checked', editGrocery()); }
+  $('lsGrocery').onclick = () => { st.listEdit.grocery = !editGrocery(); renderListGrocery(); };
+  $('lsName').addEventListener('input', renderListGrocery);
   $('lsColors').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { st.listEdit.color = b.dataset.c; renderListColors(); } });
   $('lsName').addEventListener('keydown', e => { if (e.key === 'Enter') $('lsSave').click(); });
   $('lsSave').onclick = () => {
