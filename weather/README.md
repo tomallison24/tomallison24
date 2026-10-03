@@ -64,7 +64,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
   14px chips, 16px day rows, 12-17px in the hourly columns.
-- **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
+- **Hourly tray**: the next 24 hours, scrolling sideways, straight on the sky
+  (no panel behind it) in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and a rain
   bar with its chance when it is 20% or more. The only thing that moves in the
