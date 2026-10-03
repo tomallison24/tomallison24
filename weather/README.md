@@ -10,14 +10,18 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   location (the last known place at once, then its fresh forecast), whatever
   you were looking at last. If location is off, it opens your first saved
   city, or asks you to allow location or search.
-- **Places**: a strip of glass pills above the forecast: My Location first,
-  then your saved cities, each with its temperature, and a + at the end.
-  Tap a pill, or swipe the forecast sideways, to move between places; the new
-  place slides in and its hours animate in again. Tap the place name or + for
-  the Places sheet: search "Add a city", see every place's weather, remove one
-  with its ✕, and switch units. Up to 12 cities. Each place's forecast is
-  kept for instant switching and topped up quietly in the background.
-  (Older versions kept one place; it is carried over as a saved city.)
+- **Places**: tap the place name (it has a chevron) for the Places sheet:
+  My Location first, then your saved cities with their weather; search "Add a
+  city", remove one with its ✕, switch units. Up to 12 cities. Each place's
+  forecast is kept for instant switching and topped up quietly in the
+  background. (Older versions kept one place; it is carried over as a saved
+  city.)
+- **Swipe between places**: drag the forecast card sideways and it follows
+  your finger. Let go past a quarter of the way, or flick, and it slides off
+  while the next place slides in from the other side; let go early and it
+  springs back; at the first or last place it only gives a little. The hourly
+  row, the radar and the view buttons keep their own gestures. Page dots under
+  the card show where you are (tap one to jump).
 - **Page dots** under the forecast, one per place (My Location is the arrow);
   the current one stretches into a pill. Tap a dot to go there. They hide
   when you have only one place.
