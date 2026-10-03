@@ -28,7 +28,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - **Five views of the timeline**: five little glass buttons above the hours
   (with a thumb that slides between them) switch what the main card shows:
   **Hourly** (temperature, with rain bars), **Feels like** (each hour's
-  heat index or wind chill, with how far it is from the air temperature),
+  heat index or wind chill, with the rain chance underneath as on Hourly;
+  how far it is from the air temperature is in the hour popup),
   **Humidity** (with Dry / Comfy / Humid / Muggy), **Wind** (an arrow
   pointing where it blows to, the speed, and the compass direction), and
   **Radar**. Feels like uses the NWS heat-index and wind-chill formulas on the
@@ -40,18 +41,21 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   CARTO's dark tiles (OpenStreetMap data), and both are credited on the map.
   It covers the continental US; elsewhere it says so. If no tiles arrive it
   says that, with a link to the NWS radar, rather than show a blank map.
-  Neither tile service is documented anywhere this code can check, so if radar
-  ever goes blank, the URL templates are `radarTile` and `baseTile`.
+  CARTO's map tiles need a free key (since late August 2026; without one they
+  are stamped "API KEY REQUIRED"): it is `CARTO_KEY` in `index.html`. The
+  radar URL template is `radarTile` and the map's is `baseTile`.
 - **One card**: the current weather, the hourly timeline (about six and a half
   hours across, scroll for the rest of the 24), and the 7-day forecast all sit
   on the main card; there is no chevron or drawer to open. Type is sized to
   read at a glance without crowding: a 76px temperature, 18-19px place and
   conditions, 14px chips, 16px day rows, 12-17px in the hourly columns.
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
-  time (midnight shows the day), an icon that moves to suit the weather (the
-  sun turns, rain patters, snow sways, storms flicker, wind and fog drift,
-  sunrise and sunset rise and sink), the temperature on a curve, and a rain
-  bar with its chance when it is 20% or more. "Now" pulses. When the hours
+  time (midnight shows the day), its weather icon, the temperature on a
+  curve, and a rain
+  bar with its chance when it is 20% or more. Only the current hour moves: its
+  icon suits the weather (the sun turns, rain patters, snow sways, storms
+  flicker, wind and fog drift) and "Now" pulses; the other hours hold still so
+  the tray stays calm. When the hours
   first appear they slide in, the curve draws itself and the bars grow, then
   the tray nudges sideways once to show it scrolls. All of it stops under
   Reduce Motion, and a repaint keeps your place in the tray.
