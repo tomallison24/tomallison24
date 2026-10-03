@@ -61,7 +61,12 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   the 24) and the 7-day forecast sit directly on it, with no card edge. A new
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
-  14px chips, 16px day rows, 12-17px in the hourly columns.
+  14px chips, 12-17px in the hourly columns and the 7-day columns.
+- **7-day forecast**: a column per day, side by side: the day, its icon, the
+  chance of rain (20% and up), then the high over a bar that runs down to the
+  low. Every bar is on the same scale (the week's lowest low to its highest
+  high), so the week's shape shows at a glance; the bar's colour follows the
+  temperature, and a white dot on Today's bar marks the temperature now.
 - **Hourly tray**: the next 24 hours, scrolling sideways, straight on the sky
   (no panel behind it) in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a

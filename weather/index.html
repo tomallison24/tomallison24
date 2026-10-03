@@ -260,6 +260,19 @@
   .hx-col[data-hour]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
   @media (prefers-reduced-motion: reduce) { .hd-hero, .hd-tile { animation: none; } .dot i, .dot svg { transition: none; } }
 
+
+  /* ---- 7-day: a column per day, the high over a bar down to the low ---- */
+  .dcols { display: flex; padding-top: 2px; }
+  .dc { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+  .dc-n { margin-top: 8px; font-size: 13px; font-weight: 700; letter-spacing: -0.3px; white-space: nowrap; }
+  .dc-ic { height: 30px; display: flex; align-items: center; }
+  .dc-r { height: 14px; font-size: 11px; font-weight: 700; line-height: 14px; color: #BFE3FF; white-space: nowrap; }
+  .dc-area { position: relative; width: 100%; }
+  .dc-hi, .dc-lo { position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dc-lo { font-weight: 500; opacity: 0.75; }
+  .dc-bar { position: absolute; left: 50%; width: 12px; margin-left: -6px; border-radius: 7px; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
+  .dc-now { position: absolute; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); }
+
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
   .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: rgba(255,255,255,0.8); padding: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
   .foot button { display: inline-flex; align-items: center; gap: 4px; color: rgba(255,255,255,0.85); padding: 6px 8px; border-radius: 999px; }
@@ -1431,27 +1444,30 @@ function wDays(m) {
   const min = Math.min.apply(null, days.map(d => d.l));
   const max = Math.max.apply(null, days.map(d => d.h));
   const span = Math.max(1, max - min);
-  const pct = t => ((t - min) / span * 100).toFixed(1);
+  // A column per day: the high over a bar that runs down to the low, every bar on the same
+  // scale (the week's own lowest low to highest high), so the week's shape shows at a glance.
+  const CH = 128;                                     // px of bar for the week's whole range
+  const yOf = t => (1 - (t - min) / span) * CH;
   const cur = entity.attributes.temperature;
-  const rows = days.map((d, i) => {
+  const cols = days.map((d, i) => {
     const name = i === 0 ? 'Today' : new Date(d.t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
     const icon = V.icons[d.c] || 'weather-cloudy';
     const tint = V.tints[d.c] || '#FFFFFF';
-    const rain = wet(m, d.r) ? `<div style="font-size:11px;font-weight:700;color:#BFE3FF;line-height:1;margin-top:1px;">${d.r}${unit}</div>` : '';
-    const dot = (i === 0 && cur != null)
-      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
-      : '';
-    return `<div style="display:grid;grid-template-columns:54px 34px 38px 1fr 38px;align-items:center;column-gap:10px;height:46px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
-      <div style="font-size:16px;font-weight:600;letter-spacing:-0.2px;">${name}</div>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 24, `color:${tint};`)}${rain}</div>
-      <div style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.65;">${d.l}°</div>
-      <div style="position:relative;height:5px;border-radius:999px;background:rgba(0,0,0,0.28);">
-        <div style="position:absolute;top:0;bottom:0;left:${pct(d.l)}%;width:${((d.h - d.l) / span * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,${ramp(d.l)},${ramp(d.h)});"></div>${dot}
+    const top = yOf(d.h), len = Math.max(6, yOf(d.l) - top);
+    const now = i === 0 && cur != null && d.h > d.l
+      ? `<i class="dc-now" style="top:${((1 - (Math.min(Math.max(cur, d.l), d.h) - d.l) / (d.h - d.l)) * 100).toFixed(1)}%"></i>` : '';
+    return `<div class="dc">
+      <div class="dc-n">${name}</div>
+      <div class="dc-ic">${svg(icon, 24, `color:${tint};`)}</div>
+      <div class="dc-r">${wet(m, d.r) ? d.r + unit : ''}</div>
+      <div class="dc-area" style="height:${CH + 48}px">
+        <div class="dc-hi" style="top:${top.toFixed(1)}px">${d.h}°</div>
+        <div class="dc-bar" style="top:${(top + 22).toFixed(1)}px;height:${len.toFixed(1)}px;background:linear-gradient(0deg,${ramp(d.l)},${ramp(d.h)})">${now}</div>
+        <div class="dc-lo" style="top:${(top + 26 + len).toFixed(1)}px">${d.l}°</div>
       </div>
-      <div style="font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
     </div>`;
   });
-  return `<div class="w3-dhead">7-day forecast</div><div>${rows.join('')}</div>`;
+  return `<div class="w3-dhead">7-day forecast</div><div class="dcols">${cols.join('')}</div>`;
 }
 
 // Active NWS watches/warnings/advisories for this point, most severe first.
