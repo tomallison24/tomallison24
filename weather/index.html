@@ -82,6 +82,10 @@
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
 
   .w3-fx { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  /* The sky fills the whole screen behind everything, so the forecast sits on it rather than in a box. */
+  #sky { position:fixed; inset:0; z-index:0; }
+  #sky[hidden] { display:none; }
+  main { position:relative; z-index:1; }
   .w3-sky { position:absolute; inset:-2px; background-size:100% 180% !important; animation:w3-sky 22s ease-in-out infinite alternate; }
   .w3-sun { position:absolute; top:-90px; right:-90px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle, rgba(255,226,120,0.60) 0%, rgba(255,214,10,0.22) 32%, rgba(255,214,10,0) 64%); animation:w3-pulse 6s ease-in-out infinite alternate; }
   .w3-rays { position:absolute; top:-170px; right:-170px; width:420px; height:420px; border-radius:50%; background:repeating-conic-gradient(from 0deg, rgba(255,255,255,0.13) 0deg 5deg, rgba(255,255,255,0) 5deg 15deg); -webkit-mask-image:radial-gradient(circle, #000 18%, transparent 62%); mask-image:radial-gradient(circle, #000 18%, transparent 62%); animation:w3-spin 80s linear infinite; }
@@ -106,8 +110,8 @@
   @keyframes w3-spin { to { transform:rotate(360deg); } }
   @keyframes w3-twinkle { from { opacity:.15; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
   @keyframes w3-drift { from { left:-45%; } to { left:110%; } }
-  @keyframes w3-fall { from { transform:translate(0, 0) rotate(12deg); } to { transform:translate(-80px, 380px) rotate(12deg); } }
-  @keyframes w3-snow { 0% { transform:translate(0, 0); } 50% { transform:translate(14px, 170px); } 100% { transform:translate(-8px, 340px); } }
+  @keyframes w3-fall { from { transform:translate(0, 0) rotate(12deg); } to { transform:translate(-200px, 110vh) rotate(12deg); } }
+  @keyframes w3-snow { 0% { transform:translate(0, 0); } 50% { transform:translate(14px, 55vh); } 100% { transform:translate(-8px, 110vh); } }
   @keyframes w3-flash { 0%, 86%, 100% { opacity:0; } 87% { opacity:.55; } 88% { opacity:.05; } 90% { opacity:.4; } 92% { opacity:0; } }
   @keyframes w3-fogdrift { from { transform:translateX(-8%); } to { transform:translateX(8%); } }
   @keyframes w3-gust { from { left:-40%; } to { left:120%; } }
@@ -255,8 +259,8 @@
   @media (prefers-reduced-motion: reduce) { .hd-hero, .hd-tile { animation: none; } .dot i, .dot svg { transition: none; } }
 
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
-  .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding: 6px 0; }
-  .foot button { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); padding: 6px 8px; border-radius: 999px; }
+  .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: rgba(255,255,255,0.8); padding: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  .foot button { display: inline-flex; align-items: center; gap: 4px; color: rgba(255,255,255,0.85); padding: 6px 8px; border-radius: 999px; }
   .foot button:active { background: var(--surface); }
   .spin { animation: w3-spin 1s linear infinite; }
 
@@ -353,6 +357,7 @@
 </style>
 </head>
 <body>
+<div id="sky" class="w3-fx" aria-hidden="true"></div>
 <main id="app"><div class="skeleton" aria-hidden="true"></div></main>
 
 <div id="sheetWrap">
@@ -1002,6 +1007,7 @@ function model(b) {
 // forecasts.
 const wet = (m, r) => m.rKind === 'pop' ? r >= 20 : r > 0;
 
+let heroSky = '';
 function w3Hero(m) {
   const { entity, fc, sun } = m;
   const today = (fc.daily || [])[0] || {};
@@ -1066,8 +1072,8 @@ function w3Hero(m) {
   if (today.r != null) chips.push(chip('umbrella-outline', !wet(m, today.r) ? 'Dry today' : m.rKind === 'pop' ? `${today.r}% chance` : `${today.r} ${a.precipitation_unit || ''}`));
 
   const gps = S.loc && S.loc.mode === 'gps';
+  heroSky = `<div class="w3-sky" style="background:${sky};"></div>${fx}`;   // drawn behind the whole screen by render()
   return `
-    <div class="w3-fx"><div class="w3-sky" style="background:${sky};"></div>${fx}</div>
     <div class="w3-in${S.heroRise ? ' rise' : ''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
@@ -1232,9 +1238,21 @@ function w3Hours(m) {
 // ---- Radar: NEXRAD reflectivity over a dark map, the last 50 minutes on a loop ----
 // Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
 // mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
-const R = { z: 7, idx: 5, playing: false, timer: null, touched: false, place: '' };
-const RADAR_OFFSETS = [50, 40, 30, 20, 10, 0];          // minutes ago, oldest first
-const radarTile = (off, z, x, y) => `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
+const R = { z: 7, idx: 11, playing: false, timer: null, touched: false, place: '', offs: [] };
+// Minutes ago, oldest first. The last 50 minutes come from IEM's ready-made tiles. The hour
+// before that comes from IEM's time-based map service (WMS-T), which this code could not test
+// against the live service: any of those frames that do not load are dropped, leaving the 50.
+const RADAR_OFFSETS = [110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
+const MERC = 20037508.342789244;
+function radarTile(off, z, x, y) {
+  if (off <= 50) return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
+  const size = 2 * MERC / 2 ** z, minx = -MERC + x * size, maxy = MERC - y * size;
+  const t = Math.floor((Date.now() / 1000 - off * 60) / 300) * 300;           // the service keeps a picture every 5 minutes
+  return 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q-t.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=nexrad-n0q-wmst&STYLES='
+    + `&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX=${minx.toFixed(2)},${(maxy - size).toFixed(2)},${(minx + size).toFixed(2)},${maxy.toFixed(2)}`
+    + `&TIME=${new Date(t * 1000).toISOString().slice(0, 19)}Z`;
+}
+const agoLabel = off => !off ? 'Now' : off < 60 ? `${off} min ago` : `${Math.floor(off / 60)}h${off % 60 ? ' ' + off % 60 + 'm' : ''} ago`;
 // CARTO has required a (free) key since late August 2026; without one every tile is
 // stamped "API KEY REQUIRED". Map keys are meant to sit in web pages like this one.
 const CARTO_KEY = 'cb1_48id_1_0ed95665ed15e6f191380e40';
@@ -1246,7 +1264,7 @@ function radarShow(i) {
   document.querySelectorAll('#rd .rd-fr').forEach((f, k) => f.classList.toggle('on', k === i));
   const sc = document.getElementById('rdScrub'), tm = document.getElementById('rdTime');
   if (sc) sc.value = i;
-  if (tm) tm.textContent = RADAR_OFFSETS[i] ? RADAR_OFFSETS[i] + ' min ago' : 'Now';
+  if (tm) tm.textContent = agoLabel(R.offs[i]);
 }
 function radarPlay(on) {
   clearTimeout(R.timer); R.playing = on;
@@ -1254,10 +1272,14 @@ function radarPlay(on) {
   if (!on) return;
   const step = () => {
     if (!document.getElementById('rd') || document.hidden) return stopRadar();
-    radarShow((R.idx + 1) % RADAR_OFFSETS.length);
-    R.timer = setTimeout(step, R.idx === RADAR_OFFSETS.length - 1 ? 1500 : 600);
+    // Step to the next picture that has arrived, so a slow or missing one never shows as a blank map.
+    const frs = document.querySelectorAll('#rd .rd-fr'), n = R.offs.length;
+    let j = (R.idx + 1) % n;
+    for (let k = 0; k < n && frs[j] && !frs[j].ok; k++) j = (j + 1) % n;
+    radarShow(j);
+    R.timer = setTimeout(step, R.idx === n - 1 ? 1500 : 500);
   };
-  R.timer = setTimeout(step, 600);
+  R.timer = setTimeout(step, 500);
 }
 // Draw the map for the place on screen. Called after every repaint; it only does
 // anything when the place or the zoom is not the one already drawn.
@@ -1285,12 +1307,12 @@ function radarSync() {
   for (let y = Math.floor(cy - H / 512); y <= Math.floor(cy + H / 512); y++) if (y >= 0 && y < n) ys.push(y);
   const tiles = { base: [0, 0], radar: [0, 0] };       // [loaded, failed]
   const layer = (cls, kind, url) => {
-    const d = document.createElement('div'); d.className = cls;
+    const d = document.createElement('div'); d.className = cls; d.ok = 0;
     for (const ty of ys) for (const tx of xs) {
       const im = new Image();
       im.className = 'rd-t'; im.alt = ''; im.decoding = 'async'; im.draggable = false;
       im.style.left = (ox + tx * 256).toFixed(1) + 'px'; im.style.top = (oy + ty * 256).toFixed(1) + 'px';
-      im.onload = () => { tiles[kind][0]++; };
+      im.onload = () => { tiles[kind][0]++; d.ok++; };
       im.onerror = () => { tiles[kind][1]++; im.style.display = 'none'; };
       im.src = url(((tx % n) + n) % n, ty);
       d.appendChild(im);
@@ -1298,24 +1320,34 @@ function radarSync() {
     return d;
   };
   box.appendChild(layer('rd-base', 'base', (x, y) => baseTile(z, x, y)));
-  RADAR_OFFSETS.forEach((off, k) => box.appendChild(layer('rd-fr' + (k === R.idx ? ' on' : ''), 'radar', (x, y) => radarTile(off, z, x, y))));
+  R.offs = RADAR_OFFSETS.slice();
+  R.idx = Math.min(R.idx, R.offs.length - 1);
+  R.offs.forEach((off, k) => box.appendChild(layer('rd-fr' + (k === R.idx ? ' on' : ''), 'radar', (x, y) => radarTile(off, z, x, y))));
   const ui = document.createElement('div');
   ui.innerHTML = `<div class="rd-dot"></div>
     <div class="rd-zoom"><button data-rz="1" aria-label="Zoom in">+</button><button data-rz="-1" aria-label="Zoom out">−</button></div>
     <div class="rd-bar"><button class="rd-play" data-rplay aria-label="Play or pause the loop">▶</button>
-      <input id="rdScrub" type="range" min="0" max="${RADAR_OFFSETS.length - 1}" step="1" value="${R.idx}" aria-label="Radar time"><span class="rd-time" id="rdTime"></span></div>
+      <input id="rdScrub" type="range" min="0" max="${R.offs.length - 1}" step="1" value="${R.idx}" aria-label="Radar time"><span class="rd-time" id="rdTime"></span></div>
     <div class="rd-attr">© OpenStreetMap © CARTO · Radar: NWS NEXRAD via Iowa Environmental Mesonet</div>`;
   while (ui.firstChild) box.appendChild(ui.firstChild);
   radarShow(R.idx);
   // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
   if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || (R.touched && !wasPlaying)) return;
-    if (!wasPlaying) radarShow(0);
+    if (!wasPlaying) { const frs = [...box.querySelectorAll('.rd-fr')], k = frs.findIndex(f => f.ok); radarShow(k < 0 ? R.offs.length - 1 : k); }
     radarPlay(true);
   }, wasPlaying ? 300 : 1800);
-  // If nothing arrived, say so rather than leave a blank map.
+  // If nothing arrived, say so rather than leave a blank map. Older frames that never arrived
+  // (the time-based service is the untested part) are dropped, so the loop and the slider only
+  // hold pictures that exist.
   setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
+    const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
+    for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && R.offs[k] > 50) { frs[k].remove(); R.offs.splice(k, 1); }
+    const sc = document.getElementById('rdScrub');
+    if (sc) sc.max = R.offs.length - 1;
+    const at = R.offs.indexOf(showing);
+    radarShow(at >= 0 ? at : R.offs.length - 1);
     if (!tiles.base[0] && !tiles.radar[0]) {
       stopRadar();
       box.insertAdjacentHTML('beforeend', '<div class="rd-note over"><b>Radar couldn’t load</b>Check your connection, or <a href="https://radar.weather.gov/" target="_blank" rel="noopener">open the NWS radar</a>.</div>');
@@ -1415,8 +1447,11 @@ function dotsBar() {
     return `<button class="dot${on ? ' on' : ''}" data-pick-place="${id}" aria-label="${esc(name)}, place ${i + 1} of ${ids.length}" aria-current="${on}">${id === 'here' ? svg('navigation-variant', 15, '') : '<i></i>'}</button>`;
   }).join('');
 }
-function renderShell(inner) {
+const skyEl = document.getElementById('sky');
+// Messages and the welcome screen sit on the plain dark background; while a place loads, the last sky stays.
+function renderShell(inner, keepSky) {
   for (const k in parts) delete parts[k];
+  if (!keepSky) { skyEl.hidden = true; skyEl.innerHTML = ''; delete parts.sky; document.body.style.background = ''; }
   app.innerHTML = inner;
 }
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1425,12 +1460,11 @@ function render() {
   if (!S.loc) return S.locating ? renderShell(`<div class="skeleton" aria-hidden="true"><p class="locating">Finding where you are…</p></div>${S.places.length ? `<div class="row-c"><button class="pill" data-action="location">${svg('magnify', 18)}Choose a place</button></div>` : ''}`) : renderWelcome();
   if (!S.data || S.data.key !== locKey()) {
     if (S.error) return renderMsg('Couldn’t load the forecast', esc(S.error), true);
-    return renderShell('<div class="skeleton" aria-hidden="true"></div>');
+    return renderShell('<div class="skeleton" aria-hidden="true"></div>', true);
   }
   const m = model(S.data);
   const night = m.sun.night, c = m.entity.state;
   const sky = (night && V.vivid[c + '-night']) || V.vivid[c] || V.vivid.cloudy;
-  const glow = (night && V.glows[c + '-night']) || V.glows[c] || V.glows.cloudy;
 
   const card = slot('card', 'section', 'w3-card');
   const hero = slot('hero', 'div');
@@ -1444,9 +1478,10 @@ function render() {
   if (!app.contains(card) || app.firstElementChild !== alerts) { app.replaceChildren(alerts, card, dots, foot); }
   put(dots, dotsBar());
 
-  card.style.background = sky;
-  card.style.boxShadow = '0 18px 40px -16px ' + glow;
   put(hero, w3Hero(m));
+  skyEl.hidden = false;
+  put(skyEl, heroSky);
+  document.body.style.background = sky;               // the same colours under the sky layer, for the bounce at either end of the page
   S.heroRise = false;
   // Keep the tray where you left it: remember which hour is at its left edge, and after a
   // repaint (or the hour rolling over) put that same hour back there. A new place starts at "Now".
@@ -1470,6 +1505,7 @@ function render() {
     S.swap = false;
     const swiped = S.swipeIn; S.swipeIn = false;
     if (!calm()) {
+      skyEl.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 480, easing: 'ease-out' });
       const w = card.offsetWidth;   // after a swipe it comes in from the edge the old one left by; after a tap, from a little way off
       card.animate([{ opacity: swiped ? 0.35 : 0, transform: `translateX(${(S.dir || 1) * (swiped ? w : w * 0.3)}px)` }, { opacity: 1, transform: 'none' }],
         { duration: swiped ? 360 : 420, easing: 'cubic-bezier(.22,1,.36,1)' });
