@@ -1,18 +1,22 @@
-// Draws weather/icon-512.png and weather/icon-180.png in the style of Apple's
-// own icons: a full-bleed gradient and a simple white glyph, with the phone
-// rounding the corners itself. A clear sky, from a pale azure at the top to
-// a deeper blue at the bottom, a plain sun disc and one soft cloud in front
-// of it: nothing else. Rendered at 1024 and boxed down, so edges stay smooth
-// without any image library.
+// Draws weather/icon-512.png and weather/icon-180.png in the style of the
+// other AllisonOS icons: a full-bleed diagonal gradient (light top left, deep
+// bottom right), one white glyph with a soft shadow below it, and a faint
+// translucent echo of the glyph behind, as Podcasts and Calendar have. The
+// phone rounds the corners itself. "Day": a sky from cyan through azure to
+// indigo, a warm sun peeking out from behind a white cloud, and a smaller
+// pale cloud drifting behind. "Night" is the same picture with a crescent
+// moon on the Home colours. Rendered at 1024 and boxed down, so edges stay
+// smooth without any image library.
 //
-//   node weather/scripts/make-icons.mjs
+//   node weather/scripts/make-icons.mjs [day|night] [output folder]
 import { deflateSync } from 'node:zlib';
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const N = 1024;
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const VARIANT = process.argv[2] === 'night' ? 'night' : 'day';
+const OUT = process.argv[3] || join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // --- geometry ---------------------------------------------------------------
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -36,45 +40,63 @@ function erfc(z) {
 }
 
 // --- scene ------------------------------------------------------------------
-// The sky, top to bottom: azure to a deeper blue.
-const TOP = [86, 176, 255], BOTTOM = [22, 104, 226];
-const sky = y => { const t = y / N; return [mix(TOP[0], BOTTOM[0], t), mix(TOP[1], BOTTOM[1], t), mix(TOP[2], BOTTOM[2], t)]; };
+// Gradient stops, top left to bottom right.
+const STOPS = VARIANT === 'night'
+  ? [[0, [46, 107, 255]], [0.55, [154, 91, 255]], [1, [24, 195, 165]]]      // Home's blue, violet, teal
+  : [[0, [112, 224, 255]], [0.5, [44, 124, 255]], [1, [96, 70, 238]]];      // cyan, azure, indigo
+function sky(x, y) {
+  const u = x / N - 0.2, v = y / N, t = clamp01((u * 0.6 + v) / 1.36);
+  const k = t < STOPS[1][0] ? 0 : 1, [t0, c0] = STOPS[k], [t1, c1] = STOPS[k + 1];
+  const f = (t - t0) / (t1 - t0);
+  return [mix(c0[0], c1[0], f), mix(c0[1], c1[1], f), mix(c0[2], c1[2], f)];
+}
 
-// A plain sun, up and to the left; a warm white so it reads as the sun and
-// not a second cloud.
-const SUN = { cx: 416, cy: 408, r: 176 };
-const SUN_INK = [255, 228, 150];
+// One cloud: three domes on a rounded base, drawn around (616, 664) and then
+// moved to (ox, oy) and scaled by s.
+function cloud(x, y, ox = 0, oy = 0, s = 1) {
+  const lx = (x - 616 - ox) / s + 616, ly = (y - 664 - oy) / s + 664;
+  let d = roundedRect(lx, ly, 616, 664, 262, 74, 74);
+  for (const [cx, cy, r] of [[520, 616, 108], [640, 572, 142], [764, 640, 96]]) d = Math.min(d, circle(lx, ly, cx, cy, r));
+  return d * s;
+}
+const FRONT = [-30, 34, 1];          // ox, oy, scale
+const BACK = [128, -330, 0.5];       // the small pale one, up and to the right
 
-// The cloud, low and to the right, in front of the sun: three domes on a
-// rounded base.
-const CLOUD = {
-  base: { cx: 616, cy: 664, hw: 262, hh: 74, r: 74 },
-  domes: [[520, 616, 108], [640, 572, 142], [764, 640, 96]],
-};
-function cloud(x, y) {
-  let d = roundedRect(x, y, CLOUD.base.cx, CLOUD.base.cy, CLOUD.base.hw, CLOUD.base.hh, CLOUD.base.r);
-  for (const [cx, cy, r] of CLOUD.domes) d = Math.min(d, circle(x, y, cx, cy, r));
-  return d;
+// The sun (day) or crescent moon (night), up and to the left of the cloud.
+const SUN = { cx: 384, cy: 414, r: 172 };
+function body(x, y) {
+  const d = circle(x, y, SUN.cx, SUN.cy, SUN.r);
+  return VARIANT === 'night' ? Math.max(d, -circle(x, y, SUN.cx + 78, SUN.cy - 56, SUN.r * 0.86)) : d;
 }
 
 function pixel(x, y) {
-  let [r, g, b] = sky(y);
+  let [r, g, b] = sky(x, y);
 
-  // A soft glow around the sun, so it sits in the sky rather than on it.
-  const glow = 0.28 * 0.5 * erfc((circle(x, y, SUN.cx, SUN.cy, SUN.r) - 10) / (70 * Math.SQRT2));
-  r = mix(r, 255, glow); g = mix(g, 240, glow); b = mix(b, 200, glow);
+  // The small cloud behind: translucent white.
+  const back = aa(cloud(x, y, ...BACK), 1.8) * 0.30;
+  r = mix(r, 255, back); g = mix(g, 255, back); b = mix(b, 255, back);
 
-  // The sun.
-  const sun = aa(circle(x, y, SUN.cx, SUN.cy, SUN.r), 1.8);
-  if (sun > 0) { r = mix(r, SUN_INK[0], sun); g = mix(g, SUN_INK[1], sun); b = mix(b, SUN_INK[2], sun); }
+  // A soft glow around the sun or moon.
+  const glow = 0.30 * 0.5 * erfc((circle(x, y, SUN.cx, SUN.cy, SUN.r) - 6) / (80 * Math.SQRT2));
+  r = mix(r, 255, glow); g = mix(g, 238, glow); b = mix(b, 200, glow);
 
-  // The cloud's shadow, on the sky and on the sun, as if lit from above.
-  const sh = 0.30 * 0.5 * erfc(cloud(x, y - 26) / (30 * Math.SQRT2));
-  r = mix(r, 14, sh); g = mix(g, 60, sh); b = mix(b, 150, sh);
+  // The sun: amber at the top left to coral at the bottom right. The moon: pale gold.
+  const t = clamp01(((x - SUN.cx) + (y - SUN.cy)) / (SUN.r * 2.4) + 0.5);
+  const ink = VARIANT === 'night' ? [255, 238, 190]
+    : [mix(255, 255, t), mix(222, 132, t), mix(110, 92, t)];
+  const sun = aa(body(x, y), 1.8);
+  if (sun > 0) { r = mix(r, ink[0], sun); g = mix(g, ink[1], sun); b = mix(b, ink[2], sun); }
 
-  // The cloud: plain white.
-  const ink = aa(cloud(x, y), 1.8);
-  if (ink > 0) { r = mix(r, 255, ink); g = mix(g, 255, ink); b = mix(b, 255, ink); }
+  // The front cloud's shadow, on the sky and on the sun, as if lit from above.
+  const sh = 0.34 * 0.5 * erfc(cloud(x, y - 26, ...FRONT) / (30 * Math.SQRT2));
+  r = mix(r, 22, sh); g = mix(g, 28, sh); b = mix(b, 120, sh);
+
+  // The front cloud: white, a touch cooler at the bottom edge.
+  const c = aa(cloud(x, y, ...FRONT), 1.8);
+  if (c > 0) {
+    const cool = clamp01((y - 640) / 200) * 0.10;
+    r = mix(r, 255 - 255 * cool * 0.5, c); g = mix(g, 255 - 255 * cool * 0.25, c); b = mix(b, 255, c);
+  }
 
   return [r, g, b];
 }
