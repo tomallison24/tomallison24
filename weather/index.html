@@ -1208,12 +1208,13 @@ function w3Hours(m) {
   const cols = seq.map((x, i) => {
     const cls = `hx-col${x.now ? ' hx-now' : ''}`;
     const st = `style="--i:${Math.min(i, 14)}"`;
-    const delay = `animation-delay:-${((i * 0.37) % 3).toFixed(2)}s;`;
+    // Only the current hour's icon moves; the others hold still so the tray stays calm.
+    const mv = k => x.now ? ' hx-m-' + k : '';
     if (x.kind !== 'hour') {
       const rise = x.kind === 'rise';
       return `<div class="${cls}" ${st}>
         <div class="hx-time sm">${fmtM(x.t)}</div>
-        <div class="hx-ico hx-m-${rise ? 'up' : 'down'}">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 25, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);${delay}`)}</div>
+        <div class="hx-ico">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 25, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);`)}</div>
         <div class="hx-curve">${curveSvg(i)}</div>
         <div class="hx-rain"><div class="hx-lbl sm">${rise ? 'Sunrise' : 'Sunset'}</div></div>
       </div>`;
@@ -1222,23 +1223,20 @@ function w3Hours(m) {
     const label = x.now ? 'Now' : (hourOf(x.t) === 0 ? `<span class="hx-day">${dayOf(x.t)}</span>` : fmt(x.t));
     let ico, shown, extra = '';
     if (mode === 'humidity') {
-      ico = `<div class="hx-ico hx-m-bob">${svg('water-percent', 25, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);${delay}`)}</div>`;
+      ico = `<div class="hx-ico${mv('bob')}">${svg('water-percent', 25, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);`)}</div>`;
       shown = v + '%';
       extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, v / 100) * 13)}px;background:linear-gradient(180deg,#B8F0FF,#37B6D9);box-shadow:0 0 10px rgba(55,182,217,.55)"></div><div class="hx-lbl">${dampWord(v)}</div>`;
     } else if (mode === 'wind') {
       const rot = ((x.wd || 0) + 180) % 360, dur = Math.max(0.9, Math.min(3.2, 3.2 - v / (metric ? 16 : 10))).toFixed(2);
-      ico = `<div class="hx-ico"><span class="hx-rot" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 21, `color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.45));animation:hx-swayr ${dur}s ease-in-out infinite alternate;${delay}`)}</span></div>`;
+      ico = `<div class="hx-ico"><span class="hx-rot" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 21, `color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.45));${x.now ? `animation:hx-swayr ${dur}s ease-in-out infinite alternate;` : ''}`)}</span></div>`;
       shown = String(v);
       extra = `<div class="hx-lbl">${compass(x.wd)}</div>`;
     } else {
       const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
       const tint = V.tints[x.c] || '#FFFFFF';
-      ico = `<div class="hx-ico hx-m-${hourMotion(x.c, x.dark)}">${svg(icon, 26, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>`;
+      ico = `<div class="hx-ico${mv(hourMotion(x.c, x.dark))}">${svg(icon, 26, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);`)}</div>`;
       shown = v + '°';
-      if (mode === 'feels') {
-        const d = v - x.v;
-        extra = `<div class="hx-lbl" style="color:${d > 0 ? '#FFC27A' : d < 0 ? '#A9D4FF' : 'inherit'};opacity:${d ? 1 : 0.7}">${d > 0 ? '+' + d + '°' : d < 0 ? '−' + (-d) + '°' : 'Same'}</div>`;
-      } else if (wet(m, x.r)) {
+      if (wet(m, x.r)) {                                // Hourly and Feels like both show the rain chance underneath
         const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
         extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, Math.max(0, f)) * 13)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
       }
