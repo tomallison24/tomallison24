@@ -345,12 +345,43 @@ function chipTags() {
   return userLabels().filter(l => p[l.id] ?? (!leftover(l) && ruled.has(l.id)));
 }
 
-// A tag keeps one colour everywhere, picked from its name.
+// A tag keeps one colour everywhere, and no two tags share one. The four
+// auto-tags have fixed colours (Marketing keeps its orange, 36); every other
+// tag starts at a spot picked from its name and moves on to the next colour
+// not yet taken, going through the names in order so every device agrees.
 const HUES = [211, 187, 145, 48, 28, 340, 280, 250];
 function hue(s) {
   let h = 0;
   for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return HUES[h % HUES.length];
+}
+const TAG_FIXED = { travel: 211, money: 145, health: 340, orders: 280 };
+// Best-spaced colours first; the second row only once those are used up.
+const TAG_HUES = [[8, 65, 100, 175, 245, 310], [22, 50, 82, 122, 160, 193, 228, 262, 295, 325, 354]];
+let tagHueKey = '', tagHueMap = new Map();
+function tagHue(name) {
+  const key = userLabels().map(l => l.name).join('\n');
+  if (key !== tagHueKey) {
+    tagHueKey = key; tagHueMap = new Map();
+    const taken = new Set([36, ...Object.values(TAG_FIXED)]);
+    const rest = userLabels().map(l => l.name).filter(n => !(n.toLowerCase() in TAG_FIXED));
+    for (const n of rest) {
+      let h = 0;
+      for (const c of n.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+      let pick = null;
+      for (const row of TAG_HUES) {
+        for (let i = 0; i < row.length && pick == null; i++) {
+          const x = row[(h + i) % row.length];
+          if (!taken.has(x)) pick = x;
+        }
+        if (pick != null) break;
+      }
+      if (pick == null) pick = TAG_HUES[0][h % TAG_HUES[0].length];
+      taken.add(pick); tagHueMap.set(n, pick);
+    }
+  }
+  const f = TAG_FIXED[String(name).toLowerCase()];
+  return f ?? tagHueMap.get(name) ?? hue(name);
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,7 +1034,7 @@ function autoTagsHTML() {
       const line = esc(p.about) + (on && n ? ' · ' + n.toLocaleString() : '');
       return '<li data-preset="' + esc(p.name) + '"><div class="rowtop"><span class="open" data-act="preset-see" role="button" tabindex="0" aria-label="' +
         esc((on ? 'Show ' : 'Preview ') + p.name) + '"><span class="who">' +
-        '<span class="tchip" style="--h:' + hue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
+        '<span class="tchip" style="--h:' + tagHue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
         '<span class="gtools"><button class="switch' + (busy ? ' busy' : '') + '" role="switch" data-act="preset-toggle" aria-checked="' + on + '" aria-label="' + esc(p.name) + ' auto-tag"' +
           (busy ? ' disabled' : '') + '></button></span></div></li>';
     }).join('') + '</ul></div>';
@@ -1574,7 +1605,7 @@ function tagChips(labelIds, skip) {
   const bid = bucketId(), shown = new Set(chipTags().map(l => l.id));
   return labelIds.map(id => labelsById.get(id))
     .filter(l => l && l.id !== skip && (l.id === bid || shown.has(l.id)))
-    .map(l => '<span class="tchip" style="--h:' + (l.id === bid ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>')
+    .map(l => '<span class="tchip" style="--h:' + (l.id === bid ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>')
     .join('');
 }
 
@@ -1651,7 +1682,7 @@ function boxMenuHTML() {
     row('chip', 'data-id="STARRED"', 'Flagged', inbox && state.tag === 'STARRED', ico(ICON.flag)) +
     '<hr>' +
     CATEGORIES.map(c => row('chip', 'data-id="' + c.id + '"', c.name, inbox && state.tag === c.id, ico(MENU_ICON[c.id]))).join('') +
-    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '" style="--h:' + hue(l.name) + '"',
+    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '" style="--h:' + tagHue(l.name) + '"',
       l.name, inbox && state.tag === l.id, ico('<i class="dot"></i>'))).join('') : '') +
     '<hr>' +
     row('box-view', 'data-view="marketing"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt)) +
@@ -1818,7 +1849,7 @@ function viewList() {
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
   else if (spec.base === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
-  else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : hue(tagName)) + '">' + esc(tagName) + '</span></h2>';
+  else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : tagHue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
     const empty = state.unread ? 'No unread mail here.<br>Tap All to see everything.'
       : state.search ? 'Nothing matches “' + esc(state.search) + '”.'
@@ -1875,7 +1906,7 @@ function viewRules() {
   const tagCard = l => {
     const rules = groups.get(l.id) || [], isBucket = l.id === bid;
     const meta = [rules.length ? rules.length + ' rule' + (rules.length === 1 ? '' : 's') : 'no rules', size(l.id)].filter(Boolean).join(' · ');
-    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (isBucket ? 36 : hue(l.name)) + '">' + esc(l.name) + '</span>' +
+    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (isBucket ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>' +
       '<span class="gcount">' + meta + '</span>' +
       (isBucket ? '' : '<span class="gtools">' + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
       (rules.length ? '<ul class="list">' + rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
@@ -3017,7 +3048,7 @@ function openSheet(item) {
       '<h3>Tag ' + (rule.kind === 'domain' ? 'everything from ' : 'mail from ') + who + '</h3>' +
       '<p class="note">This message, what’s already in your mailbox, and all new mail ' +
         (rule.kind === 'domain' ? 'from anyone at ' + esc(rule.label) : 'from this address') + '. It stays in your inbox.</p>' +
-      (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + hue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
+      (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + tagHue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
       '<input type="text" id="newtag" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="' + (list.length ? 'Or a new tag' : 'New tag') + ' — e.g. Sofia’s school">' +
       '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
       '<p class="note hide" id="tagerr" role="alert" style="color:var(--bad-text);text-align:center"></p>' +

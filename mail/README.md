@@ -294,6 +294,13 @@ straight away — and type a name, say *Sofia's school*:
 - tagged mail **stays in the inbox** (only Marketing skips it);
 - the tag joins the mailbox menu under the title; choose it to see just that
   tag, and **Inbox** to go back.
+- **every tag has its own colour**, the same in the menu, the list, the Tags
+  page and the tag sheet. Travel is blue, Money green, Health pink and Orders
+  purple; Marketing keeps orange. Your other tags each take a free, well-spaced
+  colour picked from the name (tags are handled in name order, so every device
+  agrees). The first ten stay at least 25° apart on the colour wheel; past
+  that, colours get closer but are still never shared. Adding a tag can shift
+  the colour of a later-named tag that was sharing a spot.
 
 Tagging answers as soon as that email and the rule are done; the older mail
 is tagged in the background, and the toast says how many once it's finished
