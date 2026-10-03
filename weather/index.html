@@ -218,6 +218,45 @@
   .list .prm { flex: none; width: 54px; height: 60px; padding: 0; justify-content: center; color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { .pl { transition: none; } }
 
+
+  /* ---- The view switcher above the timeline, and the radar ---- */
+  .hx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .hx-title { min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vsw { flex: none; display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.20);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
+  .vsw button { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,0.74); transition: color .25s; }
+  .vsw button[aria-pressed="true"] { color: #fff; }
+  .vsw .slthumb { background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.18));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0,0,0,0.25); }
+  .hx-title small { display: block; margin-top: 1px; font-size: 14px; font-weight: 500; letter-spacing: 0; opacity: 0.75; }
+  .hx-empty { padding: 56px 0; text-align: center; font-size: 17px; opacity: 0.8; }
+  .hx-rot { display: inline-flex; }
+  @keyframes hx-swayr { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+  .hx.rd { position: relative; height: 300px; background: #10131A; }
+  .rd-base, .rd-fr { position: absolute; inset: 0; }
+  .rd-fr { opacity: 0; transition: opacity .25s; }
+  .rd-fr.on { opacity: 0.88; }
+  .rd-t { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; -webkit-user-drag: none; }
+  .rd-dot { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+    background: #0A84FF; border: 2.5px solid #fff; animation: rd-ping 2.2s ease-out infinite; pointer-events: none; }
+  @keyframes rd-ping { 0% { box-shadow: 0 0 0 0 rgba(10,132,255,0.65); } 80%, 100% { box-shadow: 0 0 0 16px rgba(10,132,255,0); } }
+  .rd-zoom { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .rd-zoom button, .rd-play { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 500; color: #fff;
+    background: rgba(20,22,28,0.66); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .rd-play { flex: none; font-size: 15px; }
+  .rd-bar { position: absolute; left: 10px; right: 10px; bottom: 26px; display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 5px; border-radius: 999px;
+    background: rgba(20,22,28,0.66); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .rd-bar input { flex: 1; min-width: 0; accent-color: #9FD8FF; }
+  .rd-time { flex: none; min-width: 78px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rd-attr { position: absolute; left: 10px; right: 10px; bottom: 6px; font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rd-note { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; font-size: 16px; line-height: 1.4; color: rgba(255,255,255,0.85); }
+  .rd-note b { font-size: 19px; color: #fff; }
+  .rd-note.over { background: rgba(16,19,26,0.88); }
+  .rd-note.small { inset: auto 10px 70px 10px; padding: 8px 12px; border-radius: 14px; background: rgba(16,19,26,0.82); font-size: 14px; }
+  .rd-note a { color: #9FD8FF; }
+  @media (prefers-reduced-motion: reduce) { .rd-dot { animation: none; } .rd-fr { transition: none; } }
+
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
   .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding: 6px 0; }
   .foot button { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); padding: 6px 8px; border-radius: 999px; }
@@ -406,8 +445,9 @@ const V = {
 // Both sources are normalised to one BASE shape, always in US units, and
 // cached as that:
 //   { src, lat, lon, tz, place,
-//     cur:    { tF, hum, mph, deg, c },
-//     hourly: [{ t, c, pF, r }],        next 24 hours from this one
+//     cur:    { tF, fF (feels like), hum, mph, deg, c },
+//     hourly: [{ t, c, pF, r, fF, hum, mph, deg }],  next 24 hours from this one
+//     v:      2 (older caches lack feels-like, humidity and wind per hour and are refetched)
 //     daily:  [{ t, c, hF, lF, r }],    7 days from today
 //     rKind:  'pop' (chance, %) | 'in' (amount, inches),
 //     alerts: [{ event, severity, headline, ends, desc }] }
@@ -511,6 +551,7 @@ const S = {
   expanded: store.get('expanded', false),
   data: null,                             // the on-screen place's BASE
   alertOpen: {},
+  view: 'now',                            // the timeline: now | feels | humidity | wind | radar
   loading: false,
   locating: false,
   error: null,
@@ -549,6 +590,27 @@ async function getJSON(url) {
 const dirDeg = d => ({ N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5 })[d];
 const mphOf = s => { const m = /(\d+)(?:\s*to\s*(\d+))?/.exec(s || ''); return m ? +(m[2] || m[1]) : null; };
 const cToF = c => c * 9 / 5 + 32;
+// "Feels like", the NWS way: wind chill when it is 50F or colder and breezy,
+// heat index (the Rothfusz regression, with its two adjustments) from 80F up,
+// otherwise just the air temperature. T in F, RH in %, W in mph.
+function feelsF(T, RH, W) {
+  if (T == null) return null;
+  if (T <= 50 && W != null && W > 3) {
+    const v = Math.pow(W, 0.16);
+    return Math.round(35.74 + 0.6215 * T - 35.75 * v + 0.4275 * T * v);
+  }
+  if (T >= 80 && RH != null) {
+    let hi = 0.5 * (T + 61 + (T - 68) * 1.2 + RH * 0.094);
+    if ((hi + T) / 2 >= 80) {
+      hi = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH - 0.00683783 * T * T - 0.05481717 * RH * RH
+        + 0.00122874 * T * T * RH + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+      if (RH < 13 && T <= 112) hi -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
+      else if (RH > 85 && T <= 87) hi += ((RH - 85) / 10) * ((87 - T) / 5);
+    }
+    return Math.round(hi);
+  }
+  return Math.round(T);
+}
 const ymd = (t, tz) => new Date(t * 1000).toLocaleDateString('en-CA', { timeZone: tz });
 
 async function fromNWS(lat, lon) {
@@ -602,6 +664,7 @@ async function fromNWS(lat, lon) {
     deg: o.windDirection && o.windDirection.value != null ? o.windDirection.value : h0.deg,
     c: o.textDescription ? nwsCondition(o.icon, o.textDescription) : h0.c
   } : { tF: h0.pF, hum: h0.hum, mph: h0.mph, deg: h0.deg, c: h0.c };
+  cur.fF = feelsF(cur.tF, cur.hum, cur.mph);
 
   // Days: NWS's own 12-hour periods, a day's high paired with that night's
   // low, the way weather.gov prints its 7-day. After about 6pm the first
@@ -653,8 +716,8 @@ async function fromNWS(lat, lon) {
 
   return {
     src: 'NWS', lat, lon, tz, place: pt.city, rKind: 'pop', cur,
-    hourly: HP.slice(0, 24).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r })),
-    daily, alerts
+    hourly: HP.slice(0, 24).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r, fF: feelsF(h.pF, h.hum, h.mph), hum: h.hum, mph: h.mph, deg: h.deg })),
+    daily, alerts, v: 2
   };
 }
 
@@ -662,8 +725,8 @@ async function fromNWS(lat, lon) {
 async function fromOpenMeteo(lat, lon) {
   const om = await getJSON('https://api.open-meteo.com/v1/forecast'
     + `?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`
-    + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m'
-    + '&hourly=temperature_2m,weather_code,precipitation'
+    + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,apparent_temperature'
+    + '&hourly=temperature_2m,weather_code,precipitation,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m'
     + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum'
     + '&timezone=auto&timeformat=unixtime&forecast_days=8'
     + '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch');
@@ -675,7 +738,9 @@ async function fromOpenMeteo(lat, lon) {
   if (cur.wind_speed_10m >= 25 && cur.weather_code <= 3) c = 'windy';
   const hourly = [];
   for (let i = 0; i < H.time.length && hourly.length < 24; i++) {
-    if (H.time[i] >= hourStart) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]) });
+    if (H.time[i] >= hourStart) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]),
+      fF: H.apparent_temperature ? Math.round(H.apparent_temperature[i]) : null, hum: H.relative_humidity_2m ? H.relative_humidity_2m[i] : null,
+      mph: H.wind_speed_10m ? Math.round(H.wind_speed_10m[i]) : null, deg: H.wind_direction_10m ? H.wind_direction_10m[i] : null });
   }
   const ti = Math.max(0, D.time.findIndex((t, i) => t <= now && (D.time[i + 1] == null || D.time[i + 1] > now)));
   const daily = [];
@@ -684,8 +749,9 @@ async function fromOpenMeteo(lat, lon) {
   }
   return {
     src: 'Open-Meteo', lat, lon, tz: om.timezone, place: null, rKind: 'in',
-    cur: { tF: cur.temperature_2m, hum: cur.relative_humidity_2m, mph: cur.wind_speed_10m, deg: cur.wind_direction_10m, c },
-    hourly, daily, alerts: []
+    cur: { tF: cur.temperature_2m, hum: cur.relative_humidity_2m, mph: cur.wind_speed_10m, deg: cur.wind_direction_10m, c,
+      fF: cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : feelsF(cur.temperature_2m, cur.relative_humidity_2m, cur.wind_speed_10m) },
+    hourly, daily, alerts: [], v: 2
   };
 }
 
@@ -720,7 +786,7 @@ async function fetchBase(lat, lon) {
 
 async function refresh(force) {
   if (!S.loc || S.loading) return render();
-  const fresh = S.data && S.data.key === locKey() && Date.now() - S.data.fetchedAt < 10 * 60 * 1000;
+  const fresh = S.data && S.data.v === 2 && S.data.key === locKey() && Date.now() - S.data.fetchedAt < 10 * 60 * 1000;
   if (fresh && !force) return render();
   const seq = ++S.seq;
   S.loading = true; S.error = null; render();
@@ -759,7 +825,7 @@ async function prefetchOthers() {
     const list = [S.here && { lat: S.here.lat, lon: S.here.lon }].concat(S.places).filter(Boolean);
     for (const p of list) {
       const key = keyOf(p), c = S.cache[key];
-      if (key === locKey() || (c && Date.now() - c.fetchedAt < 30 * 60 * 1000)) continue;
+      if (key === locKey() || (c && c.v === 2 && Date.now() - c.fetchedAt < 30 * 60 * 1000)) continue;
       try {
         const base = await fetchBase(p.lat, p.lon);
         if (base) S.cache[key] = Object.assign(base, { fetchedAt: Date.now(), key });
@@ -856,7 +922,9 @@ function model(b) {
   const nightFace = (c, dark) => (c === 'sunny' && dark) ? 'clear-night' : c;
   const rr = r => b.rKind === 'pop' ? Math.round(r) : (metric ? Math.round(r * 25.4 * 10) / 10 : r);
   const hourStart = Math.floor(now / 3600) * 3600;
-  const hourly = b.hourly.filter(h => h.t >= hourStart).map(h => ({ t: h.t, c: nightFace(h.c, !isDayAt(ev, h.t + 1800)), p: Ti(h.pF), r: rr(h.r), dark: !isDayAt(ev, h.t + 1800) }));
+  const kmh = metric ? 1.609344 : 1;
+  const hourly = b.hourly.filter(h => h.t >= hourStart).map(h => ({ t: h.t, c: nightFace(h.c, !isDayAt(ev, h.t + 1800)), p: Ti(h.pF), r: rr(h.r), dark: !isDayAt(ev, h.t + 1800),
+    fl: h.fF == null ? null : Ti(h.fF), hum: h.hum == null ? null : Math.round(h.hum), w: h.mph == null ? null : Math.round(h.mph * kmh), deg: h.deg == null ? null : h.deg }));
   const today = ymd(now, b.tz);
   const daily = b.daily.filter(d => ymd(d.t, b.tz) >= today).map(d => ({ t: d.t, c: d.c, h: Ti(d.hF), l: Ti(d.lF), r: rr(d.r) }));
   const next = k => ev.map(e => e[k]).filter(t => t > now).sort((x, y) => x - y)[0];
@@ -865,6 +933,7 @@ function model(b) {
       state: nightFace(b.cur.c, night),
       attributes: {
         temperature: b.cur.tF == null ? null : T(b.cur.tF),
+        feels_like: b.cur.fF == null ? null : T(b.cur.fF),
         humidity: b.cur.hum,
         wind_speed: b.cur.mph == null ? null : (metric ? b.cur.mph * 1.609344 : b.cur.mph),
         wind_speed_unit: metric ? 'km/h' : 'mph',
@@ -979,36 +1048,69 @@ function hourMotion(c, dark) {
   return dark ? 'moon' : 'bob';
 }
 
+// The five views of the timeline, switched by the little buttons above it.
+const VIEWS = [['now', 'Hourly', 'thermo'], ['feels', 'Feels like', 'smile'], ['humidity', 'Humidity', 'drop'], ['wind', 'Wind', 'wind'], ['radar', 'Radar', 'radar']];
+const LINE = {
+  thermo: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>',
+  smile: '<circle cx="12" cy="12" r="9.5"/><path d="M8 14.2s1.5 2.3 4 2.3 4-2.3 4-2.3"/><path d="M9 9.4h.01M15 9.4h.01"/>',
+  drop: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  wind: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>',
+  radar: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.8"/><path d="M12 12L18.6 5.4"/>'
+};
+const line = (n, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LINE[n]}</svg>`;
+function viewHead(m) {
+  const unit = m.entity.attributes.wind_speed_unit || 'mph';
+  const title = { now: 'Hourly', feels: 'Feels like', humidity: 'Humidity', wind: `Wind<small>${unit}</small>`, radar: 'Radar' }[S.view];
+  return `<div class="hx-head"><div class="hx-title">${title}</div><div class="vsw" id="vsw" role="group" aria-label="Timeline view">${
+    VIEWS.map(([id, label, ic]) => `<button data-view="${id}" aria-label="${label}" title="${label}" aria-pressed="${S.view === id}">${line(ic, 21)}</button>`).join('')}</div></div>`;
+}
+const compass = d => d == null ? '–' : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(d / 45) % 8];
+const dampWord = h => h < 30 ? 'Dry' : h < 60 ? 'Comfy' : h < 75 ? 'Humid' : 'Muggy';
+
 // 24 hours in a tray you scroll sideways. Each column: time, a moving icon,
-// the temperature riding on a curve, and (when it matters) a rain bar.
+// the value riding on a curve, and one small extra underneath. Which value
+// (temperature, feels like, humidity, wind) is the view chosen above; Radar
+// swaps the tray for a map (radarSync draws it).
 function w3Hours(m) {
   const { entity, fc, sun, tz } = m;
+  const head = viewHead(m);
+  if (S.view === 'radar') return head + '<div class="hx rd" id="rd"></div>';
+  const mode = S.view;
   const hrs = (fc.hourly || []).slice(0, 24);
-  if (!hrs.length) return '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
+  if (!hrs.length) return head + '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
   const marks = [];
   if (sun.next_rising) marks.push({ t: sun.next_rising, kind: 'rise' });
   if (sun.next_setting) marks.push({ t: sun.next_setting, kind: 'set' });
   const first = hrs[0].t, last = hrs[hrs.length - 1].t;
-  const cur = entity.attributes.temperature;
-  const unit = entity.attributes.precipitation_unit || '';
-  const seq = hrs.map((h, i) => Object.assign({}, h, { kind: 'hour', now: i === 0, v: i === 0 && cur != null ? Math.round(cur) : h.p }))
-    .concat(marks.filter(k => k.t > first && k.t < last))
-    .sort((x, y) => x.t - y.t);
+  const a = entity.attributes, cur = a.temperature;
+  const unit = a.precipitation_unit || '';
+  const metric = (a.temperature_unit || '').indexOf('C') >= 0;
+  const seq = hrs.map((h, i) => {
+    const now = i === 0;
+    return Object.assign({}, h, { kind: 'hour', now,
+      v: now && cur != null ? Math.round(cur) : h.p,
+      fv: now && a.feels_like != null ? Math.round(a.feels_like) : h.fl,
+      hv: now && a.humidity != null ? Math.round(a.humidity) : h.hum,
+      wv: now && a.wind_speed != null ? Math.round(a.wind_speed) : h.w,
+      wd: now && a.wind_bearing != null ? a.wind_bearing : h.deg });
+  }).concat(marks.filter(k => k.t > first && k.t < last)).sort((x, y) => x.t - y.t);
+  const pick = x => mode === 'feels' ? x.fv : mode === 'humidity' ? x.hv : mode === 'wind' ? x.wv : x.v;
+  if (seq.some(x => x.kind === 'hour' && pick(x) == null)) return head + `<div class="hx"><div class="hx-empty">${S.loading ? 'Updating…' : 'Reconnect to load this view'}</div></div>`;
 
-  // Curve height for each column: hotter is higher. A sunrise or sunset has no
-  // temperature of its own, so the line just passes through at the average of its neighbours.
-  const vs = seq.filter(x => x.kind === 'hour').map(x => x.v);
+  // Curve height for each column: higher is higher. A sunrise or sunset has no
+  // value of its own, so the line just passes through at the average of its neighbours.
+  const vs = seq.filter(x => x.kind === 'hour').map(pick);
   const lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
-  // A day that only moves a degree or two should look flat, not dramatic.
-  const span = Math.max(S.units === 'metric' ? 5 : 9, hi - lo);
+  // A quiet stretch should look flat, not dramatic.
+  const span = Math.max(mode === 'humidity' ? 25 : mode === 'wind' ? (metric ? 16 : 10) : (metric ? 5 : 9), hi - lo);
   const Y_TOP = 36, Y_BOT = 76;                       // px inside the 88px curve cell
   const yOf = v => Y_BOT - (v - lo) / span * (Y_BOT - Y_TOP);
   const ys = seq.map((x, i) => {
-    if (x.kind === 'hour') return yOf(x.v);
+    if (x.kind === 'hour') return yOf(pick(x));
     let p = i - 1, n = i + 1;
     while (p > 0 && seq[p].kind !== 'hour') p--;
     while (n < seq.length - 1 && seq[n].kind !== 'hour') n++;
-    return (yOf(seq[p].v) + yOf(seq[n].v)) / 2;
+    return (yOf(pick(seq[p])) + yOf(pick(seq[n]))) / 2;
   });
 
   const fmt = t => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', timeZone: tz }).replace(' ', '');
@@ -1032,23 +1134,125 @@ function w3Hours(m) {
         <div class="hx-rain"><div class="hx-lbl">${rise ? 'Sunrise' : 'Sunset'}</div></div>
       </div>`;
     }
-    const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
-    const tint = V.tints[x.c] || '#FFFFFF';
-    const motion = hourMotion(x.c, x.dark);
+    const v = pick(x);
     const label = x.now ? 'Now' : (hourOf(x.t) === 0 ? `<span class="hx-day">${dayOf(x.t)}</span>` : fmt(x.t));
-    let rain = '';
-    if (wet(m, x.r)) {
-      const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
-      rain = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, Math.max(0, f)) * 17)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
+    let ico, shown, extra = '';
+    if (mode === 'humidity') {
+      ico = `<div class="hx-ico hx-m-bob">${svg('water-percent', 34, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);${delay}`)}</div>`;
+      shown = v + '%';
+      extra = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, v / 100) * 17)}px;background:linear-gradient(180deg,#B8F0FF,#37B6D9);box-shadow:0 0 10px rgba(55,182,217,.55)"></div><div class="hx-lbl">${dampWord(v)}</div>`;
+    } else if (mode === 'wind') {
+      const rot = ((x.wd || 0) + 180) % 360, dur = Math.max(0.9, Math.min(3.2, 3.2 - v / (metric ? 16 : 10))).toFixed(2);
+      ico = `<div class="hx-ico"><span class="hx-rot" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 30, `color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.45));animation:hx-swayr ${dur}s ease-in-out infinite alternate;${delay}`)}</span></div>`;
+      shown = String(v);
+      extra = `<div class="hx-lbl">${compass(x.wd)}</div>`;
+    } else {
+      const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
+      const tint = V.tints[x.c] || '#FFFFFF';
+      ico = `<div class="hx-ico hx-m-${hourMotion(x.c, x.dark)}">${svg(icon, 34, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>`;
+      shown = v + '°';
+      if (mode === 'feels') {
+        const d = v - x.v;
+        extra = `<div class="hx-lbl" style="color:${d > 0 ? '#FFC27A' : d < 0 ? '#A9D4FF' : 'inherit'};opacity:${d ? 1 : 0.7}">${d > 0 ? '+' + d + '°' : d < 0 ? '−' + (-d) + '°' : 'Same'}</div>`;
+      } else if (wet(m, x.r)) {
+        const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
+        extra = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, Math.max(0, f)) * 17)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
+      }
     }
     return `<div class="${cls}" ${st}>
       <div class="hx-time">${label}</div>
-      <div class="hx-ico hx-m-${motion}">${svg(icon, 34, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>
-      <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 36).toFixed(1)}px">${x.v}°</div></div>
-      <div class="hx-rain">${rain}</div>
+      ${ico}
+      <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 36).toFixed(1)}px">${shown}</div></div>
+      <div class="hx-rain">${extra}</div>
     </div>`;
   });
-  return `<div class="hx"><div class="hx-tray" id="hxTray">${cols.join('')}</div></div>`;
+  return head + `<div class="hx"><div class="hx-tray" id="hxTray">${cols.join('')}</div></div>`;
+}
+
+// ---- Radar: NEXRAD reflectivity over a dark map, the last 50 minutes on a loop ----
+// Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
+// mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
+const R = { z: 7, idx: 5, playing: false, timer: null };
+const RADAR_OFFSETS = [50, 40, 30, 20, 10, 0];          // minutes ago, oldest first
+const radarTile = (off, z, x, y) => `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
+const baseTile = (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
+const inUS = (lat, lon) => lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66;
+function stopRadar() { clearTimeout(R.timer); R.timer = null; R.playing = false; const b = document.querySelector('.rd-play'); if (b) b.textContent = '▶'; }
+function radarShow(i) {
+  R.idx = i;
+  document.querySelectorAll('#rd .rd-fr').forEach((f, k) => f.classList.toggle('on', k === i));
+  const sc = document.getElementById('rdScrub'), tm = document.getElementById('rdTime');
+  if (sc) sc.value = i;
+  if (tm) tm.textContent = RADAR_OFFSETS[i] ? RADAR_OFFSETS[i] + ' min ago' : 'Now';
+}
+function radarPlay(on) {
+  clearTimeout(R.timer); R.playing = on;
+  const b = document.querySelector('.rd-play'); if (b) b.textContent = on ? '❚❚' : '▶';
+  if (!on) return;
+  const step = () => {
+    if (!document.getElementById('rd') || document.hidden) return stopRadar();
+    radarShow((R.idx + 1) % RADAR_OFFSETS.length);
+    R.timer = setTimeout(step, R.idx === RADAR_OFFSETS.length - 1 ? 1500 : 600);
+  };
+  R.timer = setTimeout(step, 600);
+}
+// Draw the map for the place on screen. Called after every repaint; it only does
+// anything when the place or the zoom is not the one already drawn.
+function radarSync() {
+  const box = document.getElementById('rd');
+  if (!box || !S.loc || !box.clientWidth) return;
+  const sig = locKey() + '|' + R.z;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  stopRadar();
+  box.innerHTML = '';
+  const { lat, lon } = S.loc;
+  if (!inUS(lat, lon)) {
+    box.innerHTML = '<div class="rd-note"><b>Radar covers the continental US</b>Open a place there to see rain and storms moving in.</div>';
+    return;
+  }
+  const W = box.clientWidth, H = box.clientHeight, z = R.z, n = 2 ** z;
+  const cx = (lon + 180) / 360 * n, la = lat * Math.PI / 180;
+  const cy = (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * n;
+  const ox = W / 2 - cx * 256, oy = H / 2 - cy * 256;
+  const xs = [], ys = [];
+  for (let x = Math.floor(cx - W / 512); x <= Math.floor(cx + W / 512); x++) xs.push(x);
+  for (let y = Math.floor(cy - H / 512); y <= Math.floor(cy + H / 512); y++) if (y >= 0 && y < n) ys.push(y);
+  const tiles = { base: [0, 0], radar: [0, 0] };       // [loaded, failed]
+  const layer = (cls, kind, url) => {
+    const d = document.createElement('div'); d.className = cls;
+    for (const ty of ys) for (const tx of xs) {
+      const im = new Image();
+      im.className = 'rd-t'; im.alt = ''; im.decoding = 'async'; im.draggable = false;
+      im.style.left = (ox + tx * 256).toFixed(1) + 'px'; im.style.top = (oy + ty * 256).toFixed(1) + 'px';
+      im.onload = () => { tiles[kind][0]++; };
+      im.onerror = () => { tiles[kind][1]++; im.style.display = 'none'; };
+      im.src = url(((tx % n) + n) % n, ty);
+      d.appendChild(im);
+    }
+    return d;
+  };
+  box.appendChild(layer('rd-base', 'base', (x, y) => baseTile(z, x, y)));
+  RADAR_OFFSETS.forEach((off, k) => box.appendChild(layer('rd-fr' + (k === R.idx ? ' on' : ''), 'radar', (x, y) => radarTile(off, z, x, y))));
+  const ui = document.createElement('div');
+  ui.innerHTML = `<div class="rd-dot"></div>
+    <div class="rd-zoom"><button data-rz="1" aria-label="Zoom in">+</button><button data-rz="-1" aria-label="Zoom out">−</button></div>
+    <div class="rd-bar"><button class="rd-play" data-rplay aria-label="Play or pause the loop">▶</button>
+      <input id="rdScrub" type="range" min="0" max="${RADAR_OFFSETS.length - 1}" step="1" value="${R.idx}" aria-label="Radar time"><span class="rd-time" id="rdTime"></span></div>
+    <div class="rd-attr">© OpenStreetMap © CARTO · Radar: NWS NEXRAD via Iowa Environmental Mesonet</div>`;
+  while (ui.firstChild) box.appendChild(ui.firstChild);
+  radarShow(R.idx);
+  if (!calm()) setTimeout(() => { if (document.getElementById('rd') === box && box.dataset.sig === sig) { radarShow(0); radarPlay(true); } }, 1800);
+  // If nothing arrived, say so rather than leave a blank map.
+  setTimeout(() => {
+    if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
+    if (!tiles.base[0] && !tiles.radar[0]) {
+      stopRadar();
+      box.insertAdjacentHTML('beforeend', '<div class="rd-note over"><b>Radar couldn’t load</b>Check your connection, or <a href="https://radar.weather.gov/" target="_blank" rel="noopener">open the NWS radar</a>.</div>');
+    } else if (!tiles.radar[0]) {
+      box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">Radar images aren’t available right now.</div>');
+    }
+  }, 9000);
 }
 
 // Range bars against the week's own min/max, coloured by ABSOLUTE
@@ -1182,6 +1386,10 @@ function render() {
   const tray2 = document.getElementById('hxTray');
   if (tray2 && keep) tray2.scrollLeft = keep;       // a repaint must not throw the tray back to "Now"
   if (tray2 && !S.introShown) introTray(hours, tray2);
+  const vsw = document.getElementById('vsw');
+  slide(vsw, vsw && vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: !S.vswPlaced });
+  S.vswPlaced = true;
+  if (S.view === 'radar') radarSync(); else stopRadar();
   if (S.swap) {                                       // a new place slides in from the side you swiped toward
     S.swap = false;
     if (!calm()) for (const el of [card, drawer]) el.animate([{ opacity: 0, transform: `translateX(${(S.dir || 1) * 40}px) scale(.97)` }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
@@ -1297,9 +1505,15 @@ q.addEventListener('input', () => {
 
 // ---- Events ----
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert]');
+  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay]');
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
+  if (t.dataset.view) {
+    if (S.view !== t.dataset.view) { S.view = t.dataset.view; S.introShown = false; stopRadar(); render(); }
+    return;
+  }
+  if (t.dataset.rz) { R.z = Math.max(5, Math.min(9, R.z + +t.dataset.rz)); return radarSync(); }
+  if (t.hasAttribute('data-rplay')) return radarPlay(!R.playing);
   if (t.dataset.alert != null) { S.alertOpen[t.dataset.alert] = !S.alertOpen[t.dataset.alert]; return render(); }
   if (t.dataset.pick != null) {
     const p = results._list[+t.dataset.pick];
@@ -1321,6 +1535,7 @@ document.addEventListener('click', e => {
   }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+document.addEventListener('input', e => { if (e.target.id === 'rdScrub') { radarPlay(false); radarShow(+e.target.value); } });
 
 // Swipe the forecast sideways to move between places (the hourly tray and the pills scroll on their own).
 let sx = null, sy = 0, sTarget = null;
@@ -1330,7 +1545,7 @@ app.addEventListener('touchend', e => {
   const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy, from = sTarget;
   sx = null;
   if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
-  if (from && from.closest && from.closest('#hxTray, .places')) return;
+  if (from && from.closest && from.closest('#hxTray, .places, #rd, .vsw')) return;
   stepPlace(dx < 0 ? 1 : -1);
 }, { passive: true });
 

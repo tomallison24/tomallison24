@@ -18,6 +18,23 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   with its ✕, and switch units. Up to 12 cities. Each place's forecast is
   kept for instant switching and topped up quietly in the background.
   (Older versions kept one place; it is carried over as a saved city.)
+- **Five views of the timeline**: five little glass buttons above the hours
+  (with a thumb that slides between them) switch what the main card shows:
+  **Hourly** (temperature, with rain bars), **Feels like** (each hour's
+  heat index or wind chill, with how far it is from the air temperature),
+  **Humidity** (with Dry / Comfy / Humid / Muggy), **Wind** (an arrow
+  pointing where it blows to, the speed, and the compass direction), and
+  **Radar**. Feels like uses the NWS heat-index and wind-chill formulas on the
+  hourly forecast (Open-Meteo supplies its own apparent temperature).
+- **Radar**: the last 50 minutes of NWS NEXRAD reflectivity over a dark map,
+  looping (play/pause and a scrubber; "Now" is the latest image), with zoom
+  buttons and a dot for the place. Radar tiles come from the Iowa
+  Environmental Mesonet's cache of the NEXRAD national mosaic; the map is
+  CARTO's dark tiles (OpenStreetMap data), and both are credited on the map.
+  It covers the continental US; elsewhere it says so. If no tiles arrive it
+  says that, with a link to the NWS radar, rather than show a blank map.
+  Neither tile service is documented anywhere this code can check, so if radar
+  ever goes blank, the URL templates are `radarTile` and `baseTile`.
 - Big type, quick to read: a 92px temperature, 21px place and conditions,
   16px chips, 19px day rows.
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
