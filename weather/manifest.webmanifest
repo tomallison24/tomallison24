@@ -1,7 +1,7 @@
 {
   "name": "Weather",
   "short_name": "Weather",
-  "description": "Signal-style weather: the W3 Vivid card, fed by Open-Meteo.",
+  "description": "Weather that opens to where you are: hourly and 7-day forecasts, radar. NWS data, with Open-Meteo as fallback.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

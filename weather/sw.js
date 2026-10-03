@@ -2,7 +2,7 @@
 // deploy shows up on the next open; the cache is the fallback when offline.
 // Forecast requests are never cached here - the page keeps the last one in
 // localStorage and labels it with its time.
-const CACHE = 'weather-v8';
+const CACHE = 'weather-v11';
 // slide.js is Home's, shared by every app (the switches' sliding thumb).
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', '../home/slide.js'];
 
