@@ -77,15 +77,8 @@
     border-radius: 28px; padding: 22px 18px 16px 18px; color: #FFFFFF;
     display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px;
   }
-  .w3-drawer { position: relative; overflow: hidden; border-radius: 28px; padding: 8px 18px 12px 18px; color: #FFFFFF; }
-  .w3-chevrow { position: relative; z-index: 1; height: 44px; margin: -10px 0; display: flex; align-items: center; justify-content: center; }
-  .w3-chev {
-    width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.18);
-    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35), 0 1px 2px rgba(0,0,0,0.30);
-    color: rgba(255,255,255,0.85);
-  }
+  .w3-days { position: relative; z-index: 1; min-width: 0; }
+  .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
 
   .w3-fx { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
@@ -136,25 +129,26 @@
   .hx-tray { scroll-padding-left: 6px; display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
   .hx-tray::-webkit-scrollbar { display: none; }
-  .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 4.6); min-width: 0; display: flex; flex-direction: column; align-items: center;
-    border-radius: 18px; padding-top: 8px; scroll-snap-align: start; }
+  .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 6.5); min-width: 0; display: flex; flex-direction: column; align-items: center;
+    border-radius: 14px; padding-top: 6px; scroll-snap-align: start; }
   .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); animation: hx-ring 2.8s ease-out infinite; }
-  .hx-time { height: 22px; font-size: 15px; font-weight: 600; letter-spacing: -0.1px; line-height: 22px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
+  .hx-time { height: 18px; font-size: 12px; font-weight: 600; letter-spacing: -0.3px; line-height: 18px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
   .hx-now .hx-time { font-weight: 700; opacity: 1; }
   .hx-day { font-weight: 800; letter-spacing: 0.2px; }
-  .hx-time.sm { font-size: 13px; }
-  .hx-ico { height: 46px; display: flex; align-items: center; justify-content: center; }
+  .hx-time.sm { font-size: 11px; letter-spacing: -0.3px; }
+  .hx-ico { height: 36px; display: flex; align-items: center; justify-content: center; }
   .hx-ico .i { transform-origin: 50% 55%; }
-  .hx-curve { position: relative; width: 100%; height: 88px; }
+  .hx-curve { position: relative; width: 100%; height: 70px; }
   .hx-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .hx-line { fill: none; stroke: rgba(255,255,255,0.85); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-  .hx-dot { position: absolute; left: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28), 0 0 12px rgba(255,255,255,0.55); }
+  .hx-dot { position: absolute; left: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28), 0 0 12px rgba(255,255,255,0.55); }
   .hx-now .hx-dot { animation: hx-beat 1.8s ease-in-out infinite; }
-  .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 600; letter-spacing: -0.4px; line-height: 24px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
-  .hx-rain { height: 42px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 8px; }
-  .hx-bar { width: 22px; border-radius: 6px 6px 3px 3px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
-  .hx-pct { font-size: 14px; font-weight: 700; color: #CDEBFF; line-height: 1; }
-  .hx-lbl { font-size: 14px; font-weight: 700; line-height: 1; opacity: 0.95; }
+  .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; line-height: 20px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
+  .hx-rain { height: 34px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
+  .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
+  .hx-pct { font-size: 11.5px; font-weight: 700; color: #CDEBFF; line-height: 1; }
+  .hx-lbl.sm { font-size: 10px; letter-spacing: -0.2px; }
+  .hx-lbl { font-size: 11.5px; font-weight: 700; line-height: 1; opacity: 0.95; }
   /* Icons move to suit the weather; each hour starts at its own point in the cycle. */
   .hx-m-spin .i { animation: w3-spin 24s linear infinite; }
   .hx-m-bob .i { animation: w3-bob 3s ease-in-out infinite alternate; }
@@ -192,8 +186,8 @@
   .places { position: relative; display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 4px 16px 8px;
     scrollbar-width: none; scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
   .places::-webkit-scrollbar { display: none; }
-  .pl { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 17px; border-radius: 999px;
-    font-size: 17px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; scroll-snap-align: center;
+  .pl { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 15px; border-radius: 999px;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; scroll-snap-align: center;
     color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.08);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.12);
     transition: background .35s, color .35s, box-shadow .35s, transform .18s cubic-bezier(.22,1,.36,1); }
@@ -202,7 +196,7 @@
   .pl .pl-t { font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0.8; }
   .pl.on { color: #fff; background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.16));
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 1px 1px rgba(255,255,255,0.50), 0 6px 20px -4px rgba(0,0,0,0.5); }
-  .pl.add { width: 46px; padding: 0; justify-content: center; }
+  .pl.add { width: 40px; padding: 0; justify-content: center; }
   .locating { margin: 0; padding: 120px 0 0; text-align: center; font-size: 18px; color: var(--muted); }
   .skeleton { position: relative; }
   /* The Places sheet's rows */
@@ -220,16 +214,16 @@
 
 
   /* ---- The view switcher above the timeline, and the radar ---- */
-  .hx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-  .hx-title { min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .hx-title { min-width: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vsw { flex: none; display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.14);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.20);
     backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
-  .vsw button { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,0.74); transition: color .25s; }
+  .vsw button { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,0.74); transition: color .25s; }
   .vsw button[aria-pressed="true"] { color: #fff; }
   .vsw .slthumb { background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.18));
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0,0,0,0.25); }
-  .hx-title small { display: block; margin-top: 1px; font-size: 14px; font-weight: 500; letter-spacing: 0; opacity: 0.75; }
+  .hx-title small { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; letter-spacing: 0; opacity: 0.75; }
   .hx-empty { padding: 56px 0; text-align: center; font-size: 17px; opacity: 0.8; }
   .hx-rot { display: inline-flex; }
   @keyframes hx-swayr { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
@@ -311,8 +305,8 @@
   .alert > button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; }
   .alert .dot { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex: none; }
   .alert .t { flex: 1; min-width: 0; }
-  .alert .t b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -0.24px; }
-  .alert .t small { display: block; font-size: 15px; color: var(--muted); margin-top: 1px; }
+  .alert .t b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -0.24px; }
+  .alert .t small { display: block; font-size: 14px; color: var(--muted); margin-top: 1px; }
   .alert .chev { color: var(--muted); transition: transform .2s; }
   .alert.open .chev { transform: rotate(90deg); }
   .alert .body { display: none; padding: 0 16px 16px 68px; font-size: 16px; line-height: 1.45; color: rgba(235,235,245,0.85); white-space: pre-line; }
@@ -597,7 +591,6 @@ const S = {
   here: valid(store.get('here', null), 'place'),      // the last GPS fix: { lat, lon, name }
   cache: valid(store.get('cache', {}), 'map'),        // place key -> BASE + { fetchedAt, key }
   units: store.get('units', 'us'),
-  expanded: store.get('expanded', false),
   data: null,                             // the on-screen place's BASE
   alertOpen: {},
   view: ['now', 'feels', 'humidity', 'wind', 'radar'].includes(store.get('view', 'now')) ? store.get('view', 'now') : 'now',   // the timeline: now | feels | humidity | wind | radar (remembered)
@@ -1085,7 +1078,7 @@ function w3Hero(m) {
   });
 
   const move = has(['lightning', 'lightning-rainy']) ? 'w3-flicker' : (night ? 'w3-glow' : (c === 'sunny' ? 'w3-spin-slow' : 'w3-bob'));
-  const chip = (ic, txt, extra, cls) => `<div style="display:flex;align-items:center;gap:7px;padding:8px 14px 8px 11px;border-radius:999px;background:rgba(255,255,255,0.16);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.40);font-size:16px;font-weight:600;letter-spacing:-0.1px;white-space:nowrap;">${svg(ic, 20, extra || '').replace('class="i"', `class="i ${cls || ''}"`)}${txt}</div>`;
+  const chip = (ic, txt, extra, cls) => `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border-radius:999px;background:rgba(255,255,255,0.16);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.40);font-size:14px;font-weight:600;letter-spacing:-0.1px;white-space:nowrap;">${svg(ic, 17, extra || '').replace('class="i"', `class="i ${cls || ''}"`)}${txt}</div>`;
   const chips = [];
   if (a.humidity != null) chips.push(chip('water-percent', Math.round(a.humidity) + '%'));
   if (a.wind_speed != null) {
@@ -1100,16 +1093,16 @@ function w3Hero(m) {
     <div class="w3-in${S.heroRise ? ' rise' : ''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
-          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:21px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 16, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 18, 'opacity:0.75;')}</button>
-          <div style="font-size:${String(temp).length >= 3 ? 72 : 92}px;font-weight:200;letter-spacing:-4px;line-height:0.95;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
+          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 16, 'opacity:0.75;')}</button>
+          <div style="font-size:${String(temp).length >= 3 ? 62 : 76}px;font-weight:200;letter-spacing:-3px;line-height:0.95;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;">
-          <div class="w3-ico ${move}">${svg(icon, 68, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}</div>
-          <div style="font-size:21px;font-weight:600;letter-spacing:-0.3px;margin-top:8px;line-height:1.2;">${words}</div>
-          <div style="font-size:18px;font-weight:500;letter-spacing:-0.1px;opacity:0.92;margin-top:3px;line-height:1.2;">${hl}</div>
+          <div class="w3-ico ${move}">${svg(icon, 56, `color:${tint};filter:drop-shadow(0 0 10px ${tint}99);`)}</div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-top:6px;line-height:1.2;">${words}</div>
+          <div style="font-size:16px;font-weight:500;letter-spacing:-0.1px;opacity:0.92;margin-top:2px;line-height:1.2;">${hl}</div>
         </div>
       </div>
-      ${chips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">${chips.join('')}</div>` : ''}
+      ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">${chips.join('')}</div>` : ''}
     </div>`;
 }
 
@@ -1139,7 +1132,7 @@ function viewHead(m) {
   const unit = m.entity.attributes.wind_speed_unit || 'mph';
   const title = { now: 'Hourly', feels: 'Feels like', humidity: 'Humidity', wind: `Wind<small>${unit}</small>`, radar: 'Radar' }[S.view];
   return `<div class="hx-head"><div class="hx-title">${title}</div><div class="vsw" id="vsw" role="group" aria-label="Timeline view">${
-    VIEWS.map(([id, label, ic]) => `<button data-view="${id}" aria-label="${label}" title="${label}" aria-pressed="${S.view === id}">${line(ic, 21)}</button>`).join('')}</div></div>`;
+    VIEWS.map(([id, label, ic]) => `<button data-view="${id}" aria-label="${label}" title="${label}" aria-pressed="${S.view === id}">${line(ic, 19)}</button>`).join('')}</div></div>`;
 }
 const compass = d => d == null ? '–' : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(d / 45) % 8];
 const dampWord = h => h < 30 ? 'Dry' : h < 60 ? 'Comfy' : h < 75 ? 'Humid' : 'Muggy';
@@ -1197,7 +1190,7 @@ function w3Hours(m) {
   const lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
   // A quiet stretch should look flat, not dramatic.
   const span = Math.max(mode === 'humidity' ? 25 : mode === 'wind' ? (metric ? 16 : 10) : (metric ? 5 : 9), hi - lo);
-  const Y_TOP = 36, Y_BOT = 76;                       // px inside the 88px curve cell
+  const Y_TOP = 30, Y_BOT = 60;                       // px inside the 70px curve cell
   const yOf = v => Y_BOT - (v - lo) / span * (Y_BOT - Y_TOP);
   const ys = seq.map((x, i) => {
     if (x.kind === 'hour') return yOf(pick(x));
@@ -1210,7 +1203,7 @@ function w3Hours(m) {
   const fmt = t => hrFmt(t, tz), fmtM = t => minFmt(t, tz), hourOf = t => hrOf(t, tz), dayOf = t => dayFmt(t, tz);
   const curveSvg = i => {
     const yl = i ? (ys[i - 1] + ys[i]) / 2 : ys[i], yr = i < seq.length - 1 ? (ys[i] + ys[i + 1]) / 2 : ys[i];
-    return `<svg viewBox="0 0 100 88" preserveAspectRatio="none" aria-hidden="true"><path class="hx-line" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${ys[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
+    return `<svg viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true"><path class="hx-line" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${ys[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
   };
   const cols = seq.map((x, i) => {
     const cls = `hx-col${x.now ? ' hx-now' : ''}`;
@@ -1220,40 +1213,40 @@ function w3Hours(m) {
       const rise = x.kind === 'rise';
       return `<div class="${cls}" ${st}>
         <div class="hx-time sm">${fmtM(x.t)}</div>
-        <div class="hx-ico hx-m-${rise ? 'up' : 'down'}">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 34, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);${delay}`)}</div>
+        <div class="hx-ico hx-m-${rise ? 'up' : 'down'}">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 25, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);${delay}`)}</div>
         <div class="hx-curve">${curveSvg(i)}</div>
-        <div class="hx-rain"><div class="hx-lbl">${rise ? 'Sunrise' : 'Sunset'}</div></div>
+        <div class="hx-rain"><div class="hx-lbl sm">${rise ? 'Sunrise' : 'Sunset'}</div></div>
       </div>`;
     }
     const v = pick(x);
     const label = x.now ? 'Now' : (hourOf(x.t) === 0 ? `<span class="hx-day">${dayOf(x.t)}</span>` : fmt(x.t));
     let ico, shown, extra = '';
     if (mode === 'humidity') {
-      ico = `<div class="hx-ico hx-m-bob">${svg('water-percent', 34, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);${delay}`)}</div>`;
+      ico = `<div class="hx-ico hx-m-bob">${svg('water-percent', 25, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);${delay}`)}</div>`;
       shown = v + '%';
-      extra = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, v / 100) * 17)}px;background:linear-gradient(180deg,#B8F0FF,#37B6D9);box-shadow:0 0 10px rgba(55,182,217,.55)"></div><div class="hx-lbl">${dampWord(v)}</div>`;
+      extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, v / 100) * 13)}px;background:linear-gradient(180deg,#B8F0FF,#37B6D9);box-shadow:0 0 10px rgba(55,182,217,.55)"></div><div class="hx-lbl">${dampWord(v)}</div>`;
     } else if (mode === 'wind') {
       const rot = ((x.wd || 0) + 180) % 360, dur = Math.max(0.9, Math.min(3.2, 3.2 - v / (metric ? 16 : 10))).toFixed(2);
-      ico = `<div class="hx-ico"><span class="hx-rot" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 30, `color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.45));animation:hx-swayr ${dur}s ease-in-out infinite alternate;${delay}`)}</span></div>`;
+      ico = `<div class="hx-ico"><span class="hx-rot" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 21, `color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.45));animation:hx-swayr ${dur}s ease-in-out infinite alternate;${delay}`)}</span></div>`;
       shown = String(v);
       extra = `<div class="hx-lbl">${compass(x.wd)}</div>`;
     } else {
       const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
       const tint = V.tints[x.c] || '#FFFFFF';
-      ico = `<div class="hx-ico hx-m-${hourMotion(x.c, x.dark)}">${svg(icon, 34, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>`;
+      ico = `<div class="hx-ico hx-m-${hourMotion(x.c, x.dark)}">${svg(icon, 26, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>`;
       shown = v + '°';
       if (mode === 'feels') {
         const d = v - x.v;
         extra = `<div class="hx-lbl" style="color:${d > 0 ? '#FFC27A' : d < 0 ? '#A9D4FF' : 'inherit'};opacity:${d ? 1 : 0.7}">${d > 0 ? '+' + d + '°' : d < 0 ? '−' + (-d) + '°' : 'Same'}</div>`;
       } else if (wet(m, x.r)) {
         const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
-        extra = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, Math.max(0, f)) * 17)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
+        extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, Math.max(0, f)) * 13)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
       }
     }
     return `<div class="${cls}" ${st} data-hour="${x.t}" role="button" tabindex="0" aria-label="Details for ${x.now ? 'now' : fmt(x.t)}">
       <div class="hx-time">${label}</div>
       ${ico}
-      <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 36).toFixed(1)}px">${shown}</div></div>
+      <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 27).toFixed(1)}px">${shown}</div></div>
       <div class="hx-rain">${extra}</div>
     </div>`;
   });
@@ -1384,21 +1377,21 @@ function wDays(m) {
     const name = i === 0 ? 'Today' : new Date(d.t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
     const icon = V.icons[d.c] || 'weather-cloudy';
     const tint = V.tints[d.c] || '#FFFFFF';
-    const rain = wet(m, d.r) ? `<div style="font-size:13px;font-weight:700;color:#BFE3FF;line-height:1;margin-top:2px;">${d.r}${unit}</div>` : '';
+    const rain = wet(m, d.r) ? `<div style="font-size:11px;font-weight:700;color:#BFE3FF;line-height:1;margin-top:1px;">${d.r}${unit}</div>` : '';
     const dot = (i === 0 && cur != null)
-      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
+      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
       : '';
-    return `<div style="display:grid;grid-template-columns:70px 44px 44px 1fr 44px;align-items:center;column-gap:10px;height:60px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
-      <div style="font-size:19px;font-weight:600;letter-spacing:-0.3px;">${name}</div>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 30, `color:${tint};`)}${rain}</div>
-      <div style="font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.65;">${d.l}°</div>
-      <div style="position:relative;height:7px;border-radius:999px;background:rgba(0,0,0,0.28);">
+    return `<div style="display:grid;grid-template-columns:54px 34px 38px 1fr 38px;align-items:center;column-gap:10px;height:46px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
+      <div style="font-size:16px;font-weight:600;letter-spacing:-0.2px;">${name}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 24, `color:${tint};`)}${rain}</div>
+      <div style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.65;">${d.l}°</div>
+      <div style="position:relative;height:5px;border-radius:999px;background:rgba(0,0,0,0.28);">
         <div style="position:absolute;top:0;bottom:0;left:${pct(d.l)}%;width:${((d.h - d.l) / span * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,${ramp(d.l)},${ramp(d.h)});"></div>${dot}
       </div>
-      <div style="font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
+      <div style="font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
     </div>`;
   });
-  return `<div>${rows.join('')}</div>`;
+  return `<div class="w3-dhead">7-day forecast</div><div>${rows.join('')}</div>`;
 }
 
 // Active NWS watches/warnings/advisories for this point, most severe first.
@@ -1477,15 +1470,14 @@ function render() {
   const card = slot('card', 'section', 'w3-card');
   const hero = slot('hero', 'div');
   const hours = slot('hours', 'div', 'w3-hours');
-  const chev = slot('chev', 'div', 'w3-chevrow');
-  const drawer = slot('drawer', 'section', 'w3-drawer');
+  const days = slot('days', 'div', 'w3-days');
   const foot = slot('foot', 'div', 'foot');
   const alerts = slot('alerts', 'div', 'alerts');
   const places = slot('places', 'nav', 'places');
   const dots = slot('dots', 'nav', 'dots');
   dots.setAttribute('aria-label', 'Places');
-  if (!card.contains(hero)) { card.replaceChildren(hero, hours, chev); }
-  if (!app.contains(card) || app.firstElementChild !== places) { app.replaceChildren(places, alerts, card, drawer, dots, foot); }
+  if (!card.contains(days)) { card.replaceChildren(hero, hours, days); }
+  if (!app.contains(card) || app.firstElementChild !== places) { app.replaceChildren(places, alerts, card, dots, foot); }
   put(places, placesBar());
   put(dots, dotsBar());   // alerts is first; checking `card` re-attached everything on every repaint
 
@@ -1514,14 +1506,10 @@ function render() {
   if (S.view === 'radar') radarSync(); else stopRadar();
   if (S.swap) {                                       // a new place slides in from the side you swiped toward
     S.swap = false;
-    if (!calm()) for (const el of [card, drawer]) el.animate([{ opacity: 0, transform: `translateX(${(S.dir || 1) * 40}px) scale(.97)` }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    if (!calm()) for (const el of [card]) el.animate([{ opacity: 0, transform: `translateX(${(S.dir || 1) * 40}px) scale(.97)` }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
   if (S.centerChip) { S.centerChip = false; centerChip(places); }
-  put(chev, `<button class="w3-chev" data-action="toggle" aria-label="${S.expanded ? 'Hide' : 'Show'} 7-day forecast" aria-expanded="${S.expanded}">${svg(S.expanded ? 'chevron-up' : 'chevron-down', 18)}</button>`);
-
-  drawer.hidden = !S.expanded;
-  drawer.style.background = sky;
-  put(drawer, wDays(m));
+  put(days, wDays(m));
 
   const at = new Date(S.data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const status = S.loading ? `${svg('refresh', 14, '').replace('class="i"', 'class="i spin"')} Updating…`
@@ -1543,7 +1531,7 @@ function introTray(hours, tray) {
   S.nudged = true;
   let touched = false;
   tray.addEventListener('touchstart', () => { touched = true; }, { once: true, passive: true });
-  setTimeout(() => { if (!touched && tray.scrollLeft < 8) tray.scrollTo({ left: 64, behavior: 'smooth' }); }, 2000);
+  setTimeout(() => { if (!touched && tray.scrollLeft < 8) tray.scrollTo({ left: 48, behavior: 'smooth' }); }, 2000);
   setTimeout(() => { if (!touched && tray.scrollLeft > 8 && tray.scrollLeft < 120) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
 }
 
@@ -1711,7 +1699,6 @@ document.addEventListener('click', e => {
     return;
   }
   switch (t.dataset.action) {
-    case 'toggle': S.expanded = !S.expanded; store.set('expanded', S.expanded); render(); break;
     case 'refresh': refresh(true); break;
     case 'location': openSheet(); break;
     case 'gps': closeSheet(); autoLocate(false); break;
