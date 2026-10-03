@@ -42,8 +42,11 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   says that, with a link to the NWS radar, rather than show a blank map.
   Neither tile service is documented anywhere this code can check, so if radar
   ever goes blank, the URL templates are `radarTile` and `baseTile`.
-- Big type, quick to read: a 92px temperature, 21px place and conditions,
-  16px chips, 19px day rows.
+- **One card**: the current weather, the hourly timeline (about six and a half
+  hours across, scroll for the rest of the 24), and the 7-day forecast all sit
+  on the main card; there is no chevron or drawer to open. Type is sized to
+  read at a glance without crowding: a 76px temperature, 18-19px place and
+  conditions, 14px chips, 16px day rows, 12-17px in the hourly columns.
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
   time (midnight shows the day), an icon that moves to suit the weather (the
   sun turns, rain patters, snow sways, storms flicker, wind and fog drift,
