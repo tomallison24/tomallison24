@@ -241,19 +241,25 @@
   /* ---- The hour popup: the same Liquid Glass sheet as Places ---- */
   .hnav { display: flex; gap: 8px; }
   .hnav button:disabled { opacity: 0.35; }
-  .hd-hero { --k: 0; border-radius: 28px; padding: 20px 20px 20px 22px; display: flex; align-items: center; justify-content: space-between; color: #fff;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 1px 1px rgba(255,255,255,0.35), 0 10px 26px -12px rgba(0,0,0,0.5); }
+  /* No boxes: the sheet itself takes the hour's (or day's) sky, through the
+     glass, darkening a little towards the bottom so the text stays easy to
+     read; the big temperature sits straight on it, and the details below are
+     plain text in two columns, set apart by hairlines. */
+  .sheet.sky { isolation: isolate; }
+  .sheet.sky::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.88;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 25%, rgba(0,0,0,0.32) 100%), var(--sky); transition: opacity .3s; }
+  .sheet.sky .sheet-body { text-shadow: 0 1px 2px rgba(0,0,0,0.18); }
+  .hd-hero { --k: 0; padding: 4px 6px 14px 8px; display: flex; align-items: center; justify-content: space-between; color: #fff; }
   .hd-temp { font-size: 76px; font-weight: 200; letter-spacing: -3.5px; line-height: 0.95; font-variant-numeric: tabular-nums; }
   .hd-temp span { opacity: 0.9; }
   .hd-words { margin-top: 8px; font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
-  .hd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-  .hd-tile { border-radius: 24px; padding: 14px 16px 12px; background: var(--lgs-row); min-width: 0;
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift); }
-  .hd-k { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+  .hd-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; margin-top: 2px; }
+  .hd-tile { padding: 14px 4px 14px 8px; min-width: 0; border-top: 0.5px solid rgba(255,255,255,0.22); }
+  .hd-k { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: rgba(255,255,255,0.72); }
   .hd-v { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 600; letter-spacing: -0.8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .hd-v small { font-size: 17px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .hd-v small { font-size: 17px; font-weight: 500; letter-spacing: 0; color: rgba(255,255,255,0.72); }
   .hd-arrow { display: inline-flex; }
-  .hd-s { margin-top: 3px; font-size: 15px; color: var(--muted); }
+  .hd-s { margin-top: 3px; font-size: 15px; color: rgba(255,255,255,0.72); }
   .hd-tile.wide .hd-v { font-size: 26px; }
   .hd-hero, .hd-tile { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--k) * 55ms); }
   .hx-col[data-hour] { cursor: pointer; -webkit-user-select: none; user-select: none; }
@@ -1732,6 +1738,9 @@ hourNav[0].innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="no
 hourNav[1].innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 hourWrap.querySelector('.hnav [data-close]').innerHTML = svg('close', 18);
 
+// The hour and day sheets wear that hour's or day's sky, behind everything on them.
+function skySheet(wrap, sky) { const sh = wrap.querySelector('.sheet'); sh.classList.add('sky'); sh.style.setProperty('--sky', sky); }
+
 // Tap an hour: a Liquid Glass sheet with everything about it, and arrows to step through the day.
 function fillHour() {
   if (!S.data) return closeSheet();
@@ -1759,7 +1768,8 @@ function fillHour() {
   ];
   const rise = m.sun.next_rising, set = m.sun.next_setting;
   const daylight = rise && set ? `<div class="hd-tile wide" style="--k:5"><div class="hd-k">${svg('weather-sunset-up', 18, 'color:#FFD60A;')}Sunrise</div><div class="hd-v">${minFmt(rise, tz)}</div></div><div class="hd-tile wide" style="--k:5"><div class="hd-k">${svg('weather-sunset-down', 18, 'color:#FFD60A;')}Sunset</div><div class="hd-v">${minFmt(set, tz)}</div></div>` : '';
-  hourBody.innerHTML = `<div class="hd-hero" style="background:${sky};--k:0">
+  skySheet(hourWrap, sky);
+  hourBody.innerHTML = `<div class="hd-hero" style="--k:0">
       <div><div class="hd-temp">${x.v}<span>°</span></div><div class="hd-words">${(x.dark && x.c === 'sunny') ? 'Clear' : (V.words[x.c] || x.c)}</div></div>
       ${svg(icon, 76, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}
     </div>
@@ -1902,7 +1912,8 @@ function fillDay() {
     + (d.nt ? `<p class="dd-txt"><b>${today ? 'Tonight' : 'Night'}</b>${esc(d.nt)}</p>` : '')
     + '<div class="hd-s">National Weather Service</div></div>');
 
-  dayBody.innerHTML = `<div class="hd-hero" style="background:${sky};--k:0">
+  skySheet(dayWrap, sky);
+  dayBody.innerHTML = `<div class="hd-hero" style="--k:0">
       <div><div class="hd-temp" aria-label="High ${d.h}°, low ${d.l}°">${d.h}<span>°</span><em>${d.l}°</em></div><div class="hd-words">${V.words[d.c] || d.c}</div></div>
       ${svg(icon, 76, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}
     </div>
