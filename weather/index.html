@@ -127,9 +127,8 @@
 
   /* ---- The hourly tray: 24 hours you scroll sideways. Each hour has its
      time, a moving icon, a temperature on a curve, and a rain bar. ---- */
-  .hx { border-radius: 24px; background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
-    box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35), 0 10px 24px -14px rgba(0,0,0,0.45); overflow: hidden; }
+  /* No panel: the hours sit straight on the sky (the radar keeps its own dark map panel, .hx.rd). */
+  .hx { border-radius: 24px; background: none; overflow: hidden; }
   .hx-tray { scroll-padding-left: 6px; display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
   .hx-tray::-webkit-scrollbar { display: none; }
@@ -216,7 +215,10 @@
   .rd-bar { position: absolute; left: 10px; right: 10px; bottom: 26px; display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 5px; border-radius: 999px;
     background: rgba(20,22,28,0.66); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
   .rd-bar input { flex: 1; min-width: 0; accent-color: #9FD8FF; }
-  .rd-time { flex: none; min-width: 78px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rd-kind { position: absolute; top: 12px; left: 12px; padding: 4px 9px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.35); font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #1B1B1F; background: #FFD60A; }
+  .rd-kind[hidden] { display: none; }
+  .rd-fr.ahead.on { opacity: 0.75; }
+  .rd-time { flex: none; min-width: 84px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .rd-attr { position: absolute; left: 10px; right: 10px; bottom: 6px; font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rd-note { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; font-size: 16px; line-height: 1.4; color: rgba(255,255,255,0.85); }
   .rd-note b { font-size: 19px; color: #fff; }
@@ -1238,12 +1240,32 @@ function w3Hours(m) {
 // ---- Radar: NEXRAD reflectivity over a dark map, the last 50 minutes on a loop ----
 // Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
 // mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
-const R = { z: 7, idx: 11, playing: false, timer: null, touched: false, place: '', offs: [] };
+const R = { z: 7, idx: 11, playing: false, timer: null, touched: false, place: '', offs: [], hrrr: null };
 // Minutes ago, oldest first. The last 50 minutes come from IEM's ready-made tiles. The hour
 // before that comes from IEM's time-based map service (WMS-T), which this code could not test
 // against the live service: any of those frames that do not load are dropped, leaving the 50.
 const RADAR_OFFSETS = [110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
 const MERC = 20037508.342789244;
+// The next two hours are a forecast, not radar: the NWS HRRR model's simulated reflectivity,
+// which IEM draws every 15 minutes out to 18 hours. Frames are numbered from the model run's
+// start, so the run's time is read first (refd_1080.json, model_init_utc); without it there are
+// no forecast frames rather than mislabelled ones. Negative offsets are minutes ahead.
+const RADAR_AHEAD = [15, 30, 45, 60, 75, 90, 105, 120];
+async function hrrrInit() {
+  if (R.hrrr && Date.now() - R.hrrr.at < 10 * 60000) return R.hrrr.init;
+  const j = await getJSON('https://mesonet.agron.iastate.edu/data/gis/images/4326/hrrr/refd_1080.json', { headers: {} });
+  const v = String(j.model_init_utc || '');
+  const init = /^\d{12}$/.test(v) ? Date.UTC(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8), +v.slice(8, 10), +v.slice(10, 12)) : Date.parse(v);
+  if (!Number.isFinite(init)) throw new Error('No HRRR run time');
+  R.hrrr = { init, at: Date.now() };
+  return init;
+}
+function hrrrTile(ahead, init, z, x, y) {
+  const f = Math.round((Date.now() + ahead * 60000 - init) / 60000 / 15) * 15;   // forecast minute from the run's start
+  if (f < 0 || f > 1080) return null;
+  const run = new Date(init).toISOString().slice(0, 16).replace(/[-T:]/g, '');
+  return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFD-F${String(f).padStart(4, '0')}-${run}/${z}/${x}/${y}.png`;
+}
 function radarTile(off, z, x, y) {
   if (off <= 50) return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
   const size = 2 * MERC / 2 ** z, minx = -MERC + x * size, maxy = MERC - y * size;
@@ -1252,7 +1274,8 @@ function radarTile(off, z, x, y) {
     + `&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX=${minx.toFixed(2)},${(maxy - size).toFixed(2)},${(minx + size).toFixed(2)},${maxy.toFixed(2)}`
     + `&TIME=${new Date(t * 1000).toISOString().slice(0, 19)}Z`;
 }
-const agoLabel = off => !off ? 'Now' : off < 60 ? `${off} min ago` : `${Math.floor(off / 60)}h${off % 60 ? ' ' + off % 60 + 'm' : ''} ago`;
+const spanLabel = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 ? ' ' + m % 60 + 'm' : ''}`;
+const agoLabel = off => !off ? 'Now' : off > 0 ? `${spanLabel(off)} ago` : `in ${spanLabel(-off)}`;
 // CARTO has required a (free) key since late August 2026; without one every tile is
 // stamped "API KEY REQUIRED". Map keys are meant to sit in web pages like this one.
 const CARTO_KEY = 'cb1_48id_1_0ed95665ed15e6f191380e40';
@@ -1265,6 +1288,8 @@ function radarShow(i) {
   const sc = document.getElementById('rdScrub'), tm = document.getElementById('rdTime');
   if (sc) sc.value = i;
   if (tm) tm.textContent = agoLabel(R.offs[i]);
+  const kind = document.getElementById('rdKind');
+  if (kind) kind.hidden = !(R.offs[i] < 0);
 }
 function radarPlay(on) {
   clearTimeout(R.timer); R.playing = on;
@@ -1328,9 +1353,32 @@ function radarSync() {
     <div class="rd-zoom"><button data-rz="1" aria-label="Zoom in">+</button><button data-rz="-1" aria-label="Zoom out">−</button></div>
     <div class="rd-bar"><button class="rd-play" data-rplay aria-label="Play or pause the loop">▶</button>
       <input id="rdScrub" type="range" min="0" max="${R.offs.length - 1}" step="1" value="${R.idx}" aria-label="Radar time"><span class="rd-time" id="rdTime"></span></div>
-    <div class="rd-attr">© OpenStreetMap © CARTO · Radar: NWS NEXRAD via Iowa Environmental Mesonet</div>`;
+    <span class="rd-kind" id="rdKind" hidden>Forecast</span>
+    <div class="rd-attr">© OpenStreetMap © CARTO · Radar: NWS NEXRAD, forecast: NWS HRRR, via Iowa Environmental Mesonet</div>`;
   while (ui.firstChild) box.appendChild(ui.firstChild);
   radarShow(R.idx);
+  // The forecast frames go in after "Now" once the model run's time is known.
+  hrrrInit().then(init => {
+    if (document.getElementById('rd') !== box || box.dataset.sig !== sig) return;
+    let last = [...box.querySelectorAll('.rd-fr')].pop();
+    for (const ahead of RADAR_AHEAD) {
+      if (!hrrrTile(ahead, init, z, 0, 0)) continue;
+      const fr = layer('rd-fr ahead', 'radar', (x, y) => hrrrTile(ahead, init, z, x, y));
+      last.after(fr); last = fr;
+      R.offs.push(-ahead);
+    }
+    const sc = document.getElementById('rdScrub');
+    if (sc) sc.max = R.offs.length - 1;
+    setTimeout(() => {                                   // forecast tiles that never arrived are dropped too
+      if (document.getElementById('rd') !== box || box.dataset.sig !== sig) return;
+      const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
+      for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && R.offs[k] < 0) { frs[k].remove(); R.offs.splice(k, 1); }
+      const sc2 = document.getElementById('rdScrub');
+      if (sc2) sc2.max = R.offs.length - 1;
+      const at = R.offs.indexOf(showing);
+      if (at >= 0) R.idx = at; else radarShow(Math.min(R.idx, R.offs.length - 1));
+    }, 9000);
+  }).catch(() => { /* no run time: the radar stays past-only rather than guess the forecast's times */ });
   // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
   if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || (R.touched && !wasPlaying)) return;
@@ -1343,7 +1391,7 @@ function radarSync() {
   setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
     const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
-    for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && R.offs[k] > 50) { frs[k].remove(); R.offs.splice(k, 1); }
+    for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && (R.offs[k] > 50 || R.offs[k] < 0)) { frs[k].remove(); R.offs.splice(k, 1); }
     const sc = document.getElementById('rdScrub');
     if (sc) sc.max = R.offs.length - 1;
     const at = R.offs.indexOf(showing);

@@ -38,9 +38,14 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   pointing where it blows to, the speed, and the compass direction), and
   **Radar**. Feels like uses the NWS heat-index and wind-chill formulas on the
   hourly forecast (Open-Meteo supplies its own apparent temperature).
-- **Radar**: NWS NEXRAD reflectivity over a dark map, looping back about two
-  hours (play/pause and a scrubber; "Now" is the latest image), with zoom
-  buttons and a dot for the place. The last 50 minutes come from the Iowa
+- **Radar**: NWS NEXRAD reflectivity over a dark map, looping from about two
+  hours ago to two hours ahead. The two hours ahead are a forecast, not radar:
+  the NWS HRRR model's simulated reflectivity (IEM's `hrrr::REFD-F…` tiles,
+  every 15 minutes), marked FORECAST on the map. Those frames are numbered from
+  the model run's start, so the run's time is read first (`refd_1080.json`);
+  without it there are no forecast frames rather than mislabelled ones, and
+  forecast tiles that never arrive are dropped. Play/pause, a scrubber ("Now"
+  is the latest radar image), zoom buttons and a dot for the place. The last 50 minutes come from the Iowa
   Environmental Mesonet's ready-made tiles of the NEXRAD national mosaic; the
   hour before that comes from its time-based map service (`n0q-t.cgi`, WMS-T,
   pictures every 5 minutes). That service could not be tested from where this
@@ -59,7 +64,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
   14px chips, 16px day rows, 12-17px in the hourly columns.
-- **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
+- **Hourly tray**: the next 24 hours, scrolling sideways, straight on the sky
+  (no panel behind it) in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and a rain
   bar with its chance when it is 20% or more. The only thing that moves in the
