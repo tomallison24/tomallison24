@@ -1388,7 +1388,7 @@ function radarSync() {
   // (the time-based service is the untested part) are dropped, so the loop and the slider only
   // hold pictures that exist.
   setTimeout(() => {
-    if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
+    if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note:not(.small)')) return;
     const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
     for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && (R.offs[k] > 50 || R.offs[k] < 0)) { frs[k].remove(); R.offs.splice(k, 1); }
     const sc = document.getElementById('rdScrub');
@@ -1397,8 +1397,10 @@ function radarSync() {
     radarShow(at >= 0 ? at : R.offs.length - 1);
     if (!tiles.base[0] && !tiles.radar[0]) {
       stopRadar();
+      box.querySelectorAll('.rd-note.small').forEach(n => n.remove());   // nothing loaded at all: that is the message, not the forecast
       box.insertAdjacentHTML('beforeend', '<div class="rd-note over"><b>Radar couldn’t load</b>Check your connection, or <a href="https://radar.weather.gov/" target="_blank" rel="noopener">open the NWS radar</a>.</div>');
     } else if (!tiles.radar[0]) {
+      box.querySelectorAll('.rd-note.small').forEach(n => n.remove());
       box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">Radar images aren’t available right now.</div>');
     }
   }, 9000);
