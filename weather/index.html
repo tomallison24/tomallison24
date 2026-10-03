@@ -100,7 +100,8 @@
   .w3-flash { position:absolute; inset:0; background:#EBEBFF; opacity:0; animation:w3-flash 9s linear infinite; }
   .w3-fog { position:absolute; left:-30%; width:160%; border-radius:999px; background:rgba(255,255,255,0.22); filter:blur(14px); animation:w3-fogdrift ease-in-out infinite alternate; }
   .w3-gust { position:absolute; left:-40%; height:1.5px; border-radius:2px; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0)); animation:w3-gust linear infinite; }
-  .w3-in { position:relative; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,0.18); animation:w3-rise .7s cubic-bezier(.2,.8,.2,1) both; }
+  .w3-in { position:relative; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,0.18); }
+  .w3-in.rise { animation:w3-rise .7s cubic-bezier(.2,.8,.2,1) both; }
   .w3-hours { position:relative; z-index:1; min-width:0; }
   .w3-ico { display:inline-flex; }
   .w3-spin-slow { animation:w3-spin 30s linear infinite; }
@@ -132,7 +133,7 @@
   .hx { border-radius: 24px; background: rgba(255,255,255,0.12);
     backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
     box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35), 0 10px 24px -14px rgba(0,0,0,0.45); overflow: hidden; }
-  .hx-tray { display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
+  .hx-tray { scroll-padding-left: 6px; display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
   .hx-tray::-webkit-scrollbar { display: none; }
   .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 4.6); min-width: 0; display: flex; flex-direction: column; align-items: center;
@@ -195,7 +196,6 @@
     font-size: 17px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; scroll-snap-align: center;
     color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.08);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.12);
-    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
     transition: background .35s, color .35s, box-shadow .35s, transform .18s cubic-bezier(.22,1,.36,1); }
   .pl:active { transform: scale(0.94); }
   .pl .pl-n { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
@@ -256,6 +256,39 @@
   .rd-note.small { inset: auto 10px 70px 10px; padding: 8px 12px; border-radius: 14px; background: rgba(16,19,26,0.82); font-size: 14px; }
   .rd-note a { color: #9FD8FF; }
   @media (prefers-reduced-motion: reduce) { .rd-dot { animation: none; } .rd-fr { transition: none; } }
+
+
+  /* ---- Page dots under the forecast ---- */
+  .dots { display: flex; justify-content: center; align-items: center; gap: 2px; margin-top: -2px; }
+  .dots:empty { display: none; }
+  .dot { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: rgba(255,255,255,0.38); transition: color .3s; }
+  .dot i { display: block; width: 8px; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.30);
+    transition: width .4s cubic-bezier(.3,1.4,.5,1), background .3s; }
+  .dot svg { transition: transform .35s cubic-bezier(.3,1.4,.5,1); }
+  .dot.on { color: #fff; }
+  .dot.on i { width: 22px; background: #fff; }
+  .dot.on svg { transform: scale(1.25); }
+  /* ---- The hour popup: the same Liquid Glass sheet as Places ---- */
+  .hnav { display: flex; gap: 8px; }
+  .hnav button:disabled { opacity: 0.35; }
+  .hd-hero { --k: 0; border-radius: 28px; padding: 20px 20px 20px 22px; display: flex; align-items: center; justify-content: space-between; color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 1px 1px rgba(255,255,255,0.35), 0 10px 26px -12px rgba(0,0,0,0.5); }
+  .hd-temp { font-size: 76px; font-weight: 200; letter-spacing: -3.5px; line-height: 0.95; font-variant-numeric: tabular-nums; }
+  .hd-temp span { opacity: 0.9; }
+  .hd-words { margin-top: 8px; font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
+  .hd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .hd-tile { border-radius: 24px; padding: 14px 16px 12px; background: var(--lgs-row); min-width: 0;
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift); }
+  .hd-k { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+  .hd-v { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 600; letter-spacing: -0.8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hd-v small { font-size: 17px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .hd-arrow { display: inline-flex; }
+  .hd-s { margin-top: 3px; font-size: 15px; color: var(--muted); }
+  .hd-tile.wide .hd-v { font-size: 26px; }
+  .hd-hero, .hd-tile { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--k) * 55ms); }
+  .hx-col[data-hour] { cursor: pointer; -webkit-user-select: none; user-select: none; }
+  .hx-col[data-hour]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) { .hd-hero, .hd-tile { animation: none; } .dot i, .dot svg { transition: none; } }
 
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
   .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding: 6px 0; }
@@ -375,6 +408,15 @@
       </div>
       <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. Your location goes only to those services.</p>
     </div>
+  </section>
+</div>
+
+<div id="hourWrap">
+  <div class="scrim" data-close></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="hourTitle">
+    <div class="grab"></div>
+    <h2><span id="hourTitle">Hour</span><span class="hnav"><button data-hstep="-1" aria-label="Previous hour"></button><button data-hstep="1" aria-label="Next hour"></button><button data-close aria-label="Close"></button></span></h2>
+    <div class="sheet-body" id="hourBody"></div>
   </section>
 </div>
 
@@ -527,7 +569,7 @@ function sunEvents(lat, lon, fromMs, days) {
     const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
     const cosw = (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec));
     const toS = j => Math.round((j - 2440587.5) * 86400);
-    if (cosw < -1) out.push({ rise: toS(jt - 0.5), set: toS(jt + 0.5) });      // midnight sun
+    if (cosw < -1) out.push({ rise: toS(jt - 0.5), set: toS(jt + 0.5), polar: true });      // midnight sun: day all day, no sunrise to show
     else if (cosw <= 1) {
       const w = Math.acos(cosw) / rad / 360;
       out.push({ rise: toS(jt - w), set: toS(jt + w) });
@@ -542,19 +584,27 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('wx.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('wx.' + k, JSON.stringify(v)); } catch (e) {} }
 };
+// Saved data can be damaged (a full disk, an old build, hand edits); trust only what has the right shape.
+const okPlace = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon) && typeof p.name === 'string';
+function valid(v, kind) {
+  if (kind === 'list') return Array.isArray(v) ? v.filter(okPlace) : [];
+  if (kind === 'place') return okPlace(v) ? v : null;
+  return v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, b]) => b && Array.isArray(b.hourly) && Array.isArray(b.daily) && b.cur)) : {};
+}
 const S = {
   loc: null,                              // the place on screen: { mode: 'gps' | 'city', lat, lon, name }
-  places: store.get('places', []),        // saved cities: [{ lat, lon, name, sub }]
-  here: store.get('here', null),          // the last GPS fix: { lat, lon, name }
-  cache: store.get('cache', {}),          // place key -> BASE + { fetchedAt, key }
+  places: valid(store.get('places', []), 'list'),     // saved cities: [{ lat, lon, name, sub }]
+  here: valid(store.get('here', null), 'place'),      // the last GPS fix: { lat, lon, name }
+  cache: valid(store.get('cache', {}), 'map'),        // place key -> BASE + { fetchedAt, key }
   units: store.get('units', 'us'),
   expanded: store.get('expanded', false),
   data: null,                             // the on-screen place's BASE
   alertOpen: {},
-  view: 'now',                            // the timeline: now | feels | humidity | wind | radar
+  view: ['now', 'feels', 'humidity', 'wind', 'radar'].includes(store.get('view', 'now')) ? store.get('view', 'now') : 'now',   // the timeline: now | feels | humidity | wind | radar (remembered)
   loading: false,
   locating: false,
   error: null,
+  heroRise: true,                         // the hero slides in on first paint and on a new place, not on every refresh
   seq: 0                                  // bumped when the place changes, so a late answer for the old one is dropped
 };
 const keyOf = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
@@ -582,10 +632,19 @@ function saveCache() {
 }
 
 // ---- NWS ----
-async function getJSON(url) {
-  const r = await fetch(url, { headers: { Accept: 'application/geo+json' } });
-  if (!r.ok) { const e = new Error(`${new URL(url).hostname} ${r.status}`); e.status = r.status; throw e; }
-  return r.json();
+const SEV = { Extreme: 0, Severe: 1, Moderate: 2, Minor: 3 };
+// Every request gives up after 15 seconds (headers and body), so a dead connection
+// (common when iOS wakes the app) cannot leave the app waiting forever.
+async function getJSON(url, opts) {
+  const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 15000);
+  try {
+    const r = await fetch(url, Object.assign({ headers: { Accept: 'application/geo+json' } }, opts, { signal: ac.signal }));
+    if (!r.ok) { const e = new Error(`${new URL(url).hostname} ${r.status}`); e.status = r.status; throw e; }
+    return await r.json();
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error(`${new URL(url).hostname} did not answer`);
+    throw e;
+  } finally { clearTimeout(timer); }
 }
 const dirDeg = d => ({ N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5 })[d];
 const mphOf = s => { const m = /(\d+)(?:\s*to\s*(\d+))?/.exec(s || ''); return m ? +(m[2] || m[1]) : null; };
@@ -613,12 +672,13 @@ function feelsF(T, RH, W) {
 }
 const ymd = (t, tz) => new Date(t * 1000).toLocaleDateString('en-CA', { timeZone: tz });
 
-async function fromNWS(lat, lon) {
+async function fromNWS(lat, lon, retried) {
   // /points is the only lookup that turns a position into a forecast office
   // grid; it hardly ever changes, so it is cached per location.
   const pk = `${lat.toFixed(3)},${lon.toFixed(3)}`;
   const pts = store.get('pts', {});
   let pt = pts[pk];
+  const cachedPt = !!pt;
   if (!pt) {
     const p = (await getJSON(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`)).properties;
     const st = await getJSON(p.observationStations).catch(() => null);
@@ -633,14 +693,20 @@ async function fromNWS(lat, lon) {
     for (const k of ks.slice(0, Math.max(0, ks.length - 24))) delete pts[k];
     store.set('pts', pts);
   }
-  const [fc, hr, obs, al] = await Promise.all([
+  let fc, hr, obs, al;
+  try {
+  [fc, hr, obs, al] = await Promise.all([
     getJSON(pt.forecast),
     getJSON(pt.hourly),
     pt.station ? getJSON(`https://api.weather.gov/stations/${pt.station}/observations/latest`).catch(() => null) : null,
     getJSON(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`).catch(() => null)
   ]);
+  } catch (e) {
+    // The office or grid behind a cached lookup can change; look the place up afresh, once.
+    if (cachedPt && !retried && (e.status === 404 || e.status === 301)) { delete pts[pk]; store.set('pts', pts); return fromNWS(lat, lon, true); }
+    throw e;
+  }
   const now = Date.now() / 1000, tz = pt.tz;
-  const hourStart = Math.floor(now / 3600) * 3600;
   const HP = hr.properties.periods.map(p => ({
     t: Date.parse(p.startTime) / 1000,
     c: nwsCondition(p.icon, p.shortForecast),
@@ -648,7 +714,7 @@ async function fromNWS(lat, lon) {
     r: (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0,
     hum: p.relativeHumidity ? p.relativeHumidity.value : null,
     mph: mphOf(p.windSpeed), deg: dirDeg(p.windDirection)
-  })).filter(p => p.t >= hourStart);
+  })).filter(p => p.t > now - 3600);
   if (!HP.length) throw new Error('NWS hourly forecast is empty');
 
   // Current conditions: the station's latest observation when it is under
@@ -712,7 +778,8 @@ async function fromNWS(lat, lon) {
   const alerts = ((al && al.features) || []).map(f => f.properties)
     .filter(a => a.status === 'Actual' && a.messageType !== 'Cancel')
     .map(a => ({ event: a.event, severity: a.severity, headline: a.headline, ends: a.ends || a.expires, desc: a.description, instr: a.instruction }))
-    .slice(0, 4);
+    .sort((a, b) => (SEV[a.severity] ?? 4) - (SEV[b.severity] ?? 4))      // most severe first, so a Tornado Warning is never the one cut
+    .slice(0, 6);
 
   return {
     src: 'NWS', lat, lon, tz, place: pt.city, rKind: 'pop', cur,
@@ -731,14 +798,14 @@ async function fromOpenMeteo(lat, lon) {
     + '&timezone=auto&timeformat=unixtime&forecast_days=8'
     + '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch');
   const cur = om.current, H = om.hourly, D = om.daily;
-  const now = Date.now() / 1000, hourStart = Math.floor(now / 3600) * 3600;
+  const now = Date.now() / 1000;
   const r2 = x => Math.round((x || 0) * 100) / 100;
   let c = wmo(cur.weather_code);
   // WMO has no wind code; a strong sustained wind under a dry sky is `windy`.
   if (cur.wind_speed_10m >= 25 && cur.weather_code <= 3) c = 'windy';
   const hourly = [];
   for (let i = 0; i < H.time.length && hourly.length < 24; i++) {
-    if (H.time[i] >= hourStart) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]),
+    if (H.time[i] > now - 3600) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]),
       fF: H.apparent_temperature ? Math.round(H.apparent_temperature[i]) : null, hum: H.relative_humidity_2m ? H.relative_humidity_2m[i] : null,
       mph: H.wind_speed_10m ? Math.round(H.wind_speed_10m[i]) : null, deg: H.wind_direction_10m ? H.wind_direction_10m[i] : null });
   }
@@ -757,9 +824,7 @@ async function fromOpenMeteo(lat, lon) {
 
 async function reverseName(lat, lon) {
   try {
-    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
-    if (!r.ok) return null;
-    const j = await r.json();
+    const j = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`, { headers: {} });
     return j.city || j.locality || j.principalSubdivision || null;
   } catch (e) { return null; }
 }
@@ -767,9 +832,11 @@ async function reverseName(lat, lon) {
 function locate() {
   return new Promise((res, rej) => {
     if (!navigator.geolocation) return rej(new Error('Location is not available in this browser.'));
+    // The browser's own timeout does not count time spent on the permission prompt, so add one.
+    const giveUp = setTimeout(() => rej(new Error('Could not get your location.')), 30000);
     navigator.geolocation.getCurrentPosition(
-      p => res({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      e => rej(new Error(e.code === 1 ? 'Location permission was denied. Allow it in Settings → Privacy → Location Services, or search for a city.' : 'Could not get your location.')),
+      p => { clearTimeout(giveUp); res({ lat: p.coords.latitude, lon: p.coords.longitude }); },
+      e => { clearTimeout(giveUp); rej(new Error(e.code === 1 ? 'Location permission was denied. Allow it in Settings → Privacy → Location Services, or search for a city.' : 'Could not get your location.')); },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 15 * 60 * 1000 }
     );
   });
@@ -785,15 +852,19 @@ async function fetchBase(lat, lon) {
 }
 
 async function refresh(force) {
-  if (!S.loc || S.loading) return render();
+  if (!S.loc || (S.loading && Date.now() - S.loadingSince < 45000)) return render();   // a request that has been out for 45s is treated as lost
   const fresh = S.data && S.data.v === 2 && S.data.key === locKey() && Date.now() - S.data.fetchedAt < 10 * 60 * 1000;
   if (fresh && !force) return render();
   const seq = ++S.seq;
-  S.loading = true; S.error = null; render();
+  S.loading = true; S.loadingSince = Date.now(); S.error = null; render();
   let loc = S.loc;
   try {
     // Where you are now. The screen keeps showing the last forecast until the new one is in.
-    if (loc.mode === 'gps') loc = Object.assign({}, loc, await locate());
+    // If location is off, say so and carry on with the last known position.
+    if (loc.mode === 'gps') {
+      try { loc = Object.assign({}, loc, await locate()); S.locError = null; }
+      catch (e) { S.locError = e.message || 'Location unavailable.'; }
+    }
     if (seq !== S.seq) return;
     const base = await fetchBase(loc.lat, loc.lon);
     const key = keyOf(loc);
@@ -828,7 +899,7 @@ async function prefetchOthers() {
       if (key === locKey() || (c && c.v === 2 && Date.now() - c.fetchedAt < 30 * 60 * 1000)) continue;
       try {
         const base = await fetchBase(p.lat, p.lon);
-        if (base) S.cache[key] = Object.assign(base, { fetchedAt: Date.now(), key });
+        if (base) { S.cache[key] = Object.assign(base, { fetchedAt: Date.now(), key }); saveCache(); }   // saved as we go: iOS may suspend the app mid-loop
         if (S.loc && S.data && S.data.key === locKey()) render();
       } catch (e) { /* the next open tries again */ }
     }
@@ -842,11 +913,11 @@ const currentId = () => !S.loc ? '' : S.loc.mode === 'gps' ? 'here' : 'p' + S.pl
 
 function switchTo(loc) {
   const ids = placeIds(), from = ids.indexOf(currentId());
-  S.seq++; S.loading = false; S.error = null;
+  S.seq++; S.loading = false; S.locating = false; S.error = null;
   S.loc = loc;
   S.data = S.cache[locKey()] || null;
   S.dir = ids.indexOf(currentId()) >= from ? 1 : -1;
-  S.swap = true; S.introShown = false; S.centerChip = true;
+  S.swap = true; S.introShown = false; S.centerChip = true; S.heroRise = true;
   render();
   refresh(false);
 }
@@ -867,11 +938,13 @@ function stepPlace(d) {
   if (i < 0 || n < 0 || n >= ids.length) return;
   pickPlace(ids[n]);
 }
+const placeFrom = r => ({ lat: +(+r.latitude).toFixed(4), lon: +(+r.longitude).toFixed(4), name: r.name, sub: [r.admin1, r.country].filter(Boolean).join(', ') });
+const canAdd = r => { const p = placeFrom(r); return S.places.length < MAX_PLACES || S.places.some(q => keyOf(q) === keyOf(p)); };
 function addPlace(r) {
-  const p = { lat: +(+r.latitude).toFixed(4), lon: +(+r.longitude).toFixed(4), name: r.name, sub: [r.admin1, r.country].filter(Boolean).join(', ') };
+  const p = placeFrom(r);
   let i = S.places.findIndex(q => keyOf(q) === keyOf(p));
   if (i < 0) {
-    if (S.places.length >= MAX_PLACES) S.places.pop();
+    if (S.places.length >= MAX_PLACES) return;
     S.places.push(p); i = S.places.length - 1;
     store.set('places', S.places);
   }
@@ -889,22 +962,27 @@ function removePlace(i) {
 
 // The first open, or a tap on My Location before there is a fix: ask where you are.
 async function autoLocate(fallback) {
+  const seq = ++S.seq;
   S.locating = true; S.error = null; S.loc = null; S.data = null; render();
   try {
     const p = await locate();
+    if (seq !== S.seq) return;                         // you picked a place while it was still finding you
     const name = (await reverseName(p.lat, p.lon)) || 'My Location';
+    if (seq !== S.seq) return;
     S.here = { lat: p.lat, lon: p.lon, name }; store.set('here', S.here);
-    S.locating = false;
+    S.locError = null; S.locating = false;
     S.loc = { mode: 'gps', lat: p.lat, lon: p.lon, name };
     S.data = S.cache[locKey()] || null;
+    S.heroRise = true;
     refresh(true);
   } catch (e) {
+    if (seq !== S.seq) return;
     S.locating = false;
     if (fallback && S.places.length) {                 // no location permission, but you have saved places: open the first
       const q = S.places[0];
       S.loc = { mode: 'city', lat: q.lat, lon: q.lon, name: q.name };
       S.data = S.cache[locKey()] || null;
-      S.centerChip = true;
+      S.centerChip = true; S.heroRise = true;
       render(); refresh(false);
     } else { S.error = e.message || String(e); render(); }
   }
@@ -921,13 +999,12 @@ function model(b) {
   const night = !isDayAt(ev, now);
   const nightFace = (c, dark) => (c === 'sunny' && dark) ? 'clear-night' : c;
   const rr = r => b.rKind === 'pop' ? Math.round(r) : (metric ? Math.round(r * 25.4 * 10) / 10 : r);
-  const hourStart = Math.floor(now / 3600) * 3600;
   const kmh = metric ? 1.609344 : 1;
-  const hourly = b.hourly.filter(h => h.t >= hourStart).map(h => ({ t: h.t, c: nightFace(h.c, !isDayAt(ev, h.t + 1800)), p: Ti(h.pF), r: rr(h.r), dark: !isDayAt(ev, h.t + 1800),
+  const hourly = b.hourly.filter(h => h.t > now - 3600).map(h => ({ t: h.t, c: nightFace(h.c, !isDayAt(ev, h.t + 1800)), p: Ti(h.pF), r: rr(h.r), dark: !isDayAt(ev, h.t + 1800),
     fl: h.fF == null ? null : Ti(h.fF), hum: h.hum == null ? null : Math.round(h.hum), w: h.mph == null ? null : Math.round(h.mph * kmh), deg: h.deg == null ? null : h.deg }));
   const today = ymd(now, b.tz);
   const daily = b.daily.filter(d => ymd(d.t, b.tz) >= today).map(d => ({ t: d.t, c: d.c, h: Ti(d.hF), l: Ti(d.lF), r: rr(d.r) }));
-  const next = k => ev.map(e => e[k]).filter(t => t > now).sort((x, y) => x - y)[0];
+  const next = k => ev.filter(e => !e.polar).map(e => e[k]).filter(t => t > now).sort((x, y) => x - y)[0];
   return {
     entity: {
       state: nightFace(b.cur.c, night),
@@ -1020,7 +1097,7 @@ function w3Hero(m) {
   const gps = S.loc && S.loc.mode === 'gps';
   return `
     <div class="w3-fx"><div class="w3-sky" style="background:${sky};"></div>${fx}</div>
-    <div class="w3-in">
+    <div class="w3-in${S.heroRise ? ' rise' : ''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
           <button class="w3-place" data-action="location" aria-label="Places" style="font-size:21px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 16, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 18, 'opacity:0.75;')}</button>
@@ -1067,25 +1144,26 @@ function viewHead(m) {
 const compass = d => d == null ? '–' : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(d / 45) % 8];
 const dampWord = h => h < 30 ? 'Dry' : h < 60 ? 'Comfy' : h < 75 ? 'Humid' : 'Muggy';
 
-// 24 hours in a tray you scroll sideways. Each column: time, a moving icon,
-// the value riding on a curve, and one small extra underneath. Which value
-// (temperature, feels like, humidity, wind) is the view chosen above; Radar
-// swaps the tray for a map (radarSync draws it).
-function w3Hours(m) {
-  const { entity, fc, sun, tz } = m;
-  const head = viewHead(m);
-  if (S.view === 'radar') return head + '<div class="hx rd" id="rd"></div>';
-  const mode = S.view;
+// Time labels for a place's own clock (its time zone, not the phone's).
+const hrFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', timeZone: tz }).replace(/\s/g, '');   // \s also catches the narrow no-break space newer browsers put before AM/PM
+const minFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: tz }).replace(/\s/g, '');
+const hrOf = (t, tz) => +new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).slice(0, 2) % 24;
+const dayFmt = (t, tz) => new Date(t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
+const compassLong = d => d == null ? '' : ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(d / 45) % 8];
+
+// The next 24 hours as the timeline and the popup both read them: each hour with
+// its temperature (v), feels like (fv), humidity (hv), wind speed (wv) and
+// direction (wd), plus the next sunrise and sunset slotted in between.
+function hourSeq(m) {
+  const { entity, fc, sun } = m;
   const hrs = (fc.hourly || []).slice(0, 24);
-  if (!hrs.length) return head + '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
+  if (!hrs.length) return [];
   const marks = [];
   if (sun.next_rising) marks.push({ t: sun.next_rising, kind: 'rise' });
   if (sun.next_setting) marks.push({ t: sun.next_setting, kind: 'set' });
   const first = hrs[0].t, last = hrs[hrs.length - 1].t;
   const a = entity.attributes, cur = a.temperature;
-  const unit = a.precipitation_unit || '';
-  const metric = (a.temperature_unit || '').indexOf('C') >= 0;
-  const seq = hrs.map((h, i) => {
+  return hrs.map((h, i) => {
     const now = i === 0;
     return Object.assign({}, h, { kind: 'hour', now,
       v: now && cur != null ? Math.round(cur) : h.p,
@@ -1094,6 +1172,22 @@ function w3Hours(m) {
       wv: now && a.wind_speed != null ? Math.round(a.wind_speed) : h.w,
       wd: now && a.wind_bearing != null ? a.wind_bearing : h.deg });
   }).concat(marks.filter(k => k.t > first && k.t < last)).sort((x, y) => x.t - y.t);
+}
+
+// 24 hours in a tray you scroll sideways. Each column: time, a moving icon,
+// the value riding on a curve, and one small extra underneath. Which value
+// (temperature, feels like, humidity, wind) is the view chosen above; Radar
+// swaps the tray for a map (radarSync draws it).
+function w3Hours(m) {
+  const { entity, tz } = m;
+  const head = viewHead(m);
+  if (S.view === 'radar') return head + '<div class="hx rd" id="rd"></div>';
+  const mode = S.view;
+  const seq = hourSeq(m);
+  if (!seq.length) return head + '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
+  const a = entity.attributes, cur = a.temperature;
+  const unit = a.precipitation_unit || '';
+  const metric = (a.temperature_unit || '').indexOf('C') >= 0;
   const pick = x => mode === 'feels' ? x.fv : mode === 'humidity' ? x.hv : mode === 'wind' ? x.wv : x.v;
   if (seq.some(x => x.kind === 'hour' && pick(x) == null)) return head + `<div class="hx"><div class="hx-empty">${S.loading ? 'Updating…' : 'Reconnect to load this view'}</div></div>`;
 
@@ -1113,10 +1207,7 @@ function w3Hours(m) {
     return (yOf(pick(seq[p])) + yOf(pick(seq[n]))) / 2;
   });
 
-  const fmt = t => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', timeZone: tz }).replace(' ', '');
-  const fmtM = t => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: tz }).replace(' ', '');
-  const hourOf = t => +new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).slice(0, 2) % 24;
-  const dayOf = t => new Date(t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
+  const fmt = t => hrFmt(t, tz), fmtM = t => minFmt(t, tz), hourOf = t => hrOf(t, tz), dayOf = t => dayFmt(t, tz);
   const curveSvg = i => {
     const yl = i ? (ys[i - 1] + ys[i]) / 2 : ys[i], yr = i < seq.length - 1 ? (ys[i] + ys[i + 1]) / 2 : ys[i];
     return `<svg viewBox="0 0 100 88" preserveAspectRatio="none" aria-hidden="true"><path class="hx-line" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${ys[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
@@ -1159,7 +1250,7 @@ function w3Hours(m) {
         extra = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, Math.max(0, f)) * 17)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
       }
     }
-    return `<div class="${cls}" ${st}>
+    return `<div class="${cls}" ${st} data-hour="${x.t}" role="button" tabindex="0" aria-label="Details for ${x.now ? 'now' : fmt(x.t)}">
       <div class="hx-time">${label}</div>
       ${ico}
       <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 36).toFixed(1)}px">${shown}</div></div>
@@ -1172,7 +1263,7 @@ function w3Hours(m) {
 // ---- Radar: NEXRAD reflectivity over a dark map, the last 50 minutes on a loop ----
 // Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
 // mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
-const R = { z: 7, idx: 5, playing: false, timer: null };
+const R = { z: 7, idx: 5, playing: false, timer: null, touched: false, place: '' };
 const RADAR_OFFSETS = [50, 40, 30, 20, 10, 0];          // minutes ago, oldest first
 const radarTile = (off, z, x, y) => `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
 const baseTile = (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
@@ -1201,9 +1292,11 @@ function radarPlay(on) {
 function radarSync() {
   const box = document.getElementById('rd');
   if (!box || !S.loc || !box.clientWidth) return;
-  const sig = locKey() + '|' + R.z;
+  const sig = locKey() + '|' + R.z + '|' + Math.floor(Date.now() / 300000);      // a new picture every five minutes
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
+  const wasPlaying = R.playing;
+  if (R.place !== locKey()) { R.place = locKey(); R.touched = false; }
   stopRadar();
   box.innerHTML = '';
   const { lat, lon } = S.loc;
@@ -1242,7 +1335,12 @@ function radarSync() {
     <div class="rd-attr">© OpenStreetMap © CARTO · Radar: NWS NEXRAD via Iowa Environmental Mesonet</div>`;
   while (ui.firstChild) box.appendChild(ui.firstChild);
   radarShow(R.idx);
-  if (!calm()) setTimeout(() => { if (document.getElementById('rd') === box && box.dataset.sig === sig) { radarShow(0); radarPlay(true); } }, 1800);
+  // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
+  if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
+    if (document.getElementById('rd') !== box || box.dataset.sig !== sig || (R.touched && !wasPlaying)) return;
+    if (!wasPlaying) radarShow(0);
+    radarPlay(true);
+  }, wasPlaying ? 300 : 1800);
   // If nothing arrived, say so rather than leave a blank map.
   setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
@@ -1305,7 +1403,7 @@ function wDays(m) {
 
 // Active NWS watches/warnings/advisories for this point, most severe first.
 function alertCards(m) {
-  const rank = { Extreme: 0, Severe: 1, Moderate: 2, Minor: 3 };
+  const rank = SEV;
   const tint = { Extreme: '#FF453A', Severe: '#FF453A', Moderate: '#FF9F0A' };
   return m.alerts.slice().sort((a, b) => (rank[a.severity] ?? 4) - (rank[b.severity] ?? 4)).map((a, i) => {
     const c = tint[a.severity] || '#FFD60A';
@@ -1344,6 +1442,17 @@ function placesBar() {
     + S.places.map((p, i) => chip('p' + i, p.name, keyOf(p), false)).join('')
     + `<button class="pl add" data-action="location" aria-label="Add or manage places">${svg('plus', 20, '')}</button>`;
 }
+// Page dots under the forecast: one per place, My Location first as an arrow. The
+// current one stretches into a pill; tap a dot to go there.
+function dotsBar() {
+  const ids = placeIds();
+  if (ids.length < 2) return '';
+  const cur = currentId();
+  return ids.map((id, i) => {
+    const on = id === cur, name = id === 'here' ? 'My Location' : S.places[+id.slice(1)].name;
+    return `<button class="dot${on ? ' on' : ''}" data-pick-place="${id}" aria-label="${esc(name)}, place ${i + 1} of ${ids.length}" aria-current="${on}">${id === 'here' ? svg('navigation-variant', 15, '') : '<i></i>'}</button>`;
+  }).join('');
+}
 function renderShell(inner) {
   for (const k in parts) delete parts[k];
   app.innerHTML = `<nav id="places" class="places" aria-label="Places">${placesBar()}</nav>${inner}`;
@@ -1373,18 +1482,31 @@ function render() {
   const foot = slot('foot', 'div', 'foot');
   const alerts = slot('alerts', 'div', 'alerts');
   const places = slot('places', 'nav', 'places');
+  const dots = slot('dots', 'nav', 'dots');
+  dots.setAttribute('aria-label', 'Places');
   if (!card.contains(hero)) { card.replaceChildren(hero, hours, chev); }
-  if (!app.contains(card) || app.firstElementChild !== places) { app.replaceChildren(places, alerts, card, drawer, foot); }
-  put(places, placesBar());   // alerts is first; checking `card` re-attached everything on every repaint
+  if (!app.contains(card) || app.firstElementChild !== places) { app.replaceChildren(places, alerts, card, drawer, dots, foot); }
+  put(places, placesBar());
+  put(dots, dotsBar());   // alerts is first; checking `card` re-attached everything on every repaint
 
   card.style.background = sky;
   card.style.boxShadow = '0 18px 40px -16px ' + glow;
   put(hero, w3Hero(m));
+  S.heroRise = false;
+  // Keep the tray where you left it: remember which hour is at its left edge, and after a
+  // repaint (or the hour rolling over) put that same hour back there. A new place starts at "Now".
   const tray = document.getElementById('hxTray');
-  const keep = S.swap ? 0 : (tray ? tray.scrollLeft : 0);       // a new place starts at "Now"
+  let anchor = null;
+  if (tray && !S.swap && tray.scrollLeft > 4) {
+    const edge = tray.getBoundingClientRect().left, c = [...tray.querySelectorAll('[data-hour]')].find(c => c.getBoundingClientRect().right > edge + 6);
+    if (c) anchor = { t: c.dataset.hour, d: c.getBoundingClientRect().left - edge };
+  }
   put(hours, w3Hours(m));
   const tray2 = document.getElementById('hxTray');
-  if (tray2 && keep) tray2.scrollLeft = keep;       // a repaint must not throw the tray back to "Now"
+  if (tray2 && anchor) {
+    const c = tray2.querySelector(`[data-hour="${anchor.t}"]`);
+    tray2.scrollLeft = c ? tray2.scrollLeft + c.getBoundingClientRect().left - tray2.getBoundingClientRect().left - anchor.d : 0;
+  }
   if (tray2 && !S.introShown) introTray(hours, tray2);
   const vsw = document.getElementById('vsw');
   slide(vsw, vsw && vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: !S.vswPlaced });
@@ -1404,6 +1526,7 @@ function render() {
   const at = new Date(S.data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const status = S.loading ? `${svg('refresh', 14, '').replace('class="i"', 'class="i spin"')} Updating…`
     : S.error ? `Offline · showing ${at}`
+    : S.locError && S.loc.mode === 'gps' ? `Location unavailable · last known place · ${at}`
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Places</button>`);
@@ -1420,8 +1543,8 @@ function introTray(hours, tray) {
   S.nudged = true;
   let touched = false;
   tray.addEventListener('touchstart', () => { touched = true; }, { once: true, passive: true });
-  setTimeout(() => { if (!touched && tray.scrollLeft < 4) tray.scrollTo({ left: 64, behavior: 'smooth' }); }, 2000);
-  setTimeout(() => { if (!touched && tray.scrollLeft > 4 && tray.scrollLeft < 80) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
+  setTimeout(() => { if (!touched && tray.scrollLeft < 8) tray.scrollTo({ left: 64, behavior: 'smooth' }); }, 2000);
+  setTimeout(() => { if (!touched && tray.scrollLeft > 8 && tray.scrollLeft < 120) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
 }
 
 function renderMsg(title, body, retry) {
@@ -1463,15 +1586,73 @@ function placesRows() {
     const words = face ? face.words : '';
     return `<div class="prow${cur === id ? ' on' : ''}"><button class="pmain" data-pick-place="${id}">${icon}<span class="pn"><b>${esc(title)}</b><small>${esc(words || sub || '')}</small></span><span class="pr-t">${t}</span></button>${removable ? `<button class="prm" data-remove="${id.slice(1)}" aria-label="Remove ${esc(title)}">${svg('close', 18)}</button>` : ''}</div>`;
   };
-  return row('here', S.here && keyOf(S.here), 'My Location', S.here ? S.here.name : 'Tap to find where you are', true, false)
+  return row('here', S.here && keyOf(S.here), 'My Location', S.locError ? 'Location unavailable · tap to retry' : (S.here ? S.here.name : 'Tap to find where you are'), true, false)
     + S.places.map((p, i) => row('p' + i, keyOf(p), p.name, p.sub, false, true)).join('');
 }
 function openSheet() {
   placesList.innerHTML = placesRows();
   syncUnits(true);
   wrap.classList.add('open');
+  lockBehind(wrap);
 }
-function closeSheet() { wrap.classList.remove('open'); q.blur(); }
+const hourWrap = document.getElementById('hourWrap');
+const hourBody = document.getElementById('hourBody');
+const hourTitle = document.getElementById('hourTitle');
+const hourNav = hourWrap.querySelectorAll('[data-hstep]');
+hourNav[0].innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+hourNav[1].innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+hourWrap.querySelector('.hnav [data-close]').innerHTML = svg('close', 18);
+
+// Tap an hour: a Liquid Glass sheet with everything about it, and arrows to step through the day.
+function fillHour() {
+  if (!S.data) return closeSheet();
+  const m = model(S.data), hrs = hourSeq(m).filter(x => x.kind === 'hour');
+  if (!hrs.length) return closeSheet();
+  let i = hrs.findIndex(x => x.t >= S.hourT);          // the hour you tapped may have passed since
+  if (i < 0) i = hrs.length - 1;
+  const x = hrs[i], tz = m.tz, a = m.entity.attributes, metric = (a.temperature_unit || '').indexOf('C') >= 0;
+  S.hourT = x.t;
+  hourTitle.textContent = x.now ? 'Now' : `${dayFmt(x.t, tz)} ${hrFmt(x.t, tz)}`;
+  hourNav[0].disabled = i === 0; hourNav[1].disabled = i === hrs.length - 1;
+  const sky = (x.dark && V.vivid[x.c + '-night']) || V.vivid[x.c] || V.vivid.cloudy;
+  const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
+  const tint = V.tints[x.c] || '#FFFFFF';
+  const unitW = a.wind_speed_unit || 'mph';
+  const tile = (k, ico, label, value, sub, extra) => `<div class="hd-tile" style="--k:${k}"><div class="hd-k">${ico}${label}</div><div class="hd-v">${value}</div><div class="hd-s">${sub || '&nbsp;'}</div></div>`;
+  const d = x.fv == null ? null : x.fv - x.v;
+  const rain = m.rKind === 'pop' ? `${Math.round(x.r)}%` : (x.r > 0 ? `${x.r} ${a.precipitation_unit || ''}` : 'None');
+  const rot = ((x.wd || 0) + 180) % 360;
+  const tiles = [
+    tile(1, line('smile', 17), 'Feels like', x.fv == null ? '–' : x.fv + '°', d == null ? '' : d > 0 ? `${d}° warmer than the air` : d < 0 ? `${-d}° cooler than the air` : 'Same as the air'),
+    tile(2, line('drop', 17), 'Humidity', x.hv == null ? '–' : x.hv + '%', x.hv == null ? '' : dampWord(x.hv)),
+    tile(3, line('wind', 17), 'Wind', x.wv == null ? '–' : `<span class="hd-arrow" style="transform:rotate(${x.wd == null ? 0 : rot}deg)">${svg('navigation', 22, '')}</span>${x.wv}<small> ${unitW}</small>`, x.wd == null ? '' : `From the ${compassLong(x.wd)}`),
+    tile(4, svg('umbrella-outline', 17, ''), m.rKind === 'pop' ? 'Chance of rain' : 'Rain', rain, wet(m, x.r) ? '' : (m.rKind === 'pop' ? 'Unlikely' : 'Dry hour'))
+  ];
+  const rise = m.sun.next_rising, set = m.sun.next_setting;
+  const daylight = rise && set ? `<div class="hd-tile wide" style="--k:5"><div class="hd-k">${svg('weather-sunset-up', 18, 'color:#FFD60A;')}Sunrise</div><div class="hd-v">${minFmt(rise, tz)}</div></div><div class="hd-tile wide" style="--k:5"><div class="hd-k">${svg('weather-sunset-down', 18, 'color:#FFD60A;')}Sunset</div><div class="hd-v">${minFmt(set, tz)}</div></div>` : '';
+  hourBody.innerHTML = `<div class="hd-hero" style="background:${sky};--k:0">
+      <div><div class="hd-temp">${x.v}<span>°</span></div><div class="hd-words">${(x.dark && x.c === 'sunny') ? 'Clear' : (V.words[x.c] || x.c)}</div></div>
+      ${svg(icon, 76, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}
+    </div>
+    <div class="hd-grid">${tiles.join('')}${daylight}</div>`;
+  hourBody.scrollTop = 0;
+}
+function openHour(t) { S.hourT = t; fillHour(); hourWrap.classList.add('open'); lockBehind(hourWrap); }
+function stepHour(dir) {
+  const m = model(S.data), hrs = hourSeq(m).filter(x => x.kind === 'hour');
+  const i = hrs.findIndex(x => x.t >= S.hourT), n = Math.max(0, Math.min(hrs.length - 1, (i < 0 ? hrs.length - 1 : i) + dir));
+  S.hourT = hrs[n].t; fillHour();
+}
+let lastFocus = null;
+function lockBehind(sheetWrap) {
+  lastFocus = document.activeElement;
+  app.inert = true;                                     // keys and screen readers stay inside the sheet
+  const sh = sheetWrap.querySelector('.sheet'); sh.tabIndex = -1; sh.focus({ preventScroll: true });
+}
+function closeSheet() {
+  wrap.classList.remove('open'); hourWrap.classList.remove('open'); q.blur();
+  if (app.inert) { app.inert = false; if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); lastFocus = null; }
+}
 // The sliding glass thumb under the units switch (home/slide.js, loaded first).
 const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
 const units = document.getElementById('units');
@@ -1485,12 +1666,11 @@ let searchTimer, searchSeq = 0;
 q.addEventListener('input', () => {
   clearTimeout(searchTimer);
   const term = q.value.trim();
-  if (term.length < 2) { results.innerHTML = ''; return; }
+  if (term.length < 2) { searchSeq++; results.innerHTML = ''; return; }   // and drop any answer still on its way
   searchTimer = setTimeout(async () => {
     const seq = ++searchSeq;
     try {
-      const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(term)}&count=8&language=en&format=json`);
-      const j = await r.json();
+      const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(term)}&count=8&language=en&format=json`, { headers: {} });
       if (seq !== searchSeq) return;
       const list = j.results || [];
       results.innerHTML = list.length ? list.map((p, i) =>
@@ -1505,18 +1685,21 @@ q.addEventListener('input', () => {
 
 // ---- Events ----
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay]');
+  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay],[data-hour],[data-hstep]');
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
   if (t.dataset.view) {
-    if (S.view !== t.dataset.view) { S.view = t.dataset.view; S.introShown = false; stopRadar(); render(); }
+    if (S.view !== t.dataset.view) { S.view = t.dataset.view; store.set('view', S.view); S.introShown = false; stopRadar(); render(); }
     return;
   }
-  if (t.dataset.rz) { R.z = Math.max(5, Math.min(9, R.z + +t.dataset.rz)); return radarSync(); }
-  if (t.hasAttribute('data-rplay')) return radarPlay(!R.playing);
+  if (t.dataset.hour) return openHour(+t.dataset.hour);
+  if (t.dataset.hstep) return stepHour(+t.dataset.hstep);
+  if (t.dataset.rz) { R.touched = true; R.z = Math.max(5, Math.min(9, R.z + +t.dataset.rz)); return radarSync(); }
+  if (t.hasAttribute('data-rplay')) { R.touched = true; return radarPlay(!R.playing); }
   if (t.dataset.alert != null) { S.alertOpen[t.dataset.alert] = !S.alertOpen[t.dataset.alert]; return render(); }
   if (t.dataset.pick != null) {
     const p = results._list[+t.dataset.pick];
+    if (!canAdd(p)) { results.innerHTML = `<button disabled><span>You have ${MAX_PLACES} places. Remove one to add another.</span></button>`; return; }
     q.value = ''; results.innerHTML = '';
     closeSheet();
     return addPlace(p);
@@ -1534,8 +1717,12 @@ document.addEventListener('click', e => {
     case 'gps': closeSheet(); autoLocate(false); break;
   }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
-document.addEventListener('input', e => { if (e.target.id === 'rdScrub') { radarPlay(false); radarShow(+e.target.value); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSheet();
+  const h = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-hour]');
+  if (h) { e.preventDefault(); openHour(+h.dataset.hour); }
+});
+document.addEventListener('input', e => { if (e.target.id === 'rdScrub') { R.touched = true; radarPlay(false); radarShow(+e.target.value); } });
 
 // Swipe the forecast sideways to move between places (the hourly tray and the pills scroll on their own).
 let sx = null, sy = 0, sTarget = null;

@@ -18,6 +18,13 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   with its ✕, and switch units. Up to 12 cities. Each place's forecast is
   kept for instant switching and topped up quietly in the background.
   (Older versions kept one place; it is carried over as a saved city.)
+- **Page dots** under the forecast, one per place (My Location is the arrow);
+  the current one stretches into a pill. Tap a dot to go there. They hide
+  when you have only one place.
+- **Tap an hour** (in any view except Radar) for a Liquid Glass sheet like
+  Places: that hour's temperature and weather, feels like, humidity, wind
+  (arrow, speed, where from), chance of rain, and the day's sunrise and sunset,
+  with arrows to step through the hours. The view you pick is remembered.
 - **Five views of the timeline**: five little glass buttons above the hours
   (with a thumb that slides between them) switch what the main card shows:
   **Hourly** (temperature, with rain bars), **Feels like** (each hour's
@@ -65,3 +72,20 @@ shipped. An installed Home Screen icon is a fixed picture, so it cannot change
 with the time of day. The links carry `?v=3` so phones fetch the new picture;
 a Home Screen app added before it keeps the old one until it is removed and
 added again.
+
+## Robustness
+
+- Every request times out after 15 seconds, so a dead connection cannot leave
+  the app waiting; a refresh that has been out for 45 seconds is treated as lost.
+- A late answer for a place you have already left (GPS fix, forecast, search)
+  is dropped, never shown.
+- If location is off, the app keeps the last known place, still refreshes its
+  forecast, and says so in the footer and on the My Location row.
+- Saved data is checked for the right shape on start, so a damaged entry
+  resets instead of leaving a blank screen. A cached NWS grid that stops
+  working is looked up again once.
+- "Now" is the hour in progress in any time zone (including :30 and :45 ones);
+  alerts are sorted most severe first before any are cut; midnight-sun days
+  show no sunrise or sunset.
+- Sheets take keyboard and screen-reader focus, put the page behind them out of
+  reach, and hand focus back when they close.
