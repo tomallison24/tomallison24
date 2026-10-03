@@ -57,7 +57,7 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -75,7 +75,7 @@
   .w3-card {
     position: relative; overflow: hidden;
     border-radius: 28px; padding: 22px 18px 16px 18px; color: #FFFFFF;
-    display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px;
+    display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px; touch-action: pan-y; will-change: transform;
   }
   .w3-days { position: relative; z-index: 1; min-width: 0; }
   .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
@@ -131,7 +131,7 @@
   .hx-tray::-webkit-scrollbar { display: none; }
   .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 6.5); min-width: 0; display: flex; flex-direction: column; align-items: center;
     border-radius: 14px; padding-top: 6px; scroll-snap-align: start; }
-  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); animation: hx-ring 2.8s ease-out infinite; }
+  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); }
   .hx-time { height: 18px; font-size: 12px; font-weight: 600; letter-spacing: -0.3px; line-height: 18px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
   .hx-now .hx-time { font-weight: 700; opacity: 1; }
   .hx-day { font-weight: 800; letter-spacing: 0.2px; }
@@ -142,7 +142,6 @@
   .hx-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .hx-line { fill: none; stroke: rgba(255,255,255,0.85); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .hx-dot { position: absolute; left: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28), 0 0 12px rgba(255,255,255,0.55); }
-  .hx-now .hx-dot { animation: hx-beat 1.8s ease-in-out infinite; }
   .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; line-height: 20px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
   .hx-rain { height: 34px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
   .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
@@ -160,43 +159,15 @@
   .hx-m-fog .i { animation: hx-fog 3.4s ease-in-out infinite alternate; }
   .hx-m-up .i { animation: hx-rise 3.2s ease-in-out infinite alternate; }
   .hx-m-down .i { animation: hx-set 3.2s ease-in-out infinite alternate; }
-  @keyframes hx-ring { 0% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 0 rgba(255,255,255,0.40); } 70%, 100% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 10px rgba(255,255,255,0); } }
-  @keyframes hx-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
   @keyframes hx-patter { 0%, 100% { transform: translateY(-1px) scale(1); } 50% { transform: translateY(3px) scale(1.06, 0.96); } }
   @keyframes hx-snow { from { transform: rotate(-10deg) translateY(-1px); } to { transform: rotate(10deg) translateY(3px); } }
   @keyframes hx-wind { from { transform: translateX(-3px); } to { transform: translateX(4px); } }
   @keyframes hx-fog { from { opacity: 0.55; transform: translateX(-2px); } to { opacity: 1; transform: translateX(2px); } }
   @keyframes hx-rise { from { transform: translateY(5px); } to { transform: translateY(-4px); } }
   @keyframes hx-set { from { transform: translateY(-4px); } to { transform: translateY(5px); } }
-  /* Opening: the hours slide in one after another, the curve draws itself, the bars grow. */
-  @keyframes hx-in { from { opacity: 0; transform: translateX(26px) scale(.94); } to { opacity: 1; transform: none; } }
-  @keyframes hx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-  @keyframes hx-pop { from { transform: scale(0); } to { transform: scale(1); } }
-  @keyframes hx-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  .intro .hx-col { animation-name: hx-in; animation-duration: .6s; animation-timing-function: cubic-bezier(.2,.8,.2,1); animation-fill-mode: both; animation-delay: calc(var(--i) * 55ms + 120ms); }
-  .intro .hx-now { animation-name: hx-in, hx-ring; animation-duration: .6s, 2.8s; animation-iteration-count: 1, infinite; animation-delay: .12s, .9s; animation-timing-function: cubic-bezier(.2,.8,.2,1), ease-out; }
-  .intro .hx-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hx-draw .5s ease-out both; animation-delay: calc(var(--i) * 55ms + 320ms); }
-  .intro .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 55ms + 420ms); }
-  .intro .hx-now .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both, hx-beat 1.8s ease-in-out 1.2s infinite; animation-delay: .5s, 1.2s; }
-  .intro .hx-temp { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 450ms); }
-  .intro .hx-bar { animation: hx-grow .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 600ms); }
 
 
-  /* ---- Places: a strip of glass pills above the forecast ---- */
-  .places { position: relative; display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 4px 16px 8px;
-    scrollbar-width: none; scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
-  .places::-webkit-scrollbar { display: none; }
-  .pl { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 15px; border-radius: 999px;
-    font-size: 15px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; scroll-snap-align: center;
-    color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.08);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.12);
-    transition: background .35s, color .35s, box-shadow .35s, transform .18s cubic-bezier(.22,1,.36,1); }
-  .pl:active { transform: scale(0.94); }
-  .pl .pl-n { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-  .pl .pl-t { font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0.8; }
-  .pl.on { color: #fff; background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.16));
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 1px 1px rgba(255,255,255,0.50), 0 6px 20px -4px rgba(0,0,0,0.5); }
-  .pl.add { width: 40px; padding: 0; justify-content: center; }
+  .row-c { display: flex; justify-content: center; margin-top: 12px; }
   .locating { margin: 0; padding: 120px 0 0; text-align: center; font-size: 18px; color: var(--muted); }
   .skeleton { position: relative; }
   /* The Places sheet's rows */
@@ -210,7 +181,6 @@
   .list .pn small { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pr-t { flex: none; font-size: 26px; font-weight: 300; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
   .list .prm { flex: none; width: 54px; height: 60px; padding: 0; justify-content: center; color: var(--muted); }
-  @media (prefers-reduced-motion: reduce) { .pl { transition: none; } }
 
 
   /* ---- The view switcher above the timeline, and the radar ---- */
@@ -434,7 +404,7 @@ const V = {
   },
   tints: {
     sunny: '#FFD60A', 'clear-night': '#F2F2F7', partlycloudy: '#FFFFFF', rainy: '#BFE3FF', pouring: '#BFE3FF',
-    'snowy-rainy': '#BFE3FF', lightning: '#FFD60A', 'lightning-rainy': '#FFD60A'
+    'snowy-rainy': '#BFE3FF', lightning: '#C8A6FF', 'lightning-rainy': '#C8A6FF'   // storms: violet, so they never read as the sun
   },
   words: {
     sunny: 'Sunny', 'clear-night': 'Clear', partlycloudy: 'Partly Cloudy', cloudy: 'Cloudy', rainy: 'Rain',
@@ -910,7 +880,7 @@ function switchTo(loc) {
   S.loc = loc;
   S.data = S.cache[locKey()] || null;
   S.dir = ids.indexOf(currentId()) >= from ? 1 : -1;
-  S.swap = true; S.introShown = false; S.centerChip = true; S.heroRise = true;
+  S.swap = true; S.heroRise = true;
   render();
   refresh(false);
 }
@@ -918,18 +888,13 @@ function pickPlace(id) {
   if (id === 'here') return goHere();
   const p = S.places[+id.slice(1)];
   if (!p) return;
-  if (currentId() === id) { S.centerChip = true; return refresh(true); }
+  if (currentId() === id) { return refresh(true); }
   switchTo({ mode: 'city', lat: p.lat, lon: p.lon, name: p.name });
 }
 function goHere() {
   if (!S.here) return autoLocate(false);
-  if (currentId() === 'here') { S.centerChip = true; return refresh(true); }
+  if (currentId() === 'here') { return refresh(true); }
   switchTo({ mode: 'gps', lat: S.here.lat, lon: S.here.lon, name: S.here.name });
-}
-function stepPlace(d) {
-  const ids = placeIds(), i = ids.indexOf(currentId()), n = i + d;
-  if (i < 0 || n < 0 || n >= ids.length) return;
-  pickPlace(ids[n]);
 }
 const placeFrom = r => ({ lat: +(+r.latitude).toFixed(4), lon: +(+r.longitude).toFixed(4), name: r.name, sub: [r.admin1, r.country].filter(Boolean).join(', ') });
 const canAdd = r => { const p = placeFrom(r); return S.places.length < MAX_PLACES || S.places.some(q => keyOf(q) === keyOf(p)); };
@@ -975,7 +940,7 @@ async function autoLocate(fallback) {
       const q = S.places[0];
       S.loc = { mode: 'city', lat: q.lat, lon: q.lon, name: q.name };
       S.data = S.cache[locKey()] || null;
-      S.centerChip = true; S.heroRise = true;
+      S.heroRise = true;
       render(); refresh(false);
     } else { S.error = e.message || String(e); render(); }
   }
@@ -1093,7 +1058,7 @@ function w3Hero(m) {
     <div class="w3-in${S.heroRise ? ' rise' : ''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
-          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 16, 'opacity:0.75;')}</button>
+          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 20, 'opacity:0.95;margin-left:-1px;')}</button>
           <div style="font-size:${String(temp).length >= 3 ? 62 : 76}px;font-weight:200;letter-spacing:-3px;line-height:0.95;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;">
@@ -1426,16 +1391,6 @@ function slot(id, tag, cls) {
 }
 function put(el, html) { if (parts[el.id] !== html) { el.innerHTML = html; parts[el.id] = html; } }
 
-// The places strip stays on screen in every state: forecast, loading, or a message.
-function placesBar() {
-  const fresh = key => { const c = S.cache[key]; return c && Date.now() - c.fetchedAt < 3 * 3600 * 1000 && c.cur && c.cur.tF != null ? c : null; };
-  const temp = key => { const c = fresh(key); return c ? `<span class="pl-t">${Math.round(S.units === 'metric' ? (c.cur.tF - 32) * 5 / 9 : c.cur.tF)}°</span>` : ''; };
-  const cur = currentId();
-  const chip = (id, label, key, here) => `<button class="pl${cur === id ? ' on' : ''}" data-pick-place="${id}" aria-pressed="${cur === id}">${here ? svg('navigation-variant', 16, '') : ''}<span class="pl-n">${esc(label)}</span>${key ? temp(key) : ''}</button>`;
-  return chip('here', S.here ? S.here.name : 'My Location', S.here && keyOf(S.here), true)
-    + S.places.map((p, i) => chip('p' + i, p.name, keyOf(p), false)).join('')
-    + `<button class="pl add" data-action="location" aria-label="Add or manage places">${svg('plus', 20, '')}</button>`;
-}
 // Page dots under the forecast: one per place, My Location first as an arrow. The
 // current one stretches into a pill; tap a dot to go there.
 function dotsBar() {
@@ -1449,16 +1404,12 @@ function dotsBar() {
 }
 function renderShell(inner) {
   for (const k in parts) delete parts[k];
-  app.innerHTML = `<nav id="places" class="places" aria-label="Places">${placesBar()}</nav>${inner}`;
+  app.innerHTML = inner;
 }
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-function centerChip(el) {
-  const on = el && el.querySelector('.pl.on');
-  if (on) el.scrollTo({ left: on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2, behavior: calm() ? 'auto' : 'smooth' });
-}
 
 function render() {
-  if (!S.loc) return S.locating ? renderShell('<div class="skeleton" aria-hidden="true"><p class="locating">Finding where you are…</p></div>') : renderWelcome();
+  if (!S.loc) return S.locating ? renderShell(`<div class="skeleton" aria-hidden="true"><p class="locating">Finding where you are…</p></div>${S.places.length ? `<div class="row-c"><button class="pill" data-action="location">${svg('magnify', 18)}Choose a place</button></div>` : ''}`) : renderWelcome();
   if (!S.data || S.data.key !== locKey()) {
     if (S.error) return renderMsg('Couldn’t load the forecast', esc(S.error), true);
     return renderShell('<div class="skeleton" aria-hidden="true"></div>');
@@ -1474,13 +1425,11 @@ function render() {
   const days = slot('days', 'div', 'w3-days');
   const foot = slot('foot', 'div', 'foot');
   const alerts = slot('alerts', 'div', 'alerts');
-  const places = slot('places', 'nav', 'places');
   const dots = slot('dots', 'nav', 'dots');
   dots.setAttribute('aria-label', 'Places');
   if (!card.contains(days)) { card.replaceChildren(hero, hours, days); }
-  if (!app.contains(card) || app.firstElementChild !== places) { app.replaceChildren(places, alerts, card, dots, foot); }
-  put(places, placesBar());
-  put(dots, dotsBar());   // alerts is first; checking `card` re-attached everything on every repaint
+  if (!app.contains(card) || app.firstElementChild !== alerts) { app.replaceChildren(alerts, card, dots, foot); }
+  put(dots, dotsBar());
 
   card.style.background = sky;
   card.style.boxShadow = '0 18px 40px -16px ' + glow;
@@ -1500,16 +1449,19 @@ function render() {
     const c = tray2.querySelector(`[data-hour="${anchor.t}"]`);
     tray2.scrollLeft = c ? tray2.scrollLeft + c.getBoundingClientRect().left - tray2.getBoundingClientRect().left - anchor.d : 0;
   }
-  if (tray2 && !S.introShown) introTray(hours, tray2);
   const vsw = document.getElementById('vsw');
   slide(vsw, vsw && vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: !S.vswPlaced });
   S.vswPlaced = true;
   if (S.view === 'radar') radarSync(); else stopRadar();
   if (S.swap) {                                       // a new place slides in from the side you swiped toward
     S.swap = false;
-    if (!calm()) for (const el of [card]) el.animate([{ opacity: 0, transform: `translateX(${(S.dir || 1) * 40}px) scale(.97)` }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    const swiped = S.swipeIn; S.swipeIn = false;
+    if (!calm()) {
+      const w = card.offsetWidth;   // after a swipe it comes in from the edge the old one left by; after a tap, from a little way off
+      card.animate([{ opacity: swiped ? 0.35 : 0, transform: `translateX(${(S.dir || 1) * (swiped ? w : w * 0.3)}px)` }, { opacity: 1, transform: 'none' }],
+        { duration: swiped ? 360 : 420, easing: 'cubic-bezier(.22,1,.36,1)' });
+    }
   }
-  if (S.centerChip) { S.centerChip = false; centerChip(places); }
   put(days, wDays(m));
 
   const at = new Date(S.data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -1519,21 +1471,6 @@ function render() {
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Places</button>`);
-}
-
-// The first time the hours appear they slide in, and the tray nudges sideways
-// once, so it is plain that it scrolls. Neither repeats on later repaints.
-function introTray(hours, tray) {
-  S.introShown = true;
-  if (calm()) return;
-  hours.classList.add('intro');
-  setTimeout(() => hours.classList.remove('intro'), 2600);
-  if (S.nudged) return;
-  S.nudged = true;
-  let touched = false;
-  tray.addEventListener('touchstart', () => { touched = true; }, { once: true, passive: true });
-  setTimeout(() => { if (!touched && tray.scrollLeft < 8) tray.scrollTo({ left: 48, behavior: 'smooth' }); }, 2000);
-  setTimeout(() => { if (!touched && tray.scrollLeft > 8 && tray.scrollLeft < 120) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
 }
 
 function renderMsg(title, body, retry) {
@@ -1678,7 +1615,7 @@ document.addEventListener('click', e => {
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
   if (t.dataset.view) {
-    if (S.view !== t.dataset.view) { S.view = t.dataset.view; store.set('view', S.view); S.introShown = false; stopRadar(); render(); }
+    if (S.view !== t.dataset.view) { S.view = t.dataset.view; store.set('view', S.view); stopRadar(); render(); }
     return;
   }
   if (t.dataset.hour) return openHour(+t.dataset.hour);
@@ -1712,17 +1649,69 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('input', e => { if (e.target.id === 'rdScrub') { R.touched = true; radarPlay(false); radarShow(+e.target.value); } });
 
-// Swipe the forecast sideways to move between places (the hourly tray and the pills scroll on their own).
-let sx = null, sy = 0, sTarget = null;
-app.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; sTarget = e.target; }, { passive: true });
-app.addEventListener('touchend', e => {
-  if (sx == null) return;
-  const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy, from = sTarget;
-  sx = null;
-  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
-  if (from && from.closest && from.closest('#hxTray, .places, #rd, .vsw')) return;
-  stepPlace(dx < 0 ? 1 : -1);
+// Drag the forecast card sideways to move between places. It follows your finger,
+// gives a little at the first and last place, springs back if you let go early,
+// and otherwise slides away while the next place slides in from the other side.
+// The hourly tray, the radar and the view buttons keep their own gestures.
+let drag = null, pendingSwipe = null;
+app.addEventListener('touchstart', e => {
+  drag = null;
+  const card = document.getElementById('card');
+  if (!card || !card.isConnected || e.touches.length !== 1 || !card.contains(e.target) || e.target.closest('#hxTray, #rd, .vsw')) return;
+  // A quick second swipe: finish the first switch now (it redraws the card, so only after checking where the touch landed).
+  if (pendingSwipe) pendingSwipe();
+  const t = e.touches[0];
+  // The rest of this touch is heard on the element it started on: if a repaint replaces that
+  // element mid-drag, its events no longer bubble up to the app, but they still reach it.
+  const el = e.target;
+  drag = { card: document.getElementById('card'), el, x0: t.clientX, y0: t.clientY, x: t.clientX, t: e.timeStamp, dx: 0, vx: 0, axis: null };
+  el.addEventListener('touchmove', moveDrag, { passive: false });
+  el.addEventListener('touchend', endDrag, { passive: true });
+  el.addEventListener('touchcancel', endDrag, { passive: true });
 }, { passive: true });
+function moveDrag(e) {
+  const d = drag;
+  if (!d) return;
+  const t = e.touches[0], dx = t.clientX - d.x0, dy = t.clientY - d.y0;
+  if (!d.axis) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    d.axis = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+  }
+  if (d.axis !== 'x') return;
+  e.preventDefault();                                   // the page should not scroll while the card is being dragged
+  const dt = Math.max(1, e.timeStamp - d.t);
+  d.vx = 0.7 * ((t.clientX - d.x) / dt) + 0.3 * d.vx; d.x = t.clientX; d.t = e.timeStamp;
+  const ids = placeIds(), i = ids.indexOf(currentId());
+  const atEnd = (dx > 0 && i <= 0) || (dx < 0 && i >= ids.length - 1);
+  d.dx = atEnd ? dx * 0.22 : dx;
+  if (calm()) return;
+  d.card.style.transform = `translateX(${d.dx}px)`;
+  d.card.style.opacity = String(1 - Math.min(0.3, Math.abs(d.dx) / d.card.offsetWidth * 0.45));
+}
+function endDrag() {
+  const d = drag; drag = null;
+  if (!d) return;
+  d.el.removeEventListener('touchmove', moveDrag); d.el.removeEventListener('touchend', endDrag); d.el.removeEventListener('touchcancel', endDrag);
+  if (d.axis !== 'x') return;
+  const w = d.card.offsetWidth, ids = placeIds(), i = ids.indexOf(currentId());
+  const dir = d.dx < 0 ? 1 : -1, next = ids[i + dir];
+  const flick = Math.abs(d.vx) > 0.4 && Math.sign(d.vx) === Math.sign(d.dx);
+  const go = !!next && (Math.abs(d.dx) > w * 0.25 || flick);
+  const from = { transform: `translateX(${d.dx}px)`, opacity: d.card.style.opacity || '1' };
+  d.card.style.transform = ''; d.card.style.opacity = '';
+  if (calm()) { if (go) pickPlace(next); return; }
+  if (!go) { d.card.animate([from, { transform: 'none', opacity: 1 }], { duration: 340, easing: 'cubic-bezier(.2,.9,.3,1.12)' }); return; }
+  const out = d.card.animate([from, { transform: `translateX(${-dir * w}px)`, opacity: 0.35 }],
+    { duration: Math.max(120, Math.min(220, (w - Math.abs(d.dx)) / Math.max(0.6, Math.abs(d.vx)))), easing: 'cubic-bezier(.3,0,.7,.7)', fill: 'forwards' });
+  const fromId = currentId();
+  pendingSwipe = () => {
+    pendingSwipe = null;
+    if (currentId() === fromId) { S.swipeIn = true; pickPlace(next); }   // unless a dot or the sheet already went somewhere else
+    out.cancel();
+  };
+  out.onfinish = () => { if (pendingSwipe) pendingSwipe(); };
+}
+
 
 // Refresh when the app comes back to the front and every 15 minutes while
 // open; refresh() itself skips the network if the data is under 10 min old.
@@ -1737,7 +1726,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 }
 
 // Open to where you are: the last known place at once, then its fresh forecast.
-if (S.loc) { S.centerChip = true; render(); refresh(false); }
+if (S.loc) { render(); refresh(false); }
 else autoLocate(true);
 </script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
