@@ -52,13 +52,11 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and a rain
-  bar with its chance when it is 20% or more. Only the current hour moves: its
-  icon suits the weather (the sun turns, rain patters, snow sways, storms
-  flicker, wind and fog drift) and "Now" pulses; the other hours hold still so
-  the tray stays calm. When the hours
-  first appear they slide in, the curve draws itself and the bars grow, then
-  the tray nudges sideways once to show it scrolls. All of it stops under
-  Reduce Motion, and a repaint keeps your place in the tray.
+  bar with its chance when it is 20% or more. The only thing that moves in the
+  tray is the current hour's icon, which suits the weather (the sun turns, rain
+  patters, snow sways, storms flicker, wind and fog drift). Everything else
+  holds still: no entrance, no pulse, no nudge. It stops too under Reduce
+  Motion, and a repaint keeps your place in the tray.
 - No build step. `index.html` is the whole app; `sw.js` keeps it working
   offline, and the last forecast is kept in `localStorage`.
 - The Location sheet is iOS 26 "Liquid Glass": clear glass floating just

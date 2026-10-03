@@ -131,7 +131,7 @@
   .hx-tray::-webkit-scrollbar { display: none; }
   .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 6.5); min-width: 0; display: flex; flex-direction: column; align-items: center;
     border-radius: 14px; padding-top: 6px; scroll-snap-align: start; }
-  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); animation: hx-ring 2.8s ease-out infinite; }
+  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); }
   .hx-time { height: 18px; font-size: 12px; font-weight: 600; letter-spacing: -0.3px; line-height: 18px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
   .hx-now .hx-time { font-weight: 700; opacity: 1; }
   .hx-day { font-weight: 800; letter-spacing: 0.2px; }
@@ -142,7 +142,6 @@
   .hx-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .hx-line { fill: none; stroke: rgba(255,255,255,0.85); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .hx-dot { position: absolute; left: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28), 0 0 12px rgba(255,255,255,0.55); }
-  .hx-now .hx-dot { animation: hx-beat 1.8s ease-in-out infinite; }
   .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; line-height: 20px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
   .hx-rain { height: 34px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
   .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
@@ -160,26 +159,12 @@
   .hx-m-fog .i { animation: hx-fog 3.4s ease-in-out infinite alternate; }
   .hx-m-up .i { animation: hx-rise 3.2s ease-in-out infinite alternate; }
   .hx-m-down .i { animation: hx-set 3.2s ease-in-out infinite alternate; }
-  @keyframes hx-ring { 0% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 0 rgba(255,255,255,0.40); } 70%, 100% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 10px rgba(255,255,255,0); } }
-  @keyframes hx-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
   @keyframes hx-patter { 0%, 100% { transform: translateY(-1px) scale(1); } 50% { transform: translateY(3px) scale(1.06, 0.96); } }
   @keyframes hx-snow { from { transform: rotate(-10deg) translateY(-1px); } to { transform: rotate(10deg) translateY(3px); } }
   @keyframes hx-wind { from { transform: translateX(-3px); } to { transform: translateX(4px); } }
   @keyframes hx-fog { from { opacity: 0.55; transform: translateX(-2px); } to { opacity: 1; transform: translateX(2px); } }
   @keyframes hx-rise { from { transform: translateY(5px); } to { transform: translateY(-4px); } }
   @keyframes hx-set { from { transform: translateY(-4px); } to { transform: translateY(5px); } }
-  /* Opening: the hours slide in one after another, the curve draws itself, the bars grow. */
-  @keyframes hx-in { from { opacity: 0; transform: translateX(26px) scale(.94); } to { opacity: 1; transform: none; } }
-  @keyframes hx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-  @keyframes hx-pop { from { transform: scale(0); } to { transform: scale(1); } }
-  @keyframes hx-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  .intro .hx-col { animation-name: hx-in; animation-duration: .6s; animation-timing-function: cubic-bezier(.2,.8,.2,1); animation-fill-mode: both; animation-delay: calc(var(--i) * 55ms + 120ms); }
-  .intro .hx-now { animation-name: hx-in, hx-ring; animation-duration: .6s, 2.8s; animation-iteration-count: 1, infinite; animation-delay: .12s, .9s; animation-timing-function: cubic-bezier(.2,.8,.2,1), ease-out; }
-  .intro .hx-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hx-draw .5s ease-out both; animation-delay: calc(var(--i) * 55ms + 320ms); }
-  .intro .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 55ms + 420ms); }
-  .intro .hx-now .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both, hx-beat 1.8s ease-in-out 1.2s infinite; animation-delay: .5s, 1.2s; }
-  .intro .hx-temp { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 450ms); }
-  .intro .hx-bar { animation: hx-grow .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 600ms); }
 
 
   /* ---- Places: a strip of glass pills above the forecast ---- */
@@ -910,7 +895,7 @@ function switchTo(loc) {
   S.loc = loc;
   S.data = S.cache[locKey()] || null;
   S.dir = ids.indexOf(currentId()) >= from ? 1 : -1;
-  S.swap = true; S.introShown = false; S.centerChip = true; S.heroRise = true;
+  S.swap = true; S.centerChip = true; S.heroRise = true;
   render();
   refresh(false);
 }
@@ -1500,7 +1485,6 @@ function render() {
     const c = tray2.querySelector(`[data-hour="${anchor.t}"]`);
     tray2.scrollLeft = c ? tray2.scrollLeft + c.getBoundingClientRect().left - tray2.getBoundingClientRect().left - anchor.d : 0;
   }
-  if (tray2 && !S.introShown) introTray(hours, tray2);
   const vsw = document.getElementById('vsw');
   slide(vsw, vsw && vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: !S.vswPlaced });
   S.vswPlaced = true;
@@ -1519,21 +1503,6 @@ function render() {
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Places</button>`);
-}
-
-// The first time the hours appear they slide in, and the tray nudges sideways
-// once, so it is plain that it scrolls. Neither repeats on later repaints.
-function introTray(hours, tray) {
-  S.introShown = true;
-  if (calm()) return;
-  hours.classList.add('intro');
-  setTimeout(() => hours.classList.remove('intro'), 2600);
-  if (S.nudged) return;
-  S.nudged = true;
-  let touched = false;
-  tray.addEventListener('touchstart', () => { touched = true; }, { once: true, passive: true });
-  setTimeout(() => { if (!touched && tray.scrollLeft < 8) tray.scrollTo({ left: 48, behavior: 'smooth' }); }, 2000);
-  setTimeout(() => { if (!touched && tray.scrollLeft > 8 && tray.scrollLeft < 120) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
 }
 
 function renderMsg(title, body, retry) {
@@ -1678,7 +1647,7 @@ document.addEventListener('click', e => {
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
   if (t.dataset.view) {
-    if (S.view !== t.dataset.view) { S.view = t.dataset.view; store.set('view', S.view); S.introShown = false; stopRadar(); render(); }
+    if (S.view !== t.dataset.view) { S.view = t.dataset.view; store.set('view', S.view); stopRadar(); render(); }
     return;
   }
   if (t.dataset.hour) return openHour(+t.dataset.hour);
