@@ -6,6 +6,18 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.
+- **Opens to where you are.** Every time the app opens it shows your current
+  location (the last known place at once, then its fresh forecast), whatever
+  you were looking at last. If location is off, it opens your first saved
+  city, or asks you to allow location or search.
+- **Places**: a strip of glass pills above the forecast: My Location first,
+  then your saved cities, each with its temperature, and a + at the end.
+  Tap a pill, or swipe the forecast sideways, to move between places; the new
+  place slides in and its hours animate in again. Tap the place name or + for
+  the Places sheet: search "Add a city", see every place's weather, remove one
+  with its ✕, and switch units. Up to 12 cities. Each place's forecast is
+  kept for instant switching and topped up quietly in the background.
+  (Older versions kept one place; it is carried over as a saved city.)
 - Big type, quick to read: a 92px temperature, 21px place and conditions,
   16px chips, 19px day rows.
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
