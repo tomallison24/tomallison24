@@ -1257,7 +1257,10 @@ function w3Hours(m) {
 const R = { z: 7, idx: 5, playing: false, timer: null, touched: false, place: '' };
 const RADAR_OFFSETS = [50, 40, 30, 20, 10, 0];          // minutes ago, oldest first
 const radarTile = (off, z, x, y) => `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913${off ? '-m' + String(off).padStart(2, '0') + 'm' : ''}/${z}/${x}/${y}.png`;
-const baseTile = (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
+// CARTO has required a (free) key since late August 2026; without one every tile is
+// stamped "API KEY REQUIRED". Map keys are meant to sit in web pages like this one.
+const CARTO_KEY = 'cb1_48id_1_0ed95665ed15e6f191380e40';
+const baseTile = (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png?key=${CARTO_KEY}`;
 const inUS = (lat, lon) => lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66;
 function stopRadar() { clearTimeout(R.timer); R.timer = null; R.playing = false; const b = document.querySelector('.rd-play'); if (b) b.textContent = '▶'; }
 function radarShow(i) {

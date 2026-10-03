@@ -41,8 +41,9 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   CARTO's dark tiles (OpenStreetMap data), and both are credited on the map.
   It covers the continental US; elsewhere it says so. If no tiles arrive it
   says that, with a link to the NWS radar, rather than show a blank map.
-  Neither tile service is documented anywhere this code can check, so if radar
-  ever goes blank, the URL templates are `radarTile` and `baseTile`.
+  CARTO's map tiles need a free key (since late August 2026; without one they
+  are stamped "API KEY REQUIRED"): it is `CARTO_KEY` in `index.html`. The
+  radar URL template is `radarTile` and the map's is `baseTile`.
 - **One card**: the current weather, the hourly timeline (about six and a half
   hours across, scroll for the rest of the 24), and the 7-day forecast all sit
   on the main card; there is no chevron or drawer to open. Type is sized to
