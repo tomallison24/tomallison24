@@ -6,6 +6,15 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.
+- **Current temperature**: the NWS forecast for your exact spot at this
+  minute (between the hourly values), corrected by the nearest weather
+  station: by how far its latest reading is from what NWS forecast at the
+  station itself, so a station that simply sits somewhere warmer or cooler
+  doesn't shift your reading. The nearest station is found by actual
+  distance; it counts only within 25 km and when it reported in the last 90
+  minutes, and the correction is held to 8°F either way. Otherwise the
+  forecast for your spot stands. Tap Now in the hourly row to see which it
+  was, the station, its distance and the adjustment.
 - **Opens to where you are.** Every time the app opens it shows your current
   location (the last known place at once, then its fresh forecast), whatever
   you were looking at last. If location is off, it opens your first saved
