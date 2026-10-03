@@ -38,21 +38,27 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   pointing where it blows to, the speed, and the compass direction), and
   **Radar**. Feels like uses the NWS heat-index and wind-chill formulas on the
   hourly forecast (Open-Meteo supplies its own apparent temperature).
-- **Radar**: the last 50 minutes of NWS NEXRAD reflectivity over a dark map,
-  looping (play/pause and a scrubber; "Now" is the latest image), with zoom
-  buttons and a dot for the place. Radar tiles come from the Iowa
-  Environmental Mesonet's cache of the NEXRAD national mosaic; the map is
-  CARTO's dark tiles (OpenStreetMap data), and both are credited on the map.
-  It covers the continental US; elsewhere it says so. If no tiles arrive it
-  says that, with a link to the NWS radar, rather than show a blank map.
-  CARTO's map tiles need a free key (since late August 2026; without one they
-  are stamped "API KEY REQUIRED"): it is `CARTO_KEY` in `index.html`. The
-  radar URL template is `radarTile` and the map's is `baseTile`.
-- **One card**: the current weather, the hourly timeline (about six and a half
-  hours across, scroll for the rest of the 24), and the 7-day forecast all sit
-  on the main card; there is no chevron or drawer to open. Type is sized to
-  read at a glance without crowding: a 76px temperature, 18-19px place and
-  conditions, 14px chips, 16px day rows, 12-17px in the hourly columns.
+- **Radar**: NWS NEXRAD reflectivity over a dark map, looping back about two
+  hours (play/pause and a scrubber; "Now" is the latest image), with zoom
+  buttons and a dot for the place. The last 50 minutes come from the Iowa
+  Environmental Mesonet's ready-made tiles of the NEXRAD national mosaic; the
+  hour before that comes from its time-based map service (`n0q-t.cgi`, WMS-T,
+  pictures every 5 minutes). That service could not be tested from where this
+  was written, so any older frame that does not arrive is dropped and the loop
+  falls back to 50 minutes; the loop also never stops on a frame that has not
+  loaded. The map is CARTO's dark tiles (OpenStreetMap data); both are
+  credited on the map. It covers the continental US; elsewhere it says so. If
+  no tiles arrive it says that, with a link to the NWS radar. CARTO's map tiles
+  need a free key (since late August 2026; without one they are stamped "API
+  KEY REQUIRED"): it is `CARTO_KEY` in `index.html`. The URL builders are
+  `radarTile` and `baseTile`.
+- **One screen**: the sky (its colours, sun, clouds, rain, snow and lightning)
+  fills the whole screen behind everything, and the current weather, the
+  hourly timeline (about six and a half hours across, scroll for the rest of
+  the 24) and the 7-day forecast sit directly on it, with no card edge. A new
+  place's sky fades in as its forecast slides in. Type is sized to read at a
+  glance without crowding: a 76px temperature, 18-19px place and conditions,
+  14px chips, 16px day rows, 12-17px in the hourly columns.
 - **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and a rain
