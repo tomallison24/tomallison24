@@ -691,6 +691,21 @@ function feelsF(T, RH, W) {
   return Math.round(T);
 }
 const ymd = (t, tz) => new Date(t * 1000).toLocaleDateString('en-CA', { timeZone: tz });
+const kmBetween = (a, b, c, d) => {
+  const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(x));
+};
+// The forecast temperature at any moment: hourly values joined in a straight line, so 3:40 is
+// most of the way from 3:00's to 4:00's. A moment just before the first hour takes that hour.
+const tempAt = (list, t) => {
+  if (!list || !list.length || t < list[0].t - 7200) return null;
+  if (t < list[0].t) return list[0].pF;
+  for (let i = 0; i < list.length - 1; i++) {
+    const a = list[i], b = list[i + 1];
+    if (a.t <= t && t < b.t) return a.pF + (b.pF - a.pF) * (t - a.t) / (b.t - a.t);
+  }
+  return null;
+};
 
 async function fromNWS(lat, lon, retried) {
   // /points is the only lookup that turns a position into a forecast office
@@ -698,28 +713,45 @@ async function fromNWS(lat, lon, retried) {
   const pk = `${lat.toFixed(3)},${lon.toFixed(3)}`;
   const pts = store.get('pts', {});
   let pt = pts[pk];
+  if (pt && pt.pv !== 2) pt = null;                    // saved before stations had a distance: look again
   const cachedPt = !!pt;
   if (!pt) {
     const p = (await getJSON(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`)).properties;
     const st = await getJSON(p.observationStations).catch(() => null);
     const rl = p.relativeLocation && p.relativeLocation.properties;
+    // The nearest station by actual distance (of the few NWS lists first), and the hourly
+    // forecast for the station's own spot, so its reading can be checked against what NWS
+    // expected there.
+    const fs = (st && st.features) || [];
+    const near = fs.slice(0, 6).filter(f => f.geometry && Array.isArray(f.geometry.coordinates))
+      .map(f => ({ id: f.properties.stationIdentifier, name: f.properties.name || null, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] }))
+      .map(s => Object.assign(s, { km: kmBetween(lat, lon, s.lat, s.lon) }))
+      .sort((a, b) => a.km - b.km)[0] || null;
+    let sHourly = null;
+    if (near && near.km < 1.5) sHourly = p.forecastHourly;   // same grid square as the place
+    else if (near) {
+      try { sHourly = (await getJSON(`https://api.weather.gov/points/${near.lat.toFixed(4)},${near.lon.toFixed(4)}`)).properties.forecastHourly || null; }
+      catch (e) { /* no correction then; the forecast for the place stands */ }
+    }
     pt = {
       key: pk, forecast: p.forecast, hourly: p.forecastHourly, tz: p.timeZone,
-      station: st && st.features && st.features[0] ? st.features[0].properties.stationIdentifier : null,
-      city: rl ? rl.city : null
+      station: near ? near.id : (fs[0] ? fs[0].properties.stationIdentifier : null),
+      sName: near ? near.name : null, sKm: near ? Math.round(near.km * 10) / 10 : null, sHourly,
+      city: rl ? rl.city : null, pv: 2
     };
     pts[pk] = pt;
     const ks = Object.keys(pts);
     for (const k of ks.slice(0, Math.max(0, ks.length - 24))) delete pts[k];
     store.set('pts', pts);
   }
-  let fc, hr, obs, al;
+  let fc, hr, obs, al, sh;
   try {
-  [fc, hr, obs, al] = await Promise.all([
+  [fc, hr, obs, al, sh] = await Promise.all([
     getJSON(pt.forecast),
     getJSON(pt.hourly),
     pt.station ? getJSON(`https://api.weather.gov/stations/${pt.station}/observations/latest`).catch(() => null) : null,
-    getJSON(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`).catch(() => null)
+    getJSON(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`).catch(() => null),
+    pt.sHourly && pt.sHourly !== pt.hourly ? getJSON(pt.sHourly).catch(() => null) : null
   ]);
   } catch (e) {
     // The office or grid behind a cached lookup can change; look the place up afresh, once.
@@ -727,29 +759,49 @@ async function fromNWS(lat, lon, retried) {
     throw e;
   }
   const now = Date.now() / 1000, tz = pt.tz;
-  const HP = hr.properties.periods.map(p => ({
+  const HA = hr.properties.periods.map(p => ({
     t: Date.parse(p.startTime) / 1000,
     c: nwsCondition(p.icon, p.shortForecast),
     pF: p.temperatureUnit === 'C' ? Math.round(cToF(p.temperature)) : p.temperature,
     r: (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0,
     hum: p.relativeHumidity ? p.relativeHumidity.value : null,
     mph: mphOf(p.windSpeed), deg: dirDeg(p.windDirection)
-  })).filter(p => p.t > now - 3600);
+  }));
+  const HP = HA.filter(p => p.t > now - 3600);
   if (!HP.length) throw new Error('NWS hourly forecast is empty');
 
-  // Current conditions: the station's latest observation when it is under
-  // two hours old and has a temperature - a measurement beats a forecast -
-  // otherwise this hour's forecast. Station values are metric.
+  // Current temperature: the NWS forecast for this exact spot at this minute, corrected by
+  // the nearest station's latest reading - by how far that reading is from what NWS
+  // expected at the station itself, so the station being warmer or cooler as a place
+  // isn't copied over. Only a station within 25 km that reported in the last 90 minutes
+  // counts, and the correction is held to 8°F either way (a bad sensor shouldn't run the
+  // screen). Without one, the forecast for the spot stands. Station values are metric.
   const h0 = HP[0];
   const o = obs && obs.properties;
-  const fresh = o && o.temperature && o.temperature.value != null && now - Date.parse(o.timestamp) / 1000 < 2 * 3600;
-  const cur = fresh ? {
-    tF: cToF(o.temperature.value),
+  const oF = o && o.temperature && o.temperature.value != null ? cToF(o.temperature.value) : null;
+  const oAt = o ? Date.parse(o.timestamp) / 1000 : NaN;
+  const usable = oF != null && now - oAt < 90 * 60 && pt.sKm != null && pt.sKm <= 25;
+  const fHere = tempAt(HA, now) ?? h0.pF;
+  const SA = pt.sHourly === pt.hourly ? HA
+    : sh && sh.properties && sh.properties.periods ? sh.properties.periods.map(p => ({ t: Date.parse(p.startTime) / 1000, pF: p.temperatureUnit === 'C' ? cToF(p.temperature) : p.temperature })) : null;
+  const fThere = usable ? tempAt(SA, oAt) : null;
+  let tF = fHere, how = { kind: 'forecast' };
+  if (usable && fThere != null) {
+    const adj = Math.max(-8, Math.min(8, oF - fThere));
+    tF = fHere + adj;
+    how = { kind: 'corrected', st: pt.station, name: pt.sName, km: pt.sKm, at: oAt, adj: Math.round(adj * 10) / 10 };
+  } else if (usable && pt.sKm <= 5) {
+    tF = oF;                                           // close enough to stand in for the spot
+    how = { kind: 'station', st: pt.station, name: pt.sName, km: pt.sKm, at: oAt };
+  }
+  // Humidity, wind and the sky: measured when the station counts, else this hour's forecast.
+  const cur = usable ? {
+    tF,
     hum: o.relativeHumidity && o.relativeHumidity.value != null ? o.relativeHumidity.value : h0.hum,
     mph: o.windSpeed && o.windSpeed.value != null ? o.windSpeed.value / 1.609344 : h0.mph,
     deg: o.windDirection && o.windDirection.value != null ? o.windDirection.value : h0.deg,
-    c: o.textDescription ? nwsCondition(o.icon, o.textDescription) : h0.c
-  } : { tF: h0.pF, hum: h0.hum, mph: h0.mph, deg: h0.deg, c: h0.c };
+    c: o.textDescription ? nwsCondition(o.icon, o.textDescription) : h0.c, how
+  } : { tF, hum: h0.hum, mph: h0.mph, deg: h0.deg, c: h0.c, how };
   cur.fF = feelsF(cur.tF, cur.hum, cur.mph);
 
   // Days: NWS's own 12-hour periods, a day's high paired with that night's
@@ -774,7 +826,7 @@ async function fromNWS(lat, lon, retried) {
   const days = Object.values(byDate).sort((a, b) => a.t - b.t).filter(d => d.key >= today);
   if (days[0] && days[0].key === today && days[0].hF == null) {
     let hi = cur.tF;
-    if (pt.station) {
+    if (pt.station && (pt.sKm == null || pt.sKm <= 25)) {
       try {
         const start = new Date(Date.now() - 86400000).toISOString();
         const list = await getJSON(`https://api.weather.gov/stations/${pt.station}/observations?start=${encodeURIComponent(start)}`);
@@ -1711,8 +1763,19 @@ function fillHour() {
       <div><div class="hd-temp">${x.v}<span>°</span></div><div class="hd-words">${(x.dark && x.c === 'sunny') ? 'Clear' : (V.words[x.c] || x.c)}</div></div>
       ${svg(icon, 76, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}
     </div>
-    <div class="hd-grid">${tiles.join('')}${daylight}</div>`;
+    <div class="hd-grid">${tiles.join('')}${daylight}</div>${x.now ? nowSource(S.data.cur.how, tz, metric) : ''}`;
   hourBody.scrollTop = 0;
+}
+// Where Now's temperature came from, so it can be checked against another app.
+function nowSource(how, tz, metric) {
+  if (!how) return '';
+  const st = how.name ? `${esc(how.name)} (${esc(how.st)})` : esc(how.st || 'the nearest station');
+  const km = how.km == null ? '' : metric ? `${Math.round(how.km)} km` : `${Math.round(how.km / 1.609344)} mi`;
+  const deg = d => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(Math.round(metric ? d * 5 / 9 : d))}°`;
+  const txt = how.kind === 'corrected' ? `Now is the National Weather Service forecast for this spot, adjusted ${deg(how.adj)} by the ${st} reading at ${minFmt(how.at, tz)}, ${km} away.`
+    : how.kind === 'station' ? `Now is the ${st} reading at ${minFmt(how.at, tz)}, ${km} away.`
+    : 'Now is the National Weather Service forecast for this spot. No weather station close by has reported recently to check it against.';
+  return `<p class="note">${txt}</p>`;
 }
 function openHour(t) { S.hourT = t; fillHour(); hourWrap.classList.add('open'); lockBehind(hourWrap); }
 function stepHour(dir) {
