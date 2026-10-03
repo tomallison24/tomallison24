@@ -74,13 +74,13 @@
   /* ---- The card: ha-card + button-card grid, as W3 styles them ---- */
   .w3-card {
     position: relative; overflow: hidden;
-    border-radius: 26px; padding: 18px 16px 14px 16px; color: #FFFFFF;
-    display: grid; grid-template-columns: 1fr; row-gap: 14px;
+    border-radius: 28px; padding: 22px 18px 16px 18px; color: #FFFFFF;
+    display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px;
   }
-  .w3-drawer { position: relative; overflow: hidden; border-radius: 26px; padding: 6px 16px 10px 16px; color: #FFFFFF; }
+  .w3-drawer { position: relative; overflow: hidden; border-radius: 28px; padding: 8px 18px 12px 18px; color: #FFFFFF; }
   .w3-chevrow { position: relative; z-index: 1; height: 44px; margin: -10px 0; display: flex; align-items: center; justify-content: center; }
   .w3-chev {
-    width: 32px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,0.18);
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
     box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35), 0 1px 2px rgba(0,0,0,0.30);
@@ -101,7 +101,7 @@
   .w3-fog { position:absolute; left:-30%; width:160%; border-radius:999px; background:rgba(255,255,255,0.22); filter:blur(14px); animation:w3-fogdrift ease-in-out infinite alternate; }
   .w3-gust { position:absolute; left:-40%; height:1.5px; border-radius:2px; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0)); animation:w3-gust linear infinite; }
   .w3-in { position:relative; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,0.18); animation:w3-rise .7s cubic-bezier(.2,.8,.2,1) both; }
-  .w3-hours { position:relative; z-index:1; }
+  .w3-hours { position:relative; z-index:1; min-width:0; }
   .w3-ico { display:inline-flex; }
   .w3-spin-slow { animation:w3-spin 30s linear infinite; }
   .w3-bob { animation:w3-bob 4s ease-in-out infinite alternate; }
@@ -123,19 +123,79 @@
   @keyframes w3-rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
   @keyframes w3-sway { from { transform:rotate(calc(var(--w3-rot) - 10deg)); } to { transform:rotate(calc(var(--w3-rot) + 10deg)); } }
   @media (prefers-reduced-motion: reduce) {
-    .w3-fx *, .w3-in, .w3-ico, .w3-col, .w3-sway { animation:none !important; }
+    .w3-fx *, .w3-in, .w3-ico, .w3-sway, .hx-col, .hx-col *, .hx-col .i { animation:none !important; }
   }
 
+
+  /* ---- The hourly tray: 24 hours you scroll sideways. Each hour has its
+     time, a moving icon, a temperature on a curve, and a rain bar. ---- */
+  .hx { border-radius: 24px; background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35), 0 10px 24px -14px rgba(0,0,0,0.45); overflow: hidden; }
+  .hx-tray { display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .hx-tray::-webkit-scrollbar { display: none; }
+  .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 4.6); min-width: 0; display: flex; flex-direction: column; align-items: center;
+    border-radius: 18px; padding-top: 8px; scroll-snap-align: start; }
+  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); animation: hx-ring 2.8s ease-out infinite; }
+  .hx-time { height: 22px; font-size: 15px; font-weight: 600; letter-spacing: -0.1px; line-height: 22px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
+  .hx-now .hx-time { font-weight: 700; opacity: 1; }
+  .hx-day { font-weight: 800; letter-spacing: 0.2px; }
+  .hx-time.sm { font-size: 13px; }
+  .hx-ico { height: 46px; display: flex; align-items: center; justify-content: center; }
+  .hx-ico .i { transform-origin: 50% 55%; }
+  .hx-curve { position: relative; width: 100%; height: 88px; }
+  .hx-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .hx-line { fill: none; stroke: rgba(255,255,255,0.85); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .hx-dot { position: absolute; left: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28), 0 0 12px rgba(255,255,255,0.55); }
+  .hx-now .hx-dot { animation: hx-beat 1.8s ease-in-out infinite; }
+  .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 600; letter-spacing: -0.4px; line-height: 24px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
+  .hx-rain { height: 42px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 8px; }
+  .hx-bar { width: 22px; border-radius: 6px 6px 3px 3px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
+  .hx-pct { font-size: 14px; font-weight: 700; color: #CDEBFF; line-height: 1; }
+  .hx-lbl { font-size: 14px; font-weight: 700; line-height: 1; opacity: 0.95; }
+  /* Icons move to suit the weather; each hour starts at its own point in the cycle. */
+  .hx-m-spin .i { animation: w3-spin 24s linear infinite; }
+  .hx-m-bob .i { animation: w3-bob 3s ease-in-out infinite alternate; }
+  .hx-m-rain .i { animation: hx-patter 1.1s ease-in-out infinite; }
+  .hx-m-snow .i { animation: hx-snow 3.2s ease-in-out infinite alternate; }
+  .hx-m-zap .i { animation: w3-flicker 4.5s linear infinite; }
+  .hx-m-moon .i { animation: w3-glow 3s ease-in-out infinite alternate; }
+  .hx-m-wind .i { animation: hx-wind 1.8s ease-in-out infinite alternate; }
+  .hx-m-fog .i { animation: hx-fog 3.4s ease-in-out infinite alternate; }
+  .hx-m-up .i { animation: hx-rise 3.2s ease-in-out infinite alternate; }
+  .hx-m-down .i { animation: hx-set 3.2s ease-in-out infinite alternate; }
+  @keyframes hx-ring { 0% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 0 rgba(255,255,255,0.40); } 70%, 100% { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50), 0 0 0 10px rgba(255,255,255,0); } }
+  @keyframes hx-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+  @keyframes hx-patter { 0%, 100% { transform: translateY(-1px) scale(1); } 50% { transform: translateY(3px) scale(1.06, 0.96); } }
+  @keyframes hx-snow { from { transform: rotate(-10deg) translateY(-1px); } to { transform: rotate(10deg) translateY(3px); } }
+  @keyframes hx-wind { from { transform: translateX(-3px); } to { transform: translateX(4px); } }
+  @keyframes hx-fog { from { opacity: 0.55; transform: translateX(-2px); } to { opacity: 1; transform: translateX(2px); } }
+  @keyframes hx-rise { from { transform: translateY(5px); } to { transform: translateY(-4px); } }
+  @keyframes hx-set { from { transform: translateY(-4px); } to { transform: translateY(5px); } }
+  /* Opening: the hours slide in one after another, the curve draws itself, the bars grow. */
+  @keyframes hx-in { from { opacity: 0; transform: translateX(26px) scale(.94); } to { opacity: 1; transform: none; } }
+  @keyframes hx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  @keyframes hx-pop { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes hx-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .intro .hx-col { animation-name: hx-in; animation-duration: .6s; animation-timing-function: cubic-bezier(.2,.8,.2,1); animation-fill-mode: both; animation-delay: calc(var(--i) * 55ms + 120ms); }
+  .intro .hx-now { animation-name: hx-in, hx-ring; animation-duration: .6s, 2.8s; animation-iteration-count: 1, infinite; animation-delay: .12s, .9s; animation-timing-function: cubic-bezier(.2,.8,.2,1), ease-out; }
+  .intro .hx-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hx-draw .5s ease-out both; animation-delay: calc(var(--i) * 55ms + 320ms); }
+  .intro .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 55ms + 420ms); }
+  .intro .hx-now .hx-dot { animation: hx-pop .45s cubic-bezier(.3,1.6,.5,1) both, hx-beat 1.8s ease-in-out 1.2s infinite; animation-delay: .5s, 1.2s; }
+  .intro .hx-temp { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 450ms); }
+  .intro .hx-bar { animation: hx-grow .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 55ms + 600ms); }
+
   /* ---- App chrome: Signal's own surfaces, not the sky ---- */
-  .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 6px 0; }
+  .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding: 6px 0; }
   .foot button { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); padding: 6px 8px; border-radius: 999px; }
   .foot button:active { background: var(--surface); }
   .spin { animation: w3-spin 1s linear infinite; }
 
-  .msg { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px 16px; font-size: 15px; line-height: 1.4; }
-  .msg b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .msg { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 20px 18px; font-size: 17px; line-height: 1.4; }
+  .msg b { display: block; font-size: 20px; margin-bottom: 4px; }
   .msg .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 999px; background: #1F1F23; border: 1px solid var(--border); font-size: 15px; font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 18px; border-radius: 999px; background: #1F1F23; border: 1px solid var(--border); font-size: 17px; font-weight: 600; }
   .pill.primary { background: var(--accent); border-color: var(--accent); }
 
   .skeleton { height: 290px; border-radius: 26px; background: linear-gradient(160deg, #1A1D24, #22262F); animation: w3-pulse 1.4s ease-in-out infinite alternate; }
@@ -144,14 +204,14 @@
   .alerts { display: flex; flex-direction: column; gap: 8px; }
   .alerts:empty { display: none; }
   .alert { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
-  .alert > button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; }
-  .alert .dot { width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .alert > button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; }
+  .alert .dot { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex: none; }
   .alert .t { flex: 1; min-width: 0; }
-  .alert .t b { display: block; font-size: 15px; font-weight: 600; letter-spacing: -0.24px; }
-  .alert .t small { display: block; font-size: 13px; color: var(--muted); margin-top: 1px; }
+  .alert .t b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -0.24px; }
+  .alert .t small { display: block; font-size: 15px; color: var(--muted); margin-top: 1px; }
   .alert .chev { color: var(--muted); transition: transform .2s; }
   .alert.open .chev { transform: rotate(90deg); }
-  .alert .body { display: none; padding: 0 14px 14px 60px; font-size: 14px; line-height: 1.45; color: rgba(235,235,245,0.85); white-space: pre-line; }
+  .alert .body { display: none; padding: 0 16px 16px 68px; font-size: 16px; line-height: 1.45; color: rgba(235,235,245,0.85); white-space: pre-line; }
   .alert.open .body { display: block; }
 
   /* Location sheet: Liquid Glass. One sheet of clear glass floating just
@@ -172,7 +232,7 @@
   .open .scrim { opacity: 1; pointer-events: auto; }
   .open .sheet { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
   .grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22); margin: 6px auto 0; flex: none; }
-  .sheet h2 { flex: none; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; margin: 0; padding: 2px 12px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .sheet h2 { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.4px; margin: 0; padding: 2px 12px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
   /* Close: a round glass button, as iOS 26's sheets have */
   .sheet h2 button {
     width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text);
@@ -197,13 +257,13 @@
     box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift);
   }
   .list:empty { display: none; }
-  .list button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; padding: 13px 16px; font-size: 16px; }
+  .list button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; padding: 15px 16px; font-size: 18px; }
   .list button + button { border-top: 0.5px solid rgba(255,255,255,0.10); }
-  .list button small { display: block; color: var(--muted); font-size: 13px; margin-top: 1px; }
+  .list button small { display: block; color: var(--muted); font-size: 15px; margin-top: 1px; }
   .list button:active { background: var(--lgs-field); }
-  .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin: 18px 8px 8px; }
+  .label { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin: 18px 8px 8px; }
   .seg { display: flex; border-radius: 999px; padding: 3px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift); }
-  .seg button { flex: 1; padding: 8px 0; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--muted); transition: color .25s; }
+  .seg button { flex: 1; padding: 11px 0; border-radius: 999px; font-size: 16px; font-weight: 600; color: var(--muted); transition: color .25s; }
   .seg button[aria-pressed="true"] { background: #3A3A3F; color: var(--text); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--lgs-solid); } }
   @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
@@ -221,7 +281,7 @@
   }
   .slthumb.off { opacity: 0; scale: .7; }
   .seg.slides button[aria-pressed="true"] { background: none; }
-  .note { font-size: 12px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
+  .note { font-size: 14px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -314,7 +374,7 @@ const V = {
 // cached as that:
 //   { src, lat, lon, tz, place,
 //     cur:    { tF, hum, mph, deg, c },
-//     hourly: [{ t, c, pF, r }],        next 12 hours from this one
+//     hourly: [{ t, c, pF, r }],        next 24 hours from this one
 //     daily:  [{ t, c, hF, lF, r }],    7 days from today
 //     rKind:  'pop' (chance, %) | 'in' (amount, inches),
 //     alerts: [{ event, severity, headline, ends, desc }] }
@@ -529,7 +589,7 @@ async function fromNWS(lat, lon) {
 
   return {
     src: 'NWS', lat, lon, tz, place: pt.city, rKind: 'pop', cur,
-    hourly: HP.slice(0, 12).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r })),
+    hourly: HP.slice(0, 24).map(h => ({ t: h.t, c: h.c, pF: h.pF, r: h.r })),
     daily, alerts
   };
 }
@@ -550,7 +610,7 @@ async function fromOpenMeteo(lat, lon) {
   // WMO has no wind code; a strong sustained wind under a dry sky is `windy`.
   if (cur.wind_speed_10m >= 25 && cur.weather_code <= 3) c = 'windy';
   const hourly = [];
-  for (let i = 0; i < H.time.length && hourly.length < 12; i++) {
+  for (let i = 0; i < H.time.length && hourly.length < 24; i++) {
     if (H.time[i] >= hourStart) hourly.push({ t: H.time[i], c: wmo(H.weather_code[i]), pF: Math.round(H.temperature_2m[i]), r: r2(H.precipitation[i]) });
   }
   const ti = Math.max(0, D.time.findIndex((t, i) => t <= now && (D.time[i + 1] == null || D.time[i + 1] > now)));
@@ -710,7 +770,7 @@ function w3Hero(m) {
   });
 
   const move = has(['lightning', 'lightning-rainy']) ? 'w3-flicker' : (night ? 'w3-glow' : (c === 'sunny' ? 'w3-spin-slow' : 'w3-bob'));
-  const chip = (ic, txt, extra, cls) => `<div style="display:flex;align-items:center;gap:6px;padding:6px 11px 6px 9px;border-radius:999px;background:rgba(255,255,255,0.16);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.40);font-size:12px;font-weight:600;letter-spacing:-0.08px;white-space:nowrap;">${svg(ic, 15, extra || '').replace('class="i"', `class="i ${cls || ''}"`)}${txt}</div>`;
+  const chip = (ic, txt, extra, cls) => `<div style="display:flex;align-items:center;gap:7px;padding:8px 14px 8px 11px;border-radius:999px;background:rgba(255,255,255,0.16);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.40);font-size:16px;font-weight:600;letter-spacing:-0.1px;white-space:nowrap;">${svg(ic, 20, extra || '').replace('class="i"', `class="i ${cls || ''}"`)}${txt}</div>`;
   const chips = [];
   if (a.humidity != null) chips.push(chip('water-percent', Math.round(a.humidity) + '%'));
   if (a.wind_speed != null) {
@@ -723,62 +783,103 @@ function w3Hero(m) {
   return `
     <div class="w3-fx"><div class="w3-sky" style="background:${sky};"></div>${fx}</div>
     <div class="w3-in">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
-          <button class="w3-place" data-action="location" aria-label="Change location" style="font-size:15px;font-weight:600;letter-spacing:-0.24px;line-height:1.2;max-width:100%;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${gps ? svg('navigation-variant', 12, 'opacity:0.9;') : ''}</button>
-          <div style="font-size:68px;font-weight:200;letter-spacing:-2.5px;line-height:0.95;margin-top:4px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
+          <button class="w3-place" data-action="location" aria-label="Change location" style="font-size:21px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${gps ? svg('navigation-variant', 15, 'opacity:0.9;') : ''}</button>
+          <div style="font-size:${String(temp).length >= 3 ? 72 : 92}px;font-weight:200;letter-spacing:-4px;line-height:0.95;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;">
-          <div class="w3-ico ${move}">${svg(icon, 46, `color:${tint};filter:drop-shadow(0 0 10px ${tint}99);`)}</div>
-          <div style="font-size:15px;font-weight:600;letter-spacing:-0.24px;margin-top:6px;line-height:1.2;">${words}</div>
-          <div style="font-size:13px;font-weight:500;letter-spacing:-0.08px;opacity:0.9;margin-top:2px;line-height:1.2;">${hl}</div>
+          <div class="w3-ico ${move}">${svg(icon, 68, `color:${tint};filter:drop-shadow(0 0 12px ${tint}99);`)}</div>
+          <div style="font-size:21px;font-weight:600;letter-spacing:-0.3px;margin-top:8px;line-height:1.2;">${words}</div>
+          <div style="font-size:18px;font-weight:500;letter-spacing:-0.1px;opacity:0.92;margin-top:3px;line-height:1.2;">${hl}</div>
         </div>
       </div>
-      ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">${chips.join('')}</div>` : ''}
+      ${chips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">${chips.join('')}</div>` : ''}
     </div>`;
 }
 
+// Which way an hour's icon moves, by its weather.
+function hourMotion(c, dark) {
+  if (c === 'sunny') return 'spin';
+  if (c === 'clear-night') return 'moon';
+  if (c === 'rainy' || c === 'pouring' || c === 'hail') return 'rain';
+  if (c === 'snowy' || c === 'snowy-rainy') return 'snow';
+  if (c === 'lightning' || c === 'lightning-rainy') return 'zap';
+  if (c === 'windy' || c === 'windy-variant') return 'wind';
+  if (c === 'fog') return 'fog';
+  return dark ? 'moon' : 'bob';
+}
+
+// 24 hours in a tray you scroll sideways. Each column: time, a moving icon,
+// the temperature riding on a curve, and (when it matters) a rain bar.
 function w3Hours(m) {
   const { entity, fc, sun, tz } = m;
-  const hrs = (fc.hourly || []).slice(0, 6);
-  if (!hrs.length) return '<div style="font-size:13px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
+  const hrs = (fc.hourly || []).slice(0, 24);
+  if (!hrs.length) return '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
   const marks = [];
   if (sun.next_rising) marks.push({ t: sun.next_rising, kind: 'rise' });
   if (sun.next_setting) marks.push({ t: sun.next_setting, kind: 'set' });
   const first = hrs[0].t, last = hrs[hrs.length - 1].t;
-  const seq = hrs.map((h, i) => Object.assign({}, h, { kind: 'hour', now: i === 0 }))
-    .concat(marks.filter(k => k.t > first && k.t < last))
-    .sort((x, y) => x.t - y.t)
-    .slice(0, 6);
   const cur = entity.attributes.temperature;
   const unit = entity.attributes.precipitation_unit || '';
+  const seq = hrs.map((h, i) => Object.assign({}, h, { kind: 'hour', now: i === 0, v: i === 0 && cur != null ? Math.round(cur) : h.p }))
+    .concat(marks.filter(k => k.t > first && k.t < last))
+    .sort((x, y) => x.t - y.t);
+
+  // Curve height for each column: hotter is higher. A sunrise or sunset has no
+  // temperature of its own, so the line just passes through at the average of its neighbours.
+  const vs = seq.filter(x => x.kind === 'hour').map(x => x.v);
+  const lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+  // A day that only moves a degree or two should look flat, not dramatic.
+  const span = Math.max(S.units === 'metric' ? 5 : 9, hi - lo);
+  const Y_TOP = 36, Y_BOT = 76;                       // px inside the 88px curve cell
+  const yOf = v => Y_BOT - (v - lo) / span * (Y_BOT - Y_TOP);
+  const ys = seq.map((x, i) => {
+    if (x.kind === 'hour') return yOf(x.v);
+    let p = i - 1, n = i + 1;
+    while (p > 0 && seq[p].kind !== 'hour') p--;
+    while (n < seq.length - 1 && seq[n].kind !== 'hour') n++;
+    return (yOf(seq[p].v) + yOf(seq[n].v)) / 2;
+  });
+
   const fmt = t => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', timeZone: tz }).replace(' ', '');
   const fmtM = t => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: tz }).replace(' ', '');
-  const col = (i, now) => `display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;padding:8px 0;border-radius:15px;${now ? 'background:rgba(255,255,255,0.22);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.50);' : ''}animation:w3-rise .6s cubic-bezier(.2,.8,.2,1) ${(0.15 + i * 0.06).toFixed(2)}s both;`;
-  const time = 'font-size:12px;font-weight:600;letter-spacing:-0.08px;line-height:1.2;white-space:nowrap;opacity:0.92;';
-  const cell = 'height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-  const temp = 'font-size:16px;font-weight:600;letter-spacing:-0.24px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;';
-  const rainLabel = r => wet(m, r) ? `<div style="font-size:10px;font-weight:700;color:#CDEBFF;line-height:1;margin-top:1px;">${r}${unit}</div>` : '';
+  const hourOf = t => +new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).slice(0, 2) % 24;
+  const dayOf = t => new Date(t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
+  const curveSvg = i => {
+    const yl = i ? (ys[i - 1] + ys[i]) / 2 : ys[i], yr = i < seq.length - 1 ? (ys[i] + ys[i + 1]) / 2 : ys[i];
+    return `<svg viewBox="0 0 100 88" preserveAspectRatio="none" aria-hidden="true"><path class="hx-line" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${ys[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
+  };
   const cols = seq.map((x, i) => {
+    const cls = `hx-col${x.now ? ' hx-now' : ''}`;
+    const st = `style="--i:${Math.min(i, 14)}"`;
+    const delay = `animation-delay:-${((i * 0.37) % 3).toFixed(2)}s;`;
     if (x.kind !== 'hour') {
       const rise = x.kind === 'rise';
-      return `<div class="w3-col" style="${col(i, false)}">
-        <div style="${time}">${fmtM(x.t)}</div>
-        <div style="${cell}">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 22, 'color:#FFD60A;filter:drop-shadow(0 0 6px #FFD60A99);')}</div>
-        <div style="${temp}font-size:12px;font-weight:600;">${rise ? 'Sunrise' : 'Sunset'}</div>
+      return `<div class="${cls}" ${st}>
+        <div class="hx-time sm">${fmtM(x.t)}</div>
+        <div class="hx-ico hx-m-${rise ? 'up' : 'down'}">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 34, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);${delay}`)}</div>
+        <div class="hx-curve">${curveSvg(i)}</div>
+        <div class="hx-rain"><div class="hx-lbl">${rise ? 'Sunrise' : 'Sunset'}</div></div>
       </div>`;
     }
-    const dark = x.dark;
-    const icon = (dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
+    const icon = (x.dark && V.icons[x.c + '-night']) || V.icons[x.c] || 'weather-cloudy';
     const tint = V.tints[x.c] || '#FFFFFF';
-    const v = x.now && cur != null ? Math.round(cur) : x.p;
-    return `<div class="w3-col" style="${col(i, x.now)}">
-      <div style="${time}">${x.now ? 'Now' : fmt(x.t)}</div>
-      <div style="${cell}">${svg(icon, 22, `color:${tint};filter:drop-shadow(0 0 6px ${tint}66);`)}${rainLabel(x.r)}</div>
-      <div style="${temp}">${v}°</div>
+    const motion = hourMotion(x.c, x.dark);
+    const label = x.now ? 'Now' : (hourOf(x.t) === 0 ? `<span class="hx-day">${dayOf(x.t)}</span>` : fmt(x.t));
+    let rain = '';
+    if (wet(m, x.r)) {
+      const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
+      rain = `<div class="hx-bar" style="height:${Math.round(5 + Math.min(1, Math.max(0, f)) * 17)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
+    }
+    return `<div class="${cls}" ${st}>
+      <div class="hx-time">${label}</div>
+      <div class="hx-ico hx-m-${motion}">${svg(icon, 34, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);${delay}`)}</div>
+      <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 36).toFixed(1)}px">${x.v}°</div></div>
+      <div class="hx-rain">${rain}</div>
     </div>`;
   });
-  return `<div style="display:flex;align-items:stretch;gap:2px;padding:5px;border-radius:20px;background:rgba(255,255,255,0.12);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.35), 0 10px 24px -14px rgba(0,0,0,0.45);">${cols.join('')}</div>`;
+  return `<div class="hx"><div class="hx-tray" id="hxTray">${cols.join('')}</div></div>`;
 }
 
 // Range bars against the week's own min/max, coloured by ABSOLUTE
@@ -812,18 +913,18 @@ function wDays(m) {
     const name = i === 0 ? 'Today' : new Date(d.t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
     const icon = V.icons[d.c] || 'weather-cloudy';
     const tint = V.tints[d.c] || '#FFFFFF';
-    const rain = wet(m, d.r) ? `<div style="font-size:10px;font-weight:600;color:#BFE3FF;line-height:1;margin-top:1px;">${d.r}${unit}</div>` : '';
+    const rain = wet(m, d.r) ? `<div style="font-size:13px;font-weight:700;color:#BFE3FF;line-height:1;margin-top:2px;">${d.r}${unit}</div>` : '';
     const dot = (i === 0 && cur != null)
-      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
+      ? `<div style="position:absolute;top:50%;left:${pct(Math.min(Math.max(cur, d.l), d.h))}%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:999px;background:#FFFFFF;box-shadow:0 0 0 2px rgba(0,0,0,0.30);"></div>`
       : '';
-    return `<div style="display:grid;grid-template-columns:52px 34px 34px 1fr 34px;align-items:center;column-gap:10px;height:38px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
-      <div style="font-size:15px;font-weight:600;letter-spacing:-0.24px;">${name}</div>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 22, `color:${tint};`)}${rain}</div>
-      <div style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.6;">${d.l}°</div>
-      <div style="position:relative;height:4px;border-radius:999px;background:rgba(0,0,0,0.28);">
+    return `<div style="display:grid;grid-template-columns:70px 44px 44px 1fr 44px;align-items:center;column-gap:10px;height:60px;${i ? 'border-top:0.5px solid rgba(255,255,255,0.22);' : ''}">
+      <div style="font-size:19px;font-weight:600;letter-spacing:-0.3px;">${name}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">${svg(icon, 30, `color:${tint};`)}${rain}</div>
+      <div style="font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;opacity:0.65;">${d.l}°</div>
+      <div style="position:relative;height:7px;border-radius:999px;background:rgba(0,0,0,0.28);">
         <div style="position:absolute;top:0;bottom:0;left:${pct(d.l)}%;width:${((d.h - d.l) / span * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,${ramp(d.l)},${ramp(d.h)});"></div>${dot}
       </div>
-      <div style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
+      <div style="font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;">${d.h}°</div>
     </div>`;
   });
   return `<div>${rows.join('')}</div>`;
@@ -880,12 +981,17 @@ function render() {
   const foot = slot('foot', 'div', 'foot');
   const alerts = slot('alerts', 'div', 'alerts');
   if (!card.contains(hero)) { card.replaceChildren(hero, hours, chev); }
-  if (app.firstElementChild !== card) { app.replaceChildren(alerts, card, drawer, foot); }
+  if (app.firstElementChild !== alerts) { app.replaceChildren(alerts, card, drawer, foot); }   // alerts is first; checking `card` re-attached everything on every repaint
 
   card.style.background = sky;
   card.style.boxShadow = '0 18px 40px -16px ' + glow;
   put(hero, w3Hero(m));
+  const tray = document.getElementById('hxTray');
+  const keep = tray ? tray.scrollLeft : 0;
   put(hours, w3Hours(m));
+  const tray2 = document.getElementById('hxTray');
+  if (tray2 && keep) tray2.scrollLeft = keep;       // a repaint must not throw the tray back to "Now"
+  if (tray2 && !S.introShown) introTray(hours, tray2);
   put(chev, `<button class="w3-chev" data-action="toggle" aria-label="${S.expanded ? 'Hide' : 'Show'} 7-day forecast" aria-expanded="${S.expanded}">${svg(S.expanded ? 'chevron-up' : 'chevron-down', 18)}</button>`);
 
   drawer.hidden = !S.expanded;
@@ -898,6 +1004,20 @@ function render() {
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Location</button>`);
+}
+
+// The first time the hours appear they slide in, and the tray nudges sideways
+// once, so it is plain that it scrolls. Neither repeats on later repaints.
+function introTray(hours, tray) {
+  S.introShown = true;
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (calm) return;
+  hours.classList.add('intro');
+  setTimeout(() => hours.classList.remove('intro'), 2600);
+  let touched = false;
+  tray.addEventListener('touchstart', () => { touched = true; }, { once: true, passive: true });
+  setTimeout(() => { if (!touched && tray.scrollLeft < 4) tray.scrollTo({ left: 64, behavior: 'smooth' }); }, 2000);
+  setTimeout(() => { if (!touched && tray.scrollLeft > 4 && tray.scrollLeft < 80) tray.scrollTo({ left: 0, behavior: 'smooth' }); }, 3300);
 }
 
 function renderMsg(title, body, retry) {

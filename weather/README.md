@@ -6,6 +6,16 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.
+- Big type, quick to read: a 92px temperature, 21px place and conditions,
+  16px chips, 19px day rows.
+- **Hourly tray**: the next 24 hours, scrolling sideways. Each hour has its
+  time (midnight shows the day), an icon that moves to suit the weather (the
+  sun turns, rain patters, snow sways, storms flicker, wind and fog drift,
+  sunrise and sunset rise and sink), the temperature on a curve, and a rain
+  bar with its chance when it is 20% or more. "Now" pulses. When the hours
+  first appear they slide in, the curve draws itself and the bars grow, then
+  the tray nudges sideways once to show it scrolls. All of it stops under
+  Reduce Motion, and a repaint keeps your place in the tray.
 - No build step. `index.html` is the whole app; `sw.js` keeps it working
   offline, and the last forecast is kept in `localStorage`.
 - The Location sheet is iOS 26 "Liquid Glass": clear glass floating just
