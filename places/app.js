@@ -131,7 +131,13 @@
       const t = today(), soon = list.filter(p => p.planned && p.planned >= t), some = list.filter(p => !p.planned), gone = list.filter(p => p.planned && p.planned < t);
       for (const [label, g] of [['Coming up', soon], ['Someday', some], ['Date passed', gone]]) if (g.length) h += group(label, g);
     } else h = group(st.sort[st.tab] === 'near' && !st.here ? 'Newest (tap Nearest again once location is allowed)' : SORTS[st.tab].find(s => s[0] === st.sort[st.tab])[1], list);
+    const finding = st.q.trim().length >= 3 && !st.q.trim().startsWith('#') && st.found && st.found.length;
+    if (finding && !list.length) h = '<p class="hint" style="margin:2px 10px">None of your places match.</p>';
+    if (finding) h += '<section class="group glass"><h2><span>Businesses' + (st.here ? ', nearest first' : '') + '</span><span>' + st.found.length + '</span></h2>' + st.found.map(foundRow).join('') + '</section>';
     $('list').innerHTML = h;
+    $('filter').placeholder = st.view === 'map' ? 'Search businesses here' : 'Search your places and businesses';
+    $('mapResults').hidden = !(st.view === 'map' && finding);
+    if (st.view === 'map' && finding) $('mapResults').innerHTML = st.found.map(foundRow).join('');
     if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); }
   }
   const group = (label, g) => '<section class="group glass"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
@@ -153,8 +159,59 @@
     const l = e.target.closest('[data-layer]');
     if (l) { st.layers[l.dataset.layer] = !st.layers[l.dataset.layer]; store.set(KEY + '-layers', st.layers); render(); loadBusinesses(true); }
   });
-  $('filter').addEventListener('input', e => { st.q = e.target.value; render(); });
-  $('list').addEventListener('click', e => { const r = e.target.closest('[data-id]'); if (r) openPlace(places.find(p => p.id === r.dataset.id)); });
+  $('filter').addEventListener('input', e => { st.q = e.target.value; render(); clearTimeout(foundTimer); foundTimer = setTimeout(() => findBusinesses(st.q), 450); });
+  $('filter').addEventListener('search', () => { clearTimeout(foundTimer); findBusinesses(st.q); });
+
+  // ---------- searching for businesses (the search box at the top) ----------
+  // In the list, matching OpenStreetMap places come after your own, nearest
+  // first; on the map, they're found around where the map is looking, and
+  // tapping one flies there and opens its card.
+  let foundTimer = null, foundCtl = null;
+  st.found = [];
+  async function findBusinesses(q) {
+    q = (q || '').trim();
+    if (foundCtl) foundCtl.abort();
+    if (q.length < 3 || q.startsWith('#')) { st.found = []; $('filterSpin').hidden = true; render(); return; }
+    foundCtl = new AbortController();
+    const c = st.view === 'map' && map ? map.getCenter() : null;
+    const near = c ? '&lat=' + c.lat.toFixed(4) + '&lon=' + c.lng.toFixed(4) : st.here ? '&lat=' + st.here.lat.toFixed(4) + '&lon=' + st.here.lon.toFixed(4) : '';
+    $('filterSpin').hidden = false;
+    try {
+      const r = await fetch(PHOTON + '/api/?q=' + encodeURIComponent(q) + '&limit=12&lang=en' + near, { signal: foundCtl.signal });
+      const mine = new Set(places.filter(p => p.osm).map(p => p.osm.type + '/' + p.osm.id));
+      st.found = ((await r.json()).features || []).map(P.fromPhoton).filter(p => p.lat != null && !(p.osm && mine.has(p.osm.type + '/' + p.osm.id)));
+    } catch (e) { if (e.name === 'AbortError') return; st.found = []; }
+    $('filterSpin').hidden = true;
+    render();
+  }
+  const foundRow = (p, i) => '<button class="row" type="button" data-found="' + i + '"><span class="em" aria-hidden="true">' + esc(p.emoji) + '</span>'
+    + '<span class="t"><b>' + esc(p.name) + '</b><small>' + esc([p.category, p.address, fmtDist(st.view === 'map' ? null : distOf(p))].filter(Boolean).join(' · ')) + '</small></span>'
+    + '<span class="r"><span class="when">Add</span></span></button>';
+  function openFound(i) {
+    const f = st.found[i]; if (!f) return;
+    if (st.view !== 'map') return openPlace(draft(f), true);
+    // On the map: fly there and show its card, as for a dot.
+    $('mapResults').hidden = true; $('filter').blur();
+    const o = Object.assign({}, f, { group: f.group || 'fun' });
+    const key = o.osm ? bizKey(o) : 'found/' + o.lat + ',' + o.lon;
+    if (!o.osm) o.osm = null;
+    bizSeen.set(key, o);
+    map.flyTo([o.lat, o.lon], Math.max(map.getZoom(), 17), { duration: 0.8 });
+    map.once('moveend', () => {
+      let m = bizShown.get(key);
+      if (!m) {
+        m = L.circleMarker([o.lat, o.lon], { radius: 7, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group] || BIZ_COLOR.fun, fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(key) })
+          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] }).addTo(biz);
+        bizShown.set(key, m);
+      }
+      m.openPopup();
+    });
+  }
+  $('mapResults').addEventListener('click', e => { const b = e.target.closest('[data-found]'); if (b) openFound(+b.dataset.found); });
+  $('list').addEventListener('click', e => {
+    const r = e.target.closest('[data-id]'); if (r) return openPlace(places.find(p => p.id === r.dataset.id));
+    const f = e.target.closest('[data-found]'); if (f) openFound(+f.dataset.found);
+  });
 
   // ---------- where you are ----------
   function locate() {
@@ -193,6 +250,7 @@
   let biz = null, bizTimer = null, bizCtl = null, bizBox = null, bizShown = new Map();
   const bizSeen = new Map();                         // 'node/123' -> place fields
   const bizKey = o => o.osm.type + '/' + o.osm.id;
+  const dotClass = k => 'osm-k-' + String(k).replace(/[^\w-]/g, '-');   // names the dot (for tests and styling)
   function hint(text) { $('mapHint').textContent = text || ''; $('mapHint').hidden = !text; }
   async function loadBusinesses(force) {
     if (!map || st.view !== 'map') return;
@@ -229,15 +287,15 @@
     for (const [k, m] of bizShown) if (!want.has(k)) { biz.removeLayer(m); bizShown.delete(k); }
     for (const [k, o] of want) {
       if (bizShown.has(k)) continue;
-      const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group], fillOpacity: 0.95, className: 'osm-dot osm-' + o.group })
+      const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group], fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(k) })
         .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] })
         .addTo(biz);
       bizShown.set(k, m);
     }
   }
-  function bizCard(o) {
+  function bizCard(o, key) {
     const i = o.info || {}, hours = i.hours ? P.hoursText(i.hours).split('\n')[0] : '';
-    return '<div class="bizcard" data-biz="' + esc(bizKey(o)) + '"><b>' + esc(o.emoji) + ' ' + esc(o.name) + '</b>'
+    return '<div class="bizcard" data-biz="' + esc(key || bizKey(o)) + '"><b>' + esc(o.emoji) + ' ' + esc(o.name) + '</b>'
       + '<small>' + esc([o.category, i.cuisine].filter(Boolean).join(' · ')) + '</small>'
       + (o.address ? '<small>' + esc(o.address) + '</small>' : '') + (hours ? '<small>🕒 ' + esc(hours) + '</small>' : '')
       + '<div class="bizacts"><button type="button" data-bizadd="want">Want to go</button><button type="button" data-bizadd="been">Been</button><button type="button" data-bizdir>Directions</button></div></div>';
@@ -275,7 +333,7 @@
     st.view = v;
     document.body.classList.toggle('mapmode', v === 'map');
     document.documentElement.classList.toggle('locked', v === 'map');
-    $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map'; $('filterWrap').hidden = v === 'map';
+    $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map';
     render();
     if (v === 'map' && map) setTimeout(() => { map.invalidateSize(); loadBusinesses(); }, 50);
     if (v !== 'map') hint('');

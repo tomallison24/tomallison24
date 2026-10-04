@@ -40,6 +40,7 @@ const feat = (lon, lat, props) => ({ type: 'Feature', geometry: { type: 'Point',
 const RIOJA = feat(-104.9997, 39.7478, { osm_type: 'N', osm_id: 111, osm_key: 'amenity', osm_value: 'restaurant', type: 'house', name: 'Rioja', housenumber: '1431', street: 'Larimer Street', city: 'Denver', state: 'Colorado', countrycode: 'US' });
 const DAM = feat(-104.9892, 39.7372, { osm_type: 'W', osm_id: 222, osm_key: 'tourism', osm_value: 'museum', type: 'house', name: 'Denver Art Museum', street: 'West 14th Avenue Parkway', housenumber: '100', city: 'Denver', state: 'Colorado', countrycode: 'US' });
 const CAFE = feat(-104.9903, 39.7393, { osm_type: 'N', osm_id: 333, osm_key: 'amenity', osm_value: 'cafe', type: 'house', name: 'Corner Café', city: 'Denver', state: 'Colorado', countrycode: 'US' });
+const PIZZA = feat(-104.9850, 39.7420, { osm_type: 'N', osm_id: 444, osm_key: 'amenity', osm_value: 'restaurant', type: 'house', name: 'Pizzeria Locale', city: 'Denver', state: 'Colorado', countrycode: 'US' });
 const HOUSE = feat(-104.98, 39.74, { osm_type: 'W', osm_id: 9, osm_key: 'building', osm_value: 'house', type: 'house', housenumber: '12', street: 'Elm St', city: 'Denver', state: 'Colorado', countrycode: 'US' });
 
 const browser = await chromium.launch();
@@ -50,7 +51,7 @@ await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
   const u = route.request().url(), cors = { 'Access-Control-Allow-Origin': '*' };
   if (u.startsWith('https://photon.komoot.io/api/')) {
     const q = new URL(u).searchParams.get('q').toLowerCase(); calls.photon.push(q);
-    const fs2 = q.includes('rioja') ? [RIOJA, HOUSE] : q.includes('art museum') ? [DAM] : [];
+    const fs2 = q.includes('rioja') ? [RIOJA, HOUSE] : q.includes('art museum') ? [DAM] : q.includes('pizza') ? [PIZZA] : [];
     return route.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ type: 'FeatureCollection', features: fs2 }) });
   }
   if (u.startsWith('https://photon.komoot.io/reverse')) return route.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ features: [CAFE] }) });
@@ -174,25 +175,45 @@ ok('search your places by type or name', (await rows()).length === 1 && (await r
 await page.fill('#filter', ''); await page.dispatchEvent('#filter', 'input');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '3-want.png') });
 
+// ---- searching for businesses from the top search box ----
+await page.fill('#filter', 'pizza'); await page.waitForTimeout(900);
+let lt = await page.textContent('#list');
+ok('the search box finds businesses after your own places', lt.includes('None of your places match') && lt.includes('Businesses') && lt.includes('Pizzeria Locale'), lt.slice(0, 160));
+await page.click('#list [data-found="0"]'); await page.waitForTimeout(400);
+ok('tapping one opens it as a new place', (await page.textContent('#plLbl')) === 'New place' && (await page.inputValue('#plName')) === 'Pizzeria Locale');
+await page.click('#placeSheet [data-close].iconbtn');
+await page.fill('#filter', ''); await page.dispatchEvent('#filter', 'input'); await page.waitForTimeout(600);
+
 // ---- map ----
 await page.click('#viewBtn'); await page.waitForTimeout(800);
 const nPins = await page.$$eval('.pin.want', p => p.length);
 ok('the map shows a pin for each Want to go place', await page.isVisible('#map') && nPins === 2, nPins + ' pins');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4-map.png') });
+// ---- searching on the map ----
+await page.fill('#filter', 'pizza'); await page.waitForTimeout(900);
+ok('on the map the search box stays, and results drop down under it', await page.isVisible('#filter') && await page.isVisible('#mapResults') && (await page.textContent('#mapResults')).includes('Pizzeria Locale'));
+await page.click('#mapResults [data-found="0"]'); await page.waitForTimeout(1600);
+ok('tapping a result flies there and opens its card', await page.isHidden('#mapResults') && (await page.textContent('.bizcard')).includes('Pizzeria Locale'));
+if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '7-mapsearch.png') });
+await page.evaluate(() => document.querySelector('.leaflet-popup-close-button, .leaflet-container') && null);
+await page.keyboard.press('Escape');
+await page.fill('#filter', ''); await page.dispatchEvent('#filter', 'input'); await page.waitForTimeout(500);
+await page.click('#fitBtn'); await page.waitForTimeout(800);
+
 // ---- businesses on the map ----
 await page.waitForTimeout(1200);
 const dots = await page.$$eval('path.osm-dot', d => d.map(x => x.getAttribute('class')));
-ok('zoomed in, nearby businesses show as dots: food and things to do, not shops', dots.length === 2 && dots.some(c => c.includes('osm-food')) && dots.some(c => c.includes('osm-fun')), dots.join(' / '));
+ok('zoomed in, nearby businesses show as dots: food and things to do, not shops (plus the pizzeria you searched for)', dots.length === 3 && dots.filter(c => c.includes('osm-food')).length === 2 && dots.some(c => c.includes('osm-fun')) && !dots.some(c => c.includes('osm-shops')), dots.join(' / '));
 ok('the map view has the business chips instead of sorting', await page.isVisible('#chips [data-layer="food"]') && !(await page.isVisible('#chips [data-sort="near"]')));
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '5-businesses.png') });
-await page.click('path.osm-food'); await page.waitForTimeout(400);
+await page.click('path.osm-k-node-501'); await page.waitForTimeout(400);
 const card = await page.textContent('.bizcard');
 ok('tapping a dot shows its card: name, type, cuisine, hours', card.includes('Little Bird Kitchen') && card.includes('Restaurant') && card.includes('American') && card.includes('8 AM–9 PM'), card);
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '6-card.png') });
 await page.click('.bizcard [data-bizadd="want"]'); await page.waitForTimeout(400);
 ok('Want to go from the card opens it as a new place, details filled in', (await page.inputValue('#plName')) === 'Little Bird Kitchen' && (await page.textContent('#plMeta')).includes('Restaurant') && (await page.textContent('#plInfo')).includes('8 AM–9 PM'));
 await page.click('#plSave'); await page.waitForTimeout(500);
-ok('once saved, its dot gives way to a pin', (await page.$$eval('path.osm-dot', d => d.length)) === 1 && (await page.$$eval('.pin.want', p => p.length)) === 3);
+ok('once saved, its dot gives way to a pin', (await page.$$('path.osm-k-node-501')).length === 0 && (await page.$$eval('.pin.want', p => p.length)) === 3);
 await page.click('#chips [data-layer="shops"]'); await page.waitForTimeout(800);
 ok('switching on Shops loads and shows them too', (await page.$$('path.osm-shops')).length === 1 && calls.biz.at(-1).includes('"shop"~"^(.+)$"'));
 await page.focus('#map'); for (let i = 0; i < 3; i++) { await page.keyboard.press('-'); await page.waitForTimeout(350); }

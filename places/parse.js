@@ -92,6 +92,7 @@
       name, address, city: town, category: kind.label, emoji: kind.emoji,
       lat: num(c[1]), lon: num(c[0]),
       osm: type && p.osm_id ? { type, id: Number(p.osm_id) } : null,
+      group: groupOf({ [p.osm_key]: p.osm_value }),
       // A business or attraction, rather than a street, a town or a bare address.
       isPlace: !!p.name && !['place', 'highway', 'boundary', 'landuse', 'railway', 'waterway'].includes(p.osm_key) && !(p.osm_key === 'building' && ['house', 'residential', 'yes', 'apartments'].includes(p.osm_value)),
     };

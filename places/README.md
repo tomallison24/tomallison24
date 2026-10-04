@@ -17,8 +17,13 @@ same frosted glass as the other AllisonOS apps.
   Family calendar are added by themselves (below).
 - **Sorting**: Want to go by **Soonest** (dated plans first, grouped into
   Coming up / Someday / Date passed), **Nearest** or **Newest**; Been by
-  **Recent**, **Top rated** or **Nearest**. The search box finds your places
-  by name, type, address, notes or `#tag`.
+  **Recent**, **Top rated** or **Nearest**.
+- **The search box** at the top finds your places by name, type, address,
+  notes or `#tag`, and, from three letters on, businesses on OpenStreetMap
+  too, listed under **Businesses** after your own (nearest first); tap one to
+  add it. On the map it searches around where the map is looking: results
+  drop down under the box, and tapping one flies the map there and opens its
+  card.
 - **Map** (the map button, top right): your places as pins, blue for Want to
   go and gold for Been, each with its emoji. **Touch and hold** anywhere on the
   map to add a place there. Buttons to show where you are and fit every pin.
