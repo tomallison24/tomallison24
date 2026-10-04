@@ -53,6 +53,41 @@ and go nowhere except to that address.
   your user can, so it is worth making one just for this app, which you can
   delete there at any time to cut it off.
 
+Once saved, the sheet opens **locked**: it shows the address and "Saved"
+for the token, never the token itself, and nothing is put back in a text box.
+When editing, leave the token box blank to keep the saved one.
+
+### Settings PIN
+
+**Change** and **Disconnect** need a 4-digit PIN, so the address and token
+cannot be changed or wiped by accident. You choose it once the first
+connection works (or the first time you change or disconnect, if you
+connected before PINs existed). Five wrong tries in a row and the pad rests
+for 30 s. **Forgot PIN?** (two taps) erases the address, token and PIN
+together, so it cannot be used to get round the PIN; paste them again to
+reconnect. The PIN is kept as a salted SHA-256, not as the digits.
+
+The PIN guards against accidents, not against someone with your unlocked
+phone and the know-how to read browser storage: it does not encrypt the
+token, because the app needs the token to connect without asking each time.
+
+### Security
+
+- **Nothing secret is in this repository.** The address and token exist
+  only in the phone's browser storage. Anyone copying the code gets an app
+  that asks for *their* Home Assistant; the entity ids in it are names, not
+  keys.
+- **The token can do anything your Home Assistant user can**, not only the
+  dehumidifiers. If it might have leaked, delete it in your Home Assistant
+  profile (Security → Long-lived access tokens) and it stops working at once.
+- **Every app on the same site shares that storage**, so a bug in one
+  AllisonOS app that ran someone else's script could read it. Keep that in
+  mind when an app shows outside content.
+- **Prefer the Cloudflare copy** of the site: it sits behind Cloudflare
+  Access, so only signed-in people can load it at all. The GitHub Pages copy
+  is public and shares `tomallison24.github.io` with any other Pages site on
+  the account.
+
 On iPhone, this app opened from the launcher and the same app installed on
 its own keep separate storage (see `home/README.md`), so each needs the token once.
 
