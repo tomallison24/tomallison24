@@ -1,7 +1,10 @@
-# House
+# Home (`house/`)
 
 Home Assistant as an AllisonOS app: plain HTML talking to Home Assistant
-directly, instead of Lovelace and its community cards. It starts with the
+directly, instead of Lovelace and its community cards. It is called **Home**
+on the screen; the folder is `house/` because `home/` is the AllisonOS
+launcher, and its `localStorage` keys are `house.*` so the two never clash
+when it is opened from the launcher. It starts with the
 **dehumidifiers**, the Cube and Upstairs.
 
 The cards are a port of the Signal dashboard's DG1 dehumidifier card
@@ -35,7 +38,8 @@ The gear (top right) opens the Home Assistant sheet: an **address** and a
 and go nowhere except to that address.
 
 - **Address**: it has to be **https** and reachable from the phone, such as
-  your Home Assistant Cloud (Nabu Casa) remote URL. A local
+  your **Nabu Casa** address (`https://….ui.nabu.casa`; in Home Assistant,
+  Settings → Home Assistant Cloud, under Remote Access). A local
   `http://homeassistant.local:8123` address does not work: the app is served
   over https, and browsers block an https page from opening an http
   connection. A pasted dashboard link is fine; only its origin is kept.
@@ -44,8 +48,8 @@ and go nowhere except to that address.
   your user can, so it is worth making one just for this app, which you can
   delete there at any time to cut it off.
 
-On iPhone, the app opened from Home and House installed on its own keep
-separate storage (see `home/README.md`), so each needs the token once.
+On iPhone, this app opened from the launcher and the same app installed on
+its own keep separate storage (see `home/README.md`), so each needs the token once.
 
 ### How it talks to Home Assistant
 

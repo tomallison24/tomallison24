@@ -1,7 +1,7 @@
 # Refreshes the News app's headlines and publishes the site.
 #
 # build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (Home + News + Weather + Mail + Notes + Podcasts + Travel + Calendar + Places + House). Runs on any branch, so feed
+#         packages the repo (Home + News + Weather + Mail + Notes + Podcasts + Travel + Calendar + Places + Home Assistant in house/). Runs on any branch, so feed
 #         changes can be checked before merging. On the default branch it
 #         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
 #         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits

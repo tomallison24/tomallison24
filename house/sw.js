@@ -1,4 +1,4 @@
-// Offline shell for House. Network-first so a new deploy shows on the next
+// Offline shell for Home (the Home Assistant app). Network-first so a new deploy shows on the next
 // open; the cache is only the fallback when offline. Home Assistant itself is
 // a WebSocket on another origin, which a service worker never sees.
 const CACHE = 'house-v1';

@@ -1,6 +1,6 @@
 {
-  "name": "House",
-  "short_name": "House",
+  "name": "Home",
+  "short_name": "Home",
   "description": "Home Assistant without the dashboard cards: the dehumidifiers first, live over Home Assistant's own WebSocket API.",
   "start_url": "./",
   "scope": "./",

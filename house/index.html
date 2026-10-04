@@ -3,18 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>House</title>
+<title>Home</title>
 <meta name="description" content="The Signal dashboard's devices as an AllisonOS app, talking to Home Assistant directly. Starts with the dehumidifiers.">
 <meta name="theme-color" content="#0A0A0C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="House">
+<meta name="apple-mobile-web-app-title" content="Home">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  House - Home Assistant without Lovelace. First room: the dehumidifiers.
+  Home - Home Assistant without Lovelace. First room: the dehumidifiers.
+  (The folder is house/ because home/ is the AllisonOS launcher; its
+  localStorage keys are house.* for the same reason.)
 
   The cards are a port of the DG1 dehumidifier card in ha-config
   (views_signal/all_devices.yaml, dg_*, promoted 2026-09-26): same skies,
@@ -273,7 +275,7 @@
 <body>
 <main>
   <header class="top">
-    <h1>House</h1>
+    <h1>Home</h1>
     <div class="right">
       <span class="chip" id="chip" data-s="preview"><i></i><span>Preview</span></span>
       <button class="round" id="gear" aria-label="Home Assistant settings"></button>
@@ -308,7 +310,7 @@
           <button class="btn primary" type="submit" id="haConnect">Connect</button>
         </div>
       </form>
-      <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your Home Assistant Cloud remote URL. A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
+      <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your <b>Nabu Casa</b> address (in Home Assistant: Settings → Home Assistant Cloud, under Remote Access). A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
       <p class="help">Make a token in Home Assistant: your <b>profile</b> (bottom left) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. It is kept on this phone only.</p>
     </div>
   </div>
@@ -844,7 +846,7 @@ function cleanUrl(raw) {
   if (!/^https?:$/.test(u.protocol)) throw new Error('The address should start with https://');
   const local = /^(localhost|127\.|\[::1\])/.test(u.hostname);
   if (location.protocol === 'https:' && u.protocol === 'http:' && !local)
-    throw new Error('That address is http://. This app is on https, so the browser blocks it. Use an https address, such as your Home Assistant Cloud remote URL.');
+    throw new Error('That address is http://. This app is on https, so the browser blocks it. Use your Nabu Casa address (https://…ui.nabu.casa).');
   return u.origin;
 }
 
