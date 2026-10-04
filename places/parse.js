@@ -9,6 +9,9 @@
 //   PlacesParse.kindOf(key, value)  {label, emoji} for an OSM key=value
 //   PlacesParse.hoursText(raw)      "Mo-Fr 08:00-17:00" -> "Mon–Fri 8 AM–5 PM"
 //   PlacesParse.distance(a, b)      metres between two {lat, lon}
+//   PlacesParse.overpassQuery(groups, s, w, n, e)  the businesses in a map view, by group
+//   PlacesParse.groupOf(tags)       'food' | 'fun' | 'shops' | null for an OSM element's tags
+//   PlacesParse.fromElement(el)     a place's fields from one Overpass element
 //
 // Tested by places/scripts/parse-test.mjs.
 (function (root) {
@@ -127,5 +130,39 @@
     return 2 * R * Math.asin(Math.sqrt(h));
   }
 
-  root.PlacesParse = { mapLink, fromPhoton, fromTags, kindOf, hoursText, distance };
+  // The businesses shown on the map, in three groups that can be switched on
+  // and off: places to eat and drink, things to do, and every other shop.
+  const GROUPS = {
+    food: { amenity: 'restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten|nightclub|food_court', shop: 'bakery|pastry|coffee|tea|confectionery|chocolate|deli|wine', craft: 'brewery|winery|distillery' },
+    fun: { amenity: 'theatre|cinema|arts_centre|concert_hall|events_venue|casino|music_venue|planetarium', tourism: 'museum|gallery|attraction|zoo|aquarium|theme_park|viewpoint',
+      leisure: 'stadium|water_park|bowling_alley|escape_game|miniature_golf|amusement_arcade|ice_rink|trampoline_park|sports_centre|golf_course', historic: 'castle|fort|palace|monument|memorial|ruins' },
+    shops: { shop: '.+' },
+  };
+  const ORDER = ['amenity', 'tourism', 'leisure', 'craft', 'historic', 'shop'];
+  function groupOf(t) {
+    t = t || {};
+    for (const g of ['food', 'fun', 'shops']) for (const k of Object.keys(GROUPS[g])) if (t[k] && new RegExp('^(' + GROUPS[g][k] + ')$').test(t[k])) return g;
+    return null;
+  }
+  function overpassQuery(groups, s, w, n, e) {
+    const box = [s, w, n, e].map(v => (+v).toFixed(5)).join(',');
+    const parts = [];
+    for (const g of groups) for (const [k, v] of Object.entries(GROUPS[g] || {})) parts.push('nwr["' + k + '"~"^(' + v + ')$"]["name"](' + box + ');');
+    return '[out:json][timeout:20];(' + parts.join('') + ');out center tags 600;';
+  }
+  function fromElement(el) {
+    const t = el.tags || {}, key = ORDER.find(k => t[k]) || '';
+    const kind = kindOf(key, t[key]);
+    const lat = el.lat != null ? el.lat : el.center && el.center.lat, lon = el.lon != null ? el.lon : el.center && el.center.lon;
+    const street = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    const city = t['addr:city'] || '';
+    return {
+      name: t.name || '', lat: lat == null ? null : +lat, lon: lon == null ? null : +lon,
+      address: [street, city].filter(Boolean).join(', '), city, category: kind.label, emoji: kind.emoji,
+      osm: /^(node|way|relation)$/.test(el.type) ? { type: el.type, id: +el.id } : null,
+      info: Object.assign(fromTags(t), { at: Date.now() }), group: groupOf(t),
+    };
+  }
+
+  root.PlacesParse = { mapLink, fromPhoton, fromTags, kindOf, hoursText, distance, overpassQuery, groupOf, fromElement };
 })(typeof window !== 'undefined' ? window : globalThis);

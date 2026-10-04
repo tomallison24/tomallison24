@@ -125,6 +125,17 @@ a{color:var(--accent-text)}
 .leaflet-container{background:var(--bg);font:inherit}
 .leaflet-control-attribution{font-size:10px;background:rgba(0,0,0,.35)!important;color:#ddd!important;border-radius:8px 0 0 0}
 .leaflet-control-attribution a{color:#fff!important}
+/* businesses on the map: dots, their card, and the zoom-in note */
+.osm-dot{cursor:pointer}
+.maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
+.bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:var(--bar-solid);color:var(--text);box-shadow:0 12px 34px var(--lift-strong),inset 0 0 0 1px var(--hair)}
+.bizpop .leaflet-popup-tip{background:var(--bar-solid)}
+.bizpop .leaflet-popup-content{margin:12px 14px;font:inherit;min-width:200px}
+.bizcard b{display:block;font-size:16px;font-weight:700;margin-bottom:2px}
+.bizcard small{display:block;font-size:13px;color:var(--muted);line-height:1.4}
+.bizacts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.bizacts button{padding:7px 11px;border-radius:999px;font-size:13px;font-weight:600;color:var(--accent-text);background:var(--fill)}
+.bizacts button:first-child{color:#fff;background:var(--accent)}
 .mapbtns{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:4;display:flex;flex-direction:column;gap:8px}
 
 .fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:6;width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;
@@ -225,6 +236,7 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
   <button class="iconbtn glass" id="locBtn" type="button" aria-label="Show where I am"><svg class="i" viewBox="0 0 24 24"><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/><circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button>
   <button class="iconbtn glass" id="fitBtn" type="button" aria-label="Show all places"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg></button>
 </div>
+<div class="maphint glass" id="mapHint" role="status" hidden></div>
 <button class="fab" id="fab" type="button" aria-label="Add a place"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <!-- Add a place -->

@@ -52,6 +52,7 @@
     tab: 'want', view: 'list', q: '', tag: null,
     sort: Object.assign({ want: 'soon', been: 'recent' }, store.get(KEY + '-sort', {})),
     here: store.get(HERE_KEY, null), edit: null, editIsNew: false, lastSync: store.get(AT_KEY, 0),
+    layers: Object.assign({ food: true, fun: true, shops: false }, store.get(KEY + '-layers', {})),   // businesses shown on the map
   };
   function persist() {
     const cut = Date.now() - KEEP_GRAVES;
@@ -79,6 +80,7 @@
   const priceTxt = n => n ? '$'.repeat(n) : '';
 
   // ---------- the list ----------
+  const LAYERS = [['food', '🍽️ Food & drink'], ['fun', '🎭 Things to do'], ['shops', '🛍️ Shops']];
   const SORTS = { want: [['soon', 'Soonest'], ['near', 'Nearest'], ['new', 'Newest']], been: [['recent', 'Recent'], ['top', 'Top rated'], ['near', 'Nearest']] };
   function shown() {
     const q = st.q.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
@@ -111,7 +113,7 @@
     slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab');
     const tags = [...new Set(places.filter(p => p.status === st.tab).flatMap(p => p.tags))].sort();
     if (st.tag && !tags.includes(st.tag)) st.tag = null;
-    $('chips').innerHTML = SORTS[st.tab].map(([k, n]) => '<button class="chip glass" type="button" data-sort="' + k + '" aria-pressed="' + (st.sort[st.tab] === k) + '">' + n + '</button>').join('')
+    $('chips').innerHTML = st.view === 'map' ? LAYERS.map(([k, n]) => '<button class="chip glass" type="button" data-layer="' + k + '" aria-pressed="' + !!st.layers[k] + '">' + n + '</button>').join('') : SORTS[st.tab].map(([k, n]) => '<button class="chip glass" type="button" data-sort="' + k + '" aria-pressed="' + (st.sort[st.tab] === k) + '">' + n + '</button>').join('')
       + tags.map(t => '<button class="chip glass" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (st.tag === t) + '">#' + esc(t) + '</button>').join('');
     $('viewBtn').innerHTML = st.view === 'map' ? ICON.list : ICON.map;
     $('viewBtn').setAttribute('aria-label', st.view === 'map' ? 'Show the list' : 'Show the map');
@@ -130,7 +132,7 @@
       for (const [label, g] of [['Coming up', soon], ['Someday', some], ['Date passed', gone]]) if (g.length) h += group(label, g);
     } else h = group(st.sort[st.tab] === 'near' && !st.here ? 'Newest (tap Nearest again once location is allowed)' : SORTS[st.tab].find(s => s[0] === st.sort[st.tab])[1], list);
     $('list').innerHTML = h;
-    if (st.view === 'map') drawPins(list);
+    if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); }
   }
   const group = (label, g) => '<section class="group glass"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
 
@@ -148,6 +150,8 @@
       if (s.dataset.sort === 'near') { try { await locate(); render(); } catch (err) { toast(err.message); } }
     }
     if (t) { st.tag = st.tag === t.dataset.tag ? null : t.dataset.tag; render(); }
+    const l = e.target.closest('[data-layer]');
+    if (l) { st.layers[l.dataset.layer] = !st.layers[l.dataset.layer]; store.set(KEY + '-layers', st.layers); render(); loadBusinesses(true); }
   });
   $('filter').addEventListener('input', e => { st.q = e.target.value; render(); });
   $('list').addEventListener('click', e => { const r = e.target.closest('[data-id]'); if (r) openPlace(places.find(p => p.id === r.dataset.id)); });
@@ -172,11 +176,83 @@
     L.tileLayer('https://{s}.basemaps.cartocdn.com/' + (dark() ? 'dark_all' : 'rastertiles/voyager') + '/{z}/{x}/{y}{r}.png?key=' + CARTO_KEY,
       { subdomains: 'abcd', maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    biz = L.layerGroup().addTo(map);
     pins = L.layerGroup().addTo(map);
     // Touch and hold (or right-click) on the map: add a place there.
     map.on('contextmenu', e => addAt(e.latlng.lat, e.latlng.lng));
+    map.on('moveend', () => { clearTimeout(bizTimer); bizTimer = setTimeout(() => loadBusinesses(), 700); });
     return map;
   }
+
+  // ---------- businesses on the map (OpenStreetMap, through Overpass) ----------
+  // Once you're zoomed in to streets, every named business in view, as a dot
+  // coloured by group: tap one for its card, and add it from there. The groups
+  // (Food & drink, Things to do, Shops) are the chips at the top in map view.
+  // What came back is kept for the visit, so panning back costs nothing.
+  const BIZ_ZOOM = 15, BIZ_COLOR = { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' };
+  let biz = null, bizTimer = null, bizCtl = null, bizBox = null, bizShown = new Map();
+  const bizSeen = new Map();                         // 'node/123' -> place fields
+  const bizKey = o => o.osm.type + '/' + o.osm.id;
+  function hint(text) { $('mapHint').textContent = text || ''; $('mapHint').hidden = !text; }
+  async function loadBusinesses(force) {
+    if (!map || st.view !== 'map') return;
+    const groups = Object.keys(st.layers).filter(k => st.layers[k]);
+    if (!groups.length) { biz.clearLayers(); bizShown.clear(); hint(''); return; }
+    if (map.getZoom() < BIZ_ZOOM) { biz.clearLayers(); bizShown.clear(); hint('Zoom in to see businesses'); return; }
+    const view = map.getBounds();
+    const sig = groups.join(',');
+    if (!force && bizBox && bizBox.sig === sig && bizBox.bounds.contains(view)) return drawBusinesses();
+    const wide = view.pad(0.25);
+    if (bizCtl) bizCtl.abort();
+    bizCtl = new AbortController();
+    hint('Loading businesses…');
+    try {
+      const q = P.overpassQuery(groups, wide.getSouth(), wide.getWest(), wide.getNorth(), wide.getEast());
+      const r = await fetch(OVERPASS, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(q), signal: bizCtl.signal });
+      if (!r.ok) throw new Error('Overpass ' + r.status);
+      for (const el of (await r.json()).elements || []) {
+        const o = P.fromElement(el);
+        if (o.lat != null && o.osm && o.name && o.group) bizSeen.set(bizKey(o), o);
+      }
+      if (bizSeen.size > 4000) [...bizSeen.keys()].slice(0, bizSeen.size - 4000).forEach(k => bizSeen.delete(k));
+      bizBox = { sig, bounds: wide };
+      hint('');
+      drawBusinesses();
+    } catch (e) {
+      if (e.name !== 'AbortError') hint('Couldn’t load businesses right now');
+    }
+  }
+  function drawBusinesses() {
+    const view = map.getBounds().pad(0.1), mine = new Set(places.filter(p => p.osm).map(p => p.osm.type + '/' + p.osm.id));
+    const want = new Map();
+    for (const [k, o] of bizSeen) if (st.layers[o.group] && !mine.has(k) && view.contains([o.lat, o.lon])) want.set(k, o);
+    for (const [k, m] of bizShown) if (!want.has(k)) { biz.removeLayer(m); bizShown.delete(k); }
+    for (const [k, o] of want) {
+      if (bizShown.has(k)) continue;
+      const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group], fillOpacity: 0.95, className: 'osm-dot osm-' + o.group })
+        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] })
+        .addTo(biz);
+      bizShown.set(k, m);
+    }
+  }
+  function bizCard(o) {
+    const i = o.info || {}, hours = i.hours ? P.hoursText(i.hours).split('\n')[0] : '';
+    return '<div class="bizcard" data-biz="' + esc(bizKey(o)) + '"><b>' + esc(o.emoji) + ' ' + esc(o.name) + '</b>'
+      + '<small>' + esc([o.category, i.cuisine].filter(Boolean).join(' · ')) + '</small>'
+      + (o.address ? '<small>' + esc(o.address) + '</small>' : '') + (hours ? '<small>🕒 ' + esc(hours) + '</small>' : '')
+      + '<div class="bizacts"><button type="button" data-bizadd="want">Want to go</button><button type="button" data-bizadd="been">Been</button><button type="button" data-bizdir>Directions</button></div></div>';
+  }
+  document.addEventListener('click', e => {
+    const card = e.target.closest('.bizcard'); if (!card) return;
+    const o = bizSeen.get(card.dataset.biz); if (!o) return;
+    const add = e.target.closest('[data-bizadd]');
+    if (add) {
+      map.closePopup();
+      const status = add.dataset.bizadd;
+      openPlace(tidy(Object.assign({}, o, { id: newId(), status, visited: status === 'been' ? today() : null, created: Date.now(), updated: 0 })), true);
+    }
+    if (e.target.closest('[data-bizdir]')) location.href = 'https://maps.apple.com/?daddr=' + encodeURIComponent(o.lat.toFixed(6) + ',' + o.lon.toFixed(6)) + '&dirflg=d';
+  });
   function drawPins(list) {
     if (!ensureMap()) return;
     pins.clearLayers();
@@ -201,7 +277,8 @@
     document.documentElement.classList.toggle('locked', v === 'map');
     $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map'; $('filterWrap').hidden = v === 'map';
     render();
-    if (v === 'map' && map) setTimeout(() => map.invalidateSize(), 50);
+    if (v === 'map' && map) setTimeout(() => { map.invalidateSize(); loadBusinesses(); }, 50);
+    if (v !== 'map') hint('');
   }
   $('viewBtn').onclick = () => setView(st.view === 'map' ? 'list' : 'map');
   $('fitBtn').onclick = () => fit();

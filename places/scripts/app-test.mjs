@@ -44,7 +44,7 @@ const HOUSE = feat(-104.98, 39.74, { osm_type: 'W', osm_id: 9, osm_key: 'buildin
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
-const calls = { photon: [], overpass: 0, sheet: [], apple: [] };
+const calls = { photon: [], overpass: 0, sheet: [], apple: [], biz: [] };
 let sheetMode = 'old', sheetPlaces = [];
 await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
   const u = route.request().url(), cors = { 'Access-Control-Allow-Origin': '*' };
@@ -57,6 +57,14 @@ await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
   if (u.startsWith('https://overpass-api.de/')) {
     calls.overpass++;
     const body = decodeURIComponent((route.request().postData() || '').replace(/^data=/, ''));
+    if (body.includes('nwr[')) {                     // the businesses in the map view
+      calls.biz.push(body);
+      const els = [];
+      if (body.includes('restaurant')) els.push({ type: 'node', id: 501, lat: 39.7412, lon: -104.9921, tags: { name: 'Little Bird Kitchen', amenity: 'restaurant', cuisine: 'american', opening_hours: 'Mo-Su 08:00-21:00' } });
+      if (body.includes('museum')) els.push({ type: 'way', id: 502, center: { lat: 39.7366, lon: -104.9897 }, tags: { name: 'History Colorado', tourism: 'museum' } });
+      if (body.includes('"shop"~"^(.+)$"')) els.push({ type: 'node', id: 503, lat: 39.7390, lon: -104.9880, tags: { name: 'Tattered Cover', shop: 'books' } });
+      return route.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ elements: els }) });
+    }
     const tags = body.includes('node(111)') ? { amenity: 'restaurant', opening_hours: 'Mo-Fr 11:00-22:00; Sa,Su 10:00-23:00', phone: '+1 303-820-2282', website: 'riojadenver.com', cuisine: 'mediterranean' } : { tourism: 'museum' };
     return route.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ elements: [{ type: 'node', id: 1, tags }] }) });
   }
@@ -171,6 +179,26 @@ await page.click('#viewBtn'); await page.waitForTimeout(800);
 const nPins = await page.$$eval('.pin.want', p => p.length);
 ok('the map shows a pin for each Want to go place', await page.isVisible('#map') && nPins === 2, nPins + ' pins');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4-map.png') });
+// ---- businesses on the map ----
+await page.waitForTimeout(1200);
+const dots = await page.$$eval('path.osm-dot', d => d.map(x => x.getAttribute('class')));
+ok('zoomed in, nearby businesses show as dots: food and things to do, not shops', dots.length === 2 && dots.some(c => c.includes('osm-food')) && dots.some(c => c.includes('osm-fun')), dots.join(' / '));
+ok('the map view has the business chips instead of sorting', await page.isVisible('#chips [data-layer="food"]') && !(await page.isVisible('#chips [data-sort="near"]')));
+if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '5-businesses.png') });
+await page.click('path.osm-food'); await page.waitForTimeout(400);
+const card = await page.textContent('.bizcard');
+ok('tapping a dot shows its card: name, type, cuisine, hours', card.includes('Little Bird Kitchen') && card.includes('Restaurant') && card.includes('American') && card.includes('8 AM–9 PM'), card);
+if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '6-card.png') });
+await page.click('.bizcard [data-bizadd="want"]'); await page.waitForTimeout(400);
+ok('Want to go from the card opens it as a new place, details filled in', (await page.inputValue('#plName')) === 'Little Bird Kitchen' && (await page.textContent('#plMeta')).includes('Restaurant') && (await page.textContent('#plInfo')).includes('8 AM–9 PM'));
+await page.click('#plSave'); await page.waitForTimeout(500);
+ok('once saved, its dot gives way to a pin', (await page.$$eval('path.osm-dot', d => d.length)) === 1 && (await page.$$eval('.pin.want', p => p.length)) === 3);
+await page.click('#chips [data-layer="shops"]'); await page.waitForTimeout(800);
+ok('switching on Shops loads and shows them too', (await page.$$('path.osm-shops')).length === 1 && calls.biz.at(-1).includes('"shop"~"^(.+)$"'));
+await page.focus('#map'); for (let i = 0; i < 3; i++) { await page.keyboard.press('-'); await page.waitForTimeout(350); }
+await page.waitForTimeout(1000);
+ok('zoomed out, the dots go and a note says to zoom in', (await page.$$('path.osm-dot')).length === 0 && (await page.textContent('#mapHint')).includes('Zoom in'));
+await page.click('#fitBtn'); await page.waitForTimeout(600);
 await page.click('.pin.want >> nth=0'); await page.waitForTimeout(400);
 ok('tapping a pin opens the place', await page.isVisible('#placeSheet'));
 await page.click('#plDirections'); await page.waitForTimeout(300);
@@ -197,7 +225,7 @@ sheetMode = 'new';
 sheetPlaces = [{ id: 'pwife1', name: 'Sushi Den', status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], created: 1, updated: Date.now() }];
 await page.click('#syNotes'); await page.waitForTimeout(600);
 const last = calls.sheet.at(-1);
-ok('connected: sends its places with action "places" and the Notes secret', last.action === 'places' && last.secret === 'maple-otter' && last.places.length === 3, JSON.stringify({ action: last.action, n: last.places.length }));
+ok('connected: sends its places with action "places" and the Notes secret', last.action === 'places' && last.secret === 'maple-otter' && last.places.length === 4, JSON.stringify({ action: last.action, n: last.places.length }));
 ok('and loads the other phone’s place', (await rows()).some(x => x.startsWith('Sushi Den')) && (await page.textContent('#syStatus')).includes('Connected'));
 await page.click('#syncSheet [data-close].iconbtn');
 await page.click('#list .row:has-text("Corner Café")'); await page.waitForTimeout(300);
