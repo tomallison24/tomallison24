@@ -1379,7 +1379,8 @@ function radarShow(i) {
   document.querySelectorAll('#rd .rd-fr').forEach((f, k) => f.classList.toggle('on', k === i));
   const sc = document.getElementById('rdScrub'), tm = document.getElementById('rdTime');
   if (sc) sc.value = i;
-  if (tm) tm.textContent = agoLabel(R.offs[i]);
+  const fr = document.querySelectorAll('#rd .rd-fr')[i];
+  if (tm) tm.textContent = agoLabel(R.offs[i]) + (fr && !fr.ok && fr.bad < fr.n ? ' · loading' : '');
   const kind = document.getElementById('rdKind');
   if (kind) kind.hidden = !(R.offs[i] < 0);
 }
@@ -1423,14 +1424,16 @@ function radarSync() {
   for (let x = Math.floor(cx - W / 512); x <= Math.floor(cx + W / 512); x++) xs.push(x);
   for (let y = Math.floor(cy - H / 512); y <= Math.floor(cy + H / 512); y++) if (y >= 0 && y < n) ys.push(y);
   const tiles = { base: [0, 0], radar: [0, 0] };       // [loaded, failed]
+  const dead = f => !f.ok && f.n > 0 && f.bad >= f.n;  // every tile of this frame failed
   const layer = (cls, kind, url) => {
-    const d = document.createElement('div'); d.className = cls; d.ok = 0;
+    const d = document.createElement('div'); d.className = cls; d.ok = 0; d.bad = 0; d.n = 0;
     for (const ty of ys) for (const tx of xs) {
       const im = new Image();
       im.className = 'rd-t'; im.alt = ''; im.decoding = 'async'; im.draggable = false;
       im.style.left = (ox + tx * 256).toFixed(1) + 'px'; im.style.top = (oy + ty * 256).toFixed(1) + 'px';
-      im.onload = () => { tiles[kind][0]++; d.ok++; };
-      im.onerror = () => { tiles[kind][1]++; im.style.display = 'none'; };
+      d.n++;
+      im.onload = () => { tiles[kind][0]++; if (!d.ok++ && d.classList.contains('on')) radarShow(R.idx); };   // first picture in: drop "loading"
+      im.onerror = () => { tiles[kind][1]++; d.bad++; im.style.display = 'none'; };
       im.src = url(((tx % n) + n) % n, ty);
       d.appendChild(im);
     }
@@ -1461,10 +1464,10 @@ function radarSync() {
     }
     const sc = document.getElementById('rdScrub');
     if (sc) sc.max = R.offs.length - 1;
-    setTimeout(() => {                                   // forecast tiles that never arrived are dropped too
+    setTimeout(() => {                                   // forecast frames whose every tile failed are dropped too
       if (document.getElementById('rd') !== box || box.dataset.sig !== sig) return;
       const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
-      for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && R.offs[k] < 0) { frs[k].remove(); R.offs.splice(k, 1); }
+      for (let k = frs.length - 1; k >= 0; k--) if (dead(frs[k]) && R.offs[k] < 0) { frs[k].remove(); R.offs.splice(k, 1); }
       const sc2 = document.getElementById('rdScrub');
       if (sc2) sc2.max = R.offs.length - 1;
       const at = R.offs.indexOf(showing);
@@ -1481,13 +1484,14 @@ function radarSync() {
     if (!wasPlaying) { const frs = [...box.querySelectorAll('.rd-fr')], k = frs.findIndex(f => f.ok); radarShow(k < 0 ? R.offs.length - 1 : k); }
     radarPlay(true);
   }, wasPlaying ? 300 : 1800);
-  // If nothing arrived, say so rather than leave a blank map. Older frames that never arrived
-  // (the time-based service is the untested part) are dropped, so the loop and the slider only
-  // hold pictures that exist.
+  // If nothing arrived, say so rather than leave a blank map. Frames whose every tile failed
+  // are dropped, so the loop and the slider only hold pictures that exist. Frames still on their
+  // way are kept (the loop skips them until they arrive): IEM draws forecast tiles when first
+  // asked, so the later hours can take a while, and dropping them on a timer cut the loop short.
   setTimeout(() => {
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note:not(.small)')) return;
     const frs = [...box.querySelectorAll('.rd-fr')], showing = R.offs[R.idx];
-    for (let k = frs.length - 1; k >= 0; k--) if (!frs[k].ok && (R.offs[k] > 50 || R.offs[k] < 0)) { frs[k].remove(); R.offs.splice(k, 1); }
+    for (let k = frs.length - 1; k >= 0; k--) if (dead(frs[k]) && (R.offs[k] > 50 || R.offs[k] < 0)) { frs[k].remove(); R.offs.splice(k, 1); }
     const sc = document.getElementById('rdScrub');
     if (sc) sc.max = R.offs.length - 1;
     const at = R.offs.indexOf(showing);
