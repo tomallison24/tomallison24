@@ -408,7 +408,7 @@
         <button data-u="us" aria-pressed="true">°F · mph · in</button>
         <button data-u="metric" aria-pressed="false">°C · km/h · mm</button>
       </div>
-      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. Your location goes only to those services.</p>
+      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. In the continental US, when rain starts or stops in the next two hours comes from Open-Meteo's 15-minute forecast. Your location goes only to those services.</p>
     </div>
   </section>
 </div>
@@ -898,6 +898,41 @@ async function fromOpenMeteo(lat, lon) {
   };
 }
 
+// ---- Rain in the next two hours (continental US) ----
+// Open-Meteo's 15-minute precipitation, which over North America is NOAA's HRRR model (1 km,
+// run every hour). Each value is the total for the 15 minutes before its time, so a slot is
+// kept as [its start, 0 dry / 1 rain / 2 snow]. Snowfall is in cm; 7 cm of snow is about
+// 10 mm of water, so a slot is snow when snow makes up at least half of what falls.
+async function fromNowcast(lat, lon) {
+  const om = await getJSON('https://api.open-meteo.com/v1/forecast'
+    + `?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`
+    + '&minutely_15=precipitation,snowfall&past_minutely_15=1&forecast_minutely_15=12&timeformat=unixtime&timezone=auto');
+  const M = om.minutely_15;
+  if (!M || !Array.isArray(M.time) || !Array.isArray(M.precipitation)) throw new Error('No 15-minute forecast');
+  return M.time.map((t, i) => {
+    const mm = M.precipitation[i] || 0, snow = ((M.snowfall && M.snowfall[i]) || 0) * 10 / 7;
+    return [t - 900, mm < 0.1 ? 0 : snow >= mm / 2 ? 2 : 1];
+  });
+}
+
+// "Rain at 3:45PM" when it is dry now and rain is due within two hours; "Rain stops at 4:15PM"
+// when it is raining now and stops within two hours. Otherwise nothing. Worked out on every
+// repaint, so it moves on with the clock; a forecast over 90 minutes old says nothing.
+function soonLine(b, now) {
+  const s = Array.isArray(b.soon) ? b.soon.filter(x => Array.isArray(x) && Number.isFinite(x[0])) : [];   // saved data may be damaged
+  if (!s.length || !b.fetchedAt || now - b.fetchedAt / 1000 > 5400) return null;
+  const cur = s.findIndex(([t]) => t <= now && now < t + 900);
+  if (cur < 0) return null;
+  const word = k => k === 2 ? 'Snow' : 'Rain';
+  const ahead = s.slice(cur + 1).filter(([t]) => t < now + 7200);
+  if (s[cur][1]) {
+    const dry = ahead.find(([, k]) => !k);
+    return dry ? `${word(s[cur][1])} stops at ${minFmt(dry[0], b.tz)}` : null;
+  }
+  const wetSlot = ahead.find(([, k]) => k);
+  return wetSlot ? `${word(wetSlot[1])} at ${minFmt(wetSlot[0], b.tz)}` : null;
+}
+
 async function reverseName(lat, lon) {
   try {
     const j = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`, { headers: {} });
@@ -921,9 +956,12 @@ function locate() {
 // One place's forecast: the NWS, or Open-Meteo when that fails.
 async function fetchBase(lat, lon) {
   let base, nwsErr = null;
+  const soon = inUS(lat, lon) ? fromNowcast(lat, lon).catch(() => null) : null;   // no line rather than no forecast
   try { base = await fromNWS(lat, lon); }
   catch (e) { nwsErr = e; base = await fromOpenMeteo(lat, lon); }
   if (nwsErr && nwsErr.status !== 404) base.note = 'NWS unavailable';
+  const s = await soon;
+  if (s) base.soon = s;
   return base;
 }
 
@@ -1092,7 +1130,7 @@ function model(b) {
     },
     fc: { hourly, daily },
     sun: { night, next_rising: next('rise'), next_setting: next('set') },
-    tz: b.tz, rKind: b.rKind, alerts: b.alerts || []
+    tz: b.tz, rKind: b.rKind, alerts: b.alerts || [], soon: soonLine(b, now)
   };
 }
 
@@ -1164,7 +1202,9 @@ function w3Hero(m) {
     const rot = ((a.wind_bearing || 0) + 180) % 360;
     chips.push(chip('navigation', `${Math.round(a.wind_speed)} ${a.wind_speed_unit || ''}`, `--w3-rot:${rot}deg;transform:rotate(${rot}deg);animation:w3-sway 3s ease-in-out infinite alternate;`, 'w3-sway'));
   }
-  if (today.r != null) chips.push(chip('umbrella-outline', !wet(m, today.r) ? 'Dry today' : m.rKind === 'pop' ? `${today.r}% chance` : `${today.r} ${a.precipitation_unit || ''}`));
+  // Rain starting or stopping in the next two hours takes the rain chip's place.
+  if (m.soon) chips.push(chip('umbrella-outline', m.soon));
+  else if (today.r != null) chips.push(chip('umbrella-outline', !wet(m, today.r) ? 'Dry today' : m.rKind === 'pop' ? `${today.r}% chance` : `${today.r} ${a.precipitation_unit || ''}`));
 
   const gps = S.loc && S.loc.mode === 'gps';
   heroSky = `<div class="w3-sky" style="background:${sky};"></div>${fx}`;   // drawn behind the whole screen by render()

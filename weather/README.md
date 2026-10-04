@@ -15,6 +15,18 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   minutes, and the correction is held to 8°F either way. Otherwise the
   forecast for your spot stands. Tap Now in the hourly row to see which it
   was, the station, its distance and the adjustment.
+- **Rain in the next two hours** (continental US): the rain chip under the
+  temperature says exactly when. "Rain at 3:45PM" when it is dry now and rain
+  is due within two hours; "Rain stops at 4:15PM" when it is raining now and
+  stops within two hours ("Snow" when snow makes up at least half of it).
+  Otherwise the chip says what it always did (Dry today, or the chance). The
+  times come from Open-Meteo's 15-minute precipitation, which over North
+  America is NOAA's HRRR model (1 km, run every hour), so they fall on the
+  quarter hour: each value is what falls in the 15 minutes before its time, and
+  the chip gives the start of the first wet (or first dry) quarter. It is a
+  forecast model, not radar tracking. The line is worked out again every
+  minute, so it moves on with the clock; one more than 90 minutes old is not
+  shown, and if that request fails the forecast still loads without it. No key.
 - **Opens to where you are.** Every time the app opens it shows your current
   location (the last known place at once, then its fresh forecast), whatever
   you were looking at last. If location is off, it opens your first saved
