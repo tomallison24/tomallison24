@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>House</title>
+<meta name="description" content="The Signal dashboard's devices as an AllisonOS app, talking to Home Assistant directly. Starts with the dehumidifiers.">
+<meta name="theme-color" content="#0A0A0C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="House">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  House - Home Assistant without Lovelace. First room: the dehumidifiers.
+
+  The cards are a port of the DG1 dehumidifier card in ha-config
+  (views_signal/all_devices.yaml, dg_*, promoted 2026-09-26): same skies,
+  mist and motes, the frosted pane over a water fill at the room humidity,
+  Power / Fan / Target on the face and Mode / Readings / Features / Energy
+  under the chevron, same colours and timings. What changed is the plumbing:
+
+    HA dashboard                         HERE
+    button-card templates             -> plain functions returning HTML
+    hass.states                       -> subscribe_entities over the
+                                         WebSocket API (/api/websocket)
+    hass.callService                  -> call_service on the same socket
+    window.__dgTgt (taps add up)      -> pend{}: same 5 s window, one
+                                         set_humidity 600 ms after the last tap
+    input_boolean.signal_dh_*_more    -> localStorage, per phone
+    <ha-icon>                         -> inline MDI paths, works offline
+
+  Each region of a card is only replaced when its HTML string changes, so a
+  state update does not restart the animations.
+
+  With no Home Assistant set up it runs as a PREVIEW on sample states, and the
+  controls change those, so the design can be tried on the phone first.
+-->
+<style>
+  :root {
+    --bg: #0A0A0C;
+    --text: #FFFFFF;
+    --muted: rgba(235, 235, 245, 0.6);
+    --accent: #0A84FF;
+    --good: #30D158;
+    --warn: #FFD60A;
+    --bad: #FF453A;
+    /* Liquid Glass for the settings sheet, as in Weather */
+    --lgs-top: rgba(44, 44, 52, 0.60);
+    --lgs-bottom: rgba(22, 22, 28, 0.52);
+    --lgs-rim: rgba(255, 255, 255, 0.20);
+    --lgs-edge: rgba(255, 255, 255, 0.12);
+    --lgs-row: rgba(255, 255, 255, 0.07);
+    --lgs-field: rgba(255, 255, 255, 0.10);
+    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+    --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
+    --lgs-lift: rgba(0, 0, 0, 0.38);
+    --lgs-lift-strong: rgba(0, 0, 0, 0.5);
+    --lgs-solid: rgba(20, 20, 24, 0.96);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 28px);
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  svg { display: block; }
+  main { max-width: 520px; margin: 0 auto; }
+
+  /* ---- top bar ---- */
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 4px 14px; }
+  .top h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
+  .top .right { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.08); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3);
+  }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .chip[data-s="live"] i { background: var(--good); box-shadow: 0 0 6px rgba(48,209,88,0.8); }
+  .chip[data-s="connecting"] i, .chip[data-s="reconnecting"] i { background: var(--warn); animation: blink 1s ease-in-out infinite alternate; }
+  .chip[data-s="error"] i { background: var(--bad); }
+  @keyframes blink { from { opacity: .35; } to { opacity: 1; } }
+  .round {
+    width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4); transition: transform .18s cubic-bezier(.22,1,.36,1);
+  }
+  .round:active { transform: scale(0.9); }
+
+  .banner {
+    display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 18px;
+    background: rgba(10,132,255,0.14); box-shadow: inset 0 0 0 1px rgba(10,132,255,0.30); font-size: 14px; line-height: 1.35;
+  }
+  .banner[hidden] { display: none; }
+  .banner b { display: block; font-size: 15px; }
+  .banner span { flex: 1; min-width: 0; color: rgba(235,235,245,0.8); }
+  .banner button { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--accent); font-weight: 600; font-size: 14px; }
+
+  .sec { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 6px 10px; }
+  .sec h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .sec small { font-size: 14px; color: var(--muted); }
+  .units { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ---- DG1 card ---- */
+  .dg {
+    position: relative; overflow: hidden; border-radius: 26px; padding: 18px 16px 16px; background: #16171B;
+    transition: box-shadow .6s, opacity .4s;
+  }
+  .dg.offline { opacity: 0.6; }
+  .dg-in { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
+  .dg-fx { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .dg-sky { position: absolute; inset: -2px; background-size: 100% 180% !important; animation: dg-sky 24s ease-in-out infinite alternate; }
+  .dg-pool { position: absolute; left: 50%; width: 440px; height: 440px; margin: -220px 0 0 -220px; border-radius: 50%; }
+  .dg-breathe { animation: dg-breathe 6s ease-in-out infinite alternate; }
+  .dg-pulse { animation: dg-breathe 3.5s ease-in-out infinite alternate; }
+  .dg-drift { animation: dg-drift 26s ease-in-out infinite alternate; }
+  .dg-mist { position: absolute; bottom: -60px; width: 120px; height: 50px; border-radius: 50%; filter: blur(6px); animation: dg-rise linear infinite; }
+  .dg-mote { position: absolute; bottom: -6px; width: 2.5px; height: 2.5px; border-radius: 50%; background: rgba(255,255,255,0.7); animation: dg-rise linear infinite; }
+  .dg-sheen { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 40%); }
+  .t-in { animation: dg-in .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes dg-sky { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
+  @keyframes dg-breathe { from { transform: scale(.92); opacity: .75; } to { transform: scale(1.06); opacity: 1; } }
+  @keyframes dg-drift { from { left: 38%; } to { left: 62%; } }
+  @keyframes dg-rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-460px); opacity: 0; } }
+  @keyframes dg-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes dg-bub { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-70px); opacity: 0; } }
+  @keyframes dg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .dg-head { display: flex; justify-content: space-between; align-items: center; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .dg-name { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .dg-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); font-size: 12px; font-weight: 600; }
+  .dg-pill i { width: 7px; height: 7px; border-radius: 50%; background: rgb(240,179,187); box-shadow: 0 0 6px rgba(240,179,187,0.8); }
+
+  .dg-hero { position: relative; width: 100%; height: 228px; margin-top: -2px; }
+  .dg-glow { position: absolute; left: 50%; top: 86px; width: 290px; height: 290px; margin: -145px 0 0 -145px; border-radius: 50%; animation: dg-breathe 7s ease-in-out infinite alternate; }
+  .dg-tank { position: absolute; left: 50%; top: 12px; width: 148px; height: 148px; margin-left: -74px; border-radius: 44px; overflow: hidden; }
+  .dg-water { position: absolute; left: 0; right: 0; bottom: 0; transition: height .8s cubic-bezier(.2,.8,.2,1); }
+  .dg-wave { position: absolute; left: 0; width: 200%; height: 12px; animation: dg-slide 7s linear infinite; }
+  .dg-b { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.55); animation: dg-bub ease-in infinite; }
+  .dg-glass {
+    position: absolute; left: 50%; top: 12px; width: 148px; height: 148px; margin-left: -74px; border-radius: 44px; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(155deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 42%, rgba(255,255,255,0.035) 100%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 0 0.5px rgba(255,255,255,0.24), inset 0 -12px 24px -14px rgba(255,255,255,0.14), 0 24px 44px -20px rgba(0,0,0,0.65);
+  }
+  .dg-glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(130% 70% at 28% -8%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0) 62%); }
+  .dg-num { position: relative; font-size: 50px; font-weight: 200; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+  .dg-num span { font-size: 22px; vertical-align: top; line-height: 1.4; letter-spacing: 0; }
+  .dg-lbl { position: relative; font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.75; margin-top: 6px; }
+  .dg-tick { position: absolute; left: 0; height: 0; display: flex; align-items: center; gap: 4px; }
+  .dg-tick i { display: block; width: 14px; height: 1.5px; border-radius: 1px; background: rgba(255,255,255,0.85); }
+  .dg-tick span { font-size: 9px; font-weight: 700; opacity: 0.8; font-variant-numeric: tabular-nums; }
+  .dg-txt { position: absolute; left: 0; right: 0; top: 176px; text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+  .dg-title { font-size: 24px; font-weight: 300; letter-spacing: -0.3px; line-height: 1.1; }
+  .dg-sub { font-size: 12px; font-weight: 600; opacity: 0.72; margin-top: 5px; letter-spacing: 0.02em; }
+
+  /* Power and Fan */
+  .dg-act { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile {
+    display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 12px; border-radius: 16px; text-align: left;
+    background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4), 0 6px 16px -10px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform .18s cubic-bezier(.22,1,.36,1), background .3s;
+  }
+  .tile.on { background: rgba(255,255,255,0.17); }
+  .tile:active, .mini:active, .seg button:active { transform: scale(0.96); }
+  .td { flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); transition: background .3s, box-shadow .3s, color .3s; }
+  .tt { display: flex; flex-direction: column; gap: 4px; min-width: 0; line-height: 1; }
+  .tl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; opacity: 0.8; white-space: nowrap; }
+  .tn { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .wait { animation: blink .7s ease-in-out infinite alternate; }
+
+  /* Target stepper */
+  .dg-tgt { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
+  .disc {
+    flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.5), 0 4px 12px -6px rgba(0,0,0,0.5);
+    transition: transform .18s cubic-bezier(.22,1,.36,1), opacity .2s;
+  }
+  .disc:active { transform: scale(0.9); }
+  .disc:disabled { opacity: 0.35; }
+  .tgt { flex: 1; min-width: 0; line-height: 1; }
+  .tgt-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px; }
+  .tgt-row span:first-child { font-size: 9.5px; font-weight: 700; letter-spacing: .12em; opacity: .75; }
+  .tgt-row span:last-child { font-size: 20px; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .tgt-bar { height: 4px; border-radius: 2px; margin-top: 7px; background: rgba(255,255,255,0.14); overflow: hidden; }
+  .tgt-bar i { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,0.75); transition: width .3s cubic-bezier(.2,.8,.2,1); }
+
+  .dg-chev { align-self: center; margin-top: -4px; }
+  .dg-chev svg { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .dg.open .dg-chev svg { transform: rotate(180deg); }
+
+  /* Under the chevron */
+  .dg-more { display: none; flex-direction: column; gap: 14px; }
+  .dg.open .dg-more { display: flex; animation: dg-in .5s cubic-bezier(.2,.8,.2,1) both; }
+  .lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; opacity: 0.75; padding-left: 4px; margin-bottom: -8px; }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 15px; background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
+  .seg button { flex: 1; height: 38px; border-radius: 12px; font-size: 13px; font-weight: 500; opacity: 0.8; transition: transform .18s cubic-bezier(.22,1,.36,1), background .25s; }
+  .seg button[aria-pressed="true"] { background: rgba(255,255,255,0.14); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.40), inset 0 0 0 1px rgba(255,255,255,0.12); font-weight: 700; opacity: 1; }
+  .row3 { display: flex; gap: 6px; }
+  .mini {
+    flex: 1; min-width: 0; height: 50px; padding: 0 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: transform .18s cubic-bezier(.22,1,.36,1), background .3s;
+  }
+  div.mini { cursor: default; }
+  .mini.on { background: rgba(255,255,255,0.17); }
+  .mini.full { background: rgba(240,179,187,0.24); }
+  .mini.due { background: rgba(236,214,150,0.22); }
+  .mini .tn { font-size: 13px; }
+
+  @media (prefers-reduced-motion: reduce) { .dg-fx *, .t-in, .dg-hero *, .dg.open .dg-more { animation: none !important; } }
+
+  /* ---- toast ---- */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 20; max-width: min(92vw, 480px);
+    transform: translate(-50%, calc(100% + 40px + env(safe-area-inset-bottom))); visibility: hidden;
+    transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s linear .3s;
+    padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.35;
+    background: var(--lgs-solid); box-shadow: inset 0 0 0 1px var(--lgs-edge), 0 12px 30px var(--lgs-lift-strong);
+  }
+  .toast.show { transform: translate(-50%, 0); visibility: visible; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+
+  /* ---- settings sheet: Liquid Glass, as in Weather ---- */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.30); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
+  .sheet {
+    position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 11; margin: 0 auto; max-width: 544px;
+    display: flex; flex-direction: column; overflow: hidden; border-radius: 34px;
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
+    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px var(--lgs-lift-strong), 0 2px 8px var(--lgs-lift);
+    transform: translateY(calc(100% + 24px)); visibility: hidden;
+    transition: transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s linear .32s;
+    max-height: min(85vh, calc(100dvh - env(safe-area-inset-top) - 32px));
+  }
+  .open > .scrim { opacity: 1; pointer-events: auto; }
+  .open > .sheet { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  .grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22); margin: 6px auto 0; flex: none; }
+  .sheet h2 { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.4px; margin: 0; padding: 2px 12px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .sheet h2 button {
+    width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: var(--lgs-shine), var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lgs-lift);
+    transition: transform .18s cubic-bezier(.22,1,.36,1);
+  }
+  .sheet h2 button:active { transform: scale(0.9); }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px calc(env(safe-area-inset-bottom) + 16px); }
+  .field {
+    display: block; border-radius: 18px; padding: 10px 16px; margin-top: 8px; background: var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--lgs-lift); transition: box-shadow .2s;
+  }
+  .field:focus-within { box-shadow: inset 0 0 0 1.5px rgba(10,132,255,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(10,132,255,0.18); }
+  .field span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .field input { width: 100%; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 4px 0 2px; }
+  .help { font-size: 13px; line-height: 1.45; color: var(--muted); margin: 10px 8px 0; }
+  .help b { color: rgba(235,235,245,0.85); font-weight: 600; }
+  .status { font-size: 14px; margin: 12px 8px 0; min-height: 1.4em; }
+  .status.bad { color: #FF8A80; }
+  .status.good { color: #7BE495; }
+  .btns { display: flex; gap: 8px; margin-top: 14px; }
+  .btn { flex: 1; padding: 14px 0; border-radius: 999px; font-size: 16px; font-weight: 600; background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim); }
+  .btn.primary { background: var(--accent); box-shadow: none; }
+  .btn:disabled { opacity: 0.5; }
+  .btn[hidden] { display: none; }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--lgs-solid); } }
+  @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>House</h1>
+    <div class="right">
+      <span class="chip" id="chip" data-s="preview"><i></i><span>Preview</span></span>
+      <button class="round" id="gear" aria-label="Home Assistant settings"></button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden>
+    <span><b>Preview</b>Sample readings. Taps change them here only.</span>
+    <button id="bannerBtn">Connect</button>
+  </div>
+
+  <div class="sec"><h2>Dehumidifiers</h2><small id="secSum"></small></div>
+  <section class="units" id="units"></section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div id="sheetWrap">
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="grab"></div>
+    <h2><span id="sheetTitle">Home Assistant</span><button id="sheetClose" aria-label="Close"></button></h2>
+    <div class="sheet-body">
+      <form id="haForm" autocomplete="off">
+        <label class="field"><span>Address</span>
+          <input id="haUrl" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" spellcheck="false" autocapitalize="off"></label>
+        <label class="field"><span>Long-lived access token</span>
+          <input id="haToken" type="password" placeholder="Paste the token" spellcheck="false" autocapitalize="off"></label>
+        <div class="status" id="haStatus"></div>
+        <div class="btns">
+          <button class="btn" type="button" id="haForget" hidden>Disconnect</button>
+          <button class="btn primary" type="submit" id="haConnect">Connect</button>
+        </div>
+      </form>
+      <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your Home Assistant Cloud remote URL. A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
+      <p class="help">Make a token in Home Assistant: your <b>profile</b> (bottom left) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. It is kept on this phone only.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ---------------------------------------------------------------------------
+// Icons: MDI paths (@mdi/js 7.4.47), inline so the app works offline.
+const ICONS = {
+  power: 'M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13',
+  fan1: 'M13 19C13 17.59 13.5 16.3 14.3 15.28C14.17 14.97 14.03 14.65 13.86 14.34C14.26 14 14.57 13.59 14.77 13.11C15.26 13.21 15.78 13.39 16.25 13.67C17.07 13.25 18 13 19 13C20.05 13 21.03 13.27 21.89 13.74C21.95 13.37 22 12.96 22 12.5C22 8.92 18.03 8.13 14.33 10.13C14 9.73 13.59 9.42 13.11 9.22C13.3 8.29 13.74 7.24 14.73 6.75C17.09 5.57 17 2 12.5 2C8.93 2 8.14 5.96 10.13 9.65C9.72 9.97 9.4 10.39 9.21 10.87C8.28 10.68 7.23 10.25 6.73 9.26C5.56 6.89 2 7 2 11.5C2 15.07 5.95 15.85 9.64 13.87C9.96 14.27 10.39 14.59 10.88 14.79C10.68 15.71 10.24 16.75 9.26 17.24C6.9 18.42 7 22 11.5 22C12.31 22 13 21.78 13.5 21.41C13.19 20.67 13 19.86 13 19M12 13C11.43 13 11 12.55 11 12S11.43 11 12 11C12.54 11 13 11.45 13 12S12.54 13 12 13M17 15V17H18V23H20V15H17Z',
+  fan2: 'M13 19C13 17.59 13.5 16.3 14.3 15.28C14.17 14.97 14.03 14.65 13.86 14.34C14.26 14 14.57 13.59 14.77 13.11C15.26 13.21 15.78 13.39 16.25 13.67C17.07 13.25 18 13 19 13C20.05 13 21.03 13.27 21.89 13.74C21.95 13.37 22 12.96 22 12.5C22 8.92 18.03 8.13 14.33 10.13C14 9.73 13.59 9.42 13.11 9.22C13.3 8.29 13.74 7.24 14.73 6.75C17.09 5.57 17 2 12.5 2C8.93 2 8.14 5.96 10.13 9.65C9.72 9.97 9.4 10.39 9.21 10.87C8.28 10.68 7.23 10.25 6.73 9.26C5.56 6.89 2 7 2 11.5C2 15.07 5.95 15.85 9.64 13.87C9.96 14.27 10.39 14.59 10.88 14.79C10.68 15.71 10.24 16.75 9.26 17.24C6.9 18.42 7 22 11.5 22C12.31 22 13 21.78 13.5 21.41C13.19 20.67 13 19.86 13 19M12 13C11.43 13 11 12.55 11 12S11.43 11 12 11C12.54 11 13 11.45 13 12S12.54 13 12 13M16 15V17H19V18H18C16.9 18 16 18.9 16 20V23H21V21H18V20H19C20.11 20 21 19.11 21 18V17C21 15.9 20.11 15 19 15H16Z',
+  fan3: 'M13 19C13 17.59 13.5 16.3 14.3 15.28C14.17 14.97 14.03 14.65 13.86 14.34C14.26 14 14.57 13.59 14.77 13.11C15.26 13.21 15.78 13.39 16.25 13.67C17.07 13.25 18 13 19 13C20.05 13 21.03 13.27 21.89 13.74C21.95 13.37 22 12.96 22 12.5C22 8.92 18.03 8.13 14.33 10.13C14 9.73 13.59 9.42 13.11 9.22C13.3 8.29 13.74 7.24 14.73 6.75C17.09 5.57 17 2 12.5 2C8.93 2 8.14 5.96 10.13 9.65C9.72 9.97 9.4 10.39 9.21 10.87C8.28 10.68 7.23 10.25 6.73 9.26C5.56 6.89 2 7 2 11.5C2 15.07 5.95 15.85 9.64 13.87C9.96 14.27 10.39 14.59 10.88 14.79C10.68 15.71 10.24 16.75 9.26 17.24C6.9 18.42 7 22 11.5 22C12.31 22 13 21.78 13.5 21.41C13.19 20.67 13 19.86 13 19M12 13C11.43 13 11 12.55 11 12S11.43 11 12 11C12.54 11 13 11.45 13 12S12.54 13 12 13M21 21V20.5C21 19.67 20.33 19 19.5 19C20.33 19 21 18.33 21 17.5V17C21 15.89 20.1 15 19 15H16V17H19V18H17V20H19V21H16V23H19C20.11 23 21 22.11 21 21',
+  minus: 'M19,13H5V11H19V13Z',
+  plus: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+  chev: 'M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z',
+  therm: 'M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z',
+  cupWater: 'M18.32,8H5.67L5.23,4H18.77M12,19A3,3 0 0,1 9,16C9,14 12,10.6 12,10.6C12,10.6 15,14 15,16A3,3 0 0,1 12,19M3,2L5,20.23C5.13,21.23 5.97,22 7,22H17C18,22 18.87,21.23 19,20.23L21,2H3Z',
+  cup: 'M3 2L5 20.23C5.13 21.23 5.97 22 7 22H17C18 22 18.87 21.23 19 20.23L21 2H3M5.22 4H18.78L17 20H7L5.22 4Z',
+  filter: 'M19,18.31V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V16.3C4.54,16.12 3.95,16 3,16A1,1 0 0,1 2,15A1,1 0 0,1 3,14C3.82,14 4.47,14.08 5,14.21V12.3C4.54,12.12 3.95,12 3,12A1,1 0 0,1 2,11A1,1 0 0,1 3,10C3.82,10 4.47,10.08 5,10.21V8.3C4.54,8.12 3.95,8 3,8A1,1 0 0,1 2,7A1,1 0 0,1 3,6C3.82,6 4.47,6.08 5,6.21V4A2,2 0 0,1 7,2H17A2,2 0 0,1 19,4V6.16C20.78,6.47 21.54,7.13 21.71,7.29C22.1,7.68 22.1,8.32 21.71,8.71C21.32,9.1 20.8,9.09 20.29,8.71V8.71C20.29,8.71 19.25,8 17,8C15.74,8 14.91,8.41 13.95,8.9C12.91,9.41 11.74,10 10,10C9.64,10 9.31,10 9,9.96V7.95C9.3,8 9.63,8 10,8C11.26,8 12.09,7.59 13.05,7.11C14.09,6.59 15.27,6 17,6V4H7V20H17V18C18.5,18 18.97,18.29 19,18.31M17,10C15.27,10 14.09,10.59 13.05,11.11C12.09,11.59 11.26,12 10,12C9.63,12 9.3,12 9,11.95V13.96C9.31,14 9.64,14 10,14C11.74,14 12.91,13.41 13.95,12.9C14.91,12.42 15.74,12 17,12C19.25,12 20.29,12.71 20.29,12.71V12.71C20.8,13.1 21.32,13.1 21.71,12.71C22.1,12.32 22.1,11.69 21.71,11.29C21.5,11.08 20.25,10 17,10M17,14C15.27,14 14.09,14.59 13.05,15.11C12.09,15.59 11.26,16 10,16C9.63,16 9.3,16 9,15.95V17.96C9.31,18 9.64,18 10,18C11.74,18 12.91,17.41 13.95,16.9C14.91,16.42 15.74,16 17,16C19.25,16 20.29,16.71 20.29,16.71V16.71C20.8,17.1 21.32,17.1 21.71,16.71C22.1,16.32 22.1,15.69 21.71,15.29C21.5,15.08 20.25,14 17,14Z',
+  check: 'M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20M16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z',
+  ion: 'M18.36,2.64C20,2.64 21.36,4 21.36,5.64C21.36,7.29 20,8.64 18.36,8.64C16.71,8.64 15.36,7.29 15.36,5.64C15.36,5.34 15.41,5.06 15.5,4.8C14.43,4.29 13.25,4 12,4A8,8 0 0,0 4,12L4.04,12.84L2.05,13.05L2,12A10,10 0 0,1 12,2C13.69,2 15.28,2.42 16.67,3.16C17.16,2.83 17.74,2.64 18.36,2.64M18.36,4.64A1,1 0 0,0 17.36,5.64A1,1 0 0,0 18.36,6.64C18.92,6.64 19.36,6.19 19.36,5.64C19.36,5.08 18.92,4.64 18.36,4.64M5.64,15.36C7.29,15.36 8.64,16.71 8.64,18.36C8.64,18.66 8.59,18.94 8.5,19.2C9.57,19.71 10.75,20 12,20A8,8 0 0,0 20,12L19.96,11.16L21.95,10.95L22,12A10,10 0 0,1 12,22C10.31,22 8.72,21.58 7.33,20.84C6.84,21.17 6.26,21.36 5.64,21.36C4,21.36 2.64,20 2.64,18.36C2.64,16.71 4,15.36 5.64,15.36M5.64,17.36C5.08,17.36 4.64,17.81 4.64,18.36C4.64,18.92 5.08,19.36 5.64,19.36A1,1 0 0,0 6.64,18.36A1,1 0 0,0 5.64,17.36M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z',
+  pump: 'M2 21V15H3.5C3.18 14.06 3 13.05 3 12C3 7.03 7.03 3 12 3H22V9H20.5C20.82 9.94 21 10.95 21 12C21 16.97 16.97 21 12 21H2M5 12C5 13.28 5.34 14.47 5.94 15.5L9.4 13.5C9.15 13.06 9 12.55 9 12C9 11.35 9.21 10.75 9.56 10.26L6.3 7.93C5.5 9.08 5 10.5 5 12M12 19C14.59 19 16.85 17.59 18.06 15.5L14.6 13.5C14.08 14.4 13.11 15 12 15L11.71 15L11.33 18.97L12 19M12 9C13.21 9 14.26 9.72 14.73 10.76L18.37 9.1C17.27 6.68 14.83 5 12 5V9M12 11C11.45 11 11 11.45 11 12C11 12.55 11.45 13 12 13C12.55 13 13 12.55 13 12C13 11.45 12.55 11 12 11Z',
+  bell: 'M10,21H14A2,2 0 0,1 12,23A2,2 0 0,1 10,21M21,19V20H3V19L5,17V11C5,7.9 7.03,5.17 10,4.29C10,4.19 10,4.1 10,4A2,2 0 0,1 12,2A2,2 0 0,1 14,4C14,4.1 14,4.19 14,4.29C16.97,5.17 19,7.9 19,11V17L21,19M17,11A5,5 0 0,0 12,6A5,5 0 0,0 7,11V18H17V11M19.75,3.19L18.33,4.61C20.04,6.3 21,8.6 21,11H23C23,8.07 21.84,5.25 19.75,3.19M1,11H3C3,8.6 3.96,6.3 5.67,4.61L4.25,3.19C2.16,5.25 1,8.07 1,11Z',
+  bellOff: 'M22.11,21.46L2.39,1.73L1.11,3L5.83,7.72C5.29,8.73 5,9.86 5,11V17L3,19V20H18.11L20.84,22.73L22.11,21.46M7,18V11C7,10.39 7.11,9.79 7.34,9.23L16.11,18H7M10,21H14A2,2 0 0,1 12,23A2,2 0 0,1 10,21M8.29,5.09C8.82,4.75 9.4,4.5 10,4.29C10,4.19 10,4.1 10,4A2,2 0 0,1 12,2A2,2 0 0,1 14,4C14,4.1 14,4.19 14,4.29C16.97,5.17 19,7.9 19,11V15.8L17,13.8V11A5,5 0 0,0 12,6C11.22,6 10.45,6.2 9.76,6.56L8.29,5.09Z',
+  flash: 'M7,2H17L13.5,9H17L10,22V14H7V2M9,4V12H12V14.66L14,11H10.24L13.76,4H9Z',
+  cog: 'M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z',
+  close: 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z',
+  dehum: 'M11 9C8.79 9 7 10.79 7 13S8.79 17 11 17 15 15.21 15 13 13.21 9 11 9M11 15C9.9 15 9 14.11 9 13S9.9 11 11 11 13 11.9 13 13 12.11 15 11 15M7 4H14C16.21 4 18 5.79 18 8V9H16V8C16 6.9 15.11 6 14 6H7C5.9 6 5 6.9 5 8V20H16V18H18V22H3V8C3 5.79 4.79 4 7 4M19 10.5C19 10.5 21 12.67 21 14C21 15.1 20.1 16 19 16S17 15.1 17 14C17 12.67 19 10.5 19 10.5',
+};
+const svg = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${ICONS[n]}"/></svg>`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem('house.' + k)); } catch { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem('house.' + k) : localStorage.setItem('house.' + k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------------------------------------------------------------------------
+// The two units: the DG1 instance variables, entity for entity.
+// The Cube's plug still carries the old "M&D Dyson" names (see the Energy
+// block on All Devices) - it is the Cube's real draw despite the ids.
+const SKY_SHARED = {
+  full: 'linear-gradient(160deg, #241D20 0%, #3C2C31 50%, #614A50 100%)',
+  off: 'linear-gradient(160deg, #17181A 0%, #212326 50%, #33363B 100%)',
+  offline: 'linear-gradient(160deg, #121316 0%, #1C1D21 50%, #2C2E34 100%)',
+};
+const ACC_SHARED = { full: '240,179,187', off: '190,194,204', offline: '154,160,166' };
+const UNITS = [
+  {
+    id: 'cube', name: 'Cube',
+    hum: 'humidifier.living_room_cube_dehumidifier', fan: 'fan.living_room_cube_dehumidifier_fan',
+    rh: 'sensor.living_room_cube_dehumidifier_humidity', temp: 'sensor.living_room_cube_dehumidifier_temperature',
+    tank: 'binary_sensor.living_room_cube_dehumidifier_tank_full', level: 'sensor.living_room_cube_dehumidifier_water_level',
+    filter: 'binary_sensor.living_room_cube_dehumidifier_replace_filter',
+    ion: 'switch.living_room_cube_dehumidifier_cube_ion_mode', pump: 'switch.living_room_cube_dehumidifier_cube_pump', beep: 'switch.cube_beep',
+    pw: 'sensor.m_d_dyson_current_consumption', day: 'sensor.m_d_dyson_today_s_consumption', month: 'sensor.m_d_dyson_this_month_s_consumption',
+    modes: ['Set', 'Continuous', 'Dry'],
+    skies: { drying: 'linear-gradient(160deg, #17201F 0%, #213030 50%, #374C4A 100%)', holding: 'linear-gradient(160deg, #191D1D 0%, #242B2B 50%, #394342 100%)', ...SKY_SHARED },
+    accents: { drying: '156,212,202', holding: '184,206,202', ...ACC_SHARED },
+  },
+  {
+    id: 'upstairs', name: 'Upstairs',
+    hum: 'humidifier.office_upstairs_dehumidifier', fan: 'fan.office_upstairs_dehumidifier_fan',
+    rh: 'sensor.office_upstairs_dehumidifier_humidity', temp: 'sensor.office_upstairs_dehumidifier_temperature',
+    tank: 'binary_sensor.office_upstairs_dehumidifier_tank_full', level: '',
+    filter: 'binary_sensor.office_upstairs_dehumidifier_replace_filter',
+    ion: 'switch.office_upstairs_dehumidifier_upstairs_ion_mode', pump: 'switch.office_upstairs_dehumidifier_upstairs_pump', beep: 'switch.upstairs_beep',
+    pw: 'sensor.upstairs_dehumidifier_current_consumption', day: 'sensor.upstairs_dehumidifier_today_s_consumption', month: 'sensor.upstairs_dehumidifier_this_month_s_consumption',
+    modes: ['Set', 'Smart', 'Continuous'],
+    skies: { drying: 'linear-gradient(160deg, #181C23 0%, #222A35 50%, #384556 100%)', holding: 'linear-gradient(160deg, #1A1C20 0%, #252930 50%, #3B414B 100%)', ...SKY_SHARED },
+    accents: { drying: '166,194,230', holding: '190,200,216', ...ACC_SHARED },
+  },
+];
+const T_MIN = 35, T_MAX = 85, T_STEP = 5;   // the integration clamps to 35-85; the units' panels move in 5s
+
+// ---------------------------------------------------------------------------
+// Sample states for the preview: one unit drying, one holding with its
+// filter due, so most of the card's looks show at once.
+function sampleStates() {
+  const e = (state, attributes = {}) => ({ state: String(state), attributes });
+  return {
+    'humidifier.living_room_cube_dehumidifier': e('on', { mode: 'Set', humidity: 50, current_humidity: 56 }),
+    'fan.living_room_cube_dehumidifier_fan': e('on', { preset_mode: 'High', preset_modes: ['Low', 'High'] }),
+    'sensor.living_room_cube_dehumidifier_humidity': e(56, { unit_of_measurement: '%' }),
+    'sensor.living_room_cube_dehumidifier_temperature': e(72, { unit_of_measurement: '°F' }),
+    'sensor.living_room_cube_dehumidifier_water_level': e(40, { unit_of_measurement: '%' }),
+    'binary_sensor.living_room_cube_dehumidifier_tank_full': e('off'),
+    'binary_sensor.living_room_cube_dehumidifier_replace_filter': e('off'),
+    'switch.living_room_cube_dehumidifier_cube_ion_mode': e('unavailable'),
+    'switch.living_room_cube_dehumidifier_cube_pump': e('unavailable'),
+    'switch.cube_beep': e('on'),
+    'sensor.m_d_dyson_current_consumption': e(182.4, { unit_of_measurement: 'W' }),
+    'sensor.m_d_dyson_today_s_consumption': e(1.84, { unit_of_measurement: 'kWh' }),
+    'sensor.m_d_dyson_this_month_s_consumption': e(9.6, { unit_of_measurement: 'kWh' }),
+    'humidifier.office_upstairs_dehumidifier': e('on', { mode: 'Smart', humidity: 50, current_humidity: 48 }),
+    'fan.office_upstairs_dehumidifier_fan': e('on', { preset_mode: 'Low', preset_modes: ['Low', 'High'] }),
+    'sensor.office_upstairs_dehumidifier_humidity': e(48, { unit_of_measurement: '%' }),
+    'sensor.office_upstairs_dehumidifier_temperature': e(74, { unit_of_measurement: '°F' }),
+    'binary_sensor.office_upstairs_dehumidifier_tank_full': e('off'),
+    'binary_sensor.office_upstairs_dehumidifier_replace_filter': e('on'),
+    'switch.office_upstairs_dehumidifier_upstairs_ion_mode': e('off'),
+    'switch.office_upstairs_dehumidifier_upstairs_pump': e('off'),
+    'switch.upstairs_beep': e('off'),
+    'sensor.upstairs_dehumidifier_current_consumption': e(3.2, { unit_of_measurement: 'W' }),
+    'sensor.upstairs_dehumidifier_today_s_consumption': e(0.62, { unit_of_measurement: 'kWh' }),
+    'sensor.upstairs_dehumidifier_this_month_s_consumption': e(5.1, { unit_of_measurement: 'kWh' }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Home Assistant over the WebSocket API. The same messages as Home
+// Assistant's own client (home-assistant-js-websocket): auth with the token,
+// subscribe_entities for the states and their compressed changes, and
+// call_service for every control.
+const HA = {
+  ws: null, nextId: 1, calls: new Map(), subId: null, replace: true,
+  url: '', token: '', status: 'off', version: '', tries: 0, timer: null, pingTimer: null, stopped: true,
+
+  start(url, token) {
+    this.stop();
+    Object.assign(this, { url, token, stopped: false, tries: 0 });
+    this.open();
+  },
+  stop() {
+    this.stopped = true;
+    clearTimeout(this.timer); clearInterval(this.pingTimer);
+    if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch {} }
+    this.ws = null;
+    this.failCalls('Disconnected');
+  },
+  failCalls(msg) { for (const c of this.calls.values()) c.reject(new Error(msg)); this.calls.clear(); },
+  setStatus(s, detail) { this.status = s; onStatus(s, detail); },
+
+  open() {
+    this.setStatus(this.tries ? 'reconnecting' : 'connecting');
+    let ws;
+    try { ws = new WebSocket(this.url.replace(/^http/, 'ws') + '/api/websocket'); }
+    catch (e) { this.setStatus('error', 'That address is not one the browser can open.'); this.stopped = true; return; }
+    this.ws = ws;
+    ws.onmessage = ev => {
+      let data; try { data = JSON.parse(ev.data); } catch { return; }
+      for (const m of Array.isArray(data) ? data : [data]) this.onMessage(m);
+    };
+    ws.onclose = () => {
+      clearInterval(this.pingTimer);
+      this.failCalls('Connection lost');
+      this.ws = null;
+      if (this.stopped) return;
+      // Never got as far as auth on the first go: say so rather than spin.
+      const wait = [1, 2, 5, 10, 30][Math.min(this.tries, 4)] * 1000;
+      this.tries++;
+      if (this.tries === 1 && this.status === 'connecting') this.setStatus('error', 'Could not reach Home Assistant at that address. Trying again…');
+      else this.setStatus('reconnecting');
+      this.timer = setTimeout(() => this.open(), wait);
+    };
+  },
+
+  onMessage(m) {
+    if (m.type === 'auth_required') { this.ws.send(JSON.stringify({ type: 'auth', access_token: this.token })); return; }
+    if (m.type === 'auth_invalid') {
+      this.stopped = true; this.ws.onclose = null; this.ws.close(); this.ws = null;
+      this.setStatus('error', 'Home Assistant turned the token down: ' + (m.message || 'invalid token') + '.');
+      return;
+    }
+    if (m.type === 'auth_ok') {
+      this.version = m.ha_version || '';
+      this.tries = 0; this.nextId = 1; this.replace = true;
+      this.subId = this.nextId++;
+      this.ws.send(JSON.stringify({ id: this.subId, type: 'subscribe_entities' }));
+      clearInterval(this.pingTimer);
+      this.pingTimer = setInterval(() => this.ping(), 30000);
+      this.setStatus('live');
+      return;
+    }
+    if (m.type === 'event' && m.id === this.subId) { applyEntities(m.event, this.replace); this.replace = false; return; }
+    if ((m.type === 'result' || m.type === 'pong') && this.calls.has(m.id)) {
+      const c = this.calls.get(m.id); this.calls.delete(m.id);
+      if (m.type === 'pong' || m.success) c.resolve(m.result);
+      else c.reject(new Error((m.error && m.error.message) || 'Home Assistant refused that'));
+    }
+  },
+
+  send(msg, timeout = 15000) {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== 1 || this.status !== 'live') return reject(new Error('Not connected to Home Assistant'));
+      const id = this.nextId++;
+      const t = setTimeout(() => { this.calls.delete(id); reject(new Error('Home Assistant did not answer')); }, timeout);
+      this.calls.set(id, { resolve: v => { clearTimeout(t); resolve(v); }, reject: e => { clearTimeout(t); reject(e); } });
+      this.ws.send(JSON.stringify({ id, ...msg }));
+    });
+  },
+  // A phone puts the page to sleep and the socket can die without a close
+  // event, so: ping every 30 s, and once straight away on waking. No pong in
+  // 8 s and the socket is closed, which reconnects.
+  ping() {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    const ws = this.ws;
+    this.send({ type: 'ping' }, 8000).catch(() => { if (this.ws === ws) ws.close(); });
+  },
+  wake() {
+    if (this.stopped) return;
+    if (!this.ws) { clearTimeout(this.timer); this.open(); }
+    else this.ping();
+  },
+};
+
+// The subscribe_entities change format: a = added (full states), c = changed
+// ("+" adds, "-" removes attribute keys), r = removed. As processEvent() in
+// home-assistant-js-websocket's entities.ts.
+let ents = {};
+function applyEntities(u, replace) {
+  const next = replace ? {} : { ...ents };
+  if (u.a) for (const id in u.a) next[id] = { state: u.a[id].s, attributes: u.a[id].a || {} };
+  if (u.r) for (const id of u.r) delete next[id];
+  if (u.c) for (const id in u.c) {
+    const cur = next[id]; if (!cur) continue;
+    const add = u.c[id]['+'], rem = u.c[id]['-'];
+    const st = { state: cur.state, attributes: cur.attributes };
+    if (add && add.a || rem && rem.a) st.attributes = { ...cur.attributes };
+    if (add) { if (add.s !== undefined) st.state = add.s; if (add.a) Object.assign(st.attributes, add.a); }
+    if (rem && rem.a) for (const k of rem.a) delete st.attributes[k];
+    next[id] = st;
+  }
+  ents = next;
+  render();
+}
+
+// ---------------------------------------------------------------------------
+// Mode: preview (sample states, local taps) or live.
+let mode = 'preview';
+const saved = () => store.get('ha') || {};
+
+function call(domain, service, data, unit, key) {
+  if (mode === 'preview') { previewCall(domain, service, data); return Promise.resolve(); }
+  markWait(unit, key);
+  return HA.send({ type: 'call_service', domain, service, service_data: data })
+    .catch(e => { clearWait(unit, key); toast(`${unit.name}: ${e.message}`); });
+}
+
+// Preview: do to the sample states what Home Assistant would.
+function previewCall(domain, service, d) {
+  const s = ents[d.entity_id]; if (!s) return;
+  const set = (patch, attrs) => { ents = { ...ents, [d.entity_id]: { state: patch ?? s.state, attributes: { ...s.attributes, ...attrs } } }; };
+  if (service === 'toggle') set(s.state === 'on' ? 'off' : 'on');
+  else if (service === 'set_humidity') set(null, { humidity: d.humidity });
+  else if (service === 'set_mode') set(null, { mode: d.mode });
+  else if (service === 'set_preset_mode') set(null, { preset_mode: d.preset_mode });
+  render();
+}
+
+// A control waits (soft blink) from the tap until its entity changes, or 8 s.
+const waits = {};
+function markWait(unit, key) { if (!key) return; waits[unit.id + key] = Date.now(); render(); setTimeout(render, 8100); }
+function clearWait(unit, key) { delete waits[unit.id + key]; render(); }
+const waiting = (unit, key) => waits[unit.id + key] && Date.now() - waits[unit.id + key] < 8000;
+let lastSeen = {};
+function clearWaitsOnChange() {
+  for (const u of UNITS) for (const key of ['power', 'fan', 'mode', 'ion', 'pump', 'beep']) {
+    const id = key === 'power' || key === 'mode' ? u.hum : u[key];
+    const sig = JSON.stringify(ents[id] || null);
+    if (lastSeen[u.id + key] !== undefined && lastSeen[u.id + key] !== sig) delete waits[u.id + key];
+    lastSeen[u.id + key] = sig;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reading a unit: the DG1 dg_computed block.
+const st = id => (id && ents[id]) || null;
+const num = id => { const s = st(id); if (!s || s.state === '' || s.state == null) return NaN; return Number(s.state); };
+const isOn = id => (st(id) || {}).state === 'on';
+const usable = id => { const s = st(id); return !!s && s.state !== 'unavailable' && s.state !== 'unknown'; };
+
+// Target taps add up: each tap steps from the pending value while it is fresh
+// (5 s) and one set_humidity goes 600 ms after the last tap.
+const pend = {};
+function pendingTarget(u) { const g = pend[u.id]; return g && g.v != null && Date.now() - g.t < 5000 ? g.v : null; }
+
+function read(u) {
+  const h = st(u.hum);
+  const rh = num(u.rh);
+  const cur = !isNaN(rh) ? Math.round(rh) : h && h.attributes.current_humidity != null ? Math.round(h.attributes.current_humidity) : null;
+  const realTgt = h && h.attributes.humidity != null ? Math.round(h.attributes.humidity) : null;
+  const tgt = pendingTarget(u) ?? realTgt;
+  const full = isOn(u.tank);
+  const on = !!h && h.state === 'on';
+  let mood;
+  if (!h || h.state === 'unavailable' || h.state === 'unknown') mood = 'offline';
+  else if (full) mood = 'full';
+  else if (!on) mood = 'off';
+  else mood = cur != null && realTgt != null && cur > realTgt ? 'drying' : 'holding';
+  const fan = st(u.fan);
+  return { h, cur, tgt, realTgt, full, on, mood, missing: !h, fanp: fan ? fan.attributes.preset_mode || '' : '', md: h ? h.attributes.mode || '' : '' };
+}
+
+// ---------------------------------------------------------------------------
+// The card, region by region.
+function fxHTML(u, r) {
+  const m = r.mood, t = u.accents[m] || '190,194,204';
+  let seed = 31; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const pool = (cls, a) => `<div class="dg-pool ${cls}" style="top:150px;background:radial-gradient(circle, rgba(${t},${a}) 0%, rgba(${t},${(a * 0.35).toFixed(3)}) 38%, rgba(${t},0) 68%);"></div>`;
+  let L = '';
+  // Drying: soft mist wisps and motes rising out of the room.
+  if (m === 'drying') {
+    L += pool('dg-breathe', 0.16);
+    for (let i = 0; i < 6; i++) { const du = 10 + rnd() * 6;
+      L += `<i class="dg-mist" style="left:${(4 + rnd() * 80).toFixed(1)}%;background:radial-gradient(ellipse, rgba(${t},0.16) 0%, rgba(${t},0) 70%);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+    for (let i = 0; i < 10; i++) { const du = 7 + rnd() * 6;
+      L += `<i class="dg-mote" style="left:${(6 + rnd() * 88).toFixed(1)}%;box-shadow:0 0 4px rgba(${t},0.8);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+  }
+  if (m === 'holding') L += pool('dg-drift', 0.10);
+  if (m === 'full') L += pool('dg-pulse', 0.20);
+  return `<div class="dg-sky" style="background:${u.skies[m] || u.skies.off};"></div>${L}<div class="dg-sheen"></div>`;
+}
+
+function headHTML(u, r) {
+  const words = { drying: 'Drying', holding: 'Holding', full: 'Tank Full', off: 'Off', offline: 'Offline' };
+  const pill = (r.mood === 'drying' || r.mood === 'holding') && r.md ? `${words[r.mood]} · ${esc(r.md)}` : words[r.mood];
+  return `<div class="dg-head t-in"><div class="dg-name">${u.name}</div><div class="dg-pill">${r.mood === 'full' ? '<i></i>' : ''}${pill}</div></div>`;
+}
+
+function heroHTML(u, r) {
+  const m = r.mood, t = u.accents[m] || '190,194,204', cur = r.cur, tgt = r.realTgt, on = r.on;
+  const wc = m === 'full' ? '240,179,187' : t;
+  const lvl = cur == null ? 0 : Math.max(6, Math.min(100, cur));
+  const wa = on || m === 'full' ? 0.62 : 0.26;
+  // The surface: four sine periods over 400 units, drawn twice as wide as the
+  // tank so translateX(-50%) loops seamlessly.
+  let d = 'M 0 8'; for (let x = 0; x <= 400; x += 5) d += ' L ' + x + ' ' + (8 + 3 * Math.sin(x / 50 * Math.PI)).toFixed(2); d += ' L 400 20 L 0 20 Z';
+  const wave = `<svg class="dg-wave" viewBox="0 0 400 20" preserveAspectRatio="none" style="bottom:calc(${lvl}% - 9px);${on ? '' : 'animation:none;'}"><path d="${d}" fill="rgba(${wc},${wa})"/></svg>`;
+  let bub = '';
+  if (m === 'drying') { let s = 7; const rr = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    for (let i = 0; i < 6; i++) { const du = 3 + rr() * 3; bub += `<i class="dg-b" style="left:${(12 + rr() * 76).toFixed(1)}%;animation-duration:${du.toFixed(1)}s;animation-delay:-${(rr() * du).toFixed(1)}s;"></i>`; } }
+  const halo = on || m === 'full' ? `<div class="dg-glow" style="background:radial-gradient(circle, rgba(${wc},0.20) 0%, rgba(${wc},0.06) 45%, rgba(${wc},0) 70%);"></div>` : '';
+  const tick = tgt != null && on ? `<div class="dg-tick" style="top:${(100 - Math.max(0, Math.min(100, tgt))).toFixed(1)}%;"><i></i><span>${tgt}</span></div>` : '';
+  const ts = st(u.temp), tv = num(u.temp), tu = ts && ts.attributes.unit_of_measurement || '°';
+  // Live but no states yet: connecting. States in but no such entity: say so.
+  const waitingHA = r.missing && mode === 'live' && !Object.keys(ents).length;
+  const refused = waitingHA && HA.status === 'error';
+  const title = { drying: `Drying to ${tgt}%`, holding: `Holding at ${tgt}%`, full: 'Tank full', off: 'Off', offline: refused ? 'Not connected' : waitingHA ? 'Connecting' : r.missing ? 'Not found' : 'Unavailable' }[m];
+  const sub = m === 'offline'
+    ? (refused ? 'Check the Home Assistant settings' : waitingHA ? 'Waiting for Home Assistant' : r.missing ? 'Home Assistant has no ' + esc(u.hum) : 'The dehumidifier is not reachable')
+    : [r.fanp ? 'Fan ' + esc(r.fanp) : '', esc(r.md), !isNaN(tv) ? Math.round(tv) + esc(tu) : ''].filter(Boolean).join(' · ');
+  return `<div class="dg-hero t-in">${halo}
+      <div class="dg-tank"><div class="dg-water" style="height:${lvl}%;background:linear-gradient(180deg, rgba(${wc},${wa}) 0%, rgba(${wc},${(wa * 0.55).toFixed(2)}) 100%);"></div>${wave}${bub}</div>
+      <div class="dg-glass">${tick}<div class="dg-num">${cur == null ? '--' : cur}<span>%</span></div><div class="dg-lbl">HUMIDITY</div></div>
+      <div class="dg-txt"><div class="dg-title">${title}</div><div class="dg-sub">${sub}</div></div>
+    </div>`;
+}
+
+function actHTML(u, r) {
+  const t = u.accents[r.mood] || '190,194,204';
+  const disc = r.on ? `background:rgba(${t},0.85);box-shadow:0 0 12px rgba(${t},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  const hi = /high/i.test(r.fanp), med = /med/i.test(r.fanp);
+  const off = r.mood === 'offline' ? ' disabled' : '';
+  return `<button class="tile${r.on ? ' on' : ''}${waiting(u, 'power') ? ' wait' : ''}" data-a="power" aria-pressed="${r.on}"${off}>
+      <span class="td" style="${disc}">${svg('power', 19)}</span><span class="tt"><span class="tl">POWER</span><span class="tn">${r.on ? 'On' : 'Off'}</span></span></button>
+    <button class="tile${waiting(u, 'fan') ? ' wait' : ''}" data-a="fan"${off || (usable(u.fan) ? '' : ' disabled')}>
+      <span class="td">${svg(hi ? 'fan3' : med ? 'fan2' : 'fan1', 19)}</span><span class="tt"><span class="tl">FAN</span><span class="tn">${esc(r.fanp) || '—'}</span></span></button>`;
+}
+
+function tgtHTML(u, r) {
+  const v = r.tgt, pct = v == null ? 0 : Math.max(0, Math.min(100, (v - T_MIN) / (T_MAX - T_MIN) * 100));
+  const off = r.mood === 'offline' || v == null;
+  return `<button class="disc" data-a="minus" aria-label="Lower target"${off || v <= T_MIN ? ' disabled' : ''}>${svg('minus', 20)}</button>
+    <div class="tgt"><div class="tgt-row"><span>TARGET</span><span>${v == null ? '--' : v + '%'}</span></div><div class="tgt-bar"><i style="width:${pct}%"></i></div></div>
+    <button class="disc" data-a="plus" aria-label="Raise target"${off || v >= T_MAX ? ' disabled' : ''}>${svg('plus', 20)}</button>`;
+}
+
+function moreHTML(u, r) {
+  // Only the modes the unit says it has, when it says; never offer one it would reject.
+  const avail = r.h && Array.isArray(r.h.attributes.available_modes) ? r.h.attributes.available_modes : null;
+  const modes = avail ? u.modes.filter(m => avail.includes(m)) : u.modes;
+  const modeRow = modes.map(m => `<button data-a="mode" data-v="${esc(m)}" aria-pressed="${r.md === m}"${waiting(u, 'mode') ? ' class="wait"' : ''}>${esc(m)}</button>`).join('');
+
+  const tv = num(u.temp), tu = (st(u.temp) || { attributes: {} }).attributes.unit_of_measurement || '°';
+  const lv = u.level ? num(u.level) : NaN;
+  const due = isOn(u.filter);
+  const mini = (label, icon, val, cls = '', act = '') =>
+    `<${act ? 'button' : 'div'} class="mini ${cls}"${act}><span class="tl">${label}</span><span class="tn">${icon ? svg(icon, 15) : ''}${val}</span></${act ? 'button' : 'div'}>`;
+  const read = mini('TEMPERATURE', 'therm', isNaN(tv) ? '—' : Math.round(tv) + esc(tu))
+    + mini('TANK', r.full ? 'cupWater' : 'cup', r.full ? 'Full' : !isNaN(lv) ? Math.round(lv) + '%' : 'OK', r.full ? 'full' : '')
+    + mini('FILTER', due ? 'filter' : 'check', due ? 'Replace' : 'OK', due ? 'due' : '');
+
+  // Ion and Pump drop out while their switch is unavailable (the Cube
+  // today), so Beep takes the row alone rather than sitting by dead tiles.
+  const sw = (key, label, iconOn, iconOff) => {
+    const id = u[key]; if (!id || !st(id) || st(id).state === 'unavailable') return '';
+    const on = isOn(id);
+    return mini(label, on ? iconOn : iconOff, on ? 'On' : 'Off', (on ? 'on' : '') + (waiting(u, key) ? ' wait' : ''), ` data-a="sw" data-v="${key}" aria-pressed="${on}"`);
+  };
+  const feat = sw('ion', 'ION', 'ion', 'ion') + sw('pump', 'PUMP', 'pump', 'pump') + sw('beep', 'BEEP', 'bell', 'bellOff');
+
+  const pw = num(u.pw), day = num(u.day), month = num(u.month);
+  const en = mini('NOW', 'flash', isNaN(pw) ? '—' : (pw < 10 ? pw.toFixed(1) : Math.round(pw)) + ' W')
+    + mini('TODAY', '', isNaN(day) ? '—' : day.toFixed(2) + ' kWh')
+    + mini('MONTH', '', isNaN(month) ? '—' : month.toFixed(1) + ' kWh');
+
+  return (modes.length ? `<div class="lbl">MODE</div><div class="seg">${modeRow}</div>` : '')
+    + `<div class="lbl">READINGS</div><div class="row3">${read}</div>`
+    + (feat ? `<div class="lbl">FEATURES</div><div class="row3">${feat}</div>` : '')
+    + `<div class="lbl">ENERGY</div><div class="row3">${en}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Render: build each card once, then only touch a region whose HTML changed.
+const unitsEl = $('units');
+const openMore = store.get('more') || {};
+for (const u of UNITS) {
+  unitsEl.insertAdjacentHTML('beforeend', `
+    <article class="dg${openMore[u.id] ? ' open' : ''}" data-u="${u.id}">
+      <div class="dg-fx" data-r="fx"></div>
+      <div class="dg-in">
+        <div data-r="head"></div>
+        <div data-r="hero"></div>
+        <div class="dg-act" data-r="act"></div>
+        <div class="dg-tgt" data-r="tgt"></div>
+        <button class="round dg-chev" data-a="more" aria-expanded="${!!openMore[u.id]}" aria-label="More for the ${u.name}">${svg('chev', 24)}</button>
+        <div class="dg-more" data-r="more"></div>
+      </div>
+    </article>`);
+}
+const last = new Map();
+function put(el, html) { if (last.get(el) !== html) { last.set(el, html); el.innerHTML = html; } }
+
+let ready = false;
+function render() {
+  if (!ready) return;
+  clearWaitsOnChange();
+  let running = 0;
+  for (const u of UNITS) {
+    const card = unitsEl.querySelector(`[data-u="${u.id}"]`), r = read(u);
+    if (r.on) running++;
+    const R = n => card.querySelector(`[data-r="${n}"]`);
+    put(R('fx'), fxHTML(u, r));
+    put(R('head'), headHTML(u, r));
+    put(R('hero'), heroHTML(u, r));
+    put(R('act'), actHTML(u, r));
+    put(R('tgt'), tgtHTML(u, r));
+    put(R('more'), moreHTML(u, r));
+    card.classList.toggle('offline', r.mood === 'offline');
+    card.style.boxShadow = `0 18px 40px -16px rgba(${u.accents[r.mood] || '190,194,204'},0.26)`;
+  }
+  $('secSum').textContent = running ? running + ' running' : 'Off';
+}
+
+// ---------------------------------------------------------------------------
+// Taps.
+unitsEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+  const u = UNITS.find(x => x.id === b.closest('[data-u]').dataset.u), r = read(u), a = b.dataset.a;
+  if (a === 'more') {
+    const card = b.closest('.dg'), open = !card.classList.contains('open');
+    card.classList.toggle('open', open); b.setAttribute('aria-expanded', open);
+    openMore[u.id] = open; store.set('more', openMore);
+    if (open) setTimeout(() => card.querySelector('.dg-more').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+    return;
+  }
+  if (a === 'power') return call('humidifier', 'toggle', { entity_id: u.hum }, u, 'power');
+  if (a === 'fan') {
+    // Step through the fan's own presets (Low <-> High on both units today).
+    const f = st(u.fan) || { attributes: {} }, l = f.attributes.preset_modes || ['Low', 'High'];
+    const i = l.indexOf(f.attributes.preset_mode);
+    return call('fan', 'set_preset_mode', { entity_id: u.fan, preset_mode: l[(i + 1) % l.length] }, u, 'fan');
+  }
+  if (a === 'mode') { if (b.dataset.v !== r.md) call('humidifier', 'set_mode', { entity_id: u.hum, mode: b.dataset.v }, u, 'mode'); return; }
+  if (a === 'sw') return call('switch', 'toggle', { entity_id: u[b.dataset.v] }, u, b.dataset.v);
+  if (a === 'minus' || a === 'plus') {
+    const g = pend[u.id] || (pend[u.id] = {}), now = Date.now();
+    const base = pendingTarget(u) ?? r.realTgt ?? 50;
+    g.v = Math.max(T_MIN, Math.min(T_MAX, Math.round(base / T_STEP) * T_STEP + (a === 'plus' ? T_STEP : -T_STEP)));
+    g.t = now;
+    render();
+    clearTimeout(g.h);
+    g.h = setTimeout(() => {
+      g.t = Date.now();
+      call('humidifier', 'set_humidity', { entity_id: u.hum, humidity: g.v }, u, '');
+      setTimeout(render, 5100);   // drop the pending value once it is stale
+    }, 600);
+  }
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ---------------------------------------------------------------------------
+// Status chip, banner and the settings sheet.
+$('gear').innerHTML = svg('cog', 22);
+$('sheetClose').innerHTML = svg('close', 18);
+const sheetWrap = $('sheetWrap');
+function openSheet() {
+  const s = saved();
+  $('haUrl').value = s.url || ''; $('haToken').value = s.token || '';
+  sheetWrap.classList.add('open');
+  syncSheet();
+}
+function closeSheet() { sheetWrap.classList.remove('open'); }
+$('gear').onclick = openSheet; $('bannerBtn').onclick = openSheet;
+$('scrim').onclick = closeSheet; $('sheetClose').onclick = closeSheet;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+let statusDetail = '';
+function syncSheet() {
+  const s = $('haStatus'), live = mode === 'live';
+  $('haForget').hidden = !saved().token;
+  s.className = 'status' + (HA.status === 'error' ? ' bad' : HA.status === 'live' && live ? ' good' : '');
+  s.textContent = !live ? '' :
+    HA.status === 'live' ? 'Connected' + (HA.version ? ' · Home Assistant ' + HA.version : '') :
+    HA.status === 'error' ? statusDetail :
+    HA.status === 'reconnecting' ? 'Connection lost. Reconnecting…' : 'Connecting…';
+}
+function onStatus(s, detail) {
+  if (detail !== undefined) statusDetail = detail;
+  const chip = $('chip'), words = { live: 'Live', connecting: 'Connecting', reconnecting: 'Reconnecting', error: 'Not connected', off: 'Preview' };
+  const shown = mode === 'preview' ? 'preview' : s;
+  chip.dataset.s = shown; chip.lastElementChild.textContent = mode === 'preview' ? 'Preview' : words[s] || s;
+  $('banner').hidden = mode !== 'preview';
+  if (s === 'live' && sheetWrap.classList.contains('open') && mode === 'live') setTimeout(closeSheet, 700);
+  syncSheet();
+  render();
+}
+
+// Tidy what was typed into an origin: add https:// if missing, drop any
+// path (a pasted dashboard link), and refuse http:// from an https page.
+function cleanUrl(raw) {
+  let s = raw.trim(); if (!s) throw new Error('Enter your Home Assistant address.');
+  if (!/^[a-z]+:\/\//i.test(s)) s = 'https://' + s;
+  let u; try { u = new URL(s); } catch { throw new Error('That is not a web address.'); }
+  if (!/^https?:$/.test(u.protocol)) throw new Error('The address should start with https://');
+  const local = /^(localhost|127\.|\[::1\])/.test(u.hostname);
+  if (location.protocol === 'https:' && u.protocol === 'http:' && !local)
+    throw new Error('That address is http://. This app is on https, so the browser blocks it. Use an https address, such as your Home Assistant Cloud remote URL.');
+  return u.origin;
+}
+
+$('haForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const bad = msg => { $('haStatus').className = 'status bad'; $('haStatus').textContent = msg; };
+  let url; try { url = cleanUrl($('haUrl').value); } catch (err) { return bad(err.message); }
+  const token = $('haToken').value.trim();
+  if (!token) return bad('Paste a long-lived access token.');
+  $('haUrl').value = url;
+  store.set('ha', { url, token });
+  goLive();
+});
+$('haForget').onclick = () => {
+  store.set('ha', null); $('haToken').value = '';
+  HA.stop(); goPreview(); syncSheet();
+};
+
+function goPreview() { mode = 'preview'; ents = sampleStates(); onStatus('off'); }
+function goLive() {
+  const s = saved();
+  mode = 'live'; ents = {};
+  HA.start(s.url, s.token);
+}
+
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && mode === 'live') HA.wake(); });
+window.addEventListener('online', () => { if (mode === 'live') HA.wake(); });
+
+ready = true;
+if (saved().url && saved().token) goLive(); else goPreview();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+<script src="../home/back.js" defer></script>
+</body>
+</html>
