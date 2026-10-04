@@ -212,6 +212,7 @@
   .usheet .sheet-body { -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px); }
   .usheet h2 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .sheet.dragging { transition: none !important; }
+  .sheet:focus { outline: none; }   /* focused on open so keys stay inside; no ring needed round the whole sheet */
   .dg-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); font-size: 12px; font-weight: 600; white-space: nowrap; letter-spacing: 0; }
   .dg-pill i { width: 7px; height: 7px; border-radius: 50%; background: rgb(240,179,187); box-shadow: 0 0 6px rgba(240,179,187,0.8); }
   .uhero { display: flex; flex-direction: column; align-items: center; padding: 10px 0 18px; text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
@@ -228,8 +229,28 @@
   .rowi .v { font-weight: 600; font-variant-numeric: tabular-nums; opacity: .9; }
   .rowi .v.full { color: rgb(240,179,187); opacity: 1; }
   .rowi .v.due { color: rgb(236,214,150); opacity: 1; }
-  .sw { width: 51px; height: 31px; border-radius: 999px; background: rgba(255,255,255,0.18); position: relative; flex: none; transition: background .25s; }
-  .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform .3s cubic-bezier(.3,1.25,.45,1); }
+  /* Glass switches: a clear track with a lit rim that lets the sky through,
+     and a frosted knob. On, the track takes a soft wash of the unit's colour
+     (--tint, set per switch) with a faint glow instead of a solid fill. */
+  .sw {
+    --tint: 255,255,255;
+    width: 51px; height: 31px; border-radius: 999px; position: relative; flex: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+    -webkit-backdrop-filter: blur(10px) saturate(160%); backdrop-filter: blur(10px) saturate(160%);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.28), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 2px rgba(0,0,0,0.18);
+    transition: background .3s, box-shadow .3s;
+  }
+  .sw.on {
+    background: linear-gradient(180deg, rgba(var(--tint),0.55), rgba(var(--tint),0.30));
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.40), inset 0 1px 1px rgba(255,255,255,0.35), 0 0 14px rgba(var(--tint),0.35);
+  }
+  .sw::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+    background: radial-gradient(120% 90% at 30% 20%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.70) 45%, rgba(255,255,255,0.45) 100%);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.30);
+    transition: transform .3s cubic-bezier(.3,1.25,.45,1);
+  }
   .sw.on::after { transform: translateX(20px); }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); }
   .stat { padding: 12px 6px; text-align: center; }
@@ -255,6 +276,7 @@
   /* In the popup the tiles melt into the unit's sky: no boxes, only
      hairlines between rows, and the sliding thumb to show what is chosen. */
   .usheet .group, .usheet .seg { background: none; box-shadow: none; border-radius: 0; }
+  .usheet .group { overflow: visible; }   /* no box to clip to, and the switches' glow must not be cut off */
   .usheet .seg { padding: 0; }
   .usheet .seg .slthumb { border-radius: 12px; }
   .usheet .rowi { padding: 0 4px; }
@@ -776,7 +798,8 @@ function tgtHTML(u, r) {
 }
 
 // ---- the popup's rows ----
-const swHTML = (u, r, on) => `<span class="sw${on ? ' on' : ''}" style="${on ? `background:rgba(${u.accents[r.mood] === ACC_SHARED.off ? '48,209,88' : u.accents[r.mood]},0.9)` : ''}"></span>`;
+// On, the switch is tinted with the unit's colour; with the unit off (grey sky) it is iOS green.
+const swHTML = (u, r, on) => `<span class="sw${on ? ' on' : ''}" style="--tint:${u.accents[r.mood] === ACC_SHARED.off ? '48,209,88' : u.accents[r.mood]}"></span>`;
 const icon = (n, extra = '') => `<span class="ic"${extra}>${svg(n, 18)}</span>`;
 
 function powerRowHTML(u, r) {
