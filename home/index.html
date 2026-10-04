@@ -399,7 +399,7 @@
     { id: 'notes',   name: 'Notes',   path: '../notes/' },
     { id: 'podcasts', name: 'Podcasts', path: '../podcasts/' },
     { id: 'travel',  name: 'Travel',  path: '../travel/' },
-    { id: 'places',  name: 'Places',  path: '../places/' },
+    { id: 'places',  name: 'Places',  path: '../places/', v: 2 },   // v: bumped when the icon changes, so the tile fetches it afresh
   ];
   const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/><circle cx="12" cy="12" r="3"/></svg>';
 
@@ -456,7 +456,7 @@
 
   const tile = a => `
       <a class="app" href="${a.path}" data-id="${a.id}" draggable="false">
-        <span class="icon"><img src="${a.path}icon-512.png" alt="" width="60" height="60" decoding="async" draggable="false"></span>
+        <span class="icon"><img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="60" height="60" decoding="async" draggable="false"></span>
         <span class="name">${esc(a.name)}</span>
       </a>`;
 
@@ -493,7 +493,7 @@
         const on = inDock.includes(a.id);
         return `
       <div class="opt${auto ? ' dim' : ''}" data-dock="${a.id}">
-        <img src="${a.path}icon-512.png" alt="" width="28" height="28">
+        <img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="28" height="28">
         <span class="label">${esc(a.name)}</span>
         <button class="switch" role="switch" aria-checked="${on}" aria-label="${esc(a.name)} in the dock" ${auto || (full && !on) ? 'disabled' : ''}></button>
       </div>`;
@@ -523,7 +523,7 @@
       const on = !settings.hidden.includes(a.id);
       return `
       <div class="opt${on ? '' : ' dim'}" data-id="${a.id}">
-        <img src="${a.path}icon-512.png" alt="" width="28" height="28">
+        <img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="28" height="28">
         <span class="label">${esc(a.name)}</span>
         <button class="mini" data-move="-1" aria-label="Move ${esc(a.name)} up" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg></button>
         <button class="mini" data-move="1" aria-label="Move ${esc(a.name)} down" ${i === apps.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></svg></button>
