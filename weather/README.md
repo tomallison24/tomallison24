@@ -54,9 +54,11 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   Places: that hour's temperature and weather, feels like, humidity, wind
   (arrow, speed, where from), chance of rain, and the day's sunrise and sunset,
   with arrows to step through the hours. The view you pick is remembered.
-- **Five views of the timeline**: five little glass buttons above the hours
+- **Six views of the timeline**: six little glass buttons above the hours
   (with a thumb that slides between them) switch what the main card shows:
-  **Hourly** (temperature, with rain bars), **Feels like** (each hour's
+  **Hourly** (temperature, with rain bars), **Rain** (an umbrella: each
+  hour's chance of rain on the curve, or Open-Meteo's amount, with a bar under
+  the hours of 20% and up; dry hours' umbrellas fade back), **Feels like** (each hour's
   heat index or wind chill, with the rain chance underneath as on Hourly;
   how far it is from the air temperature is in the hour popup),
   **Humidity** (with Dry / Comfy / Humid / Muggy), **Wind** (an arrow
