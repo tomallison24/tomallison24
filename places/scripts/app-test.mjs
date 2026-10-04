@@ -145,6 +145,15 @@ ok('it moves to Been', (await toastText()).includes('Moved to Been') && (await p
 await page.click('#seg [data-tab="been"]'); await page.waitForTimeout(300);
 r = await rows();
 ok('Been shows its stars, price and the day you went', r.length === 1 && r[0].includes('★★★★') && r[0].includes('$$$') && r[0].includes('Today'), r.join(' / '));
+// ---- visits ----
+await page.click('#list .row:has-text("Rioja")'); await page.waitForTimeout(300);
+await page.fill('#plDate', '2026-09-12'); await page.dispatchEvent('#plDate', 'change');
+ok('changing Went on replaces that visit rather than adding one', (await page.textContent('#plDateHint')).startsWith('The day you went'));
+await page.click('#plAgain');
+ok('Went again today keeps the earlier visit', (await page.inputValue('#plDate')) === today && (await page.textContent('#plDateHint')).includes('Been 2 times') && (await page.textContent('#plDateHint')).includes('Sep 12'), await page.textContent('#plDateHint'));
+await page.click('#plSave'); await page.waitForTimeout(300);
+r = await rows();
+ok('the list shows how many times you’ve been', r[0].includes('2×'), r.join(' / '));
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '1-been.png') });
 await page.click('#seg [data-tab="want"]'); await page.waitForTimeout(200);
 

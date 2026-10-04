@@ -24,7 +24,8 @@
   const miles = /^en-(US|LR|MM)$/i.test(navigator.language || 'en-US');
 
   // ---------- data ----------
-  // A place: { id, name, status: 'want'|'been', rating 0-5, price 0-4, planned, visited (YYYY-MM-DD),
+  // A place: { id, name, status: 'want'|'been', rating 0-5, price 0-4, planned, visited (YYYY-MM-DD, the latest visit),
+  //   visits [YYYY-MM-DD, newest first], cal {uid, at} (added from the Family calendar: scripts/from-calendar.mjs),
   //   notes, tags[], lat, lon, address, city, category, emoji, osm {type, id}, info {hours, phone, website, cuisine, at},
   //   created, updated }
   function tidy(p) {
@@ -35,6 +36,8 @@
       id: s(p.id, 40) || newId(), name: s(p.name, 200), status: p.status === 'been' ? 'been' : 'want',
       rating: Math.max(0, Math.min(5, Math.round(n(p.rating) || 0))), price: Math.max(0, Math.min(4, Math.round(n(p.price) || 0))),
       planned: date(p.planned), visited: date(p.visited), notes: s(p.notes, 5000),
+      visits: [...new Set((Array.isArray(p.visits) ? p.visits : []).concat(p.visited || []).map(date).filter(Boolean))].sort().reverse().slice(0, 200),
+      cal: p.cal && typeof p.cal.uid === 'string' ? { uid: s(p.cal.uid, 300), at: n(p.cal.at) || 0 } : null,
       tags: Array.isArray(p.tags) ? p.tags.map(t => s(t, 40)).filter(Boolean).slice(0, 30) : [],
       lat: n(p.lat), lon: n(p.lon), address: s(p.address, 300), city: s(p.city, 100), category: s(p.category, 60), emoji: s(p.emoji, 8) || '📍',
       osm: p.osm && /^(node|way|relation)$/.test(p.osm.type) && n(p.osm.id) ? { type: p.osm.type, id: n(p.osm.id) } : null,
@@ -95,7 +98,7 @@
     const d = distOf(p);
     const sub = [p.category, p.city || (p.address || '').split(',')[0], fmtDist(d)].filter(Boolean).join(' · ') || (p.notes || '').split('\n')[0];
     const right = p.status === 'been'
-      ? (p.rating ? starsHtml(p.rating) : '') + (p.price ? '<span class="price">' + priceTxt(p.price) + '</span>' : '') + (p.visited ? '<span>' + esc(fmtDate(p.visited)) + '</span>' : '')
+      ? (p.rating ? starsHtml(p.rating) : '') + (p.price ? '<span class="price">' + priceTxt(p.price) + '</span>' : '') + (p.visited ? '<span>' + esc(fmtDate(p.visited)) + (p.visits.length > 1 ? ' · ' + p.visits.length + '×' : '') + '</span>' : '')
       : (p.planned ? '<span class="when">' + esc(fmtDate(p.planned)) + '</span>' : '') + (p.price ? '<span class="price">' + priceTxt(p.price) + '</span>' : '');
     return '<button class="row" type="button" data-id="' + esc(p.id) + '"><span class="em" aria-hidden="true">' + esc(p.emoji) + '</span>'
       + '<span class="t"><b>' + esc(p.name || 'Untitled') + '</b><small>' + esc(sub) + '</small></span><span class="r">' + right + '</span></button>';
@@ -344,7 +347,11 @@
     $('plRate').innerHTML = [1, 2, 3, 4, 5].map(n => '<button type="button" role="radio" data-r="' + n + '" aria-checked="' + (p.rating === n) + '" aria-label="' + n + (n === 1 ? ' star' : ' stars') + '" class="' + (n <= p.rating ? 'on' : '') + '">★</button>').join('');
     $('plPrice').innerHTML = [1, 2, 3, 4].map(n => '<button class="opt" type="button" role="radio" data-p="' + n + '" aria-checked="' + (p.price === n) + '">' + '$'.repeat(n) + '</button>').join('');
     $('plDateLbl').textContent = been ? 'Went on' : 'Planned for';
-    $('plDateHint').textContent = been ? 'The day you went. Been is sorted most recent first.' : 'An event or a booking? Put its date here. Want to go is sorted soonest first.';
+    const others = been ? p.visits.filter(v => v !== p.visited) : [];
+    $('plDateHint').textContent = been ? (others.length ? 'Been ' + (others.length + 1) + ' times. Before that: ' + others.map(fmtDate).join(', ') + '.' : 'The day you went. Been is sorted most recent first.')
+      : 'An event or a booking? Put its date here. Want to go is sorted soonest first.';
+    $('plAgain').hidden = !been || p.visited === today();
+    $('plCal').hidden = !p.cal;
     $('plDate').value = (been ? p.visited : p.planned) || '';
     $('plDateClear').hidden = !$('plDate').value;
     const i = p.info, rows = [];
@@ -383,9 +390,15 @@
   });
   $('plRate').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (b) { const n = +b.dataset.r; st.edit.rating = st.edit.rating === n ? 0 : n; renderPlace(); } });
   $('plPrice').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { const n = +b.dataset.p; st.edit.price = st.edit.price === n ? 0 : n; renderPlace(); } });
-  $('plDate').addEventListener('change', e => { st.edit[st.edit.status === 'been' ? 'visited' : 'planned'] = e.target.value || null; renderPlace(); });
-  $('plDateClear').onclick = () => { st.edit[st.edit.status === 'been' ? 'visited' : 'planned'] = null; renderPlace(); };
+  $('plDate').addEventListener('change', e => {
+    const p = st.edit, v = e.target.value || null;
+    if (p.status === 'been') { p.visits = p.visits.filter(x => x !== p.visited); p.visited = v; } else p.planned = v;
+    renderPlace();
+  });
+  $('plDateClear').onclick = () => { const p = st.edit; if (p.status === 'been') { p.visits = p.visits.filter(x => x !== p.visited); p.visited = p.visits[0] || null; } else p.planned = null; renderPlace(); };
   $('plToday').onclick = () => { st.edit[st.edit.status === 'been' ? 'visited' : 'planned'] = today(); renderPlace(); };
+  // Went again: today becomes the latest visit, and the earlier ones are kept.
+  $('plAgain').onclick = () => { const p = st.edit; if (p.visited) p.visits = [...new Set([p.visited, ...p.visits])]; p.visited = today(); renderPlace(); };
   $('plSave').onclick = () => {
     const p = st.edit;
     p.name = $('plName').value.trim(); p.notes = $('plNotes').value.replace(/\s+$/, ''); p.tags = tagsOf(p.notes);

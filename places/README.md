@@ -10,6 +10,11 @@ same frosted glass as the other AllisonOS apps.
   been), **price** ($–$$$$), a **date** (Planned for, for an event or a
   booking; Went on, once you've been), and **notes** with `#tags`
   (`#brunch`, `#date-night`), which become filters at the top.
+- **Every visit**: a place keeps each day you went. **Went again today** adds
+  one (changing Went on corrects the latest instead); the place shows "Been 3
+  times. Before that: …", and the list shows **3×**.
+- **From your calendar**: dinners, drinks, shows and museum trips in the
+  Family calendar are added by themselves (below).
 - **Sorting**: Want to go by **Soonest** (dated plans first, grouped into
   Coming up / Someday / Date passed), **Nearest** or **Newest**; Been by
   **Recent**, **Top rated** or **Nearest**. The search box finds your places
@@ -56,6 +61,53 @@ Places sends your searches and, when you add one, your position to Photon,
 and a place's OpenStreetMap id to Overpass. Nothing else leaves the phone
 except the Google Sheet sync below.
 
+## From your calendar
+
+Every three hours a GitHub workflow (`.github/workflows/places-calendar.yml`,
+`scripts/from-calendar.mjs`) reads the iCloud **Family** calendar, a year
+back and a year ahead, and adds outings to Places through the Sheet; the
+phones pick them up on their next sync.
+
+- **What counts** (`calendar.mjs`): an event that happens once, whose
+  location OpenStreetMap knows as somewhere you'd go out: a restaurant, café,
+  bar, pub, bakery, brewery or winery; a museum, gallery, theatre, cinema or
+  concert hall; a zoo, aquarium, theme park, attraction or castle; a stadium,
+  bowling alley, escape room and the like. The location Apple Calendar saves
+  (its name and pin) is matched to the OpenStreetMap place within 250 m.
+- **What doesn't**: repeating events (practices, lessons, clubs), titles like
+  training, practice, lesson, appointment, dentist, doctor, pickup or
+  drop-off, and locations that are homes, offices, schools, churches, parks,
+  sports fields or gyms. So *Fearless Foxes training* never shows up, and
+  neither does a one-off training at a park.
+- **What it does**: a past event is a visit: the place goes into **Been**
+  with that date (or, if you already have it, gets the visit added). A coming
+  event goes into **Want to go**, Planned for that date, and moves to Been by
+  itself once the day has passed, unless you've changed it since. Places from
+  the calendar say "📅 Added from the Family calendar", with the event's title
+  in their notes. Nothing is ever deleted or rated for you.
+- **Limits**: only the Family calendar (the one the Calendar app shows); a
+  weekly dinner at the same place is a repeating event, so it's skipped;
+  places OpenStreetMap doesn't know aren't added. The first run looks up at
+  most 80 locations, the rest over the next runs; after that only new events
+  are looked up.
+- **Privacy**: event locations go to Photon to find the place; the workflow's
+  log shows only counts, never titles or places (the log can be read by
+  anyone who can see the repository).
+
+### Set up (once)
+
+It uses the Apple ID secrets the Calendar app already has (`ICLOUD_APPLE_ID`,
+`ICLOUD_APP_PASSWORD`, and `ICLOUD_CALENDAR` if yours isn't called Family;
+calendar/README.md, "Set up"), plus the Notes Sheet:
+
+1. GitHub → the repository → **Settings → Secrets and variables → Actions →
+   New repository secret**: `NOTES_SHEET_URL` (the Sheet's web app link, ending
+   in `/exec`) and `NOTES_SHEET_SECRET` (its SECRET).
+2. The Sheet's script must be the updated one (below).
+3. **Actions → Places from Calendar → Run workflow** to run it now; it then
+   runs every three hours by itself. Until the secrets exist it just says it
+   isn't set up.
+
 ## Two phones: the Notes Google Sheet
 
 Places keeps its lists in **the same Google Sheet as Notes**, with the same
@@ -89,6 +141,9 @@ and deleted places are remembered so the other phone deletes them too.
   on Home.
 
 Tests: `node places/scripts/parse-test.mjs` (map links, search results,
-tags, hours) and `node places/scripts/app-test.mjs` (the app in headless
-Chromium against stand-ins for Photon, Overpass, the map tiles and the
-Sheet). Neither talks to the real services or a real iPhone.
+tags, hours), `node places/scripts/calendar-test.mjs` (which events count and
+what they change), `node places/scripts/from-calendar-test.mjs` (the calendar
+workflow end to end, with iCloud, Photon and the Sheet as stand-ins) and
+`node places/scripts/app-test.mjs` (the app in headless Chromium against
+stand-ins for Photon, Overpass, the map tiles and the Sheet). None of them
+talks to the real services or a real iPhone.

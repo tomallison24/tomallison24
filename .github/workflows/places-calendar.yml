@@ -1,0 +1,58 @@
+# Adds outings from the iCloud Family calendar (restaurants, bars, museums and
+# the like; not practices, lessons or appointments) to the Places app, through
+# the Notes Google Sheet it syncs with. See places/README.md, "From your calendar".
+#
+# Needs the repository secrets the Calendar app already uses (ICLOUD_APPLE_ID,
+# ICLOUD_APP_PASSWORD, optionally ICLOUD_CALENDAR) plus NOTES_SHEET_URL and
+# NOTES_SHEET_SECRET. Until they exist it does nothing, so it is safe to leave on.
+name: Places from Calendar
+
+on:
+  schedule:
+    # Every three hours, off the hour (GitHub delays or drops runs at busy times).
+    - cron: '25 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: places-calendar
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to exact commits (version in the comment), as in the other
+      # workflows: a tag can be moved to new code, and this job can read the
+      # repo's secrets.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - name: Test
+        run: node places/scripts/calendar-test.mjs && node places/scripts/from-calendar-test.mjs
+      # Which events were already looked up, so each is looked up once.
+      - name: Restore what was looked up
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        with:
+          path: .cache-places
+          key: places-seen-${{ github.run_id }}
+          restore-keys: places-seen-
+      - name: Add outings to Places
+        env:
+          ICLOUD_APPLE_ID: ${{ secrets.ICLOUD_APPLE_ID }}
+          ICLOUD_APP_PASSWORD: ${{ secrets.ICLOUD_APP_PASSWORD }}
+          ICLOUD_CALENDAR: ${{ secrets.ICLOUD_CALENDAR }}
+          NOTES_SHEET_URL: ${{ secrets.NOTES_SHEET_URL }}
+          NOTES_SHEET_SECRET: ${{ secrets.NOTES_SHEET_SECRET }}
+          PLACES_TZ: ${{ vars.PLACES_TZ }}
+        run: node places/scripts/from-calendar.mjs
+      - name: Keep what was looked up
+        if: always()
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        with:
+          path: .cache-places
+          key: places-seen-${{ github.run_id }}
