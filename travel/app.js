@@ -495,7 +495,7 @@ if (window.top !== window.self) {
       s = [side === 'start' ? b.pickupPlace : (b.dropPlace || b.pickupPlace), side === 'start' ? b.carClass : ''].filter(Boolean).join(' · ');
     } else { t = b.title || 'Booking'; s = b.place || ''; }
     const meta = [statusPill(b), b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
-    return '<button class="ev ' + b.type + cx + '" type="button" data-bk="' + esc(b.id) + '">'
+    return '<button class="ev ' + esc(b.type) + cx + '" type="button" data-bk="' + esc(b.id) + '">'
       + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(fmtDay(at)) + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
       + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
@@ -1023,7 +1023,7 @@ if (window.top !== window.self) {
   }
   const fileName = s => (s || 'trip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'trip';
   function ics(list) {
-    const e2 = v => String(v || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
+    const e2 = v => String(v || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\r\n|\r|\n/g, '\\n');   // \r too: a lone \r would start a line of its own
     const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
     const utcS = t => new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
     const floating = at => at.replace(/[-:]/g, '').slice(0, 13) + '00';
@@ -1210,7 +1210,8 @@ if (window.top !== window.self) {
       local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
       return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
-    bookings = mergeKind('bookings', bookings, res.bookings);
+    // Only bookings of a type this app knows, as the backup import requires.
+    bookings = mergeKind('bookings', bookings, (res.bookings || []).filter(b => b && /^(flight|hotel|car|other)$/.test(b.type)));
     trips = mergeKind('trips', trips, res.trips);
     initShadow(); persist();
     if (localNewer) syncAgain = true;

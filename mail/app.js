@@ -446,7 +446,7 @@ async function hydrate(ids, hist) {
     else need.push(id);
   }
   let stop = null;
-  const got = await pool(need, 4, id => api('/threads/' + id, {
+  const got = await pool(need, 4, id => api('/threads/' + encodeURIComponent(id), {
     params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'Content-Type'] },
   }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) stop = e; return null; }));
   if (stop) throw stop;                             // a half-drawn list would look like mail had gone
@@ -508,7 +508,7 @@ async function partText(msgId, part) {
 // Every message in a conversation, oldest first: who, when, the text in
 // both forms, and the files attached.
 async function fetchThread(item) {
-  const t = await api('/threads/' + item.threadId, { params: { format: 'full' } });
+  const t = await api('/threads/' + encodeURIComponent(item.threadId), { params: { format: 'full' } });
   const live = (t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH'));
   return Promise.all((live.length ? live : t.messages || []).map(async m => {
     const html = findPart(m.payload, 'text/html'), text = findPart(m.payload, 'text/plain');
@@ -578,7 +578,9 @@ function attachmentsOf(node, out = []) {
 // only lets this page measure the frame to size it.
 function emailDoc(html, images) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const n of doc.querySelectorAll('script, noscript, meta, link, base, title, iframe, frame, frameset, object, embed, applet, form')) n.remove();
+  // SVG animation (set, animate…) is removed too: it could change a link into
+  // javascript: after the check below has passed it.
+  for (const n of doc.querySelectorAll('script, noscript, meta, link, base, title, iframe, frame, frameset, object, embed, applet, form, set, animate, animateMotion, animateTransform, discard')) n.remove();
   for (const el of doc.querySelectorAll('*')) {
     for (const a of [...el.attributes]) if (/^on|^ping$/i.test(a.name)) el.removeAttribute(a.name);
   }
@@ -712,7 +714,7 @@ async function relabel(ids, add = [], remove = []) {
 
 async function relabelThread(threadId, add = [], remove = []) {
   if (!add.length && !remove.length) return;
-  await api('/threads/' + threadId + '/modify', {
+  await api('/threads/' + encodeURIComponent(threadId) + '/modify', {
     method: 'POST',
     body: { ...(add.length && { addLabelIds: add }), ...(remove.length && { removeLabelIds: remove }) },
   });
@@ -1204,7 +1206,7 @@ async function tidyPlan({ progress, alive = () => true, onPause, limit = TIDY_CA
   progress?.(0, todo.length);
   for (const { id } of todo) {
     if (!alive()) break;
-    const t = await call('/threads/' + id, {
+    const t = await call('/threads/' + encodeURIComponent(id), {
       params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
     }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
     const item = t && buildRow(t);
@@ -1333,7 +1335,7 @@ async function marketingSort({ progress, alive = () => true } = {}) {
   };
   for (const { id } of todo) {
     if (!alive()) break;
-    const t = await call('/threads/' + id, {
+    const t = await call('/threads/' + encodeURIComponent(id), {
       params: { format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Id', 'Precedence'] },
     }).catch(e => { if (e instanceof QuotaError || e instanceof AuthError) throw e; return null; });
     const item = t && buildRow(t);
@@ -2939,7 +2941,7 @@ async function remindMe(item, date) {
   quietOnce = true;
   render();
   try {
-    const snap = await api('/threads/' + tid, { params: { format: 'minimal' } });
+    const snap = await api('/threads/' + encodeURIComponent(tid), { params: { format: 'minimal' } });
     const inboxMsgs = (snap.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id);
     const label = await labelNamed('Remind ' + dayStr(date), { create: true });
     await relabelThread(tid, [label.id], ['INBOX']);
@@ -3359,11 +3361,11 @@ async function throwAway(items, how) {
   const back = { tids, how, inboxMsgs: [] };
   let missed = 0;
   try {
-    const snaps = await pool(tids, 6, id => api('/threads/' + id, { params: { format: 'minimal' } }).catch(() => null));
+    const snaps = await pool(tids, 6, id => api('/threads/' + encodeURIComponent(id), { params: { format: 'minimal' } }).catch(() => null));
     back.inboxMsgs = snaps.filter(Boolean).flatMap(t => (t.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id));
     await pool(tids, 6, async id => {
       try {
-        if (how === 'trash') await api('/threads/' + id + '/trash', { method: 'POST' });
+        if (how === 'trash') await api('/threads/' + encodeURIComponent(id) + '/trash', { method: 'POST' });
         else await relabelThread(id, [], ['INBOX']);
       } catch (e) { if (e instanceof AuthError) throw e; missed++; }
     });
@@ -3376,7 +3378,7 @@ async function throwAway(items, how) {
 
 async function bringBack(back) {
   try {
-    if (back.how === 'trash') await pool(back.tids, 6, id => api('/threads/' + id + '/untrash', { method: 'POST' }));
+    if (back.how === 'trash') await pool(back.tids, 6, id => api('/threads/' + encodeURIComponent(id) + '/untrash', { method: 'POST' }));
     await relabel(back.inboxMsgs, ['INBOX']);
     toast('Put back');
     state.lists = {};
@@ -3746,7 +3748,7 @@ async function undo(back) {
     // An open message shows its tags: read them back from Gmail.
     const r = state.reading;
     if (r) {
-      const t = await api('/threads/' + r.item.threadId, { params: { format: 'minimal' } });
+      const t = await api('/threads/' + encodeURIComponent(r.item.threadId), { params: { format: 'minimal' } });
       r.item.labelIds = [...new Set((t.messages || []).filter(m => !(m.labelIds || []).includes('TRASH')).flatMap(m => m.labelIds || []))];
       const box = $('#rtags');
       if (box && state.reading === r) box.innerHTML = tagChips(r.item.labelIds);

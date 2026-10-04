@@ -106,7 +106,7 @@
   // Props by name
   const prop = (c, name) => c.props.find(p => p.name === name) || null;
   const props = (c, name) => c.props.filter(p => p.name === name);
-  const escText = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/[;,]/g, m => '\\' + m).replace(/\r?\n/g, '\\n');
+  const escText = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/[;,]/g, m => '\\' + m).replace(/\r\n|\r|\n/g, '\\n');   // a lone \r is a line break too
   const unescText = s => String(s == null ? '' : s).replace(/\\([\\;,nN])/g, (m, c) => c === 'n' || c === 'N' ? '\n' : c);
   const text = (c, name) => { const p = prop(c, name); return p ? unescText(p.value) : ''; };
   function setProp(c, name, value, params) {

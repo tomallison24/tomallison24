@@ -50,8 +50,10 @@ Mail and News. Free, no accounts, no server.
   On iPhone a Home Screen app keeps separate storage from Safari, so a link
   opened in Safari offers to copy it for pasting into the Home Screen app.
 - **Backup**: the download button makes one `.json` file with everything.
-  **Import** restores it, or opens a shared file. A banner appears when the
-  last backup is more than 7 days old.
+  **Import** restores it, or opens a shared file. Restoring asks first ("Add
+  3 notes, 2 reminders and 1 list from this file?"), and only restore files
+  you made yourself. A banner appears when the last backup is more than 7
+  days old.
 - **Add to calendar**: a reminder with a date goes straight into the iCloud
   Family calendar where the site is on Cloudflare (through the Calendar app's
   function, see `calendar/README.md`), so the phone's calendar does the
@@ -231,8 +233,22 @@ connect again with the setup link or the saved password.
 Edit it, **Save**, then **Deploy → Manage deployments → ✏️ Edit → Version:
 New version → Deploy**. The URL stays the same.
 
+**2026-10 update, worth doing once:** the script now keeps any text that
+starts with `=`, `+`, `-` or `@` as text, so a note titled like a formula
+(`=IMPORTXML(…)`) can never run as one in the Sheet. Paste the new
+`google-sheet-sync.gs` over the old one and deploy a new version as above.
+
 ### Keep in mind
 
+- **Setup links**: a link opens the sync sheet already filled in and says
+  which Sheet it points to (`script.google.com/macros/s/AKfy…/exec`), and
+  warns if it isn't the one this phone already uses. Only tap Connect for a
+  link that came from your own Notes. A link's notification server is only
+  taken once Connect works.
+- **Anything that comes from the Sheet or a backup file is checked** before
+  Notes keeps it, and ids and colours are escaped wherever they are drawn, so
+  nothing in them can become part of the page
+  (`node notes/scripts/security-test.mjs` tries).
 - Anyone with both the URL and the secret can read and change the notes, so
   keep them private.
 - Free Google accounts have daily Apps Script limits; two people syncing notes

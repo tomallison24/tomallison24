@@ -111,6 +111,40 @@ password and update the secret (Apple cancels them when the Apple ID's
 password changes). If it says no calendar of that name, it lists the names
 it found; set `ICLOUD_CALENDAR` to one of them.
 
+## Locking the server functions
+
+Everything under `/…/api/` (this app's iCloud connection, Travel's flight
+status, Podcasts' feed fetcher, Weather's radar run time) runs on Cloudflare
+with the owner's secrets. Cloudflare Access in front of the site is what keeps
+strangers out; `functions/_middleware.js` adds a second lock in the functions
+themselves, so they refuse any `/api/` request without a valid Access sign-in
+even if Access were ever off for some address (the `….pages.dev` one, a
+preview deployment).
+
+It is **off until you give it two values**, then on for every deploy after:
+
+1. Cloudflare dashboard → **Zero Trust → Access → Applications** → the
+   application in front of the site → **Overview**: copy the **Application
+   Audience (AUD) Tag**.
+2. Your team domain is `https://<team>.cloudflareaccess.com`, where
+   `<team>` is your Zero Trust team name (shown in Zero Trust's settings; it
+   is also the address of the sign-in page Access shows you).
+3. GitHub → the repository → **Settings → Secrets and variables → Actions →
+   New repository secret**: `ACCESS_AUD` (the tag) and `ACCESS_TEAM_DOMAIN`
+   (the team domain, with `https://`).
+4. Re-run the News workflow (or wait for the next run). From then on, an
+   `/api/` request without a valid sign-in gets `403 {"error":"access"}`.
+
+While you're there, check the Access application covers **both**
+`tomallison24-news.pages.dev` and `*.tomallison24-news.pages.dev`, as well as
+any custom domain.
+
+The check is Cloudflare's own (as in its Access plugin for Pages): an RS256
+token from the `Cf-Access-Jwt-Assertion` header, signed by a key from the
+team's `/cdn-cgi/access/certs`, with this team as issuer, this application in
+its audience, and not expired. `node calendar/scripts/access-test.mjs` tests
+it with a key of its own.
+
 ## How it's built
 
 - **No build step.** `index.html` is the page and its look (Notes' style
@@ -137,6 +171,7 @@ it found; set `ICLOUD_CALENDAR` to one of them.
 ```sh
 node calendar/scripts/ical-test.mjs   # reading, writing, repeats, zones
 node calendar/scripts/api-test.mjs    # the CalDAV function, iCloud stubbed
+node calendar/scripts/access-test.mjs # the Access check in front of every function
 node calendar/scripts/app-test.mjs    # the app in headless Chromium, iCloud stubbed
 node calendar/scripts/make-icons.mjs  # redraws icon-512.png and icon-180.png from icon.svg
 ```
