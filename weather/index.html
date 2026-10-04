@@ -408,7 +408,7 @@
         <button data-u="us" aria-pressed="true">°F · mph · in</button>
         <button data-u="metric" aria-pressed="false">°C · km/h · mm</button>
       </div>
-      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. In the continental US, when rain starts or stops in the next two hours comes from Open-Meteo's 15-minute forecast. Your location goes only to those services.</p>
+      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. In the continental US, when rain starts or stops comes from Open-Meteo's 15-minute forecast. Your location goes only to those services.</p>
     </div>
   </section>
 </div>
@@ -898,15 +898,15 @@ async function fromOpenMeteo(lat, lon) {
   };
 }
 
-// ---- Rain in the next two hours (continental US) ----
+// ---- Rain starting or stopping (continental US) ----
 // Open-Meteo's 15-minute precipitation, which over North America is NOAA's HRRR model (1 km,
-// run every hour). Each value is the total for the 15 minutes before its time, so a slot is
-// kept as [its start, 0 dry / 1 rain / 2 snow]. Snowfall is in cm; 7 cm of snow is about
-// 10 mm of water, so a slot is snow when snow makes up at least half of what falls.
+// run every hour), for the next six hours. Each value is the total for the 15 minutes before
+// its time, so a slot is kept as [its start, 0 dry / 1 rain / 2 snow]. Snowfall is in cm; 7 cm
+// of snow is about 10 mm of water, so a slot is snow when snow makes up at least half of it.
 async function fromNowcast(lat, lon) {
   const om = await getJSON('https://api.open-meteo.com/v1/forecast'
     + `?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`
-    + '&minutely_15=precipitation,snowfall&past_minutely_15=1&forecast_minutely_15=12&timeformat=unixtime&timezone=auto');
+    + '&minutely_15=precipitation,snowfall&past_minutely_15=1&forecast_minutely_15=24&timeformat=unixtime&timezone=auto');
   const M = om.minutely_15;
   if (!M || !Array.isArray(M.time) || !Array.isArray(M.precipitation)) throw new Error('No 15-minute forecast');
   return M.time.map((t, i) => {
@@ -915,21 +915,27 @@ async function fromNowcast(lat, lon) {
   });
 }
 
-// "Rain at 3:45PM" when it is dry now and rain is due within two hours; "Rain stops at 4:15PM"
-// when it is raining now and stops within two hours. Otherwise nothing. Worked out on every
-// repaint, so it moves on with the clock; a forecast over 90 minutes old says nothing.
+// Raining now (by the model, or by the station or forecast behind the current conditions):
+// "Rain stops at 4:15PM" at the first dry quarter, or "Rain through 6:15PM" when it doesn't
+// stop in the six hours there are. Dry now: "Rain at 3:45PM" when rain is due within two
+// hours, else nothing. Worked out on every repaint, so it moves on with the clock; a forecast
+// over 90 minutes old says nothing.
+const RAINY = ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail'];
 function soonLine(b, now) {
   const s = Array.isArray(b.soon) ? b.soon.filter(x => Array.isArray(x) && Number.isFinite(x[0])) : [];   // saved data may be damaged
   if (!s.length || !b.fetchedAt || now - b.fetchedAt / 1000 > 5400) return null;
   const cur = s.findIndex(([t]) => t <= now && now < t + 900);
   if (cur < 0) return null;
   const word = k => k === 2 ? 'Snow' : 'Rain';
-  const ahead = s.slice(cur + 1).filter(([t]) => t < now + 7200);
-  if (s[cur][1]) {
-    const dry = ahead.find(([, k]) => !k);
-    return dry ? `${word(s[cur][1])} stops at ${minFmt(dry[0], b.tz)}` : null;
+  const after = s.slice(cur + 1);
+  const seen = b.cur && RAINY.includes(b.cur.c) ? 1 : b.cur && b.cur.c === 'snowy' ? 2 : 0;
+  const k = s[cur][1] || seen;
+  if (k) {
+    if (!after.length) return null;
+    const dry = after.find(([, x]) => !x);
+    return dry ? `${word(k)} stops at ${minFmt(dry[0], b.tz)}` : `${word(k)} through ${minFmt(s[s.length - 1][0] + 900, b.tz)}`;
   }
-  const wetSlot = ahead.find(([, k]) => k);
+  const wetSlot = after.find(([t, x]) => x && t < now + 7200);
   return wetSlot ? `${word(wetSlot[1])} at ${minFmt(wetSlot[0], b.tz)}` : null;
 }
 
