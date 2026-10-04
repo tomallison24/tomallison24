@@ -252,6 +252,16 @@
   }
   .slthumb.off { opacity: 0; scale: .7; }
   .seg.slides button[aria-pressed="true"] { background: none; box-shadow: none; }
+  /* In the popup the tiles melt into the unit's sky: no boxes, only
+     hairlines between rows, and the sliding thumb to show what is chosen. */
+  .usheet .group, .usheet .seg { background: none; box-shadow: none; border-radius: 0; }
+  .usheet .seg { padding: 0; }
+  .usheet .seg .slthumb { border-radius: 12px; }
+  .usheet .rowi { padding: 0 4px; }
+  .usheet .rowi + .rowi { border-top-color: rgba(255,255,255,0.13); }
+  .usheet .rowi .ic { background: none; width: 26px; }
+  .usheet .stat { padding: 6px 4px; }
+  .usheet .stat + .stat { border-left-color: rgba(255,255,255,0.13); }
 
   @media (prefers-reduced-motion: reduce) { .dg-fx *, .t-in, .tank * { animation: none !important; } }
   /* Small phones: a smaller tank and title, so the words keep to one line. */
