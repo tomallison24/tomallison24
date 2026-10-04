@@ -1208,9 +1208,10 @@ function w3Hero(m) {
     const rot = ((a.wind_bearing || 0) + 180) % 360;
     chips.push(chip('navigation', `${Math.round(a.wind_speed)} ${a.wind_speed_unit || ''}`, `--w3-rot:${rot}deg;transform:rotate(${rot}deg);animation:w3-sway 3s ease-in-out infinite alternate;`, 'w3-sway'));
   }
-  // Rain starting or stopping in the next two hours takes the rain chip's place.
-  if (m.soon) chips.push(chip('umbrella-outline', m.soon));
-  else if (today.r != null) chips.push(chip('umbrella-outline', !wet(m, today.r) ? 'Dry today' : m.rKind === 'pop' ? `${today.r}% chance` : `${today.r} ${a.precipitation_unit || ''}`));
+  // Today's chance of rain always has its own chip (Open-Meteo gives an amount instead), and
+  // rain starting or stopping soon gets one more, with a rain or snow cloud.
+  if (today.r != null) chips.push(chip('umbrella-outline', m.rKind === 'pop' ? `${Math.round(today.r)}% chance` : today.r > 0 ? `${today.r} ${a.precipitation_unit || ''}` : 'Dry today'));
+  if (m.soon) chips.push(chip(m.soon.startsWith('Snow') ? 'weather-snowy' : 'weather-rainy', m.soon));
 
   const gps = S.loc && S.loc.mode === 'gps';
   heroSky = `<div class="w3-sky" style="background:${sky};"></div>${fx}`;   // drawn behind the whole screen by render()
