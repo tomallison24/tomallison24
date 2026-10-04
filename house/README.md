@@ -7,27 +7,32 @@ launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It starts with the
 **dehumidifiers**, the Cube and Upstairs.
 
-The cards are a port of the Signal dashboard's DG1 dehumidifier card
-(ha-config, `views_signal/all_devices.yaml`, the `dg_*` block): the frosted
-glass pane over a water fill at the room humidity, the per-unit skies (Cube
-sea-glass, Upstairs mist blue, rose when the tank is full), mist and motes
-while drying. Same entities, same colours, same timings.
+The look is the Signal dashboard's DG1 dehumidifier card (ha-config,
+`views_signal/all_devices.yaml`, the `dg_*` block): the frosted glass tank
+over a water fill at the room humidity, the per-unit skies (Cube sea-glass,
+Upstairs mist blue, rose when the tank is full), mist and motes while drying.
+Same entities, same colours.
 
-- **On the face**: humidity, Power, Fan (steps through the fan's own presets,
-  Low and High today) and Target (35 to 85 in 5s, as the units' panels do).
-  Target taps add up, as on the dashboard: tap + three times and one
-  `set_humidity` goes 0.6 s after the last tap.
-- **Under the chevron**: Mode (Cube: Set / Continuous / Dry; Upstairs: Set /
-  Smart / Continuous, and only those the unit lists in `available_modes`),
-  Readings (temperature, tank, filter), Features (Ion and Pump only while
-  their switch is available, so the Cube shows Beep alone), Energy (the Tapo
-  plug: now, today, this month). The Cube's plug still has its old
-  `m_d_dyson_*` ids; it is the Cube's real draw. Whether each chevron is open
-  is remembered on the phone.
+- **The cards** are compact, so both units fit on one screen: the tank, what
+  the unit is doing ("Drying to 50%", fan, mode, temperature) and the two
+  controls used every day on one row, **Power** and **Target** (35 to 85 in
+  5s, as the units' panels do). Target taps add up: tap + three times and
+  one `set_humidity` goes 0.6 s after the last tap.
+- **Only what needs you shows on a card**: "Empty the tank" and "Replace
+  filter" appear when they are true and not otherwise.
+- **Everything else is in the unit's popup**: tap a card (or its name). A
+  sheet in that unit's own sky, with the big tank, Target, a Power switch,
+  **Fan** and **Mode** as sliding glass switches (`home/slide.js`, as in the
+  other apps; only the modes the unit lists in `available_modes`),
+  **Readings** (temperature, water tank, filter), **Features** (Ion, Pump,
+  Beep as switches; Ion and Pump only while available, so the Cube shows Beep
+  alone) and **Energy** (the Tapo plug: now, today, this month). The Cube's
+  plug still has its old `m_d_dyson_*` ids; it is the Cube's real draw. Close
+  it with ✕, a tap above it, Escape, or a swipe down.
 - **Live**: a tap blinks softly until Home Assistant reports the change, so
   you can see when the unit has actually done it. A change made anywhere else
-  (the unit's panel, an automation) shows straight away. If Home Assistant
-  turns a call down, a note says why.
+  (the unit's panel, an automation) shows straight away, on the card and in
+  an open popup. If Home Assistant turns a call down, a note says why.
 - **Preview**: with no Home Assistant set up, the app runs on sample readings
   and the controls change those, so the design can be tried first.
 

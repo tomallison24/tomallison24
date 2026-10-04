@@ -18,11 +18,13 @@
   (The folder is house/ because home/ is the AllisonOS launcher; its
   localStorage keys are house.* for the same reason.)
 
-  The cards are a port of the DG1 dehumidifier card in ha-config
+  The look is the DG1 dehumidifier card in ha-config
   (views_signal/all_devices.yaml, dg_*, promoted 2026-09-26): same skies,
-  mist and motes, the frosted pane over a water fill at the room humidity,
-  Power / Fan / Target on the face and Mode / Readings / Features / Energy
-  under the chevron, same colours and timings. What changed is the plumbing:
+  mist and motes, the frosted tank over a water fill at the room humidity.
+  The layout is new: a compact card per unit with only Power and Target on
+  it (and an alert when the tank or filter needs you), and everything else
+  - Fan, Mode, Readings, Features, Energy - in a popup sheet per unit.
+  The plumbing, against the dashboard:
 
     HA dashboard                         HERE
     button-card templates             -> plain functions returning HTML
@@ -31,7 +33,6 @@
     hass.callService                  -> call_service on the same socket
     window.__dgTgt (taps add up)      -> pend{}: same 5 s window, one
                                          set_humidity 600 ms after the last tap
-    input_boolean.signal_dh_*_more    -> localStorage, per phone
     <ha-icon>                         -> inline MDI paths, works offline
 
   Each region of a card is only replaced when its HTML string changes, so a
@@ -65,6 +66,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
+  html.lock, html.lock body { overflow: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
@@ -132,51 +134,60 @@
   @keyframes dg-bub { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-70px); opacity: 0; } }
   @keyframes dg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-  .dg-head { display: flex; justify-content: space-between; align-items: center; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-  .dg-name { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-  .dg-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); font-size: 12px; font-weight: 600; }
-  .dg-pill i { width: 7px; height: 7px; border-radius: 50%; background: rgb(240,179,187); box-shadow: 0 0 6px rgba(240,179,187,0.8); }
 
-  .dg-hero { position: relative; width: 100%; height: 228px; margin-top: -2px; }
-  .dg-glow { position: absolute; left: 50%; top: 86px; width: 290px; height: 290px; margin: -145px 0 0 -145px; border-radius: 50%; animation: dg-breathe 7s ease-in-out infinite alternate; }
-  .dg-tank { position: absolute; left: 50%; top: 12px; width: 148px; height: 148px; margin-left: -74px; border-radius: 44px; overflow: hidden; }
+  /* The compact card: the tank, what the unit is doing, and the two
+     controls used every day (power and target). Tap the card for the rest. */
+  .dg { cursor: pointer; }
+  .dg-top { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+  /* Every control on one row: power, a hairline, then the target. */
+  .dg-ctl { display: flex; align-items: center; gap: 12px; }
+  .dg-ctl > .dg-tgt { flex: 1; min-width: 0; padding: 0; }
+  .dg-ctl .hair { width: 1px; height: 28px; background: rgba(255,255,255,0.14); flex: none; }
+  .dg-info { min-width: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .dg-name { display: inline-flex; align-items: center; gap: 1px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: .85; }
+  .dg-name svg { opacity: .7; }
+  .dg-title { font-size: 22px; font-weight: 300; letter-spacing: -0.3px; line-height: 1.15; margin-top: 4px; }
+  .dg-sub { font-size: 12px; font-weight: 600; opacity: 0.72; margin-top: 4px; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alerts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .alerts:empty { display: none; }
+  .alert { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px 4px 6px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(236,214,150,0.24); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); }
+  .alert.full { background: rgba(240,179,187,0.26); }
+  .pwr {
+    flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.12); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45), 0 4px 12px -6px rgba(0,0,0,0.5);
+    transition: transform .18s cubic-bezier(.22,1,.36,1), background .3s, box-shadow .3s, color .3s;
+  }
+  .pwr:active { transform: scale(0.9); }
+  .pwr:disabled { opacity: .35; }
+
+  /* The tank: DG1's frosted pane over a water fill at the room humidity.
+     Small on the card, full size in the popup. */
+  .tank { position: relative; width: var(--s); height: var(--s); flex: none; }
+  .tank.sm { --s: 104px; --r: 32px; --n: 36px; --p: 16px; }
+  .tank.lg { --s: 148px; --r: 44px; --n: 50px; --p: 22px; }
+  .tank .glow { position: absolute; left: 50%; top: 50%; width: calc(var(--s) * 2); height: calc(var(--s) * 2); margin: calc(var(--s) * -1) 0 0 calc(var(--s) * -1); border-radius: 50%; pointer-events: none; animation: dg-breathe 7s ease-in-out infinite alternate; }
+  .tank .tk { position: absolute; inset: 0; border-radius: var(--r); overflow: hidden; }
   .dg-water { position: absolute; left: 0; right: 0; bottom: 0; transition: height .8s cubic-bezier(.2,.8,.2,1); }
   .dg-wave { position: absolute; left: 0; width: 200%; height: 12px; animation: dg-slide 7s linear infinite; }
   .dg-b { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.55); animation: dg-bub ease-in infinite; }
-  .dg-glass {
-    position: absolute; left: 50%; top: 12px; width: 148px; height: 148px; margin-left: -74px; border-radius: 44px; overflow: hidden;
+  .tank .glass {
+    position: absolute; inset: 0; border-radius: var(--r); overflow: hidden;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: linear-gradient(155deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 42%, rgba(255,255,255,0.035) 100%);
     -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 0 0.5px rgba(255,255,255,0.24), inset 0 -12px 24px -14px rgba(255,255,255,0.14), 0 24px 44px -20px rgba(0,0,0,0.65);
   }
-  .dg-glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(130% 70% at 28% -8%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0) 62%); }
-  .dg-num { position: relative; font-size: 50px; font-weight: 200; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
-  .dg-num span { font-size: 22px; vertical-align: top; line-height: 1.4; letter-spacing: 0; }
+  .tank .glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(130% 70% at 28% -8%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0) 62%); }
+  .dg-num { position: relative; font-size: var(--n); font-weight: 200; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+  .dg-num span { font-size: var(--p); vertical-align: top; line-height: 1.4; letter-spacing: 0; }
   .dg-lbl { position: relative; font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.75; margin-top: 6px; }
+  .tank.sm .dg-lbl { font-size: 8px; margin-top: 4px; }
+  .tank.sm .dg-tick span { display: none; }   /* too small for the number: the target is right below */
   .dg-tick { position: absolute; left: 0; height: 0; display: flex; align-items: center; gap: 4px; }
-  .dg-tick i { display: block; width: 14px; height: 1.5px; border-radius: 1px; background: rgba(255,255,255,0.85); }
+  .dg-tick i { display: block; width: 12px; height: 1.5px; border-radius: 1px; background: rgba(255,255,255,0.85); }
   .dg-tick span { font-size: 9px; font-weight: 700; opacity: 0.8; font-variant-numeric: tabular-nums; }
-  .dg-txt { position: absolute; left: 0; right: 0; top: 176px; text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
-  .dg-title { font-size: 24px; font-weight: 300; letter-spacing: -0.3px; line-height: 1.1; }
-  .dg-sub { font-size: 12px; font-weight: 600; opacity: 0.72; margin-top: 5px; letter-spacing: 0.02em; }
 
-  /* Power and Fan */
-  .dg-act { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .tile {
-    display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 12px; border-radius: 16px; text-align: left;
-    background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4), 0 6px 16px -10px rgba(0,0,0,0.5);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform .18s cubic-bezier(.22,1,.36,1), background .3s;
-  }
-  .tile.on { background: rgba(255,255,255,0.17); }
-  .tile:active, .mini:active, .seg button:active { transform: scale(0.96); }
-  .td { flex: 0 0 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); transition: background .3s, box-shadow .3s, color .3s; }
-  .tt { display: flex; flex-direction: column; gap: 4px; min-width: 0; line-height: 1; }
-  .tl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; opacity: 0.8; white-space: nowrap; }
-  .tn { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .wait { animation: blink .7s ease-in-out infinite alternate; }
-
-  /* Target stepper */
+  /* Target stepper, on the card and in the popup */
   .dg-tgt { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
   .disc {
     flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -186,36 +197,72 @@
   .disc:active { transform: scale(0.9); }
   .disc:disabled { opacity: 0.35; }
   .tgt { flex: 1; min-width: 0; line-height: 1; }
-  .tgt-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px; }
+  .tgt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 2px; }
   .tgt-row span:first-child { font-size: 9.5px; font-weight: 700; letter-spacing: .12em; opacity: .75; }
   .tgt-row span:last-child { font-size: 20px; font-weight: 300; font-variant-numeric: tabular-nums; }
   .tgt-bar { height: 4px; border-radius: 2px; margin-top: 7px; background: rgba(255,255,255,0.14); overflow: hidden; }
   .tgt-bar i { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,0.75); transition: width .3s cubic-bezier(.2,.8,.2,1); }
+  .wait { animation: blink .7s ease-in-out infinite alternate; }
 
-  .dg-chev { align-self: center; margin-top: -4px; }
-  .dg-chev svg { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
-  .dg.open .dg-chev svg { transform: rotate(180deg); }
-
-  /* Under the chevron */
-  .dg-more { display: none; flex-direction: column; gap: 14px; }
-  .dg.open .dg-more { display: flex; animation: dg-in .5s cubic-bezier(.2,.8,.2,1) both; }
-  .lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; opacity: 0.75; padding-left: 4px; margin-bottom: -8px; }
+  /* ---- the unit popup: a sheet in the unit's own sky ---- */
+  .usheet { background: #16171B; max-height: min(92vh, calc(100dvh - env(safe-area-inset-top) - 16px)); transition: transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s linear .32s, box-shadow .6s; }
+  .usheet > :not(.dg-fx) { position: relative; z-index: 1; }
+  .usheet h2 { gap: 10px; }
+  /* The list fades in under the header rather than being cut off by it, as in Weather. */
+  .usheet .sheet-body { -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px); }
+  .usheet h2 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .sheet.dragging { transition: none !important; }
+  .dg-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); font-size: 12px; font-weight: 600; white-space: nowrap; letter-spacing: 0; }
+  .dg-pill i { width: 7px; height: 7px; border-radius: 50%; background: rgb(240,179,187); box-shadow: 0 0 6px rgba(240,179,187,0.8); }
+  .uhero { display: flex; flex-direction: column; align-items: center; padding: 10px 0 18px; text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+  .uhero .dg-title { font-size: 24px; margin-top: 18px; }
+  .uhero .dg-sub { white-space: normal; }
+  .glbl { font-size: 11px; font-weight: 700; letter-spacing: .12em; opacity: .7; margin: 20px 8px 8px; }
+  .group { border-radius: 20px; overflow: hidden; background: rgba(255,255,255,0.09); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
+  .group.first { margin-top: 18px; }
+  .rowi { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 14px; font-size: 16px; text-align: left; }
+  .rowi + .rowi { border-top: 0.5px solid rgba(255,255,255,0.10); }
+  button.rowi:active { background: rgba(255,255,255,0.06); }
+  .rowi .ic { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.13); flex: none; }
+  .rowi .k { flex: 1; min-width: 0; }
+  .rowi .v { font-weight: 600; font-variant-numeric: tabular-nums; opacity: .9; }
+  .rowi .v.full { color: rgb(240,179,187); opacity: 1; }
+  .rowi .v.due { color: rgb(236,214,150); opacity: 1; }
+  .sw { width: 51px; height: 31px; border-radius: 999px; background: rgba(255,255,255,0.18); position: relative; flex: none; transition: background .25s; }
+  .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform .3s cubic-bezier(.3,1.25,.45,1); }
+  .sw.on::after { transform: translateX(20px); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .stat { padding: 12px 6px; text-align: center; }
+  .stat + .stat { border-left: 0.5px solid rgba(255,255,255,0.10); }
+  .stat small { font-size: 11px; font-weight: 700; letter-spacing: .1em; opacity: .7; }
+  .stat b { display: block; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 5px; }
   .seg { display: flex; gap: 3px; padding: 3px; border-radius: 15px; background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
-  .seg button { flex: 1; height: 38px; border-radius: 12px; font-size: 13px; font-weight: 500; opacity: 0.8; transition: transform .18s cubic-bezier(.22,1,.36,1), background .25s; }
-  .seg button[aria-pressed="true"] { background: rgba(255,255,255,0.14); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.40), inset 0 0 0 1px rgba(255,255,255,0.12); font-weight: 700; opacity: 1; }
-  .row3 { display: flex; gap: 6px; }
-  .mini {
-    flex: 1; min-width: 0; height: 50px; padding: 0 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    transition: transform .18s cubic-bezier(.22,1,.36,1), background .3s;
+  .seg button { flex: 1; height: 40px; border-radius: 12px; font-size: 14px; font-weight: 500; opacity: 0.8; transition: transform .18s cubic-bezier(.22,1,.36,1), opacity .25s; }
+  .seg button:active { transform: scale(0.96); }
+  .seg button[aria-pressed="true"] { background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.40); font-weight: 700; opacity: 1; }
+  .seg button:disabled { opacity: .35; }
+  /* The sliding glass thumb (home/slide.js), as in every AllisonOS switch */
+  .slides { position: relative; isolation: isolate; }
+  .slides > :not(.slthumb) { position: relative; z-index: 1; }
+  .slthumb {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 12px; z-index: 0; pointer-events: none;
+    background: var(--lgs-shine), rgba(255,255,255,0.16);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 0 var(--lgs-rim), 0 3px 10px var(--lgs-lift);
+    transition: opacity .25s ease, scale .25s cubic-bezier(.22,1,.36,1);
   }
-  div.mini { cursor: default; }
-  .mini.on { background: rgba(255,255,255,0.17); }
-  .mini.full { background: rgba(240,179,187,0.24); }
-  .mini.due { background: rgba(236,214,150,0.22); }
-  .mini .tn { font-size: 13px; }
+  .slthumb.off { opacity: 0; scale: .7; }
+  .seg.slides button[aria-pressed="true"] { background: none; box-shadow: none; }
 
-  @media (prefers-reduced-motion: reduce) { .dg-fx *, .t-in, .dg-hero *, .dg.open .dg-more { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .dg-fx *, .t-in, .tank * { animation: none !important; } }
+  /* Small phones: a smaller tank and title, so the words keep to one line. */
+  @media (max-width: 360px) {
+    .tank.sm { --s: 84px; --r: 26px; --n: 29px; --p: 13px; }
+    .tank.sm .dg-lbl { font-size: 7px; letter-spacing: .1em; }
+    .dg-top { gap: 12px; }
+    .dg .dg-title { font-size: 19px; }
+    .dg-ctl { gap: 8px; }
+    .dg-ctl .hair { display: none; }
+  }
 
   /* ---- toast ---- */
   .toast {
@@ -240,7 +287,7 @@
     max-height: min(85vh, calc(100dvh - env(safe-area-inset-top) - 32px));
   }
   .open > .scrim { opacity: 1; pointer-events: auto; }
-  .open > .sheet { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  .open > .sheet { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1), box-shadow .6s; }
   .grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22); margin: 6px auto 0; flex: none; }
   .sheet h2 { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.4px; margin: 0; padding: 2px 12px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
   .sheet h2 button {
@@ -294,10 +341,10 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div id="sheetWrap">
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" data-close></div>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="grab"></div>
-    <h2><span id="sheetTitle">Home Assistant</span><button id="sheetClose" aria-label="Close"></button></h2>
+    <h2><span id="sheetTitle">Home Assistant</span><button data-close aria-label="Close"></button></h2>
     <div class="sheet-body">
       <form id="haForm" autocomplete="off">
         <label class="field"><span>Address</span>
@@ -316,6 +363,26 @@
   </div>
 </div>
 
+<div id="unitWrap">
+  <div class="scrim" data-close></div>
+  <div class="sheet usheet" role="dialog" aria-modal="true" aria-labelledby="uTitle" data-u="">
+    <div class="dg-fx" data-s="fx"></div>
+    <div class="grab"></div>
+    <h2><span class="who"><span id="uTitle"></span><span data-s="pill"></span></span><button data-close aria-label="Close"></button></h2>
+    <div class="sheet-body">
+      <div data-s="hero"></div>
+      <div class="dg-tgt" data-s="tgt"></div>
+      <div class="group first" data-s="power"></div>
+      <div data-s="fanWrap"><div class="glbl">FAN</div><div class="seg" data-s="fan"></div></div>
+      <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
+      <div class="glbl">READINGS</div><div class="group" data-s="read"></div>
+      <div data-s="featWrap"><div class="glbl">FEATURES</div><div class="group" data-s="feat"></div></div>
+      <div class="glbl">ENERGY</div><div class="group" data-s="en"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../home/slide.js"></script>
 <script>
 'use strict';
 // ---------------------------------------------------------------------------
@@ -340,6 +407,8 @@ const ICONS = {
   flash: 'M7,2H17L13.5,9H17L10,22V14H7V2M9,4V12H12V14.66L14,11H10.24L13.76,4H9Z',
   cog: 'M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z',
   close: 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z',
+  chevR: 'M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z',
+  water: 'M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z',
   dehum: 'M11 9C8.79 9 7 10.79 7 13S8.79 17 11 17 15 15.21 15 13 13.21 9 11 9M11 15C9.9 15 9 14.11 9 13S9.9 11 11 11 13 11.9 13 13 12.11 15 11 15M7 4H14C16.21 4 18 5.79 18 8V9H16V8C16 6.9 15.11 6 14 6H7C5.9 6 5 6.9 5 8V20H16V18H18V22H3V8C3 5.79 4.79 4 7 4M19 10.5C19 10.5 21 12.67 21 14C21 15.1 20.1 16 19 16S17 15.1 17 14C17 12.67 19 10.5 19 10.5',
 };
 const svg = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${ICONS[n]}"/></svg>`;
@@ -609,10 +678,10 @@ function read(u) {
 
 // ---------------------------------------------------------------------------
 // The card, region by region.
-function fxHTML(u, r) {
+function fxHTML(u, r, top = 150) {
   const m = r.mood, t = u.accents[m] || '190,194,204';
   let seed = 31; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-  const pool = (cls, a) => `<div class="dg-pool ${cls}" style="top:150px;background:radial-gradient(circle, rgba(${t},${a}) 0%, rgba(${t},${(a * 0.35).toFixed(3)}) 38%, rgba(${t},0) 68%);"></div>`;
+  const pool = (cls, a) => `<div class="dg-pool ${cls}" style="top:${top}px;background:radial-gradient(circle, rgba(${t},${a}) 0%, rgba(${t},${(a * 0.35).toFixed(3)}) 38%, rgba(${t},0) 68%);"></div>`;
   let L = '';
   // Drying: soft mist wisps and motes rising out of the room.
   if (m === 'drying') {
@@ -627,13 +696,28 @@ function fxHTML(u, r) {
   return `<div class="dg-sky" style="background:${u.skies[m] || u.skies.off};"></div>${L}<div class="dg-sheen"></div>`;
 }
 
-function headHTML(u, r) {
+function pillHTML(r) {
   const words = { drying: 'Drying', holding: 'Holding', full: 'Tank Full', off: 'Off', offline: 'Offline' };
   const pill = (r.mood === 'drying' || r.mood === 'holding') && r.md ? `${words[r.mood]} · ${esc(r.md)}` : words[r.mood];
-  return `<div class="dg-head t-in"><div class="dg-name">${u.name}</div><div class="dg-pill">${r.mood === 'full' ? '<i></i>' : ''}${pill}</div></div>`;
+  return `<span class="dg-pill">${r.mood === 'full' ? '<i></i>' : ''}${pill}</span>`;
 }
 
-function heroHTML(u, r) {
+// What the unit is doing, in words: the title and the line under it.
+function says(u, r) {
+  const tgt = r.realTgt, ts = st(u.temp), tv = num(u.temp), tu = ts && ts.attributes.unit_of_measurement || '°';
+  // Live but no states yet: connecting. States in but no such entity: say so.
+  const waitingHA = r.missing && mode === 'live' && !Object.keys(ents).length;
+  const refused = waitingHA && HA.status === 'error';
+  const title = { drying: `Drying to ${tgt}%`, holding: `Holding at ${tgt}%`, full: 'Tank full', off: 'Off', offline: refused ? 'Not connected' : waitingHA ? 'Connecting' : r.missing ? 'Not found' : 'Unavailable' }[r.mood];
+  const sub = r.mood === 'offline'
+    ? (refused ? 'Check the Home Assistant settings' : waitingHA ? 'Waiting for Home Assistant' : r.missing ? 'Home Assistant has no ' + esc(u.hum) : 'The dehumidifier is not reachable')
+    : [r.fanp ? 'Fan ' + esc(r.fanp) : '', esc(r.md), !isNaN(tv) ? Math.round(tv) + esc(tu) : ''].filter(Boolean).join(' · ');
+  return { title, sub };
+}
+
+// The tank: water up to the room humidity, its surface waving and bubbles
+// rising while drying, a hairline on the left at the target.
+function tankHTML(u, r, size) {
   const m = r.mood, t = u.accents[m] || '190,194,204', cur = r.cur, tgt = r.realTgt, on = r.on;
   const wc = m === 'full' ? '240,179,187' : t;
   const lvl = cur == null ? 0 : Math.max(6, Math.min(100, cur));
@@ -644,100 +728,109 @@ function heroHTML(u, r) {
   const wave = `<svg class="dg-wave" viewBox="0 0 400 20" preserveAspectRatio="none" style="bottom:calc(${lvl}% - 9px);${on ? '' : 'animation:none;'}"><path d="${d}" fill="rgba(${wc},${wa})"/></svg>`;
   let bub = '';
   if (m === 'drying') { let s = 7; const rr = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-    for (let i = 0; i < 6; i++) { const du = 3 + rr() * 3; bub += `<i class="dg-b" style="left:${(12 + rr() * 76).toFixed(1)}%;animation-duration:${du.toFixed(1)}s;animation-delay:-${(rr() * du).toFixed(1)}s;"></i>`; } }
-  const halo = on || m === 'full' ? `<div class="dg-glow" style="background:radial-gradient(circle, rgba(${wc},0.20) 0%, rgba(${wc},0.06) 45%, rgba(${wc},0) 70%);"></div>` : '';
+    for (let i = 0; i < (size === 'lg' ? 6 : 4); i++) { const du = 3 + rr() * 3; bub += `<i class="dg-b" style="left:${(12 + rr() * 76).toFixed(1)}%;animation-duration:${du.toFixed(1)}s;animation-delay:-${(rr() * du).toFixed(1)}s;"></i>`; } }
+  const halo = on || m === 'full' ? `<div class="glow" style="background:radial-gradient(circle, rgba(${wc},0.20) 0%, rgba(${wc},0.06) 45%, rgba(${wc},0) 70%);"></div>` : '';
   const tick = tgt != null && on ? `<div class="dg-tick" style="top:${(100 - Math.max(0, Math.min(100, tgt))).toFixed(1)}%;"><i></i><span>${tgt}</span></div>` : '';
-  const ts = st(u.temp), tv = num(u.temp), tu = ts && ts.attributes.unit_of_measurement || '°';
-  // Live but no states yet: connecting. States in but no such entity: say so.
-  const waitingHA = r.missing && mode === 'live' && !Object.keys(ents).length;
-  const refused = waitingHA && HA.status === 'error';
-  const title = { drying: `Drying to ${tgt}%`, holding: `Holding at ${tgt}%`, full: 'Tank full', off: 'Off', offline: refused ? 'Not connected' : waitingHA ? 'Connecting' : r.missing ? 'Not found' : 'Unavailable' }[m];
-  const sub = m === 'offline'
-    ? (refused ? 'Check the Home Assistant settings' : waitingHA ? 'Waiting for Home Assistant' : r.missing ? 'Home Assistant has no ' + esc(u.hum) : 'The dehumidifier is not reachable')
-    : [r.fanp ? 'Fan ' + esc(r.fanp) : '', esc(r.md), !isNaN(tv) ? Math.round(tv) + esc(tu) : ''].filter(Boolean).join(' · ');
-  return `<div class="dg-hero t-in">${halo}
-      <div class="dg-tank"><div class="dg-water" style="height:${lvl}%;background:linear-gradient(180deg, rgba(${wc},${wa}) 0%, rgba(${wc},${(wa * 0.55).toFixed(2)}) 100%);"></div>${wave}${bub}</div>
-      <div class="dg-glass">${tick}<div class="dg-num">${cur == null ? '--' : cur}<span>%</span></div><div class="dg-lbl">HUMIDITY</div></div>
-      <div class="dg-txt"><div class="dg-title">${title}</div><div class="dg-sub">${sub}</div></div>
+  return `<div class="tank ${size}">${halo}
+      <div class="tk"><div class="dg-water" style="height:${lvl}%;background:linear-gradient(180deg, rgba(${wc},${wa}) 0%, rgba(${wc},${(wa * 0.55).toFixed(2)}) 100%);"></div>${wave}${bub}</div>
+      <div class="glass">${tick}<div class="dg-num">${cur == null ? '--' : cur}<span>%</span></div><div class="dg-lbl">HUMIDITY</div></div>
     </div>`;
 }
 
-function actHTML(u, r) {
+// Only what needs doing shows on the card: an empty tank, a new filter.
+function alertsHTML(u, r) {
+  let a = '';
+  if (r.full) a += `<span class="alert full">${svg('cupWater', 14)}Empty the tank</span>`;
+  if (isOn(u.filter)) a += `<span class="alert">${svg('filter', 14)}Replace filter</span>`;
+  return a;
+}
+
+function infoHTML(u, r) {
+  const w = says(u, r);
+  return `<button class="dg-name" data-a="open" aria-label="All of the ${u.name}'s controls">${u.name}${svg('chevR', 16)}</button>
+    <div class="dg-title">${w.title}</div><div class="dg-sub">${w.sub}</div><div class="alerts">${alertsHTML(u, r)}</div>`;
+}
+
+function powerHTML(u, r) {
   const t = u.accents[r.mood] || '190,194,204';
-  const disc = r.on ? `background:rgba(${t},0.85);box-shadow:0 0 12px rgba(${t},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
-  const hi = /high/i.test(r.fanp), med = /med/i.test(r.fanp);
-  const off = r.mood === 'offline' ? ' disabled' : '';
-  return `<button class="tile${r.on ? ' on' : ''}${waiting(u, 'power') ? ' wait' : ''}" data-a="power" aria-pressed="${r.on}"${off}>
-      <span class="td" style="${disc}">${svg('power', 19)}</span><span class="tt"><span class="tl">POWER</span><span class="tn">${r.on ? 'On' : 'Off'}</span></span></button>
-    <button class="tile${waiting(u, 'fan') ? ' wait' : ''}" data-a="fan"${off || (usable(u.fan) ? '' : ' disabled')}>
-      <span class="td">${svg(hi ? 'fan3' : med ? 'fan2' : 'fan1', 19)}</span><span class="tt"><span class="tl">FAN</span><span class="tn">${esc(r.fanp) || '—'}</span></span></button>`;
+  const lit = r.on ? `background:rgba(${t},0.85);box-shadow:0 0 14px rgba(${t},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  return `<button class="pwr${waiting(u, 'power') ? ' wait' : ''}" data-a="power" style="${lit}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} the ${u.name}"${r.mood === 'offline' ? ' disabled' : ''}>${svg('power', 22)}</button>`;
 }
 
 function tgtHTML(u, r) {
   const v = r.tgt, pct = v == null ? 0 : Math.max(0, Math.min(100, (v - T_MIN) / (T_MAX - T_MIN) * 100));
   const off = r.mood === 'offline' || v == null;
-  return `<button class="disc" data-a="minus" aria-label="Lower target"${off || v <= T_MIN ? ' disabled' : ''}>${svg('minus', 20)}</button>
+  return `<button class="disc" data-a="minus" aria-label="Lower the target"${off || v <= T_MIN ? ' disabled' : ''}>${svg('minus', 20)}</button>
     <div class="tgt"><div class="tgt-row"><span>TARGET</span><span>${v == null ? '--' : v + '%'}</span></div><div class="tgt-bar"><i style="width:${pct}%"></i></div></div>
-    <button class="disc" data-a="plus" aria-label="Raise target"${off || v >= T_MAX ? ' disabled' : ''}>${svg('plus', 20)}</button>`;
+    <button class="disc" data-a="plus" aria-label="Raise the target"${off || v >= T_MAX ? ' disabled' : ''}>${svg('plus', 20)}</button>`;
 }
 
-function moreHTML(u, r) {
+// ---- the popup's rows ----
+const swHTML = (u, r, on) => `<span class="sw${on ? ' on' : ''}" style="${on ? `background:rgba(${u.accents[r.mood] === ACC_SHARED.off ? '48,209,88' : u.accents[r.mood]},0.9)` : ''}"></span>`;
+const icon = (n, extra = '') => `<span class="ic"${extra}>${svg(n, 18)}</span>`;
+
+function powerRowHTML(u, r) {
+  return `<button class="rowi${waiting(u, 'power') ? ' wait' : ''}" data-a="power" role="switch" aria-checked="${r.on}"${r.mood === 'offline' ? ' disabled' : ''}>
+    ${icon('power')}<span class="k">Power</span>${swHTML(u, r, r.on)}</button>`;
+}
+
+function fanSeg(u, r) {
+  const f = st(u.fan), list = f && f.attributes.preset_modes || ['Low', 'High'];
+  const dis = !usable(u.fan) || r.mood === 'offline' ? ' disabled' : '';
+  return list.map(p => `<button data-a="fan" data-v="${esc(p)}" aria-pressed="${r.fanp === p}"${dis}>${esc(p)}</button>`).join('');
+}
+
+function modeSeg(u, r) {
   // Only the modes the unit says it has, when it says; never offer one it would reject.
   const avail = r.h && Array.isArray(r.h.attributes.available_modes) ? r.h.attributes.available_modes : null;
   const modes = avail ? u.modes.filter(m => avail.includes(m)) : u.modes;
-  const modeRow = modes.map(m => `<button data-a="mode" data-v="${esc(m)}" aria-pressed="${r.md === m}"${waiting(u, 'mode') ? ' class="wait"' : ''}>${esc(m)}</button>`).join('');
+  const dis = r.mood === 'offline' ? ' disabled' : '';
+  return modes.map(m => `<button data-a="mode" data-v="${esc(m)}" aria-pressed="${r.md === m}"${dis}>${esc(m)}</button>`).join('');
+}
 
+function readHTML(u, r) {
   const tv = num(u.temp), tu = (st(u.temp) || { attributes: {} }).attributes.unit_of_measurement || '°';
-  const lv = u.level ? num(u.level) : NaN;
-  const due = isOn(u.filter);
-  const mini = (label, icon, val, cls = '', act = '') =>
-    `<${act ? 'button' : 'div'} class="mini ${cls}"${act}><span class="tl">${label}</span><span class="tn">${icon ? svg(icon, 15) : ''}${val}</span></${act ? 'button' : 'div'}>`;
-  const read = mini('TEMPERATURE', 'therm', isNaN(tv) ? '—' : Math.round(tv) + esc(tu))
-    + mini('TANK', r.full ? 'cupWater' : 'cup', r.full ? 'Full' : !isNaN(lv) ? Math.round(lv) + '%' : 'OK', r.full ? 'full' : '')
-    + mini('FILTER', due ? 'filter' : 'check', due ? 'Replace' : 'OK', due ? 'due' : '');
+  const lv = u.level ? num(u.level) : NaN, due = isOn(u.filter);
+  const row = (ic, k, v, cls = '') => `<div class="rowi">${icon(ic)}<span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`;
+  return row('therm', 'Temperature', isNaN(tv) ? '—' : Math.round(tv) + esc(tu))
+    + row(r.full ? 'cupWater' : 'cup', 'Water tank', r.full ? 'Full' : !isNaN(lv) ? Math.round(lv) + '%' : 'OK', r.full ? 'full' : '')
+    + row(due ? 'filter' : 'check', 'Filter', due ? 'Replace' : 'OK', due ? 'due' : '');
+}
 
-  // Ion and Pump drop out while their switch is unavailable (the Cube
-  // today), so Beep takes the row alone rather than sitting by dead tiles.
-  const sw = (key, label, iconOn, iconOff) => {
+function featHTML(u, r) {
+  // Ion and Pump drop out while their switch is unavailable (the Cube today).
+  const one = (key, label, ic) => {
     const id = u[key]; if (!id || !st(id) || st(id).state === 'unavailable') return '';
     const on = isOn(id);
-    return mini(label, on ? iconOn : iconOff, on ? 'On' : 'Off', (on ? 'on' : '') + (waiting(u, key) ? ' wait' : ''), ` data-a="sw" data-v="${key}" aria-pressed="${on}"`);
+    return `<button class="rowi${waiting(u, key) ? ' wait' : ''}" data-a="sw" data-v="${key}" role="switch" aria-checked="${on}">${icon(ic)}<span class="k">${label}</span>${swHTML(u, r, on)}</button>`;
   };
-  const feat = sw('ion', 'ION', 'ion', 'ion') + sw('pump', 'PUMP', 'pump', 'pump') + sw('beep', 'BEEP', 'bell', 'bellOff');
+  return one('ion', 'Ion', 'ion') + one('pump', 'Pump', 'pump') + one('beep', 'Beep', isOn(u.beep) ? 'bell' : 'bellOff');
+}
 
+function enHTML(u) {
   const pw = num(u.pw), day = num(u.day), month = num(u.month);
-  const en = mini('NOW', 'flash', isNaN(pw) ? '—' : (pw < 10 ? pw.toFixed(1) : Math.round(pw)) + ' W')
-    + mini('TODAY', '', isNaN(day) ? '—' : day.toFixed(2) + ' kWh')
-    + mini('MONTH', '', isNaN(month) ? '—' : month.toFixed(1) + ' kWh');
-
-  return (modes.length ? `<div class="lbl">MODE</div><div class="seg">${modeRow}</div>` : '')
-    + `<div class="lbl">READINGS</div><div class="row3">${read}</div>`
-    + (feat ? `<div class="lbl">FEATURES</div><div class="row3">${feat}</div>` : '')
-    + `<div class="lbl">ENERGY</div><div class="row3">${en}</div>`;
+  const stat = (k, v) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`;
+  return `<div class="stats">${stat('NOW', isNaN(pw) ? '—' : (pw < 10 ? pw.toFixed(1) : Math.round(pw)) + ' W')}${stat('TODAY', isNaN(day) ? '—' : day.toFixed(2) + ' kWh')}${stat('MONTH', isNaN(month) ? '—' : month.toFixed(1) + ' kWh')}</div>`;
 }
 
 // ---------------------------------------------------------------------------
 // Render: build each card once, then only touch a region whose HTML changed.
 const unitsEl = $('units');
-const openMore = store.get('more') || {};
 for (const u of UNITS) {
   unitsEl.insertAdjacentHTML('beforeend', `
-    <article class="dg${openMore[u.id] ? ' open' : ''}" data-u="${u.id}">
+    <article class="dg" data-u="${u.id}">
       <div class="dg-fx" data-r="fx"></div>
       <div class="dg-in">
-        <div data-r="head"></div>
-        <div data-r="hero"></div>
-        <div class="dg-act" data-r="act"></div>
-        <div class="dg-tgt" data-r="tgt"></div>
-        <button class="round dg-chev" data-a="more" aria-expanded="${!!openMore[u.id]}" aria-label="More for the ${u.name}">${svg('chev', 24)}</button>
-        <div class="dg-more" data-r="more"></div>
+        <div class="dg-top"><div data-r="tank"></div><div class="dg-info" data-r="info"></div></div>
+        <div class="dg-ctl"><div data-r="pwr"></div><i class="hair"></i><div class="dg-tgt" data-r="tgt"></div></div>
       </div>
     </article>`);
 }
 const last = new Map();
 function put(el, html) { if (last.get(el) !== html) { last.set(el, html); el.innerHTML = html; } }
+const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
 
-let ready = false;
+let ready = false, openId = null;
 function render() {
   if (!ready) return;
   clearWaitsOnChange();
@@ -746,40 +839,115 @@ function render() {
     const card = unitsEl.querySelector(`[data-u="${u.id}"]`), r = read(u);
     if (r.on) running++;
     const R = n => card.querySelector(`[data-r="${n}"]`);
-    put(R('fx'), fxHTML(u, r));
-    put(R('head'), headHTML(u, r));
-    put(R('hero'), heroHTML(u, r));
-    put(R('act'), actHTML(u, r));
+    put(R('fx'), fxHTML(u, r, 60));
+    put(R('tank'), tankHTML(u, r, 'sm'));
+    put(R('info'), infoHTML(u, r));
+    put(R('pwr'), powerHTML(u, r));
     put(R('tgt'), tgtHTML(u, r));
-    put(R('more'), moreHTML(u, r));
     card.classList.toggle('offline', r.mood === 'offline');
     card.style.boxShadow = `0 18px 40px -16px rgba(${u.accents[r.mood] || '190,194,204'},0.26)`;
   }
   $('secSum').textContent = running ? running + ' running' : 'Off';
+  if (openId) renderUnit();
+}
+
+const unitWrap = $('unitWrap'), usheet = unitWrap.querySelector('.sheet');
+function renderUnit() {
+  const u = UNITS.find(x => x.id === openId), r = read(u);
+  const S = n => usheet.querySelector(`[data-s="${n}"]`);
+  $('uTitle').textContent = u.name;
+  put(S('fx'), fxHTML(u, r, 170));
+  put(S('pill'), pillHTML(r));
+  const w = says(u, r);
+  put(S('hero'), `<div class="uhero">${tankHTML(u, r, 'lg')}<div class="dg-title">${w.title}</div><div class="dg-sub">${w.sub}</div></div>`);
+  put(S('tgt'), tgtHTML(u, r));
+  put(S('power'), powerRowHTML(u, r));
+  S('fanWrap').hidden = !st(u.fan);
+  put(S('fan'), fanSeg(u, r));
+  S('fan').classList.toggle('wait', !!waiting(u, 'fan'));
+  put(S('mode'), modeSeg(u, r));
+  S('modeWrap').hidden = !S('mode').children.length;
+  S('mode').classList.toggle('wait', !!waiting(u, 'mode'));
+  put(S('read'), readHTML(u, r));
+  const feat = featHTML(u, r);
+  S('featWrap').hidden = !feat;
+  put(S('feat'), feat);
+  put(S('en'), enHTML(u));
+  usheet.style.boxShadow = `inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px rgba(${u.accents[r.mood] || '190,194,204'},0.22), 0 2px 8px var(--lgs-lift)`;
+  for (const k of ['fan', 'mode']) slide(S(k), S(k).querySelector('[aria-pressed="true"]'), k + '-' + u.id);
 }
 
 // ---------------------------------------------------------------------------
-// Taps.
-unitsEl.addEventListener('click', e => {
-  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
-  const u = UNITS.find(x => x.id === b.closest('[data-u]').dataset.u), r = read(u), a = b.dataset.a;
-  if (a === 'more') {
-    const card = b.closest('.dg'), open = !card.classList.contains('open');
-    card.classList.toggle('open', open); b.setAttribute('aria-expanded', open);
-    openMore[u.id] = open; store.set('more', openMore);
-    if (open) setTimeout(() => card.querySelector('.dg-more').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
-    return;
-  }
+// Sheets: open, close, and swipe down to close, as on an iPhone.
+const mainEl = document.querySelector('main');
+let lastFocus = null;
+function showSheet(wrap) {
+  for (const w of [sheetWrap, unitWrap]) if (w !== wrap) w.classList.remove('open');
+  if (!wrap.classList.contains('open')) lastFocus = document.activeElement;
+  wrap.classList.add('open');
+  mainEl.inert = true; document.documentElement.classList.add('lock');
+  const sh = wrap.querySelector('.sheet'); sh.tabIndex = -1; sh.focus({ preventScroll: true });
+}
+function closeSheets() {
+  sheetWrap.classList.remove('open'); unitWrap.classList.remove('open');
+  openId = null;
+  mainEl.inert = false; document.documentElement.classList.remove('lock');
+  if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
+  lastFocus = null;
+}
+function openUnit(id) {
+  openId = id; usheet.dataset.u = id;
+  usheet.querySelector('.sheet-body').scrollTop = 0;
+  showSheet(unitWrap);
+  renderUnit();
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheets(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+function dragToClose(wrap) {
+  const sh = wrap.querySelector('.sheet'), body = sh.querySelector('.sheet-body');
+  let y0 = null, dy = 0, t0 = 0;
+  sh.addEventListener('touchstart', e => {
+    y0 = null;
+    if (e.touches.length !== 1 || e.target.closest('.seg, input, .dg-tgt')) return;
+    if (body.contains(e.target) && body.scrollTop > 0) return;   // scrolling the list, not the sheet
+    y0 = e.touches[0].clientY; dy = 0; t0 = e.timeStamp;
+  }, { passive: true });
+  sh.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0 && !sh.classList.contains('dragging')) { y0 = null; return; }   // an upward scroll: leave it be
+    e.preventDefault();
+    sh.classList.add('dragging');
+    sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  }, { passive: false });
+  const end = e => {
+    if (y0 == null || !sh.classList.contains('dragging')) { y0 = null; return; }
+    y0 = null;
+    const v = dy / Math.max(1, e.timeStamp - t0);
+    sh.classList.remove('dragging'); sh.style.transform = '';
+    if (dy > 110 || (dy > 30 && v > 0.6)) closeSheets();
+  };
+  sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+}
+
+// ---------------------------------------------------------------------------
+// Taps, on a card or in its popup (both carry data-u).
+document.addEventListener('click', e => {
+  const host = e.target.closest('[data-u]'); if (!host || !host.dataset.u) return;
+  const u = UNITS.find(x => x.id === host.dataset.u); if (!u) return;
+  const b = e.target.closest('[data-a]');
+  if (!b) { if (host.classList.contains('dg')) openUnit(u.id); return; }   // the card itself opens the popup
+  if (b.disabled) return;
+  const r = read(u), a = b.dataset.a;
+  if (a === 'open') return openUnit(u.id);
   if (a === 'power') return call('humidifier', 'toggle', { entity_id: u.hum }, u, 'power');
-  if (a === 'fan') {
-    // Step through the fan's own presets (Low <-> High on both units today).
-    const f = st(u.fan) || { attributes: {} }, l = f.attributes.preset_modes || ['Low', 'High'];
-    const i = l.indexOf(f.attributes.preset_mode);
-    return call('fan', 'set_preset_mode', { entity_id: u.fan, preset_mode: l[(i + 1) % l.length] }, u, 'fan');
-  }
+  if (a === 'fan') { if (b.dataset.v !== r.fanp) call('fan', 'set_preset_mode', { entity_id: u.fan, preset_mode: b.dataset.v }, u, 'fan'); return; }
   if (a === 'mode') { if (b.dataset.v !== r.md) call('humidifier', 'set_mode', { entity_id: u.hum, mode: b.dataset.v }, u, 'mode'); return; }
   if (a === 'sw') return call('switch', 'toggle', { entity_id: u[b.dataset.v] }, u, b.dataset.v);
   if (a === 'minus' || a === 'plus') {
+    // Taps add up: each steps from the pending value while it is fresh (5 s),
+    // and one set_humidity goes 600 ms after the last tap.
     const g = pend[u.id] || (pend[u.id] = {}), now = Date.now();
     const base = pendingTarget(u) ?? r.realTgt ?? 50;
     g.v = Math.max(T_MIN, Math.min(T_MAX, Math.round(base / T_STEP) * T_STEP + (a === 'plus' ? T_STEP : -T_STEP)));
@@ -803,18 +971,16 @@ function toast(msg) {
 // ---------------------------------------------------------------------------
 // Status chip, banner and the settings sheet.
 $('gear').innerHTML = svg('cog', 22);
-$('sheetClose').innerHTML = svg('close', 18);
+for (const b of document.querySelectorAll('h2 [data-close]')) b.innerHTML = svg('close', 18);
 const sheetWrap = $('sheetWrap');
 function openSheet() {
   const s = saved();
   $('haUrl').value = s.url || ''; $('haToken').value = s.token || '';
-  sheetWrap.classList.add('open');
+  showSheet(sheetWrap);
   syncSheet();
 }
-function closeSheet() { sheetWrap.classList.remove('open'); }
 $('gear').onclick = openSheet; $('bannerBtn').onclick = openSheet;
-$('scrim').onclick = closeSheet; $('sheetClose').onclick = closeSheet;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+dragToClose(sheetWrap); dragToClose(unitWrap);
 
 let statusDetail = '';
 function syncSheet() {
@@ -832,7 +998,7 @@ function onStatus(s, detail) {
   const shown = mode === 'preview' ? 'preview' : s;
   chip.dataset.s = shown; chip.lastElementChild.textContent = mode === 'preview' ? 'Preview' : words[s] || s;
   $('banner').hidden = mode !== 'preview';
-  if (s === 'live' && sheetWrap.classList.contains('open') && mode === 'live') setTimeout(closeSheet, 700);
+  if (s === 'live' && sheetWrap.classList.contains('open') && mode === 'live') setTimeout(() => { if (sheetWrap.classList.contains('open')) closeSheets(); }, 700);
   syncSheet();
   render();
 }
