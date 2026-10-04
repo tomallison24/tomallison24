@@ -74,12 +74,14 @@
   /* ---- The card: ha-card + button-card grid, as W3 styles them ---- */
   .w3-card {
     position: relative; overflow: hidden;
-    border-radius: 28px; padding: 22px 18px 16px 18px; color: #FFFFFF;
+    border-radius: 28px; padding: 30px 18px 16px 18px; color: #FFFFFF;
     display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px; touch-action: pan-y; will-change: transform;
   }
   .w3-days { position: relative; z-index: 1; min-width: 0; }
   .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
+  /* Room to breathe: under the place name, around the chips, and before Hourly. */
+  .w3-hero { padding-bottom: 14px; }
 
   .w3-fx { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
   /* The sky fills the whole screen behind everything, so the forecast sits on it rather than in a box. */
@@ -1171,15 +1173,15 @@ function w3Hero(m) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
           <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 20, 'opacity:0.95;margin-left:-1px;')}</button>
-          <div style="font-size:${String(temp).length >= 3 ? 62 : 76}px;font-weight:200;letter-spacing:-3px;line-height:0.95;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
+          <div style="font-size:${String(temp).length >= 3 ? 62 : 76}px;font-weight:200;letter-spacing:-3px;line-height:0.95;margin-top:14px;font-variant-numeric:tabular-nums;text-shadow:0 4px 24px rgba(0,0,0,0.18);">${temp}<span style="opacity:0.9;">°</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;">
           <div class="w3-ico ${move}">${svg(icon, 56, `color:${tint};filter:drop-shadow(0 0 10px ${tint}99);`)}</div>
-          <div style="font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-top:6px;line-height:1.2;">${words}</div>
-          <div style="font-size:16px;font-weight:500;letter-spacing:-0.1px;opacity:0.92;margin-top:2px;line-height:1.2;">${hl}</div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-top:10px;line-height:1.2;">${words}</div>
+          <div style="font-size:16px;font-weight:500;letter-spacing:-0.1px;opacity:0.92;margin-top:4px;line-height:1.2;">${hl}</div>
         </div>
       </div>
-      ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">${chips.join('')}</div>` : ''}
+      ${chips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:24px;">${chips.join('')}</div>` : ''}
     </div>`;
 }
 
@@ -1626,7 +1628,7 @@ function render() {
   const sky = (night && V.vivid[c + '-night']) || V.vivid[c] || V.vivid.cloudy;
 
   const card = slot('card', 'section', 'w3-card');
-  const hero = slot('hero', 'div');
+  const hero = slot('hero', 'div', 'w3-hero');
   const hours = slot('hours', 'div', 'w3-hours');
   const days = slot('days', 'div', 'w3-days');
   const foot = slot('foot', 'div', 'foot');
