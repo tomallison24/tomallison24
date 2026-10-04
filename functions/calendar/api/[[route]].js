@@ -229,7 +229,9 @@ async function deleteEvent(cal, acct, name, ifMatch) {
 // replaces the event (so Travel can re-send a changed booking).
 async function importEvents(cal, acct, ics) {
   if (!looksLikeCalendar(ics)) throw err('bad-request', 400);
-  const text = ics.replace(/\r?\n/g, '\r\n');
+  // A lone \r is never a valid line ending in iCalendar; drop it rather than
+  // let it act as one, so text with a stray \r can't start a line of its own.
+  const text = ics.replace(/\r(?!\n)/g, '').replace(/\r?\n/g, '\r\n');
   const events = [...text.matchAll(/BEGIN:VEVENT\r\n[\s\S]*?END:VEVENT\r\n/g)].map(m => m[0]);
   const zones = [...text.matchAll(/BEGIN:VTIMEZONE\r\n[\s\S]*?END:VTIMEZONE\r\n/g)].map(m => m[0]).join('');
   const head = text.split('\r\n').filter(l => /^(VERSION|PRODID|CALSCALE|METHOD):/i.test(l)).join('\r\n');

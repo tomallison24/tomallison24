@@ -48,7 +48,10 @@ const headers = [
 const html = '<p>Body text</p><img id="px" src="https://img.shop.example/pixel.png" width="1" height="1">' +
   '<a id="l-https" href="https://shop.example/sale">sale</a> <a id="l-mail" href="mailto:help@shop.example">mail</a> <a id="l-tel" href="tel:+441234">tel</a>' +
   '<a id="l-js" href="javascript:alert(1)">js</a> <a id="l-js2" href=" java&#9;script:alert(1)">js2</a> <a id="l-data" href="data:text/html,x">data</a>' +
-  '<a id="l-rel" href="/account">rel</a> <svg><a id="l-svg" xlink:href="javascript:alert(1)"><text>svg</text></a></svg>';
+  '<a id="l-rel" href="/account">rel</a> <svg><a id="l-svg" xlink:href="javascript:alert(1)"><text>svg</text></a></svg>' +
+  // SVG animation that would turn a checked https link into javascript: after the check
+  '<svg><a id="l-anim" href="https://ok.example/"><set attributeName="href" to="javascript:alert(1)"/><animate attributeName="href" values="javascript:alert(2)"/>' +
+  '<animateMotion dur="1s"/><animateTransform attributeName="transform" type="scale" to="2"/><discard/><text>anim</text></a></svg>';
 const full = {
   id: 't1', historyId: '5', messages: [{
     id: 'm1', threadId: 't1', labelIds: ['INBOX', 'UNREAD'], internalDate: String(Date.now()), snippet: 'Body text',
@@ -119,6 +122,10 @@ check(seen.pixel === 0, 'remote images stay off until Show');
   check(links['l-https'] && links['l-mail'] && links['l-tel'], 'https, mailto and tel links are kept');
   const bad = ['l-js', 'l-js2', 'l-data', 'l-rel', 'l-svg'].filter(id => links[id]);
   check(!bad.length, 'javascript:, data:, relative and SVG script links lose their address' + (bad.length ? ': ' + bad.join(', ') : ''));
+  const anim = await frame.evaluate(() => ['set', 'animate', 'animateMotion', 'animateTransform', 'discard']
+    .filter(t => document.getElementsByTagNameNS('http://www.w3.org/2000/svg', t).length));
+  check(!anim.length, 'SVG animation that could rewrite a link is removed' + (anim.length ? ': ' + anim.join(', ') : ''));
+  check(await frame.evaluate(() => document.getElementById('l-anim')?.getAttribute('href')) === 'https://ok.example/', 'the animated link keeps its checked https address');
 }
 
 // Show images

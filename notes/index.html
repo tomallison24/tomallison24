@@ -1086,6 +1086,39 @@ svg.fs{fill:currentColor}
   const KEY = 'allison-notes-v1';
   const COLORS = ['none','yellow','green','blue','pink','purple'];
   const LIST_COLORS = ['#3B82F6','#F59E0B','#10B981','#8B5CF6','#EC4899','#06B6D4','#EF4444'];
+  // Lists, reminders and notes that arrive from outside this phone (a backup
+  // file, the Sheet) are checked before they are kept, and every id and colour
+  // is escaped where it is drawn as well, so nothing in them can become part of
+  // the page. sane* fix only what is wrong and hand back anything that is
+  // already fine untouched, so a good record is never stamped as changed.
+  const okId = v => typeof v === 'string' && v.length > 0 && v.length <= 100;
+  const okHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+  const hexOr = c => okHex(c) ? c : LIST_COLORS[0];
+  const prioOf = t => [0, 1, 2, 3].includes(t.prio) ? t.prio : 0;
+  const strs = a => Array.isArray(a) && a.every(x => typeof x === 'string');
+  function saneList(l){
+    if (!l || typeof l !== 'object' || !okId(l.id) || typeof l.name !== 'string') return null;
+    return okHex(l.color) ? l : Object.assign({}, l, { color: LIST_COLORS[0] });
+  }
+  function saneTodo(t){
+    if (!t || typeof t !== 'object' || !okId(t.id) || typeof t.title !== 'string') return null;
+    const fix = {};
+    if (t.prio != null && ![0, 1, 2, 3].includes(t.prio)) fix.prio = 0;
+    if (t.done != null && typeof t.done !== 'boolean') fix.done = !!t.done;
+    if (t.flagged != null && typeof t.flagged !== 'boolean') fix.flagged = !!t.flagged;
+    if (t.list != null && typeof t.list !== 'string') fix.list = '';
+    if (!strs(t.tags)) fix.tags = Array.isArray(t.tags) ? t.tags.filter(x => typeof x === 'string') : [];
+    return Object.keys(fix).length ? Object.assign({}, t, fix) : t;
+  }
+  function saneNote(n){
+    if (!n || typeof n !== 'object' || !okId(n.id) || typeof n.title !== 'string' || typeof n.body !== 'string') return null;
+    const fix = {};
+    if (n.color != null && !COLORS.includes(n.color)) fix.color = 'none';
+    if (!strs(n.tags)) fix.tags = Array.isArray(n.tags) ? n.tags.filter(x => typeof x === 'string') : [];
+    return Object.keys(fix).length ? Object.assign({}, n, fix) : n;
+  }
+  const saneAll = (arr, fn) => (Array.isArray(arr) ? arr : []).map(fn).filter(Boolean);
+  let linkServer = null;   // a setup link's notification server, waiting for Connect (see takeSetupLink)
   const H = 3600e3, D = 24*H, now = Date.now();
   const I = {
     pin:'<svg viewBox="0 0 24 24"><path d="M9.2 3.4h5.6a.8.8 0 0 1 .6 1.3l-1 1.3v4.4l2.7 2.6a1 1 0 0 1-.7 1.7H7.6a1 1 0 0 1-.7-1.7l2.7-2.6V6l-1-1.3a.8.8 0 0 1 .6-1.3z"/><path d="M12 15v5.6"/></svg>',
@@ -1169,7 +1202,7 @@ svg.fs{fill:currentColor}
     keep.set('sync', syncCfg ? {url:syncCfg.url, secret:syncCfg.secret} : null);
   }
   try { graves = JSON.parse(localStorage.getItem(GRAVE_KEY)) || {}; } catch(e) {}
-  let notes = saved ? saved.notes : clone(SAMPLE_NOTES);
+  let notes = saved ? saneAll(saved.notes, saneNote) : clone(SAMPLE_NOTES);
   // Every note has a creation time (older notes: read from their id), an
   // archived flag and a deletedAt time for Trash; Trash empties after 30 days.
   function fixNotes(){
@@ -1178,8 +1211,9 @@ svg.fs{fill:currentColor}
     notes = notes.filter(n => { const keep = !n.deletedAt || Date.now() - n.deletedAt < 30 * 864e5; if (!keep) graves['notes:' + n.id] = Date.now(); return keep; });
   }
   fixNotes();
-  let lists = saved ? saved.lists : clone(SAMPLE_LISTS);
-  let todos = saved ? saved.todos : clone(SAMPLE_TODOS);
+  let lists = saved ? saneAll(saved.lists, saneList) : clone(SAMPLE_LISTS);
+  if (!lists.length) lists = clone(SAMPLE_LISTS);
+  let todos = saved ? saneAll(saved.todos, saneTodo) : clone(SAMPLE_TODOS);
   // What each item looked like at the last save, so any change anywhere in
   // the app stamps it with a new 'updated' time, and anything that vanished
   // is recorded as deleted (a "grave") for the other phone.
@@ -1786,13 +1820,13 @@ svg.fs{fill:currentColor}
     if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+(alertsHere(t) ? I.bell : I.clock)+esc(fmtDue(t))+'</span>');
     if (!st.rlist) meta.push('<span class="tchip lst">'+esc(l.name)+'</span>');
     t.tags.forEach(x => meta.push(tchip(x, st.rq)));
-    return '<div class="todo'+(t.done ? ' done' : '')+'" style="--lc:'+l.color+';--i:'+(i||0)+'">'
-      + '<button class="check" type="button" role="checkbox" aria-checked="'+t.done+'" data-check="'+t.id+'" aria-label="Complete '+esc(t.title)+'">'+I.check+'</button>'
-      + '<button class="tbody" type="button" data-todo="'+t.id+'"><span class="t">'+hl(t.title, st.rq)+'</span>'
+    return '<div class="todo'+(t.done ? ' done' : '')+'" style="--lc:'+hexOr(l.color)+';--i:'+(i||0)+'">'
+      + '<button class="check" type="button" role="checkbox" aria-checked="'+!!t.done+'" data-check="'+esc(t.id)+'" aria-label="Complete '+esc(t.title)+'">'+I.check+'</button>'
+      + '<button class="tbody" type="button" data-todo="'+esc(t.id)+'"><span class="t">'+hl(t.title, st.rq)+'</span>'
       + (t.notes ? '<span class="n">'+hl(t.notes.split('\n')[0], st.rq)+'</span>' : '')
       + (meta.length ? '<span class="tmeta">'+meta.join('')+'</span>' : '')+'</button>'
       + '<span class="tside">'
-      + (t.prio ? '<span class="prio p'+t.prio+'" aria-label="'+['','Low','Medium','High'][t.prio]+' priority"><i></i><i></i><i></i></span>' : '')
+      + (prioOf(t) ? '<span class="prio p'+prioOf(t)+'" aria-label="'+['','Low','Medium','High'][prioOf(t)]+' priority"><i></i><i></i><i></i></span>' : '')
       + (t.flagged ? '<span class="flag" aria-label="Flagged">'+I.flag+'</span>' : '')
       + '</span></div>';
   }
@@ -1831,7 +1865,7 @@ svg.fs{fill:currentColor}
     let c = '<button class="chip glass" type="button" data-list="" aria-pressed="'+(!st.rlist)+'">All lists</button>';
     lists.forEach(l => {
       const n = todos.filter(t => !t.done && t.list === l.id).length;
-      c += '<button class="chip glass" type="button" data-list="'+l.id+'" style="--lc:'+l.color+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)+' <span class="n">'+n+'</span></button>';
+      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)+' <span class="n">'+n+'</span></button>';
     });
     c += '<button class="chip ghost" type="button" id="addList">'+I.plus+'List</button>';
     $('listChips').innerHTML = c;
@@ -1951,7 +1985,7 @@ svg.fs{fill:currentColor}
       $('tdAisle').innerHTML = '<button class="opt" type="button" role="radio" data-ai="" aria-checked="'+!cur+'">Auto · '+esc(AISLE.NAMES[auto])+'</button>'
         + AISLE.SECTIONS.map(x => '<button class="opt" type="button" role="radio" data-ai="'+x.id+'" aria-checked="'+(cur === x.id)+'">'+esc(x.name)+'</button>').join('');
     }
-    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+l.id+'" style="--lc:'+l.color+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
     todoTags.render();
     slideTodo();
@@ -2457,9 +2491,9 @@ svg.fs{fill:currentColor}
       local.forEach(l => { if (!l.private && !remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
       return [...map.values()].filter(x => { if (x.private) return true; const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
-    notes = mergeKind('notes', notes, res.notes);
-    todos = mergeKind('todos', todos, res.todos);
-    lists = mergeKind('lists', lists, res.lists);
+    notes = mergeKind('notes', notes, saneAll(res.notes, saneNote));
+    todos = mergeKind('todos', todos, saneAll(res.todos, saneTodo));
+    lists = mergeKind('lists', lists, saneAll(res.lists, saneList));
     if (!lists.length) lists = clone(SAMPLE_LISTS);
     todos.forEach(t => { if (!lists.some(l => l.id === t.list)) t.list = lists[0].id; });
     fixNotes(); initShadow(); persist();
@@ -2546,7 +2580,14 @@ svg.fs{fill:currentColor}
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
     if (pre && syncCfg) { $('syForm').hidden = false; $('syOn').hidden = true; }
     renderSyncStatus();
-    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
+    if (pre) {
+      $('syForm').hidden = false; $('syOn').hidden = true;
+      // Say exactly where the link points, so a link from anyone else stands out.
+      let where = pre.u; try { const u = new URL(pre.u); where = u.host + u.pathname.replace(/^(\/macros\/s\/.{6}).*(\/exec)$/, '$1…$2'); } catch(e) {}
+      const other = syncCfg && syncCfg.url !== pre.u;
+      $('syStatus').textContent = 'From a setup link to ' + where + '. ' + (other ? 'That is a different Sheet from the one this phone uses now. ' : '')
+        + 'Connect sends your notes and reminders there. Only tap Connect if the link came from your own Notes.';
+    }
     openSheet('syncSheet');
   }
   $('bkSheet').onclick = () => { closeSheet('backupSheet'); openSyncSheet(); };
@@ -2562,6 +2603,8 @@ svg.fs{fill:currentColor}
     $('syConnect').disabled = false;
     if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
     saveSyncCfg();
+    if (linkServer && !push.on) { push.server = linkServer; savePush(); }
+    linkServer = null;
     renderSyncStatus();
     toast('Connected. ' + plural(alive().length, 'note') + ' and ' + plural(todos.length, 'reminder') + ' now in the Sheet.');
   };
@@ -2580,7 +2623,8 @@ svg.fs{fill:currentColor}
   };
   function takeSetupLink(text){
     const m = text.match(/#sync=([\w-]+)/); if (!m) return false;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { if (typeof c.p === 'string' && okServer(c.p) && !push.on) { push.server = c.p; savePush(); } openSyncSheet(c); return true; } } catch(e) {}
+    // The link's notification server (p) is only taken once Connect works.
+    try { const c = JSON.parse(b64d(m[1])); if (c && typeof c.u === 'string' && typeof c.s === 'string') { linkServer = typeof c.p === 'string' && okServer(c.p) ? c.p : null; openSyncSheet(c); return true; } } catch(e) {}
     toast('That setup link is damaged. Copy it again.'); return true;
   }
   document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
@@ -2642,7 +2686,7 @@ svg.fs{fill:currentColor}
       : !syncCfg ? PUSH_ERRORS['no-sheet']
       : on ? 'On in ' + place() + '. Reminders alert here at their Alert time, even with Notes closed.'
       : 'Get an alert on this phone when a reminder is due or a note’s nudge comes round, even with Notes closed.';
-    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+l.id+'" style="--lc:'+l.color+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('puNudges').setAttribute('aria-checked', push.nudges);
     $('puMorning').value = push.morning;
   }
@@ -2767,12 +2811,11 @@ svg.fs{fill:currentColor}
     try { data = JSON.parse(await f.text()); } catch(err) { toast('That file isn\u2019t a Notes file.'); return; }
     if (data && data.kind === 'backup' && Array.isArray(data.notes) && Array.isArray(data.lists) && Array.isArray(data.todos)) {
       const haveN = new Set(notes.map(n => n.id)), haveT = new Set(todos.map(t => t.id)), haveL = new Set(lists.map(l => l.id));
-      const okNote = n => n && typeof n.id === 'string' && typeof n.title === 'string' && typeof n.body === 'string' && Array.isArray(n.tags);
-      const okTodo = t => t && typeof t.id === 'string' && typeof t.title === 'string' && Array.isArray(t.tags);
-      const okList = l => l && typeof l.id === 'string' && typeof l.name === 'string' && /^#[0-9a-f]{6}$/i.test(l.color);
-      const addL = data.lists.filter(l => okList(l) && !haveL.has(l.id));
-      const addN = data.notes.filter(n => okNote(n) && !haveN.has(n.id));
-      const addT = data.todos.filter(t => okTodo(t) && !haveT.has(t.id));
+      const addL = saneAll(data.lists, saneList).filter(l => !haveL.has(l.id));
+      const addN = saneAll(data.notes, saneNote).filter(n => Array.isArray(n.tags) && !haveN.has(n.id));
+      const addT = saneAll(data.todos, saneTodo).filter(t => !haveT.has(t.id));
+      if (!addL.length && !addN.length && !addT.length) { toast('Nothing new in that file.'); return; }
+      if (!confirm('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.')) return;
       lists.push(...addL); notes.push(...addN); todos.push(...addT); fixNotes();
       const known = new Set(lists.map(l => l.id)); todos.forEach(t => { if (!known.has(t.list)) t.list = lists[0].id; });
       save(); render();
@@ -2783,9 +2826,9 @@ svg.fs{fill:currentColor}
 
   // ---------- add to calendar: the phone's calendar does the alerting ----------
   function icsFor(t){
-    const esc2 = v => String(v).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
+    const esc2 = v => String(v).replace(/[\\;,]/g, m => '\\' + m).replace(/\r\n|\r|\n/g, '\\n');   // \r too: a lone \r would start a line of its own
     const d = t.date.replace(/-/g, ''), stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Allison OS//Notes//EN','BEGIN:VEVENT','UID:' + t.id + '@allison-notes','DTSTAMP:' + stamp];
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Allison OS//Notes//EN','BEGIN:VEVENT','UID:' + String(t.id).replace(/[\r\n]/g, '') + '@allison-notes','DTSTAMP:' + stamp];
     if (t.time) {
       const end = new Date(t.date + 'T' + t.time); end.setMinutes(end.getMinutes() + 30);
       lines.push('DTSTART:' + d + 'T' + t.time.replace(':', '') + '00', 'DTEND:' + ymd(end).replace(/-/g, '') + 'T' + pad(end.getHours()) + pad(end.getMinutes()) + '00');

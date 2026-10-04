@@ -126,10 +126,17 @@ function store(ss, db) {
   write(ss, GRAVES, [['item', 'deleted']].concat(g), true);
 }
 
+// Text that starts with = + - or @ would become a formula (a note titled
+// =IMPORTXML(...), or a piece of a long note that happens to start with =).
+// A leading apostrophe makes Sheets keep it as text; the apostrophe is not
+// part of the value, so getValues() reads back exactly what was written.
+function asText(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; }
+const asTextRows = rows => rows.map(r => r.map(asText));
+
 function write(ss, name, values, hidden) {
   const sh = ss.getSheetByName(name) || ss.insertSheet(name);
   sh.clearContents();
-  if (values.length) sh.getRange(1, 1, values.length, values[0].length).setValues(values);
+  if (values.length) sh.getRange(1, 1, values.length, values[0].length).setValues(asTextRows(values));
   if (hidden) sh.hideSheet();
   return sh;
 }
@@ -225,7 +232,7 @@ function view(ss, name, header, body) {
   const sh = ss.getSheetByName(name) || ss.insertSheet(name);
   sh.clearContents();
   sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
-  if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(body);
+  if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(asTextRows(body));
   sh.setFrozenRows(1);
   sh.setColumnWidth(1, 220);
   sh.setColumnWidth(2, 420);

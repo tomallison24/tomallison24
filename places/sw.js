@@ -2,7 +2,7 @@
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Your places live in localStorage, never in this cache, and search,
 // place details and map tiles (other sites) are never cached here.
-const CACHE = 'places-v5';
+const CACHE = 'places-v6';
 // slide.js and back.js are Home's, shared by every app.
 const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=2', 'icon-512.png?v=2', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js'];
 

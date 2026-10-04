@@ -28,6 +28,10 @@
   //   visits [YYYY-MM-DD, newest first], cal {uid, at} (added from the Family calendar: scripts/from-calendar.mjs),
   //   notes, tags[], lat, lon, address, city, category, emoji, osm {type, id}, info {hours, phone, website, cuisine, at},
   //   created, updated }
+  // A website is only ever a web address. Ones found by search already are
+  // (parse.js puts https:// in front); this also covers places that come back
+  // from the Sheet, so nothing like javascript: can become a link.
+  const webOnly = v => { try { return /^https?:$/.test(new URL(v).protocol) ? v : ''; } catch { return ''; } };
   function tidy(p) {
     const s = (v, n) => String(v == null ? '' : v).slice(0, n);
     const date = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null;
@@ -41,7 +45,7 @@
       tags: Array.isArray(p.tags) ? p.tags.map(t => s(t, 40)).filter(Boolean).slice(0, 30) : [],
       lat: n(p.lat), lon: n(p.lon), address: s(p.address, 300), city: s(p.city, 100), category: s(p.category, 60), emoji: s(p.emoji, 8) || '📍',
       osm: p.osm && /^(node|way|relation)$/.test(p.osm.type) && n(p.osm.id) ? { type: p.osm.type, id: n(p.osm.id) } : null,
-      info: p.info && typeof p.info === 'object' ? { hours: s(p.info.hours, 400), phone: s(p.info.phone, 60), website: s(p.info.website, 300), cuisine: s(p.info.cuisine, 120), at: n(p.info.at) || 0 } : null,
+      info: p.info && typeof p.info === 'object' ? { hours: s(p.info.hours, 400), phone: s(p.info.phone, 60), website: webOnly(s(p.info.website, 300)), cuisine: s(p.info.cuisine, 120), at: n(p.info.at) || 0 } : null,
       created: n(p.created) || Date.now(), updated: n(p.updated) || 0,
     };
   }
@@ -492,7 +496,7 @@
     const i = p.info, rows = [];
     if (i && i.hours) rows.push(['🕒', esc(P.hoursText(i.hours))]);
     if (i && i.phone) rows.push(['📞', '<a href="tel:' + esc(i.phone.replace(/[^\d+]/g, '')) + '">' + esc(i.phone) + '</a>']);
-    if (i && i.website) { let host = i.website; try { host = new URL(i.website).hostname.replace(/^www\./, ''); } catch {} rows.push(['🌐', '<a href="' + esc(i.website) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>']); }
+    if (i && webOnly(i.website)) { let host = i.website; try { host = new URL(i.website).hostname.replace(/^www\./, ''); } catch {} rows.push(['🌐', '<a href="' + esc(i.website) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>']); }
     if (i && i.cuisine) rows.push(['🍴', esc(i.cuisine)]);
     $('plInfoField').hidden = !p.osm;
     $('plInfo').innerHTML = rows.length ? rows.map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + v + '</span></div>').join('')
