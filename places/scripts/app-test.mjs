@@ -95,7 +95,10 @@ await page.goto(BASE + '/places/');
 await page.waitForTimeout(600);
 const rows = () => page.$$eval('#list .row', rs => rs.map(r => r.querySelector('b').textContent + ' | ' + r.querySelector('.r').textContent));
 const toastText = () => page.textContent('#toastMsg');
+const toList = async () => { if (await page.isVisible('#map')) { await page.click('#viewBtn'); await page.waitForTimeout(300); } };
 
+ok('opens on the map', await page.isVisible('#map') && (await page.getAttribute('#viewBtn', 'aria-label')) === 'Show the list');
+await toList();
 ok('starts empty, with a hint how to add', (await page.textContent('#list')).includes('Tap + to add'));
 
 // ---- add by search ----
@@ -116,8 +119,11 @@ const soon = new Date(Date.now() + 5 * 864e5), soonStr = soon.getFullYear() + '-
 await page.fill('#plDate', soonStr); await page.dispatchEvent('#plDate', 'change');
 await page.fill('#plNotes', 'Anniversary dinner #date-night');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '2-place.png') });
+await page.fill('#filter', 'riojx'); await page.dispatchEvent('#filter', 'input');   // a search left in the box
 await page.click('#plSave');
-await page.waitForTimeout(400);
+await page.waitForTimeout(500);
+ok('after adding, back to the main screen: the map, search cleared, sheets closed', await page.isVisible('#map') && (await page.inputValue('#filter')) === '' && await page.isHidden('#placeSheet') && await page.isHidden('#addSheet') && (await toastText()).includes('Added to Want to go'));
+await toList();
 let r = await rows();
 ok('saved under Want to go, Coming up, with its date and price', r.length === 1 && r[0].startsWith('Rioja') && r[0].includes('$$$') && (await page.textContent('#list h2')).includes('Coming up'), r.join(' / '));
 ok('its #tag becomes a filter chip', await page.isVisible('#chips [data-tag="date-night"]'));
@@ -142,6 +148,7 @@ await page.click('#addSheet [data-close].iconbtn');
 await page.click('#fab'); await page.click('#addHere'); await page.waitForTimeout(700);
 ok('Add where I am: the nearest named place is filled in', (await page.inputValue('#plName')) === 'Corner Café' && (await page.textContent('#plMeta')).includes('Café'));
 await page.click('#plSave'); await page.waitForTimeout(300);
+await toList();
 
 // ---- move to Been, rate ----
 await page.click('#list .row:has-text("Rioja")'); await page.waitForTimeout(300);

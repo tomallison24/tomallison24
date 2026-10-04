@@ -24,7 +24,10 @@ same frosted glass as the other AllisonOS apps.
   add it. On the map it searches around where the map is looking: results
   drop down under the box, and tapping one flies the map there and opens its
   card.
-- **Map** (the map button, top right): your places as pins, blue for Want to
+- **Opens on the map**; the list button (top right) switches to the list
+  and back. After you add a place, Places goes back to the map, on the list
+  the place went into, with the search cleared and the new pin in the middle.
+- **Map**: your places as pins, blue for Want to
   go and gold for Been, each with its emoji. **Touch and hold** anywhere on the
   map to add a place there. Buttons to show where you are and fit every pin.
 - **Businesses on the map**: zoomed in to street level, every named business
