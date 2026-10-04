@@ -182,6 +182,10 @@ note, reminder or list wins. If a phone is wiped, connecting again loads
 everything back. Free: it runs as a small Apps Script in your own Google
 account (`google-sheet-sync.gs` in this folder).
 
+The Places app (`places/`) keeps its lists in this same Sheet, with the same
+link and secret (its README says how); they show up as **📍 Want to go** and
+**📍 Been** tabs.
+
 The Sheet gets one tab per tag (`#recipe`, `#home`, ... and `No tag`, newest
 note first), one per reminder list (`✓ Groceries`, ...), and hidden `_notes`,
 `_reminders`, `_lists` and `_deleted` tabs that the app reads back from. The
