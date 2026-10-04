@@ -544,8 +544,21 @@
     delete graves['places:' + clean.id];
     const moved = clean.status !== st.tab;
     closeSheet('placeSheet'); save();
+    if (st.editIsNew) home(clean);
     if (st.editIsNew || moved) toast((st.editIsNew ? 'Added to ' : 'Moved to ') + (clean.status === 'been' ? 'Been' : 'Want to go'));
   };
+  // After adding a place: back to the main screen, the map, on the list it went
+  // into, with the search cleared and the new pin in the middle.
+  function home(p) {
+    st.q = ''; $('filter').value = ''; st.found = []; st.tag = null;
+    if (foundCtl) foundCtl.abort();
+    $('filter').blur();
+    document.querySelectorAll('.sheetwrap').forEach(w => { if (!w.hidden) closeSheet(w.id); });
+    if (map) map.closePopup();
+    st.tab = p.status;
+    setView('map');
+    if (map && p.lat != null) setTimeout(() => map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15)), 80);
+  }
   $('plDelete').onclick = () => {
     const i = places.findIndex(x => x.id === st.edit.id); if (i < 0) return;
     const gone = places[i];
@@ -664,7 +677,9 @@
   window.addEventListener('online', () => { if (syncCfg) sync(false); });
 
   // ---------- start ----------
-  render();
+  // Places opens on the map (the list is a tap away, top right).
+  setView('map');
+  if (!places.some(p => p.lat != null) && st.here && map) map.setView([st.here.lat, st.here.lon], 15);
   slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true });
   window.addEventListener('resize', () => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
   if (syncCfg) setTimeout(() => sync(false), 400);
