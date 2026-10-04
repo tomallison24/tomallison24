@@ -347,6 +347,39 @@
   .btn.primary { background: var(--accent); box-shadow: none; }
   .btn:disabled { opacity: 0.5; }
   .btn[hidden] { display: none; }
+
+  /* Settings views: locked (what is saved), edit (the form), pin (the pad). */
+  .view[hidden] { display: none; }
+  #vLocked .group { background: var(--lgs-row); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim); margin-top: 6px; }
+  #vLocked .rowi { min-height: 50px; font-size: 15px; }
+  #vLocked .rowi .k { color: var(--muted); flex: none; }
+  #vLocked .rowi .v { flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lockline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 14px 8px 0; }
+  .lockline svg { flex: none; }
+
+  /* The PIN pad: glass keys, as on the iPhone's lock screen */
+  .pinv { display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; }
+  .pinv[hidden] { display: none; }
+  .pin-title { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; text-align: center; }
+  .pin-sub { font-size: 13px; color: var(--muted); margin-top: 4px; text-align: center; min-height: 1.3em; }
+  .pin-sub.bad { color: #FF8A80; }
+  .dots { display: flex; gap: 16px; margin: 18px 0 20px; }
+  .dots i { width: 13px; height: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.85); transition: background .12s; }
+  .dots i.on { background: #fff; }
+  .dots.shake { animation: shake .4s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shake { 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
+  .pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px 22px; }
+  .pad button {
+    width: 72px; height: 72px; border-radius: 50%; font-size: 28px; font-weight: 300; font-variant-numeric: tabular-nums;
+    background: var(--lgs-shine), var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lgs-lift);
+    transition: transform .12s cubic-bezier(.22,1,.36,1), background .12s;
+  }
+  .pad button:active { transform: scale(0.92); background: rgba(255,255,255,0.28); }
+  .pad button.txt { background: none; box-shadow: none; font-size: 15px; font-weight: 500; }
+  .pad button:disabled { opacity: .35; }
+  .linkbtn { margin-top: 16px; font-size: 14px; color: var(--muted); padding: 8px 12px; }
+  .linkbtn.warn { color: #FF8A80; font-weight: 600; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--lgs-solid); } }
   @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
 </style>
@@ -378,19 +411,48 @@
     <div class="grab"></div>
     <h2><span id="sheetTitle">Home Assistant</span><button data-close aria-label="Close"></button></h2>
     <div class="sheet-body">
-      <form id="haForm" autocomplete="off">
+      <!-- Locked: what is saved. Changing or disconnecting needs the PIN. -->
+      <div class="view" id="vLocked" hidden>
+        <div class="group">
+          <div class="rowi"><span class="k">Address</span><span class="v" id="lkUrl"></span></div>
+          <div class="rowi"><span class="k">Token</span><span class="v">Saved ••••••••</span></div>
+        </div>
+        <div class="status hastatus"></div>
+        <div class="btns">
+          <button class="btn" type="button" id="lkForget">Disconnect</button>
+          <button class="btn primary" type="button" id="lkEdit">Change</button>
+        </div>
+        <div class="lockline" id="lkLine"></div>
+      </div>
+
+      <!-- Edit: the address and token. A saved token is never put back in the box. -->
+      <form class="view" id="haForm" autocomplete="off" hidden>
         <label class="field"><span>Address</span>
           <input id="haUrl" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" spellcheck="false" autocapitalize="off"></label>
         <label class="field"><span>Long-lived access token</span>
           <input id="haToken" type="password" placeholder="Paste the token" spellcheck="false" autocapitalize="off"></label>
-        <div class="status" id="haStatus"></div>
+        <div class="status hastatus" id="haStatus"></div>
         <div class="btns">
-          <button class="btn" type="button" id="haForget" hidden>Disconnect</button>
+          <button class="btn" type="button" id="haCancel" hidden>Cancel</button>
           <button class="btn primary" type="submit" id="haConnect">Connect</button>
         </div>
+        <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your <b>Nabu Casa</b> address (in Home Assistant: Settings → Home Assistant Cloud, under Remote Access). A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
+        <p class="help">Make a token in Home Assistant: your <b>profile</b> (bottom left) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. It is kept on this phone only.</p>
       </form>
-      <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your <b>Nabu Casa</b> address (in Home Assistant: Settings → Home Assistant Cloud, under Remote Access). A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
-      <p class="help">Make a token in Home Assistant: your <b>profile</b> (bottom left) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. It is kept on this phone only.</p>
+
+      <!-- PIN: enter it, or choose one (twice). -->
+      <div class="pinv" id="vPin" hidden>
+        <div class="pin-title" id="pinTitle"></div>
+        <div class="pin-sub" id="pinSub"></div>
+        <div class="dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+        <div class="pad" id="pinPad">
+          <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+          <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+          <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+          <button type="button" class="txt" data-k="cancel">Cancel</button><button type="button" data-k="0">0</button><button type="button" class="txt" data-k="del" aria-label="Delete"></button>
+        </div>
+        <button type="button" class="linkbtn" id="pinForgot">Forgot PIN?</button>
+      </div>
     </div>
   </div>
 </div>
@@ -439,6 +501,9 @@ const ICONS = {
   flash: 'M7,2H17L13.5,9H17L10,22V14H7V2M9,4V12H12V14.66L14,11H10.24L13.76,4H9Z',
   cog: 'M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z',
   close: 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z',
+  lock: 'M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z',
+  lockOpen: 'M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V10A2,2 0 0,1 6,8H15V6A3,3 0 0,0 12,3A3,3 0 0,0 9,6H7A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17Z',
+  backspace: 'M22,3H7C6.31,3 5.77,3.35 5.41,3.88L0,12L5.41,20.11C5.77,20.64 6.31,21 7,21H22A2,2 0 0,0 24,19V5A2,2 0 0,0 22,3M19,15.59L17.59,17L14,13.41L10.41,17L9,15.59L12.59,12L9,8.41L10.41,7L14,10.59L17.59,7L19,8.41L15.41,12',
   chevR: 'M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z',
   water: 'M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z',
   dehum: 'M11 9C8.79 9 7 10.79 7 13S8.79 17 11 17 15 15.21 15 13 13.21 9 11 9M11 15C9.9 15 9 14.11 9 13S9.9 11 11 11 13 11.9 13 13 12.11 15 11 15M7 4H14C16.21 4 18 5.79 18 8V9H16V8C16 6.9 15.11 6 14 6H7C5.9 6 5 6.9 5 8V20H16V18H18V22H3V8C3 5.79 4.79 4 7 4M19 10.5C19 10.5 21 12.67 21 14C21 15.1 20.1 16 19 16S17 15.1 17 14C17 12.67 19 10.5 19 10.5',
@@ -1007,8 +1072,7 @@ $('gear').innerHTML = svg('cog', 22);
 for (const b of document.querySelectorAll('h2 [data-close]')) b.innerHTML = svg('close', 18);
 const sheetWrap = $('sheetWrap');
 function openSheet() {
-  const s = saved();
-  $('haUrl').value = s.url || ''; $('haToken').value = s.token || '';
+  showView(saved().token ? 'locked' : 'edit');
   showSheet(sheetWrap);
   syncSheet();
 }
@@ -1017,21 +1081,138 @@ dragToClose(sheetWrap); dragToClose(unitWrap);
 
 let statusDetail = '';
 function syncSheet() {
-  const s = $('haStatus'), live = mode === 'live';
-  $('haForget').hidden = !saved().token;
-  s.className = 'status' + (HA.status === 'error' ? ' bad' : HA.status === 'live' && live ? ' good' : '');
-  s.textContent = !live ? '' :
-    HA.status === 'live' ? 'Connected' + (HA.version ? ' · Home Assistant ' + HA.version : '') :
-    HA.status === 'error' ? statusDetail :
-    HA.status === 'reconnecting' ? 'Connection lost. Reconnecting…' : 'Connecting…';
+  const live = mode === 'live';
+  for (const s of document.querySelectorAll('.hastatus')) {
+    s.className = 'status hastatus' + (HA.status === 'error' ? ' bad' : HA.status === 'live' && live ? ' good' : '');
+    s.textContent = !live ? '' :
+      HA.status === 'live' ? 'Connected' + (HA.version ? ' · Home Assistant ' + HA.version : '') :
+      HA.status === 'error' ? statusDetail :
+      HA.status === 'reconnecting' ? 'Connection lost. Reconnecting…' : 'Connecting…';
+  }
+  $('lkUrl').textContent = (saved().url || '').replace(/^https?:\/\//, '');
+  $('lkLine').innerHTML = PIN.get()
+    ? `${svg('lock', 16)}Locked. Changing or disconnecting needs your PIN.`
+    : `${svg('lockOpen', 16)}Not locked. You will choose a PIN the first time you change or disconnect.`;
+}
+
+// ---------------------------------------------------------------------------
+// The settings PIN. It stops the address and token being changed or wiped by
+// accident; it is not encryption (the app needs the token to connect without
+// asking each time). Kept as a salted SHA-256, never as the digits.
+let view = 'edit', pendingSave = false;
+function showView(v) {
+  view = v;
+  $('vLocked').hidden = v !== 'locked';
+  $('haForm').hidden = v !== 'edit';
+  $('vPin').hidden = v !== 'pin';
+  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : 'Home Assistant';
+  if (v === 'edit') {
+    const s = saved();
+    $('haUrl').value = s.url || '';
+    $('haToken').value = '';
+    $('haToken').placeholder = s.token ? 'Saved. Leave blank to keep it' : 'Paste the token';
+    $('haCancel').hidden = !s.token;
+  }
+  syncSheet();
+}
+
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+const PIN = {
+  get() { return store.get('pin'); },
+  async hash(pin, salt) { return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin))); },
+  async set(pin) { const salt = hex(crypto.getRandomValues(new Uint8Array(16))); store.set('pin', { salt, hash: await this.hash(pin, salt) }); },
+  async ok(pin) { const p = this.get(); return !!p && await this.hash(pin, p.salt) === p.hash; },
+};
+
+// One pad, three jobs: check the PIN, choose one, or confirm the choice.
+const pad = { job: null, first: '', typed: '', then: null, back: 'locked', busy: false };
+function askPin(job, then, back = 'locked') {
+  Object.assign(pad, { job, first: '', typed: '', then, back, busy: false });
+  showView('pin');
+  $('pinForgot').hidden = job !== 'check';
+  $('pinForgot').className = 'linkbtn'; $('pinForgot').textContent = 'Forgot PIN?';
+  $('pinPad').querySelector('[data-k="cancel"]').textContent = job === 'check' ? 'Cancel' : back === 'done' ? 'Not now' : 'Cancel';
+  pinPrompt();
+}
+function pinPrompt(msg = '', bad = false) {
+  $('pinTitle').textContent = pad.job === 'check' ? 'Enter your PIN' : pad.job === 'choose' ? 'Choose a 4-digit PIN' : 'Enter it again';
+  const wait = lockedOut();
+  $('pinSub').textContent = wait ? `Too many tries. Try again in ${wait} s.` : msg || (pad.job === 'choose' ? 'It locks the address and token against changes.' : '');
+  $('pinSub').className = 'pin-sub' + (bad || wait ? ' bad' : '');
+  for (const b of $('pinPad').querySelectorAll('[data-k]')) if (/\d/.test(b.dataset.k)) b.disabled = !!wait;
+  if (wait) setTimeout(() => { if (view === 'pin') pinPrompt(); }, 1000);
+  drawDots();
+}
+function drawDots() { [...$('pinDots').children].forEach((d, i) => d.classList.toggle('on', i < pad.typed.length)); }
+function shake() { const d = $('pinDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); }
+// Five wrong in a row and the pad rests for 30 s.
+function lockedOut() { const f = store.get('pinFails') || {}; const left = Math.ceil(((f.until || 0) - Date.now()) / 1000); return left > 0 ? left : 0; }
+
+async function pinKey(k) {
+  if (view !== 'pin' || pad.busy) return;
+  if (k === 'cancel') return pad.back === 'done' ? finishSave() : showView(pad.back);
+  if (k === 'del') { pad.typed = pad.typed.slice(0, -1); return drawDots(); }
+  if (!/^\d$/.test(k) || pad.typed.length >= 4 || lockedOut()) return;
+  pad.typed += k; drawDots();
+  if (pad.typed.length < 4) return;
+  pad.busy = true;
+  await new Promise(r => setTimeout(r, 120));   // let the fourth dot fill before the answer
+  const typed = pad.typed; pad.typed = ''; pad.busy = false;
+  if (pad.job === 'check') {
+    if (await PIN.ok(typed)) { store.set('pinFails', null); return pad.then(); }
+    const f = store.get('pinFails') || { n: 0 }; f.n = (f.n || 0) + 1;
+    if (f.n >= 5) { f.n = 0; f.until = Date.now() + 30000; }
+    store.set('pinFails', f);
+    shake(); return pinPrompt('Wrong PIN', true);
+  }
+  if (pad.job === 'choose') { pad.first = typed; pad.job = 'confirm'; return pinPrompt(); }
+  if (typed !== pad.first) { pad.job = 'choose'; pad.first = ''; shake(); return pinPrompt("Those didn't match. Choose again.", true); }
+  await PIN.set(typed);
+  pad.then();
+}
+$('pinPad').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b && !b.disabled) pinKey(b.dataset.k); });
+$('pinPad').querySelector('[data-k="del"]').innerHTML = svg('backspace', 24);
+document.addEventListener('keydown', e => {
+  if (view !== 'pin' || !sheetWrap.classList.contains('open')) return;
+  if (/^\d$/.test(e.key)) pinKey(e.key);
+  else if (e.key === 'Backspace') pinKey('del');
+});
+// Forgot: the way out wipes what the PIN protects, so it cannot be used to
+// get round it. Two taps, so a stray one does nothing.
+let forgetArmed = 0;
+$('pinForgot').onclick = () => {
+  const b = $('pinForgot');
+  if (Date.now() - forgetArmed > 4000) {
+    forgetArmed = Date.now(); b.className = 'linkbtn warn'; b.textContent = 'Tap again to erase the address, token and PIN';
+    setTimeout(() => { if (Date.now() - forgetArmed >= 4000) { b.className = 'linkbtn'; b.textContent = 'Forgot PIN?'; } }, 4100);
+    return;
+  }
+  forgetArmed = 0;
+  store.set('ha', null); store.set('pin', null); store.set('pinFails', null);
+  HA.stop(); goPreview(); showView('edit');
+};
+
+// Anything that changes what is saved goes through the PIN; with none set
+// yet, it asks for one first.
+function guarded(fn) { PIN.get() ? askPin('check', fn) : askPin('choose', fn); }
+$('lkEdit').onclick = () => guarded(() => showView('edit'));
+$('lkForget').onclick = () => guarded(() => { store.set('ha', null); HA.stop(); goPreview(); showView('edit'); });
+$('haCancel').onclick = () => showView('locked');
+
+// After a save: lock it with a PIN if there is none yet, then show it locked.
+function finishSave() {
+  showView('locked');
+  if (HA.status === 'live') setTimeout(() => { if (sheetWrap.classList.contains('open') && view === 'locked') closeSheets(); }, 700);
 }
 function onStatus(s, detail) {
   if (detail !== undefined) statusDetail = detail;
+  if (s === 'live' && pendingSave) { pendingSave = false; if (sheetWrap.classList.contains('open')) PIN.get() ? finishSave() : askPin('choose', finishSave, 'done'); }
+  if (s === 'error') pendingSave = false;
   const chip = $('chip'), words = { live: 'Live', connecting: 'Connecting', reconnecting: 'Reconnecting', error: 'Not connected', off: 'Preview' };
   const shown = mode === 'preview' ? 'preview' : s;
   chip.dataset.s = shown; chip.lastElementChild.textContent = mode === 'preview' ? 'Preview' : words[s] || s;
   $('banner').hidden = mode !== 'preview';
-  if (s === 'live' && sheetWrap.classList.contains('open') && mode === 'live') setTimeout(() => { if (sheetWrap.classList.contains('open')) closeSheets(); }, 700);
+  if (s === 'live' && sheetWrap.classList.contains('open') && mode === 'live' && view === 'locked') setTimeout(() => { if (sheetWrap.classList.contains('open') && view === 'locked') closeSheets(); }, 700);
   syncSheet();
   render();
 }
@@ -1051,18 +1232,18 @@ function cleanUrl(raw) {
 
 $('haForm').addEventListener('submit', e => {
   e.preventDefault();
-  const bad = msg => { $('haStatus').className = 'status bad'; $('haStatus').textContent = msg; };
+  const bad = msg => { $('haStatus').className = 'status hastatus bad'; $('haStatus').textContent = msg; };
   let url; try { url = cleanUrl($('haUrl').value); } catch (err) { return bad(err.message); }
-  const token = $('haToken').value.trim();
+  // A blank token box keeps the saved token: it is never shown again once saved.
+  const token = $('haToken').value.trim() || saved().token;
   if (!token) return bad('Paste a long-lived access token.');
-  $('haUrl').value = url;
   store.set('ha', { url, token });
+  $('haToken').value = '';
+  // Stay on the form until Home Assistant says yes, so a typo can be fixed
+  // straight away; then lock it (choosing a PIN first if there is none).
+  pendingSave = true;
   goLive();
 });
-$('haForget').onclick = () => {
-  store.set('ha', null); $('haToken').value = '';
-  HA.stop(); goPreview(); syncSheet();
-};
 
 function goPreview() { mode = 'preview'; ents = sampleStates(); onStatus('off'); }
 function goLive() {
