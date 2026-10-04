@@ -15,10 +15,14 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   minutes, and the correction is held to 8°F either way. Otherwise the
   forecast for your spot stands. Tap Now in the hourly row to see which it
   was, the station, its distance and the adjustment.
-- **Rain in the next two hours** (continental US): the rain chip under the
-  temperature says exactly when. "Rain at 3:45PM" when it is dry now and rain
-  is due within two hours; "Rain stops at 4:15PM" when it is raining now and
-  stops within two hours ("Snow" when snow makes up at least half of it).
+- **Rain starting or stopping** (continental US): the rain chip under the
+  temperature says exactly when. Dry now: "Rain at 3:45PM" when rain is due
+  within two hours. Raining now: "Rain stops at 4:15PM" at the first dry
+  quarter hour, or "Rain through 6:15PM" when it doesn't stop in the six hours
+  there are ("Snow" when snow makes up at least half of it). "Raining now" is
+  the model's own current quarter, or the current conditions (the station, or
+  this hour's forecast) showing rain or snow, so when those say rain and the
+  model has it dry already, the chip says it stops at the next quarter hour.
   Otherwise the chip says what it always did (Dry today, or the chance). The
   times come from Open-Meteo's 15-minute precipitation, which over North
   America is NOAA's HRRR model (1 km, run every hour), so they fall on the
