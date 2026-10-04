@@ -1338,11 +1338,11 @@ function w3Hours(m) {
 // Radar tiles: the Iowa Environmental Mesonet's cache of the NWS NEXRAD national
 // mosaic (the continental US). Map: CARTO's dark tiles, from OpenStreetMap data.
 const R = { z: 7, idx: 0, playing: false, timer: null, touched: false, place: '', offs: [], hrrr: null };
-// The loop is "Now" (the latest NEXRAD radar, IEM's ready-made tiles) and then the next two
+// The loop is "Now" (the latest NEXRAD radar, IEM's ready-made tiles) and then the next four
 // hours, which are a forecast, not radar: the NWS HRRR model's simulated reflectivity, which
 // IEM draws every 15 minutes out to 18 hours. Offsets are minutes: 0 is now, negative is ahead.
 const RADAR_OFFSETS = [0];
-const RADAR_AHEAD = [15, 30, 45, 60, 75, 90, 105, 120];
+const RADAR_AHEAD = Array.from({ length: 16 }, (_, i) => (i + 1) * 15);   // every 15 minutes out to 4 hours
 // Forecast frames are numbered from the model run's start, so that time is read first
 // (IEM's refd_1080.json, model_init_utc). IEM doesn't let other sites read that file, so it
 // comes through this site's own helper (functions/weather/api, on Cloudflare); a direct read
@@ -1473,7 +1473,7 @@ function radarSync() {
   }).catch(() => {
     // No run time: show the latest radar on its own, and say why the loop is missing.
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
-    box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">The two-hour forecast isn’t available right now, so this is the latest radar only.</div>');
+    box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">The four-hour forecast isn’t available right now, so this is the latest radar only.</div>');
   });
   // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
   if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
