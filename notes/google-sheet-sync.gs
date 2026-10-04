@@ -7,10 +7,12 @@
  * secret into Notes. Full steps: notes/README.md, "Google Sheet sync".
  *
  * What it keeps in the Sheet:
- *   _notes, _reminders, _lists, _deleted  hidden tabs the app reads back from
- *                                          (one row per item, as JSON)
+ *   _notes, _reminders, _lists, _places,  hidden tabs the apps read back from
+ *   _deleted                               (one row per item, as JSON)
  *   #recipe, #home, ... No tag            one tab per tag, newest note first
  *   ✓ Groceries, ✓ Home, ...              one tab per reminder list
+ *   📍 Want to go, 📍 Been                 the Places app's lists (places/), which
+ *                                          shares this Sheet and its secret
  * The tag and list tabs are rebuilt on every change, so edit notes in the
  * app, not in those tabs.
  *
@@ -22,7 +24,7 @@
 const SECRET = 'CHANGE-ME';   // <- replace with your own long phrase, e.g. 'maple-otter-47-lantern-quiet'
 
 const APP = 'allison-notes-sync', VERSION = 1;
-const DATA = {notes: '_notes', todos: '_reminders', lists: '_lists'};
+const DATA = {notes: '_notes', todos: '_reminders', lists: '_lists', places: '_places'};   // places: the Places app (places/)
 const GRAVES = '_deleted';
 const KEEP_DELETED_DAYS = 180;
 const CHUNK = 45000;          // a Sheet cell holds up to 50,000 characters
@@ -42,6 +44,12 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const db = load(ss);
     if (req.action === 'due') return out(due(db));
+    // The Places app shares this Sheet: it sends and gets back only its places.
+    if (req.action === 'places') {
+      const moved = merge(db, {places: req.places || [], graves: onlyKind(req.graves, 'places')});
+      if (moved) { store(ss, db); views(ss, db); }
+      return out({ok: true, app: APP, v: VERSION, at: Date.now(), places: Array.from(db.places.values()), graves: onlyKind(Object.fromEntries(db.graves), 'places')});
+    }
     const changed = req.action === 'sync' ? merge(db, req) : false;
     if (changed || req.action === 'rebuild') { store(ss, db); views(ss, db); }
     return out({
@@ -52,6 +60,13 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// The "deleted" marks for one kind of item only ("places:…").
+function onlyKind(graves, kind) {
+  const out = {};
+  Object.keys(graves || {}).forEach(k => { if (k.indexOf(kind + ':') === 0) out[k] = graves[k]; });
+  return out;
 }
 
 // For the notification server (notes/push): only what it needs to alert.
@@ -183,10 +198,24 @@ function views(ss, db) {
     wanted[name] = true;
   });
 
-  // Remove tabs for tags and lists that no longer exist, and the empty starter tab.
+  // Places: one tab for where you want to go, one for where you've been.
+  const places = Array.from(db.places.values());
+  const money = p => p ? '$$$$'.slice(0, p) : '';
+  [['📍 Want to go', 'want'], ['📍 Been', 'been']].forEach(([name, status]) => {
+    const list = places.filter(p => (p.status || 'want') === status)
+      .sort((a, b) => status === 'been' ? String(b.visited || '').localeCompare(String(a.visited || '')) : String(a.planned || '9999').localeCompare(String(b.planned || '9999')));
+    if (!list.length) return;
+    const header = ['Place', 'Type', 'Address', status === 'been' ? 'Went on' : 'Planned for', 'Rating', 'Price', 'Tags', 'Notes', 'Map'];
+    view(ss, name, header, list.map(p => [p.name || '', p.category || '', p.address || '', (status === 'been' ? p.visited : p.planned) || '',
+      p.rating ? '★★★★★'.slice(0, p.rating) : '', money(p.price), (p.tags || []).map(t => '#' + t).join(' '), p.notes || '',
+      p.lat != null ? 'https://maps.apple.com/?ll=' + p.lat + ',' + p.lon + '&q=' + encodeURIComponent(p.name || 'Place') : '']));
+    wanted[name] = true;
+  });
+
+  // Remove tabs for tags, lists and places that no longer exist, and the empty starter tab.
   ss.getSheets().forEach(sh => {
     const n = sh.getName();
-    const ours = n.charAt(0) === '#' || n.indexOf('✓ ') === 0 || n === 'No tag';
+    const ours = n.charAt(0) === '#' || n.indexOf('✓ ') === 0 || n === 'No tag' || n.indexOf('📍 ') === 0;
     if (ours && !wanted[n]) ss.deleteSheet(sh);
     else if ((n === 'Sheet1' || n === 'Sheet 1') && sh.getLastRow() === 0 && Object.keys(wanted).length) ss.deleteSheet(sh);
   });

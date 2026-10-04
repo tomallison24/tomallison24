@@ -1,7 +1,7 @@
 # Refreshes the News app's headlines and publishes the site.
 #
 # build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (Home + News + Weather + Mail + Notes + Podcasts + Travel + Calendar). Runs on any branch, so feed
+#         packages the repo (Home + News + Weather + Mail + Notes + Podcasts + Travel + Calendar + Places). Runs on any branch, so feed
 #         changes can be checked before merging. On the default branch it
 #         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
 #         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits
@@ -25,6 +25,7 @@ on:
       - 'home/**'
       - 'podcasts/**'
       - 'travel/**'
+      - 'places/**'
       - 'calendar/**'
       - 'functions/**'
       - '.github/workflows/news.yml'
@@ -80,7 +81,7 @@ jobs:
           # /podcasts/api/*, Travel's flight status, /travel/api/*, and
           # Calendar's iCloud connection, /calendar/api/*, and Weather's forecast
           # radar run time, /weather/api/*) as Pages Functions.
-          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar _site/
+          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places _site/
           npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
           # Travel's live flight status key (travel/README.md, "Live flight
           # status"), handed to the Pages project as a secret. Skipped until
