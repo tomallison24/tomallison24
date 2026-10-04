@@ -17,11 +17,27 @@ same frosted glass as the other AllisonOS apps.
   Family calendar are added by themselves (below).
 - **Sorting**: Want to go by **Soonest** (dated plans first, grouped into
   Coming up / Someday / Date passed), **Nearest** or **Newest**; Been by
-  **Recent**, **Top rated** or **Nearest**. The search box finds your places
-  by name, type, address, notes or `#tag`.
+  **Recent**, **Top rated** or **Nearest**.
+- **The search box** at the top finds your places by name, type, address,
+  notes or `#tag`, and, from three letters on, businesses on OpenStreetMap
+  too, listed under **Businesses** after your own (nearest first); tap one to
+  add it. On the map it searches around where the map is looking: results
+  drop down under the box, and tapping one flies the map there and opens its
+  card.
 - **Map** (the map button, top right): your places as pins, blue for Want to
   go and gold for Been, each with its emoji. **Touch and hold** anywhere on the
   map to add a place there. Buttons to show where you are and fit every pin.
+- **Businesses on the map**: zoomed in to street level, every named business
+  OpenStreetMap has in view shows as a small dot: coral for **Food & drink**
+  (restaurants, cafés, bars, pubs, bakeries, breweries), violet for **Things
+  to do** (museums, galleries, theatres, cinemas, attractions, zoos, bowling,
+  stadiums, landmarks), teal for **Shops** (every other shop). The chips at
+  the top switch each group on or off (Shops starts off, so the map isn't
+  crowded). Tap a dot for its card (type, cuisine, today's hours) with **Want
+  to go**, **Been** and **Directions**; once saved, its dot becomes your pin.
+  Further out than streets, a note says to zoom in. They come from the
+  Overpass API, a box a little larger than the screen at a time, and are kept
+  for the visit, so panning back costs nothing.
 - **Adding a place** (the + button):
   - **Search** by name, type or address ("tacos", "Denver Art Museum"),
     nearest first once Places knows where you are;
@@ -46,8 +62,8 @@ All free, with no account:
 - **Search**: [Photon](https://photon.komoot.io) by Komoot, over OpenStreetMap
   data. Searches go to Photon as you type (after three letters, with a short
   pause), with your last known position so nearby places come first.
-- **Hours, phone, website**: the [Overpass API](https://overpass-api.de),
-  which reads a place's OpenStreetMap tags.
+- **Hours, phone, website, and the businesses on the map**: the
+  [Overpass API](https://overpass-api.de), which reads OpenStreetMap's data.
 - **Map**: CARTO's tiles (OpenStreetMap data), with the same free key as
   Weather's radar map (`CARTO_KEY` in `app.js`), drawn by
   [Leaflet](https://leafletjs.com) 1.9.4, kept in `vendor/` (BSD-2-Clause,
@@ -58,7 +74,7 @@ well covered; suburbs and small independent places can be missing or out of
 date. Anything it doesn't have can still be added by hand or from a pin.
 
 Places sends your searches and, when you add one, your position to Photon,
-and a place's OpenStreetMap id to Overpass. Nothing else leaves the phone
+and a place's OpenStreetMap id, or the area the map is showing, to Overpass. Nothing else leaves the phone
 except the Google Sheet sync below.
 
 ## From your calendar
