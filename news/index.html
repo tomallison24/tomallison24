@@ -22,7 +22,8 @@
   it only reads that one same-origin file.
 
   Look: a quiet gradient backdrop that drifts slowly, with frosted glass
-  (backdrop-filter) only on the tab bar and the sheets; the lead story, the
+  (backdrop-filter) only on the tab bar, its tabs and chips, the toast and the
+  sheets; the lead story, the
   story list and the other cards are very faint tiles with no blur, the same
   in every AllisonOS app. Few glass layers keep scrolling smooth on iPhone.
   The filter panels are Liquid Glass sheets, as in the Calendar, and every
@@ -248,7 +249,7 @@
   }
   .bottom-bar .tab { background: transparent; border-color: transparent; font-weight: 600; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .bottom-bar .tab[aria-selected="true"] {
-    background: var(--lg-sel); color: var(--accent); font-weight: 700;
+    background: var(--lg-sel); color: var(--sel-ink); font-weight: 700;
     box-shadow: inset 0 0 0 0.5px var(--lg-rim), inset 0 1px 0 var(--bar-hi), 0 1px 4px var(--bar-lift);
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
