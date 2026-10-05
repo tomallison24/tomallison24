@@ -57,12 +57,14 @@
     --blob-2: rgba(255, 158, 118, 0.62);
     --blob-3: rgba(168, 138, 255, 0.62);
     --blob-4: rgba(96, 208, 178, 0.55);
-    /* Liquid Glass for the Settings sheet: clear glass, a lit rim, lighter glass rows */
+    /* Cards: very faint tiles, the same in every AllisonOS app */
+    --tile: rgba(255, 255, 255, 0.40);
+    --tile-edge: rgba(60, 60, 67, 0.10);
+    /* Liquid Glass for the Settings sheet: clear glass, a lit rim, faint tile rows */
     --lgs-top: rgba(255, 255, 255, 0.68);
     --lgs-bottom: rgba(255, 255, 255, 0.50);
     --lgs-rim: rgba(255, 255, 255, 0.92);
     --lgs-edge: rgba(255, 255, 255, 0.62);
-    --lgs-row: rgba(255, 255, 255, 0.44);
     --lgs-field: rgba(255, 255, 255, 0.62);
     --lgs-thumb: rgba(255, 255, 255, 0.92);
     --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%);
@@ -96,11 +98,12 @@
       --blob-2: rgba(200, 80, 40, 0.45);
       --blob-3: rgba(110, 60, 210, 0.50);
       --blob-4: rgba(20, 150, 120, 0.42);
+      --tile: rgba(255, 255, 255, 0.05);
+      --tile-edge: rgba(255, 255, 255, 0.10);
       --lgs-top: rgba(44, 44, 52, 0.60);
       --lgs-bottom: rgba(22, 22, 28, 0.52);
       --lgs-rim: rgba(255, 255, 255, 0.20);
       --lgs-edge: rgba(255, 255, 255, 0.12);
-      --lgs-row: rgba(255, 255, 255, 0.07);
       --lgs-field: rgba(255, 255, 255, 0.10);
       --lgs-thumb: rgba(255, 255, 255, 0.16);
       --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
@@ -133,11 +136,12 @@
     --blob-2: rgba(200, 80, 40, 0.45);
     --blob-3: rgba(110, 60, 210, 0.50);
     --blob-4: rgba(20, 150, 120, 0.42);
+    --tile: rgba(255, 255, 255, 0.05);
+    --tile-edge: rgba(255, 255, 255, 0.10);
     --lgs-top: rgba(44, 44, 52, 0.60);
     --lgs-bottom: rgba(22, 22, 28, 0.52);
     --lgs-rim: rgba(255, 255, 255, 0.20);
     --lgs-edge: rgba(255, 255, 255, 0.12);
-    --lgs-row: rgba(255, 255, 255, 0.07);
     --lgs-field: rgba(255, 255, 255, 0.10);
     --lgs-thumb: rgba(255, 255, 255, 0.16);
     --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
@@ -217,7 +221,7 @@
   .dock .app .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
   /* ---- Install ---- */
-  .install { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 22px; border-radius: 22px; }
+  .install { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 22px; border-radius: 22px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .install[hidden] { display: none; }
   .install .text { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
   .install .text b { display: block; font-size: 15px; font-weight: 600; }
@@ -229,8 +233,8 @@
   /* ---- Settings sheet: Liquid Glass ----
      One sheet of clear glass floating just inside the screen's edges, as
      iOS 26's are: the home screen blurs and brightens through it, a lit rim
-     runs round it, and the rows and buttons are lighter glass on top. The
-     rows don't blur again (the sheet already has), which keeps it smooth. */
+     runs round it, the buttons are lighter glass on top, and the lists are
+     the same faint tiles as every AllisonOS card (no blur of their own). */
   html.locked, html.locked body { overflow: hidden; }
   .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
   .sheet-wrap[hidden] { display: none; }
@@ -272,10 +276,7 @@
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
   }
   .sect h3 { margin: 18px 8px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-  .group {
-    border-radius: 26px; overflow: hidden; background: var(--lgs-row);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift);
-  }
+  .group { border-radius: 26px; overflow: hidden; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px 8px 16px; text-align: left; font-size: 16px; }
   .opt + .opt::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--hairline); }
   .opt .label { flex: 1; min-width: 0; }
@@ -332,7 +333,7 @@
 
 <div class="wrap">
   <main>
-    <section class="glass install" id="install" hidden>
+    <section class="install" id="install" hidden>
       <div class="text"><b>Add AllisonOS to your home screen</b><span id="install-sub">Every app opens inside it, with no browser bar.</span></div>
       <button class="go" id="install-go" hidden>Install</button>
       <button class="later" id="install-later" aria-label="Not now">
