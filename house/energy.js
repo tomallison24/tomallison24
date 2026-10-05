@@ -16,10 +16,11 @@
 // A device Home Assistant does not estimate (the speakers, cameras, vacuums,
 // the Hatch, the printer, the outdoor lights) shows no figure at all.
 //
-// ONE DIFFERENCE, on purpose: Home Assistant's climate estimate waits for the
-// Windmill to say it is cooling, which it never does, so its total leaves the
-// Windmill out. Here it is counted when it is inferred to be cooling (the
-// same inference as its card), and its line says so.
+// TODAY per device: Home Assistant keeps a daily meter for each estimated
+// device (ha-config: sensor.est_<device>_daily_energy, added 2026-10-05) as
+// well as for the metered ones; a popup shows it once that sensor exists.
+// The Windmill counts while it is inferred to be cooling, here and (since the
+// same change) in Home Assistant's climate total.
 'use strict';
 const KW = 0.13;   // $/kWh, Home Assistant's rate
 const fmtW = w => w == null || isNaN(w) ? '—' : w >= 1000 ? String(Number((w / 1000).toFixed(w >= 10000 ? 0 : 2))) + ' kW' : (w < 10 ? Number(w.toFixed(1)) : Math.round(w)) + ' W';
@@ -39,6 +40,19 @@ function lightW(id) {
   return ms.length ? ms.reduce((s, m) => s + bulbW(m, 10), 0) : null;
 }
 const AC_W = { lr: 2710, of: 2060, wm: 730 };
+// Each device's own daily meter in Home Assistant, where it has one.
+const EST_KEY = { lr: 'living_room_ac', of: 'office_ac', wm: 'windmill_ac', sofia: 'sofias_dyson', olivia: 'olivias_dyson', md: 'md_dyson',
+  'light.floor_lamps': 'floor_lamps', 'light.morocco': 'morocco', 'light.living_room_fireplace_lights_socket': 'fireplace', 'light.spotlight': 'spotlight',
+  'light.cocktail_main': 'cocktail_lights', 'light.tv_lamps': 'tv_lamps', 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi': 'tv_strip', 'light.bar_main_light_1': 'bar_main_light',
+  'light.side_lamps': 'side_lamps', 'light.kitchen': 'kitchen_lights', 'light.kitchen_fan': 'kitchen_fan_lights', 'light.sofias_lamp': 'sofias_lamp',
+  'light.tom_lamp': 'toms_lamp', 'light.elena_lamp': 'elenas_lamp' };
+// kWh today, or null where Home Assistant has no meter (yet). Bedroom Lamps is Tom's + Elena's.
+function estToday(key) {
+  if (key === 'light.master_bedroom') { const a = estToday('light.tom_lamp'), b = estToday('light.elena_lamp'); return a == null || b == null ? null : a + b; }
+  const k = EST_KEY[key], id = k && 'sensor.est_' + k + '_daily_energy';
+  return id && st(id) && !gone(id) ? num(id) : null;
+}
+const withToday = (stats, key) => { const t = estToday(key); return t == null ? stats : [...stats, ['TODAY', fmtKwh(t)]]; };
 const thermoW = t => { const r = tread(t); return !r.offline && r.act === 'cooling' ? AC_W[t.id] : 0; };
 function dysonW(y) {
   if (gone(y.fan) && gone(y.clim)) return null;
@@ -54,8 +68,8 @@ function energyPart(stats, est, note) {
 }
 const thermoEnergyHTML = t => {
   const w = thermoW(t);
-  return { stats: [['NOW', fmtW(w)]], note: t.id === 'wm'
-    ? 'About 730 W while it cools (8,000 BTU at a typical efficiency). Home Assistant\'s climate total leaves the Windmill out: it never says it is cooling.'
+  return { stats: withToday([['NOW', fmtW(w)]], t.id), note: t.id === 'wm'
+    ? 'About 730 W while it cools (8,000 BTU at a typical efficiency), counted while it is inferred to be cooling - it never says so itself.'
     : t.id === 'lr' ? '2,710 W while it cools, from the unit\'s nameplate. Heating is gas and isn\'t counted.'
     : '2,060 W while it cools: the outdoor unit\'s nameplate and an assumed 500 W blower. Heating isn\'t counted in Home Assistant\'s estimate.' };
 };
@@ -76,7 +90,7 @@ function stripDevices(v) {
     add('Lighting', num('sensor.estimated_lighting_power')); add('Climate', num('sensor.estimated_climate_power'));
     add('Fans & dehumidifiers', num('sensor.estimated_fan_dehumidifier_power')); add('TV', num('sensor.estimated_tv_power'));
   } else if (v === 'climate') {
-    for (const t of THERMOS) add(t.id === 'wm' ? t.name : t.name + ' AC', thermoW(t), t.id === 'wm' ? 'not in HA\'s total' : 'est.');
+    for (const t of THERMOS) add(t.id === 'wm' ? t.name : t.name + ' AC', thermoW(t), 'est.');
     for (const h of HEATERS) add(h.name, num(h.power), 'metered');
     for (const y of DYSONS) add(y.name, dysonW(y), 'est.');
     for (const u of UNITS) add(u.name + ' Dehumidifier', num(u.pw), 'metered');
@@ -108,4 +122,9 @@ family({
     }
   },
   act(id, a) { if (a === 'toggle') { stripOpen[id] = !stripOpen[id]; render(); } },
+  // The preview's daily meters (kWh so far today).
+  samples: e => Object.fromEntries(Object.entries({ floor_lamps: 0.31, morocco: 0.18, fireplace: 0.12, spotlight: 0.02, cocktail_lights: 0.22, tv_lamps: 0.09, tv_strip: 0.05,
+    bar_main_light: 0, side_lamps: 0.06, kitchen_lights: 0.41, kitchen_fan_lights: 0.03, sofias_lamp: 0.04, toms_lamp: 0.07, elenas_lamp: 0.11,
+    living_room_ac: 2.03, office_ac: 0, windmill_ac: 0.84, sofias_dyson: 0.04, olivias_dyson: 3.17, md_dyson: 0 })
+    .map(([k, v]) => ['sensor.est_' + k + '_daily_energy', e(v, { unit_of_measurement: 'kWh' })])),
 });

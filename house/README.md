@@ -195,11 +195,12 @@ each device's power now. Each device's popup has an **Energy** section.
   total).
 - Nothing is shown for a device Home Assistant doesn't estimate: speakers,
   Apple TV, cameras, vacuums, the Hatch, the printer, outdoor lights.
-- Home Assistant keeps today and month per category, not per device, so most
-  devices have **now** only.
-- The Windmill: Home Assistant's climate total waits for it to report
-  cooling, which it never does, so its total leaves it out. Here it is counted
-  while it is inferred to be cooling, and its line says it isn't in HA's total.
+- **Today per device**: Home Assistant keeps a daily meter for each estimated
+  device (ha-config's `sensor.est_<device>_daily_energy`: the lights, ACs and
+  Dysons; daily only), shown once that sensor exists - they count from Home
+  Assistant's restart after that change. Month stays per category.
+- The Windmill counts while it is inferred to be cooling, here and in Home
+  Assistant's climate total (it never reports cooling itself).
 
 ## Thermostat schedules
 

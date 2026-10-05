@@ -146,7 +146,7 @@ family({
         ['power', grp(swRow('toggle', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
         L.kind === 'strip' ? ['colour', lbl('COLOUR') + this.swatches(r)] : null,
         ms.length ? ['members', lbl('LIGHTS IN THIS GROUP') + `<div class="group">${memberRows}</div>`] : null,
-        lightW(id) != null ? energyPart([['NOW', fmtW(lightW(id))]], true, (id === EST_STRIP ? '12 W' : '10 W a bulb') + ' at full brightness, less when dimmed.') : null,
+        lightW(id) != null ? energyPart(withToday([['NOW', fmtW(lightW(id))]], id), true, (id === EST_STRIP ? '12 W' : '10 W a bulb') + ' at full brightness, less when dimmed.') : null,
       ],
     };
   },
