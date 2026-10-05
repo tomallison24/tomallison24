@@ -213,9 +213,11 @@ site.
   block, unchanged, plus Travel's own pieces at the end), `app.js` the app,
   `parse.js` the email reading, `sw.js` the offline shell. As in Calendar,
   the sheets are Liquid Glass floating just inside the screen's edges (the
-  trip page stays a whole page, with the same glass rows and buttons), and
-  the section bar and the Trips filter have a glass thumb that slides to the
-  one chosen (`home/slide.js`, shared by every app).
+  trip page stays a whole page, with the same rows and glass buttons), the
+  cards and rows (the trips, a trip's timeline, the lists) are very faint
+  flat tiles, the same in every AllisonOS app, and the section bar and the
+  Trips filter have a glass thumb that slides to the one chosen
+  (`home/slide.js`, shared by every app).
 - **Security as in Mail**: a Content Security Policy that only runs these
   files, no email is ever shown as a page (the HTML is only read as text),
   it refuses to run in a frame, and the sign-in carries a random `state`.

@@ -25,8 +25,10 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
   URL and notes. New events get a 15-minute alert (Settings changes it).
   The editor, an event's details, Settings and the this-or-all choice are
   Liquid Glass sheets, as in iOS 26: clear glass floating just inside the
-  screen's edges with the calendar blurred through it, glass rows, fields and
-  switches, and round ✕ (cancel or close) and ✓ (add or done) buttons.
+  screen's edges with the calendar blurred through it, glass fields and
+  switches, and round ✕ (cancel or close) and ✓ (add or done) buttons. The
+  rows in them, like every card (the month grid, the lists), are very faint
+  flat tiles, the same in every AllisonOS app.
 - **Drag** an event in Day or Week to move it (press and hold first on a
   phone), or drag its bottom edge to make it longer or shorter. Times snap to
   15 minutes; in Week you can drag to another day.

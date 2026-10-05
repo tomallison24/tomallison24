@@ -49,6 +49,8 @@
   --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
   --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
   --n-yellow:#FFCC00; --n-green:#34C759; --n-blue:#0A84FF; --n-pink:#FF2D55; --n-purple:#AF52DE;
+  /* Cards: very faint tiles, the same in every AllisonOS app */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;
@@ -64,6 +66,7 @@
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
@@ -79,6 +82,7 @@
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -488,6 +492,10 @@ svg.fs{fill:currentColor}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ok:#30D158;--ok-ink:#7EE2A0;--warn:#FF9F0A;--warn-ink:#FFCB7A;--bad:#FF453A;--bad-ink:#FF9E97}}
 :root[data-theme="dark"]{--ok:#30D158;--ok-ink:#7EE2A0;--warn:#FF9F0A;--warn-ink:#FFCB7A;--bad:#FF453A;--bad-ink:#FF9E97}
 .enter .trip,.enter .hero,.enter .dayblock{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+/* Cards - the trips, a trip's timeline, the lists, boxes, the Explore form
+   and empty states - are very faint flat tiles, the same in every AllisonOS
+   app: no blur, lit rim or shadow. (The next-up hero keeps its colour.) */
+.trip,.tl,.rgroup,.box,.form,.live,.empty{background:var(--tile);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 
 /* the next thing to happen, big, at the top */
 .hero{position:relative;overflow:hidden;display:block;width:100%;text-align:left;border-radius:26px;padding:16px 16px 14px;color:var(--text);transition:transform .18s var(--ease);
@@ -604,16 +612,17 @@ a.rowbtn{color:var(--text);text-decoration:none}
 /* ---- the sheets: Liquid Glass ----
    A booking, Add, Settings, the Google Sheet and Paste are each one sheet of
    clear glass floating just inside the screen's edges: the trips blur and
-   brighten through it, a lit rim runs round it, and the rows, fields and
-   buttons are lighter glass on top. The rows don't blur again (the sheet
-   already has), which keeps it smooth on a phone. The trip page stays a
-   whole page that slides in, with the same glass rows and buttons. */
+   brighten through it, a lit rim runs round it, the rows sit on it as the
+   same faint tiles as the cards, and the fields and buttons are lighter
+   glass on top. The rows don't blur again (the sheet already has), which
+   keeps it smooth on a phone. The trip page stays a whole page that slides
+   in, with the same rows and glass buttons. */
 :root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
-  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+  --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
-  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
 :root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
-  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
 .lg .scrim{background:var(--lgs-scrim)}
 .lg .sheet:not(.page){width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
   background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
@@ -630,8 +639,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
 .lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
 .lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
-.lg .rgroup,.lg .tl,.lg .box,.lg .live,.lg .typepick button{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
-  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .rgroup,.lg .tl,.lg .box,.lg .live,.lg .typepick button{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .lg .typepick button{transition:transform .18s var(--ease)}
 .lg .rowbtn:active,.lg .ev:active{background:var(--lgs-field)}
 .lg .verify{border:0;border-radius:26px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 34%,transparent),inset 0 1px 1px var(--lgs-rim)}

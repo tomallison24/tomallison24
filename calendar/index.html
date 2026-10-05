@@ -53,6 +53,8 @@
   --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
   --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
   --n-yellow:#FFCC00; --n-green:#34C759; --n-blue:#0A84FF; --n-pink:#FF2D55; --n-purple:#AF52DE;
+  /* Cards: very faint tiles, the same in every AllisonOS app */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;
@@ -68,6 +70,7 @@
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
@@ -83,6 +86,7 @@
   --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
   --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -492,6 +496,10 @@ svg.fs{fill:currentColor}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--hol:#30D158;--ok:#30D158;--bad:#FF453A}}
 :root[data-theme="dark"]{--hol:#30D158;--ok:#30D158;--bad:#FF453A}
 .enter .mgrid,.enter .timeview,.enter .rgroup,.enter .ymon,.enter .strip{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+/* Cards - the month grid, the day and week grids and their strip, the year's
+   months, the event lists, notices and empty states - are very faint flat
+   tiles, the same in every AllisonOS app: no blur, lit rim or shadow. */
+.rgroup,.empty,.notice,.mgrid,.timeview,.strip,.ymon{background:var(--tile);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .titlebtn{flex:1;min-width:0;text-align:left;display:flex;align-items:center;gap:6px}
 .titlebtn .title{flex:none;max-width:100%;font-size:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .titlebtn svg{width:16px;height:16px;color:var(--faint);stroke-width:2.2;margin-top:6px}
@@ -719,15 +727,16 @@ a.rowbtn{color:var(--text);text-decoration:none}
 /* ---- the sheets: Liquid Glass ----
    New Event, an event's details, Settings and the this-or-all choice are
    each one sheet of clear glass floating just inside the screen's edges:
-   the calendar blurs and brightens through it, a lit rim runs round it, and
-   the rows, fields and buttons are lighter glass on top. The rows don't blur
-   again (the sheet already has), which keeps it smooth on a phone. */
+   the calendar blurs and brightens through it, a lit rim runs round it, the
+   rows sit on it as the same faint tiles as the cards, and the fields and
+   buttons are lighter glass on top. The rows don't blur again (the sheet
+   already has), which keeps it smooth on a phone. */
 :root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
-  --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+  --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
-  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
 :root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
-  --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
 .lg .scrim{background:var(--lgs-scrim)}
 .lg .sheet{width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
   background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
@@ -746,8 +755,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
 .lg .okbtn[disabled]{opacity:.6}
 .lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
-.lg .rgroup{border:0;border-radius:26px;background:var(--lgs-row);-webkit-backdrop-filter:none;backdrop-filter:none;
-  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.lg .rgroup{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .lg a.kvrow{text-decoration:none}
 .lg .rowbtn:active,.lg button.kvrow:active,.lg a.kvrow:active,.lg .pickrow:active{background:var(--lgs-field)}
 .lg .label{margin:4px 8px -6px}

@@ -52,6 +52,10 @@ days you never open the app — but only once its Google credentials are set up
   with the same glass (✕ to cancel, a blue ↑ to send), Settings has iOS 26's
   switches, and **All | Unread**, the tag picker and *Notify me about* have a
   glass thumb that slides to your choice.
+- **Cards** — each conversation in the list, a message's parts, files, the
+  Settings and Tags panels and Tidy's lists — are very faint tiles: a whisper
+  of white with a hairline edge, no shadow and no blur (`--tile`,
+  `--tile-edge`), the same in every AllisonOS app.
 - Rows show the sender, subject and preview, plus your own tags — no buttons
   and no domain chips; the actions live under the swipes.
 
