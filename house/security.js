@@ -11,7 +11,11 @@
 //     STANDBY when on but disarmed, OFF otherwise. A still's age is the ts=
 //     in its thumbnail address (when it was taken).
 //   - pausing motion detection runs script.pause_<camera>_camera_motion_detection
-//     with the minutes, which turns it off and back on after.
+//     with the minutes, which turns it off and back on after. While it runs
+//     the card says how many minutes are left. The script only says that it
+//     is running (and when it started), so the minutes asked for are kept on
+//     this phone when the pause is started here; one started elsewhere shows
+//     as "Paused" without a count.
 //   - the Nest doorbell can't be turned off from Home Assistant; its stills
 //     only come with events, so it has a live view: WebRTC or HLS, whichever
 //     the camera offers (camera/capabilities), as Home Assistant's own player.
@@ -44,6 +48,23 @@ family({
     const s = st(c.cam);
     return { d, on, badge: !on ? 'off' : sys.armed ? 'active' : 'standby', ts, offline: gone(c.cam),
       pic: haPic(attr(c.cam, 'entity_picture'), ts || (s && s.lu)), motion: isOn(c.motion) };
+  },
+  // A pause under way: { mins (left, or null when not known), m (asked for) },
+  // or null when there is none.
+  pauseLeft(c, r) {
+    const p = store.get('pause.' + c.id), running = val(c.pause) === 'on';
+    const fresh = p && Date.now() - p.start < 15e3;   // just tapped: the script may not have reported yet
+    if (r.on || (!running && !fresh)) { if (p && !running && !fresh) store.set('pause.' + c.id, null); return null; }
+    if (!p) return { mins: null, m: null };
+    // Started again from somewhere else (its start isn't ours): the count isn't known.
+    const lt = Date.parse(attr(c.pause, 'last_triggered'));
+    if (running && !isNaN(lt) && Math.abs(lt - p.start) > 120e3) return { mins: null, m: null };
+    const left = p.start + p.m * 60e3 - Date.now();
+    return { mins: left > 0 ? Math.ceil(left / 60e3) : null, m: p.m };
+  },
+  pauseLine(c, r) {
+    const pz = this.pauseLeft(c, r);
+    return pz ? `<span class="cp-t">${svg('timer', 12)}${pz.mins != null ? pz.mins + ' min' : 'Paused'}</span>` : '';
   },
   snap(name, pic, badge, age, extra = '') {
     const b = badge ? `<span class="cbadge ${badge}">${badge === 'active' ? '<i></i>' : ''}${badge.toUpperCase()}</span>` : '';
@@ -92,7 +113,10 @@ family({
     put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
       <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? '48,209,88' : '255,180,78')}</button>`);
     const pz = el.querySelector('[data-r="pause"]');
-    if (pz) put(pz, `<div class="cp-h">Pause motion detection</div>${chipsHTML('pause', PAUSES, null, { dis: !r.on || unav(c.pause) })}`);
+    if (pz) {
+      const left = this.pauseLeft(c, r);
+      put(pz, `<div class="cp-h"><span>Pause motion detection</span>${this.pauseLine(c, r)}</div>${chipsHTML('pause', PAUSES, left && left.mins != null ? left.m : null, { dis: (!r.on && !left) || unav(c.pause) })}`);
+    }
     el.classList.toggle('offline', r.offline);
   },
 
@@ -124,7 +148,8 @@ family({
         ['view', `<div class="camv">${this.snap('', r.pic, '', this.ageOf(c, r))}</div>`],
         ['acts', `<div class="camacts"><button class="ghost big" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Take a snapshot</button></div><p class="tnote">Blink sends stills, not video. A new one takes about 8 seconds.</p>`],
         ['motion', grp(swRow('motion', 'Motion detection', 'motion', r.on, sys.armed ? '48,209,88' : '255,180,78', { dis: gone(c.sw), wait: tWaiting(r.d, 'sw'), sub: r.on && !sys.armed ? 'On, but the system is disarmed' : '' }), true)],
-        ['pause', lbl('PAUSE MOTION DETECTION') + chipsHTML('pause', PAUSES, null, { dis: !r.on })],
+        ['pause', (() => { const left = this.pauseLeft(c, r);
+          return `<div class="glbl cp-lbl"><span>PAUSE MOTION DETECTION</span>${this.pauseLine(c, r)}</div>` + chipsHTML('pause', PAUSES, left && left.mins != null ? left.m : null, { dis: !r.on && !left }); })()],
         ['read', lbl('READINGS') + grp(readRow('motion', 'Last motion', mo && mo.state === 'on' ? 'Detected' : mo && mo.lc ? ago(mo.lc) : '—')
           + readRow('battery', 'Battery', gone(c.battery) ? '—' : low ? 'Low' : 'OK', low ? 'due' : '')
           + readRow('therm', 'Temperature', isNaN(num(c.temp)) ? '—' : Math.round(num(c.temp)) + esc(tu))
@@ -150,6 +175,7 @@ family({
     if (a === 'pause') {
       const m = Number(b.dataset.v);
       toast(`${c.name}: motion detection off for ${m < 60 ? m + ' minutes' : m / 60 + (m === 60 ? ' hour' : ' hours')}`);
+      store.set('pause.' + c.id, { start: Date.now(), m });
       tset(r.d, 'sw', 'off'); render();
       return fire(c.name, 'script', 'turn_on', { entity_id: c.pause, variables: { minutes: m } });
     }
@@ -229,9 +255,12 @@ family({
   },
   preview(domain, service, d) {
     if (domain === 'script' && service === 'turn_on') {
-      const c = BLINKS.find(x => x.pause === d.entity_id); if (c) { patchEnt(c.sw, 'off'); return true; }
+      const c = BLINKS.find(x => x.pause === d.entity_id); if (c) { patchEnt(c.sw, 'off'); patchEnt(c.pause, 'on', { last_triggered: new Date().toISOString() }); return true; }
       if (d.entity_id === 'script.blink_snapshot') { const b = BLINKS.find(x => x.cam === d.variables.camera); patchEnt(b.cam, null, { thumbnail: `/api/blink/thumb?ts=${Math.round(Date.now() / 1000)}` }); return true; }
     }
     return false;
   },
 });
+
+// The count goes down by the minute: redraw while a pause is under way.
+setInterval(() => { if (BLINKS.some(c => store.get('pause.' + c.id))) render(); }, 30e3);

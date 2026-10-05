@@ -174,7 +174,11 @@ dashboard's comments record a quirk, the app keeps it:
   stills with ACTIVE / STANDBY / OFF, how old each still is, Snapshot (Blink
   sends stills, not video; a new one takes ~8 s), motion detection, and
   pausing it for 30 min to 4 h - on the Yard's card itself, as it is used
-  often, and in every camera's popup.
+  often, and in every camera's popup. While a pause runs, the minutes left
+  show discreetly beside "Pause motion detection" (and the length picked is
+  lit); another length restarts it. The pause script only says it is
+  running, so the minutes are kept on the phone that started it - a pause
+  started elsewhere (the dashboard, another phone) just shows "Paused".
 - **The doorbell's live view**: Home Assistant's own way - it asks what the
   camera offers, then WebRTC (with the data channel a Nest asks for) or HLS.
   Checked against Home Assistant 2026.7.4's camera code and a stand-in in
