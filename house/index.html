@@ -192,7 +192,7 @@
   .tg-head .pwr { flex: none; }
   .tg-tags { position: relative; height: 44px; margin: 2px 0 6px; }
   .tg-tag { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; transition: left .4s cubic-bezier(.2,.8,.2,1); text-shadow: 0 1px 8px rgba(0,0,0,0.3); }
-  .tg-tag small { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
+  .tg-tag small { white-space: nowrap; display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
   .tg-tag b { font-size: 28px; font-weight: 200; font-variant-numeric: tabular-nums; }
   .tg-ruler { position: relative; height: 56px; border-radius: 16px; overflow: hidden; touch-action: pan-y;
     background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
@@ -210,6 +210,12 @@
     box-shadow: inset 0 0 0 1px rgba(var(--c),0.95), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 22px rgba(var(--c),0.7); }
   .tg-ruler:has(.drag) .tg-band, .tg-wrap:has(.drag) .tg-tag { transition: none; }   /* follow the finger */
   .tg-ruler.locked .tg-lens { opacity: .6; }
+  /* Eco: green and fixed - a band for the range, thin pins at its edges */
+  .tg-ruler.eco .tg-band { background: linear-gradient(90deg, rgba(140,214,160,0.16), rgba(140,214,160,0.3) 50%, rgba(140,214,160,0.16)); }
+  .tg-ruler.eco .tg-lens { opacity: 1; width: 8px; margin-left: -4px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(var(--c),0.9), 0 0 10px rgba(var(--c),0.5); }
+  .tg-eco { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 10px; text-align: center; }
+  .tg-eco span { font-size: 13px; font-weight: 600; color: rgb(170,230,185); }
+  .tg-eco small { font-size: 11.5px; opacity: .55; }
   .tg-z { position: absolute; top: 0; bottom: 0; z-index: 1; }
   .tg-z:active { background: rgba(255,255,255,0.05); }
   .tg-ends { display: flex; justify-content: space-between; align-items: center; min-height: 18px; padding: 6px 10px 0; }
@@ -1466,13 +1472,14 @@ const T_SKY = {
   cool: 'linear-gradient(160deg, #1A1E26 0%, #262E3B 50%, #3E4B5E 100%)',
   fan: 'linear-gradient(160deg, #1A2224 0%, #26343A 50%, #3E5358 100%)',
   off: 'linear-gradient(160deg, #18191D 0%, #23242B 50%, #34363F 100%)',
+  eco: 'linear-gradient(160deg, #161D19 0%, #1F2C25 50%, #34473C 100%)',   // a Nest resting in Eco: moss
 };
 const T_SCENES = {
   lounge: { day: 'linear-gradient(160deg, #221E26 0%, #332D39 50%, #4F4656 100%)', night: 'linear-gradient(160deg, #1B1920 0%, #28242E 50%, #3D3643 100%)', glow: '201,163,154' },
   focus: { day: 'linear-gradient(160deg, #1E1E2A 0%, #2B2B3F 50%, #44455E 100%)', night: 'linear-gradient(160deg, #19191F 0%, #23232E 50%, #353545 100%)', glow: '138,136,184' },
   breeze: { day: 'linear-gradient(170deg, #1C2226 0%, #293539 50%, #405049 100%)', night: 'linear-gradient(170deg, #17191D 0%, #212A2E 50%, #2F3B35 100%)', glow: '110,170,130' },
 };
-const T_ACC = { heat: '255,179,138', cool: '156,210,255', fan: '142,227,214', idle: '195,198,242', off: '154,160,166', offline: '154,160,166' };
+const T_ACC = { heat: '255,179,138', cool: '156,210,255', fan: '142,227,214', idle: '195,198,242', eco: '140,214,160', off: '154,160,166', offline: '154,160,166' };
 
 // What was tapped, shown until the unit reports it (or 20 s).
 const tpend = {};
@@ -1494,7 +1501,6 @@ function tread(t) {
   const cur = A.current_temperature;
   const act = A.hvac_action != null ? A.hvac_action : (s === 'off' ? 'off' : s === 'fan_only' ? 'fan'
     : ((s === 'cool' || s === 'auto') && cur != null && temp != null && cur > temp) ? 'cooling' : 'idle');
-  const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : 'idle';
   const min = Number.isFinite(A.min_temp) ? A.min_temp : T_LO, max = Number.isFinite(A.max_temp) ? A.max_temp : T_HI;
   // A Nest's Eco is a preset, not a mode: the mode stays Heat / Cool / Auto
   // and the targets Home Assistant reports become the Eco temperatures (set in
@@ -1503,6 +1509,7 @@ function tread(t) {
   // so the card offers Exit Eco instead of steppers.
   const canEco = t.kind === 'nest' && Array.isArray(A.preset_modes) && A.preset_modes.includes('eco');
   const eco = canEco && !offline && s !== 'off' && held(t, 'preset', A.preset_mode) === 'eco';
+  const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : eco ? 'eco' : 'idle';  // Eco resting has its own look; heating or cooling in Eco shows as that
   return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco };
 }
 
@@ -1540,6 +1547,11 @@ function tfxHTML(t, r, top = 60) {
   } else if (m === 'fan') {
     for (let i = 0; i < 7; i++) { const du = 3.5 + rnd() * 3;
       L += `<i class="tc-air" style="top:${(12 + rnd() * 76).toFixed(1)}%;background:linear-gradient(90deg, rgba(142,227,214,0), rgba(142,227,214,0.5), rgba(142,227,214,0));animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+  } else if (m === 'eco') {
+    // Eco: a soft green pool and a few motes drifting slowly up.
+    L += pool('120,200,140', 0.13, 'dg-drift');
+    for (let i = 0; i < 7; i++) { const du = 14 + rnd() * 10;
+      L += `<i class="tc-ember" style="left:${(8 + rnd() * 84).toFixed(1)}%;width:2px;height:2px;background:rgba(170,235,180,0.7);box-shadow:0 0 4px rgba(140,214,160,0.7);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
   } else if (m === 'idle') L += pool(sc.glow, 0.16, 'dg-drift');
   return `<div class="dg-sky" style="background:${tSky(t, r)};"></div>${L}<div class="dg-sheen"></div>`;
 }
@@ -1604,6 +1616,7 @@ function tSets(t, r) {
 function tRulerHTML(t, r) {
   const sets = tSets(t, r);
   if (!sets.length) return `<div class="tg-none">${r.s === 'fan_only' ? 'Fan only' : r.offline ? esc(tStatus(t, r)) : 'Off'}</div>`;
+  if (r.eco) return tEcoHTML(t, r, sets);
   const vals = sets.map(x => x[2] == null ? 70 : Math.round(x[2]));
   const lo = Math.min(...vals), hi = Math.max(...vals), mid = (lo + hi) / 2;
   // The window: centred on the band, wide enough for it and a margin.
@@ -1713,6 +1726,39 @@ document.addEventListener('pointercancel', e => tDrop(e, false));
 document.addEventListener('click', e => {
   if (Date.now() - tDragged < 400 && e.target.closest && e.target.closest('[data-th]')) { e.stopPropagation(); e.preventDefault(); tDragged = 0; }
 }, true);
+
+// Eco: the same ruler, in green and fixed. The Eco temperatures are the
+// edges of a wide band the Nest keeps the room inside - it heats only below
+// the low one and cools only above the high one - set in the Nest app, so
+// there's nothing to drag or tap; a line says where the room is, and Exit
+// Eco goes back to your own temperatures.
+function tEcoHTML(t, r, sets) {
+  const G = T_ACC.eco, vals = sets.map(x => x[2] == null ? 70 : Math.round(x[2]));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  // The window takes in the room too, so with one target you see which side of it the room is.
+  const wLo = r.cur == null ? lo : Math.min(lo, r.cur), wHi = r.cur == null ? hi : Math.max(hi, r.cur), mid = (wLo + wHi) / 2;
+  const W = Math.max(24, Math.ceil((wHi - wLo) * 1.4) + 8), a = mid - W / 2, pc = v => ((v - a) / W * 100).toFixed(2);
+  let ticks = '';
+  for (let x = Math.ceil(a); x <= a + W; x++) ticks += `<i class="tg-rt${x % 5 ? '' : ' big'}" style="left:${pc(x)}%">${x % 5 ? '' : `<em>${x}</em>`}</i>`;
+  const now = r.cur != null && r.cur >= a && r.cur <= a + W ? `<i class="tg-now" style="left:${pc(r.cur)}%"></i>` : '';
+  // One target (Heat or Cool in Eco): the band runs from it outwards.
+  const bLo = sets.length === 2 ? lo : sets[0][0] === 'temperature' && r.s === 'cool' ? a : lo;
+  const bHi = sets.length === 2 ? hi : sets[0][0] === 'temperature' && r.s === 'cool' ? lo : a + W;
+  const band = `<i class="tg-band" style="left:${pc(bLo)}%;width:${((bHi - bLo) / W * 100).toFixed(2)}%"></i>`;
+  const word = (f, label) => f === 'target_temp_low' || label === 'Heat' ? 'Heat below' : 'Cool above';
+  let pins = '', tags = '';
+  sets.forEach(([f, label, v], i) => {
+    pins += `<i class="tg-lens" data-f="${f}" data-v="${vals[i]}" style="left:${pc(vals[i])}%;--c:${G}"></i>`;
+    tags += `<div class="tg-tag" data-f="${f}" style="left:${pc(vals[i])}%;--c:${G}"><small>${svg('leaf', 11)}${word(f, label)}</small><b>${v == null ? '--' : Math.round(v)}°</b></div>`;
+  });
+  const n = Math.round(r.cur), inLo = sets.length === 2 ? lo : r.s === 'cool' ? -Infinity : lo, inHi = sets.length === 2 ? hi : r.s === 'cool' ? hi : Infinity;
+  const where = r.cur == null ? '' : r.act === 'heating' ? `${n}° inside · heating to ${lo}°` : r.act === 'cooling' ? `${n}° inside · cooling to ${hi}°`
+    : n < inLo ? `${n}° inside · below Eco` : n > inHi ? `${n}° inside · above Eco` : `${n}° inside · within Eco, resting`;
+  return `<div class="tg-tags">${tags}</div>
+    <div class="tg-ruler eco locked" data-a0="${a}" data-w="${W}">${ticks}${band}${now}${pins}</div>
+    <div class="tg-eco"><span>${where}</span><small>Eco temperatures are set in the Nest app.</small></div>
+    <div class="tg-ends"><button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>`;
+}
 
 // ---- cards ----
 const thermosEl = $('thermos');

@@ -85,8 +85,17 @@ the same rules:
   **Drag a lens**, or **tap beside it** (left lowers, right raises; between
   two lenses the space is split at the middle). A drag moves in whole
   degrees, keeps 3° between Heat and Cool, and sends one change when you let
-  go. The ruler centres on the targets and widens with them. In Eco it shows
-  the Eco temperatures with Exit Eco; Off and Fan only have no ruler. Power
+  go. The ruler centres on the targets and widens with them. Off and Fan
+  only have no ruler.
+- **Eco** (the Living Room and Office Nests) has its own look: a moss-green
+  sky with slow drifting motes and a green glow, and the ruler in green and
+  fixed - the Eco range as a band with thin pins at its edges, **Heat below**
+  and **Cool above** over them (one of them in Heat or Cool mode), the room a
+  dot, and a line saying where the room is ("70° inside · within Eco,
+  resting", or heating / cooling to the edge). The Eco temperatures are set
+  in the Nest app, so there is nothing to drag; **Exit Eco** goes back to
+  your own temperatures. Heating or cooling in Eco shows the ember or frost
+  sky as usual. Power
   remembers the mode it was in. The popup has the rest (mode, fan, humidity,
   runtime).
 - **The sky** is what the unit is doing: embers while heating, frost while
