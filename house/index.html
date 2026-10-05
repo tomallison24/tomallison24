@@ -1540,6 +1540,17 @@ function tStatus(t, r) {
     : r.eco ? `Eco · ${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°`
     : r.range ? `Keeping ${n(r.lo)}–${n(r.hi)}°` : `Holding ${n(r.temp)}°`;
 }
+// The card says as little as it can: one word for what it is doing (the orb
+// has the room, the steppers the target), and the temperature outside.
+function tWord(t, r) {
+  if (r.offline) return tStatus(t, r);
+  return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : r.eco ? 'Eco' : 'Idle';
+}
+function tOutside(t, r) {
+  if (r.offline) return tSub(t, r, true);
+  const wo = st('weather.forecast_home'), o = wo && Number(wo.attributes.temperature);
+  return Number.isFinite(o) ? `${svg('outside', 13).replace('<svg', '<svg class="inl"')}${Math.round(o)}° outside` : '';
+}
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
 // The line under the status. On the card it is short (it shares the row with
 // the orb); in the popup the orb already shows Outside, so it is left out.
@@ -1631,7 +1642,7 @@ function renderThermos() {
     put(R('fx'), tfxHTML(t, r, 60));
     put(R('orb'), orbHTML(t, r, 'sm', card.closest('#g-fav') ? 'f' : ''));
     put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
-      <div class="dg-title">${tStatus(t, r)}</div><div class="dg-sub">${tSub(t, r, true)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
+      <div class="dg-title">${tWord(t, r)}</div><div class="dg-sub">${tOutside(t, r)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
     put(R('tgt'), tStepHTML(t, r));
     card.classList.toggle('offline', r.offline);

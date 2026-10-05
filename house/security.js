@@ -21,7 +21,9 @@ const BLINK = 'alarm_control_panel.blink_system', BLINK_ALERT = 'input_boolean.b
 const DOORBELL = { id: 'door', name: 'Front Door', cam: 'camera.outside_front_outside_front_doorbell', chime: 'event.outside_front_outside_front_doorbell_chime', motion: 'event.outside_front_outside_front_doorbell_motion' };
 const BLINKS = [['yard', 'Yard'], ['garage', 'Garage'], ['kitchen', 'Kitchen'], ['living_room', 'Living Room']].map(([k, n]) => ({
   id: k, name: n, cam: 'camera.' + k, sw: `switch.${k}_camera_motion_detection`, motion: `binary_sensor.${k}_motion`, battery: `binary_sensor.${k}_battery`,
-  temp: `sensor.blink_${k}_temperature`, wifi: `sensor.blink_${k}_wi_fi_signal_strength`, pause: `script.pause_${k}_camera_motion_detection` }));
+  temp: `sensor.blink_${k}_temperature`, wifi: `sensor.blink_${k}_wi_fi_signal_strength`, pause: `script.pause_${k}_camera_motion_detection`,
+  pauseOnCard: k === 'yard' }));   // the Yard's pause is used often enough to sit on its card
+const PAUSES = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [240, '4 hours']];
 const SEC_ACC = { armed: '78,161,255', disarmed: '154,160,166', arming: '255,180,78', triggered: '255,92,92', offline: '154,160,166' };
 // Front-door events are timestamps; their type reads better without "camera_".
 const evWhen = id => { const v = val(id); return v && v !== 'unknown' && v !== 'unavailable' ? ago(v) : 'None'; };
@@ -75,7 +77,7 @@ family({
     this.sum = sys.mood === 'offline' ? 'Offline' : sys.alert ? 'Indoor motion' : sys.armed ? `Armed · ${watching} watching` : { disarmed: 'Disarmed', arming: 'Arming', triggered: 'Triggered' }[sys.mood];
   },
   // The cards' frames, for Favorites' copies.
-  shell(id) { return id === 'door' ? cardHTML('cams:door', '<div data-r="snap"></div><div data-r="tiles"></div>', 'camcard') : cardHTML('cams:' + id, '<div data-r="snap"></div><div class="dg-ctl camctl" data-r="ctl"></div>', 'camcard'); },
+  shell(id) { return id === 'door' ? cardHTML('cams:door', '<div data-r="snap"></div><div data-r="tiles"></div>', 'camcard') : cardHTML('cams:' + id, `<div data-r="snap"></div><div class="camctl" data-r="ctl"></div>${BLINKS.find(c => c.id === id).pauseOnCard ? '<div class="campause" data-r="pause"></div>' : ''}`, 'camcard'); },
   paintDoor(door) {
     const dpic = haPic(attr(DOORBELL.cam, 'entity_picture'), (st(DOORBELL.cam) || {}).lu);
     put(door.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
@@ -89,6 +91,8 @@ family({
     put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''));
     put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
       <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? '48,209,88' : '255,180,78')}</button>`);
+    const pz = el.querySelector('[data-r="pause"]');
+    if (pz) put(pz, `<div class="cp-h">Pause motion detection</div>${chipsHTML('pause', PAUSES, null, { dis: !r.on || unav(c.pause) })}`);
     el.classList.toggle('offline', r.offline);
   },
 
@@ -120,7 +124,7 @@ family({
         ['view', `<div class="camv">${this.snap('', r.pic, '', this.ageOf(c, r))}</div>`],
         ['acts', `<div class="camacts"><button class="ghost big" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Take a snapshot</button></div><p class="tnote">Blink sends stills, not video. A new one takes about 8 seconds.</p>`],
         ['motion', grp(swRow('motion', 'Motion detection', 'motion', r.on, sys.armed ? '48,209,88' : '255,180,78', { dis: gone(c.sw), wait: tWaiting(r.d, 'sw'), sub: r.on && !sys.armed ? 'On, but the system is disarmed' : '' }), true)],
-        ['pause', lbl('PAUSE MOTION DETECTION') + chipsHTML('pause', [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [240, '4 hours']], null, { dis: !r.on })],
+        ['pause', lbl('PAUSE MOTION DETECTION') + chipsHTML('pause', PAUSES, null, { dis: !r.on })],
         ['read', lbl('READINGS') + grp(readRow('motion', 'Last motion', mo && mo.state === 'on' ? 'Detected' : mo && mo.lc ? ago(mo.lc) : '—')
           + readRow('battery', 'Battery', gone(c.battery) ? '—' : low ? 'Low' : 'OK', low ? 'due' : '')
           + readRow('therm', 'Temperature', isNaN(num(c.temp)) ? '—' : Math.round(num(c.temp)) + esc(tu))
@@ -219,7 +223,7 @@ family({
     };
     [[12, 'on', 'off'], [140, 'on', 'off'], [35, 'off', 'off'], [600, 'on', 'on']].forEach(([age, sw, low], i) => {
       const c = BLINKS[i];
-      Object.assign(out, { [c.cam]: cam(age), [c.sw]: e(sw), [c.motion]: e(i === 0 ? 'on' : 'off'), [c.battery]: e(low), [c.temp]: e(54 + i * 6, { unit_of_measurement: '°F' }), [c.wifi]: e(-52 - i * 9, { unit_of_measurement: 'dBm' }) });
+      Object.assign(out, { [c.pause]: e('off'), [c.cam]: cam(age), [c.sw]: e(sw), [c.motion]: e(i === 0 ? 'on' : 'off'), [c.battery]: e(low), [c.temp]: e(54 + i * 6, { unit_of_measurement: '°F' }), [c.wifi]: e(-52 - i * 9, { unit_of_measurement: 'dBm' }) });
     });
     return out;
   },

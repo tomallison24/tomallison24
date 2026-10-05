@@ -88,6 +88,7 @@
 .ghost { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
   background: rgba(255,255,255,0.12); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4); transition: transform .18s cubic-bezier(.22,1,.36,1); }
 .ghost:active { transform: scale(0.95); }
+.ghost svg { flex: none; }
 .ghost:disabled { opacity: .35; }
 .ghost.big { height: 48px; padding: 0 20px; font-size: 15px; }
 .ghost .sw { transform: scale(0.72); margin: 0 -8px 0 -2px; }
@@ -271,8 +272,14 @@
   background: rgba(255,92,92,0.75); }
 .livebtn { position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: rgba(0,0,0,0.45); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); }
-.camctl { padding: 12px 14px 14px; justify-content: space-between; }
-.sw-pill { padding-right: 10px; }
+/* Snapshot and Motion: two equal pills, icon and label from the same edge */
+.camctl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px 14px; }
+.camctl .ghost { width: 100%; justify-content: flex-start; min-width: 0; padding: 0 8px 0 16px; }
+.camctl .sw-pill .sw { margin-left: auto; }
+.campause { padding: 0 14px 14px; margin-top: -2px; }
+.campause .cp-h { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .6; margin: 0 4px 8px; }
+.campause .chips { margin-top: 0; flex-wrap: nowrap; }
+.campause .chip2 { min-width: 0; flex: 1 1 0; padding: 0 6px; height: 36px; font-size: 13px; }
 .ctiles { display: grid; grid-template-columns: 1fr 1fr; }
 .ctiles > div { padding: 12px 16px 14px; }
 .ctiles > div + div { border-left: 0.5px solid rgba(255,255,255,0.10); }
@@ -452,3 +459,6 @@
 .sstep.now .st-tag { color: #8BE0A4; }
 .sstep.next { opacity: .9; }
 .sstep.next .st-tag { opacity: .7; text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+/* the thermostat card's outside line */
+.dg-sub svg.inl { display: inline-block; vertical-align: -2px; margin-right: 4px; opacity: .85; }
