@@ -155,7 +155,10 @@ dashboard's comments record a quirk, the app keeps it:
   sensitivity, air quality (the worst sensor's band), filter (reset takes two
   taps), running and heating today.
 - **Lights** (LP1 "Halo", `lights.yaml`): each light a faint pane (the same
-  card as every AllisonOS app) with its colour glowing behind it; rooms you can fold, a disc that
+  card as every AllisonOS app) with one warm amber glowing behind it
+  (255,196,128, the same for every light); rooms as drawers - closed when
+  the app opens and again whenever you leave Lights, sliding open with
+  their lights coming in one after another - and a disc that
   turns a whole room off (or on), All on / All off (the dashboard's list:
   not outdoors, the garage or the heaters' backlights). Each light: its
   colour mixed with warm grey, a halo by brightness, a slider; its popup has

@@ -150,20 +150,29 @@
 .hs-half.lit { opacity: 1; background: rgba(255,255,255,0.10); }
 .hs-half:active { background: rgba(255,255,255,0.16); }
 .hs-hair { width: 0.5px; margin: 12px 0; background: rgba(255,255,255,0.18); }
-.lroom { display: flex; flex-direction: column; gap: 8px; }
+.lroom { display: flex; flex-direction: column; }
 .lroom + .lroom { margin-top: 12px; }
 .rbar { display: flex; align-items: center; gap: 10px; padding: 6px 2px 0 6px; }
 .rb-mid { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; text-align: left; }
 .rb-name { font-size: 19px; font-weight: 600; letter-spacing: -0.2px; }
 .rb-line { font-size: 13px; opacity: .5; white-space: nowrap; }
-.rb-chev { align-self: center; display: flex; opacity: .45; transition: transform .3s cubic-bezier(.2,.8,.2,1); transform: rotate(-90deg); }
+.rb-chev { align-self: center; display: flex; opacity: .45; transition: transform .45s cubic-bezier(.2,.8,.2,1); transform: rotate(-90deg); }
 .rb-chev.open { transform: none; }
 .rb-disc { width: 38px; height: 38px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; transition: transform .18s, background .3s, color .3s;
   background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.14); }
-.rb-disc.on { background: rgb(255,224,178); color: #1A1A1C; box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.7); }
+.rb-disc.on { background: rgb(255,196,128); color: #1A1A1C; box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.7); }
 .rb-disc:active { transform: scale(0.92); }
 .lpills { display: flex; flex-direction: column; gap: 10px; }
-.lroom.folded .lpills { display: none; }
+/* A room's drawer: it slides open to its lights' height (rows 0fr -> 1fr) and
+   fades in, its lights following one after another; closing, it folds away. */
+.lpwrap { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .5s cubic-bezier(.2,.8,.2,1), opacity .35s ease; }
+.lpwrap > .lpills { min-height: 0; overflow: hidden; }
+.lpwrap > .lpills > .lpw:first-child { margin-top: 8px; }   /* inside the drawer, so a closed one takes no room */
+.lroom.folded .lpwrap { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .4s cubic-bezier(.4,0,.2,1), opacity .25s ease; }
+.lroom.folded .lpwrap > .lpills { visibility: hidden; transition: visibility 0s linear .4s; }
+.lroom.reveal .lpw { animation: lp-in .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 55ms + 70ms); }
+@keyframes lp-in { from { opacity: 0; transform: translateY(-10px) scale(.96); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .lpwrap, .lroom.folded .lpwrap { transition: none; } .lroom.reveal .lpw { animation: none; } }
 .lpw { position: relative; border-radius: 24px; overflow: hidden; isolation: isolate; }   /* the glow stays behind its own pane */
 .lglow { position: absolute; inset: 0; pointer-events: none;   /* the light, centred on the bulb (34px in: padding + half the badge) */
   opacity: 0; transition: opacity .6s, background .6s; }
@@ -192,7 +201,7 @@
 .lp-chips { flex-wrap: nowrap; gap: 6px; margin-top: 6px; }
 .lp-chips .chip2 { flex: 1 1 0; min-width: 0; height: 30px; padding: 0; font-size: 12px; font-variant-numeric: tabular-nums;
   background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14), inset 0 0.5px 0 rgba(255,255,255,0.25); }
-.lp-chips .chip2[aria-pressed="true"] { background: rgba(var(--tint, 255,224,178),0.32); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.4), inset 0 0.5px 0 rgba(255,255,255,0.6); }
+.lp-chips .chip2[aria-pressed="true"] { background: rgba(var(--tint, 255,196,128),0.32); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.4), inset 0 0.5px 0 rgba(255,255,255,0.6); }
 .lp:not(.on) .lp-chips .chip2 { color: rgba(255,255,255,0.6); }
 .lp-halo { position: absolute; inset: 0; z-index: -1; pointer-events: none; animation: dg-breathe 6s ease-in-out infinite alternate; }
 .lphero { position: relative; isolation: isolate; }

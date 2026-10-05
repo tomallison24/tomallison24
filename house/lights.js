@@ -1,7 +1,7 @@
 // LIGHTS: the Signal dashboard's Lights view (ha-config,
 // views_signal/lights.yaml) - the LP1 "Halo" pill per light, rooms as fold
 // bars, and the whole-house On | Off pill - in this app's layout. Same rules:
-//   - every light shares one warm colour (255,224,178), whatever its own:
+//   - every light shares one warm colour (255,196,128, a warm amber), whatever its own:
 //     the dashboard tinted each by its rgb_color; this keeps the view as one
 //   - the halo round the badge grows with the brightness (k = .35 + .65 x it)
 //   - preset chips 1 / 25 / 50 / 75 / 100, lit within 2% (25 reads back 25.1)
@@ -47,8 +47,13 @@ for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL
 const L_SWATCH = [['white', 'White', '255,255,255', null], ['warm', 'Warm White', '255,217,168', [30, 25]], ['red', 'Red', '255,59,48', [0, 100]],
   ['green', 'Green', '52,199,89', [120, 100]], ['blue', 'Blue', '59,130,246', [220, 100]], ['purple', 'Purple', '168,85,247', [280, 100]]];
 const L_STRIP = 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', L_CUSTOM = 'input_text.signal_tv_strip_custom_hs';
-const L_TINT = '255,224,178';
+const L_TINT = '255,196,128';
 const lfold = () => store.get('lfold') || [];
+// The room drawers start closed and close again when the view is left, so it
+// is always neat to come back to.
+const lfoldAll = () => store.set('lfold', L_ROOMS.map(R => R.id));
+window.addEventListener('viewchange', e => { if (e.detail.from === 'lights' && e.detail.to !== 'lights') { lfoldAll(); setTimeout(render, 0); } });
+lfoldAll();   // the app opens on Favorites, so they start closed
 
 family({
   id: 'lights', name: 'Lights', icon: 'lightbulb', group: 'Lights', order: 1,
@@ -102,7 +107,7 @@ family({
     el.innerHTML = `<div class="hsplit" data-dv="lights:house"></div>` + L_ROOMS.map(R => `
       <div class="lroom" data-room="${R.id}">
         <div class="rbar" data-dv="lights:room/${R.id}"></div>
-        <div class="lpills">${R.lights.map(([id]) => `<div class="lpw"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div>
+        <div class="lpwrap"><div class="lpills">${R.lights.map(([id], i) => `<div class="lpw" style="--i:${i}"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div></div>
       </div>`).join('');
   },
   render() {
@@ -192,7 +197,14 @@ family({
     if (id.startsWith('room/')) {
       const R = L_ROOMS.find(x => x.id === id.slice(5)), list = R.lights.map(x => x[0]);
       if (a === 'room') return this.setMany(list, !list.some(x => this.read(x).on));
-      if (a === 'fold') { const f = lfold(); store.set('lfold', f.includes(R.id) ? f.filter(x => x !== R.id) : [...f, R.id]); return render(); }
+      if (a === 'fold') {
+        const f = lfold(), open = f.includes(R.id);
+        store.set('lfold', open ? f.filter(x => x !== R.id) : [...f, R.id]);
+        render();
+        // Opening: the drawer slides open and its lights come in one after another.
+        if (open) { const box = this.el.querySelector(`[data-room="${R.id}"]`); box.classList.remove('reveal'); void box.offsetWidth; box.classList.add('reveal'); clearTimeout(box._rv); box._rv = setTimeout(() => box.classList.remove('reveal'), 900); }
+        return;
+      }
       return;
     }
     const r = this.read(id);
