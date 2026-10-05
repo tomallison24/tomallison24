@@ -4,8 +4,11 @@
 //   - Now Playing: a Sonos that is playing (one card per group, its leader's)
 //   - Running Now: every device that is doing something, as chips; a tap
 //     takes you to it and opens its popup
-//   - Automations (AG1 "Frosted"): Goodnight, Evening Lights, Mom's Awake,
-//     Report a Bug, Babysitter, Hatch Green. A routine's pill is lit by its
+//   - Automations: Goodnight, Evening Lights, Mom's Awake, Report a Bug,
+//     Babysitter, Hatch Green, as Liquid Glass tiles three across (Labs'
+//     design D): each tile carries a glow of its colour behind the glass,
+//     faint at rest; lit, the tile turns white glass and the glow comes up
+//     full. A routine's tile is lit by its
 //     acknowledgement helper (input_boolean.signal_*_ack), which its script
 //     holds on for 3 s; the tap runs the routine's script with
 //     script.turn_on, which returns at once. Babysitter is a mode: the pill
@@ -21,12 +24,12 @@
 // paint every copy), so they look and work the same in both places.
 'use strict';
 const FAV_AUTOS = [
-  { id: 'goodnight', name: 'Goodnight', icon: 'night', script: 'script.goodnight', ack: 'input_boolean.signal_goodnight_ack' },
-  { id: 'evening', name: 'Evening Lights', icon: 'sunset', script: 'script.evening_lights', ack: 'input_boolean.signal_evening_lights_ack' },
-  { id: 'awake', name: "Mom's Awake", icon: 'sun', script: 'script.moms_awake', ack: 'input_boolean.signal_moms_awake_ack' },
-  { id: 'bug', name: 'Report a Bug', icon: 'bug', form: true },
-  { id: 'sitter', name: 'Babysitter', onName: 'Sitter armed', icon: 'child', toggle: 'input_boolean.babysitter_mode' },
-  { id: 'hatch', name: 'Hatch Green', icon: 'nightBulb', script: 'script.hatch_bedtime', ack: 'script.hatch_bedtime', vars: { light: 'green' } },
+  { id: 'goodnight', name: 'Goodnight', icon: 'night', acc: '150,160,255', script: 'script.goodnight', ack: 'input_boolean.signal_goodnight_ack' },
+  { id: 'evening', name: 'Evening Lights', icon: 'sunset', acc: '255,176,110', script: 'script.evening_lights', ack: 'input_boolean.signal_evening_lights_ack' },
+  { id: 'awake', name: "Mom's Awake", icon: 'sun', acc: '255,214,120', script: 'script.moms_awake', ack: 'input_boolean.signal_moms_awake_ack' },
+  { id: 'bug', name: 'Report a Bug', icon: 'bug', acc: '190,194,204', form: true },
+  { id: 'sitter', name: 'Babysitter', onName: 'Sitter armed', icon: 'child', acc: '255,150,190', toggle: 'input_boolean.babysitter_mode' },
+  { id: 'hatch', name: 'Hatch Green', icon: 'nightBulb', acc: '120,220,150', script: 'script.hatch_bedtime', ack: 'script.hatch_bedtime', vars: { light: 'green' } },
 ];
 const FAV_THERMOS = ['lr', 'of'], FAV_CAMS = ['living_room', 'door'], FAV_LAMPS = ['light.tom_lamp', 'light.elena_lamp'];
 const famOf = id => FAMILIES.find(f => f.id === id);
@@ -90,8 +93,9 @@ family({
 
     put(this.el.querySelector('.autos'), FAV_AUTOS.map(a => {
       const s = this.autoState(a), name = s.lit && a.onName ? a.onName : a.name;
-      return `<button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
-        <span class="ag-disc">${svg(s.lit ? 'check' : a.icon, 20)}</span><span class="ag-name">${esc(name)}</span></button>`;
+      return `<div class="agw${s.lit ? ' lit' : ''}" style="--c:${a.acc}"><i class="ag-glow"></i>
+        <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
+        <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name">${esc(name)}</span></button></div>`;
     }).join(''));
     this.sum = this.run.length ? this.run.length + ' running' : playing.length ? 'Music playing' : 'Nothing running';
   },

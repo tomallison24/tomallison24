@@ -110,7 +110,10 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
 - **Now Playing**: a Sonos that is playing, one card per group.
 - **Running Now**: every device that is doing something (heating, cooling,
   a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
-- **Automations** (AG1 "Frosted"): Goodnight, Evening Lights, Mom's Awake,
+- **Automations** (Liquid Glass tiles, three across: each carries a glow of
+  its colour behind the glass - Goodnight indigo, Evening Lights amber, Mom's
+  Awake gold, Report a Bug grey, Babysitter rose, Hatch Green green - and
+  turns white glass when lit): Goodnight, Evening Lights, Mom's Awake,
   Report a Bug, Babysitter, Hatch Green. A routine's pill runs its script
   (`script.turn_on`, so it returns at once) and is lit while the script holds
   its acknowledgement helper on (3 s). Babysitter is a mode: lit, "Sitter
@@ -236,25 +239,10 @@ thermostat in its `entities`.
 ## Labs
 
 **Labs** is a view for trying ideas live, wired to the real devices, before
-they replace anything (`labs.js`; the view is left out of the drop-down
-while it has none). The thermostat ruler (design G, picked from seven) came
-from here.
-
-Today: the **Favorites automation pills, more Liquid Glass**, four ways.
-Glass needs something behind it to bend, and Favorites is dark, so each pill
-brings its own light: a blurred glow of the automation's colour behind the
-pane (faint at rest, full when lit), which the glass diffuses. Colours:
-Goodnight indigo, Evening Lights amber, Mom's Awake gold, Report a Bug grey,
-Babysitter rose, Hatch Green green. Taps run the real automations.
-
-- **A · Clear**: clear glass capsules, a glass ring for the icon; lit, the
-  ring fills white and the colour blooms behind.
-- **B · Bead**: the icon in a tinted glass bead with a highlight; lit, the
-  bead glows.
-- **C · Tint**: each pane faintly tinted its colour, rim and all; lit, the
-  colour deepens.
-- **D · Control**: Control Center tiles, three across; lit, the tile turns
-  white glass.
+they replace anything: an idea is a family in a `labs.js` with the group
+`Labs`. It is left out of the drop-down while it has none - as now. From
+here so far: the thermostat ruler (design G of seven) and the automation
+tiles (design D of four).
 
 ## Connecting to Home Assistant
 
