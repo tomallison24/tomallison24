@@ -1925,7 +1925,7 @@ function viewRules() {
   const others = tags().filter(l => !yours.includes(l));
   const otherCard = others.length ? '<div class="card"><h2>Other labels in Gmail</h2>' +
     '<p class="cnote">Not used as tags, so not in the mailbox menu. Switch one on to filter by it.</p><ul class="list">' +
-    others.map(l => labelRow(l, esc(size(l.id) || '&nbsp;'), '<span class="gtools">' + chipBtn(l) + delBtn(l, 'label') + '</span>')).join('') +
+    others.map(l => labelRow(l, size(l.id) ? esc(size(l.id)) : '&nbsp;', '<span class="gtools">' + chipBtn(l) + delBtn(l, 'label') + '</span>')).join('') +
     '</ul></div>' : '';
 
   const left = userLabels().filter(l => leftover(l) && !shown.has(l.id));
