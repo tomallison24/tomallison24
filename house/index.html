@@ -578,6 +578,7 @@
       <div data-s="tgt"></div>
       <div class="group first" data-s="power"></div>
       <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Eco holds the wider Eco temperatures, which are set in the Nest app. Turn it off to go back to your own.</p></div>
+      <div data-s="schedWrap"><div class="glbl">SCHEDULE</div><div data-s="sched"></div></div>
       <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
       <div data-s="fanSegWrap"><div class="glbl">FAN</div><div class="seg" data-s="fanSeg"></div></div>
       <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">On: every time the Office changes, this AC follows it, 3° under its target (2° at 80° and up), and turns off when the Office does.</p></div>
@@ -1627,7 +1628,7 @@ function renderThermos() {
     put(R('fx'), tfxHTML(t, r, 60));
     put(R('orb'), orbHTML(t, r, 'sm', card.closest('#g-fav') ? 'f' : ''));
     put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
-      <div class="dg-title">${tStatus(t, r)}</div><div class="dg-sub">${tSub(t, r, true)}</div>`);
+      <div class="dg-title">${tStatus(t, r)}</div><div class="dg-sub">${tSub(t, r, true)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
     put(R('tgt'), tStepHTML(t, r));
     card.classList.toggle('offline', r.offline);
@@ -1656,6 +1657,7 @@ function renderThermo() {
   S('syncWrap').hidden = !t.sync;
   if (t.sync) put(S('sync'), tSyncRow(t));
   put(S('read'), tReadHTML(t, r));
+  put(S('sched'), tSchedHTML(t));   // schedule.js
   const en = thermoEnergyHTML(t);   // energy.js
   put(S('en'), statsHTML(en.stats)); put(S('enNote'), en.note);
   tsheet.style.boxShadow = `inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px rgba(${T_ACC[r.mood] || T_ACC.idle},0.22), 0 2px 8px var(--lgs-lift)`;
@@ -2034,6 +2036,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="security.js"></script>
 <script src="around.js"></script>
 <script src="energy.js"></script>
+<script src="schedule.js"></script>
 <script src="favorites.js"></script>
 <script src="../home/back.js" defer></script>
 </body>

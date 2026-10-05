@@ -201,6 +201,24 @@ each device's power now. Each device's popup has an **Energy** section.
   cooling, which it never does, so its total leaves it out. Here it is counted
   while it is inferred to be cooling, and its line says it isn't in HA's total.
 
+## Thermostat schedules
+
+Each thermostat shows where it is in its schedule, as Home Assistant's
+scheduler card does. The schedules are the **Scheduler** integration's
+(`custom_components/scheduler`), kept inside Home Assistant rather than in
+ha-config, so the app finds each `switch.schedule_…` that lists the
+thermostat in its `entities`.
+
+- **The card** says the step under way and until when ("68–74° until
+  10:00 PM"), from the schedule that changes next.
+- **The popup** has a Schedule section: each schedule, the days it runs, every
+  step with its time and what it sets, the step under way lit as **Now**, the
+  next one with when it starts, and a switch to pause or resume the schedule.
+- The step under way is Scheduler's `current_slot`; a schedule of start times
+  only leaves that empty, so it is then the step before `next_slot`.
+- A thermostat with no schedule says so (a schedule kept in the Nest app
+  isn't visible to Home Assistant).
+
 ## Connecting to Home Assistant
 
 The gear (top right) opens the Home Assistant sheet: an **address** and a
