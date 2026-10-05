@@ -228,7 +228,7 @@ thermostat in its `entities`.
 The last view, **Labs**, is for trying ideas live before they replace
 anything (`labs.js`). Each idea is wired to the real device.
 
-Today: the **Living Room thermostat without the orb**, six ways, all ultra
+Today: the **Living Room thermostat without the orb**, seven ways, all ultra
 clean Liquid Glass (a frosted pane with the mood's light behind it: heating
 amber, cooling blue, idle lavender, off grey):
 
@@ -244,6 +244,9 @@ amber, cooling blue, idle lavender, off grey):
   half at work glows.
 - **F · Ruler**: the camera's exposure dial; the ruler slides under a fixed
   lens; tap left or right of it.
+- **G · Dual**: F with Heat and Cool on one ruler, a lens each and the
+  comfort band between them, the room a dot; tap beside a lens to move it
+  that way (between the two, the space is split at the middle).
 
 They follow the card's rules (Auto sends Heat and Cool together, 3° apart;
 taps add up; Power remembers the mode).

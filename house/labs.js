@@ -1,7 +1,7 @@
 // LABS: ideas tried out live before they replace anything. Each one here is
 // wired to the real device, so it can be used, not only looked at.
 //
-// The Living Room thermostat, three ways without the orb - ultra clean,
+// The Living Room thermostat, seven ways without the orb - ultra clean,
 // Liquid Glass: a pane of frosted glass with its mood's light behind it
 // (heating amber, cooling blue, idle lavender, off grey), so the glass has
 // something to diffuse. Same rules as the card (core's tread / tStep /
@@ -18,6 +18,9 @@
 //                  lozenge at the seam; the half at work glows
 //   F · Ruler    - the camera's exposure dial: a tick ruler slides under a
 //                  fixed lens, the room a dot on it; tap left or right
+//   G · Dual     - F with both targets on one ruler: a lens each, the
+//                  comfort band between, the room a dot; tap outside a lens
+//                  to move it out, inside to move it in
 'use strict';
 const LAB_T = () => THERMOS.find(t => t.id === 'lr');
 const LAB_IDEAS = [
@@ -27,8 +30,9 @@ const LAB_IDEAS = [
   { id: 'd', name: 'D · Drum', note: 'Picker wheels, the target in a glass lens. Tap a number above or below to go to it.' },
   { id: 'e', name: 'E · Split', note: 'Two glass halves, warm and cool, the room at the seam. The half at work glows.' },
   { id: 'f', name: 'F · Ruler', note: 'The camera\'s exposure dial: the ruler slides under a fixed lens. Tap left or right of it.' },
+  { id: 'g', name: 'G · Dual', note: 'Ruler F with Heat and Cool on one ruler, the comfort band between. Tap beside a lens to move it that way.' },
 ];
-// One reading for all three: what to show, in as few words as possible.
+// One reading for all of them: what to show, in as few words as possible.
 function labRead() {
   const t = LAB_T(), r = tread(t), n = v => v == null ? '--' : Math.round(v);
   const word = tWord(t, r), acc = T_ACC[r.mood] || T_ACC.idle;
@@ -146,6 +150,37 @@ const LAB_DRAW = {
     };
     return `${labHead(L)}<div class="lab-sub lab-f-sub">${L.n(L.r.cur)}° inside · ${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>
       ${L.sets.length ? L.sets.map(ruler).join('') : `<div class="lab-caps">${labNone(L)}</div>`}`;
+  },
+  // G · Dual (one ruler, both targets)
+  g(L) {
+    if (!L.sets.length) return `${labHead(L)}<div class="lab-caps">${labNone(L)}</div>`;
+    const vals = L.sets.map(s => s[2] == null ? 70 : s[2]);
+    const lo = Math.min(...vals), hi = Math.max(...vals), mid = (lo + hi) / 2;
+    // The window: centred on the band, wide enough for it and a margin.
+    const W = Math.max(24, Math.ceil((hi - lo) * 1.6) + 6), a = mid - W / 2;
+    const pct = v => ((v - a) / W * 100).toFixed(2);
+    let ticks = '';
+    for (let x = Math.ceil(a); x <= a + W; x++) {
+      const big = x % 5 === 0;
+      ticks += `<i class="lab-rt${big ? ' big' : ''}" style="left:${pct(x)}%">${big ? `<em>${x}</em>` : ''}</i>`;
+    }
+    const cur = L.r.cur != null && L.r.cur >= a && L.r.cur <= a + W ? `<i class="lab-rnow" style="left:${pct(L.r.cur)}%"></i>` : '';
+    const band = L.sets.length === 2 ? `<i class="lab-g-band" style="left:${pct(lo)}%;width:${(hi - lo) / W * 100}%;--a:${L.sets[0][3]};--b:${L.sets[1][3]}"></i>` : '';
+    // Tap zones: left of a lens lowers it, right of it raises it; between two
+    // lenses the space is split at the middle.
+    const xs = vals.map(v => (v - a) / W * 100), edges = [0, ...xs.slice(1).map((x, i) => (x + xs[i]) / 2), 100];
+    let zones = '', tags = '', lenses = '';
+    L.sets.forEach(([f, label, v, rgb], i) => {
+      const x = xs[i], dn = L.locked || v <= L.r.min, up = L.locked || v >= L.r.max;
+      zones += `<button class="lab-g-z" style="left:${edges[i]}%;width:${x - edges[i]}%" data-a="step" data-f="${f}" data-v="-1" aria-label="Lower ${label}"${dn ? ' disabled' : ''}></button>`
+        + `<button class="lab-g-z" style="left:${x}%;width:${edges[i + 1] - x}%" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${up ? ' disabled' : ''}></button>`;
+      lenses += `<i class="lab-lens lab-g-lens" style="left:${x}%;--c:${rgb}"></i>`;
+      tags += `<div class="lab-g-tag" style="left:${x}%;--c:${rgb}"><small>${label}</small><b>${L.n(v)}°</b></div>`;
+    });
+    return `${labHead(L)}<div class="lab-sub lab-f-sub">${L.n(L.r.cur)}° inside · ${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>
+      <div class="lab-g-tags">${tags}</div>
+      <div class="lab-ruler lab-g-ruler">${ticks}${band}${cur}${lenses}${zones}</div>
+      <div class="lab-g-ends"><span>${svg('minus', 12)}</span><span>${svg('plus', 12)}</span></div>`;
   },
 };
 

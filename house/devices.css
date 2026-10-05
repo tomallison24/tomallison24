@@ -609,3 +609,15 @@
 .lab-ru-r { right: 0; justify-content: flex-end; }
 .lab-ru-l:active, .lab-ru-r:active { background: rgba(255,255,255,0.05); }
 .lab-ru-l:disabled, .lab-ru-r:disabled { opacity: .15; }
+/* G · Dual: both targets on one ruler, the comfort band between the lenses */
+.lab-g-tags { position: relative; height: 44px; margin: 12px 0 6px; }
+.lab-g-tag { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.lab-g-tag small { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
+.lab-g-tag b { font-size: 28px; font-weight: 200; font-variant-numeric: tabular-nums; }
+.lab-g-ruler { height: 56px; }
+.lab-g-band { position: absolute; top: 4px; bottom: 4px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(var(--a),0.22), rgba(var(--b),0.22)); }
+.lab-g-lens { width: 26px; margin-left: -13px; transition: left .4s cubic-bezier(.2,.8,.2,1); }
+.lab-g-z { position: absolute; top: 0; bottom: 0; z-index: 1; }
+.lab-g-z:active { background: rgba(255,255,255,0.05); }
+.lab-g-ends { display: flex; justify-content: space-between; padding: 6px 10px 0; opacity: .4; }
