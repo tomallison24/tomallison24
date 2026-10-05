@@ -73,11 +73,10 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  /* clip, not hidden: hidden would make the body its own scroller and the
-     top bar (sticky) would have nothing to stick to */
+  /* clip, not hidden: hidden would make the body its own scroller */
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
   @supports not (overflow: clip) { html { overflow-x: hidden; } }
-  html { scroll-padding-top: calc(env(safe-area-inset-top) + 110px); }   /* what's scrolled to lands below the top bar */
+  html { scroll-padding-top: calc(env(safe-area-inset-top) + 60px); }   /* what's scrolled to lands below the glass pill */
   html.lock, html.lock body { overflow: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
@@ -88,26 +87,34 @@
   svg { display: block; }
   main { max-width: 520px; margin: 0 auto; }
 
-  /* ---- top bar: Home and the view picker, kept at the top ----
-     Sticky, edge to edge and under the status bar. Once the page scrolls
-     it turns to frosted glass and the title tightens; the space it gives
-     back goes to its bottom margin, so nothing below moves. The glass is
-     a layer behind it (::before), not the bar itself, so the view menu's
-     own glass still blurs the page. */
-  .bar { position: sticky; top: 0; z-index: 8; margin: calc(-1 * (env(safe-area-inset-top) + 10px)) -16px 0; padding: calc(env(safe-area-inset-top) + 10px) 16px 0;
-    transition: margin-bottom .28s cubic-bezier(.2,.8,.2,1); }
-  .bar::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .28s;
-    background: linear-gradient(180deg, rgba(10,10,12,0.9), rgba(10,10,12,0.78));
-    -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
-    box-shadow: inset 0 -0.5px 0 rgba(255,255,255,0.16); }
-  .bar .top, .bar .top h1, .bar .sec { transition: margin .28s cubic-bezier(.2,.8,.2,1), font-size .28s cubic-bezier(.2,.8,.2,1), line-height .28s cubic-bezier(.2,.8,.2,1); }
-  .bar .top h1 { line-height: 38px; }
-  .bar.stuck { margin-bottom: 26px; }   /* = (38 - 24) + (6 - 0) + (14 - 8): what the title gives back */
-  .bar.stuck::before { opacity: 1; }
-  .bar.stuck .top { margin: 0 4px 8px; }
-  .bar.stuck .top h1 { font-size: 22px; line-height: 24px; }
-  .bar .sec { margin-bottom: 0; padding-bottom: 10px; }
-  @media (prefers-reduced-transparency: reduce) { .bar::before { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  /* ---- the glass pill: Home and the view picker, once scrolled ----
+     The title and the drop-down scroll away with the page; when they have
+     gone, a floating Liquid Glass pill takes their place at the top - Home
+     (back to the top) and the view (the same drop-down). Clear glass: a
+     light tint, a strong blur and a bright rim, so the page shows through. */
+  .vpill { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 50%; z-index: 8; display: flex; align-items: center; padding: 4px;
+    border-radius: 999px; transform: translate(-50%, -14px) scale(.96); opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .35s cubic-bezier(.2,.8,.2,1); }
+  /* the glass is a layer behind, so the drop-down's own glass (inside the
+     pill) still blurs the page rather than only the pill */
+  .vpill::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+    -webkit-backdrop-filter: blur(16px) saturate(190%); backdrop-filter: blur(16px) saturate(190%);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.32), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 10px 28px -6px rgba(0,0,0,0.5); }
+  .vpill.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .vpill > button { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+    font-size: 16px; font-weight: 700; letter-spacing: -0.2px; text-shadow: 0 1px 8px rgba(0,0,0,0.45); transition: background .2s; }
+  .vpill > button:active { background: rgba(255,255,255,0.12); }
+  .vpill .vp-home { color: rgba(255,255,255,0.62); }
+  .vpill .vp-sep { width: 0.5px; height: 18px; background: rgba(255,255,255,0.3); }
+  .vpill .vp-view { padding-right: 8px; }
+  .vpill .vp-view svg { opacity: .7; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .vpill .vp-view[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .vpill .viewmenu { left: 0; top: calc(100% + 8px); width: max-content; }
+  /* the status bar keeps clear of what scrolls under it */
+  body::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: calc(env(safe-area-inset-top) + 6px); z-index: 7; pointer-events: none;
+    background: linear-gradient(180deg, var(--bg) 55%, rgba(10,10,12,0)); }
+  @media (prefers-reduced-transparency: reduce) { .vpill::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* ---- top bar ---- */
   .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 4px 14px; }
   .top h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
@@ -514,22 +521,25 @@
 </head>
 <body>
 <main>
-  <!-- Home and the view picker stay at the top as the page scrolls. -->
-  <div class="bar" id="bar">
-    <header class="top">
-      <h1>Home</h1>
-      <div class="right">
-        <span class="chip" id="chip" data-s="preview"><i></i><span>Preview</span></span>
-        <button class="round" id="gear" aria-label="Home Assistant settings"></button>
-      </div>
-    </header>
-
-    <div class="sec">
-      <button class="viewbtn" id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><h2 id="viewName">Favorites</h2></button>
-      <small id="secSum"></small>
-      <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
+  <header class="top">
+    <h1>Home</h1>
+    <div class="right">
+      <span class="chip" id="chip" data-s="preview"><i></i><span>Preview</span></span>
+      <button class="round" id="gear" aria-label="Home Assistant settings"></button>
     </div>
+  </header>
+
+  <div class="sec">
+    <button class="viewbtn" id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><h2 id="viewName">Favorites</h2></button>
+    <small id="secSum"></small>
+    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
   </div>
+
+  <!-- Once the title has scrolled away: Home and the view, in a glass pill. -->
+  <nav class="vpill" id="vpill" aria-hidden="true">
+    <button class="vp-home" id="vpHome" type="button" tabindex="-1">Home</button><i class="vp-sep"></i>
+    <button class="vp-view" id="vpView" type="button" tabindex="-1" aria-haspopup="listbox" aria-expanded="false"><span id="vpName">Favorites</span></button>
+  </nav>
 
   <div class="banner" id="banner" hidden>
     <span><b>Preview</b>Sample readings. Taps change them here only.</span>
@@ -1852,45 +1862,52 @@ function layoutViews() {
 }
 function renderViewHead() {
   const v = VIEWS.find(x => x.id === curView);
-  $('viewName').textContent = v.name;
+  $('viewName').textContent = v.name; $('vpName').textContent = v.name;
   if (!$('viewBtn').querySelector('svg')) $('viewBtn').insertAdjacentHTML('beforeend', svg('chev', 22));
+  if (!$('vpView').querySelector('svg')) $('vpView').insertAdjacentHTML('beforeend', svg('chev', 20));
   $('secSum').textContent = viewSum(v);
   for (const x of VIEWS) { const box = $('g-' + x.id); if (box) box.hidden = x.id !== curView; }
   for (const x of SECTIONS) { const h = document.querySelector(`.vsec[data-sec="${x.id}"] .vsec-h small`); if (h) h.textContent = x.sum(); }
   if (!$('viewMenu').hidden) drawViewMenu();
 }
-// The bar turns to glass once the page has scrolled (with a little
-// hysteresis, so it doesn't flicker at the top).
-function stickBar() {
-  const b = $('bar'), y = window.scrollY;
-  if (y > 12 && !b.classList.contains('stuck')) b.classList.add('stuck');
-  else if (y < 4 && b.classList.contains('stuck')) b.classList.remove('stuck');
+// The glass pill shows once the drop-down has scrolled out of sight.
+function showPill() {
+  const p = $('vpill'), on = $('viewBtn').getBoundingClientRect().bottom < 4;
+  if (on === p.classList.contains('on')) return;
+  p.classList.toggle('on', on); p.setAttribute('aria-hidden', String(!on));
+  p.querySelectorAll('button').forEach(b => b.tabIndex = on ? 0 : -1);
+  if (!on && $('viewMenu').parentElement === p) closeViewMenu();
 }
-window.addEventListener('scroll', stickBar, { passive: true });
-stickBar();
+window.addEventListener('scroll', showPill, { passive: true });
+window.addEventListener('resize', showPill, { passive: true });
+showPill();
+$('vpHome').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+$('vpView').addEventListener('click', e => openViewMenu(e, $('vpView'), $('vpill')));
 function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
 function drawViewMenu() {
   put($('viewMenu'), VIEWS.map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
       <span class="ic">${svg(v.icon, 20)}</span><span class="k">${v.name}<small>${esc(viewSum(v))}</small></span><span class="tick">${svg('check', 20)}</span></button>`).join(''));
 }
-function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
-$('viewBtn').addEventListener('click', e => {
+function closeViewMenu() { $('viewMenu').hidden = true; for (const b of [$('viewBtn'), $('vpView')]) b.setAttribute('aria-expanded', 'false'); }
+// One menu, opened under whichever button was tapped: the title's or the pill's.
+function openViewMenu(e, btn, home) {
   e.stopPropagation();
-  const open = $('viewMenu').hidden;
-  if (open) {
-    drawViewMenu(); $('viewMenu').hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true');
-    const sel = $('viewMenu').querySelector('[aria-selected="true"]');
-    if (sel) $('viewMenu').scrollTop = sel.offsetTop - $('viewMenu').clientHeight / 2 + sel.offsetHeight / 2;
-  }
-  else closeViewMenu();
-});
+  const m = $('viewMenu');
+  if (!m.hidden && m.parentElement === home) return closeViewMenu();
+  closeViewMenu();
+  if (m.parentElement !== home) home.appendChild(m);
+  drawViewMenu(); m.hidden = false; btn.setAttribute('aria-expanded', 'true');
+  const sel = m.querySelector('[aria-selected="true"]');
+  if (sel) m.scrollTop = sel.offsetTop - m.clientHeight / 2 + sel.offsetHeight / 2;
+}
+$('viewBtn').addEventListener('click', e => openViewMenu(e, $('viewBtn'), $('viewBtn').parentElement));
 $('viewMenu').addEventListener('click', e => {
   const b = e.target.closest('[data-view]'); if (!b) return;
   curView = b.dataset.view;
   closeViewMenu(); renderViewHead();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
-document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn, #vpView')) closeViewMenu(); });
 
 let toastTimer;
 function toast(msg) {
