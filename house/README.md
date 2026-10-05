@@ -89,8 +89,8 @@ the same rules:
   only have no ruler.
 - **Eco** (the Living Room and Office Nests) has its own look: a moss-green
   sky with slow drifting motes and a green glow, and the ruler in green and
-  fixed - the Eco range as a band with thin pins at its edges, **Heat below**
-  and **Cool above** over them (one of them in Heat or Cool mode), the room a
+  fixed - the Eco range as a band with thin pins at its edges, **Eco low**
+  and **Eco high** over them (one of them in Heat or Cool mode), the room a
   dot, and a line saying where the room is ("70° inside · within Eco,
   resting", or heating / cooling to the edge). The Eco temperatures are set
   in the Nest app, so there is nothing to drag; **Exit Eco** goes back to
