@@ -41,12 +41,14 @@
     --text: #FFFFFF;
     --muted: rgba(235, 235, 245, 0.6);
     --accent: #0A84FF;
-    /* Liquid Glass for the Location sheet: clear glass, a lit rim, lighter glass rows */
+    /* Cards: very faint tiles, the same in every AllisonOS app (a whisper of fill, a hairline edge, no shadow) */
+    --tile: rgba(255, 255, 255, 0.05);
+    --tile-edge: rgba(255, 255, 255, 0.10);
+    /* Liquid Glass for the sheets: clear glass, a lit rim, lighter glass fields */
     --lgs-top: rgba(44, 44, 52, 0.60);
     --lgs-bottom: rgba(22, 22, 28, 0.52);
     --lgs-rim: rgba(255, 255, 255, 0.20);
     --lgs-edge: rgba(255, 255, 255, 0.12);
-    --lgs-row: rgba(255, 255, 255, 0.07);
     --lgs-field: rgba(255, 255, 255, 0.10);
     --lgs-thumb: rgba(255, 255, 255, 0.16);
     --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
@@ -78,11 +80,11 @@
     display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px; touch-action: pan-y; will-change: transform;
   }
   .w3-days { position: relative; z-index: 1; min-width: 0; }
-  /* Hourly and the 7-day forecast each sit on their own very faint tile, so the sky still shows
+  /* Hourly and the 7-day forecast each sit on their own very faint tile (--tile), so the sky still shows
      through. The tiles reach 10px past the card's padding on each side and pad back in by the same,
      so what is inside keeps its width; the card's row gap keeps the two apart. */
   .w3-hours, .w3-days { margin: 0 -10px; padding: 12px 10px 8px; border-radius: 22px;
-    background: rgba(255,255,255,0.05); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.10); }
+    background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
   /* Room to breathe: under the place name, around the chips, and before Hourly. */
@@ -263,8 +265,8 @@
   .hd-words { margin-top: 8px; font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
   .hd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
   /* The hour and day sheets' tiles: as faint as the Hourly and 7-day tiles on the main screen. */
-  .hd-tile { border-radius: 24px; padding: 14px 16px 12px; background: rgba(255,255,255,0.05); min-width: 0;
-    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.10); }
+  .hd-tile { border-radius: 24px; padding: 14px 16px 12px; background: var(--tile); min-width: 0;
+    box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .hd-k { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
   .hd-v { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 600; letter-spacing: -0.8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .hd-v small { font-size: 17px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
@@ -310,13 +312,13 @@
   .foot button:active { background: var(--surface); }
   .spin { animation: w3-spin 1s linear infinite; }
 
-  .msg { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 20px 18px; font-size: 17px; line-height: 1.4; }
+  .msg { background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); border-radius: 22px; padding: 20px 18px; font-size: 17px; line-height: 1.4; }
   .msg b { display: block; font-size: 20px; margin-bottom: 4px; }
   .msg .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 18px; border-radius: 999px; background: #1F1F23; border: 1px solid var(--border); font-size: 17px; font-weight: 600; }
   .pill.primary { background: var(--accent); border-color: var(--accent); }
 
-  .skeleton { height: 290px; border-radius: 26px; background: linear-gradient(160deg, #1A1D24, #22262F); animation: w3-pulse 1.4s ease-in-out infinite alternate; }
+  .skeleton { height: 290px; border-radius: 26px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); animation: w3-pulse 1.4s ease-in-out infinite alternate; }
 
   /* NWS alerts: Signal surfaces with the severity as the one colour */
   .alerts { display: flex; flex-direction: column; gap: 8px; }
@@ -334,8 +336,9 @@
 
   /* Location sheet: Liquid Glass. One sheet of clear glass floating just
      inside the screen's edges, as iOS 26's are: the sky blurs through it, a
-     lit rim runs round it, and the rows and fields are lighter glass on top.
-     The rows don't blur again (the sheet already has). */
+     lit rim runs round it, the lists are the same faint tiles as every card
+     and the fields are lighter glass on top. Neither blurs again (the sheet
+     already has). */
   .scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.30); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
   .sheet {
     position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 11; margin: 0 auto; max-width: 544px;
@@ -371,8 +374,8 @@
   .search:focus-within { box-shadow: inset 0 0 0 1.5px rgba(10,132,255,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(10,132,255,0.18); }
   .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 12px 0; }
   .list {
-    margin-top: 10px; border-radius: 26px; overflow: hidden; background: var(--lgs-row);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lgs-lift);
+    margin-top: 10px; border-radius: 26px; overflow: hidden; background: var(--tile);
+    box-shadow: inset 0 0 0 0.5px var(--tile-edge);
   }
   .list:empty { display: none; }
   .list button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; padding: 15px 16px; font-size: 18px; }

@@ -87,7 +87,9 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   the 24) and the 7-day forecast sit on it with no card edge around the whole.
   Hourly and the 7-day forecast each have their own very faint tile (5% white
   with a hairline edge, rounded, a gap between them), so the sky still shows
-  through; the tiles in the hour and day sheets are the same. A new
+  through; the tiles in the hour and day sheets, the messages and the
+  Location sheet's lists are the same (`--tile` and `--tile-edge`, the
+  same faint tile as every AllisonOS app's cards). A new
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
   14px chips, 12-17px in the hourly columns and the 7-day columns.
