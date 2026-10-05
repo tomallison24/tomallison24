@@ -5,7 +5,9 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It has every device on the Signal
-dashboard in six views, picked from the drop-down under the title:
+dashboard in six views (and Labs), picked from the drop-down under the
+title. The title and the drop-down stay at the top as the page scrolls,
+turning to frosted glass once it does:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
