@@ -110,9 +110,12 @@ family({
         if (r.on) n++;
         put(p, this.pill(id));
         p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
-        // The light's colour glows behind its glass, stronger with the brightness.
+        // The light comes from the bulb: brightest at the icon, fading with the
+        // distance from it (about as light does, the square of it), behind the
+        // glass so the pane diffuses it. A brighter light reaches further.
         const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100), glow = p.previousElementSibling;
-        glow.style.background = `radial-gradient(closest-side, rgba(${r.pc},${(0.55 * k).toFixed(2)}), rgba(${r.pc},${(0.16 * k).toFixed(2)}) 55%, rgba(${r.pc},0))`;
+        const reach = Math.round(150 + 230 * k), c = a => `rgba(${r.pc},${(a * k).toFixed(3)})`;
+        glow.style.background = `radial-gradient(circle ${reach}px at 34px 50%, ${c(0.62)} 0%, ${c(0.46)} 9%, ${c(0.28)} 22%, ${c(0.14)} 40%, ${c(0.05)} 66%, ${c(0)} 100%)`;
         glow.style.opacity = r.on ? 1 : 0;
       }
     }
