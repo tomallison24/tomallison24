@@ -1,8 +1,8 @@
 // LIGHTS: the Signal dashboard's Lights view (ha-config,
 // views_signal/lights.yaml) - the LP1 "Halo" pill per light, rooms as fold
 // bars, and the whole-house On | Off pill - in this app's layout. Same rules:
-//   - a light's colour is its rgb_color mixed half and half with warm grey
-//     (236,230,224); one with no colour (brightness-only) is amber #F5A623
+//   - every light shares one warm colour (255,224,178), whatever its own:
+//     the dashboard tinted each by its rgb_color; this keeps the view as one
 //   - the halo round the badge grows with the brightness (k = .35 + .65 x it)
 //   - preset chips 1 / 25 / 50 / 75 / 100, lit within 2% (25 reads back 25.1)
 //   - the Fireplace socket is on / off only
@@ -46,6 +46,7 @@ for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL
 const L_SWATCH = [['white', 'White', '255,255,255', null], ['warm', 'Warm White', '255,217,168', [30, 25]], ['red', 'Red', '255,59,48', [0, 100]],
   ['green', 'Green', '52,199,89', [120, 100]], ['blue', 'Blue', '59,130,246', [220, 100]], ['purple', 'Purple', '168,85,247', [280, 100]]];
 const L_STRIP = 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', L_CUSTOM = 'input_text.signal_tv_strip_custom_hs';
+const L_TINT = '255,224,178';
 const lfold = () => store.get('lfold') || [];
 
 family({
@@ -57,7 +58,9 @@ family({
     const on = !offline && held(d, 'power', s.state) === 'on';
     const raw = A.brightness != null ? Math.round(A.brightness / 2.55) : null;
     const bri = on ? held(d, 'bri', raw == null ? 100 : raw) : 0;
-    const c = A.rgb_color, pc = c ? c.map((v, i) => Math.round(v * 0.5 + [236, 230, 224][i] * 0.5)).join(',') : '245,166,35';
+    // One warm colour for every light (its icon, glow and slider), the room switches' too, so the view reads as one;
+    // a light's own colour still shows where it matters, in the TV strip's swatches.
+    const pc = L_TINT;
     return { L, d, A, offline, on, bri, raw, pc, hs: A.hs_color, onoff: L.kind === 'onoff' || (Array.isArray(A.supported_color_modes) && A.supported_color_modes.join() === 'onoff') };
   },
   readout(r) { return r.offline ? 'Offline' : r.onoff ? (r.on ? 'On' : 'Off') : r.on ? (r.raw == null && !tWaiting(r.d, 'bri') ? 'On' : Math.round(r.bri) + '%') : 'Off'; },
