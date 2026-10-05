@@ -54,12 +54,11 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   Places: that hour's temperature and weather, feels like, humidity, wind
   (arrow, speed, where from), chance of rain, and the day's sunrise and sunset,
   with arrows to step through the hours. The view you pick is remembered.
-- **Six views of the timeline**: six little glass buttons above the hours
+- **Five views of the timeline**: five little glass buttons above the hours
   (with a thumb that slides between them) switch what the main card shows:
-  **Hourly** (temperature, with rain bars), **Rain** (an umbrella: each
-  hour's chance of rain on the curve, or Open-Meteo's amount, with a bar under
-  the hours of 20% and up; dry hours' umbrellas fade back), **Feels like** (each hour's
-  heat index or wind chill, with the rain chance underneath as on Hourly;
+  **Hourly** (temperature, with the chance of rain on a line of its own
+  underneath), **Feels like** (each hour's
+  heat index or wind chill, with the rain line underneath as on Hourly;
   how far it is from the air temperature is in the hour popup),
   **Humidity** (with Dry / Comfy / Humid / Muggy), **Wind** (an arrow
   pointing where it blows to, the speed, and the compass direction), and
@@ -110,8 +109,12 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - **Hourly tray**: the next 24 hours (of the week kept), scrolling sideways, straight on the sky
   (no panel behind it) in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
-  curve, and a rain
-  bar with its chance when it is 20% or more. The only thing that moves in the
+  curve, and under it the chance of rain on a thinner blue line of its own
+  (0 to 100%, or up to 0.25 in an hour for Open-Meteo amounts), since it has
+  nothing to do with the temperature. The figure rides above its point from
+  5% (any amount for Open-Meteo), faded below 20%; under 5% the line runs on
+  with no figure. Sunrise and sunset columns let the line pass through (their
+  "Sunrise"/"Sunset" label stays in the Humidity and Wind views). The only thing that moves in the
   tray is the current hour's icon, which suits the weather (the sun turns, rain
   patters, snow sways, storms flicker, wind and fog drift). Everything else
   holds still: no entrance, no pulse, no nudge. It stops too under Reduce

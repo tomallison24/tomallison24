@@ -152,6 +152,13 @@
   .hx-rain { height: 34px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
   .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
   .hx-pct { font-size: 11.5px; font-weight: 700; color: #CDEBFF; line-height: 1; }
+  /* The chance of rain's own line under the temperatures (Hourly and Feels like). */
+  .hx-rc { position: relative; width: 100%; height: 50px; }
+  .hx-rc svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .hx-rline { fill: none; stroke: rgba(108,184,255,0.6); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .hx-rdot { position: absolute; left: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #9FD0FF; }
+  .hx-rc .hx-pct { position: absolute; left: 0; right: 0; text-align: center; }
+  .hx-rc .dry { opacity: 0.5; }
   .hx-lbl.sm { font-size: 10px; letter-spacing: -0.2px; }
   .hx-lbl { font-size: 11.5px; font-weight: 700; line-height: 1; opacity: 0.95; }
   /* Icons move to suit the weather; each hour starts at its own point in the cycle. */
@@ -623,7 +630,7 @@ const S = {
   units: store.get('units', 'us'),
   data: null,                             // the on-screen place's BASE
   alertOpen: {},
-  view: ['now', 'rain', 'feels', 'humidity', 'wind', 'radar'].includes(store.get('view', 'now')) ? store.get('view', 'now') : 'now',   // the timeline: now | rain | feels | humidity | wind | radar (remembered)
+  view: ['now', 'feels', 'humidity', 'wind', 'radar'].includes(store.get('view', 'now')) ? store.get('view', 'now') : 'now',   // the timeline: now | feels | humidity | wind | radar (remembered; the old Rain view lands on now)
   loading: false,
   locating: false,
   error: null,
@@ -1243,13 +1250,12 @@ function hourMotion(c, dark) {
   return dark ? 'moon' : 'bob';
 }
 
-// The six views of the timeline, switched by the little buttons above it.
-const VIEWS = [['now', 'Hourly', 'thermo'], ['rain', 'Chance of rain', 'umbrella'], ['feels', 'Feels like', 'smile'], ['humidity', 'Humidity', 'drop'], ['wind', 'Wind', 'wind'], ['radar', 'Radar', 'radar']];
+// The five views of the timeline, switched by the little buttons above it.
+const VIEWS = [['now', 'Hourly', 'thermo'], ['feels', 'Feels like', 'smile'], ['humidity', 'Humidity', 'drop'], ['wind', 'Wind', 'wind'], ['radar', 'Radar', 'radar']];
 const LINE = {
   thermo: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>',
   smile: '<circle cx="12" cy="12" r="9.5"/><path d="M8 14.2s1.5 2.3 4 2.3 4-2.3 4-2.3"/><path d="M9 9.4h.01M15 9.4h.01"/>',
   drop: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
-  umbrella: '<path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6.5a2.5 2.5 0 0 1-5 0"/>',
   wind: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>',
   radar: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.8"/><path d="M12 12L18.6 5.4"/>',
   text: '<path d="M4 6h16M4 12h16M4 18h10"/>'
@@ -1257,7 +1263,7 @@ const LINE = {
 const line = (n, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LINE[n]}</svg>`;
 function viewHead(m) {
   const unit = m.entity.attributes.wind_speed_unit || 'mph';
-  const title = { now: 'Hourly', rain: `Rain<small>${m.rKind === 'pop' ? 'chance' : m.entity.attributes.precipitation_unit || ''}</small>`, feels: 'Feels like', humidity: 'Humidity', wind: `Wind<small>${unit}</small>`, radar: 'Radar' }[S.view];
+  const title = { now: 'Hourly', feels: 'Feels like', humidity: 'Humidity', wind: `Wind<small>${unit}</small>`, radar: 'Radar' }[S.view];
   return `<div class="hx-head"><div class="hx-title">${title}</div><div class="vsw" id="vsw" role="group" aria-label="Timeline view">${
     VIEWS.map(([id, label, ic]) => `<button data-view="${id}" aria-label="${label}" title="${label}" aria-pressed="${S.view === id}">${line(ic, 19)}</button>`).join('')}</div></div>`;
 }
@@ -1302,7 +1308,7 @@ function hourSeq(m) {
 
 // 24 hours in a tray you scroll sideways. Each column: time, a moving icon,
 // the value riding on a curve, and one small extra underneath. Which value
-// (temperature, chance of rain, feels like, humidity, wind) is the view chosen above; Radar
+// (temperature, feels like, humidity, wind) is the view chosen above; Radar
 // swaps the tray for a map (radarSync draws it).
 function w3Hours(m) {
   const { entity, tz } = m;
@@ -1314,7 +1320,7 @@ function w3Hours(m) {
   const a = entity.attributes, cur = a.temperature;
   const unit = a.precipitation_unit || '';
   const metric = (a.temperature_unit || '').indexOf('C') >= 0;
-  const pick = x => mode === 'rain' ? x.r : mode === 'feels' ? x.fv : mode === 'humidity' ? x.hv : mode === 'wind' ? x.wv : x.v;
+  const pick = x => mode === 'feels' ? x.fv : mode === 'humidity' ? x.hv : mode === 'wind' ? x.wv : x.v;
   if (seq.some(x => x.kind === 'hour' && pick(x) == null)) return head + `<div class="hx"><div class="hx-empty">${S.loading ? 'Updating…' : 'Reconnect to load this view'}</div></div>`;
 
   // Curve height for each column: higher is higher. A sunrise or sunset has no
@@ -1322,21 +1328,34 @@ function w3Hours(m) {
   const vs = seq.filter(x => x.kind === 'hour').map(pick);
   const lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
   // A quiet stretch should look flat, not dramatic.
-  const span = Math.max(mode === 'rain' ? (m.rKind === 'pop' ? 100 : unit === 'mm' ? 6 : 0.25) : mode === 'humidity' ? 25 : mode === 'wind' ? (metric ? 16 : 10) : (metric ? 5 : 9), hi - lo);
+  const span = Math.max(mode === 'humidity' ? 25 : mode === 'wind' ? (metric ? 16 : 10) : (metric ? 5 : 9), hi - lo);
   const Y_TOP = 30, Y_BOT = 60;                       // px inside the 70px curve cell
   const yOf = v => Y_BOT - (v - lo) / span * (Y_BOT - Y_TOP);
-  const ys = seq.map((x, i) => {
-    if (x.kind === 'hour') return yOf(pick(x));
+  const along = y => seq.map((x, i) => {
+    if (x.kind === 'hour') return y(x);
     let p = i - 1, n = i + 1;
     while (p > 0 && seq[p].kind !== 'hour') p--;
     while (n < seq.length - 1 && seq[n].kind !== 'hour') n++;
-    return (yOf(pick(seq[p])) + yOf(pick(seq[n]))) / 2;
+    return (y(seq[p]) + y(seq[n])) / 2;
   });
+  const ys = along(x => yOf(pick(x)));
+  // Hourly and Feels like: the chance of rain has a line of its own under the temperatures, on
+  // its own scale (0-100%, or up to 0.25 in / 6 mm an hour for Open-Meteo), since it has nothing
+  // to do with how warm it is. Its figure shows from 5% (any amount for Open-Meteo), faded below
+  // 20%; under that the line runs on with no figure.
+  const rainRow = mode === 'now' || mode === 'feels';
+  const R_TOP = 20, R_BOT = 44;                       // px inside the 50px rain cell
+  const rys = rainRow ? along(x => R_BOT - Math.min(1, Math.max(0, m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25))) * (R_BOT - R_TOP)) : null;
 
   const fmt = t => hrFmt(t, tz), fmtM = t => minFmt(t, tz), hourOf = t => hrOf(t, tz), dayOf = t => dayFmt(t, tz);
-  const curveSvg = i => {
-    const yl = i ? (ys[i - 1] + ys[i]) / 2 : ys[i], yr = i < seq.length - 1 ? (ys[i] + ys[i + 1]) / 2 : ys[i];
-    return `<svg viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true"><path class="hx-line" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${ys[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
+  const curveSvg = (i, Y = ys, cls = 'hx-line', h = 70) => {
+    const yl = i ? (Y[i - 1] + Y[i]) / 2 : Y[i], yr = i < seq.length - 1 ? (Y[i] + Y[i + 1]) / 2 : Y[i];
+    return `<svg viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="${cls}" pathLength="1" d="M0 ${yl.toFixed(1)} L50 ${Y[i].toFixed(1)} L100 ${yr.toFixed(1)}"/></svg>`;
+  };
+  const rainCell = i => {
+    const x = seq[i], y = rys[i];
+    const show = x.kind === 'hour' && (m.rKind === 'pop' ? x.r >= 5 : x.r > 0), dry = wet(m, x.r) ? '' : ' dry';
+    return `<div class="hx-rc">${curveSvg(i, rys, 'hx-rline', 50)}${show ? `<div class="hx-rdot${dry}" style="top:${y.toFixed(1)}px"></div><div class="hx-pct${dry}" style="top:${(y - 17).toFixed(1)}px">${x.r}${unit}</div>` : ''}</div>`;
   };
   const cols = seq.map((x, i) => {
     const cls = `hx-col${x.now ? ' hx-now' : ''}`;
@@ -1349,19 +1368,13 @@ function w3Hours(m) {
         <div class="hx-time sm">${fmtM(x.t)}</div>
         <div class="hx-ico">${svg(rise ? 'weather-sunset-up' : 'weather-sunset-down', 25, `color:#FFD60A;filter:drop-shadow(0 0 7px #FFD60A99);`)}</div>
         <div class="hx-curve">${curveSvg(i)}</div>
-        <div class="hx-rain"><div class="hx-lbl sm">${rise ? 'Sunrise' : 'Sunset'}</div></div>
+        ${rainRow ? rainCell(i) : `<div class="hx-rain"><div class="hx-lbl sm">${rise ? 'Sunrise' : 'Sunset'}</div></div>`}
       </div>`;
     }
     const v = pick(x);
     const label = x.now ? 'Now' : (hourOf(x.t) === 0 ? `<span class="hx-day">${dayOf(x.t)}</span>` : fmt(x.t));
     let ico, shown, extra = '';
-    if (mode === 'rain') {
-      // The chance of rain each hour (NWS), or the amount (Open-Meteo); a bar under the hours worth a glance.
-      const pop = m.rKind === 'pop', f = pop ? v / 100 : v / (unit === 'mm' ? 6 : 0.25);
-      ico = `<div class="hx-ico${mv(wet(m, v) ? 'rain' : 'bob')}">${svg('umbrella-outline', 24, wet(m, v) ? 'color:#9FD0FF;filter:drop-shadow(0 0 7px #9FD0FF88);' : 'color:#fff;opacity:0.4;')}</div>`;   // dry hours fade back
-      shown = pop ? v + '%' : String(v);
-      if (wet(m, v)) extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, Math.max(0, f)) * 13)}px"></div>`;
-    } else if (mode === 'humidity') {
+    if (mode === 'humidity') {
       ico = `<div class="hx-ico${mv('bob')}">${svg('water-percent', 25, `color:#9FD8FF;filter:drop-shadow(0 0 7px #9FD8FF88);`)}</div>`;
       shown = v + '%';
       extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, v / 100) * 13)}px;background:linear-gradient(180deg,#B8F0FF,#37B6D9);box-shadow:0 0 10px rgba(55,182,217,.55)"></div><div class="hx-lbl">${dampWord(v)}</div>`;
@@ -1375,16 +1388,12 @@ function w3Hours(m) {
       const tint = V.tints[x.c] || '#FFFFFF';
       ico = `<div class="hx-ico${mv(hourMotion(x.c, x.dark))}">${svg(icon, 26, `color:${tint};filter:drop-shadow(0 0 7px ${tint}66);`)}</div>`;
       shown = v + '°';
-      if (wet(m, x.r)) {                                // Hourly and Feels like both show the rain chance underneath
-        const f = m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25);
-        extra = `<div class="hx-bar" style="height:${Math.round(4 + Math.min(1, Math.max(0, f)) * 13)}px"></div><div class="hx-pct">${x.r}${unit}</div>`;
-      }
     }
     return `<div class="${cls}" ${st} data-hour="${x.t}" role="button" tabindex="0" aria-label="Details for ${x.now ? 'now' : fmt(x.t)}">
       <div class="hx-time">${label}</div>
       ${ico}
       <div class="hx-curve">${curveSvg(i)}<div class="hx-dot" style="top:${ys[i].toFixed(1)}px"></div><div class="hx-temp" style="top:${(ys[i] - 27).toFixed(1)}px">${shown}</div></div>
-      <div class="hx-rain">${extra}</div>
+      ${rainRow ? rainCell(i) : `<div class="hx-rain">${extra}</div>`}
     </div>`;
   });
   return head + `<div class="hx"><div class="hx-tray" id="hxTray">${cols.join('')}</div></div>`;
