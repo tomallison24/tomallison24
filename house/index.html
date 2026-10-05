@@ -181,44 +181,51 @@
   .viewmenu button[aria-selected="true"] .tick { opacity: 1; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .viewmenu { background: var(--lgs-solid); } }
 
-  /* ---- thermostats: the orb (TF1's P1 dial), small on the card, full in the popup ---- */
-  .orb { position: relative; width: var(--os); height: var(--os); flex: none; }
-  .orb.sm { --os: 104px; }
-  .orb.lg { --os: 220px; margin: 0 auto; }
-  .orb .ball { position: absolute; inset: 6%; border-radius: 50%; overflow: hidden; isolation: isolate;
-    box-shadow: inset 0 1px 0.5px rgba(255,255,255,0.12), inset 0 -14px 24px rgba(0,0,0,0.16), 0 14px 26px -16px rgba(0,0,0,0.45); }
-  .orb .ball > i { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
-  .orb .spec { opacity: .32; background: radial-gradient(circle at 55% 58%, rgba(255,255,255,0) 76%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,0) 100%);
-    -webkit-mask-image: linear-gradient(145deg, #000 8%, rgba(0,0,0,0) 46%); mask-image: linear-gradient(145deg, #000 8%, rgba(0,0,0,0) 46%); }
-  .orb .grey { background: radial-gradient(circle at 50% 55%, rgba(150,152,160,0.12) 0%, rgba(150,152,160,0.05) 75%); }
-  .orb .pulse { background: radial-gradient(circle at 50% 58%, rgba(var(--gp),0.40) 0%, rgba(var(--gp),0.20) 55%, rgba(var(--gp),0.08) 100%); opacity: 0; animation: orb-pulse 4.5s ease-in-out infinite alternate; }
-  @keyframes orb-pulse { from { opacity: 0; } to { opacity: 1; } }
-  .orb svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .orb .t-flow { animation: t-flow 1.6s linear infinite; }
-  @keyframes t-flow { to { stroke-dashoffset: -12; } }
-  .orb .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,0.22), 0 2px 14px rgba(0,0,0,0.25); }
-  .orb .num b { font-weight: 200; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
-  .orb .num b span { vertical-align: top; line-height: 1.3; letter-spacing: 0; }
-  .orb.sm .num b { font-size: 34px; } .orb.sm .num b span { font-size: 16px; }
-  .orb.lg .num b { font-size: 60px; } .orb.lg .num b span { font-size: 28px; }
-  .orb .num em { font-style: normal; font-weight: 700; letter-spacing: .14em; opacity: .8; }
-  .orb.sm .num em { font-size: 7.5px; margin-bottom: 3px; } .orb.lg .num em { font-size: 11px; margin-bottom: 2px; }
-  .orb .num .st { font-size: 12.5px; font-weight: 600; opacity: .92; margin-top: 4px; }
-  .orb .out { position: absolute; left: 0; right: 0; top: 81%; display: flex; justify-content: center; align-items: baseline; gap: 5px; font-size: 12px; font-weight: 600; opacity: .75; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,0.22); }
-  .orb .out span { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; opacity: .85; }
+  /* ---- thermostats: the ruler (Labs' G) ----
+     One ruler for both targets: a glass lens each (Heat amber, Cool blue),
+     the comfort band between them, the room a white dot; the targets'
+     numbers ride above their lenses. Drag a lens, or tap beside it: left
+     lowers it, right raises it (between two lenses the space is split at
+     the middle). The ruler is centred on the band and widens with it. */
+  .tg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .tg-head .pwr { flex: none; }
+  .tg-tags { position: relative; height: 44px; margin: 2px 0 6px; }
+  .tg-tag { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; transition: left .4s cubic-bezier(.2,.8,.2,1); text-shadow: 0 1px 8px rgba(0,0,0,0.3); }
+  .tg-tag small { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
+  .tg-tag b { font-size: 28px; font-weight: 200; font-variant-numeric: tabular-nums; }
+  .tg-ruler { position: relative; height: 56px; border-radius: 16px; overflow: hidden; touch-action: pan-y;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+  .tg-rt { position: absolute; top: 10px; width: 1px; height: 12px; margin-left: -0.5px; background: rgba(255,255,255,0.35); }
+  .tg-rt.big { height: 20px; top: 8px; background: rgba(255,255,255,0.7); }
+  .tg-rt em { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 10px; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  .tg-now { position: absolute; top: 4px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.9); }
+  .tg-band { position: absolute; top: 4px; bottom: 4px; pointer-events: none; background: linear-gradient(90deg, rgba(var(--a),0.22), rgba(var(--b),0.22));
+    transition: left .4s cubic-bezier(.2,.8,.2,1), width .4s cubic-bezier(.2,.8,.2,1); }
+  .tg-lens { position: absolute; top: 4px; bottom: 4px; width: 26px; margin-left: -13px; border-radius: 12px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(var(--c),0.35), rgba(var(--c),0.12)); box-shadow: inset 0 0 0 1px rgba(var(--c),0.75), inset 0 1px 0 rgba(255,255,255,0.5), 0 0 14px rgba(var(--c),0.4);
+    transition: left .4s cubic-bezier(.2,.8,.2,1), transform .2s, box-shadow .2s; }
+  .tg-lens.drag { transition: transform .2s, box-shadow .2s; transform: scale(1.12); z-index: 2;
+    box-shadow: inset 0 0 0 1px rgba(var(--c),0.95), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 22px rgba(var(--c),0.7); }
+  .tg-ruler:has(.drag) .tg-band, .tg-wrap:has(.drag) .tg-tag { transition: none; }   /* follow the finger */
+  .tg-ruler.locked .tg-lens { opacity: .6; }
+  .tg-z { position: absolute; top: 0; bottom: 0; z-index: 1; }
+  .tg-z:active { background: rgba(255,255,255,0.05); }
+  .tg-ends { display: flex; justify-content: space-between; align-items: center; min-height: 18px; padding: 6px 10px 0; }
+  .tg-ends > span { opacity: .4; }
+  .tg-ends .ecobtn { margin: 4px auto 0; height: 36px; }
+  .tg-none { padding: 18px 0 6px; text-align: center; font-size: 15px; font-weight: 600; opacity: .55; }
+  .tc .tg-wrap { margin-top: 2px; }
+  .tc .dg-sub { white-space: normal; }   /* the one line may wrap on a small phone rather than lose Outside */
+  .tg-big { font-size: 72px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tg-big span { font-size: 32px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
+  .uhero .tg-big + .dg-title { margin-top: 6px; }
+  .usheet [data-s="tgt"] { margin-top: 4px; }
   .tc-ember { position: absolute; bottom: -6px; width: 3px; height: 3px; border-radius: 50%; animation: dg-rise linear infinite; }
   .tc-frost { position: absolute; top: -8px; width: 3px; height: 3px; border-radius: 50%; background: rgba(235,245,255,0.75); animation: tc-fall linear infinite; }
   .tc-air { position: absolute; left: -40%; height: 1.5px; width: 40%; border-radius: 2px; animation: tc-air linear infinite; }
   @keyframes tc-fall { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .9; } 100% { transform: translate(-30px, 420px); opacity: 0; } }
   @keyframes tc-air { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: .55; } 100% { transform: translateX(360%); opacity: 0; } }
-  /* Auto on the card: two small steppers, Heat and Cool */
-  .tsplit { display: flex; flex: 1; min-width: 0; gap: 10px; }
-  .tstep { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-  .tstep .disc { width: 34px; height: 34px; }
-  .tstep .v { text-align: center; line-height: 1; }
-  .tstep .v span { display: block; font-size: 9px; font-weight: 700; letter-spacing: .12em; opacity: .75; margin-bottom: 4px; }
-  .tstep .v b { font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; }
-  .tc [data-r="tgt"] > .dg-tgt, .tc [data-r="tgt"] > .tsplit { flex: 1; min-width: 0; padding: 0; }
   .ecobtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; font-weight: 600;
     background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.5), 0 4px 12px -6px rgba(0,0,0,0.5); transition: transform .18s cubic-bezier(.22,1,.36,1); }
   .ecobtn:active { transform: scale(0.94); }
@@ -227,7 +234,7 @@
   .tgt-row .leaf { display: inline-flex; align-items: center; gap: 4px; }
   .tgt-row .leaf svg { color: #A8E6A1; }
   .tnote { font-size: 13px; color: rgba(255,255,255,0.7); margin: 10px 8px 0; line-height: 1.4; }
-  @media (prefers-reduced-motion: reduce) { .orb *, .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
 
   /* ---- DG1 card ---- */
   .dg {
@@ -414,13 +421,6 @@
     .dg .dg-title { font-size: 19px; }
     .dg-ctl { gap: 8px; }
     .dg-ctl .hair { display: none; }
-    .orb.sm { --os: 84px; }
-    .orb.sm .num b { font-size: 27px; } .orb.sm .num b span { font-size: 13px; }
-    .orb.sm .num em { font-size: 6.5px; }
-    .tsplit { gap: 6px; }
-    .tstep { gap: 2px; }
-    .tstep .disc { width: 30px; height: 30px; }
-    .tstep .v b { font-size: 16px; }
   }
 
   /* ---- toast ---- */
@@ -630,7 +630,7 @@
     <h2><span class="who"><span id="tTitle"></span><span data-s="pill"></span></span><button data-close aria-label="Close"></button></h2>
     <div class="sheet-body">
       <div data-s="hero"></div>
-      <div data-s="tgt"></div>
+      <div class="tg-wrap" data-s="tgt"></div>
       <div class="group first" data-s="power"></div>
       <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Eco holds the wider Eco temperatures, which are set in the Nest app. Turn it off to go back to your own.</p></div>
       <div data-s="schedWrap"><div class="glbl">SCHEDULE</div><div data-s="sched"></div></div>
@@ -1440,9 +1440,9 @@ document.addEventListener('click', e => {
 //   - the sky is what the unit is DOING: heating ember, cooling ice, fan
 //     teal, off graphite; idle is the room's own palette (lounge, focus,
 //     breeze), eased from day to night by the sun's elevation
-//   - the orb is filled with the card's colour, the 50-90 F arc a hairline on
-//     its edge, the setpoint(s) glass beads on it, a dot at the room
-//     temperature; it pulses grey/red or grey/blue while heating or cooling
+//   - the targets are glass lenses on one ruler (the app's own, from Labs'
+//     design G, in place of the orb): Heat amber, Cool blue, the comfort
+//     band between them and the room a dot; drag a lens or tap beside it
 //   - Auto (heat_cool) keeps 3 F between Heat and Cool and always sends both
 //   - the Windmill never reports hvac_action: in cool or eco with the room
 //     above the setpoint it is cooling. Its `auto` is the unit's Eco mode, its
@@ -1543,45 +1543,6 @@ function tfxHTML(t, r, top = 60) {
   return `<div class="dg-sky" style="background:${tSky(t, r)};"></div>${L}<div class="dg-sheen"></div>`;
 }
 
-// The orb. Its fill is the card's own colour (the first two stops of its sky).
-function orbHTML(t, r, size, tag = '') {
-  const lg = size === 'lg', R = 88, C = 100;
-  const bw = lg ? 1.8 : 3.4, tw = lg ? 0.9 : 2.2, kr = lg ? 5.4 : 8.5, dot = lg ? 2.6 : 4.2;
-  const ang = v => 135 + (Math.max(T_LO, Math.min(T_HI, v)) - T_LO) / (T_HI - T_LO) * 270;
-  const pt = d => { const a = d * Math.PI / 180; return [(C + R * Math.cos(a)).toFixed(2), (C + R * Math.sin(a)).toFixed(2)]; };
-  const arc = (d1, d2) => { const p1 = pt(d1), p2 = pt(d2); return `M ${p1[0]} ${p1[1]} A ${R} ${R} 0 ${d2 - d1 > 180 ? 1 : 0} 1 ${p2[0]} ${p2[1]}`; };
-  const stops = tSky(t, r).match(/#[0-9A-Fa-f]{6}/g) || ['#23242B', '#34363F'];
-  const pulse = r.mood === 'heat' ? '196,112,104' : r.mood === 'cool' ? '110,146,196' : '';
-  // Ids per orb: the card's, the popup's and Favorites' copy are on the page together, and a
-  // gradient defined inside a hidden view would not paint in the shown one.
-  const g = 'o' + t.id + size + tag;
-  const knob = (v, k) => { const p = pt(ang(v)); return `<circle cx="${p[0]}" cy="${p[1]}" r="${kr}" fill="url(#${g}${k})" stroke="rgba(255,255,255,0.85)" stroke-width="${lg ? 1.2 : 2}"/>`; };
-  let band = '', knobs = '', bandD = '';
-  if (r.range && r.lo != null && r.hi != null) {
-    bandD = arc(ang(r.lo), ang(r.hi));
-    band = `<path d="${bandD}" stroke="url(#${g}band)" stroke-width="${bw}" stroke-linecap="round" fill="none"/>`;
-    knobs = knob(r.lo, 'h') + knob(r.hi, 'c');
-  } else if (r.single && r.temp != null) {
-    bandD = arc(135, ang(r.temp));
-    band = `<path d="${bandD}" stroke="${r.s === 'heat' ? '#FFB38A' : '#9CD2FF'}" stroke-opacity="0.9" stroke-width="${bw}" stroke-linecap="round" fill="none"/>`;
-    knobs = knob(r.temp, r.s === 'heat' ? 'h' : 'c');
-  }
-  const flow = (r.mood === 'heat' || r.mood === 'cool') && bandD ? `<path d="${bandD}" class="t-flow" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="${bw}" stroke-linecap="round" stroke-dasharray="2 4" fill="none"/>` : '';
-  const cp = r.cur != null ? pt(ang(r.cur)) : null;
-  const wo = st('weather.forecast_home'), outT = wo && Number.isFinite(Number(wo.attributes.temperature)) ? Math.round(Number(wo.attributes.temperature)) : null;
-  return `<div class="orb ${size}"${pulse ? ` style="--gp:${pulse}"` : ''}>
-      <div class="ball" style="background:linear-gradient(160deg, ${stops[0]} -30%, ${stops[1] || stops[0]} 130%);">${pulse ? '<i class="grey"></i><i class="pulse"></i>' : ''}<i class="spec"></i></div>
-      <svg viewBox="0 0 200 200" aria-hidden="true"><defs>
-        <linearGradient id="${g}band" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFB38A"/><stop offset="1" stop-color="#9CD2FF"/></linearGradient>
-        <radialGradient id="${g}h" cx="0.36" cy="0.32" r="0.72"><stop offset="0" stop-color="#FFF4EC"/><stop offset="0.38" stop-color="#FFB38A"/><stop offset="1" stop-color="#B8683F"/></radialGradient>
-        <radialGradient id="${g}c" cx="0.36" cy="0.32" r="0.72"><stop offset="0" stop-color="#F2F9FF"/><stop offset="0.38" stop-color="#9CD2FF"/><stop offset="1" stop-color="#4A7FB0"/></radialGradient></defs>
-        <path d="${arc(135, 405)}" stroke="rgba(255,255,255,0.26)" stroke-width="${tw}" stroke-linecap="round" fill="none"/>${band}${flow}
-        ${cp ? `<circle cx="${cp[0]}" cy="${cp[1]}" r="${dot}" fill="#FFFFFF"/>` : ''}${knobs}</svg>
-      <div class="num"><em>INSIDE</em><b>${r.cur == null ? '--' : Math.round(r.cur)}<span>°</span></b>${lg ? `<div class="st">${tStatus(t, r)}</div>` : ''}</div>
-      ${lg && outT != null ? `<div class="out"><span>OUTSIDE</span>${outT}°</div>` : ''}
-    </div>`;
-}
-
 function tStatus(t, r) {
   if (r.offline) {
     const waitingHA = r.missing && mode === 'live' && !Object.keys(ents).length;
@@ -1594,20 +1555,21 @@ function tStatus(t, r) {
     : r.eco ? `Eco · ${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°`
     : r.range ? `Keeping ${n(r.lo)}–${n(r.hi)}°` : `Holding ${n(r.temp)}°`;
 }
-// The card says as little as it can: one word for what it is doing (the orb
-// has the room, the steppers the target), and the temperature outside.
+// The card says as little as it can: the room, one word for what it is
+// doing, and the temperature outside; the ruler has the targets.
 function tWord(t, r) {
   if (r.offline) return tStatus(t, r);
   return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : r.eco ? 'Eco' : 'Idle';
 }
-function tOutside(t, r) {
-  if (r.offline) return tSub(t, r, true);
+// The card's one line: "70° inside · Idle · 52° outside".
+function tLine(t, r) {
+  if (r.offline) return esc(tStatus(t, r));
   const wo = st('weather.forecast_home'), o = wo && Number(wo.attributes.temperature);
-  return Number.isFinite(o) ? `${svg('outside', 13).replace('<svg', '<svg class="inl"')}${Math.round(o)}° outside` : '';
+  return [r.cur == null ? '' : Math.round(r.cur) + '° inside', tWord(t, r), Number.isFinite(o) ? Math.round(o) + '° outside' : ''].filter(Boolean).join(' · ');
 }
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
-// The line under the status. On the card it is short (it shares the row with
-// the orb); in the popup the orb already shows Outside, so it is left out.
+// The line under the popup's status: the mode, the humidity (or the
+// Windmill's fan) and, with \`card\`, the temperature outside.
 function tSub(t, r, card) {
   if (r.offline) return r.missing && mode === 'live' && Object.keys(ents).length ? 'Home Assistant has no ' + esc(t.ent) : 'The thermostat is not reachable';
   const wo = st('weather.forecast_home'), out = wo && Number.isFinite(Number(wo.attributes.temperature)) ? Math.round(Number(wo.attributes.temperature)) + '° out' : '';
@@ -1626,26 +1588,46 @@ function tPowerHTML(t, r) {
   const lit = on ? `background:rgba(${a},0.85);box-shadow:0 0 14px rgba(${a},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
   return `<button class="pwr${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" style="${lit}" aria-pressed="${on}" aria-label="${on ? 'Turn off' : 'Turn on'} the ${t.name}"${r.offline ? ' disabled' : ''}>${svg('power', 22)}</button>`;
 }
-// One setpoint: the same stepper as the dehumidifiers. Auto: Heat and Cool.
-function tStepHTML(t, r, split) {
-  const dis = r.offline;
-  if (r.eco) {
-    const n = v => v == null ? '--' : Math.round(v);
-    return `<div class="dg-tgt"><div class="tgt"><div class="tgt-row"><span class="leaf">${svg('leaf', 13)}ECO</span><span>${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°</span></div><div class="tgt-bar"></div></div>
-      <button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>`;
-  }
-  const one = (f, label, v) => `<div class="tstep"><button class="disc" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${dis || v == null || v <= r.min ? ' disabled' : ''}>${svg('minus', 18)}</button>
-      <div class="v"><span>${label.toUpperCase()}</span><b>${v == null ? '--' : Math.round(v) + '°'}</b></div>
-      <button class="disc" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${dis || v == null || v >= r.max ? ' disabled' : ''}>${svg('plus', 18)}</button></div>`;
-  if (r.range) return `<div class="tsplit">${one('target_temp_low', 'Heat', r.lo)}${one('target_temp_high', 'Cool', r.hi)}</div>`;
-  if (r.single) {
-    const v = r.temp, pct = v == null ? 0 : Math.max(0, Math.min(100, (v - T_LO) / (T_HI - T_LO) * 100));
-    return `<div class="dg-tgt"><button class="disc" data-a="tminus" data-f="temperature" aria-label="Lower the target"${dis || v == null || v <= r.min ? ' disabled' : ''}>${svg('minus', 20)}</button>
-      <div class="tgt"><div class="tgt-row"><span>TARGET</span><span>${v == null ? '--' : Math.round(v) + '°'}</span></div><div class="tgt-bar"><i style="width:${pct}%"></i></div></div>
-      <button class="disc" data-a="tplus" data-f="temperature" aria-label="Raise the target"${dis || v == null || v >= r.max ? ' disabled' : ''}>${svg('plus', 20)}</button></div>`;
-  }
-  // Off or fan only: nothing to set; say so where the stepper would be.
-  return `<div class="dg-tgt"><div class="tgt"><div class="tgt-row"><span>TARGET</span><span style="opacity:.55">${r.s === 'fan_only' ? 'Fan only' : r.offline ? '--' : 'Off'}</span></div><div class="tgt-bar"></div></div></div>`;
+// The targets the ruler shows: Auto has two (Heat, Cool), Heat / Cool /
+// the Windmill's Eco one, Off and Fan only none.
+const T_HEAT = '255,179,138', T_COOL = '156,210,255';
+function tSets(t, r) {
+  if (r.offline || r.s === 'off' || r.s === 'fan_only') return [];
+  if (r.range) return [['target_temp_low', 'Heat', r.lo, T_HEAT], ['target_temp_high', 'Cool', r.hi, T_COOL]];
+  return [['temperature', r.s === 'heat' ? 'Heat' : r.s === 'cool' ? 'Cool' : modeName(t, r.s), r.temp, r.s === 'heat' ? T_HEAT : T_COOL]];
+}
+// The ruler: tags, ticks, band, room dot, lenses and the tap zones beside
+// them (tminus / tplus, as the steppers were). In Eco the targets are the
+// Eco temperatures and can't be stepped one at a time (see tread), so the
+// ruler is shown without zones and offers Exit Eco.
+function tRulerHTML(t, r) {
+  const sets = tSets(t, r);
+  if (!sets.length) return `<div class="tg-none">${r.s === 'fan_only' ? 'Fan only' : r.offline ? esc(tStatus(t, r)) : 'Off'}</div>`;
+  const vals = sets.map(x => x[2] == null ? 70 : Math.round(x[2]));
+  const lo = Math.min(...vals), hi = Math.max(...vals), mid = (lo + hi) / 2;
+  // The window: centred on the band, wide enough for it and a margin.
+  const W = Math.max(24, Math.ceil((hi - lo) * 1.6) + 6), a = mid - W / 2;
+  const pc = v => ((v - a) / W * 100).toFixed(2);
+  let ticks = '';
+  for (let x = Math.ceil(a); x <= a + W; x++) ticks += `<i class="tg-rt${x % 5 ? '' : ' big'}" style="left:${pc(x)}%">${x % 5 ? '' : `<em>${x}</em>`}</i>`;
+  const now = r.cur != null && r.cur >= a && r.cur <= a + W ? `<i class="tg-now" style="left:${pc(r.cur)}%"></i>` : '';
+  const band = sets.length === 2 ? `<i class="tg-band" style="left:${pc(lo)}%;width:${((hi - lo) / W * 100).toFixed(2)}%;--a:${sets[0][3]};--b:${sets[1][3]}"></i>` : '';
+  // Tap zones: left of a lens lowers it, right raises it; between two
+  // lenses the space is split at the middle.
+  const xs = vals.map(v => (v - a) / W * 100), edges = [0, ...xs.slice(1).map((x, i) => (x + xs[i]) / 2), 100];
+  let zones = '', tags = '', lenses = '';
+  sets.forEach(([f, label, v], i) => {
+    const x = xs[i], rgb = sets[i][3];
+    if (!r.eco) zones += `<button class="tg-z" style="left:${edges[i].toFixed(2)}%;width:${(x - edges[i]).toFixed(2)}%" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${v == null || v <= r.min ? ' disabled' : ''}></button>`
+      + `<button class="tg-z" style="left:${x.toFixed(2)}%;width:${(edges[i + 1] - x).toFixed(2)}%" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${v == null || v >= r.max ? ' disabled' : ''}></button>`;
+    lenses += `<i class="tg-lens" data-f="${f}" data-v="${vals[i]}" style="left:${x.toFixed(2)}%;--c:${rgb}"></i>`;
+    tags += `<div class="tg-tag" data-f="${f}" style="left:${x.toFixed(2)}%;--c:${rgb}"><small>${r.eco ? svg('leaf', 11) : ''}${esc(label)}</small><b>${v == null ? '--' : Math.round(v)}°</b></div>`;
+  });
+  const ends = r.eco ? `<button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button>`
+    : `<span>${svg('minus', 12)}</span><span>${svg('plus', 12)}</span>`;
+  return `<div class="tg-tags">${tags}</div>
+    <div class="tg-ruler${r.eco ? ' locked' : ''}" data-a0="${a}" data-w="${W}">${ticks}${band}${now}${lenses}${zones}</div>
+    <div class="tg-ends">${ends}</div>`;
 }
 function tEcoRow(t, r) {
   return `<button class="rowi${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="${r.eco ? 'none' : 'eco'}" role="switch" aria-checked="${r.eco}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${icon('leaf')}<span class="k">Eco</span><span class="sw${r.eco ? ' on' : ''}" style="--tint:120,200,120"></span></button>`;
@@ -1671,14 +1653,74 @@ function tReadHTML(t, r) {
   return first + row('timer', 'Running today', mins == null ? '—' : Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm') + row('outside', 'Outside', outT) + fanRow;
 }
 
+// Dragging a lens: it follows the finger in whole degrees (on the ruler as
+// drawn, inside the unit's range, and 3° from the other in Auto) and the
+// ruler isn't redrawn under it (rangeHeld); letting go sends the change as
+// taps would (tStep), and the click a drag ends with is not a tap. A touch
+// further than a lens's reach from every lens is a tap on the zone under it.
+let tDrag = null, tDragged = 0;
+document.addEventListener('pointerdown', e => {
+  const ru = e.target.closest && e.target.closest('.tg-ruler');
+  if (!ru || ru.classList.contains('locked') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const host = ru.closest('[data-th]'), t = host && THERMOS.find(x => x.id === host.dataset.th); if (!t) return;
+  const box = ru.getBoundingClientRect(), a = Number(ru.dataset.a0), W = Number(ru.dataset.w);
+  const lenses = [...ru.querySelectorAll('.tg-lens')];
+  let best = null;
+  for (const l of lenses) {
+    const d = Math.abs(e.clientX - (box.left + (Number(l.dataset.v) - a) / W * box.width));
+    if (d <= 24 && (!best || d < best.d)) best = { l, d };
+  }
+  if (!best) return;
+  const other = lenses.find(l => l !== best.l);
+  tDrag = { t, ru, box, a, W, lens: best.l, f: best.l.dataset.f, from: Number(best.l.dataset.v), v: Number(best.l.dataset.v),
+    other: other ? Number(other.dataset.v) : null, x0: e.clientX, id: e.pointerId, moved: false };
+});
+document.addEventListener('pointermove', e => {
+  const D = tDrag; if (!D || e.pointerId !== D.id) return;
+  if (!D.moved) {
+    if (Math.abs(e.clientX - D.x0) < 5) return;
+    D.moved = true; rangeHeld = D.ru; D.lens.classList.add('drag');
+    try { D.ru.setPointerCapture(e.pointerId); } catch {}
+  }
+  const r = tread(D.t);
+  let v = Math.round(D.a + (e.clientX - D.box.left) / D.box.width * D.W);
+  v = Math.max(Math.ceil(D.a), Math.min(Math.floor(D.a + D.W), Math.max(r.min, Math.min(r.max, v))));
+  if (D.other != null) v = D.f === 'target_temp_low' ? Math.min(v, D.other - T_GAP) : Math.max(v, D.other + T_GAP);
+  if (v === D.v) return;
+  D.v = v;
+  const x = ((v - D.a) / D.W * 100).toFixed(2) + '%';
+  D.lens.style.left = x; D.lens.dataset.v = v;
+  const tag = D.ru.parentElement.querySelector(`.tg-tag[data-f="${D.f}"]`);
+  if (tag) { tag.style.left = x; tag.querySelector('b').textContent = v + '°'; }
+  const band = D.ru.querySelector('.tg-band');
+  if (band && D.other != null) {
+    const lo = Math.min(v, D.other), hi = Math.max(v, D.other);
+    band.style.left = ((lo - D.a) / D.W * 100).toFixed(2) + '%'; band.style.width = ((hi - lo) / D.W * 100).toFixed(2) + '%';
+  }
+});
+function tDrop(e, keep) {
+  const D = tDrag; if (!D || e.pointerId !== D.id) return;
+  tDrag = null;
+  if (!D.moved) return;
+  tDragged = Date.now(); rangeHeld = null;
+  last.delete(D.ru.parentElement);   // moved by hand: draw it afresh
+  if (keep && D.v !== D.from) tStep(D.t, D.f, D.v - D.from);
+  render();
+}
+document.addEventListener('pointerup', e => tDrop(e, true));
+document.addEventListener('pointercancel', e => tDrop(e, false));
+document.addEventListener('click', e => {
+  if (Date.now() - tDragged < 400 && e.target.closest && e.target.closest('[data-th]')) { e.stopPropagation(); e.preventDefault(); tDragged = 0; }
+}, true);
+
 // ---- cards ----
 const thermosEl = $('thermos');
 const tCardHTML = t => `
     <article class="dg tc" data-th="${t.id}">
       <div class="dg-fx" data-r="fx"></div>
       <div class="dg-in">
-        <div class="dg-top"><div data-r="orb"></div><div class="dg-info" data-r="info"></div></div>
-        <div class="dg-ctl"><div data-r="pwr"></div><i class="hair"></i><div data-r="tgt" style="flex:1;min-width:0;display:flex"></div></div>
+        <div class="tg-head"><div class="dg-info" data-r="info"></div><div data-r="pwr"></div></div>
+        <div class="tg-wrap" data-r="tgt"></div>
       </div>
     </article>`;
 for (const t of THERMOS) thermosEl.insertAdjacentHTML('beforeend', tCardHTML(t));
@@ -1694,11 +1736,10 @@ function renderThermos() {
     for (const card of document.querySelectorAll(`.dg[data-th="${t.id}"]`)) {
     const R = n => card.querySelector(`[data-r="${n}"]`);
     put(R('fx'), tfxHTML(t, r, 60));
-    put(R('orb'), orbHTML(t, r, 'sm', card.closest('#g-fav') ? 'f' : ''));
     put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
-      <div class="dg-title">${tWord(t, r)}</div><div class="dg-sub">${tOutside(t, r)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
+      <div class="dg-sub">${tLine(t, r)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
-    put(R('tgt'), tStepHTML(t, r));
+    put(R('tgt'), tRulerHTML(t, r));
     card.classList.toggle('offline', r.offline);
     card.style.boxShadow = `0 18px 40px -16px rgba(${T_ACC[r.mood] || T_ACC.idle},0.26)`;
     }
@@ -1713,8 +1754,8 @@ function renderThermo() {
   $('tTitle').textContent = t.name;
   put(S('fx'), tfxHTML(t, r, 150));
   put(S('pill'), tPill(t, r));
-  put(S('hero'), `<div class="uhero">${orbHTML(t, r, 'lg')}<div class="dg-sub" style="margin-top:12px">${tSub(t, r)}</div></div>`);
-  put(S('tgt'), r.range ? `<div class="dg-tgt">${tStepHTML(t, r)}</div>` : tStepHTML(t, r));
+  put(S('hero'), `<div class="uhero"><div class="tg-big">${r.cur == null ? '--' : Math.round(r.cur)}<span>°</span></div><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${tSub(t, r, true)}</div></div>`);
+  put(S('tgt'), tRulerHTML(t, r));
   put(S('power'), tPowerRow(t, r));
   S('ecoWrap').hidden = !r.canEco;
   if (r.canEco) put(S('eco'), tEcoRow(t, r));
@@ -1828,7 +1869,7 @@ const VIEWS = [
   { id: 'media', name: 'Media', icon: 'speaker', quiet: 'Quiet' },
   { id: 'security', name: 'Security', icon: 'shield', quiet: 'Disarmed' },
   { id: 'around', name: 'Around the house', icon: 'home', quiet: 'All quiet' },
-  { id: 'labs', name: 'Labs', icon: 'flask', quiet: 'Ideas' },   // designs tried out live (labs.js)
+  { id: 'labs', name: 'Labs', icon: 'flask', quiet: 'Ideas' },   // designs tried out live (a labs.js); hidden while it has none
 ];
 const SECTIONS = [
   { id: 'thermo', name: 'Thermostats', view: 'climate', order: 1, el: () => thermosEl, sum: () => thermoSum },
@@ -1884,8 +1925,10 @@ showPill();
 $('vpHome').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 $('vpView').addEventListener('click', e => openViewMenu(e, $('vpView'), $('vpill')));
 function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
+// A view with nothing in it (Labs between ideas) is left out of the menu.
+const viewShown = v => { const box = $('g-' + v.id); return !box || box.children.length > 0; };
 function drawViewMenu() {
-  put($('viewMenu'), VIEWS.map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
+  put($('viewMenu'), VIEWS.filter(viewShown).map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
       <span class="ic">${svg(v.icon, 20)}</span><span class="k">${v.name}<small>${esc(viewSum(v))}</small></span><span class="tick">${svg('check', 20)}</span></button>`).join(''));
 }
 function closeViewMenu() { $('viewMenu').hidden = true; for (const b of [$('viewBtn'), $('vpView')]) b.setAttribute('aria-expanded', 'false'); }
@@ -2122,7 +2165,6 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="around.js"></script>
 <script src="energy.js"></script>
 <script src="schedule.js"></script>
-<script src="labs.js"></script>
 <script src="favorites.js"></script>
 <script src="../home/back.js" defer></script>
 </body>
