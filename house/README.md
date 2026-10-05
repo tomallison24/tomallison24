@@ -51,6 +51,14 @@ the same rules:
   (`climate.office_office`), both Nests: Heat / Cool / Auto / Off. In Auto,
   Heat and Cool each have a stepper, are kept 3° apart, and are always sent
   together (the Nest needs both). Fan is a switch (on / auto).
+- **Nest Eco** is a preset, not a mode: the mode stays Heat / Cool / Auto and
+  Home Assistant reports the Eco temperatures (set in the Nest app) as the
+  targets. The card says "Eco · 62–82°" (or "Heating to 62°" while it heats)
+  and swaps the steppers for the Eco temperatures and **Exit Eco** - a single
+  target can't be changed in Eco (Home Assistant only takes a Heat + Cool
+  pair then, and quietly ignores one on its own). The popup has an **Eco**
+  switch to turn it back on. Only shown on a Nest that lists `eco` in its
+  `preset_modes`; the Windmill's Eco is its own mode, above.
 - **Windmill AC** (`climate.windmill_ac`): Cool / Eco / Fan / Off - its Eco
   is Home Assistant's `auto`. It never says what it's doing, so in Cool or
   Eco with the room above the target it counts as cooling. Fan is Auto / Low /

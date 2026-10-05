@@ -174,6 +174,13 @@
   .tstep .v span { display: block; font-size: 9px; font-weight: 700; letter-spacing: .12em; opacity: .75; margin-bottom: 4px; }
   .tstep .v b { font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; }
   .tc [data-r="tgt"] > .dg-tgt, .tc [data-r="tgt"] > .tsplit { flex: 1; min-width: 0; padding: 0; }
+  .ecobtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; font-weight: 600;
+    background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.5), 0 4px 12px -6px rgba(0,0,0,0.5); transition: transform .18s cubic-bezier(.22,1,.36,1); }
+  .ecobtn:active { transform: scale(0.94); }
+  .ecobtn:disabled { opacity: .4; }
+  .ecobtn svg { color: #A8E6A1; }
+  .tgt-row .leaf { display: inline-flex; align-items: center; gap: 4px; }
+  .tgt-row .leaf svg { color: #A8E6A1; }
   .tnote { font-size: 13px; color: rgba(255,255,255,0.7); margin: 10px 8px 0; line-height: 1.4; }
   @media (prefers-reduced-motion: reduce) { .orb *, .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
 
@@ -566,6 +573,7 @@
       <div data-s="hero"></div>
       <div data-s="tgt"></div>
       <div class="group first" data-s="power"></div>
+      <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Eco holds the wider Eco temperatures, which are set in the Nest app. Turn it off to go back to your own.</p></div>
       <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
       <div data-s="fanSegWrap"><div class="glbl">FAN</div><div class="seg" data-s="fanSeg"></div></div>
       <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">On: every time the Office changes, this AC follows it, 3° under its target (2° at 80° and up), and turns off when the Office does.</p></div>
@@ -697,9 +705,9 @@ function sampleStates() {
     // Thermostats: the Living Room keeping a range, the Office heating, the
     // Windmill cooling (it reports no hvac_action; cooling is inferred).
     'climate.living_room_living_room': e('heat_cool', { hvac_modes: ['off', 'heat', 'cool', 'heat_cool'], hvac_action: 'idle', current_temperature: 70, current_humidity: 41,
-      target_temp_low: 68, target_temp_high: 74, temperature: null, fan_mode: 'off', fan_modes: ['on', 'off'], min_temp: 50, max_temp: 90 }),
+      target_temp_low: 68, target_temp_high: 74, temperature: null, fan_mode: 'off', fan_modes: ['on', 'off'], preset_mode: 'none', preset_modes: ['none', 'eco'], min_temp: 50, max_temp: 90 }),
     'climate.office_office': e('heat', { hvac_modes: ['off', 'heat', 'cool', 'heat_cool'], hvac_action: 'heating', current_temperature: 67, current_humidity: 38,
-      temperature: 70, target_temp_low: null, target_temp_high: null, fan_mode: 'off', fan_modes: ['on', 'off'], min_temp: 50, max_temp: 90 }),
+      temperature: 70, target_temp_low: null, target_temp_high: null, fan_mode: 'off', fan_modes: ['on', 'off'], preset_mode: 'none', preset_modes: ['none', 'eco'], min_temp: 50, max_temp: 90 }),
     'climate.windmill_ac': e('cool', { hvac_modes: ['off', 'cool', 'auto', 'fan_only'], current_temperature: 76, temperature: 72,
       fan_mode: 'Auto', fan_modes: ['Auto', 'Low', 'Medium', 'High'], min_temp: 60, max_temp: 86 }),
     'sensor.living_room_ac_runtime_today': e(0.75, { unit_of_measurement: 'h' }),
@@ -848,11 +856,19 @@ function previewCall(domain, service, d) {
   if (service === 'toggle') set(s.state === 'on' ? 'off' : 'on');
   else if (service === 'set_humidity') set(null, { humidity: d.humidity });
   else if (service === 'set_mode') set(null, { mode: d.mode });
-  else if (service === 'set_preset_mode') set(null, { preset_mode: d.preset_mode });
+  else if (service === 'set_preset_mode' && domain !== 'climate') set(null, { preset_mode: d.preset_mode });   // a fan's speed preset; a Nest's Eco is below
   else if (service === 'turn_on' || service === 'turn_off') set(service === 'turn_on' ? 'on' : 'off');
   else if (service === 'set_hvac_mode') set(d.hvac_mode, previewAction(d.entity_id, d.hvac_mode, s.attributes));
   else if (service === 'set_temperature') { const { entity_id, ...t } = d; set(null, { ...t, ...previewAction(d.entity_id, s.state, { ...s.attributes, ...t }) }); }
   else if (service === 'set_fan_mode') set(null, { fan_mode: d.fan_mode });
+  else if (service === 'set_preset_mode') {
+    const a = s.attributes, on = d.preset_mode === 'eco';
+    const swap = on
+      ? { _own: { temperature: a.temperature, target_temp_low: a.target_temp_low, target_temp_high: a.target_temp_high },
+          ...(s.state === 'heat_cool' ? { target_temp_low: 62, target_temp_high: 82 } : { temperature: s.state === 'cool' ? 82 : 62 }) }
+      : { ...(a._own || {}), _own: null };
+    set(null, { preset_mode: d.preset_mode, ...swap, ...previewAction(d.entity_id, s.state, { ...a, ...swap }) });
+  }
   render();
 }
 
@@ -1265,7 +1281,14 @@ function tread(t) {
     : ((s === 'cool' || s === 'auto') && cur != null && temp != null && cur > temp) ? 'cooling' : 'idle');
   const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : 'idle';
   const min = Number.isFinite(A.min_temp) ? A.min_temp : T_LO, max = Number.isFinite(A.max_temp) ? A.max_temp : T_HI;
-  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto' };
+  // A Nest's Eco is a preset, not a mode: the mode stays Heat / Cool / Auto
+  // and the targets Home Assistant reports become the Eco temperatures (set in
+  // the Nest app). A single target can't be changed while it is on - Home
+  // Assistant only takes a Heat + Cool pair, and quietly ignores a single one -
+  // so the card offers Exit Eco instead of steppers.
+  const canEco = t.kind === 'nest' && Array.isArray(A.preset_modes) && A.preset_modes.includes('eco');
+  const eco = canEco && !offline && s !== 'off' && held(t, 'preset', A.preset_mode) === 'eco';
+  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco };
 }
 
 // The idle sky: the room's palette from its day colours at the horizon, a
@@ -1352,6 +1375,7 @@ function tStatus(t, r) {
   return r.s === 'off' ? 'System off' : r.s === 'fan_only' ? 'Fan only'
     : r.act === 'heating' ? `Heating to ${n(r.range ? r.lo : r.temp)}°`
     : r.act === 'cooling' ? `Cooling to ${n(r.range ? r.hi : r.temp)}°`
+    : r.eco ? `Eco · ${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°`
     : r.range ? `Keeping ${n(r.lo)}–${n(r.hi)}°` : `Holding ${n(r.temp)}°`;
 }
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
@@ -1365,7 +1389,7 @@ function tSub(t, r, card) {
 }
 function tPill(t, r) {
   const word = r.offline ? 'Offline' : r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.act === 'fan' ? 'Fan' : 'Idle';
-  const md = modeName(t, r.s);
+  const md = r.eco ? 'Eco' : modeName(t, r.s);
   return `<span class="dg-pill">${word}${!r.offline && r.s !== 'off' && md !== word ? ' · ' + esc(md) : ''}</span>`;
 }
 
@@ -1378,6 +1402,11 @@ function tPowerHTML(t, r) {
 // One setpoint: the same stepper as the dehumidifiers. Auto: Heat and Cool.
 function tStepHTML(t, r, split) {
   const dis = r.offline;
+  if (r.eco) {
+    const n = v => v == null ? '--' : Math.round(v);
+    return `<div class="dg-tgt"><div class="tgt"><div class="tgt-row"><span class="leaf">${svg('leaf', 13)}ECO</span><span>${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°</span></div><div class="tgt-bar"></div></div>
+      <button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>`;
+  }
   const one = (f, label, v) => `<div class="tstep"><button class="disc" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${dis || v == null || v <= r.min ? ' disabled' : ''}>${svg('minus', 18)}</button>
       <div class="v"><span>${label.toUpperCase()}</span><b>${v == null ? '--' : Math.round(v) + '°'}</b></div>
       <button class="disc" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${dis || v == null || v >= r.max ? ' disabled' : ''}>${svg('plus', 18)}</button></div>`;
@@ -1390,6 +1419,9 @@ function tStepHTML(t, r, split) {
   }
   // Off or fan only: nothing to set; say so where the stepper would be.
   return `<div class="dg-tgt"><div class="tgt"><div class="tgt-row"><span>TARGET</span><span style="opacity:.55">${r.s === 'fan_only' ? 'Fan only' : r.offline ? '--' : 'Off'}</span></div><div class="tgt-bar"></div></div></div>`;
+}
+function tEcoRow(t, r) {
+  return `<button class="rowi${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="${r.eco ? 'none' : 'eco'}" role="switch" aria-checked="${r.eco}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${icon('leaf')}<span class="k">Eco</span><span class="sw${r.eco ? ' on' : ''}" style="--tint:120,200,120"></span></button>`;
 }
 function tPowerRow(t, r) {
   const on = !r.offline && r.s !== 'off';
@@ -1455,6 +1487,8 @@ function renderThermo() {
   put(S('hero'), `<div class="uhero">${orbHTML(t, r, 'lg')}<div class="dg-sub" style="margin-top:12px">${tSub(t, r)}</div></div>`);
   put(S('tgt'), r.range ? `<div class="dg-tgt">${tStepHTML(t, r)}</div>` : tStepHTML(t, r));
   put(S('power'), tPowerRow(t, r));
+  S('ecoWrap').hidden = !r.canEco;
+  if (r.canEco) put(S('eco'), tEcoRow(t, r));
   put(S('mode'), tModeSeg(t, r));
   S('mode').classList.toggle('wait', tWaiting(t, 'mode'));
   S('fanSegWrap').hidden = !t.fans;
@@ -1539,6 +1573,10 @@ document.addEventListener('click', e => {
   if (a === 'tmode') return tMode(t, b.dataset.v);
   if (a === 'tfan') { if (r.fm !== b.dataset.v) { tset(t, 'fan', b.dataset.v); render(); tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: b.dataset.v }, ['fan']); } return; }
   if (a === 'tfanon') { const v = r.fm === 'on' ? 'off' : 'on'; tset(t, 'fan', v); render(); return tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: v }, ['fan']); }
+  if (a === 'teco') {
+    tset(t, 'preset', b.dataset.v); render();
+    return tsend(t, 'climate', 'set_preset_mode', { entity_id: t.ent, preset_mode: b.dataset.v }, ['preset']);
+  }
   if (a === 'tsync') {
     const on = held(t, 'sync', (st(t.sync) || {}).state) === 'on';
     tset(t, 'sync', on ? 'off' : 'on'); render();
