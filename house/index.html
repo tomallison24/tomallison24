@@ -837,20 +837,27 @@ const HA = {
   },
   stop() {
     this.stopped = true;
-    clearTimeout(this.timer); clearInterval(this.pingTimer);
+    clearTimeout(this.timer); clearInterval(this.pingTimer); clearTimeout(this.authTimer);
     if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch {} }
     this.ws = null;
     this.failCalls('Disconnected');
   },
   failCalls(msg) { for (const c of this.calls.values()) c.reject(new Error(msg)); this.calls.clear(); this.subs.clear(); },
-  setStatus(s, detail) { this.status = s; onStatus(s, detail); },
+  // The page is drawn after the status changes; a fault in drawing it must
+  // never stop the connection (it once could: open() drew "Connecting"
+  // before making the socket, so an error there left it stuck forever).
+  setStatus(s, detail) { this.status = s; try { onStatus(s, detail); } catch (e) { drawError('the page', e); } },
 
   open() {
-    this.setStatus(this.tries ? 'reconnecting' : 'connecting');
     let ws;
     try { ws = new WebSocket(this.url.replace(/^http/, 'ws') + '/api/websocket'); }
-    catch (e) { this.setStatus('error', 'That address is not one the browser can open.'); this.stopped = true; return; }
-    this.ws = ws;
+    catch (e) { this.stopped = true; this.setStatus('error', 'That address is not one the browser can open.'); return; }
+    this.ws = ws; this.slow = false;
+    // No answer from Home Assistant in 12 s (a network that never connects
+    // or never replies): give up on this socket and try again, saying so.
+    clearTimeout(this.authTimer);
+    this.authTimer = setTimeout(() => { if (this.ws === ws && this.status !== 'live') { this.slow = true; ws.close(); } }, 12000);
+    this.setStatus(this.tries ? 'reconnecting' : 'connecting');
     ws.onmessage = ev => {
       let data; try { data = JSON.parse(ev.data); } catch { return; }
       for (const m of Array.isArray(data) ? data : [data]) this.onMessage(m);
@@ -861,9 +868,11 @@ const HA = {
       this.ws = null;
       if (this.stopped) return;
       // Never got as far as auth on the first go: say so rather than spin.
+      clearTimeout(this.authTimer);
       const wait = [1, 2, 5, 10, 30][Math.min(this.tries, 4)] * 1000;
       this.tries++;
-      if (this.tries === 1 && this.status === 'connecting') this.setStatus('error', 'Could not reach Home Assistant at that address. Trying again…');
+      if (this.slow) this.setStatus('error', 'Home Assistant did not answer at ' + this.url.replace(/^https?:\/\//, '') + ' within 12 seconds. Trying again…');
+      else if (this.tries === 1 && this.status === 'connecting') this.setStatus('error', 'Could not reach Home Assistant at that address. Trying again…');
       else this.setStatus('reconnecting');
       this.timer = setTimeout(() => this.open(), wait);
     };
@@ -877,6 +886,7 @@ const HA = {
       return;
     }
     if (m.type === 'auth_ok') {
+      clearTimeout(this.authTimer);
       this.version = m.ha_version || '';
       this.tries = 0; this.nextId = 1; this.replace = true;
       this.subId = this.nextId++;
@@ -1209,8 +1219,30 @@ function put(el, html) {
 const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
 
 let ready = false, openId = null;
+// Something that could not be drawn: say so on screen (once each), so it
+// can be reported, and carry on with the rest.
+const drawErrors = new Set();
+function drawError(what, e) {
+  console.error(e);
+  const msg = `${what}: ${e && e.message || e}`;
+  if (drawErrors.has(msg)) return;
+  drawErrors.add(msg);
+  toast(`Couldn't draw ${msg}`);
+}
+window.addEventListener('error', e => drawError('the app', e.error || e.message));
+window.addEventListener('unhandledrejection', e => drawError('the app', e.reason));
 function render() {
   if (!ready) return;
+  const safe = (what, fn) => { try { fn(); } catch (e) { drawError(what, e); } };
+  safe('the dehumidifiers', renderDehums);
+  safe('the thermostats', renderThermos);
+  for (const f of FAMILIES) if (f.render) safe(f.name, () => f.render());
+  safe('the menu', renderViewHead);
+  if (openId) safe('the popup', renderUnit);
+  if (openTId) safe('the popup', renderThermo);
+  if (openD) safe('the popup', renderDev);
+}
+function renderDehums() {
   clearWaitsOnChange();
   let running = 0;
   for (const u of UNITS) {
@@ -1226,12 +1258,6 @@ function render() {
     card.style.boxShadow = `0 18px 40px -16px rgba(${u.accents[r.mood] || '190,194,204'},0.26)`;
   }
   dehumSum = running ? running + ' running' : 'Off';
-  renderThermos();
-  for (const f of FAMILIES) if (f.render) f.render();
-  renderViewHead();
-  if (openId) renderUnit();
-  if (openTId) renderThermo();
-  if (openD) renderDev();
 }
 
 const unitWrap = $('unitWrap'), usheet = unitWrap.querySelector('.sheet');
@@ -1990,7 +2016,7 @@ window.addEventListener('online', () => { if (mode === 'live') HA.wake(); });
 
 // Start once every family's file has loaded (they come after this script).
 document.addEventListener('DOMContentLoaded', () => {
-  layoutViews();
+  try { layoutViews(); } catch (e) { drawError('the views', e); }
   ready = true;
   if (saved().url && saved().token) goLive(); else goPreview();
 });
