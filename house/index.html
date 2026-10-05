@@ -562,7 +562,7 @@
       <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
       <div class="glbl">READINGS</div><div class="group" data-s="read"></div>
       <div data-s="featWrap"><div class="glbl">FEATURES</div><div class="group" data-s="feat"></div></div>
-      <div class="glbl">ENERGY</div><div class="group" data-s="en"></div>
+      <div class="glbl">ENERGY · METERED</div><div class="group" data-s="en"></div>
     </div>
   </div>
 </div>
@@ -582,6 +582,7 @@
       <div data-s="fanSegWrap"><div class="glbl">FAN</div><div class="seg" data-s="fanSeg"></div></div>
       <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">On: every time the Office changes, this AC follows it, 3° under its target (2° at 80° and up), and turns off when the Office does.</p></div>
       <div class="glbl">READINGS</div><div class="group" data-s="read"></div>
+      <div class="glbl">ENERGY · ESTIMATED</div><div class="group" data-s="en"></div><p class="tnote" data-s="enNote"></p>
     </div>
   </div>
 </div>
@@ -1655,6 +1656,8 @@ function renderThermo() {
   S('syncWrap').hidden = !t.sync;
   if (t.sync) put(S('sync'), tSyncRow(t));
   put(S('read'), tReadHTML(t, r));
+  const en = thermoEnergyHTML(t);   // energy.js
+  put(S('en'), statsHTML(en.stats)); put(S('enNote'), en.note);
   tsheet.style.boxShadow = `inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px rgba(${T_ACC[r.mood] || T_ACC.idle},0.22), 0 2px 8px var(--lgs-lift)`;
   slide(S('mode'), S('mode').querySelector('[aria-pressed="true"]'), 'tmode-' + t.id);
   if (t.fans) slide(S('fanSeg'), S('fanSeg').querySelector('[aria-pressed="true"]'), 'tfan-' + t.id);
@@ -2030,6 +2033,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="media.js"></script>
 <script src="security.js"></script>
 <script src="around.js"></script>
+<script src="energy.js"></script>
 <script src="favorites.js"></script>
 <script src="../home/back.js" defer></script>
 </body>
