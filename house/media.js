@@ -192,6 +192,8 @@ function mediaFamily(cfg) {
             + grp(actRow('tvsrc', 'Switch to TV', 'tv', { dis: dis || A.source === 'TV', right: A.source === 'TV' ? 'On TV' : null })
               + readRow('input', 'Input format', esc(val('sensor.' + p.pre + '_audio_input_format') || '—')))] : null,
           status ? ['status', lbl('STATUS') + grp(status)] : null,
+          p.ent === TV_ENT ? energyPart([['NOW', fmtW(tvW())], ['TODAY', fmtKwh(num('sensor.tv_daily_energy'))], ['MONTH', fmtKwh(num('sensor.tv_monthly_energy'), 1)]], true,
+            '120 W on (between its rated SDR and HDR figures), 0.5 W in standby.') : null,
         ],
       };
     },

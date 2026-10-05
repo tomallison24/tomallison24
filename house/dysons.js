@@ -144,6 +144,11 @@ family({
           + swRow('sense', 'Sensing', 'eye', r.sense, a, { dis: gone(y.sense), wait: tWaiting(r.d, 'sense'), sub: 'Keeps reading the air while off' }))],
         y.sens ? ['sens', lbl('AIR SENSITIVITY') + segHTML('sens', DY_SENS, r.sens, { dis: gone(y.sens), wait: tWaiting(r.d, 'sens') })] : null,
         ['aq', lbl('AIR QUALITY' + (r.worst >= 0 ? ' · ' + AQ_WORD[r.worst].toUpperCase() : '')) + grp(statsHTML(aqTiles))],
+        (() => {
+          const w = dysonW(y), heat = num(y.heated), run = num(y.runtime);
+          const today = isNaN(heat) ? null : heat * 1.5 + Math.max(0, (isNaN(run) ? 0 : run) - heat) * 0.006;
+          return energyPart([['NOW', fmtW(w)], ['TODAY', fmtKwh(today)]], true, '1,500 W while the element heats, 6 W while only the fan runs (measured at a low speed), from today\'s heating and running hours.');
+        })(),
         ['read', lbl('READINGS') + grp(
           readRow('filter', y.filterName || 'Filter', isNaN(fl) ? '—' : Math.round(fl) + '%', fl <= 10 ? 'due' : '')
           + (y.carbon ? readRow('filter', 'Carbon filter', isNaN(num(y.carbon)) ? '—' : Math.round(num(y.carbon)) + '%') : '')

@@ -88,7 +88,7 @@ const heaters = family({
         ['level', lbl('LEVEL') + segHTML('level', [['1', 'Low'], ['2', 'High']], r.high ? '2' : '1', { dis: r.offline || gone(h.level), wait: tWaiting(r.d, 'level') })],
         ['feat', lbl('FEATURES') + grp(swRow('lock', 'Child lock', r.lock ? 'lock' : 'lockOpen', r.lock, a, { dis: gone(h.lock), wait: tWaiting(r.d, 'lock') })
           + swRow('light', 'Backlight', 'lightbulb', r.back, a, { dis: gone(h.light), wait: tWaiting(r.d, 'light') }))],
-        ['read', lbl('READINGS') + grp(statsHTML([['NOW', watts(h.power)], ['HEATED TODAY', hm(num(h.heated))], ['TODAY', kwh(h.energy)]]))],
+        ['read', lbl('ENERGY · METERED') + grp(statsHTML([['NOW', watts(h.power)], ['TODAY', kwh(h.energy)], ['HEATED TODAY', hm(num(h.heated))]]))],
       ],
     };
   },
