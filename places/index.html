@@ -134,8 +134,8 @@ a{color:var(--accent-text)}
    streets and labels don't fight the text. */
 .mapres{max-height:46vh;overflow-y:auto;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
-/* The business card: the same clear glass as the sheets and the toast; its tip carries the bottom of
-   the card's gradient (no blur of its own), so the two read as one piece. */
+/* The business card: the same clear glass as the sheets and the toast; its tip is the bottom of the
+   card's gradient under the same blur, so the two read as one piece. */
 .bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));color:var(--text);
   -webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong)}
 .bizpop .leaflet-popup-tip{background:var(--lgs-bottom);-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);box-shadow:inset 0 0 0 1px var(--lgs-edge),0 3px 14px var(--lift)}
