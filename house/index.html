@@ -1948,8 +1948,11 @@ function layoutViews() {
     main.appendChild(box);
   }
 }
+// Families that tidy up when their view is left listen for 'viewchange'.
+let shownView = null;
 function renderViewHead() {
   const v = VIEWS.find(x => x.id === curView);
+  if (shownView !== curView) { const from = shownView; shownView = curView; if (from) window.dispatchEvent(new CustomEvent('viewchange', { detail: { from, to: curView } })); }
   $('viewName').textContent = v.name; $('vpName').textContent = v.name;
   if (!$('viewBtn').querySelector('svg')) $('viewBtn').insertAdjacentHTML('beforeend', svg('chev', 22));
   if (!$('vpView').querySelector('svg')) $('vpView').insertAdjacentHTML('beforeend', svg('chev', 20));
