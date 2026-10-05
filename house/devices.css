@@ -43,9 +43,9 @@
 .gsl input::-moz-range-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.12); }
 .gsl input::-moz-range-progress { height: 10px; border-radius: 999px; background: rgba(var(--tint),0.8); }
 .gsl input::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -8px; border-radius: 50%;
-  background: radial-gradient(120% 90% at 30% 20%, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.78) 50%, rgba(255,255,255,0.55) 100%);
+  background: radial-gradient(120% 90% at 30% 20%, #FFFFFF 0%, #F1F1F4 55%, #DADADF 100%);   /* solid, so the track never shows through it */
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.35); }
-.gsl input::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.gsl input::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: #F1F1F4; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
 .gsl.thin input { height: 28px; }
 .gsl.thin input::-webkit-slider-runnable-track { height: 6px; }
 .gsl.thin input::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -7px; }
@@ -136,43 +136,59 @@
 .aqk { display: inline-flex; align-items: center; gap: 5px; }
 .aqk i { width: 7px; height: 7px; border-radius: 50%; }
 
-/* ---- lights: LP1 "Halo" pills and the room bars ---- */
-.hsplit { display: flex; align-items: stretch; height: 56px; border-radius: 22px; overflow: hidden; margin-bottom: 4px;
-  background: rgba(255,255,255,0.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); }
-.hs-half { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; opacity: .7; transition: background .3s, opacity .3s; }
-.hs-half.lit { opacity: 1; background: linear-gradient(160deg, rgba(245,166,35,0.42), rgba(245,166,35,0.18)); }
-.hs-half.lit.off { background: rgba(255,255,255,0.12); }
+/* ---- lights: LP1 "Halo" as frosted glass ----
+   Each light is a pane of frosted glass; a lit one's colour glows behind it
+   (.lglow), so the glass blurs it into the pane rather than painting it on.
+   No rails, no outlines: the room is a quiet heading with its own switch. */
+.hsplit { display: flex; align-items: stretch; height: 50px; border-radius: 999px; overflow: hidden; margin-bottom: 6px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  -webkit-backdrop-filter: blur(22px) saturate(170%); backdrop-filter: blur(22px) saturate(170%);
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.16), inset 0 1px 0 rgba(255,255,255,0.12); }
+.hs-half { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; opacity: .55; transition: background .3s, opacity .3s; }
+.hs-half.lit { opacity: 1; background: rgba(255,255,255,0.10); }
 .hs-half:active { background: rgba(255,255,255,0.16); }
-.hs-hair { width: 1px; background: rgba(255,255,255,0.12); }
+.hs-hair { width: 0.5px; margin: 12px 0; background: rgba(255,255,255,0.18); }
 .lroom { display: flex; flex-direction: column; gap: 8px; }
-.rbar { display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 10px; border-radius: 22px; transition: background .4s;
-  background: linear-gradient(160deg, #19191D, #23242A); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
-.lroom.lit .rbar { background: linear-gradient(160deg, #1E1C1A, #2B2824); box-shadow: inset 0 0 0 1px rgba(236,204,160,0.18), 0 10px 26px -18px rgba(236,204,160,0.5); }
-.rb-disc { width: 46px; height: 46px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.10); transition: transform .18s, background .3s; }
-.rb-disc.on { background: rgba(236,204,160,0.85); color: #1A1A1C; box-shadow: 0 0 14px rgba(236,204,160,0.45); }
+.lroom + .lroom { margin-top: 12px; }
+.rbar { display: flex; align-items: center; gap: 10px; padding: 6px 2px 0 6px; }
+.rb-mid { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; text-align: left; }
+.rb-name { font-size: 19px; font-weight: 600; letter-spacing: -0.2px; }
+.rb-line { font-size: 13px; opacity: .5; white-space: nowrap; }
+.rb-chev { align-self: center; display: flex; opacity: .45; transition: transform .3s cubic-bezier(.2,.8,.2,1); transform: rotate(-90deg); }
+.rb-chev.open { transform: none; }
+.rb-disc { width: 38px; height: 38px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; transition: transform .18s, background .3s, color .3s;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.14); }
+.rb-disc.on { background: rgba(255,224,178,0.92); color: #1A1A1C; box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.7); }
 .rb-disc:active { transform: scale(0.92); }
-.rb-mid { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-.rb-name { font-size: 17px; font-weight: 600; }
-.rb-line { font-size: 13px; opacity: .65; }
-.rb-chev { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; opacity: .6; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
-.rb-chev.open { transform: rotate(180deg); }
-.lpills { display: flex; flex-direction: column; gap: 8px; padding-left: 10px; }
+.lpills { display: flex; flex-direction: column; gap: 10px; }
 .lroom.folded .lpills { display: none; }
-.lroom + .lroom { margin-top: 6px; }
-.lp { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: 14px; min-height: 90px; padding: 12px 16px 12px 14px; border-radius: 8px 24px 24px 8px; cursor: pointer;
-  background: rgba(255,255,255,0.02); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 3px 0 0 rgba(255,255,255,0.12); transition: box-shadow .4s; }
-.lp.on { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 3px 0 0 rgba(var(--pc, 245,166,35),0.9); }
-.lp.onoff { min-height: 72px; }
-.lp.offline { opacity: .5; }
-.lp-halo { position: absolute; inset: 0; z-index: -1; pointer-events: none; animation: dg-breathe 6s ease-in-out infinite alternate; transform-origin: 36px 50%; }
-.lp-badge { flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.10); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.35); transition: transform .18s, background .3s, box-shadow .3s; }
+.lpw { position: relative; border-radius: 24px; overflow: hidden; isolation: isolate; }   /* the glow stays behind its own pane */
+.lglow { position: absolute; left: -76px; top: 50%; width: 220px; height: 220px; margin-top: -110px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .6s, background .6s; }
+.lp { position: relative; z-index: 1; display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 16px 10px 14px; border-radius: 24px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.03));
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14), inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 28px -20px rgba(0,0,0,0.9); transition: background .4s; }
+.lp.on { background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.22), 0 12px 28px -20px rgba(0,0,0,0.9); }
+.lp.onoff { min-height: 64px; }
+.lp.offline { opacity: .45; }
+.lp-badge { flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); transition: transform .18s, background .3s, color .3s;
+  background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18); }
 .lp-badge:active { transform: scale(0.92); }
 .lp-mid { flex: 1; min-width: 0; }
 .lp-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.lp-name { font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lp.on .lp-name { color: #F2F2F5; }
-.lp-val { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: .8; flex: none; }
-.lp .gsl { margin-top: 4px; }
+.lp-name { font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp.on .lp-name { color: #FFF; }
+.lp-val { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: rgba(255,255,255,0.45); flex: none; }
+.lp.on .lp-val { color: rgba(255,255,255,0.8); }
+/* the slider in a pane: a hairline track and a small glass knob */
+.lp .gsl { margin-top: 2px; }
+.lp .gsl input { height: 24px; }
+.lp .gsl input::-webkit-slider-runnable-track { height: 4px; background: linear-gradient(90deg, rgba(var(--tint),0.95) 0%, rgba(var(--tint),0.95) var(--p), rgba(255,255,255,0.14) var(--p)); box-shadow: none; }
+.lp .gsl input::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.8), 0 1px 5px rgba(0,0,0,0.4); }
+.lp .gsl input::-moz-range-track { height: 4px; }
+.lp .gsl input::-moz-range-progress { height: 4px; }
+.lp .gsl input::-moz-range-thumb { width: 18px; height: 18px; }
+.lp-halo { position: absolute; inset: 0; z-index: -1; pointer-events: none; animation: dg-breathe 6s ease-in-out infinite alternate; }
 .lphero { position: relative; isolation: isolate; }
 .lphero .lp-halo { inset: -40px -12px; transform-origin: 50% 50%; }
 .lphero .dg-title { font-size: 34px; font-weight: 200; }
@@ -360,5 +376,5 @@
   .toners { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rotor *, .rotor, .vinyl *, .hlamp *, .lp-halo, .rb-disc, .fins *, .dv-art, .dv-star, .cbadge i, .sysalert { animation: none !important; }
+  .rotor *, .rotor, .vinyl *, .hlamp *, .lp-halo, .fins *, .dv-art, .dv-star, .cbadge i, .sysalert { animation: none !important; }
 }
