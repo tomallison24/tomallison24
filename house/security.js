@@ -56,8 +56,7 @@ family({
 
   mount(el) {
     el.innerHTML = `${cardHTML('cams:sys', '<div class="sysrow" data-r="sys"></div>', 'syscard')}
-      ${cardHTML('cams:door', '<div data-r="snap"></div><div data-r="tiles"></div>', 'camcard')}
-      ${BLINKS.map(c => cardHTML('cams:' + c.id, '<div data-r="snap"></div><div class="dg-ctl camctl" data-r="ctl"></div>', 'camcard')).join('')}`;
+      ${this.shell('door')}${BLINKS.map(c => this.shell(c.id)).join('')}`;
   },
   render() {
     const sys = this.sys(), a = SEC_ACC[sys.mood], card = this.el.querySelector('[data-dv="cams:sys"]');
@@ -71,22 +70,26 @@ family({
     card.classList.toggle('alerting', sys.alert);
     shadow(card, a);
 
-    const door = this.el.querySelector('[data-dv="cams:door"]');
+    for (const door of cardsOf('cams:door')) this.paintDoor(door);
+    for (const c of BLINKS) for (const el of cardsOf('cams:' + c.id)) this.paintCam(el, c);
+    this.sum = sys.mood === 'offline' ? 'Offline' : sys.alert ? 'Indoor motion' : sys.armed ? `Armed · ${watching} watching` : { disarmed: 'Disarmed', arming: 'Arming', triggered: 'Triggered' }[sys.mood];
+  },
+  // The cards' frames, for Favorites' copies.
+  shell(id) { return id === 'door' ? cardHTML('cams:door', '<div data-r="snap"></div><div data-r="tiles"></div>', 'camcard') : cardHTML('cams:' + id, '<div data-r="snap"></div><div class="dg-ctl camctl" data-r="ctl"></div>', 'camcard'); },
+  paintDoor(door) {
     const dpic = haPic(attr(DOORBELL.cam, 'entity_picture'), (st(DOORBELL.cam) || {}).lu);
     put(door.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
     put(door.querySelector('[data-r="snap"]'), this.snap(DOORBELL.name, dpic, '', '', `<button class="livebtn" data-a="open">${svg('video', 16)}Live</button>`));
     put(door.querySelector('[data-r="tiles"]'), `<div class="ctiles"><div><small>LAST RING</small><b>${evWhen(DOORBELL.chime)}</b></div><div><small>LAST MOTION</small><b>${evWhen(DOORBELL.motion)}</b><em>${esc(evWhat(DOORBELL.motion))}</em></div></div>`);
     door.classList.toggle('offline', gone(DOORBELL.cam));
-
-    for (const c of BLINKS) {
-      const r = this.cam(c), el = this.el.querySelector(`[data-dv="cams:${c.id}"]`);
-      put(el.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
-      put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''));
-      put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
-        <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? '48,209,88' : '255,180,78')}</button>`);
-      el.classList.toggle('offline', r.offline);
-    }
-    this.sum = sys.mood === 'offline' ? 'Offline' : sys.alert ? 'Indoor motion' : sys.armed ? `Armed · ${watching} watching` : { disarmed: 'Disarmed', arming: 'Arming', triggered: 'Triggered' }[sys.mood];
+  },
+  paintCam(el, c) {
+    const sys = this.sys(), r = this.cam(c);
+    put(el.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
+    put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''));
+    put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
+      <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? '48,209,88' : '255,180,78')}</button>`);
+    el.classList.toggle('offline', r.offline);
   },
 
   sheet(id) {

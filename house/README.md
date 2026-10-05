@@ -5,17 +5,18 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It has every device on the Signal
-dashboard, one view at a time, picked from the drop-down under the title,
-which groups them by what they do:
+dashboard in six views, picked from the drop-down under the title:
 
+- **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
 - **Lights**: every light, by room
-- **Media**: Speakers (the Sonos, the Move, the Nest Mini), TV (Apple TV, LG)
-- **Security**: Cameras (the Blink system and cameras, the Nest doorbell)
+- **Media**: Speakers (the Sonos, the Move, the Nest Mini) and TV
+- **Security**: the Blink system and cameras, the Nest doorbell
 - **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
 
-Each view says in the drop-down what it is doing ("1 heating", "3 playing",
-"Armed · 3 watching"). Every family works the same way: a compact card with
+A view with several kinds of device has a small heading over each, with
+what that part is doing. Each view says in the drop-down what is running or needs you ("4 running",
+"3 playing · TV on", "Toner low"). Every family works the same way: a compact card with
 the controls used every day, everything else in its popup (tap the card),
 taps shown at once and held until Home Assistant confirms them, and sample
 readings in the preview.
@@ -50,8 +51,6 @@ Same entities, same colours.
   and the controls change those, so the design can be tried first.
 
 ## Thermostats
-
-The view chosen in the drop-down is kept on the phone.
 
 The three thermostats are the Signal dashboard's TF1 "Frost" card (ha-config,
 `views_signal/signal_templates.yaml`, `tf_card`) in this app's layout, with
@@ -92,6 +91,28 @@ the same rules:
   Windmill goes through a slow cloud and would otherwise flick back. Target
   taps add up into one call 0.6 s after the last. A change the unit turns
   down lets go at once, with a note saying why.
+
+## Favorites
+
+The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
+
+- **Now Playing**: a Sonos that is playing, one card per group.
+- **Running Now**: every device that is doing something (heating, cooling,
+  a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
+- **Automations** (AG1 "Frosted"): Goodnight, Evening Lights, Mom's Awake,
+  Report a Bug, Babysitter, Hatch Green. A routine's pill runs its script
+  (`script.turn_on`, so it returns at once) and is lit while the script holds
+  its acknowledgement helper on (3 s). Babysitter is a mode: lit, "Sitter
+  armed", while it is on. Hatch Green is the bedtime script with the green
+  light, lit while it runs. Report a Bug fills the dashboard's form helpers
+  and runs `script.log_bug`, which adds it to `bug_log.md`.
+- **Thermostats** (Living Room and Office; the Windmill is left out, as on
+  the dashboard), **Cameras** (the living room Blink and the doorbell),
+  **Lights** (All on / All off, Tom's and Elena's lamps).
+
+These are the same cards as in their own views and change together.
+Weather, Activity, Updates and the changelog, also on the dashboard's
+Favorites, are not devices and are not here.
 
 ## The other families
 
@@ -233,10 +254,10 @@ because the redirect away and back is unreliable in an iPhone home-screen app.
 
 The dehumidifiers are `UNITS` and the thermostats `THERMOS` in `index.html`.
 Every other family is its own file - `heaters.js`, `dysons.js`, `lights.js`,
-`media.js`, `security.js`, `around.js` - with its devices in a list at the
-top (entity ids, colours). `devices.js` has what they share: `family()`
-puts a view in the drop-down under its group, and the cards, popup, sample
-states and preview are the family's own.
+`media.js`, `security.js`, `around.js`, `favorites.js` - with its devices in
+a list at the top (entity ids, colours). `devices.js` has what they share:
+`family()` adds a section to one of the six views, and the cards, popup,
+sample states and preview are the family's own.
 
 ## Icons
 

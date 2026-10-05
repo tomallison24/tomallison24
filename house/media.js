@@ -102,27 +102,33 @@ function mediaFamily(cfg) {
     },
 
     mount(el) {
-      el.innerHTML = cfg.list.map(p => cardHTML(cfg.id + ':' + p.id, `
-        <div class="dg-top"><div data-r="hero"></div><div class="dg-info" data-r="info"></div></div>
-        <div class="dg-ctl mctl" data-r="ctl"></div>`, 'mcard')).join('');
+      el.innerHTML = cfg.list.map(p => this.shell(p)).join('');
       // The seek bar moves with the song while a popup is open.
       setInterval(() => { if (openD && openD.f === this && !rangeHeld) { const p = cfg.list.find(x => x.id === openD.id); if (p && this.read(p).playing) renderDev(); } }, 1000);
     },
     render() {
       let n = 0;
       for (const p of cfg.list) {
-        const card = this.el.querySelector(`[data-dv="${cfg.id}:${p.id}"]`), r = this.read(p), R = k => card.querySelector(`[data-r="${k}"]`), w = this.words(p, r);
+        const r = this.read(p);
         if (r.playing || (p.kind === 'tv' && r.on)) n++;
-        put(R('fx'), this.fx(p, r, 60));
-        put(R('hero'), this.vinyl(p, r, 'sm'));
-        const who = this.withWho(p, r), bat = p.battery && !gone(p.battery) ? `${svg('battery', 13)}${Math.round(num(p.battery))}%` : '';
-        put(R('info'), infoHTML2(p.name, w.title, w.sub, (who || bat || r.muted) ? `<div class="alerts">${r.muted ? `<span class="alert">${svg('mute', 13)}Muted</span>` : ''}${who ? `<span class="alert">${svg('group', 13)}${esc(who)}</span>` : ''}${bat ? `<span class="alert">${bat}</span>` : ''}</div>` : ''));
-        put(R('ctl'), this.controls(p, r));
-        card.classList.toggle('offline', r.offline);
-        card.classList.toggle('muted', r.muted);
-        shadow(card, this.acc(p, r));
+        for (const card of cardsOf(cfg.id + ':' + p.id)) this.paint(card, p);
       }
       this.sum = cfg.summary(n);
+    },
+    // One card, wherever it is (its own view, or Now Playing on Favorites).
+    shell(p) { return cardHTML(cfg.id + ':' + p.id, `
+        <div class="dg-top"><div data-r="hero"></div><div class="dg-info" data-r="info"></div></div>
+        <div class="dg-ctl mctl" data-r="ctl"></div>`, 'mcard'); },
+    paint(card, p) {
+      const r = this.read(p), R = k => card.querySelector(`[data-r="${k}"]`), w = this.words(p, r);
+      put(R('fx'), this.fx(p, r, 60));
+      put(R('hero'), this.vinyl(p, r, 'sm'));
+      const who = this.withWho(p, r), bat = p.battery && !gone(p.battery) ? `${svg('battery', 13)}${Math.round(num(p.battery))}%` : '';
+      put(R('info'), infoHTML2(p.name, w.title, w.sub, (who || bat || r.muted) ? `<div class="alerts">${r.muted ? `<span class="alert">${svg('mute', 13)}Muted</span>` : ''}${who ? `<span class="alert">${svg('group', 13)}${esc(who)}</span>` : ''}${bat ? `<span class="alert">${bat}</span>` : ''}</div>` : ''));
+      put(R('ctl'), this.controls(p, r));
+      card.classList.toggle('offline', r.offline);
+      card.classList.toggle('muted', r.muted);
+      shadow(card, this.acc(p, r));
     },
 
     sheet(id) {

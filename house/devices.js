@@ -1,8 +1,10 @@
 // Home: what the device families share. Each family (heaters.js, dysons.js,
-// lights.js, media.js, security.js, around.js) is loaded after index.html's
-// script and calls family() once per view: its place in the drop-down (under
-// its group: Climate, Lights, Media, Security, Around the house), its cards,
-// its popup, its sample states and how the preview answers its calls.
+// lights.js, media.js, security.js, around.js, favorites.js) is loaded after
+// index.html's script and calls family() once per section: the view it sits
+// in (Favorites, Climate, Lights, Media, Security, Around the house), its
+// cards, its popup, its sample states and how the preview answers its calls.
+// A card can appear twice (in its own view and on Favorites): the families
+// paint every copy, found by its data-dv.
 //
 // A card or popup is a host with data-dv="<view>:<device>"; a tap on one of
 // its [data-a] controls goes to that family's act(); a tap anywhere else on a
@@ -14,13 +16,14 @@
 // with the thermostats' held()/tset()/tsend(): a device is { id, name }.
 'use strict';
 
+const VIEW_OF = { Favorites: 'fav', Climate: 'climate', Lights: 'lights', Media: 'media', Security: 'security', 'Around the house': 'around' };
 function family(f) {
   const el = document.createElement('section');
   el.className = 'units'; el.id = 'v-' + f.id; el.hidden = true;
-  document.querySelector('main').appendChild(el);
+  document.querySelector('main').appendChild(el);   // moved into its view by layoutViews()
   f.el = el; f.sum = f.sum || '';
   FAMILIES.push(f);
-  VIEWS.push({ id: f.id, name: f.name, icon: f.icon, group: f.group, order: f.order, el: () => el, sum: () => f.sum });
+  SECTIONS.push({ id: f.id, name: f.name, view: VIEW_OF[f.group], order: f.order, el: () => el, sum: () => f.sum });
   if (f.samples) SAMPLES.push(f.samples.bind(f));
   if (f.preview) PREVIEW.unshift(f.preview.bind(f));   // before the common answers below
   if (f.mount) f.mount(el);
@@ -105,6 +108,7 @@ function infoHTML2(name, title, sub, extra = '') {
 }
 const pillHTML2 = (word, dot) => `<span class="dg-pill">${dot ? `<i style="background:rgb(${dot});box-shadow:0 0 6px rgba(${dot},0.8)"></i>` : ''}${word}</span>`;
 // The card's frame: sky behind, then the family's own regions.
+const cardsOf = key => document.querySelectorAll(`[data-dv="${key}"]:not(.sheet)`);   // not the popup, which carries its device's key too
 const cardHTML = (key, inner, cls = '') => `<article class="dg dvc ${cls}" data-dv="${key}"><div class="dg-fx" data-r="fx"></div><div class="dg-in">${inner}</div></article>`;
 function shadow(card, acc) { card.style.boxShadow = `0 18px 40px -16px rgba(${acc},0.26)`; }
 
@@ -242,6 +246,13 @@ PREVIEW.push((domain, service, d) => {
         const ms = ents[m];
         patchEnt(m, on ? 'on' : 'off', on ? { brightness: a.brightness, ...(a.rgb_color ? { rgb_color: a.rgb_color } : {}) } : { _bri: ms.attributes.brightness, brightness: null });
       }
+    }
+    // A group is on while any of its lights is, as Home Assistant's are.
+    for (const gid in ents) {
+      const g = ents[gid], m = g.attributes.entity_id;
+      if (!gid.startsWith('light.') || !Array.isArray(m) || !m.some(x => ids.includes(x))) continue;
+      const lit = m.filter(x => ents[x] && ents[x].state === 'on');
+      patchEnt(gid, lit.length ? 'on' : 'off', lit.length ? { brightness: ents[lit[0]].attributes.brightness } : { brightness: null });
     }
     return true;
   }
