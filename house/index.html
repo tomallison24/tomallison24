@@ -1729,7 +1729,7 @@ document.addEventListener('click', e => {
 
 // Eco: the same ruler, in green and fixed. The Eco temperatures are the
 // edges of a wide band the Nest keeps the room inside - it heats only below
-// the low one and cools only above the high one - set in the Nest app, so
+// the low one (Eco low) and cools only above the high one (Eco high) - set in the Nest app, so
 // there's nothing to drag or tap; a line says where the room is, and Exit
 // Eco goes back to your own temperatures.
 function tEcoHTML(t, r, sets) {
@@ -1745,7 +1745,7 @@ function tEcoHTML(t, r, sets) {
   const bLo = sets.length === 2 ? lo : sets[0][0] === 'temperature' && r.s === 'cool' ? a : lo;
   const bHi = sets.length === 2 ? hi : sets[0][0] === 'temperature' && r.s === 'cool' ? lo : a + W;
   const band = `<i class="tg-band" style="left:${pc(bLo)}%;width:${((bHi - bLo) / W * 100).toFixed(2)}%"></i>`;
-  const word = (f, label) => f === 'target_temp_low' || label === 'Heat' ? 'Heat below' : 'Cool above';
+  const word = (f, label) => f === 'target_temp_low' || label === 'Heat' ? 'Eco low' : 'Eco high';
   let pins = '', tags = '';
   sets.forEach(([f, label, v], i) => {
     pins += `<i class="tg-lens" data-f="${f}" data-v="${vals[i]}" style="left:${pc(vals[i])}%;--c:${G}"></i>`;
