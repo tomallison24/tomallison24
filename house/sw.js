@@ -1,8 +1,8 @@
 // Offline shell for Home (the Home Assistant app). Network-first so a new deploy shows on the next
 // open; the cache is only the fallback when offline. Home Assistant itself is
 // a WebSocket on another origin, which a service worker never sees.
-const CACHE = 'house-v20';
-const SHELL = ['./', 'index.html', 'devices.css', 'devices.js', 'heaters.js', 'dysons.js', 'lights.js', 'media.js', 'security.js', 'around.js', 'energy.js', 'schedule.js', 'labs.js', 'favorites.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/back.js', '../home/slide.js'];
+const CACHE = 'house-v21';
+const SHELL = ['./', 'index.html', 'devices.css', 'devices.js', 'heaters.js', 'dysons.js', 'lights.js', 'media.js', 'security.js', 'around.js', 'energy.js', 'schedule.js', 'favorites.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/back.js', '../home/slide.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

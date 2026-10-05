@@ -5,7 +5,7 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It has every device on the Signal
-dashboard in six views (and Labs), picked from the drop-down under the
+dashboard in six views, picked from the drop-down under the
 title. Once they have scrolled away, a floating Liquid Glass pill takes
 their place at the top: **Home** (back to the top) and the view (the same
 drop-down):
@@ -78,18 +78,24 @@ the same rules:
   (`automation.hvac_sync_window_ac_with_main_thermostat` - the id says
   window/main, the registry's, not a typo): it keeps the AC 3° under the
   Office (2° at 80° and up) and turns it off with the Office.
-- **The card** says as little as it can: the orb with the room temperature
-  (the 50–90° arc on its edge, the target(s) as beads), one word for what it
-  is doing (Heating, Cooling, Idle, Eco, Off), the temperature outside, the
-  next schedule change, then Power and the target. Power remembers the mode
-  it was in. The popup has the rest (mode, fan, humidity, runtime).
+- **The card** says as little as it can: one line ("70° inside · Idle · 52°
+  outside"), the next schedule change, Power, and **the ruler** (Labs' design
+  G): the target(s) as glass lenses on one ruler - Heat amber, Cool blue, the
+  comfort band between them, the room a white dot - with their numbers above.
+  **Drag a lens**, or **tap beside it** (left lowers, right raises; between
+  two lenses the space is split at the middle). A drag moves in whole
+  degrees, keeps 3° between Heat and Cool, and sends one change when you let
+  go. The ruler centres on the targets and widens with them. In Eco it shows
+  the Eco temperatures with Exit Eco; Off and Fan only have no ruler. Power
+  remembers the mode it was in. The popup has the rest (mode, fan, humidity,
+  runtime).
 - **The sky** is what the unit is doing: embers while heating, frost while
   cooling, airflow with the fan, graphite when off. Idle, each room has its
   own palette (Living Room lounge, Office focus, Windmill breeze), a touch
-  brighter as the sun climbs and darker after sunset (`sun.sun`). The orb
-  pulses red or blue while it heats or cools.
-- **The popup** (tap a card): the big orb with Outside
-  (`weather.forecast_home`), the target, Power, Mode, Fan, the Windmill's
+  brighter as the sun climbs and darker after sunset (`sun.sun`).
+- **The popup** (tap a card): the room as a big number, what it is doing,
+  mode / humidity / outside (`weather.forecast_home`), the same ruler, Power,
+  Mode, Fan, the Windmill's
   sync, and Readings (humidity or the compressor, running today from
   `sensor.*_ac_runtime_today`, outside).
 - **Taps show at once and stay** until the unit reports them, or 20 s - the
@@ -228,32 +234,11 @@ thermostat in its `entities`.
 
 ## Labs
 
-The last view, **Labs**, is for trying ideas live before they replace
-anything (`labs.js`). Each idea is wired to the real device.
-
-Today: the **Living Room thermostat without the orb**, seven ways, all ultra
-clean Liquid Glass (a frosted pane with the mood's light behind it: heating
-amber, cooling blue, idle lavender, off grey):
-
-- **A · Numeral**: the room as one thin number; the targets as glass capsules.
-- **B · Track**: a glass tube from 50° to 90° with the comfort band, the room
-  as a mark and the targets as beads; capsules below.
-- **C · Control**: Control Center capsules filled to each target, the room
-  as a hairline in from the left at its own height; tap the top half to
-  raise it, the bottom half to lower it.
-- **D · Drum**: picker wheels, the target in a glass lens; tap a number above
-  or below to go to it.
-- **E · Split**: two glass halves, warm and cool, the room at the seam; the
-  half at work glows.
-- **F · Ruler**: the camera's exposure dial; the ruler slides under a fixed
-  lens; tap left or right of it.
-- **G · Dual**: F with Heat and Cool on one ruler, a lens each and the
-  comfort band between them, the room a dot; drag a lens along the ruler,
-  or tap beside it to move it that way (between the two, the space is split
-  at the middle). A drag sends one change when you let go.
-
-They follow the card's rules (Auto sends Heat and Cool together, 3° apart;
-taps add up; Power remembers the mode).
+**Labs** is a view for trying ideas live, wired to the real devices, before
+they replace anything: an idea is a family in a `labs.js` with the group
+`Labs`. It is left out of the drop-down while it has none - as now: the
+thermostat ruler (design G, picked from seven) has moved to the cards, and
+the other ideas are gone.
 
 ## Connecting to Home Assistant
 
