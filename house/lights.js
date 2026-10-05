@@ -101,29 +101,34 @@ family({
       </div>`).join('');
   },
   render() {
-    put(this.el.querySelector('.hsplit'), this.house());
+    for (const h of cardsOf('lights:house')) put(h, this.house());
     let n = 0;
     for (const R of L_ROOMS) {
       const box = this.el.querySelector(`[data-room="${R.id}"]`), folded = lfold().includes(R.id);
       put(box.querySelector('.rbar'), this.roomBar(R));
       box.classList.toggle('folded', folded);
       box.classList.toggle('lit', R.lights.some(([id]) => this.read(id).on));
-      for (const [id] of R.lights) {
-        const r = this.read(id), p = box.querySelector(`[data-dv="lights:${id}"]`);
-        if (r.on) n++;
-        put(p, this.pill(id));
-        p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
-        // The light comes from the bulb: brightest at the icon, fading with the
-        // distance from it (about as light does, the square of it), behind the
-        // glass so the pane diffuses it. A brighter light reaches further.
-        const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100), glow = p.previousElementSibling;
-        const reach = Math.round(150 + 230 * k), c = a => `rgba(${r.pc},${(a * k).toFixed(3)})`;
-        glow.style.background = `radial-gradient(circle ${reach}px at 34px 50%, ${c(0.62)} 0%, ${c(0.46)} 9%, ${c(0.28)} 22%, ${c(0.14)} 40%, ${c(0.05)} 66%, ${c(0)} 100%)`;
-        glow.style.opacity = r.on ? 1 : 0;
-      }
+      for (const [id] of R.lights) if (this.read(id).on) n++;
     }
+    // Every pane, here and on Favorites (Tom's and Elena's lamps).
+    for (const p of document.querySelectorAll('.lp[data-dv^="lights:light."]')) this.paint(p, p.dataset.dv.slice(7));
     this.sum = n ? n + ' on' : 'All off';
   },
+  // One light's pane: the pill, and its glow behind the glass (the pane's
+  // sibling in its .lpw wrapper).
+  paint(p, id) {
+    const r = this.read(id);
+    put(p, this.pill(id));
+    p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
+    // The light comes from the bulb: brightest at the icon, fading with the
+    // distance from it (about as light does, the square of it), behind the
+    // glass so the pane diffuses it. A brighter light reaches further.
+    const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100), glow = p.previousElementSibling;
+    const reach = Math.round(150 + 230 * k), c = a => `rgba(${r.pc},${(a * k).toFixed(3)})`;
+    glow.style.background = `radial-gradient(circle ${reach}px at 34px 50%, ${c(0.62)} 0%, ${c(0.46)} 9%, ${c(0.28)} 22%, ${c(0.14)} 40%, ${c(0.05)} 66%, ${c(0)} 100%)`;
+    glow.style.opacity = r.on ? 1 : 0;
+  },
+
   sheet(id) {
     const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : '48,209,88';
     const memberRows = ms.map(m => {
