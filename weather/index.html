@@ -78,6 +78,11 @@
     display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px; touch-action: pan-y; will-change: transform;
   }
   .w3-days { position: relative; z-index: 1; min-width: 0; }
+  /* Hourly and the 7-day forecast each sit on their own very faint tile, so the sky still shows
+     through. The tiles reach 10px past the card's padding on each side and pad back in by the same,
+     so what is inside keeps its width; the card's row gap keeps the two apart. */
+  .w3-hours, .w3-days { margin: 0 -10px; padding: 12px 10px 8px; border-radius: 22px;
+    background: rgba(255,255,255,0.05); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.10); }
   .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
   /* Room to breathe: under the place name, around the chips, and before Hourly. */

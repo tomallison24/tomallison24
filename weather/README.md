@@ -84,7 +84,10 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - **One screen**: the sky (its colours, sun, clouds, rain, snow and lightning)
   fills the whole screen behind everything, and the current weather, the
   hourly timeline (about six and a half hours across, scroll for the rest of
-  the 24) and the 7-day forecast sit directly on it, with no card edge. A new
+  the 24) and the 7-day forecast sit on it with no card edge around the whole.
+  Hourly and the 7-day forecast each have their own very faint tile (5% white
+  with a hairline edge, rounded, a gap between them), so the sky still shows
+  through. A new
   place's sky fades in as its forecast slides in. Type is sized to read at a
   glance without crowding: a 76px temperature, 18-19px place and conditions,
   14px chips, 12-17px in the hourly columns and the 7-day columns.
@@ -106,8 +109,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   (where the hourly forecast stops short of the last day, that day says its
   hours aren't available yet) and the NWS `detailedForecast` text; the saved data's
   version went to 3, so older saved forecasts are fetched again.
-- **Hourly tray**: the next 24 hours (of the week kept), scrolling sideways, straight on the sky
-  (no panel behind it) in every condition view. Each hour has its
+- **Hourly tray**: the next 24 hours (of the week kept), scrolling sideways, on its faint tile
+  in every condition view. Each hour has its
   time (midnight shows the day), its weather icon, the temperature on a
   curve, and under it the chance of rain on a thinner blue line of its own
   (0 to 100%, or up to 0.25 in an hour for Open-Meteo amounts), since it has
