@@ -11,12 +11,21 @@
 //   B · Track    - a glass tube 50-90°: the comfort band, the room as a mark
 //   C · Control  - Control Center: tall capsules filled to each target;
 //                  tap the top half to raise it, the bottom half to lower it
+//   D · Drum     - iOS picker wheels, the chosen number in a glass lens;
+//                  tap a number above or below to go to it
+//   E · Split    - two glass halves, warm Heat and cool Cool, the room in a
+//                  lozenge at the seam; the half at work glows
+//   F · Ruler    - the camera's exposure dial: a tick ruler slides under a
+//                  fixed lens, the room a dot on it; tap left or right
 'use strict';
 const LAB_T = () => THERMOS.find(t => t.id === 'lr');
 const LAB_IDEAS = [
   { id: 'a', name: 'A · Numeral', note: 'The room as one thin number. The targets as glass capsules.' },
   { id: 'b', name: 'B · Track', note: 'One glass tube from 50° to 90°: the comfort band, the room as a mark.' },
   { id: 'c', name: 'C · Control', note: 'Control Center: capsules filled to each target. Tap the top half to raise, the bottom to lower.' },
+  { id: 'd', name: 'D · Drum', note: 'Picker wheels, the target in a glass lens. Tap a number above or below to go to it.' },
+  { id: 'e', name: 'E · Split', note: 'Two glass halves, warm and cool, the room at the seam. The half at work glows.' },
+  { id: 'f', name: 'F · Ruler', note: 'The camera\'s exposure dial: the ruler slides under a fixed lens. Tap left or right of it.' },
 ];
 // One reading for all three: what to show, in as few words as possible.
 function labRead() {
@@ -41,6 +50,7 @@ function labCapsule(L, [f, label, v, rgb]) {
     <button class="lab-step" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${dis || v >= L.r.max ? ' disabled' : ''}>${svg('plus', 18)}</button></div>`;
 }
 
+const labNone = L => `<div class="lab-cap idle"><div class="lab-cap-v"><b>${labOff(L)}</b></div></div>`;
 const LAB_DRAW = {
   // A · Numeral
   a(L) {
@@ -87,6 +97,51 @@ const LAB_DRAW = {
         <div class="lab-sub">${L.word}${L.out != null ? `<br>${L.out}° outside` : ''}</div>
         ${labPwr(L)}
       </div>${caps || `<div class="lab-cc idle"><div class="lab-cc-v"><b>${labOff(L)}</b></div></div>`}</div>`;
+  },
+  // D · Drum: a wheel per target, higher numbers above, as a thermometer reads
+  d(L) {
+    const wheel = ([f, label, v, rgb]) => {
+      const rows = [2, 1, 0, -1, -2].map(k => {
+        const x = v == null ? null : Math.round(v) + k, ok = x != null && x >= L.r.min && x <= L.r.max;
+        return k === 0 ? `<div class="lab-dr-sel">${L.n(x)}°</div>`
+          : `<button class="lab-dr-n d${Math.abs(k)}" data-a="step" data-f="${f}" data-v="${k}"${L.locked || !ok ? ' disabled' : ''}>${ok ? x : ''}</button>`;
+      }).join('');
+      return `<div class="lab-dr" style="--c:${rgb}"><small>${label}</small><div class="lab-dr-w"><i class="lab-dr-lens"></i>${rows}</div></div>`;
+    };
+    return `${labHead(L)}<div class="lab-sub lab-d-sub">${L.n(L.r.cur)}° inside · ${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>
+      <div class="lab-drums">${L.sets.length ? L.sets.map(wheel).join('') : labNone(L)}</div>`;
+  },
+  // E · Split: warm half, cool half, the room at the seam
+  e(L) {
+    const half = ([f, label, v, rgb]) => {
+      const busy = (label === 'Heat' && L.r.act === 'heating') || (label === 'Cool' && L.r.act === 'cooling');
+      return `<div class="lab-half${busy ? ' busy' : ''}" style="--c:${rgb}">
+        <small>${label}${busy ? ` · ${label === 'Heat' ? 'heating' : 'cooling'}` : ''}</small><b>${L.n(v)}<span>°</span></b>
+        <div class="lab-half-b"><button class="lab-step" data-a="step" data-f="${f}" data-v="-1" aria-label="Lower ${label}"${L.locked || v <= L.r.min ? ' disabled' : ''}>${svg('minus', 18)}</button>
+        <button class="lab-step" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${L.locked || v >= L.r.max ? ' disabled' : ''}>${svg('plus', 18)}</button></div></div>`;
+    };
+    return `<div class="lab-e-h"><span class="lab-name">${L.t.name}</span>${labPwr(L)}</div>
+      <div class="lab-split${L.sets.length === 1 ? ' one' : ''}">${L.sets.length ? L.sets.map(half).join('') : labNone(L)}
+        <div class="lab-seam"><b>${L.n(L.r.cur)}°</b><small>inside</small></div></div>
+      <div class="lab-sub lab-e-sub">${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>`;
+  },
+  // F · Ruler: the ticks slide, the lens stays
+  f(L) {
+    const ruler = ([f, label, v, rgb]) => {
+      const c = v == null ? 70 : Math.round(v), PX = 14;   // px a degree
+      let ticks = '';
+      for (let x = c - 12; x <= c + 12; x++) {
+        const big = x % 5 === 0;
+        ticks += `<i class="lab-rt${big ? ' big' : ''}" style="left:calc(50% + ${(x - c) * PX}px)">${big ? `<em>${x}</em>` : ''}</i>`;
+      }
+      const cur = L.r.cur != null && Math.abs(L.r.cur - c) <= 12 ? `<i class="lab-rnow" style="left:calc(50% + ${((L.r.cur - c) * PX).toFixed(1)}px)"></i>` : '';
+      return `<div class="lab-ru" style="--c:${rgb}"><div class="lab-ru-v"><small>${label}</small><b>${L.n(v)}°</b></div>
+        <div class="lab-ruler">${ticks}${cur}<i class="lab-lens"></i>
+          <button class="lab-ru-l" data-a="step" data-f="${f}" data-v="-1" aria-label="Lower ${label}"${L.locked || v <= L.r.min ? ' disabled' : ''}>${svg('minus', 14)}</button>
+          <button class="lab-ru-r" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${L.locked || v >= L.r.max ? ' disabled' : ''}>${svg('plus', 14)}</button></div></div>`;
+    };
+    return `${labHead(L)}<div class="lab-sub lab-f-sub">${L.n(L.r.cur)}° inside · ${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>
+      ${L.sets.length ? L.sets.map(ruler).join('') : `<div class="lab-caps">${labNone(L)}</div>`}`;
   },
 };
 
