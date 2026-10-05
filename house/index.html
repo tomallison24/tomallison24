@@ -1870,7 +1870,7 @@ const VIEWS = [
   { id: 'media', name: 'Media', icon: 'speaker', quiet: 'Quiet' },
   { id: 'security', name: 'Security', icon: 'shield', quiet: 'Disarmed' },
   { id: 'around', name: 'Around the house', icon: 'home', quiet: 'All quiet' },
-  { id: 'labs', name: 'Labs', icon: 'flask', quiet: 'Ideas' },   // designs tried out live (labs.js); hidden while it has none
+  { id: 'labs', name: 'Labs', icon: 'flask', quiet: 'Ideas' },   // designs tried out live (a labs.js); hidden while it has none
 ];
 const SECTIONS = [
   { id: 'thermo', name: 'Thermostats', view: 'climate', order: 1, el: () => thermosEl, sum: () => thermoSum },
@@ -2167,7 +2167,6 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="energy.js"></script>
 <script src="schedule.js"></script>
 <script src="favorites.js"></script>
-<script src="labs.js"></script>
 <script src="../home/back.js" defer></script>
 </body>
 </html>
