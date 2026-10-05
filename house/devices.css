@@ -137,8 +137,9 @@
 .aqk i { width: 7px; height: 7px; border-radius: 50%; }
 
 /* ---- lights: LP1 "Halo" as frosted glass ----
-   Each light is a pane of frosted glass; a lit one's colour glows behind it
-   (.lglow), so the glass blurs it into the pane rather than painting it on.
+   Each light is a pane of frosted glass; a lit one's light spreads from its
+   bulb behind the glass (.lglow), dimming with the distance from it, so the
+   pane diffuses it rather than having it painted on.
    No rails, no outlines: the room is a quiet heading with its own switch. */
 .hsplit { display: flex; align-items: stretch; height: 50px; border-radius: 999px; overflow: hidden; margin-bottom: 6px;
   background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
@@ -163,7 +164,8 @@
 .lpills { display: flex; flex-direction: column; gap: 10px; }
 .lroom.folded .lpills { display: none; }
 .lpw { position: relative; border-radius: 24px; overflow: hidden; isolation: isolate; }   /* the glow stays behind its own pane */
-.lglow { position: absolute; left: -76px; top: 50%; width: 220px; height: 220px; margin-top: -110px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .6s, background .6s; }
+.lglow { position: absolute; inset: 0; pointer-events: none;   /* the light, centred on the bulb (34px in: padding + half the badge) */
+  opacity: 0; transition: opacity .6s, background .6s; }
 .lp { position: relative; z-index: 1; display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 16px 10px 14px; border-radius: 24px; cursor: pointer;
   background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.03));
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
