@@ -153,7 +153,7 @@
   .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
   .hx-pct { font-size: 11.5px; font-weight: 700; color: #CDEBFF; line-height: 1; }
   /* The chance of rain's own line under the temperatures (Hourly and Feels like). */
-  .hx-rc { position: relative; width: 100%; height: 50px; }
+  .hx-rc { position: relative; width: 100%; height: 60px; }
   .hx-rc svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .hx-rline { fill: none; stroke: rgba(108,184,255,0.6); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .hx-rdot { position: absolute; left: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #9FD0FF; }
@@ -1344,7 +1344,7 @@ function w3Hours(m) {
   // to do with how warm it is. Its figure shows from 5% (any amount for Open-Meteo), faded below
   // 20%; under that the line runs on with no figure.
   const rainRow = mode === 'now' || mode === 'feels';
-  const R_TOP = 20, R_BOT = 44;                       // px inside the 50px rain cell
+  const R_TOP = 20, R_BOT = 44;                       // px inside the 60px rain cell: 16px under 0%, so the line clears the Now box's rounded corners
   const rys = rainRow ? along(x => R_BOT - Math.min(1, Math.max(0, m.rKind === 'pop' ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25))) * (R_BOT - R_TOP)) : null;
 
   const fmt = t => hrFmt(t, tz), fmtM = t => minFmt(t, tz), hourOf = t => hrOf(t, tz), dayOf = t => dayFmt(t, tz);
@@ -1355,7 +1355,7 @@ function w3Hours(m) {
   const rainCell = i => {
     const x = seq[i], y = rys[i];
     const show = x.kind === 'hour' && (m.rKind === 'pop' ? x.r >= 5 : x.r > 0), dry = wet(m, x.r) ? '' : ' dry';
-    return `<div class="hx-rc">${curveSvg(i, rys, 'hx-rline', 50)}${show ? `<div class="hx-rdot${dry}" style="top:${y.toFixed(1)}px"></div><div class="hx-pct${dry}" style="top:${(y - 17).toFixed(1)}px">${x.r}${unit}</div>` : ''}</div>`;
+    return `<div class="hx-rc">${curveSvg(i, rys, 'hx-rline', 60)}${show ? `<div class="hx-rdot${dry}" style="top:${y.toFixed(1)}px"></div><div class="hx-pct${dry}" style="top:${(y - 17).toFixed(1)}px">${x.r}${unit}</div>` : ''}</div>`;
   };
   const cols = seq.map((x, i) => {
     const cls = `hx-col${x.now ? ' hx-now' : ''}`;
