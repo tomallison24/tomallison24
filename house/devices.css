@@ -462,3 +462,89 @@
 
 /* the thermostat card's outside line */
 .dg-sub svg.inl { display: inline-block; vertical-align: -2px; margin-right: 4px; opacity: .85; }
+
+/* ---- Labs: the Living Room thermostat, three ways, in Liquid Glass ----
+   A pane of glass with the mood's light behind it (.lab-glow), a bright rim
+   along its top edge and a soft specular sheen, so it reads as glass rather
+   than grey. Type is light and sparse; everything else is the glass. */
+.lab-intro { margin: 0 6px 4px; }
+.lab-idea { display: flex; flex-direction: column; gap: 10px; }
+.lab-idea + .lab-idea { margin-top: 18px; }
+.lab-cap-h { display: flex; flex-direction: column; gap: 2px; padding: 0 6px; }
+.lab-cap-h b { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.lab-cap-h span { font-size: 13px; color: var(--muted); }
+.lab-wrap { position: relative; isolation: isolate; }
+.lab-glow { position: absolute; inset: -8px; z-index: -1; border-radius: 40px; filter: blur(18px); pointer-events: none; transition: background .8s; }
+.lab { position: relative; overflow: hidden; border-radius: 30px; padding: 18px 18px 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.03) 100%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%); backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(255,255,255,0.06), 0 24px 48px -24px rgba(0,0,0,0.75); }
+.lab::before { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(120% 60% at 18% -10%, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%); }
+.lab > * { position: relative; }
+.lab.offline { opacity: .55; }
+.lab-h { display: flex; align-items: center; justify-content: space-between; }
+.lab-name { font-size: 13px; font-weight: 600; letter-spacing: .02em; opacity: .75; }
+.lab-pwr { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; transition: transform .18s, background .3s, color .3s;
+  background: rgba(255,255,255,0.10); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.25), inset 0 1px 0 rgba(255,255,255,0.3); }
+.lab-pwr.on { background: rgba(var(--a),0.9); color: #15161A; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 0 16px rgba(var(--a),0.45); }
+.lab-pwr:active { transform: scale(0.92); }
+.lab-sub { font-size: 14px; color: rgba(255,255,255,0.6); font-weight: 500; }
+/* glass capsules: − value + */
+.lab-caps { display: flex; gap: 10px; margin-top: 18px; }
+.lab-cap { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 6px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -10px 18px -12px rgba(var(--c, 255,255,255),0.5); }
+.lab-cap.idle { justify-content: center; opacity: .6; }
+.lab-caps.slim .lab-cap { height: 48px; }
+.lab-step { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: .85; transition: transform .15s, background .2s; }
+.lab-step:active { transform: scale(0.88); background: rgba(255,255,255,0.12); }
+.lab-step:disabled { opacity: .25; }
+.lab-cap-v { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.lab-cap-v small { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c, 255,255,255)); opacity: .9; margin-bottom: 3px; }
+.lab-cap-v b { font-size: 21px; font-weight: 400; font-variant-numeric: tabular-nums; }
+/* A · Numeral */
+.lab-a-num { font-size: 92px; font-weight: 100; letter-spacing: -4px; line-height: .95; margin: 14px 0 4px -4px; font-variant-numeric: tabular-nums; }
+.lab-a-num span { font-size: 40px; vertical-align: top; letter-spacing: 0; font-weight: 200; }
+/* B · Track */
+.lab-b-top { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 0 18px; }
+.lab-b-num { font-size: 60px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+.lab-b-num span { font-size: 28px; vertical-align: top; font-weight: 200; }
+.lab-b-word { text-align: right; display: flex; flex-direction: column; gap: 3px; padding-bottom: 6px; }
+.lab-b-word b { font-size: 17px; font-weight: 500; }
+.lab-b-word small { font-size: 13px; color: rgba(255,255,255,0.55); }
+.lab-track { position: relative; height: 14px; margin: 26px 10px 26px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 1px rgba(0,0,0,0.3); }
+.lab-band { position: absolute; top: 2px; bottom: 2px; border-radius: 999px; transition: left .4s, width .4s; }
+.lab-tick { position: absolute; top: 100%; width: 1px; height: 0; }
+.lab-tick em { position: absolute; top: 8px; transform: translateX(-50%); font-style: normal; font-size: 10px; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+.lab-now { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; border-radius: 1px; background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8); transition: left .4s; }
+.lab-bead { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; transition: left .4s;
+  background: radial-gradient(120% 90% at 30% 20%, #fff, rgba(var(--c),0.9) 70%); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.4), 0 0 12px rgba(var(--c),0.5); }
+.lab-bead em { position: absolute; bottom: 100%; left: 50%; transform: translate(-50%, -6px); font-style: normal; font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* C · Control Center */
+.lab-c { padding: 14px; }
+.lab-c-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; height: 196px; }
+.lab-c-grid.one { grid-template-columns: 1.15fr 2fr; }
+.lab-c-grid.none { grid-template-columns: 1.15fr 2fr; }
+.lab-c-room { position: relative; display: flex; flex-direction: column; padding: 6px 4px 4px; }
+.lab-c-num { font-size: 56px; font-weight: 100; letter-spacing: -2px; line-height: 1; margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.lab-c-num span { font-size: 26px; vertical-align: top; font-weight: 200; }
+.lab-c-room .lab-pwr { position: absolute; left: 4px; bottom: 4px; }
+.lab-cc { position: relative; overflow: hidden; border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.3); }
+.lab-cc-fill { position: absolute; left: 0; right: 0; bottom: 0; height: var(--f); transition: height .4s cubic-bezier(.2,.8,.2,1);
+  background: linear-gradient(180deg, rgba(var(--c),0.85), rgba(var(--c),0.55)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+.lab-cc-up, .lab-cc-dn { position: absolute; left: 0; right: 0; height: 50%; display: flex; justify-content: center; z-index: 1; color: rgba(255,255,255,0.75); }
+.lab-cc-up { top: 0; align-items: flex-start; padding-top: 10px; }
+.lab-cc-dn { bottom: 0; align-items: flex-end; padding-bottom: 10px; }
+.lab-cc-up:active, .lab-cc-dn:active { background: rgba(255,255,255,0.08); }
+.lab-cc-up:disabled, .lab-cc-dn:disabled { opacity: .2; }
+.lab-cc-v { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.lab-cc-v b { font-size: 26px; font-weight: 300; font-variant-numeric: tabular-nums; }
+.lab-cc-v small { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .85; margin-top: 2px; }
+.lab-cc.dis { opacity: .55; }
+.lab-cc.idle .lab-cc-v b { font-size: 17px; opacity: .6; }
+@media (max-width: 360px) { .lab-a-num { font-size: 76px; } .lab-c-grid { height: 176px; gap: 8px; } .lab-c-num { font-size: 46px; } }
