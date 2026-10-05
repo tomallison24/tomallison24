@@ -223,6 +223,24 @@ thermostat in its `entities`.
 - A thermostat with no schedule says so (a schedule kept in the Nest app
   isn't visible to Home Assistant).
 
+## Labs
+
+The last view, **Labs**, is for trying ideas live before they replace
+anything (`labs.js`). Each idea is wired to the real device.
+
+Today: the **Living Room thermostat without the orb**, three ways, all ultra
+clean Liquid Glass (a frosted pane with the mood's light behind it: heating
+amber, cooling blue, idle lavender, off grey):
+
+- **A · Numeral**: the room as one thin number; the targets as glass capsules.
+- **B · Track**: a glass tube from 50° to 90° with the comfort band, the room
+  as a mark and the targets as beads; capsules below.
+- **C · Control**: Control Center capsules filled to each target; tap the top
+  half to raise it, the bottom half to lower it.
+
+They follow the card's rules (Auto sends Heat and Cool together, 3° apart;
+taps add up; Power remembers the mode).
+
 ## Connecting to Home Assistant
 
 The gear (top right) opens the Home Assistant sheet: an **address** and a
