@@ -119,6 +119,10 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
 - **Now Playing**: a Sonos that is playing, one card per group.
 - **Running Now**: every device that is doing something (heating, cooling,
   a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
+- **Weather**: a full-width glass pill over the automations - the
+  condition's icon (the night's after sunset), the temperature outside and
+  the condition from `weather.forecast_home`, with a glow of its colour -
+  that opens the AllisonOS Weather app (`../weather/`).
 - **Automations** (Liquid Glass tiles, three across: each carries a glow of
   its colour behind the glass - Goodnight indigo, Evening Lights amber, Mom's
   Awake gold, Report a Bug grey, Babysitter rose, Hatch Green green - and

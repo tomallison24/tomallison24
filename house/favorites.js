@@ -16,6 +16,9 @@
 //     Green is script.hatch_bedtime with the green light, lit while it runs.
 //     Report a Bug fills the same helpers as the dashboard's form and runs
 //     script.log_bug, which appends it to bug_log.md.
+//   - Weather: a glass pill over the automations - the condition, the
+//     temperature outside (weather.forecast_home) - that opens the AllisonOS
+//     Weather app (../weather/, a plain link, as the launcher's own)
 //   - Thermostats: Living Room and Office (the Windmill is left out, as on
 //     the dashboard)
 //   - Cameras: the living room Blink and the doorbell
@@ -33,6 +36,25 @@ const FAV_AUTOS = [
 ];
 const FAV_THERMOS = ['lr', 'of'], FAV_CAMS = ['living_room', 'door'], FAV_LAMPS = ['light.tom_lamp', 'light.elena_lamp'];
 const famOf = id => FAMILIES.find(f => f.id === id);
+// The weather pill: Home Assistant's condition as the Weather app shows it -
+// its icon (the night's after sunset), its name, and a glow of its colour.
+const FAV_WX = {
+  sunny: ['sun', 'Sunny', '255,214,120'], 'clear-night': ['night', 'Clear', '150,160,255'], partlycloudy: ['wxPartly', 'Partly Cloudy', '160,200,255'],
+  cloudy: ['wxCloudy', 'Cloudy', '170,182,198'], rainy: ['wxRainy', 'Rain', '120,170,255'], pouring: ['wxPouring', 'Heavy Rain', '110,150,255'],
+  snowy: ['wxSnowy', 'Snow', '215,232,255'], 'snowy-rainy': ['wxSleet', 'Sleet', '180,210,255'], fog: ['wxFog', 'Fog', '180,186,196'],
+  hail: ['wxHail', 'Hail', '190,215,255'], lightning: ['wxStorm', 'Thunderstorms', '170,150,255'], 'lightning-rainy': ['wxStormRain', 'Thunderstorms', '170,150,255'],
+  windy: ['wxWindy', 'Windy', '170,220,210'], 'windy-variant': ['wxWindy', 'Windy', '170,220,210'], exceptional: ['alert', 'Weather alert', '255,170,120'],
+};
+function favWeather() {
+  const w = st('weather.forecast_home');
+  if (!w || w.state === 'unavailable' || w.state === 'unknown') return { html: `<span class="wx-ic">${svg('wxCloudy', 26)}</span><span class="wx-t"><b>--°</b><small>Weather</small></span><span class="wx-go">${svg('chevR', 18)}</span>`, c: '170,182,198' };
+  const night = val('sun.sun') === 'below_horizon';
+  let [ic, word, c] = FAV_WX[w.state] || ['wxCloudy', w.state.replace(/-/g, ' ').replace(/^\w/, x => x.toUpperCase()), '170,182,198'];
+  if (night && w.state === 'partlycloudy') ic = 'wxNightPartly';
+  if (night && w.state === 'sunny') { ic = 'night'; word = 'Clear'; c = '150,160,255'; }
+  const t = Number(w.attributes.temperature), u = w.attributes.temperature_unit || '°';
+  return { c, html: `<span class="wx-ic">${svg(ic, 26)}</span><span class="wx-t"><b>${Number.isFinite(t) ? Math.round(t) + (u.includes('C') ? '°C' : '°') : '--°'}</b><small>${esc(word)}</small></span><span class="wx-go">Weather${svg('chevR', 18)}</span>` };
+}
 
 family({
   id: 'fav', name: 'Favorites', icon: 'star', group: 'Favorites', order: 1,
@@ -45,6 +67,7 @@ family({
       <div class="fnp" data-r="np"></div>
       <div class="runpanel" data-r="run" hidden></div>
       <div class="vsec-h"><span>Automations</span></div>
+      <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weather/" aria-label="Open Weather"></a></div>
       <div class="autos" data-dv="fav:autos"></div>
       <div class="vsec-h"><span>Thermostats</span></div>
       <div class="fcards">${THERMOS.filter(t => FAV_THERMOS.includes(t.id)).map(tCardHTML).join('')}</div>
@@ -91,6 +114,9 @@ family({
       `<button class="runchip" data-a="go" data-v="${i}" style="--a:${x.rgb}"><i></i><b>${esc(x.name)}</b><span>${esc(x.word)}</span></button>`).join('')}</div>`);
     run.dataset.dv = 'fav:run';
 
+    const wx = favWeather();
+    put(this.el.querySelector('[data-r="wx"]'), wx.html);
+    this.el.querySelector('[data-r="wxw"]').style.setProperty('--c', wx.c);
     put(this.el.querySelector('.autos'), FAV_AUTOS.map(a => {
       const s = this.autoState(a), name = s.lit && a.onName ? a.onName : a.name;
       return `<div class="agw${s.lit ? ' lit' : ''}" style="--c:${a.acc}"><i class="ag-glow"></i>
