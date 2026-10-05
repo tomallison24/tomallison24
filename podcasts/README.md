@@ -20,10 +20,11 @@ in the same frosted glass as Mail, Notes and News.
 - **An episode**: tap it for its notes. Times in the notes (`12:34`) play
   from there. **⋯**: Play Next, Play Later, Save, Mark as Played, Share.
 - **Mini player** above the tabs; tap it for **Now Playing**: artwork (or
-  the video), a scrubber, skip back / forward, **speed** (0.5× to 3×), a
-  **sleep timer** (minutes, or the end of the episode), **AirPlay** when
-  Safari finds a speaker or TV, **Up Next** and the episode notes. Drag it
-  down to close.
+  the video), a scrubber (a clear track and a white knob that turns into a
+  clear lens while you drag it, as in iOS 26), skip back / forward,
+  **speed** (0.5× to 3×), a **sleep timer** (minutes, or the end of the
+  episode), **AirPlay** when Safari finds a speaker or TV, **Up Next** and
+  the episode notes. Drag it down to close.
 - **Video podcasts** play in Now Playing, with **Picture in Picture** and
   **full screen**. On iPhone a video stops when you leave the app; use
   Picture in Picture to keep watching. Audio keeps playing with the screen
@@ -80,7 +81,9 @@ The sheets (an episode, Settings, the choices and Now Playing) are iOS 26's
 Liquid Glass, as in Calendar: clear glass floating inside the screen's
 edges, with round ✕ and ✓ buttons. The tabs, the filter chips and Settings'
 choices have one glass thumb that slides to the chosen option
-(`home/slide.js`, shared with the other apps).
+(`home/slide.js`, shared with the other apps). The toast is the same clear
+glass as the sheets, and "Show more" and "Clear history" are small glass
+pills like the other buttons.
 
 The icon (`icon.svg`, drawn as `icon-512.png` and `icon-180.png`) is a white
 signal on a pink-to-violet gradient.

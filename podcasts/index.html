@@ -157,8 +157,10 @@ svg.fs{fill:currentColor}
 .empty .btn{margin-top:8px}
 .notice{border-radius:22px;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
 .notice span{flex:1}
-.morebtn{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;font-size:13px;color:var(--muted);background:var(--fill);border:1px solid var(--hair);transition:transform .18s var(--ease)}
-.morebtn:active{transform:scale(.94)}
+/* "Show more" and "Clear history": small clear glass pills, like the other buttons */
+.morebtn{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:9px 19px;border-radius:999px;font-size:13px;color:var(--muted);
+  background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s}
+.morebtn:active{transform:scale(.94);background:var(--glass-2)}
 .enter .ep,.enter .upcard,.enter .stile,.enter .srow{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 30ms)}
 /* Cards - the episode lists, Up Next, show notes, notices and empty states -
    are very faint flat tiles, the same in every AllisonOS app: no blur, lit
@@ -351,12 +353,22 @@ svg.fs{fill:currentColor}
 .npd{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 .npt{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.25;overflow-wrap:anywhere}
 .npshow{align-self:flex-start;color:var(--muted);font-size:16px;font-weight:500;text-align:left}
-.scrub{-webkit-appearance:none;appearance:none;width:100%;height:30px;margin:0;background:transparent;--p:0%;touch-action:none}
+/* the scrubber, as iOS 26's: a clear capsule track that fills as it plays,
+   and a white pill knob that swells into a clear lens while it's dragged */
+.scrub{-webkit-appearance:none;appearance:none;width:100%;height:30px;margin:0;background:transparent;--p:0%;--scrub-rest:rgba(120,120,128,.24);touch-action:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .scrub{--scrub-rest:rgba(255,255,255,.18)}}
+:root[data-theme="dark"] .scrub{--scrub-rest:rgba(255,255,255,.18)}
 .scrub:focus{outline:none}
-.scrub::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--text) var(--p),var(--ring) var(--p))}
-.scrub::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-5px;border-radius:50%;background:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)}
-.scrub::-moz-range-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--text) var(--p),var(--ring) var(--p))}
-.scrub::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:var(--text)}
+.scrub::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--text) var(--p),var(--scrub-rest) var(--p));box-shadow:inset 0 0 0 .5px var(--hair)}
+.scrub::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:20px;margin-top:-7px;border:0;border-radius:999px;background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06);transition:transform .2s var(--ease),background .2s,box-shadow .2s}
+.scrub:not(:disabled):active::-webkit-slider-thumb{transform:scale(1.15);background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+.scrub:focus-visible::-webkit-slider-thumb{box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06),0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+.scrub::-moz-range-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--text) var(--p),var(--scrub-rest) var(--p));box-shadow:inset 0 0 0 .5px var(--hair)}
+.scrub::-moz-range-thumb{width:28px;height:20px;border:0;border-radius:999px;background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06);transition:transform .2s var(--ease),background .2s,box-shadow .2s}
+.scrub:not(:disabled):active::-moz-range-thumb{transform:scale(1.15);background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+.scrub:focus-visible::-moz-range-thumb{box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06),0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
 .scrub:disabled{opacity:.4}
 .nptimes{display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:var(--faint);font-variant-numeric:tabular-nums;margin-top:-14px;padding:0 2px}
 .npctrl{display:flex;align-items:center;justify-content:center;gap:30px;padding:2px 0}
@@ -368,11 +380,11 @@ svg.fs{fill:currentColor}
 .nprow{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .nprow .pillbtn{min-width:44px;justify-content:center}
 
-/* toast */
+/* toast: the same clear glass as the sheets, with their lit rim */
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
   display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
-  background:var(--toast);border:1px solid var(--hair);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
-  box-shadow:0 12px 36px var(--lift-strong),inset 0 1px 0 var(--hi);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));border:1px solid transparent;-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
 .app.hasmini .toast{bottom:calc(152px + env(safe-area-inset-bottom,0px))}
 .toast span{min-width:0}
 .toast button{color:var(--accent);font-weight:600;flex:none;padding:3px 5px}
@@ -407,8 +419,8 @@ svg.fs{fill:currentColor}
 .syncpill.out{animation:updOut .45s ease both}
 @keyframes syncTurn{to{transform:rotate(360deg)}}
 @keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:var(--lg-rim),0 8px 24px var(--lift),0 0 0 6px color-mix(in srgb,var(--accent) 22%,transparent)}}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill{background:var(--bar-solid)}}
-@media (prefers-reduced-transparency:reduce){.updpill{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill,.toast{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.updpill,.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
 /* ---- Icons and buttons: the same system as Mail and Notes ----
    Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
@@ -448,10 +460,10 @@ svg.fs{fill:currentColor}
 .tab svg{width:20px;height:20px;color:var(--icon)}
 .tab[aria-selected="true"]{color:var(--text);background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn{background:var(--bar-solid)}
+  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn,.morebtn{background:var(--bar-solid)}
 }
 @media (prefers-reduced-transparency:reduce){
-  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn,.morebtn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 /* ---- switches with a sliding glass thumb ----

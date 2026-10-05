@@ -324,11 +324,11 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .tagrow .sub{font-size:12px;color:var(--faint)}
 .linkbtn{color:var(--accent);font-weight:600;font-size:14px;padding:4px 6px}
 
-/* toast */
+/* toast: the same clear glass as the sheets, with their lit rim */
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
   display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
-  background:var(--toast);border:1px solid var(--hair);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
-  box-shadow:0 12px 36px var(--lift-strong),inset 0 1px 0 var(--hi);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));border:1px solid transparent;-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
 .toast span{min-width:0}
 .toast button{color:var(--accent);font-weight:600;flex:none;padding:3px 5px}
 
@@ -418,8 +418,8 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .syncpill.out{animation:updOut .45s ease both}
 @keyframes syncTurn{to{transform:rotate(360deg)}}
 @keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:var(--lg-rim),0 8px 24px var(--lift),0 0 0 6px color-mix(in srgb,var(--accent) 22%,transparent)}}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill{background:var(--bar-solid)}}
-@media (prefers-reduced-transparency:reduce){.updpill{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill,.toast{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.updpill,.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
 /* ---- Icons and buttons: the same system as Mail ----
    Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
