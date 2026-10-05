@@ -4,9 +4,21 @@ Home Assistant as an AllisonOS app: plain HTML talking to Home Assistant
 directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
-when it is opened from the launcher. It has the
-**dehumidifiers** (the Cube and Upstairs) and the **thermostats** (Living
-Room, Office and the Windmill AC), one view at a time.
+when it is opened from the launcher. It has every device on the Signal
+dashboard, one view at a time, picked from the drop-down under the title,
+which groups them by what they do:
+
+- **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
+- **Lights**: every light, by room
+- **Media**: Speakers (the Sonos, the Move, the Nest Mini), TV (Apple TV, LG)
+- **Security**: Cameras (the Blink system and cameras, the Nest doorbell)
+- **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
+
+Each view says in the drop-down what it is doing ("1 heating", "3 playing",
+"Armed · 3 watching"). Every family works the same way: a compact card with
+the controls used every day, everything else in its popup (tap the card),
+taps shown at once and held until Home Assistant confirms them, and sample
+readings in the preview.
 
 The look is the Signal dashboard's DG1 dehumidifier card (ha-config,
 `views_signal/all_devices.yaml`, the `dg_*` block): the frosted glass tank
@@ -39,9 +51,7 @@ Same entities, same colours.
 
 ## Thermostats
 
-The heading is a drop-down: **Dehumidifiers** or **Thermostats**, each with
-what it's doing ("2 running", "1 heating · 1 cooling"). The choice is kept on
-the phone.
+The view chosen in the drop-down is kept on the phone.
 
 The three thermostats are the Signal dashboard's TF1 "Frost" card (ha-config,
 `views_signal/signal_templates.yaml`, `tf_card`) in this app's layout, with
@@ -82,6 +92,68 @@ the same rules:
   Windmill goes through a slow cloud and would otherwise flick back. Target
   taps add up into one call 0.6 s after the last. A change the unit turns
   down lets go at once, with a note saying why.
+
+## The other families
+
+Each is the Signal dashboard's own card for it (ha-config, `views_signal/`),
+with the same entities, colours and rules, in this app's layout. Where the
+dashboard's comments record a quirk, the app keeps it:
+
+- **Heaters** (HT1 "Ember", `climate.yaml`): seven glass fins behind the
+  target. They have no thermometer, so the target is the hero; heating means
+  drawing over 20 W. Power, target (50-86), Level Low / High, Child lock,
+  Backlight, today's power, hours and kWh.
+- **Air Purifiers** (DY1 rotor, `climate.yaml`): ten blades lit to the speed
+  (1-10), turning faster with it, the room temperature in the hub. Speed,
+  Mode Off / Cool / Heat and the heat target, Auto / Manual, Airflow (Focus /
+  Diffuse on the girls' units, Front / Back on M&D), Swing, Night, Sensing, air
+  sensitivity, air quality (the worst sensor's band), filter (reset takes two
+  taps), running and heating today.
+- **Lights** (LP1 "Halo", `lights.yaml`): rooms you can fold, a disc that
+  turns a whole room off (or on), All on / All off (the dashboard's list:
+  not outdoors, the garage or the heaters' backlights). Each light: its
+  colour mixed with warm grey, a halo by brightness, a slider; its popup has
+  1 / 25 / 50 / 75 / 100 and the lamps in its group. The TV strip has the
+  dashboard's swatches and Custom.
+- **Speakers and TV** (SN3, `media.yaml`): a glass record with the album art,
+  turning while playing, the art tinting the sky. Play / pause, skip, volume
+  on the card; seek, ±15 s, mute, volume presets, shuffle, repeat,
+  crossfade, loudness, favourites (`sensor.sonos_favorites` ships disabled:
+  empty until it is turned on), the sleep timer, tone, grouping, House party
+  and Hand off (two taps) in the popup; the Arc's home theatre settings; the
+  Apple TV's apps; the LG's power and sources. What each player can do is
+  what it reports to Home Assistant.
+- **Cameras** (`security.yaml`): Arm / Disarm (one tap, as on the dashboard),
+  the indoor motion alert (tap to silence), the Blink cameras' latest
+  stills with ACTIVE / STANDBY / OFF, how old each still is, Snapshot (Blink
+  sends stills, not video; a new one takes ~8 s), motion detection, and
+  pausing it for 30 min to 4 h.
+- **The doorbell's live view**: Home Assistant's own way - it asks what the
+  camera offers, then WebRTC (with the data channel a Nest asks for) or HLS.
+  Checked against Home Assistant 2026.7.4's camera code and a stand-in in
+  the tests, **not yet against the real doorbell**: if it fails, the popup
+  says what Home Assistant answered.
+- **Vacuums** (SG2, `all_devices.yaml`): the battery arc, Start / Pause,
+  Dock, Stop, Find, suction (deliberately crossed: the Shark's `eco` runs
+  harder, so Eco sends `normal`), Normal / Matrix, the three room buttons
+  (which room is which is not known). The Ecovacs is shown, but its
+  integration is not signing in, so it is unavailable.
+- **Blinds** (`all_devices.yaml`): taps set the blinds' target helpers, not
+  the covers, as the dashboard does (the VELUX cloud is slow; automations
+  move the blinds). Both, or each; Guest mode; the departure-mode warning.
+- **Nursery** (HG1, `all_devices.yaml`): the Hatch's lamp under glass. Light,
+  Sound (select_sound_mode; never media_play), volume in 5s, sounds,
+  Bedtime, Morning (script.hatch_bedtime with the green light), brightness,
+  colours, the clock, Toddler lock. The clock's Off is only sent while the
+  clock is on: on this model it is a toggle. (The dashboard's own Off button
+  does not check this.)
+- **Printer**: status and the four toners (20% and under is low).
+- **Energy**: the estimate tiles from every view and the two Tapo plugs.
+  Only the plugs and heaters are metered; Total is lighting, climate, and
+  fans & dehumidifiers, not the whole house.
+
+Scripts that wait (Snapshot, the motion pause, Hand off) are started with
+`script.turn_on`, so the app is not left waiting on them.
 
 ## Connecting to Home Assistant
 
@@ -124,8 +196,11 @@ token, because the app needs the token to connect without asking each time.
   only in the phone's browser storage. Anyone copying the code gets an app
   that asks for *their* Home Assistant; the entity ids in it are names, not
   keys.
+- **Camera stills and album art** load from your Home Assistant address with
+  the short-lived token Home Assistant puts in each picture's address (it
+  changes every few minutes); nothing else is loaded from anywhere.
 - **The token can do anything your Home Assistant user can**, not only the
-  dehumidifiers. If it might have leaked, delete it in your Home Assistant
+  devices here. If it might have leaked, delete it in your Home Assistant
   profile (Security → Long-lived access tokens) and it stops working at once.
 - **Every app on the same site shares that storage**, so a bug in one
   AllisonOS app that ran someone else's script could read it. Keep that in
@@ -155,8 +230,12 @@ because the redirect away and back is unreliable in an iPhone home-screen app.
 
 ## Adding devices
 
-Each device is an entry in `UNITS` in `index.html`: its entity ids, plus its
-sky and accent colours. The card reads everything else from the entities.
+The dehumidifiers are `UNITS` and the thermostats `THERMOS` in `index.html`.
+Every other family is its own file - `heaters.js`, `dysons.js`, `lights.js`,
+`media.js`, `security.js`, `around.js` - with its devices in a list at the
+top (entity ids, colours). `devices.js` has what they share: `family()`
+puts a view in the drop-down under its group, and the cards, popup, sample
+states and preview are the family's own.
 
 ## Icons
 
