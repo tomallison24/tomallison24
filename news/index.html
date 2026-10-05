@@ -22,8 +22,9 @@
   it only reads that one same-origin file.
 
   Look: a quiet gradient backdrop that drifts slowly, with frosted glass
-  (backdrop-filter) only on a few large surfaces: the tab bar, the lead story
-  and the story list. Few glass layers keep scrolling smooth on iPhone.
+  (backdrop-filter) only on the tab bar and the sheets; the lead story, the
+  story list and the other cards are very faint tiles with no blur, the same
+  in every AllisonOS app. Few glass layers keep scrolling smooth on iPhone.
   The filter panels are Liquid Glass sheets, as in the Calendar, and every
   switch has the sliding glass thumb from ../home/slide.js.
 -->
@@ -68,6 +69,9 @@
     --blob-2: rgba(255, 158, 118, 0.55);
     --blob-3: rgba(168, 138, 255, 0.55);
     --blob-4: rgba(96, 208, 178, 0.50);
+    /* Cards: very faint tiles, the same in every AllisonOS app */
+    --tile: rgba(255, 255, 255, 0.40);
+    --tile-edge: rgba(60, 60, 67, 0.10);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -107,6 +111,8 @@
       --blob-2: rgba(200, 80, 40, 0.40);
       --blob-3: rgba(110, 60, 210, 0.45);
       --blob-4: rgba(20, 150, 120, 0.38);
+      --tile: rgba(255, 255, 255, 0.05);
+      --tile-edge: rgba(255, 255, 255, 0.10);
       color-scheme: dark;
     }
   }
@@ -324,7 +330,7 @@
   .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 20px; }
   .sect h3 { margin: 18px 4px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
   .sect:first-child .card:first-child { margin-top: 12px; }
-  .card { border-radius: 12px; overflow: hidden; background: var(--glass-strong); border: 0.5px solid var(--glass-edge); }
+  .card { border-radius: 12px; overflow: hidden; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 14px; text-align: left; font-size: 16px; }
   .opt + .opt::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
   .opt:active { background: var(--hairline); }
@@ -383,6 +389,9 @@
   /* ---- Feed ---- */
   main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 14px; }
 
+  /* The lead story, the story list and the notices are cards: faint tiles,
+     no blur (the backdrop is only soft colour, so the text reads without it). */
+  .lead, .list, .notice { background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .lead { display: block; border-radius: 24px; overflow: hidden; }
   .lead .img { aspect-ratio: 16 / 9; background: var(--skeleton); overflow: hidden; }
   .lead .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -457,15 +466,14 @@
   /* ---- The sheets: Liquid Glass ----
      Sport filters and Sources are each one sheet of clear glass floating
      just inside the screen's edges: the stories blur and brighten through it,
-     a lit rim runs round it, and the search field, the lists and the buttons
-     are lighter glass on top. The lists don't blur again (the sheet already
-     has), which keeps it smooth on a phone. */
+     a lit rim runs round it, and the search field and the buttons are
+     lighter glass on top. The lists are the same faint tiles as every card
+     (no blur of their own, which keeps it smooth on a phone). */
   :root {
     --lgs-top: rgba(255, 255, 255, 0.68);
     --lgs-bottom: rgba(255, 255, 255, 0.50);
     --lgs-rim: rgba(255, 255, 255, 0.92);
     --lgs-edge: rgba(255, 255, 255, 0.62);
-    --lgs-row: rgba(255, 255, 255, 0.44);
     --lgs-field: rgba(255, 255, 255, 0.62);
     --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
     --lgs-scrim: rgba(0, 0, 0, 0.10);
@@ -480,7 +488,6 @@
       --lgs-bottom: rgba(22, 22, 28, 0.52);
       --lgs-rim: rgba(255, 255, 255, 0.20);
       --lgs-edge: rgba(255, 255, 255, 0.12);
-      --lgs-row: rgba(255, 255, 255, 0.07);
       --lgs-field: rgba(255, 255, 255, 0.10);
       --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
       --lgs-scrim: rgba(0, 0, 0, 0.30);
@@ -532,11 +539,7 @@
   }
   .lg .sect h3 { margin: 18px 16px 6px; }
   .lg .sheet-note { margin: 14px 16px 0; }
-  .lg .card {
-    border: 0; border-radius: 26px;
-    background: var(--lgs-row);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--bar-lift);
-  }
+  .lg .card { border-radius: 26px; }
   .lg .opt { min-height: 48px; padding: 11px 16px; }
   .lg .opt + .opt::before { left: 16px; }
   .lg .opt:active { background: var(--lgs-field); }
@@ -1007,13 +1010,13 @@
 
     let html = '';
     if (lead) {
-      html += `<a class="lead glass" href="${esc(safeUrl(lead.url))}" target="_blank" rel="noopener">
+      html += `<a class="lead" href="${esc(safeUrl(lead.url))}" target="_blank" rel="noopener">
         <div class="img">${img(lead.image, '', true)}</div>
         <div class="body">${meta(lead, isLatest)}<h2>${esc(lead.title)}</h2>${lead.summary ? `<p>${esc(lead.summary)}</p>` : ''}</div>
       </a>`;
     }
     if (rest.length) {
-      html += `<div class="list glass">${rest.map(s => `
+      html += `<div class="list">${rest.map(s => `
         <a class="row" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">
           <div class="text">${meta(s, isLatest)}<h3>${esc(s.title)}</h3></div>
           ${safeUrl(s.image) ? `<div class="thumb">${img(s.image, '', false)}</div>` : ''}
@@ -1032,13 +1035,13 @@
   }
 
   function notice(title, body, actions) {
-    return `<div class="notice glass"><h2>${esc(title)}</h2><p>${body}</p>${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
+    return `<div class="notice"><h2>${esc(title)}</h2><p>${body}</p>${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
   }
 
   function skeleton() {
     const row = `<div class="row"><div class="text"><div class="sk" style="width:40%;height:10px"></div><div class="sk" style="width:95%;height:14px;margin-top:10px"></div><div class="sk" style="width:70%;height:14px;margin-top:6px"></div></div><div class="thumb sk"></div></div>`;
-    return `<div class="lead glass"><div class="img sk" style="border-radius:0"></div><div class="body"><div class="sk" style="width:35%;height:10px"></div><div class="sk" style="width:90%;height:20px;margin-top:12px"></div><div class="sk" style="width:60%;height:20px;margin-top:6px"></div></div></div>
-      <div class="list glass">${row.repeat(5)}</div>`;
+    return `<div class="lead"><div class="img sk" style="border-radius:0"></div><div class="body"><div class="sk" style="width:35%;height:10px"></div><div class="sk" style="width:90%;height:20px;margin-top:12px"></div><div class="sk" style="width:60%;height:20px;margin-top:6px"></div></div></div>
+      <div class="list">${row.repeat(5)}</div>`;
   }
 
   function render() { renderTabs(); renderFilterbar(); renderFeed(); }

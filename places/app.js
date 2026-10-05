@@ -128,7 +128,7 @@
     let h = '';
     if (!list.length) {
       const any = places.some(p => p.status === st.tab);
-      h = '<div class="empty glass"><strong>' + (any ? 'Nothing matches' : st.tab === 'want' ? 'Nowhere yet' : 'Nothing rated yet') + '</strong>'
+      h = '<div class="empty"><strong>' + (any ? 'Nothing matches' : st.tab === 'want' ? 'Nowhere yet' : 'Nothing rated yet') + '</strong>'
         + (any ? 'Try another word or tag.' : st.tab === 'want' ? 'Tap + to add a place you’d like to go: search, use where you are, or paste a link from Apple Maps.'
           : 'When you’ve been somewhere, open it and tap Been, then give it stars.') + '</div>';
     } else if (st.tab === 'want' && st.sort.want === 'soon') {
@@ -137,14 +137,14 @@
     } else h = group(st.sort[st.tab] === 'near' && !st.here ? 'Newest (tap Nearest again once location is allowed)' : SORTS[st.tab].find(s => s[0] === st.sort[st.tab])[1], list);
     const finding = st.q.trim().length >= 3 && !st.q.trim().startsWith('#') && st.found && st.found.length;
     if (finding && !list.length) h = '<p class="hint" style="margin:2px 10px">None of your places match.</p>';
-    if (finding) h += '<section class="group glass"><h2><span>Businesses' + (st.here ? ', nearest first' : '') + '</span><span>' + st.found.length + '</span></h2>' + st.found.map(foundRow).join('') + '</section>';
+    if (finding) h += '<section class="group"><h2><span>Businesses' + (st.here ? ', nearest first' : '') + '</span><span>' + st.found.length + '</span></h2>' + st.found.map(foundRow).join('') + '</section>';
     $('list').innerHTML = h;
     $('filter').placeholder = st.view === 'map' ? 'Search businesses here' : 'Search your places and businesses';
     $('mapResults').hidden = !(st.view === 'map' && finding);
     if (st.view === 'map' && finding) $('mapResults').innerHTML = st.found.map(foundRow).join('');
     if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); }
   }
-  const group = (label, g) => '<section class="group glass"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
+  const group = (label, g) => '<section class="group"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
 
   const ICON = {
     map: '<svg class="i" viewBox="0 0 24 24"><path d="M9 4.5L3.8 6.6v12.9L9 17.4l6 2.1 5.2-2.1V4.5L15 6.6z"/><path d="M9 4.5v12.9M15 6.6v12.9"/></svg>',

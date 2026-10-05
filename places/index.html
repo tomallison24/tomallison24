@@ -35,6 +35,8 @@
   --lgs-top:rgba(255,255,255,.68); --lgs-bottom:rgba(255,255,255,.50); --lgs-rim:rgba(255,255,255,.92); --lgs-edge:rgba(255,255,255,.62);
   --lgs-row:rgba(255,255,255,.44); --lgs-field:rgba(255,255,255,.62); --lgs-filter:blur(28px) saturate(200%) brightness(1.06); --lgs-scrim:rgba(0,0,0,.10);
   --seg-thumb:rgba(255,255,255,.92); --bar-solid:rgba(248,248,251,.97); --tint-mix:16%; --sel-ink:#00479E;
+  /* Cards: very faint tiles, the same in every AllisonOS app (a whisper of fill, a hairline edge, no shadow) */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
 }
 @media (prefers-color-scheme:dark){:root{
   color-scheme:dark;
@@ -46,6 +48,7 @@
   --lgs-top:rgba(44,44,52,.60); --lgs-bottom:rgba(22,22,28,.52); --lgs-rim:rgba(255,255,255,.20); --lgs-edge:rgba(255,255,255,.12);
   --lgs-row:rgba(255,255,255,.07); --lgs-field:rgba(255,255,255,.10); --lgs-filter:blur(28px) saturate(180%) brightness(.92); --lgs-scrim:rgba(0,0,0,.30);
   --seg-thumb:rgba(255,255,255,.14); --bar-solid:rgba(20,20,24,.96); --tint-mix:42%; --sel-ink:#FFFFFF;
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -97,7 +100,7 @@ a{color:var(--accent-text)}
 .chip[aria-pressed="true"]{color:var(--sel-ink);background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);border-color:color-mix(in srgb,var(--accent) 40%,var(--gb-edge))}
 
 .list{padding:4px 14px 0;display:flex;flex-direction:column;gap:14px}
-.group{border-radius:24px;overflow:hidden}
+.group{border-radius:24px;overflow:hidden;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .group h2{margin:0;padding:12px 16px 6px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);display:flex;justify-content:space-between}
 .row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 16px}
 .row + .row{border-top:.5px solid var(--hair)}
@@ -111,7 +114,7 @@ a{color:var(--accent-text)}
 .stars .off{color:var(--hair)}
 .price{font-weight:600;color:var(--text);opacity:.75}
 .when{font-weight:600;color:var(--accent-text)}
-.empty{padding:40px 24px;text-align:center;color:var(--muted);border-radius:24px}
+.empty{padding:40px 24px;text-align:center;color:var(--muted);border-radius:24px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .empty strong{display:block;font-size:18px;color:var(--text);margin-bottom:6px}
 
 #map{position:fixed;left:0;right:0;bottom:0;top:0;z-index:1}
@@ -127,7 +130,9 @@ a{color:var(--accent-text)}
 .leaflet-control-attribution a{color:#fff!important}
 /* businesses on the map: dots, their card, and the zoom-in note */
 .osm-dot{cursor:pointer}
-.mapres{max-height:46vh;overflow-y:auto}
+/* The one card that keeps a blur: the search results dropping down over the map, so the map's
+   streets and labels don't fight the text. */
+.mapres{max-height:46vh;overflow-y:auto;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
 .bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:var(--bar-solid);color:var(--text);box-shadow:0 12px 34px var(--lift-strong),inset 0 0 0 1px var(--hair)}
 .bizpop .leaflet-popup-tip{background:var(--bar-solid)}
@@ -162,7 +167,7 @@ a{color:var(--accent-text)}
 .sheethead .ghost{visibility:hidden}
 .sheetbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
-.box,.rgroup{border-radius:26px;background:var(--lgs-row);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 16px var(--lift)}
+.box,.rgroup{border-radius:26px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .box{padding:12px 16px}
 .rgroup{overflow:hidden}
 .field{display:flex;flex-direction:column;gap:8px}
@@ -229,7 +234,7 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
       <input id="filter" type="search" placeholder="Search your places and businesses" autocomplete="off" enterkeyhint="search" aria-label="Search your places and businesses">
       <span class="spinner" id="filterSpin" hidden></span>
     </label>
-    <div class="group glass mapres" id="mapResults" hidden></div>
+    <div class="group mapres" id="mapResults" hidden></div>
     <div class="chips" id="chips" role="group" aria-label="Sort and filter"></div>
   </header>
   <main class="list" id="list"></main>

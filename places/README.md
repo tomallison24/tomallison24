@@ -1,7 +1,8 @@
 # Places
 
 Where you want to go and where you've been, as a home-screen web app, in the
-same frosted glass as the other AllisonOS apps.
+same frosted glass as the other AllisonOS apps, with the same very faint tiles
+for its lists and cards (only the search results over the map keep a blur).
 
 - **Two lists**: **Want to go** and **Been**, switched at the top. Opening a
   place and tapping **Been** moves it across (with today as the day you went,
