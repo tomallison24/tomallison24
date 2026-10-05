@@ -19,8 +19,8 @@
 //   F · Ruler    - the camera's exposure dial: a tick ruler slides under a
 //                  fixed lens, the room a dot on it; tap left or right
 //   G · Dual     - F with both targets on one ruler: a lens each, the
-//                  comfort band between, the room a dot; tap outside a lens
-//                  to move it out, inside to move it in
+//                  comfort band between, the room a dot; drag a lens, or
+//                  tap beside it to move it that way
 'use strict';
 const LAB_T = () => THERMOS.find(t => t.id === 'lr');
 const LAB_IDEAS = [
@@ -30,7 +30,7 @@ const LAB_IDEAS = [
   { id: 'd', name: 'D · Drum', note: 'Picker wheels, the target in a glass lens. Tap a number above or below to go to it.' },
   { id: 'e', name: 'E · Split', note: 'Two glass halves, warm and cool, the room at the seam. The half at work glows.' },
   { id: 'f', name: 'F · Ruler', note: 'The camera\'s exposure dial: the ruler slides under a fixed lens. Tap left or right of it.' },
-  { id: 'g', name: 'G · Dual', note: 'Ruler F with Heat and Cool on one ruler, the comfort band between. Tap beside a lens to move it that way.' },
+  { id: 'g', name: 'G · Dual', note: 'Ruler F with Heat and Cool on one ruler, the comfort band between. Drag a lens, or tap beside it to move it that way.' },
 ];
 // One reading for all of them: what to show, in as few words as possible.
 function labRead() {
@@ -174,15 +174,76 @@ const LAB_DRAW = {
       const x = xs[i], dn = L.locked || v <= L.r.min, up = L.locked || v >= L.r.max;
       zones += `<button class="lab-g-z" style="left:${edges[i]}%;width:${x - edges[i]}%" data-a="step" data-f="${f}" data-v="-1" aria-label="Lower ${label}"${dn ? ' disabled' : ''}></button>`
         + `<button class="lab-g-z" style="left:${x}%;width:${edges[i + 1] - x}%" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${up ? ' disabled' : ''}></button>`;
-      lenses += `<i class="lab-lens lab-g-lens" style="left:${x}%;--c:${rgb}"></i>`;
-      tags += `<div class="lab-g-tag" style="left:${x}%;--c:${rgb}"><small>${label}</small><b>${L.n(v)}°</b></div>`;
+      lenses += `<i class="lab-lens lab-g-lens" data-f="${f}" data-v="${Math.round(v)}" style="left:${x}%;--c:${rgb}"></i>`;
+      tags += `<div class="lab-g-tag" data-f="${f}" style="left:${x}%;--c:${rgb}"><small>${label}</small><b>${L.n(v)}°</b></div>`;
     });
     return `${labHead(L)}<div class="lab-sub lab-f-sub">${L.n(L.r.cur)}° inside · ${L.word}${L.out != null ? ` · ${L.out}° outside` : ''}</div>
       <div class="lab-g-tags">${tags}</div>
-      <div class="lab-ruler lab-g-ruler">${ticks}${band}${cur}${lenses}${zones}</div>
+      <div class="lab-ruler lab-g-ruler" data-a0="${a}" data-w="${W}"${L.locked ? ' data-locked' : ''}>${ticks}${band}${cur}${lenses}${zones}</div>
       <div class="lab-g-ends"><span>${svg('minus', 12)}</span><span>${svg('plus', 12)}</span></div>`;
   },
 };
+
+// G: drag a lens along the ruler. It follows the finger in whole degrees
+// (inside the thermostat's range, and 3° from the other in Auto) and the
+// card isn't redrawn under it; letting go sends the change as taps would
+// (tStep), and the tap that would follow is swallowed. A touch that starts
+// further than a lens's reach from both is a tap.
+let labDrag = null, labDragged = 0;
+document.addEventListener('pointerdown', e => {
+  const ru = e.target.closest && e.target.closest('.lab-g-ruler');
+  if (!ru || ru.hasAttribute('data-locked') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const box = ru.getBoundingClientRect(), a = Number(ru.dataset.a0), W = Number(ru.dataset.w);
+  const xOf = v => box.left + (v - a) / W * box.width;
+  let best = null;
+  for (const l of ru.querySelectorAll('.lab-g-lens')) {
+    const d = Math.abs(e.clientX - xOf(Number(l.dataset.v)));
+    if (d <= 24 && (!best || d < best.d)) best = { l, d };
+  }
+  if (!best) return;
+  const other = [...ru.querySelectorAll('.lab-g-lens')].find(l => l !== best.l);
+  labDrag = { ru, box, a, W, lens: best.l, f: best.l.dataset.f, from: Number(best.l.dataset.v), v: Number(best.l.dataset.v),
+    other: other && Number(other.dataset.v), x0: e.clientX, id: e.pointerId, moved: false };
+});
+document.addEventListener('pointermove', e => {
+  const D = labDrag; if (!D || e.pointerId !== D.id) return;
+  if (!D.moved) {
+    if (Math.abs(e.clientX - D.x0) < 5) return;
+    D.moved = true; rangeHeld = D.ru; D.lens.classList.add('drag');
+    try { D.ru.setPointerCapture(e.pointerId); } catch {}
+  }
+  const r = tread(LAB_T());
+  let v = Math.round(D.a + (e.clientX - D.box.left) / D.box.width * D.W);
+  // On the ruler as drawn, and inside the thermostat's range.
+  v = Math.max(Math.ceil(D.a), Math.min(Math.floor(D.a + D.W), Math.max(r.min, Math.min(r.max, v))));
+  if (D.other != null) v = D.f === 'target_temp_low' ? Math.min(v, D.other - T_GAP) : Math.max(v, D.other + T_GAP);
+  if (v === D.v) return;
+  D.v = v;
+  const x = ((v - D.a) / D.W * 100).toFixed(2) + '%';
+  D.lens.style.left = x; D.lens.dataset.v = v;
+  const tag = D.ru.parentElement.querySelector(`.lab-g-tag[data-f="${D.f}"]`);
+  if (tag) { tag.style.left = x; tag.querySelector('b').textContent = v + '°'; }
+  const band = D.ru.querySelector('.lab-g-band');
+  if (band && D.other != null) {
+    const lo = Math.min(v, D.other), hi = Math.max(v, D.other);
+    band.style.left = ((lo - D.a) / D.W * 100).toFixed(2) + '%'; band.style.width = ((hi - lo) / D.W * 100).toFixed(2) + '%';
+  }
+});
+function labDrop(e, keep) {
+  const D = labDrag; if (!D || e.pointerId !== D.id) return;
+  labDrag = null;
+  if (!D.moved) return;   // a tap: the zone under it does the work
+  labDragged = Date.now(); rangeHeld = null;
+  last.delete(D.ru.closest('[data-dv]'));   // moved by hand: draw it afresh
+  if (keep && D.v !== D.from) tStep(LAB_T(), D.f, D.v - D.from);
+  render();
+}
+document.addEventListener('pointerup', e => labDrop(e, true));
+document.addEventListener('pointercancel', e => labDrop(e, false));
+// The click a drag ends with is not a tap.
+document.addEventListener('click', e => {
+  if (Date.now() - labDragged < 400 && e.target.closest && e.target.closest('.lab-g-ruler, .lab-g')) { e.stopPropagation(); e.preventDefault(); labDragged = 0; }
+}, true);
 
 family({
   id: 'labs', name: 'Living Room thermostat', group: 'Labs', order: 1,
