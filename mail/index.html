@@ -519,15 +519,16 @@
     max-width: min(480px, calc(100vw - 28px)); width: max-content;
     display: flex; align-items: center; gap: 12px;
     padding: 12px 13px 12px 16px; border-radius: 16px;
-    background: var(--toast); border: 1px solid var(--hair);
-    backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
-    box-shadow: 0 12px 36px var(--lift-strong), inset 0 1px 0 var(--hi);
-    font-size: 14px; animation: toastIn .42s var(--ease) both;
+    /* the sheets' Liquid Glass (tokens below); the border stays, clear, so nothing moves */
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom)); border: 1px solid transparent;
+    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 12px 30px var(--lift-strong);
+    color: var(--text); font-size: 14px; animation: toastIn .42s var(--ease) both;
   }
   #toast .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #toast button { color: var(--accent); font-weight: 600; flex: none; padding: 3px 5px; transition: transform .18s var(--ease); }
   #toast button:active { transform: scale(0.92); }
-  #toast.bad { border-color: rgba(255,69,58,0.42); }
+  #toast.bad { box-shadow: inset 0 0 0 1px rgba(255,69,58,0.42), inset 0 1px 1px var(--lgs-rim), 0 12px 30px var(--lift-strong); }   /* an error: a red rim */
   #toast.bad .msg { white-space: normal; }
 
   .foot { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 12px; color: var(--faint); padding: 2px 0 4px; animation: rowIn .5s .2s var(--ease) both; }
@@ -1073,14 +1074,36 @@
   .btn:not(.ghost) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 42%, transparent), inset 0 1px 1px var(--hi), var(--gb-shadow); }
   .send, #selbar button { --tint: var(--accent); }
   #selbar button.danger { --tint: var(--danger); }
+  /* The small buttons in a card - Show more, In menu / Not in menu on the
+     Tags page, a message's Show (images) - are the same clear glass. In menu
+     keeps a faint blue fill as well as the blue rim, so on and off still read
+     at a glance; Show reads blue and Delete all unused red. */
+  .more button, .mini, .imgnote button {
+    background: var(--lg-bg); border-color: transparent;
+    backdrop-filter: var(--lg-filter); -webkit-backdrop-filter: var(--lg-filter);
+    box-shadow: var(--lg-rim);
+  }
+  .more button:active, .mini:active { background: var(--glass-2); }
+  .mini.on, .imgnote button, .more button.danger {
+    background: var(--lg-bg); border-color: transparent;
+    color: var(--tint-text, var(--accent-text)); --tint: var(--accent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 42%, transparent), inset 0 1px 1px var(--hi);
+  }
+  .mini.on { background: linear-gradient(color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent) 12%, transparent)), var(--lg-bg); }
+  .more button.danger { --tint: var(--danger); --tint-text: var(--danger-text); }
+  .imgnote button:active, .mini.on:active, .more button.danger:active { background: var(--glass-2); }
+  /* the search bar's clear button: lit like glass, but no second blur inside the bar */
+  .search .x { background: var(--gb-shine), var(--fill); box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi); }
   /* where the glass can't blur, or Reduce Transparency is on: near-solid */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar,
-    .btn:not(.ghost), .send, #selbar button, #selbar button.danger { background: var(--bar-solid); }
+    .btn:not(.ghost), .send, #selbar button, #selbar button.danger,
+    .more button, .mini, .imgnote button, .mini.on, .more button.danger { background: var(--bar-solid); }
   }
   @media (prefers-reduced-transparency: reduce) {
     .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, #selbar,
-    .btn:not(.ghost), .send, #selbar button, #selbar button.danger {
+    .btn:not(.ghost), .send, #selbar button, #selbar button.danger,
+    .more button, .mini, .imgnote button, .mini.on, .more button.danger {
       background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none;
     }
   }
@@ -1278,10 +1301,10 @@
   .switch.busy::after { animation: breathe 1.2s ease-in-out infinite; }   /* an auto-tag turning on or off */
   /* where the glass can't blur, or Reduce Transparency is on: near-solid */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .sheet, .menu { background: var(--bar-solid); }
+    .sheet, .menu, #toast { background: var(--bar-solid); }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .sheet, .menu { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .sheet, .menu, #toast { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
 </style>
 </head>

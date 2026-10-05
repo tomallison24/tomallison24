@@ -51,7 +51,10 @@ days you never open the app — but only once its Google credentials are set up
   and the main action filled blue. A message and New Message stay full pages
   with the same glass (✕ to cancel, a blue ↑ to send), Settings has iOS 26's
   switches, and **All | Unread**, the tag picker and *Notify me about* have a
-  glass thumb that slides to your choice.
+  glass thumb that slides to your choice. The small buttons in a card
+  (**Show more**, *In menu* on the Tags page, a message's **Show** for images)
+  are the same clear glass, and the toast is the sheets' glass, with a red rim
+  for an error.
 - **Cards** — each conversation in the list, a message's parts, files, the
   Settings and Tags panels and Tidy's lists — are very faint tiles: a whisper
   of white with a hairline edge, no shadow and no blur (`--tile`,

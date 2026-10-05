@@ -134,14 +134,20 @@ a{color:var(--accent-text)}
    streets and labels don't fight the text. */
 .mapres{max-height:46vh;overflow-y:auto;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
-.bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:var(--bar-solid);color:var(--text);box-shadow:0 12px 34px var(--lift-strong),inset 0 0 0 1px var(--hair)}
-.bizpop .leaflet-popup-tip{background:var(--bar-solid)}
+/* The business card: the same clear glass as the sheets and the toast; its tip carries the bottom of
+   the card's gradient (no blur of its own), so the two read as one piece. */
+.bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));color:var(--text);
+  -webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong)}
+.bizpop .leaflet-popup-tip{background:var(--lgs-bottom);-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);box-shadow:inset 0 0 0 1px var(--lgs-edge),0 3px 14px var(--lift)}
 .bizpop .leaflet-popup-content{margin:12px 14px;font:inherit;min-width:200px}
 .bizcard b{display:block;font-size:16px;font-weight:700;margin-bottom:2px}
 .bizcard small{display:block;font-size:13px;color:var(--muted);line-height:1.4}
 .bizacts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.bizacts button{padding:7px 11px;border-radius:999px;font-size:13px;font-weight:600;color:var(--accent-text);background:var(--fill)}
-.bizacts button:first-child{color:#fff;background:var(--accent)}
+.bizacts button{padding:7px 11px;border-radius:999px;font-size:13px;font-weight:600;color:var(--accent-text);background:var(--gb-shine),var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
+.bizacts button:active{background:var(--lgs-row)}
+.bizacts button:first-child{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.bizacts button:first-child:active{background:var(--gb-shine),var(--accent)}
 .mapbtns{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:4;display:flex;flex-direction:column;gap:8px}
 
 .fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:6;width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;
@@ -208,10 +214,12 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
 .spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--hair);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* The toast: the sheets' clear glass, floating over whatever is under it */
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translateX(-50%);z-index:40;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;display:flex;gap:12px;align-items:center;font-size:14px;
-  background:var(--bar-solid);box-shadow:0 10px 30px var(--lift-strong),inset 0 0 0 1px var(--hair)}
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong)}
 .toast button{color:var(--accent-text);font-weight:700}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet,.toast,.bizpop .leaflet-popup-content-wrapper,.bizpop .leaflet-popup-tip{background:var(--bar-solid)}}
 </style>
 </head>
 <body>

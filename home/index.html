@@ -226,8 +226,23 @@
   .install .text { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
   .install .text b { display: block; font-size: 15px; font-weight: 600; }
   .install .text span { color: var(--muted); }
-  .install .go { flex: none; height: 34px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 600; background: var(--chip-on-bg); color: var(--chip-on-text); }
-  .install .later { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--muted); }
+  /* Install: tinted glass in the chip-on colour (black in light, white in dark) with a lit rim;
+     Not now: a small clear glass disc, as the dock is made of */
+  .install .go {
+    flex: none; height: 34px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--chip-on-text);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), color-mix(in srgb, var(--chip-on-bg) 88%, transparent);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px var(--lgs-lift-strong);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .install .go:active { transform: scale(0.96); background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), var(--chip-on-bg); }
+  .install .later {
+    flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--muted);
+    background: var(--lgs-shine), var(--glass);
+    backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+    box-shadow: inset 0 0 0 1px var(--glass-edge), inset 0 1px 1px var(--lgs-rim), 0 2px 8px var(--lgs-lift);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .install .later:active { transform: scale(0.9); }
   .install .later svg { width: 14px; height: 14px; }
 
   /* ---- Settings sheet: Liquid Glass ----
