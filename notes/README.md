@@ -168,10 +168,16 @@ blue kept for text, dots and switches; every button and bar in the same clear
 Liquid Glass (`--lg-bg`, `--lg-filter`, `--lg-rim`). New note uses Mail's
 compose (pencil) icon.
 
+Cards — notes, collection tiles, groups of rows, boxes, notices and empty
+states, on the page and in sheets — are very faint tiles: a whisper of white
+with a hairline edge, no shadow and no blur (`--tile`, `--tile-edge`), the
+same in every AllisonOS app. A coloured note keeps its tint.
+
 Sheets are iOS 26 Liquid Glass, as in the Calendar: each floats just inside
-the screen's edges with a lit rim, rows and fields are lighter glass on top,
-✕ closes and a blue ✓ saves, and Private and Flag are iOS 26 switches (the
-note editor stays a full page, with the same rows and buttons). Every
+the screen's edges with a lit rim, its rows sit on those faint tiles, fields
+are lighter glass on top, ✕ closes and a blue ✓ saves, and Private and Flag
+are iOS 26 switches (the note editor stays a full page, with the same tiles
+and buttons). Every
 one-choice switch (the Notes / Reminders bar, the reminder views, the list
 chips, a reminder's When, Priority and List) has one glass thumb that slides
 to the chosen option, from the shared `home/slide.js`.
