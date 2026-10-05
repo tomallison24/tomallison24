@@ -288,8 +288,8 @@
 .campause { padding: 0 14px 14px; margin-top: -2px; }
 .campause .cp-h { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 4px 8px; }
 .campause .cp-h > span:first-child { opacity: .6; }
-/* the minutes left on a pause: small, amber (motion is off), as the card's own labels */
-.cp-t { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; color: rgba(255,196,120,0.9); }
+/* the minutes left on a pause: small and white, as the card's own labels */
+.cp-t { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; color: rgba(255,255,255,0.9); }
 .cp-t svg { opacity: .85; }
 .cp-lbl { display: flex; justify-content: space-between; align-items: center; }
 .cp-lbl .cp-t { opacity: 1; }
