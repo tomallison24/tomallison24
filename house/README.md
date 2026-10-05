@@ -175,7 +175,7 @@ dashboard's comments record a quirk, the app keeps it:
   sends stills, not video; a new one takes ~8 s), motion detection, and
   pausing it for 30 min to 4 h - on the Yard's card itself, as it is used
   often, and in every camera's popup. While a pause runs, the minutes left
-  show discreetly beside "Pause motion detection" (and the length picked is
+  show discreetly, in white, beside "Pause motion detection" (and the length picked is
   lit); another length restarts it. The pause script only says it is
   running, so the minutes are kept on the phone that started it - a pause
   started elsewhere (the dashboard, another phone) just shows "Paused".
