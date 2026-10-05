@@ -240,5 +240,5 @@ states and preview are the family's own.
 ## Icons
 
 `node house/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`:
-DG1's frosted tank with the water line, on the Cube's sea-glass running to
-the Upstairs unit's mist blue.
+a white house with one window lit warm, on a dusk sky (lavender to indigo),
+in the style of the other AllisonOS icons.
