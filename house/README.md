@@ -236,10 +236,25 @@ thermostat in its `entities`.
 ## Labs
 
 **Labs** is a view for trying ideas live, wired to the real devices, before
-they replace anything: an idea is a family in a `labs.js` with the group
-`Labs`. It is left out of the drop-down while it has none - as now: the
-thermostat ruler (design G, picked from seven) has moved to the cards, and
-the other ideas are gone.
+they replace anything (`labs.js`; the view is left out of the drop-down
+while it has none). The thermostat ruler (design G, picked from seven) came
+from here.
+
+Today: the **Favorites automation pills, more Liquid Glass**, four ways.
+Glass needs something behind it to bend, and Favorites is dark, so each pill
+brings its own light: a blurred glow of the automation's colour behind the
+pane (faint at rest, full when lit), which the glass diffuses. Colours:
+Goodnight indigo, Evening Lights amber, Mom's Awake gold, Report a Bug grey,
+Babysitter rose, Hatch Green green. Taps run the real automations.
+
+- **A · Clear**: clear glass capsules, a glass ring for the icon; lit, the
+  ring fills white and the colour blooms behind.
+- **B · Bead**: the icon in a tinted glass bead with a highlight; lit, the
+  bead glows.
+- **C · Tint**: each pane faintly tinted its colour, rim and all; lit, the
+  colour deepens.
+- **D · Control**: Control Center tiles, three across; lit, the tile turns
+  white glass.
 
 ## Connecting to Home Assistant
 
