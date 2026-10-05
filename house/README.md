@@ -109,7 +109,8 @@ dashboard's comments record a quirk, the app keeps it:
   Diffuse on the girls' units, Front / Back on M&D), Swing, Night, Sensing, air
   sensitivity, air quality (the worst sensor's band), filter (reset takes two
   taps), running and heating today.
-- **Lights** (LP1 "Halo", `lights.yaml`): rooms you can fold, a disc that
+- **Lights** (LP1 "Halo" as frosted glass, `lights.yaml`): each light a pane
+  of frosted glass with its colour glowing behind it; rooms you can fold, a disc that
   turns a whole room off (or on), All on / All off (the dashboard's list:
   not outdoors, the garage or the heaters' backlights). Each light: its
   colour mixed with warm grey, a halo by brightness, a slider; its popup has

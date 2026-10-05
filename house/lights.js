@@ -68,22 +68,22 @@ family({
     const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100);
     return `<i class="lp-halo" style="background:radial-gradient(380px circle at ${cx} 50%, rgba(${r.pc},${(0.46 * k).toFixed(3)}) 0%, rgba(${r.pc},${(0.16 * k).toFixed(3)}) 30%, rgba(${r.pc},0) 62%)"></i>`;
   },
-  badge(r, size = 46) {
+  badge(r, size = 40) {
     const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100);
-    const st2 = r.on ? `background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:0 0 ${(8 + 14 * k).toFixed(0)}px rgba(${r.pc},${(0.45 * k).toFixed(2)}), inset 0 0.5px 0 rgba(255,255,255,0.6)` : '';
+    const st2 = !r.on ? '' : size > 50 ? `background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:0 0 ${(8 + 14 * k).toFixed(0)}px rgba(${r.pc},${(0.45 * k).toFixed(2)}), inset 0 0.5px 0 rgba(255,255,255,0.6)`
+      : `background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
     return `<button class="lp-badge${tWaiting(r.d, 'power') ? ' wait' : ''}" data-a="toggle" style="width:${size}px;height:${size}px;${st2}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} ${esc(r.L.name)}"${r.offline ? ' disabled' : ''}>${svg(r.on ? 'lightbulb' : 'lightbulbOff', size > 50 ? 30 : 22)}</button>`;
   },
   pill(id) {
     const r = this.read(id);
-    return `${this.halo(r)}${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name">${esc(r.L.name)}</span><span class="lp-val" style="${r.on ? `color:rgb(${r.pc.split(',').map(v => Math.round(Number(v) + (255 - v) * 0.35)).join(',')})` : ''}">${this.readout(r)}</span></div>
+    return `${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name">${esc(r.L.name)}</span><span class="lp-val">${this.readout(r)}</span></div>
       ${r.onoff ? '' : sliderHTML('bri', r.bri, 1, 100, 1, { tint: r.pc, cls: 'thin', unit: '%', aria: r.L.name + ' brightness', dis: r.offline })}</div>`;
   },
   roomBar(R) {
     const on = R.lights.filter(([id]) => this.read(id).on).length, n = R.lights.length, folded = lfold().includes(R.id);
     const line = on ? (n === 1 ? 'On' : `${on} of ${n} on`) : n === 1 ? 'Off' : 'All off';
-    return `<button class="rb-disc${on ? ' on' : ''}" data-a="room" aria-label="${on ? 'Turn off' : 'Turn on'} the ${esc(R.name)}">${svg(R.icon, 22)}</button>
-      <button class="rb-mid" data-a="fold" aria-expanded="${!folded}"><span class="rb-name">${esc(R.name)}</span><span class="rb-line">${line}</span></button>
-      <button class="rb-chev${folded ? '' : ' open'}" data-a="fold" aria-label="${folded ? 'Show' : 'Hide'} the ${esc(R.name)}'s lights">${svg('chev', 22)}</button>`;
+    return `<button class="rb-mid" data-a="fold" aria-expanded="${!folded}" aria-label="${folded ? 'Show' : 'Hide'} the ${esc(R.name)}'s lights"><span class="rb-name">${esc(R.name)}</span><span class="rb-line">${line}</span><span class="rb-chev${folded ? '' : ' open'}">${svg('chev', 18)}</span></button>
+      <button class="rb-disc${on ? ' on' : ''}" data-a="room" aria-label="${on ? 'Turn off' : 'Turn on'} the ${esc(R.name)}">${svg(on ? 'lightbulb' : 'lightbulbOff', 20)}</button>`;
   },
   house() {
     const anyOn = L_HOUSE.some(id => this.read(id).on);
@@ -94,7 +94,7 @@ family({
     el.innerHTML = `<div class="hsplit" data-dv="lights:house"></div>` + L_ROOMS.map(R => `
       <div class="lroom" data-room="${R.id}">
         <div class="rbar" data-dv="lights:room/${R.id}"></div>
-        <div class="lpills">${R.lights.map(([id]) => `<article class="lp dvc" data-dv="lights:${id}"></article>`).join('')}</div>
+        <div class="lpills">${R.lights.map(([id]) => `<div class="lpw"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div>
       </div>`).join('');
   },
   render() {
@@ -109,7 +109,11 @@ family({
         const r = this.read(id), p = box.querySelector(`[data-dv="lights:${id}"]`);
         if (r.on) n++;
         put(p, this.pill(id));
-        p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff); p.style.setProperty('--pc', r.pc);
+        p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
+        // The light's colour glows behind its glass, stronger with the brightness.
+        const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100), glow = p.previousElementSibling;
+        glow.style.background = `radial-gradient(closest-side, rgba(${r.pc},${(0.55 * k).toFixed(2)}), rgba(${r.pc},${(0.16 * k).toFixed(2)}) 55%, rgba(${r.pc},0))`;
+        glow.style.opacity = r.on ? 1 : 0;
       }
     }
     this.sum = n ? n + ' on' : 'All off';
