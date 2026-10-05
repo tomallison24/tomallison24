@@ -14,7 +14,8 @@
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  Home - Home Assistant without Lovelace. First room: the dehumidifiers.
+  Home - Home Assistant without Lovelace: the dehumidifiers, and the
+  thermostats (the TF1 "Frost" card, further down), one view at a time.
   (The folder is house/ because home/ is the AllisonOS launcher; its
   localStorage keys are house.* for the same reason.)
 
@@ -108,6 +109,73 @@
   .sec h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
   .sec small { font-size: 14px; color: var(--muted); }
   .units { display: flex; flex-direction: column; gap: 14px; }
+  .units[hidden] { display: none; }
+
+  /* ---- the view drop-down: Dehumidifiers / Thermostats ---- */
+  .sec { position: relative; }
+  .viewbtn { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 0 -2px; padding: 2px 4px; border-radius: 10px; transition: background .2s; }
+  .viewbtn:active { background: rgba(255,255,255,0.08); }
+  .viewbtn h2 { pointer-events: none; }
+  .viewbtn svg { opacity: .7; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .viewbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .viewmenu {
+    position: absolute; left: -4px; top: calc(100% + 6px); z-index: 5; min-width: 250px; padding: 6px; border-radius: 22px;
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom)); backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 18px 40px var(--lgs-lift-strong);
+    transform-origin: 20px 0; animation: menu-in .22s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .viewmenu[hidden] { display: none; }
+  @keyframes menu-in { from { opacity: 0; transform: scale(.92) translateY(-4px); } to { opacity: 1; transform: none; } }
+  .viewmenu button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border-radius: 16px; text-align: left; font-size: 16px; font-weight: 600; }
+  .viewmenu button:active { background: var(--lgs-field); }
+  .viewmenu button[aria-selected="true"] { background: var(--lgs-row); }
+  .viewmenu .ic { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); flex: none; }
+  .viewmenu .k { flex: 1; min-width: 0; }
+  .viewmenu small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+  .viewmenu .tick { opacity: 0; }
+  .viewmenu button[aria-selected="true"] .tick { opacity: 1; }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .viewmenu { background: var(--lgs-solid); } }
+
+  /* ---- thermostats: the orb (TF1's P1 dial), small on the card, full in the popup ---- */
+  .orb { position: relative; width: var(--os); height: var(--os); flex: none; }
+  .orb.sm { --os: 104px; }
+  .orb.lg { --os: 220px; margin: 0 auto; }
+  .orb .ball { position: absolute; inset: 6%; border-radius: 50%; overflow: hidden; isolation: isolate;
+    box-shadow: inset 0 1px 0.5px rgba(255,255,255,0.12), inset 0 -14px 24px rgba(0,0,0,0.16), 0 14px 26px -16px rgba(0,0,0,0.45); }
+  .orb .ball > i { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .orb .spec { opacity: .32; background: radial-gradient(circle at 55% 58%, rgba(255,255,255,0) 76%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,0) 100%);
+    -webkit-mask-image: linear-gradient(145deg, #000 8%, rgba(0,0,0,0) 46%); mask-image: linear-gradient(145deg, #000 8%, rgba(0,0,0,0) 46%); }
+  .orb .grey { background: radial-gradient(circle at 50% 55%, rgba(150,152,160,0.12) 0%, rgba(150,152,160,0.05) 75%); }
+  .orb .pulse { background: radial-gradient(circle at 50% 58%, rgba(var(--gp),0.40) 0%, rgba(var(--gp),0.20) 55%, rgba(var(--gp),0.08) 100%); opacity: 0; animation: orb-pulse 4.5s ease-in-out infinite alternate; }
+  @keyframes orb-pulse { from { opacity: 0; } to { opacity: 1; } }
+  .orb svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .orb .t-flow { animation: t-flow 1.6s linear infinite; }
+  @keyframes t-flow { to { stroke-dashoffset: -12; } }
+  .orb .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,0.22), 0 2px 14px rgba(0,0,0,0.25); }
+  .orb .num b { font-weight: 200; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+  .orb .num b span { vertical-align: top; line-height: 1.3; letter-spacing: 0; }
+  .orb.sm .num b { font-size: 34px; } .orb.sm .num b span { font-size: 16px; }
+  .orb.lg .num b { font-size: 60px; } .orb.lg .num b span { font-size: 28px; }
+  .orb .num em { font-style: normal; font-weight: 700; letter-spacing: .14em; opacity: .8; }
+  .orb.sm .num em { font-size: 7.5px; margin-bottom: 3px; } .orb.lg .num em { font-size: 11px; margin-bottom: 2px; }
+  .orb .num .st { font-size: 12.5px; font-weight: 600; opacity: .92; margin-top: 4px; }
+  .orb .out { position: absolute; left: 0; right: 0; top: 81%; display: flex; justify-content: center; align-items: baseline; gap: 5px; font-size: 12px; font-weight: 600; opacity: .75; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,0.22); }
+  .orb .out span { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; opacity: .85; }
+  .tc-ember { position: absolute; bottom: -6px; width: 3px; height: 3px; border-radius: 50%; animation: dg-rise linear infinite; }
+  .tc-frost { position: absolute; top: -8px; width: 3px; height: 3px; border-radius: 50%; background: rgba(235,245,255,0.75); animation: tc-fall linear infinite; }
+  .tc-air { position: absolute; left: -40%; height: 1.5px; width: 40%; border-radius: 2px; animation: tc-air linear infinite; }
+  @keyframes tc-fall { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .9; } 100% { transform: translate(-30px, 420px); opacity: 0; } }
+  @keyframes tc-air { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: .55; } 100% { transform: translateX(360%); opacity: 0; } }
+  /* Auto on the card: two small steppers, Heat and Cool */
+  .tsplit { display: flex; flex: 1; min-width: 0; gap: 10px; }
+  .tstep { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+  .tstep .disc { width: 34px; height: 34px; }
+  .tstep .v { text-align: center; line-height: 1; }
+  .tstep .v span { display: block; font-size: 9px; font-weight: 700; letter-spacing: .12em; opacity: .75; margin-bottom: 4px; }
+  .tstep .v b { font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .tc [data-r="tgt"] > .dg-tgt, .tc [data-r="tgt"] > .tsplit { flex: 1; min-width: 0; padding: 0; }
+  .tnote { font-size: 13px; color: rgba(255,255,255,0.7); margin: 10px 8px 0; line-height: 1.4; }
+  @media (prefers-reduced-motion: reduce) { .orb *, .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
 
   /* ---- DG1 card ---- */
   .dg {
@@ -294,6 +362,13 @@
     .dg .dg-title { font-size: 19px; }
     .dg-ctl { gap: 8px; }
     .dg-ctl .hair { display: none; }
+    .orb.sm { --os: 84px; }
+    .orb.sm .num b { font-size: 27px; } .orb.sm .num b span { font-size: 13px; }
+    .orb.sm .num em { font-size: 6.5px; }
+    .tsplit { gap: 6px; }
+    .tstep { gap: 2px; }
+    .tstep .disc { width: 30px; height: 30px; }
+    .tstep .v b { font-size: 16px; }
   }
 
   /* ---- toast ---- */
@@ -399,8 +474,13 @@
     <button id="bannerBtn">Connect</button>
   </div>
 
-  <div class="sec"><h2>Dehumidifiers</h2><small id="secSum"></small></div>
+  <div class="sec">
+    <button class="viewbtn" id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><h2 id="viewName">Dehumidifiers</h2></button>
+    <small id="secSum"></small>
+    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
+  </div>
   <section class="units" id="units"></section>
+  <section class="units" id="thermos" hidden></section>
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -476,6 +556,24 @@
   </div>
 </div>
 
+<div id="thermoWrap">
+  <div class="scrim" data-close></div>
+  <div class="sheet usheet" role="dialog" aria-modal="true" aria-labelledby="tTitle" data-th="">
+    <div class="dg-fx" data-s="fx"></div>
+    <div class="grab"></div>
+    <h2><span class="who"><span id="tTitle"></span><span data-s="pill"></span></span><button data-close aria-label="Close"></button></h2>
+    <div class="sheet-body">
+      <div data-s="hero"></div>
+      <div data-s="tgt"></div>
+      <div class="group first" data-s="power"></div>
+      <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
+      <div data-s="fanSegWrap"><div class="glbl">FAN</div><div class="seg" data-s="fanSeg"></div></div>
+      <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">On: every time the Office changes, this AC follows it, 3° under its target (2° at 80° and up), and turns off when the Office does.</p></div>
+      <div class="glbl">READINGS</div><div class="group" data-s="read"></div>
+    </div>
+  </div>
+</div>
+
 <script src="../home/slide.js"></script>
 <script>
 'use strict';
@@ -504,6 +602,17 @@ const ICONS = {
   lock: 'M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z',
   lockOpen: 'M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V10A2,2 0 0,1 6,8H15V6A3,3 0 0,0 12,3A3,3 0 0,0 9,6H7A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17Z',
   backspace: 'M22,3H7C6.31,3 5.77,3.35 5.41,3.88L0,12L5.41,20.11C5.77,20.64 6.31,21 7,21H22A2,2 0 0,0 24,19V5A2,2 0 0,0 22,3M19,15.59L17.59,17L14,13.41L10.41,17L9,15.59L12.59,12L9,8.41L10.41,7L14,10.59L17.59,7L19,8.41L15.41,12',
+  fire: 'M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2M14.5 17.5C14.22 17.74 13.76 18 13.4 18.1C12.28 18.5 11.16 17.94 10.5 17.28C11.69 17 12.4 16.12 12.61 15.23C12.78 14.43 12.46 13.77 12.33 13C12.21 12.26 12.23 11.63 12.5 10.94C12.69 11.32 12.89 11.7 13.13 12C13.9 13 15.11 13.44 15.37 14.8C15.41 14.94 15.43 15.08 15.43 15.23C15.46 16.05 15.1 16.95 14.5 17.5H14.5Z',
+  snow: 'M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z',
+  sync: 'M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z',
+  thermostat: 'M16.95,16.95L14.83,14.83C15.55,14.1 16,13.1 16,12C16,11.26 15.79,10.57 15.43,10L17.6,7.81C18.5,9 19,10.43 19,12C19,13.93 18.22,15.68 16.95,16.95M12,5C13.57,5 15,5.5 16.19,6.4L14,8.56C13.43,8.21 12.74,8 12,8A4,4 0 0,0 8,12C8,13.1 8.45,14.1 9.17,14.83L7.05,16.95C5.78,15.68 5,13.93 5,12A7,7 0 0,1 12,5M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12C22,6.47 17.5,2 12,2Z',
+  humid: 'M12,3.25C12,3.25 6,10 6,14C6,17.32 8.69,20 12,20A6,6 0 0,0 18,14C18,10 12,3.25 12,3.25M14.47,9.97L15.53,11.03L9.53,17.03L8.47,15.97M9.75,10A1.25,1.25 0 0,1 11,11.25A1.25,1.25 0 0,1 9.75,12.5A1.25,1.25 0 0,1 8.5,11.25A1.25,1.25 0 0,1 9.75,10M14.25,14.5A1.25,1.25 0 0,1 15.5,15.75A1.25,1.25 0 0,1 14.25,17A1.25,1.25 0 0,1 13,15.75A1.25,1.25 0 0,1 14.25,14.5Z',
+  timer: 'M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6A7,7 0 0,1 19,13A7,7 0 0,1 12,20M19.03,7.39L20.45,5.97C20,5.46 19.55,5 19.04,4.56L17.62,6C16.07,4.74 14.12,4 12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22C17,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39M11,14H13V8H11M15,1H9V3H15V1Z',
+  ac: 'M6.59,0.66C8.93,-1.15 11.47,1.06 12.04,4.5C12.47,4.5 12.89,4.62 13.27,4.84C13.79,4.24 14.25,3.42 14.07,2.5C13.65,0.35 16.06,-1.39 18.35,1.58C20.16,3.92 17.95,6.46 14.5,7.03C14.5,7.46 14.39,7.89 14.16,8.27C14.76,8.78 15.58,9.24 16.5,9.06C18.63,8.64 20.38,11.04 17.41,13.34C15.07,15.15 12.53,12.94 11.96,9.5C11.53,9.5 11.11,9.37 10.74,9.15C10.22,9.75 9.75,10.58 9.93,11.5C10.35,13.64 7.94,15.39 5.65,12.42C3.83,10.07 6.05,7.53 9.5,6.97C9.5,6.54 9.63,6.12 9.85,5.74C9.25,5.23 8.43,4.76 7.5,4.94C5.37,5.36 3.62,2.96 6.59,0.66M5,16H7A2,2 0 0,1 9,18V24H7V22H5V24H3V18A2,2 0 0,1 5,16M5,18V20H7V18H5M12.93,16H15L12.07,24H10L12.93,16M18,16H21V18H18V22H21V24H18A2,2 0 0,1 16,22V18A2,2 0 0,1 18,16Z',
+  fan: 'M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11M12.5,2C17,2 17.11,5.57 14.75,6.75C13.76,7.24 13.32,8.29 13.13,9.22C13.61,9.42 14.03,9.73 14.35,10.13C18.05,8.13 22.03,8.92 22.03,12.5C22.03,17 18.46,17.1 17.28,14.73C16.78,13.74 15.72,13.3 14.79,13.11C14.59,13.59 14.28,14 13.88,14.34C15.87,18.03 15.08,22 11.5,22C7,22 6.91,18.42 9.27,17.24C10.25,16.75 10.69,15.71 10.89,14.79C10.4,14.59 9.97,14.27 9.65,13.87C5.96,15.85 2,15.07 2,11.5C2,7 5.56,6.89 6.74,9.26C7.24,10.25 8.29,10.68 9.22,10.87C9.41,10.39 9.73,9.97 10.14,9.65C8.15,5.96 8.94,2 12.5,2Z',
+  outside: 'M12.74,5.47C15.1,6.5 16.35,9.03 15.92,11.46C17.19,12.56 18,14.19 18,16V16.17C18.31,16.06 18.65,16 19,16A3,3 0 0,1 22,19A3,3 0 0,1 19,22H6A4,4 0 0,1 2,18A4,4 0 0,1 6,14H6.27C5,12.45 4.6,10.24 5.5,8.26C6.72,5.5 9.97,4.24 12.74,5.47M11.93,7.3C10.16,6.5 8.09,7.31 7.31,9.07C6.85,10.09 6.93,11.22 7.41,12.13C8.5,10.83 10.16,10 12,10C12.7,10 13.38,10.12 14,10.34C13.94,9.06 13.18,7.86 11.93,7.3M13.55,3.64C13,3.4 12.45,3.23 11.88,3.12L14.37,1.82L15.27,4.71C14.76,4.29 14.19,3.93 13.55,3.64M6.09,4.44C5.6,4.79 5.17,5.19 4.8,5.63L4.91,2.82L7.87,3.5C7.25,3.71 6.65,4.03 6.09,4.44M18,9.71C17.91,9.12 17.78,8.55 17.59,8L19.97,9.5L17.92,11.73C18.03,11.08 18.05,10.4 18,9.71M3.04,11.3C3.11,11.9 3.24,12.47 3.43,13L1.06,11.5L3.1,9.28C3,9.93 2.97,10.61 3.04,11.3M19,18H16V16A4,4 0 0,0 12,12A4,4 0 0,0 8,16H6A2,2 0 0,0 4,18A2,2 0 0,0 6,20H19A1,1 0 0,0 20,19A1,1 0 0,0 19,18Z',
+  leaf: 'M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z',
+  auto: 'M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22C12.4 22 12.7 22 13.1 21.9L15.4 15.3L14.8 14.7C15.5 14 16 13 16 11.9C16 11.2 15.8 10.5 15.4 9.9L17.6 7.7C18.5 9 19 10.4 19 12H20C20.3 12 20.6 12.1 20.8 12.2C20.8 12.2 20.9 12.2 20.9 12.3C21.3 12.5 21.7 12.9 21.9 13.4C22 12.9 22 12.5 22 12C22 6.5 17.5 2 12 2M14 8.6C13.4 8.2 12.7 8 12 8C9.8 8 8 9.8 8 12C8 13.1 8.4 14.1 9.2 14.8L7.1 16.9C5.8 15.7 5 13.9 5 12C5 8.1 8.1 5 12 5C13.6 5 15 5.5 16.2 6.4L14 8.6M20 14H18L14.8 23H16.7L17.4 21H20.6L21.3 23H23.2L20 14M17.8 19.7L19 16L20.2 19.7H17.8Z',
   chevR: 'M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z',
   water: 'M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z',
   dehum: 'M11 9C8.79 9 7 10.79 7 13S8.79 17 11 17 15 15.21 15 13 13.21 9 11 9M11 15C9.9 15 9 14.11 9 13S9.9 11 11 11 13 11.9 13 13 12.11 15 11 15M7 4H14C16.21 4 18 5.79 18 8V9H16V8C16 6.9 15.11 6 14 6H7C5.9 6 5 6.9 5 8V20H16V18H18V22H3V8C3 5.79 4.79 4 7 4M19 10.5C19 10.5 21 12.67 21 14C21 15.1 20.1 16 19 16S17 15.1 17 14C17 12.67 19 10.5 19 10.5',
@@ -585,6 +694,20 @@ function sampleStates() {
     'sensor.upstairs_dehumidifier_current_consumption': e(3.2, { unit_of_measurement: 'W' }),
     'sensor.upstairs_dehumidifier_today_s_consumption': e(0.62, { unit_of_measurement: 'kWh' }),
     'sensor.upstairs_dehumidifier_this_month_s_consumption': e(5.1, { unit_of_measurement: 'kWh' }),
+    // Thermostats: the Living Room keeping a range, the Office heating, the
+    // Windmill cooling (it reports no hvac_action; cooling is inferred).
+    'climate.living_room_living_room': e('heat_cool', { hvac_modes: ['off', 'heat', 'cool', 'heat_cool'], hvac_action: 'idle', current_temperature: 70, current_humidity: 41,
+      target_temp_low: 68, target_temp_high: 74, temperature: null, fan_mode: 'off', fan_modes: ['on', 'off'], min_temp: 50, max_temp: 90 }),
+    'climate.office_office': e('heat', { hvac_modes: ['off', 'heat', 'cool', 'heat_cool'], hvac_action: 'heating', current_temperature: 67, current_humidity: 38,
+      temperature: 70, target_temp_low: null, target_temp_high: null, fan_mode: 'off', fan_modes: ['on', 'off'], min_temp: 50, max_temp: 90 }),
+    'climate.windmill_ac': e('cool', { hvac_modes: ['off', 'cool', 'auto', 'fan_only'], current_temperature: 76, temperature: 72,
+      fan_mode: 'Auto', fan_modes: ['Auto', 'Low', 'Medium', 'High'], min_temp: 60, max_temp: 86 }),
+    'sensor.living_room_ac_runtime_today': e(0.75, { unit_of_measurement: 'h' }),
+    'sensor.office_ac_runtime_today': e(2.4, { unit_of_measurement: 'h' }),
+    'sensor.windmill_ac_runtime_today': e(1.15, { unit_of_measurement: 'h' }),
+    'automation.hvac_sync_window_ac_with_main_thermostat': e('on'),
+    'weather.forecast_home': e('partlycloudy', { temperature: 52 }),
+    'sun.sun': e('above_horizon', { elevation: 24 }),
   };
 }
 
@@ -726,7 +849,23 @@ function previewCall(domain, service, d) {
   else if (service === 'set_humidity') set(null, { humidity: d.humidity });
   else if (service === 'set_mode') set(null, { mode: d.mode });
   else if (service === 'set_preset_mode') set(null, { preset_mode: d.preset_mode });
+  else if (service === 'turn_on' || service === 'turn_off') set(service === 'turn_on' ? 'on' : 'off');
+  else if (service === 'set_hvac_mode') set(d.hvac_mode, previewAction(d.entity_id, d.hvac_mode, s.attributes));
+  else if (service === 'set_temperature') { const { entity_id, ...t } = d; set(null, { ...t, ...previewAction(d.entity_id, s.state, { ...s.attributes, ...t }) }); }
+  else if (service === 'set_fan_mode') set(null, { fan_mode: d.fan_mode });
   render();
+}
+
+// A Nest says what it is doing (hvac_action); in the preview, work it out
+// as a Nest would. The Windmill never says, so it is left out.
+function previewAction(id, mode, a) {
+  if (!('hvac_action' in a)) return {};
+  const c = a.current_temperature, act =
+    mode === 'off' ? 'off' : mode === 'heat' ? (c < a.temperature ? 'heating' : 'idle') : mode === 'cool' ? (c > a.temperature ? 'cooling' : 'idle')
+    : mode === 'heat_cool' ? (c < a.target_temp_low ? 'heating' : c > a.target_temp_high ? 'cooling' : 'idle') : 'idle';
+  const extra = mode === 'heat_cool' && a.target_temp_low == null ? { target_temp_low: (a.temperature || 70) - 2, target_temp_high: (a.temperature || 70) + 2 } : {};
+  const single = (mode === 'heat' || mode === 'cool') && a.temperature == null ? { temperature: Math.round(((a.target_temp_low || 68) + (a.target_temp_high || 74)) / 2) } : {};
+  return { hvac_action: act, ...extra, ...single };
 }
 
 // A control waits (soft blink) from the tap until its entity changes, or 8 s.
@@ -945,8 +1084,11 @@ function render() {
     card.classList.toggle('offline', r.mood === 'offline');
     card.style.boxShadow = `0 18px 40px -16px rgba(${u.accents[r.mood] || '190,194,204'},0.26)`;
   }
-  $('secSum').textContent = running ? running + ' running' : 'Off';
+  dehumSum = running ? running + ' running' : 'Off';
+  renderThermos();
+  renderViewHead();
   if (openId) renderUnit();
+  if (openTId) renderThermo();
 }
 
 const unitWrap = $('unitWrap'), usheet = unitWrap.querySelector('.sheet');
@@ -980,15 +1122,15 @@ function renderUnit() {
 const mainEl = document.querySelector('main');
 let lastFocus = null;
 function showSheet(wrap) {
-  for (const w of [sheetWrap, unitWrap]) if (w !== wrap) w.classList.remove('open');
+  for (const w of [sheetWrap, unitWrap, thermoWrap]) if (w !== wrap) w.classList.remove('open');
   if (!wrap.classList.contains('open')) lastFocus = document.activeElement;
   wrap.classList.add('open');
   mainEl.inert = true; document.documentElement.classList.add('lock');
   const sh = wrap.querySelector('.sheet'); sh.tabIndex = -1; sh.focus({ preventScroll: true });
 }
 function closeSheets() {
-  sheetWrap.classList.remove('open'); unitWrap.classList.remove('open');
-  openId = null;
+  sheetWrap.classList.remove('open'); unitWrap.classList.remove('open'); thermoWrap.classList.remove('open');
+  openId = null; openTId = null;
   mainEl.inert = false; document.documentElement.classList.remove('lock');
   if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
   lastFocus = null;
@@ -1000,7 +1142,7 @@ function openUnit(id) {
   renderUnit();
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheets(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheets(); closeViewMenu(); } });
 
 function dragToClose(wrap) {
   const sh = wrap.querySelector('.sheet'), body = sh.querySelector('.sheet-body');
@@ -1060,6 +1202,384 @@ document.addEventListener('click', e => {
   }
 });
 
+
+// ---------------------------------------------------------------------------
+// THERMOSTATS: the Signal dashboard's TF1 "Frost" card (ha-config,
+// views_signal/signal_templates.yaml, tf_card) in this app's layout - a
+// compact card with power and target, and the rest in a popup. Same rules:
+//   - the sky is what the unit is DOING: heating ember, cooling ice, fan
+//     teal, off graphite; idle is the room's own palette (lounge, focus,
+//     breeze), eased from day to night by the sun's elevation
+//   - the orb is filled with the card's colour, the 50-90 F arc a hairline on
+//     its edge, the setpoint(s) glass beads on it, a dot at the room
+//     temperature; it pulses grey/red or grey/blue while heating or cooling
+//   - Auto (heat_cool) keeps 3 F between Heat and Cool and always sends both
+//   - the Windmill never reports hvac_action: in cool or eco with the room
+//     above the setpoint it is cooling. Its `auto` is the unit's Eco mode, its
+//     fan a four-way speed, and it can follow the Office (the sync automation,
+//     whose id says window/main - that is the registry's, do not "fix" it).
+// Taps show at once and stay shown until the unit reports them (or 20 s): the
+// Windmill goes through a slow cloud, so without that a tap would flick back.
+const THERMOS = [
+  { id: 'lr', name: 'Living Room', kind: 'nest', ent: 'climate.living_room_living_room', runtime: 'sensor.living_room_ac_runtime_today', scene: 'lounge',
+    modes: [['heat', 'Heat'], ['cool', 'Cool'], ['heat_cool', 'Auto'], ['off', 'Off']] },
+  { id: 'of', name: 'Office', kind: 'nest', ent: 'climate.office_office', runtime: 'sensor.office_ac_runtime_today', scene: 'focus',
+    modes: [['heat', 'Heat'], ['cool', 'Cool'], ['heat_cool', 'Auto'], ['off', 'Off']] },
+  { id: 'wm', name: 'Windmill AC', kind: 'windmill', ent: 'climate.windmill_ac', runtime: 'sensor.windmill_ac_runtime_today', scene: 'breeze',
+    modes: [['cool', 'Cool'], ['auto', 'Eco'], ['fan_only', 'Fan'], ['off', 'Off']], fans: ['Auto', 'Low', 'Medium', 'High'],
+    sync: 'automation.hvac_sync_window_ac_with_main_thermostat' },
+];
+const T_LO = 50, T_HI = 90, T_GAP = 3, T_HOLD = 20000;
+const T_SKY = {
+  heat: 'linear-gradient(160deg, #221C1C 0%, #372A28 50%, #5A4540 100%)',
+  cool: 'linear-gradient(160deg, #1A1E26 0%, #262E3B 50%, #3E4B5E 100%)',
+  fan: 'linear-gradient(160deg, #1A2224 0%, #26343A 50%, #3E5358 100%)',
+  off: 'linear-gradient(160deg, #18191D 0%, #23242B 50%, #34363F 100%)',
+};
+const T_SCENES = {
+  lounge: { day: 'linear-gradient(160deg, #221E26 0%, #332D39 50%, #4F4656 100%)', night: 'linear-gradient(160deg, #1B1920 0%, #28242E 50%, #3D3643 100%)', glow: '201,163,154' },
+  focus: { day: 'linear-gradient(160deg, #1E1E2A 0%, #2B2B3F 50%, #44455E 100%)', night: 'linear-gradient(160deg, #19191F 0%, #23232E 50%, #353545 100%)', glow: '138,136,184' },
+  breeze: { day: 'linear-gradient(170deg, #1C2226 0%, #293539 50%, #405049 100%)', night: 'linear-gradient(170deg, #17191D 0%, #212A2E 50%, #2F3B35 100%)', glow: '110,170,130' },
+};
+const T_ACC = { heat: '255,179,138', cool: '156,210,255', fan: '142,227,214', idle: '195,198,242', off: '154,160,166', offline: '154,160,166' };
+
+// What was tapped, shown until the unit reports it (or 20 s).
+const tpend = {};
+const tSame = (a, b) => typeof a === 'number' || typeof b === 'number' ? Math.round(a) === Math.round(b) : a === b;
+function held(t, f, actual) {
+  const p = tpend[t.id + ':' + f];
+  if (!p) return actual;
+  if (Date.now() - p.t > T_HOLD || (!p.sending && tSame(p.v, actual) && p.sent)) { delete tpend[t.id + ':' + f]; return actual; }
+  return p.v;
+}
+const tWaiting = (t, f) => !!tpend[t.id + ':' + f];
+
+function tread(t) {
+  const e = st(t.ent), A = e ? e.attributes : {};
+  const offline = !e || e.state === 'unavailable' || e.state === 'unknown';
+  const s = offline ? (e ? e.state : 'unknown') : held(t, 'mode', e.state);
+  const fm = held(t, 'fan', A.fan_mode);
+  const temp = held(t, 'temperature', A.temperature), lo = held(t, 'target_temp_low', A.target_temp_low), hi = held(t, 'target_temp_high', A.target_temp_high);
+  const cur = A.current_temperature;
+  const act = A.hvac_action != null ? A.hvac_action : (s === 'off' ? 'off' : s === 'fan_only' ? 'fan'
+    : ((s === 'cool' || s === 'auto') && cur != null && temp != null && cur > temp) ? 'cooling' : 'idle');
+  const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : 'idle';
+  const min = Number.isFinite(A.min_temp) ? A.min_temp : T_LO, max = Number.isFinite(A.max_temp) ? A.max_temp : T_HI;
+  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto' };
+}
+
+// The idle sky: the room's palette from its day colours at the horizon, a
+// touch brighter as the sun climbs (up to 7% at 40 degrees), easing into the
+// night colours as it sets (all the way by -18), as tf_card's isky.
+function idleSky(sc) {
+  const sun = st('sun.sun'), el = sun ? Number(sun.attributes.elevation) : 30;
+  const rgb = g => (g.match(/#[0-9A-Fa-f]{6}/g) || []).map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+  const D = rgb(sc.day), N = rgb(sc.night);
+  if (!D.length || isNaN(el)) return sc.day;
+  const ang = (sc.day.match(/(\d+)deg/) || [0, '160'])[1], pos = (sc.day.match(/\s\d+%/g) || []).map(p => p.trim());
+  const k = el >= 0 ? 0.07 * Math.min(el, 40) / 40 : 0, f = el < 0 ? Math.min(-el, 18) / 18 : 0;
+  const hex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  const stops = D.map((c, i) => c.map((v, j) => { const n = (N[i] || c)[j], d = v + (n - v) * f; return d + (255 - d) * k; }));
+  return `linear-gradient(${ang}deg, ${stops.map((c, i) => hex(c) + ' ' + (pos[i] || i * 50 + '%')).join(', ')})`;
+}
+const tSky = (t, r) => r.mood === 'idle' ? idleSky(T_SCENES[t.scene]) : T_SKY[r.mood] || T_SKY.off;
+
+// The sky behind a card or popup: embers rising while heating, frost
+// drifting while cooling, airflow while the fan runs, the room's glow idle.
+function tfxHTML(t, r, top = 60) {
+  const m = r.mood, sc = T_SCENES[t.scene];
+  let seed = 17; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const pool = (rgb, a, cls) => `<div class="dg-pool ${cls}" style="top:${top}px;background:radial-gradient(circle, rgba(${rgb},${a}) 0%, rgba(${rgb},${(a * 0.35).toFixed(3)}) 38%, rgba(${rgb},0) 68%);"></div>`;
+  let L = '';
+  if (m === 'heat') {
+    L += pool('224,122,79', 0.16, 'dg-breathe');
+    for (let i = 0; i < 12; i++) { const du = 6 + rnd() * 6;
+      L += `<i class="tc-ember" style="left:${(5 + rnd() * 90).toFixed(1)}%;background:rgba(255,${150 + Math.round(rnd() * 60)},110,0.85);box-shadow:0 0 5px rgba(255,140,90,0.8);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+  } else if (m === 'cool') {
+    L += pool('120,170,230', 0.14, 'dg-breathe');
+    for (let i = 0; i < 12; i++) { const du = 9 + rnd() * 7;
+      L += `<i class="tc-frost" style="left:${(5 + rnd() * 95).toFixed(1)}%;box-shadow:0 0 4px rgba(156,210,255,0.8);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+  } else if (m === 'fan') {
+    for (let i = 0; i < 7; i++) { const du = 3.5 + rnd() * 3;
+      L += `<i class="tc-air" style="top:${(12 + rnd() * 76).toFixed(1)}%;background:linear-gradient(90deg, rgba(142,227,214,0), rgba(142,227,214,0.5), rgba(142,227,214,0));animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+  } else if (m === 'idle') L += pool(sc.glow, 0.16, 'dg-drift');
+  return `<div class="dg-sky" style="background:${tSky(t, r)};"></div>${L}<div class="dg-sheen"></div>`;
+}
+
+// The orb. Its fill is the card's own colour (the first two stops of its sky).
+function orbHTML(t, r, size) {
+  const lg = size === 'lg', R = 88, C = 100;
+  const bw = lg ? 1.8 : 3.4, tw = lg ? 0.9 : 2.2, kr = lg ? 5.4 : 8.5, dot = lg ? 2.6 : 4.2;
+  const ang = v => 135 + (Math.max(T_LO, Math.min(T_HI, v)) - T_LO) / (T_HI - T_LO) * 270;
+  const pt = d => { const a = d * Math.PI / 180; return [(C + R * Math.cos(a)).toFixed(2), (C + R * Math.sin(a)).toFixed(2)]; };
+  const arc = (d1, d2) => { const p1 = pt(d1), p2 = pt(d2); return `M ${p1[0]} ${p1[1]} A ${R} ${R} 0 ${d2 - d1 > 180 ? 1 : 0} 1 ${p2[0]} ${p2[1]}`; };
+  const stops = tSky(t, r).match(/#[0-9A-Fa-f]{6}/g) || ['#23242B', '#34363F'];
+  const pulse = r.mood === 'heat' ? '196,112,104' : r.mood === 'cool' ? '110,146,196' : '';
+  const g = 'o' + t.id + size;   // ids per orb: the card's and the popup's are on the page together
+  const knob = (v, k) => { const p = pt(ang(v)); return `<circle cx="${p[0]}" cy="${p[1]}" r="${kr}" fill="url(#${g}${k})" stroke="rgba(255,255,255,0.85)" stroke-width="${lg ? 1.2 : 2}"/>`; };
+  let band = '', knobs = '', bandD = '';
+  if (r.range && r.lo != null && r.hi != null) {
+    bandD = arc(ang(r.lo), ang(r.hi));
+    band = `<path d="${bandD}" stroke="url(#${g}band)" stroke-width="${bw}" stroke-linecap="round" fill="none"/>`;
+    knobs = knob(r.lo, 'h') + knob(r.hi, 'c');
+  } else if (r.single && r.temp != null) {
+    bandD = arc(135, ang(r.temp));
+    band = `<path d="${bandD}" stroke="${r.s === 'heat' ? '#FFB38A' : '#9CD2FF'}" stroke-opacity="0.9" stroke-width="${bw}" stroke-linecap="round" fill="none"/>`;
+    knobs = knob(r.temp, r.s === 'heat' ? 'h' : 'c');
+  }
+  const flow = (r.mood === 'heat' || r.mood === 'cool') && bandD ? `<path d="${bandD}" class="t-flow" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="${bw}" stroke-linecap="round" stroke-dasharray="2 4" fill="none"/>` : '';
+  const cp = r.cur != null ? pt(ang(r.cur)) : null;
+  const wo = st('weather.forecast_home'), outT = wo && Number.isFinite(Number(wo.attributes.temperature)) ? Math.round(Number(wo.attributes.temperature)) : null;
+  return `<div class="orb ${size}"${pulse ? ` style="--gp:${pulse}"` : ''}>
+      <div class="ball" style="background:linear-gradient(160deg, ${stops[0]} -30%, ${stops[1] || stops[0]} 130%);">${pulse ? '<i class="grey"></i><i class="pulse"></i>' : ''}<i class="spec"></i></div>
+      <svg viewBox="0 0 200 200" aria-hidden="true"><defs>
+        <linearGradient id="${g}band" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFB38A"/><stop offset="1" stop-color="#9CD2FF"/></linearGradient>
+        <radialGradient id="${g}h" cx="0.36" cy="0.32" r="0.72"><stop offset="0" stop-color="#FFF4EC"/><stop offset="0.38" stop-color="#FFB38A"/><stop offset="1" stop-color="#B8683F"/></radialGradient>
+        <radialGradient id="${g}c" cx="0.36" cy="0.32" r="0.72"><stop offset="0" stop-color="#F2F9FF"/><stop offset="0.38" stop-color="#9CD2FF"/><stop offset="1" stop-color="#4A7FB0"/></radialGradient></defs>
+        <path d="${arc(135, 405)}" stroke="rgba(255,255,255,0.26)" stroke-width="${tw}" stroke-linecap="round" fill="none"/>${band}${flow}
+        ${cp ? `<circle cx="${cp[0]}" cy="${cp[1]}" r="${dot}" fill="#FFFFFF"/>` : ''}${knobs}</svg>
+      <div class="num"><em>INSIDE</em><b>${r.cur == null ? '--' : Math.round(r.cur)}<span>°</span></b>${lg ? `<div class="st">${tStatus(t, r)}</div>` : ''}</div>
+      ${lg && outT != null ? `<div class="out"><span>OUTSIDE</span>${outT}°</div>` : ''}
+    </div>`;
+}
+
+function tStatus(t, r) {
+  if (r.offline) {
+    const waitingHA = r.missing && mode === 'live' && !Object.keys(ents).length;
+    return waitingHA ? (HA.status === 'error' ? 'Not connected' : 'Connecting') : r.missing ? 'Not found' : 'Unavailable';
+  }
+  const n = v => v == null ? '--' : Math.round(v);
+  return r.s === 'off' ? 'System off' : r.s === 'fan_only' ? 'Fan only'
+    : r.act === 'heating' ? `Heating to ${n(r.range ? r.lo : r.temp)}°`
+    : r.act === 'cooling' ? `Cooling to ${n(r.range ? r.hi : r.temp)}°`
+    : r.range ? `Keeping ${n(r.lo)}–${n(r.hi)}°` : `Holding ${n(r.temp)}°`;
+}
+const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
+// The line under the status. On the card it is short (it shares the row with
+// the orb); in the popup the orb already shows Outside, so it is left out.
+function tSub(t, r, card) {
+  if (r.offline) return r.missing && mode === 'live' && Object.keys(ents).length ? 'Home Assistant has no ' + esc(t.ent) : 'The thermostat is not reachable';
+  const wo = st('weather.forecast_home'), out = wo && Number.isFinite(Number(wo.attributes.temperature)) ? Math.round(Number(wo.attributes.temperature)) + '° out' : '';
+  const h = r.A.current_humidity != null ? Math.round(r.A.current_humidity) + (card ? '% RH' : '% humidity') : '';
+  return [esc(modeName(t, r.s)), t.kind === 'windmill' ? (r.s !== 'off' && r.fm ? 'Fan ' + esc(r.fm) : '') : h, card ? out : ''].filter(Boolean).join(' · ');
+}
+function tPill(t, r) {
+  const word = r.offline ? 'Offline' : r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.act === 'fan' ? 'Fan' : 'Idle';
+  const md = modeName(t, r.s);
+  return `<span class="dg-pill">${word}${!r.offline && r.s !== 'off' && md !== word ? ' · ' + esc(md) : ''}</span>`;
+}
+
+// ---- the controls ----
+function tPowerHTML(t, r) {
+  const on = !r.offline && r.s !== 'off', a = T_ACC[r.mood] || T_ACC.idle;
+  const lit = on ? `background:rgba(${a},0.85);box-shadow:0 0 14px rgba(${a},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  return `<button class="pwr${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" style="${lit}" aria-pressed="${on}" aria-label="${on ? 'Turn off' : 'Turn on'} the ${t.name}"${r.offline ? ' disabled' : ''}>${svg('power', 22)}</button>`;
+}
+// One setpoint: the same stepper as the dehumidifiers. Auto: Heat and Cool.
+function tStepHTML(t, r, split) {
+  const dis = r.offline;
+  const one = (f, label, v) => `<div class="tstep"><button class="disc" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${dis || v == null || v <= r.min ? ' disabled' : ''}>${svg('minus', 18)}</button>
+      <div class="v"><span>${label.toUpperCase()}</span><b>${v == null ? '--' : Math.round(v) + '°'}</b></div>
+      <button class="disc" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${dis || v == null || v >= r.max ? ' disabled' : ''}>${svg('plus', 18)}</button></div>`;
+  if (r.range) return `<div class="tsplit">${one('target_temp_low', 'Heat', r.lo)}${one('target_temp_high', 'Cool', r.hi)}</div>`;
+  if (r.single) {
+    const v = r.temp, pct = v == null ? 0 : Math.max(0, Math.min(100, (v - T_LO) / (T_HI - T_LO) * 100));
+    return `<div class="dg-tgt"><button class="disc" data-a="tminus" data-f="temperature" aria-label="Lower the target"${dis || v == null || v <= r.min ? ' disabled' : ''}>${svg('minus', 20)}</button>
+      <div class="tgt"><div class="tgt-row"><span>TARGET</span><span>${v == null ? '--' : Math.round(v) + '°'}</span></div><div class="tgt-bar"><i style="width:${pct}%"></i></div></div>
+      <button class="disc" data-a="tplus" data-f="temperature" aria-label="Raise the target"${dis || v == null || v >= r.max ? ' disabled' : ''}>${svg('plus', 20)}</button></div>`;
+  }
+  // Off or fan only: nothing to set; say so where the stepper would be.
+  return `<div class="dg-tgt"><div class="tgt"><div class="tgt-row"><span>TARGET</span><span style="opacity:.55">${r.s === 'fan_only' ? 'Fan only' : r.offline ? '--' : 'Off'}</span></div><div class="tgt-bar"></div></div></div>`;
+}
+function tPowerRow(t, r) {
+  const on = !r.offline && r.s !== 'off';
+  return `<button class="rowi${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" role="switch" aria-checked="${on}"${r.offline ? ' disabled' : ''}>${icon('power')}<span class="k">Power</span><span class="sw${on ? ' on' : ''}" style="--tint:${T_ACC[r.mood] === T_ACC.off ? '48,209,88' : T_ACC[r.mood] || T_ACC.idle}"></span></button>`;
+}
+const tModeSeg = (t, r) => t.modes.map(([m, n]) => `<button data-a="tmode" data-v="${m}" aria-pressed="${r.s === m}"${r.offline ? ' disabled' : ''}>${n}</button>`).join('');
+const tFanSeg = (t, r) => (t.fans || []).map(f => `<button data-a="tfan" data-v="${f}" aria-pressed="${r.fm === f}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${f}</button>`).join('');
+function tSyncRow(t) {
+  const on = held(t, 'sync', (st(t.sync) || {}).state) === 'on';
+  return `<button class="rowi${tWaiting(t, 'sync') ? ' wait' : ''}" data-a="tsync" role="switch" aria-checked="${on}"${st(t.sync) ? '' : ' disabled'}>${icon('sync')}<span class="k">Follow the Office</span><span class="sw${on ? ' on' : ''}" style="--tint:110,170,130"></span></button>`;
+}
+function tReadHTML(t, r) {
+  const row = (ic, k, v) => `<div class="rowi">${icon(ic)}<span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const hrs = Number((st(t.runtime) || {}).state), mins = isNaN(hrs) ? null : Math.round(hrs * 60);
+  const wo = st('weather.forecast_home'), outT = wo && Number.isFinite(Number(wo.attributes.temperature)) ? Math.round(Number(wo.attributes.temperature)) + '°' : '—';
+  let first;
+  if (t.kind === 'windmill') first = row('snow', 'Compressor', r.offline ? '—' : r.s === 'off' ? 'Off' : r.act === 'cooling' ? 'Cooling' : 'Resting');
+  else if (t.kind === 'nest') first = row('humid', 'Humidity', r.A.current_humidity != null ? Math.round(r.A.current_humidity) + '%' : '—');
+  const fanRow = t.kind === 'nest' ? `<button class="rowi${tWaiting(t, 'fan') ? ' wait' : ''}" data-a="tfanon" role="switch" aria-checked="${r.fm === 'on'}"${r.offline ? ' disabled' : ''}>${icon('fan')}<span class="k">Fan</span><span class="sw${r.fm === 'on' ? ' on' : ''}" style="--tint:142,227,214"></span></button>` : '';
+  return first + row('timer', 'Running today', mins == null ? '—' : Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm') + row('outside', 'Outside', outT) + fanRow;
+}
+
+// ---- cards ----
+const thermosEl = $('thermos');
+for (const t of THERMOS) {
+  thermosEl.insertAdjacentHTML('beforeend', `
+    <article class="dg tc" data-th="${t.id}">
+      <div class="dg-fx" data-r="fx"></div>
+      <div class="dg-in">
+        <div class="dg-top"><div data-r="orb"></div><div class="dg-info" data-r="info"></div></div>
+        <div class="dg-ctl"><div data-r="pwr"></div><i class="hair"></i><div data-r="tgt" style="flex:1;min-width:0;display:flex"></div></div>
+      </div>
+    </article>`);
+}
+let thermoSum = '', dehumSum = '', openTId = null;
+function renderThermos() {
+  let h = 0, c = 0;
+  for (const t of THERMOS) {
+    const card = thermosEl.querySelector(`[data-th="${t.id}"]`), r = tread(t);
+    if (!r.offline && r.s !== 'off') { const k = 'house.tlast.' + t.id; try { localStorage.setItem(k, r.s); } catch {} }
+    if (r.act === 'heating') h++;
+    if (r.act === 'cooling') c++;
+    const R = n => card.querySelector(`[data-r="${n}"]`);
+    put(R('fx'), tfxHTML(t, r, 60));
+    put(R('orb'), orbHTML(t, r, 'sm'));
+    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
+      <div class="dg-title">${tStatus(t, r)}</div><div class="dg-sub">${tSub(t, r, true)}</div>`);
+    put(R('pwr'), tPowerHTML(t, r));
+    put(R('tgt'), tStepHTML(t, r));
+    card.classList.toggle('offline', r.offline);
+    card.style.boxShadow = `0 18px 40px -16px rgba(${T_ACC[r.mood] || T_ACC.idle},0.26)`;
+  }
+  thermoSum = [h ? h + ' heating' : '', c ? c + ' cooling' : ''].filter(Boolean).join(' · ') || 'Idle';
+}
+
+const thermoWrap = $('thermoWrap'), tsheet = thermoWrap.querySelector('.sheet');
+function renderThermo() {
+  const t = THERMOS.find(x => x.id === openTId), r = tread(t);
+  const S = n => tsheet.querySelector(`[data-s="${n}"]`);
+  $('tTitle').textContent = t.name;
+  put(S('fx'), tfxHTML(t, r, 150));
+  put(S('pill'), tPill(t, r));
+  put(S('hero'), `<div class="uhero">${orbHTML(t, r, 'lg')}<div class="dg-sub" style="margin-top:12px">${tSub(t, r)}</div></div>`);
+  put(S('tgt'), r.range ? `<div class="dg-tgt">${tStepHTML(t, r)}</div>` : tStepHTML(t, r));
+  put(S('power'), tPowerRow(t, r));
+  put(S('mode'), tModeSeg(t, r));
+  S('mode').classList.toggle('wait', tWaiting(t, 'mode'));
+  S('fanSegWrap').hidden = !t.fans;
+  if (t.fans) { put(S('fanSeg'), tFanSeg(t, r)); S('fanSeg').classList.toggle('wait', tWaiting(t, 'fan')); }
+  S('syncWrap').hidden = !t.sync;
+  if (t.sync) put(S('sync'), tSyncRow(t));
+  put(S('read'), tReadHTML(t, r));
+  tsheet.style.boxShadow = `inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px rgba(${T_ACC[r.mood] || T_ACC.idle},0.22), 0 2px 8px var(--lgs-lift)`;
+  slide(S('mode'), S('mode').querySelector('[aria-pressed="true"]'), 'tmode-' + t.id);
+  if (t.fans) slide(S('fanSeg'), S('fanSeg').querySelector('[aria-pressed="true"]'), 'tfan-' + t.id);
+}
+function openThermo(id) {
+  openTId = id; tsheet.dataset.th = id;
+  tsheet.querySelector('.sheet-body').scrollTop = 0;
+  showSheet(thermoWrap);
+  renderThermo();
+}
+
+// ---- sending ----
+// Each field shows what was tapped at once; it is held while the call is
+// on its way and until the unit reports it (or 20 s). A call Home Assistant
+// turns down lets go of it straight away, with a note saying why.
+async function tsend(t, domain, service, data, fields) {
+  const now = Date.now();
+  for (const f of fields) if (tpend[t.id + ':' + f]) Object.assign(tpend[t.id + ':' + f], { sending: true, t: now });
+  try {
+    if (mode === 'preview') previewCall(domain, service, data);
+    else await HA.send({ type: 'call_service', domain, service, service_data: data });
+    for (const f of fields) if (tpend[t.id + ':' + f]) Object.assign(tpend[t.id + ':' + f], { sending: false, sent: true, t: Date.now() });
+  } catch (e) {
+    for (const f of fields) delete tpend[t.id + ':' + f];
+    toast(`${t.name}: ${e.message}`);
+  }
+  render();
+  setTimeout(render, T_HOLD + 100);   // let go of anything the unit never confirmed
+}
+const tset = (t, f, v) => { tpend[t.id + ':' + f] = { v, t: Date.now() }; };
+
+// Setpoint taps add up (each steps from what is shown) and one call goes
+// 600 ms after the last. Auto sends Heat and Cool together, 3 apart.
+const tTimers = {};
+function tStep(t, f, dir) {
+  const r = tread(t);
+  const base = f === 'temperature' ? r.temp : f === 'target_temp_low' ? r.lo : r.hi;
+  if (base == null) return;
+  let v = Math.max(r.min, Math.min(r.max, Math.round(base) + dir));
+  if (f === 'target_temp_low') v = Math.min(v, Math.round(r.hi) - T_GAP);
+  if (f === 'target_temp_high') v = Math.max(v, Math.round(r.lo) + T_GAP);
+  if (v === Math.round(base)) return;
+  tset(t, f, v); render();
+  clearTimeout(tTimers[t.id]);
+  tTimers[t.id] = setTimeout(() => {
+    const q = tread(t);
+    if (q.range) tsend(t, 'climate', 'set_temperature', { entity_id: t.ent, target_temp_low: Math.round(q.lo), target_temp_high: Math.round(q.hi) }, ['target_temp_low', 'target_temp_high']);
+    else tsend(t, 'climate', 'set_temperature', { entity_id: t.ent, temperature: Math.round(q.temp) }, ['temperature']);
+  }, 600);
+}
+function tMode(t, m) {
+  if (tread(t).s === m) return;
+  tset(t, 'mode', m); render();
+  tsend(t, 'climate', 'set_hvac_mode', { entity_id: t.ent, hvac_mode: m }, ['mode']);
+}
+// Power: off, or back to the mode it was last in (Auto for a Nest, Cool for
+// the Windmill if it has never been seen on).
+function tPower(t) {
+  const r = tread(t);
+  if (r.s !== 'off') return tMode(t, 'off');
+  let m = null; try { m = localStorage.getItem('house.tlast.' + t.id); } catch {}
+  tMode(t, t.modes.some(x => x[0] === m) && m !== 'off' ? m : t.kind === 'windmill' ? 'cool' : 'heat_cool');
+}
+
+document.addEventListener('click', e => {
+  const host = e.target.closest('[data-th]'); if (!host || !host.dataset.th) return;
+  const t = THERMOS.find(x => x.id === host.dataset.th); if (!t) return;
+  const b = e.target.closest('[data-a]');
+  if (!b) { if (host.classList.contains('dg')) openThermo(t.id); return; }
+  if (b.disabled) return;
+  const a = b.dataset.a, r = tread(t);
+  if (a === 'open') return openThermo(t.id);
+  if (a === 'power') return tPower(t);
+  if (a === 'tminus' || a === 'tplus') return tStep(t, b.dataset.f, a === 'tplus' ? 1 : -1);
+  if (a === 'tmode') return tMode(t, b.dataset.v);
+  if (a === 'tfan') { if (r.fm !== b.dataset.v) { tset(t, 'fan', b.dataset.v); render(); tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: b.dataset.v }, ['fan']); } return; }
+  if (a === 'tfanon') { const v = r.fm === 'on' ? 'off' : 'on'; tset(t, 'fan', v); render(); return tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: v }, ['fan']); }
+  if (a === 'tsync') {
+    const on = held(t, 'sync', (st(t.sync) || {}).state) === 'on';
+    tset(t, 'sync', on ? 'off' : 'on'); render();
+    return tsend(t, 'automation', on ? 'turn_off' : 'turn_on', { entity_id: t.sync }, ['sync']);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// The view drop-down: Dehumidifiers or Thermostats, remembered on the phone.
+const VIEWS = [
+  { id: 'dehum', name: 'Dehumidifiers', icon: 'dehum', el: () => unitsEl, sum: () => dehumSum },
+  { id: 'thermo', name: 'Thermostats', icon: 'thermostat', el: () => thermosEl, sum: () => thermoSum },
+];
+let curView = VIEWS.some(v => v.id === store.get('view')) ? store.get('view') : 'dehum';
+function renderViewHead() {
+  const v = VIEWS.find(x => x.id === curView);
+  $('viewName').textContent = v.name;
+  if (!$('viewBtn').querySelector('svg')) $('viewBtn').insertAdjacentHTML('beforeend', svg('chev', 22));
+  $('secSum').textContent = v.sum();
+  for (const x of VIEWS) x.el().hidden = x.id !== curView;
+  if (!$('viewMenu').hidden) drawViewMenu();
+}
+function drawViewMenu() {
+  put($('viewMenu'), VIEWS.map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
+      <span class="ic">${svg(v.icon, 20)}</span><span class="k">${v.name}<small>${esc(v.sum())}</small></span><span class="tick">${svg('check', 20)}</span></button>`).join(''));
+}
+function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
+$('viewBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const open = $('viewMenu').hidden;
+  if (open) { drawViewMenu(); $('viewMenu').hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true'); }
+  else closeViewMenu();
+});
+$('viewMenu').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]'); if (!b) return;
+  curView = b.dataset.view; store.set('view', curView);
+  closeViewMenu(); renderViewHead();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+
 let toastTimer;
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -1077,7 +1597,7 @@ function openSheet() {
   syncSheet();
 }
 $('gear').onclick = openSheet; $('bannerBtn').onclick = openSheet;
-dragToClose(sheetWrap); dragToClose(unitWrap);
+dragToClose(sheetWrap); dragToClose(unitWrap); dragToClose(thermoWrap);
 
 let statusDetail = '';
 function syncSheet() {

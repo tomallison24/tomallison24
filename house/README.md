@@ -4,8 +4,9 @@ Home Assistant as an AllisonOS app: plain HTML talking to Home Assistant
 directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
-when it is opened from the launcher. It starts with the
-**dehumidifiers**, the Cube and Upstairs.
+when it is opened from the launcher. It has the
+**dehumidifiers** (the Cube and Upstairs) and the **thermostats** (Living
+Room, Office and the Windmill AC), one view at a time.
 
 The look is the Signal dashboard's DG1 dehumidifier card (ha-config,
 `views_signal/all_devices.yaml`, the `dg_*` block): the frosted glass tank
@@ -35,6 +36,44 @@ Same entities, same colours.
   an open popup. If Home Assistant turns a call down, a note says why.
 - **Preview**: with no Home Assistant set up, the app runs on sample readings
   and the controls change those, so the design can be tried first.
+
+## Thermostats
+
+The heading is a drop-down: **Dehumidifiers** or **Thermostats**, each with
+what it's doing ("2 running", "1 heating · 1 cooling"). The choice is kept on
+the phone.
+
+The three thermostats are the Signal dashboard's TF1 "Frost" card (ha-config,
+`views_signal/signal_templates.yaml`, `tf_card`) in this app's layout, with
+the same rules:
+
+- **Living Room** (`climate.living_room_living_room`) and **Office**
+  (`climate.office_office`), both Nests: Heat / Cool / Auto / Off. In Auto,
+  Heat and Cool each have a stepper, are kept 3° apart, and are always sent
+  together (the Nest needs both). Fan is a switch (on / auto).
+- **Windmill AC** (`climate.windmill_ac`): Cool / Eco / Fan / Off - its Eco
+  is Home Assistant's `auto`. It never says what it's doing, so in Cool or
+  Eco with the room above the target it counts as cooling. Fan is Auto / Low /
+  Medium / High. **Follow the Office** switches the sync automation
+  (`automation.hvac_sync_window_ac_with_main_thermostat` - the id says
+  window/main, the registry's, not a typo): it keeps the AC 3° under the
+  Office (2° at 80° and up) and turns it off with the Office.
+- **The card**: an orb with the room temperature, the 50–90° arc on its edge
+  and the target(s) as beads; what it's doing ("Heating to 70°", "Keeping
+  68–74°"); then Power and the target. Power remembers the mode it was in.
+- **The sky** is what the unit is doing: embers while heating, frost while
+  cooling, airflow with the fan, graphite when off. Idle, each room has its
+  own palette (Living Room lounge, Office focus, Windmill breeze), a touch
+  brighter as the sun climbs and darker after sunset (`sun.sun`). The orb
+  pulses red or blue while it heats or cools.
+- **The popup** (tap a card): the big orb with Outside
+  (`weather.forecast_home`), the target, Power, Mode, Fan, the Windmill's
+  sync, and Readings (humidity or the compressor, running today from
+  `sensor.*_ac_runtime_today`, outside).
+- **Taps show at once and stay** until the unit reports them, or 20 s - the
+  Windmill goes through a slow cloud and would otherwise flick back. Target
+  taps add up into one call 0.6 s after the last. A change the unit turns
+  down lets go at once, with a note saying why.
 
 ## Connecting to Home Assistant
 
