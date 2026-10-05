@@ -177,6 +177,48 @@ dashboard's comments record a quirk, the app keeps it:
 Scripts that wait (Snapshot, the motion pause, Hand off) are started with
 `script.turn_on`, so the app is not left waiting on them.
 
+## Energy
+
+Each view with estimated devices starts with a strip: their power **now**,
+**today** and **this month** (with the month's cost at $0.13/kWh), from Home
+Assistant's own totals - the house on Favorites, climate plus fans &
+dehumidifiers on Climate, lighting on Lights, the TV on Media. Tap it for
+each device's power now. Each device's popup has an **Energy** section.
+
+- **Metered**: the two heaters (now, today) and the two dehumidifiers (now,
+  today, month), from their own power sensors and plugs.
+- **Estimated**, with Home Assistant's formulas: lights 10 W a bulb (12 W the
+  TV strip) by brightness; the ACs while cooling (2,710 / 2,060 / 730 W;
+  heating isn't counted, the Living Room's is gas); a Dyson 1,500 W while its
+  element heats, 6 W while the fan runs (today from its heating and running
+  hours); the TV 120 W on, 0.5 W off (today and month: it is the whole TV
+  total).
+- Nothing is shown for a device Home Assistant doesn't estimate: speakers,
+  Apple TV, cameras, vacuums, the Hatch, the printer, outdoor lights.
+- Home Assistant keeps today and month per category, not per device, so most
+  devices have **now** only.
+- The Windmill: Home Assistant's climate total waits for it to report
+  cooling, which it never does, so its total leaves it out. Here it is counted
+  while it is inferred to be cooling, and its line says it isn't in HA's total.
+
+## Thermostat schedules
+
+Each thermostat shows where it is in its schedule, as Home Assistant's
+scheduler card does. The schedules are the **Scheduler** integration's
+(`custom_components/scheduler`), kept inside Home Assistant rather than in
+ha-config, so the app finds each `switch.schedule_…` that lists the
+thermostat in its `entities`.
+
+- **The card** says the step under way and until when ("68–74° until
+  10:00 PM"), from the schedule that changes next.
+- **The popup** has a Schedule section: each schedule, the days it runs, every
+  step with its time and what it sets, the step under way lit as **Now**, the
+  next one with when it starts, and a switch to pause or resume the schedule.
+- The step under way is Scheduler's `current_slot`; a schedule of start times
+  only leaves that empty, so it is then the step before `next_slot`.
+- A thermostat with no schedule says so (a schedule kept in the Nest app
+  isn't visible to Home Assistant).
+
 ## Connecting to Home Assistant
 
 The gear (top right) opens the Home Assistant sheet: an **address** and a

@@ -23,7 +23,7 @@ function family(f) {
   document.querySelector('main').appendChild(el);   // moved into its view by layoutViews()
   f.el = el; f.sum = f.sum || '';
   FAMILIES.push(f);
-  SECTIONS.push({ id: f.id, name: f.name, view: VIEW_OF[f.group], order: f.order, el: () => el, sum: () => f.sum });
+  if (!f.noSection) SECTIONS.push({ id: f.id, name: f.name, view: VIEW_OF[f.group], order: f.order, el: () => el, sum: () => f.sum });
   if (f.samples) SAMPLES.push(f.samples.bind(f));
   if (f.preview) PREVIEW.unshift(f.preview.bind(f));   // before the common answers below
   if (f.mount) f.mount(el);
