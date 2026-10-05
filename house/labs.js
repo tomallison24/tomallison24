@@ -9,7 +9,8 @@
 // into one call, Power remembers the mode, Eco shows the Eco temperatures.
 //   A · Numeral  - the room as one thin number; the targets as glass capsules
 //   B · Track    - a glass tube 50-90°: the comfort band, the room as a mark
-//   C · Control  - Control Center: tall capsules filled to each target;
+//   C · Control  - Control Center: tall capsules filled to each target, the
+//                  room a hairline in from the left at its own height;
 //                  tap the top half to raise it, the bottom half to lower it
 //   D · Drum     - iOS picker wheels, the chosen number in a glass lens;
 //                  tap a number above or below to go to it
@@ -22,7 +23,7 @@ const LAB_T = () => THERMOS.find(t => t.id === 'lr');
 const LAB_IDEAS = [
   { id: 'a', name: 'A · Numeral', note: 'The room as one thin number. The targets as glass capsules.' },
   { id: 'b', name: 'B · Track', note: 'One glass tube from 50° to 90°: the comfort band, the room as a mark.' },
-  { id: 'c', name: 'C · Control', note: 'Control Center: capsules filled to each target. Tap the top half to raise, the bottom to lower.' },
+  { id: 'c', name: 'C · Control', note: 'Control Center: capsules filled to each target, the room a hairline at the side. Tap the top half to raise, the bottom to lower.' },
   { id: 'd', name: 'D · Drum', note: 'Picker wheels, the target in a glass lens. Tap a number above or below to go to it.' },
   { id: 'e', name: 'E · Split', note: 'Two glass halves, warm and cool, the room at the seam. The half at work glows.' },
   { id: 'f', name: 'F · Ruler', note: 'The camera\'s exposure dial: the ruler slides under a fixed lens. Tap left or right of it.' },
@@ -85,8 +86,11 @@ const LAB_DRAW = {
   c(L) {
     const lo = L.r.min || 50, hi = L.r.max || 90;
     const fill = v => v == null ? 0 : Math.max(6, Math.min(100, (v - lo) / (hi - lo) * 100));
+    // The room, as a hairline at its own height on the same scale, in from one side.
+    const cur = L.r.cur, now = cur == null || L.r.offline ? ''
+      : `<i class="lab-cc-now" style="bottom:${Math.max(0, Math.min(100, (cur - lo) / (hi - lo) * 100))}%" aria-hidden="true"></i>`;
     const caps = L.sets.map(([f, label, v, rgb]) => `<div class="lab-cc${L.locked ? ' dis' : ''}" style="--c:${rgb};--f:${fill(v)}%">
-        <i class="lab-cc-fill"></i>
+        <i class="lab-cc-fill"></i>${now}
         <button class="lab-cc-up" data-a="step" data-f="${f}" data-v="1" aria-label="Raise ${label}"${L.locked || v >= L.r.max ? ' disabled' : ''}>${svg('chevUp', 18)}</button>
         <button class="lab-cc-dn" data-a="step" data-f="${f}" data-v="-1" aria-label="Lower ${label}"${L.locked || v <= L.r.min ? ' disabled' : ''}>${svg('chev', 18)}</button>
         <div class="lab-cc-v"><b>${L.n(v)}°</b><small>${label}</small></div></div>`).join('');

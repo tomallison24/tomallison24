@@ -235,8 +235,9 @@ amber, cooling blue, idle lavender, off grey):
 - **A · Numeral**: the room as one thin number; the targets as glass capsules.
 - **B · Track**: a glass tube from 50° to 90° with the comfort band, the room
   as a mark and the targets as beads; capsules below.
-- **C · Control**: Control Center capsules filled to each target; tap the top
-  half to raise it, the bottom half to lower it.
+- **C · Control**: Control Center capsules filled to each target, the room
+  as a hairline in from the left at its own height; tap the top half to
+  raise it, the bottom half to lower it.
 - **D · Drum**: picker wheels, the target in a glass lens; tap a number above
   or below to go to it.
 - **E · Split**: two glass halves, warm and cool, the room at the seam; the
