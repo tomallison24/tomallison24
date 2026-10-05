@@ -66,7 +66,9 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   hourly forecast (Open-Meteo supplies its own apparent temperature).
 - **Radar**: "Now" (the latest NWS NEXRAD radar) and then the next four hours,
   every 15 minutes, over a dark map, looping, with play/pause, a scrubber, zoom
-  buttons and a dot for the place. The four hours ahead are a forecast, not
+  buttons and a dot for the place. The controls are dark-tinted Liquid Glass; the
+  scrubber is a thin track filled in white up to a white capsule thumb, which
+  turns into a clear lens while you hold it. The four hours ahead are a forecast, not
   radar: the NWS HRRR model's simulated reflectivity (IEM's `hrrr::REFD-F…`
   tiles), marked FORECAST on the map. Those frames are numbered from the model
   run's start, which only IEM's `refd_1080.json` gives, and IEM doesn't let

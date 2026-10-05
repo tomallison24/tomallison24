@@ -214,6 +214,7 @@ site.
   `parse.js` the email reading, `sw.js` the offline shell. As in Calendar,
   the sheets are Liquid Glass floating just inside the screen's edges (the
   trip page stays a whole page, with the same rows and glass buttons), the
+  toast is the same clear glass as the sheets, the
   cards and rows (the trips, a trip's timeline, the lists) are very faint
   flat tiles, the same in every AllisonOS app, and the section bar and the
   Trips filter have a glass thumb that slides to the one chosen

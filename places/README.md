@@ -2,7 +2,8 @@
 
 Where you want to go and where you've been, as a home-screen web app, in the
 same frosted glass as the other AllisonOS apps, with the same very faint tiles
-for its lists and cards (only the search results over the map keep a blur).
+for its lists and cards (only the search results over the map keep a blur;
+the business cards on the map and the toast are the sheets' clear glass).
 
 - **Two lists**: **Want to go** and **Been**, switched at the top. Opening a
   place and tapping **Been** moves it across (with today as the day you went,
@@ -37,7 +38,7 @@ for its lists and cards (only the search results over the map keep a blur).
   to do** (museums, galleries, theatres, cinemas, attractions, zoos, bowling,
   stadiums, landmarks), teal for **Shops** (every other shop). The chips at
   the top switch each group on or off (Shops starts off, so the map isn't
-  crowded). Tap a dot for its card (type, cuisine, today's hours) with **Want
+  crowded). Tap a dot for its glass card (type, cuisine, today's hours) with **Want
   to go**, **Been** and **Directions**; once saved, its dot becomes your pin.
   Further out than streets, a note says to zoom in. They come from the
   Overpass API, a box a little larger than the screen at a time, and are kept

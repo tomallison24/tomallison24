@@ -475,6 +475,7 @@
     renderPlace();
     openSheet('placeSheet');
     slide($('plStatus'), $('plStatus').querySelector('[aria-checked="true"]'), 'plStatus', { jump: true });
+    slide($('plPrice'), $('plPrice').querySelector('[aria-checked="true"]'), 'plPrice', { jump: true });
     if (p.osm && (!p.info || Date.now() - p.info.at > 7 * DAY)) loadInfo(st.edit);
   }
   function renderPlace() {
@@ -485,6 +486,7 @@
     $('plRateField').hidden = !been;
     $('plRate').innerHTML = [1, 2, 3, 4, 5].map(n => '<button type="button" role="radio" data-r="' + n + '" aria-checked="' + (p.rating === n) + '" aria-label="' + n + (n === 1 ? ' star' : ' stars') + '" class="' + (n <= p.rating ? 'on' : '') + '">★</button>').join('');
     $('plPrice').innerHTML = [1, 2, 3, 4].map(n => '<button class="opt" type="button" role="radio" data-p="' + n + '" aria-checked="' + (p.price === n) + '">' + '$'.repeat(n) + '</button>').join('');
+    slide($('plPrice'), $('plPrice').querySelector('[aria-checked="true"]'), 'plPrice');   // redrawn: the thumb slides on from the last price (none chosen: it hides)
     $('plDateLbl').textContent = been ? 'Went on' : 'Planned for';
     const others = been ? p.visits.filter(v => v !== p.visited) : [];
     $('plDateHint').textContent = been ? (others.length ? 'Been ' + (others.length + 1) + ' times. Before that: ' + others.map(fmtDate).join(', ') + '.' : 'The day you went. Been is sorted most recent first.')

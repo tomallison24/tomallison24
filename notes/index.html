@@ -224,8 +224,10 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .prio.p1 i:nth-child(-n+1),.prio.p2 i:nth-child(-n+2),.prio.p3 i:nth-child(-n+3){background:var(--danger)}
 .flag{color:var(--flag)}
 .flag svg{fill:currentColor;width:15px;height:15px}
-.morebtn{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;font-size:13px;color:var(--muted);background:var(--fill);border:1px solid var(--hair);transition:transform .18s var(--ease)}
-.morebtn:active{transform:scale(.94)}
+/* Show N completed: the same clear glass as every button (it outranks .glass) */
+.morebtn{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;font-size:13px;color:var(--muted);
+  background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s}
+.morebtn:active{transform:scale(.94);background:var(--glass-2)}
 
 /* ---- floating capsules: sections + new, as in Mail's toolbar ---- */
 .dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
@@ -331,11 +333,11 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .tagrow .sub{font-size:12px;color:var(--faint)}
 .linkbtn{color:var(--accent);font-weight:600;font-size:14px;padding:4px 6px}
 
-/* toast */
+/* toast: the sheets' Liquid Glass (tokens below); the border stays, clear, so nothing moves */
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
   display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
-  background:var(--toast);border:1px solid var(--hair);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
-  box-shadow:0 12px 36px var(--lift-strong),inset 0 1px 0 var(--hi);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));border:1px solid transparent;-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);color:var(--text);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
 .toast span{min-width:0}
 .toast button{color:var(--accent);font-weight:600;flex:none;padding:3px 5px}
 
@@ -538,10 +540,10 @@ svg.fs{fill:currentColor}
 .rowbtn .ic svg{width:22px;height:22px}
 .tagedit .tchip button svg{stroke-width:2.2}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid)}
+  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow,.morebtn{background:var(--bar-solid)}
 }
 @media (prefers-reduced-transparency:reduce){
-  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow,.morebtn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 /* ---- switches with a sliding glass thumb ----
@@ -629,9 +631,9 @@ svg.fs{fill:currentColor}
 [aria-checked="true"] > .switch{background:var(--n-green)}
 [aria-checked="true"] > .switch::after{transform:translateX(18px)}
 .swrow:active > .switch::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet:not(.page){background:var(--bar-solid)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet:not(.page),.toast{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){
-  .lg .sheet:not(.page){background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .lg .sheet:not(.page),.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
   .chips > .slthumb{background:color-mix(in srgb,var(--accent) var(--tint-mix),var(--bar-solid));-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 </style>

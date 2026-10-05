@@ -177,7 +177,8 @@ Sheets are iOS 26 Liquid Glass, as in the Calendar: each floats just inside
 the screen's edges with a lit rim, its rows sit on those faint tiles, fields
 are lighter glass on top, ✕ closes and a blue ✓ saves, and Private and Flag
 are iOS 26 switches (the note editor stays a full page, with the same tiles
-and buttons). Every
+and buttons). The toast is the same sheet glass, and **Show N completed** the
+same clear glass as every button. Every
 one-choice switch (the Notes / Reminders bar, the reminder views, the list
 chips, a reminder's When, Priority and List) has one glass thumb that slides
 to the chosen option, from the shared `home/slide.js`.
