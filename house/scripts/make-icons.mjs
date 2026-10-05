@@ -1,10 +1,10 @@
 // Draws house/icon-512.png and house/icon-180.png in the style of the other
 // AllisonOS icons: a full-bleed diagonal gradient (light top left, deep bottom
-// right), one white glyph with a soft shadow below it. The glyph is the DG1
-// dehumidifier card's hero: a frosted glass tank with water up to a wavy line.
-// The gradient runs from the Cube's sea-glass to the Upstairs unit's mist
-// blue. Rendered at 1024 and boxed down, so edges stay smooth without any
-// image library.
+// right), one white glyph with a soft shadow below it. The glyph is a house
+// with one window lit warm - a home with the lights on - over a dusk sky
+// (lavender to indigo), the app being every device in the house now, not the
+// dehumidifiers it started with. Rendered at 1024 and boxed down, so edges
+// stay smooth without any image library.
 //
 //   node house/scripts/make-icons.mjs [output folder]
 import { deflateSync } from 'node:zlib';
@@ -35,8 +35,8 @@ function erfc(z) {
 }
 
 // --- scene ------------------------------------------------------------------
-// Gradient stops, top left to bottom right: sea-glass, teal-blue, mist indigo.
-const STOPS = [[0, [126, 214, 196]], [0.5, [52, 138, 168]], [1, [56, 74, 150]]];
+// Gradient stops, top left to bottom right: lavender, iris, deep indigo.
+const STOPS = [[0, [168, 150, 255]], [0.5, [92, 86, 214]], [1, [36, 38, 112]]];
 function sky(x, y) {
   const u = x / N - 0.2, v = y / N, t = clamp01((u * 0.6 + v) / 1.36);
   const k = t < STOPS[1][0] ? 0 : 1, [t0, c0] = STOPS[k], [t1, c1] = STOPS[k + 1];
@@ -44,33 +44,52 @@ function sky(x, y) {
   return [mix(c0[0], c1[0], f), mix(c0[1], c1[1], f), mix(c0[2], c1[2], f)];
 }
 
-// The tank: a squircle-ish rounded square, as on the card (148px, 44px radius).
-const TANK = { cx: 512, cy: 500, h: 300, r: 90 };
-const tank = (x, y) => roundedRect(x, y, TANK.cx, TANK.cy, TANK.h, TANK.h, TANK.r);
-// The water line: two periods of a gentle sine across the tank.
-const surface = x => 560 + 22 * Math.sin((x - TANK.cx + TANK.h) / (TANK.h * 2) * Math.PI * 4);
+// Signed distance to a polygon (Inigo Quilez's sdPolygon): negative inside.
+function polygon(x, y, P) {
+  let d = Infinity, s = 1;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const [ax, ay] = P[i], [bx, by] = P[j];
+    const ex = bx - ax, ey = by - ay, wx = x - ax, wy = y - ay;
+    const h = clamp01((wx * ex + wy * ey) / (ex * ex + ey * ey));
+    d = Math.min(d, Math.hypot(wx - ex * h, wy - ey * h));
+    const c1 = y >= ay, c2 = y < by, c3 = ex * wy > ey * wx;
+    if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) s = -s;
+  }
+  return s * d;
+}
+
+// The house: a pentagon (roof and walls) with its corners rounded, by
+// shrinking it and growing it back.
+const R = 46, HOUSE = [[512, 214], [796, 468], [796, 806], [228, 806], [228, 468]];
+const shrunk = HOUSE.map(([x, y]) => [x + Math.sign(512 - x) * R * (x === 512 ? 0 : 1), y + (y === 214 ? R * 1.5 : y === 806 ? -R : 0)]);
+const house = (x, y) => polygon(x, y, shrunk) - R;
+// The window: four panes, lit amber, with white glazing bars between them.
+const WIN = { cx: 512, cy: 606, h: 104, r: 26, bar: 9 };
+const win = (x, y) => roundedRect(x, y, WIN.cx, WIN.cy, WIN.h, WIN.h, WIN.r);
 
 function pixel(x, y) {
   let [r, g, b] = sky(x, y);
 
-  // The tank's shadow, soft and low, as if lit from above.
-  const sh = 0.30 * 0.5 * erfc((tank(x, y - 34)) / (40 * Math.SQRT2));
-  r = mix(r, 14, sh); g = mix(g, 40, sh); b = mix(b, 70, sh);
+  // The house's shadow, soft and low, as if lit from above.
+  const sh = 0.32 * 0.5 * erfc(house(x, y - 36) / (42 * Math.SQRT2));
+  r = mix(r, 16, sh); g = mix(g, 14, sh); b = mix(b, 60, sh);
 
-  const inside = aa(tank(x, y), 1.8);
-  if (inside > 0) {
-    // Frosted glass: a translucent white pane, brighter toward the top left.
-    const lit = clamp01(1 - ((x - 212) + (y - 200)) / 900);
-    const glass = (0.20 + 0.16 * lit) * inside;
-    r = mix(r, 255, glass); g = mix(g, 255, glass); b = mix(b, 255, glass);
-    // The water: solid white below the wavy line.
-    const water = aa(surface(x) - y, 2) * inside;
-    r = mix(r, 255, water); g = mix(g, 255, water); b = mix(b, 255, water);
+  // White walls and roof.
+  const inside = aa(house(x, y), 1.8);
+  r = mix(r, 255, inside); g = mix(g, 255, inside); b = mix(b, 255, inside);
+
+  // The lit window: warm amber, brighter at its centre, a faint glow round it.
+  const d = win(x, y);
+  const glow = inside * 0.22 * Math.exp(-Math.max(0, d) / 46);
+  r = mix(r, 255, glow); g = mix(g, 196, glow); b = mix(b, 110, glow);
+  const pane = aa(d, 1.8);
+  if (pane > 0) {
+    const c = clamp01(Math.hypot(x - WIN.cx, y - WIN.cy) / (WIN.h * 1.4));
+    let wr = 255, wg = mix(214, 160, c), wb = mix(122, 62, c);
+    const bars = aa(Math.min(Math.abs(x - WIN.cx), Math.abs(y - WIN.cy)) - WIN.bar, 1.6);
+    wr = mix(wr, 255, bars); wg = mix(wg, 255, bars); wb = mix(wb, 255, bars);
+    r = mix(r, wr, pane); g = mix(g, wg, pane); b = mix(b, wb, pane);
   }
-  // The rim: a thin bright edge round the glass.
-  const rim = aa(Math.abs(tank(x, y) + 5) - 5, 1.6) * 0.55;
-  r = mix(r, 255, rim); g = mix(g, 255, rim); b = mix(b, 255, rim);
-
   return [r, g, b];
 }
 
