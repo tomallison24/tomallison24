@@ -540,6 +540,10 @@
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.3); }
 .lab-cc-fill { position: absolute; left: 0; right: 0; bottom: 0; height: var(--f); transition: height .4s cubic-bezier(.2,.8,.2,1);
   background: linear-gradient(180deg, rgba(var(--c),0.85), rgba(var(--c),0.55)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+/* The room: a hairline from the left edge, under a quarter of the way in. */
+.lab-cc-now { position: absolute; left: 0; width: 22%; height: 1px; transform: translateY(50%) scaleY(.75); z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.55)); box-shadow: 0 0 3px rgba(0,0,0,0.25);
+  transition: bottom .4s cubic-bezier(.2,.8,.2,1); }
 .lab-cc-up, .lab-cc-dn { position: absolute; left: 0; right: 0; height: 50%; display: flex; justify-content: center; z-index: 1; color: rgba(255,255,255,0.75); }
 .lab-cc-up { top: 0; align-items: flex-start; padding-top: 10px; }
 .lab-cc-dn { bottom: 0; align-items: flex-end; padding-bottom: 10px; }
