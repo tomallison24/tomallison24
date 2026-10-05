@@ -245,8 +245,9 @@ amber, cooling blue, idle lavender, off grey):
 - **F · Ruler**: the camera's exposure dial; the ruler slides under a fixed
   lens; tap left or right of it.
 - **G · Dual**: F with Heat and Cool on one ruler, a lens each and the
-  comfort band between them, the room a dot; tap beside a lens to move it
-  that way (between the two, the space is split at the middle).
+  comfort band between them, the room a dot; drag a lens along the ruler,
+  or tap beside it to move it that way (between the two, the space is split
+  at the middle). A drag sends one change when you let go.
 
 They follow the card's rules (Auto sends Heat and Cool together, 3° apart;
 taps add up; Power remembers the mode).
