@@ -40,6 +40,7 @@ const L_ROOMS = [
 ];
 const L_HOUSE = ['light.side_lamps', 'light.floor_lamps', 'light.morocco', 'light.spotlight', 'light.living_room_fireplace_lights_socket', 'light.cocktail_main',
   'light.tv_lamps', 'light.bar_main_light_1', 'light.kitchen', 'light.kitchen_fan', 'light.master_bedroom', 'light.sofias_lamp', 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi'];
+const L_PRESETS = [[1, '1%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']];   // brightness, one tap
 const L_NAMES = { 'light.tom_lamp': "Tom's Lamp", 'light.elena_lamp': "Elena's Lamp" };
 const L_ALL = {};
 for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL[id] = { id, name, members, kind, room: r.id };
@@ -77,11 +78,15 @@ family({
       : `background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
     return `<button class="lp-badge${tWaiting(r.d, 'power') ? ' wait' : ''}" data-a="toggle" style="width:${size}px;height:${size}px;${st2}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} ${esc(r.L.name)}"${r.offline ? ' disabled' : ''}>${svg(r.on ? 'lightbulb' : 'lightbulbOff', size > 50 ? 30 : 22)}</button>`;
   },
-  pill(id) {
+  // A light's pill: name, brightness, the slider; on Favorites (\`presets\`)
+  // also the popup's brightness presets, so they're one tap from the app.
+  pill(id, presets) {
     const r = this.read(id);
     return `${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name">${esc(r.L.name)}</span><span class="lp-val">${this.readout(r)}</span></div>
-      ${r.onoff ? '' : sliderHTML('bri', r.bri, 1, 100, 1, { tint: r.pc, cls: 'thin', unit: '%', aria: r.L.name + ' brightness', dis: r.offline })}</div>`;
+      ${r.onoff ? '' : sliderHTML('bri', r.bri, 1, 100, 1, { tint: r.pc, cls: 'thin', unit: '%', aria: r.L.name + ' brightness', dis: r.offline })
+        + (presets ? this.presets(r, 'lp-chips') : '')}</div>`;
   },
+  presets(r, cls) { return chipsHTML('chip', L_PRESETS, r.on ? r.bri : null, { near: 2, dis: r.offline, cls }); },
   roomBar(R) {
     const on = R.lights.filter(([id]) => this.read(id).on).length, n = R.lights.length, folded = lfold().includes(R.id);
     const line = on ? (n === 1 ? 'On' : `${on} of ${n} on`) : n === 1 ? 'Off' : 'All off';
@@ -118,7 +123,7 @@ family({
   // sibling in its .lpw wrapper).
   paint(p, id) {
     const r = this.read(id);
-    put(p, this.pill(id));
+    put(p, this.pill(id, !!p.closest('.favs')));
     p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
     // The light comes from the bulb: brightest at the icon, fading with the
     // distance from it (about as light does, the square of it), behind the
@@ -142,7 +147,7 @@ family({
       parts: [
         ['hero', `<div class="uhero lphero">${this.halo(r, '50%')}${this.badge(r, 120)}<div class="dg-title">${r.offline ? offWord(id) : r.on ? (r.onoff ? 'On' : Math.round(r.bri) + '%') : 'Off'}</div></div>`],
         r.onoff ? null : ['bri', sliderHTML('bri', r.bri, 1, 100, 1, { label: 'BRIGHTNESS', shown: r.on ? Math.round(r.bri) + '%' : 'Off', unit: '%', tint: r.pc, dis: r.offline })
-          + chipsHTML('chip', [[1, '1%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']], r.on ? r.bri : null, { near: 2, dis: r.offline })],
+          + this.presets(r)],
         ['power', grp(swRow('toggle', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
         L.kind === 'strip' ? ['colour', lbl('COLOUR') + this.swatches(r)] : null,
         ms.length ? ['members', lbl('LIGHTS IN THIS GROUP') + `<div class="group">${memberRows}</div>`] : null,

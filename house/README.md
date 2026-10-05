@@ -119,7 +119,8 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   and runs `script.log_bug`, which adds it to `bug_log.md`.
 - **Thermostats** (Living Room and Office; the Windmill is left out, as on
   the dashboard), **Cameras** (the living room Blink and the doorbell),
-  **Lights** (All on / All off, Tom's and Elena's lamps).
+  **Lights** (All on / All off, Tom's and Elena's lamps, each with its slider
+  and the 1 / 25 / 50 / 75 / 100% presets right on the pill).
 
 These are the same cards as in their own views and change together.
 Weather, Activity, Updates and the changelog, also on the dashboard's
