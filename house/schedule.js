@@ -39,9 +39,10 @@ const hhmm = s => String(s || '').split(' - ').map(schTime).join('–');
 // When the next step starts, as "22:00", "Tue 06:30" or a date.
 function schWhen(iso) {
   const d = new Date(iso); if (isNaN(d)) return '';
-  const now = new Date(), t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // Short: "10 PM", "6:30 AM"; another day by its name ("Tue 6 PM").
+  const now = new Date(), t = d.toLocaleTimeString([], d.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' });
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
-  return days === 0 ? t : days === 1 ? 'tomorrow ' + t : days < 7 ? d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
+  return days === 0 ? t : days < 7 ? d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
 }
 // What a step does, in the thermostat's own words.
 function schAction(t, a) {
@@ -67,8 +68,8 @@ function schRead(t, id) {
   const days = (A.weekdays || []).map(w => SCH_DAYS[w] || SCH_DAY[w] || w).join(', ');
   return { id, d, A, on, slots, acts, cur, derived, next: Number.isInteger(A.next_slot) ? A.next_slot : null, when: A.next_trigger ? schWhen(A.next_trigger) : '', name, days };
 }
-// The card's line: the step under way and until when, from the schedule
-// that changes next.
+// The card's line: the next change and what it sets ("10:00 PM → 64–78°"),
+// from the schedule that changes next.
 function tSchedChip(t) {
   const list = tSchedules(t).map(id => schRead(t, id)).filter(s => s.on);
   if (!list.length) return '';
@@ -76,7 +77,8 @@ function tSchedChip(t) {
   const s = list[0];
   const now = s.cur != null ? schAction(t, s.acts[s.cur]) : '';
   const next = s.next != null ? schAction(t, s.acts[s.next]) : '';
-  const txt = now ? `${now}${s.when ? ' until ' + s.when : ''}` : next ? `Next ${next}${s.when ? ' at ' + s.when : ''}` : 'Scheduled';
+  // Just the next change: when, and what to.
+  const txt = next && s.when ? `${s.when} → ${next}` : now ? now : 'Scheduled';
   return `<span class="alert sched">${svg('timer', 13)}${txt}</span>`;
 }
 // The popup: each schedule, its steps, the one under way lit, and its switch.

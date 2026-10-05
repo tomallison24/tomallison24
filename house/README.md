@@ -75,9 +75,11 @@ the same rules:
   (`automation.hvac_sync_window_ac_with_main_thermostat` - the id says
   window/main, the registry's, not a typo): it keeps the AC 3° under the
   Office (2° at 80° and up) and turns it off with the Office.
-- **The card**: an orb with the room temperature, the 50–90° arc on its edge
-  and the target(s) as beads; what it's doing ("Heating to 70°", "Keeping
-  68–74°"); then Power and the target. Power remembers the mode it was in.
+- **The card** says as little as it can: the orb with the room temperature
+  (the 50–90° arc on its edge, the target(s) as beads), one word for what it
+  is doing (Heating, Cooling, Idle, Eco, Off), the temperature outside, the
+  next schedule change, then Power and the target. Power remembers the mode
+  it was in. The popup has the rest (mode, fan, humidity, runtime).
 - **The sky** is what the unit is doing: embers while heating, frost while
   cooling, airflow with the fan, graphite when off. Idle, each room has its
   own palette (Living Room lounge, Office focus, Windmill breeze), a touch
@@ -149,7 +151,8 @@ dashboard's comments record a quirk, the app keeps it:
   the indoor motion alert (tap to silence), the Blink cameras' latest
   stills with ACTIVE / STANDBY / OFF, how old each still is, Snapshot (Blink
   sends stills, not video; a new one takes ~8 s), motion detection, and
-  pausing it for 30 min to 4 h.
+  pausing it for 30 min to 4 h - on the Yard's card itself, as it is used
+  often, and in every camera's popup.
 - **The doorbell's live view**: Home Assistant's own way - it asks what the
   camera offers, then WebRTC (with the data channel a Nest asks for) or HLS.
   Checked against Home Assistant 2026.7.4's camera code and a stand-in in
@@ -210,8 +213,8 @@ scheduler card does. The schedules are the **Scheduler** integration's
 ha-config, so the app finds each `switch.schedule_…` that lists the
 thermostat in its `entities`.
 
-- **The card** says the step under way and until when ("68–74° until
-  10:00 PM"), from the schedule that changes next.
+- **The card** says the next change and what it sets ("10 PM → 64–78°"),
+  from the schedule that changes next.
 - **The popup** has a Schedule section: each schedule, the days it runs, every
   step with its time and what it sets, the step under way lit as **Now**, the
   next one with when it starts, and a switch to pause or resume the schedule.
