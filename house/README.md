@@ -330,6 +330,39 @@ The PIN guards against accidents, not against someone with your unlocked
 phone and the know-how to read browser storage: it does not encrypt the
 token, because the app needs the token to connect without asking each time.
 
+### Sharing with another device
+
+Locked sheet → **Share with another device** (asks for the PIN). The token
+itself never leaves the phone:
+
+1. Home Assistant makes a **new long-lived token just for this share**
+   (`Home share <time>`, good for one day at most).
+2. The app shows a random **6-digit code** with a 5-minute countdown, and
+   makes a link (`…/house/#join=…`) holding the address, that token and the
+   time it runs out, encrypted with the code (AES-GCM, key by PBKDF2-SHA-256,
+   310,000 rounds). **Send link** opens the share sheet; **Copy link** copies
+   it. Tell the person the code separately (not in the same message).
+3. On the other device, opening the link (or pasting it into **Address**)
+   shows **Join Home**: the code and a name for the device. It connects with
+   the share token, makes **its own** long-lived token
+   (`Home · <name> (<date>)`, ten years), deletes the share token, and asks
+   for its own settings PIN. On a device already connected, joining needs
+   that device's PIN.
+4. **The 5 minutes are enforced by Home Assistant**, not only by the app: at
+   0:00 the sharing phone deletes the share token if it is still there.
+   If the app was closed before then, any device signed in as you deletes
+   share tokens over 5 minutes old when it next connects, and Home
+   Assistant itself ends them after a day. Joining also refuses a link over
+   5 minutes old.
+
+Every joined device **connects as you**, with everything you can do in Home
+Assistant. Remove one in Home Assistant: your profile → Security →
+Long-lived access tokens → its `Home · …` token. On an iPhone, Safari and a
+Home Screen app keep separate storage, so add Home to the Home Screen first,
+then paste the link into Address there (the Join screen says so in Safari).
+The link points at the copy of the site it was made on (GitHub Pages or the
+Cloudflare one).
+
 ### Security
 
 - **Nothing secret is in this repository.** The address and token exist
