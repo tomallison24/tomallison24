@@ -76,26 +76,21 @@
   /* clip, not hidden: hidden would make the body its own scroller */
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
   body { background: transparent; }   /* the page's colour is html's, so the light below shows through */
-  /* ---- the light behind the glass ----
-     Glass only reads with something behind it to bend. A few wide, very soft
-     fields of colour - indigo high on the left, teal on the right, a warm
-     amber low on the left, a violet low on the right - sit behind everything
-     on the near-black, soft but clearly there,
-     and drift slowly (a minute and more a cycle), so every glass pane, pill
-     and tile carries a faint, living tint. Fixed to the screen, not the page;
-     transforms only, so it stays smooth; still for reduced motion. */
+  /* ---- behind the glass: a beach, out of focus ----
+     Glass only reads with something behind it to bend. Behind everything sits
+     a beach as a camera would see it far out of focus - a dusk sky going warm
+     at the horizon, a low sun's glow, the sea, a soft line of surf and the
+     sand - drawn (an SVG, heavily blurred), not a photo, then dimmed so it
+     stays a hint of place rather than a picture: darkest at the top where the
+     title is, lifting a little toward the sand. The surf breathes in and out
+     very slowly; still for reduced motion. Fixed to the screen, not the page. */
   .bgfx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-  .bgfx i { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
-  .bgfx i:nth-child(1) { left: -38vmax; top: -34vmax; background: radial-gradient(closest-side, rgba(110,104,255,0.46), rgba(110,104,255,0.20) 45%, rgba(110,104,255,0) 100%); animation: bg-a 70s ease-in-out infinite alternate; }
-  .bgfx i:nth-child(2) { right: -46vmax; top: 22vh; background: radial-gradient(closest-side, rgba(40,200,190,0.34), rgba(40,200,190,0.13) 45%, rgba(40,200,190,0) 100%); animation: bg-b 85s ease-in-out infinite alternate; }
-  .bgfx i:nth-child(3) { left: -30vmax; bottom: -48vmax; background: radial-gradient(closest-side, rgba(255,150,84,0.30), rgba(255,150,84,0.11) 45%, rgba(255,150,84,0) 100%); animation: bg-c 95s ease-in-out infinite alternate; }
-  .bgfx i:nth-child(4) { right: -40vmax; bottom: -40vmax; background: radial-gradient(closest-side, rgba(196,92,220,0.24), rgba(196,92,220,0.08) 45%, rgba(196,92,220,0) 100%); animation: bg-d 110s ease-in-out infinite alternate; }
-  .bgfx::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.05), rgba(255,255,255,0) 60%); }   /* a breath of light from the top */
-  @keyframes bg-a { to { transform: translate(14vmax, 10vmax) scale(1.08); } }
-  @keyframes bg-b { to { transform: translate(-12vmax, 16vmax) scale(.94); } }
-  @keyframes bg-c { to { transform: translate(18vmax, -12vmax) scale(1.06); } }
-  @keyframes bg-d { to { transform: translate(-14vmax, -18vmax) scale(1.1); } }
-  @media (prefers-reduced-motion: reduce) { .bgfx i { animation: none; } }
+  .bgfx svg { position: absolute; inset: -6%; width: 112%; height: 112%; }
+  .bgfx .surf { animation: bg-surf 14s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 50%; }
+  @keyframes bg-surf { to { transform: translateY(4%) scaleY(1.25); opacity: .75; } }
+  .bgfx::after { content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(8,9,12,0.80) 0%, rgba(8,9,12,0.66) 38%, rgba(8,9,12,0.58) 62%, rgba(8,9,12,0.66) 100%); }
+  @media (prefers-reduced-motion: reduce) { .bgfx .surf { animation: none; } }
   @supports not (overflow: clip) { html { overflow-x: hidden; } }
   html { scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }   /* what's scrolled to lands above the view picker */
   html.lock, html.lock body { overflow: hidden; }
@@ -535,7 +530,24 @@
 </style>
 </head>
 <body>
-<div class="bgfx" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<div class="bgfx" aria-hidden="true"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16233A"/><stop offset=".55" stop-color="#3B4E6E"/><stop offset=".85" stop-color="#9C8BA0"/><stop offset="1" stop-color="#E2A982"/></linearGradient>
+    <linearGradient id="bgSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E6A84"/><stop offset=".55" stop-color="#2F7B86"/><stop offset="1" stop-color="#5FA7A2"/></linearGradient>
+    <linearGradient id="bgSand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9AE8C"/><stop offset="1" stop-color="#8E7558"/></linearGradient>
+    <radialGradient id="bgSun" cx=".62" cy=".5" r=".5"><stop offset="0" stop-color="#FFD9A8" stop-opacity=".9"/><stop offset="1" stop-color="#FFD9A8" stop-opacity="0"/></radialGradient>
+    <filter id="bgBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+  <g filter="url(#bgBlur)">
+    <rect x="-10" y="-10" width="120" height="102" fill="url(#bgSky)"/>
+    <ellipse cx="62" cy="90" rx="34" ry="16" fill="url(#bgSun)"/>
+    <rect x="-10" y="88" width="120" height="58" fill="url(#bgSea)"/>
+    <rect x="-10" y="90" width="120" height="3" fill="#F3D1AE" opacity=".35"/>
+    <ellipse cx="62" cy="104" rx="10" ry="12" fill="#FFE2BC" opacity=".18"/>
+    <rect class="surf" x="-10" y="138" width="120" height="7" rx="3" fill="#EAF3EF" opacity=".55"/>
+    <rect x="-10" y="143" width="120" height="70" fill="url(#bgSand)"/>
+  </g>
+</svg></div>
 <main>
   <header class="top">
     <h1>Home</h1>

@@ -8,9 +8,9 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all, a few soft fields of colour drift
-slowly on the near-black - indigo, teal, a warm amber and a violet, soft
-but clearly there - so the glass has something to diffuse:
+all is a beach far out of focus - a dusk sky warming at the horizon, the
+sea, a slow line of surf and the sand, drawn and dimmed - so the glass has
+something to diffuse without the page losing its calm:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
