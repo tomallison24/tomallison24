@@ -292,8 +292,8 @@ the automation tiles (design D of four) and the backgrounds.
 
 The backgrounds that were tried here moved to **Settings → Customization →
 Background** (`bg.js`): a popup with **Colour** - **Temperature** (the
-default: Google Home's grey at 70°F outside, eased toward a very faint blue
-at 50°F and a faint red at 90°F, held beyond them; the weather pill's
+default: Google Home's grey at 72.5°F outside, eased toward a very faint
+blue at 60°F and a faint red at 85°F, held beyond them; the weather pill's
 reading, rechecked every 30 s and on every update), or a fixed Slate, Navy,
 Sage, Dusk, Sand, Graphite, Black -
 and **Movement** - Bubbles (the default: nine small, very faint glass

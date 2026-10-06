@@ -9,8 +9,8 @@
 //   Beach          the blurred dusk beach (an SVG in index.html)
 //   None           just the page's colour
 // Under it all, the page's own colour (house.tone). By default it follows
-// the temperature outside (Temperature): Google Home's grey at 70°F, eased
-// toward a faint blue at 50°F and a faint red at 90°F (held beyond them) -
+// the temperature outside (Temperature): Google Home's grey at 72.5°F, eased
+// toward a faint blue at 60°F and a faint red at 85°F (held beyond them) -
 // the same reading as the weather pill, rechecked every 30 s. Or a fixed one:
 //   Slate, Navy, Sage, Dusk (mauve), Sand (taupe), Graphite, Black
 // Each tone has a pale twin for light mode, which follows the phone's
@@ -52,15 +52,17 @@ const BG = {
     document.documentElement.style.setProperty('--bg', c);
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c;
   },
-  // Temperature: cold, Google Home's grey, warm - at 50, 70 and 90°F - for each mode.
+  // Temperature: cold, Google Home's grey, warm - at 60, 72.5 and 85°F - for each mode.
+  T_LO: 60, T_HI: 85,
   TEMP: { dark: ['#1A2130', '#202124', '#291E20'], lite: ['#E4EBF5', '#F1F3F4', '#F6E8E7'] },
   tempColour(f) {
-    const [cold, mid, warm] = this.TEMP[this.light ? 'lite' : 'dark'];
-    if (!Number.isFinite(f)) return mid;
-    const k = Math.max(-1, Math.min(1, (f - 70) / 20));
+    const [cold, grey, warm] = this.TEMP[this.light ? 'lite' : 'dark'];
+    if (!Number.isFinite(f)) return grey;
+    const mid = (this.T_LO + this.T_HI) / 2, half = (this.T_HI - this.T_LO) / 2;
+    const k = Math.max(-1, Math.min(1, (f - mid) / half));
     const a = k < 0 ? cold : warm, w = Math.abs(k);
     const ch = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
-    return '#' + [0, 1, 2].map(i => Math.round(ch(mid, i) + (ch(a, i) - ch(mid, i)) * w).toString(16).padStart(2, '0')).join('').toUpperCase();
+    return '#' + [0, 1, 2].map(i => Math.round(ch(grey, i) + (ch(a, i) - ch(grey, i)) * w).toString(16).padStart(2, '0')).join('').toUpperCase();
   },
   // Outside, in °F: the weather pill's reading (WXNOW, favorites.js), else Home Assistant's.
   outsideF() {
