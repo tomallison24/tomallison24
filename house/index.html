@@ -1501,6 +1501,7 @@ function render() {
   if (openId) safe('the popup', renderUnit);
   if (openTId) safe('the popup', renderThermo);
   if (openD) safe('the popup', renderDev);
+  if (typeof BG !== 'undefined') safe('the background', () => BG.paintTone());   // Temperature follows the reading outside
 }
 function renderDehums() {
   clearWaitsOnChange();
