@@ -332,7 +332,7 @@ await test('Google Sheet: a deletion syncs; a second phone set up from the link 
   await phone2.ctx.close();
 });
 
-await test('Analysis: from the drop-down under the title; stronger, weaker, new and missed', async () => {
+await test('Analysis: from the glass pill at the bottom; stronger, weaker, new and missed', async () => {
   const D = n => ymd(day(n));
   const seed = { v: 2, exercises: [], logs: [
     { id: 'a1', date: D(-10), group: 'chest', exercise: 'Barbell Bench Press', weight: 100, reps: 8, sets: 3, updated: 1 },
@@ -348,8 +348,17 @@ await test('Analysis: from the drop-down under the title; stronger, weaker, new 
   const p = an.page;
   await p.goto(BASE + '/fitness/');
   await p.waitForFunction(() => window.__fitness);
+  // The pill sits at the bottom, centred, clear of the + button.
+  const pill = await p.$eval('#vbar', e => { const r = e.getBoundingClientRect(), f = document.getElementById('fab').getBoundingClientRect(); return { pos: getComputedStyle(e).position, bottom: innerHeight - r.bottom, mid: r.left + r.width / 2, w: innerWidth, overlap: r.right > f.left }; });
+  assert.equal(pill.pos, 'fixed');
+  assert.ok(pill.bottom >= 10 && pill.bottom <= 24, 'near the bottom: ' + pill.bottom);
+  assert.ok(Math.abs(pill.mid - pill.w / 2) < 1, 'centred');
+  assert.ok(!pill.overlap, 'clear of the + button');
+  assert.ok(await p.$('#vbIcon svg'), 'the view’s icon');
   await p.click('#viewBtn');
   assert.equal(await p.getAttribute('#viewBtn', 'aria-expanded'), 'true');
+  const opens = await p.evaluate(() => document.getElementById('viewMenu').getBoundingClientRect().bottom <= document.getElementById('vbar').getBoundingClientRect().top);
+  assert.ok(opens, 'the menu opens upwards, above the pill');
   assert.deepEqual(await p.$$eval('#viewMenu [data-view]', bs => bs.map(b => [b.dataset.view, b.getAttribute('aria-selected')])), [['week', 'true'], ['analysis', 'false']]);
   assert.match(await p.textContent('#viewMenu [data-view="analysis"] small'), /Improving 2 · needs work 2/);
   await shot(p, '08-view-menu');
@@ -385,6 +394,10 @@ await test('Analysis: from the drop-down under the title; stronger, weaker, new 
   assert.equal(await p.getAttribute('[data-period="month"]', 'aria-pressed'), 'true');
   await p.click('#viewBtn'); await p.click('#viewMenu [data-view="week"]');
   assert.equal(await p.$$eval('.drow', e => e.length), 7);
+  await p.click('.drow.today');
+  await p.waitForTimeout(400);   // it fades out over a quarter of a second
+  assert.equal(await p.$eval('#vbar', e => getComputedStyle(e).opacity), '0', 'the pill hides under a popup');
+  await p.keyboard.press('Escape');
   violations.push(...(await p.evaluate(() => window.__csp || [])));
   await an.ctx.close();
   const dk = await newPage('dark', seed, { 'allison-fitness-v1-view': 'analysis' });

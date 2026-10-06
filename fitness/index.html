@@ -606,18 +606,38 @@ html.locked .dock{opacity:0;pointer-events:none}
   box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
 .lg .erow .del:active{background:var(--lgs-field)}
 
-/* ---- the view drop-down under the title: Week / Analysis (as Home's was) ---- */
-/* the header sits above the page, so the menu opens over it */
-.top{position:relative;z-index:3}
-.viewrow{position:relative;padding:0 2px;margin-top:-6px}
-.viewbtn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 4px;margin-left:-2px;border-radius:12px;font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--text);transition:background .2s}
-.viewbtn:active{background:var(--fill)}
-.viewbtn svg{width:20px;height:20px;color:var(--faint);transition:transform .25s var(--ease)}
-.viewbtn[aria-expanded="true"] svg{transform:rotate(180deg)}
-.viewmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:6;min-width:260px;padding:6px;border-radius:22px;
+/* ---- the view picker: a Liquid Glass pill at the bottom, as Home's ----
+   Centred over the home indicator, in reach of a thumb: the view's icon,
+   its name and a chevron; the menu opens upwards from it. Home's own glass:
+   a light tint, a strong blur and a bright rim, drawn a layer behind
+   (::before) so the menu's own glass still blurs the page. Hidden under a
+   popup, like the + beside it. */
+.vbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 15px);z-index:6;translate:-50% 0;
+  display:flex;align-items:center;padding:4px;border-radius:999px;transition:opacity .25s,transform .3s cubic-bezier(.2,.8,.2,1)}
+.vbar::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.56),rgba(255,255,255,.24));
+  -webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);
+  box-shadow:inset 0 0 0 .5px rgba(28,32,40,.12),inset 0 1px .5px rgba(255,255,255,.9),0 10px 26px -8px rgba(30,40,60,.28)}
+html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
+.vbar > button{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 14px 0 8px;border-radius:999px;white-space:nowrap;
+  font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text);transition:background .2s}
+.vbar > button:active{background:rgba(28,32,40,.09)}
+.vbar .vb-ic{display:flex;width:30px;height:30px;border-radius:50%;align-items:center;justify-content:center;background:rgba(28,32,40,.09);color:var(--icon)}
+.vbar .vb-ic svg{width:18px;height:18px}
+.vbar .vb-chev{display:flex;opacity:.7;margin-left:-2px;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.vbar .vb-chev svg{width:20px;height:20px;transform:rotate(180deg)}
+.vbar button[aria-expanded="true"] .vb-chev{transform:rotate(180deg)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vbar::before{background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
+    box-shadow:inset 0 0 0 .5px rgba(255,255,255,.32),inset 0 1px .5px rgba(255,255,255,.5),inset 0 -1px 1px rgba(255,255,255,.08),0 12px 30px -6px rgba(0,0,0,.6)}
+  :root:not([data-theme="light"]) .vbar > button{text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  :root:not([data-theme="light"]) .vbar > button:active,:root:not([data-theme="light"]) .vbar .vb-ic{background:rgba(255,255,255,.12)}}
+@media (prefers-reduced-transparency:reduce){.vbar::before{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.vbar::before{background:var(--bar-solid)}}
+/* its menu: the same clear glass as the sheets, opening upwards */
+.viewmenu{position:absolute;left:50%;bottom:calc(100% + 10px);translate:-50% 0;z-index:6;width:max-content;min-width:260px;padding:6px;border-radius:22px;
   background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
-  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong);transform-origin:20px 0;animation:menuIn .22s var(--ease) both}
-@keyframes menuIn{from{opacity:0;transform:scale(.92) translateY(-4px)}to{opacity:1;transform:none}}
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong);transform-origin:50% 100%;animation:menuUp .22s var(--ease) both}
+@keyframes menuUp{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}
 .viewmenu button{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:16px;text-align:left;font-size:16px;font-weight:600;color:var(--text)}
 .viewmenu button:active{background:var(--lgs-field)}
 .viewmenu button[aria-selected="true"]{background:var(--lgs-field)}
@@ -694,14 +714,15 @@ html.locked .dock{opacity:0;pointer-events:none}
           <button class="iconbtn glass" id="todayBtn" type="button" aria-label="This week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" class="fs"/></svg></button>
         </div>
       </div>
-      <!-- The view, as a drop-down under the title (as Home's was): Week or Analysis -->
-      <div class="viewrow">
-        <button class="viewbtn" id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><span id="viewName">Week</span><svg viewBox="0 0 24 24" class="b"><path d="M6 9.4l5.3 5.2a1 1 0 0 0 1.4 0L18 9.4"/></svg></button>
-        <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
-      </div>
     </header>
     <main class="list" id="main"></main>
   </section>
+
+  <!-- The view picker, at the bottom in reach of a thumb (as Home's); the menu opens upwards -->
+  <nav class="vbar" id="vbar">
+    <button id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Show a view"><span class="vb-ic" id="vbIcon"></span><span id="viewName">Week</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M6 9.4l5.3 5.2a1 1 0 0 0 1.4 0L18 9.4"/></svg></span></button>
+    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
+  </nav>
 
   <!-- DOCK: log today -->
   <div class="dock">
