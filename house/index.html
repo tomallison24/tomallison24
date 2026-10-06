@@ -76,46 +76,38 @@
   /* clip, not hidden: hidden would make the body its own scroller */
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
   @supports not (overflow: clip) { html { overflow-x: hidden; } }
-  html { scroll-padding-top: calc(env(safe-area-inset-top) + 60px); }   /* what's scrolled to lands below the glass pill */
+  html { scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }   /* what's scrolled to lands above the view picker */
   html.lock, html.lock body { overflow: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
-    padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 28px);
+    padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 92px);   /* room for the view picker at the bottom */
   }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   svg { display: block; }
   main { max-width: 520px; margin: 0 auto; }
 
-  /* ---- the glass pill: Home and the view picker, once scrolled ----
-     The title and the drop-down scroll away with the page; when they have
-     gone, a floating Liquid Glass pill takes their place at the top - Home
-     (back to the top) and the view (the same drop-down). Clear glass: a
-     light tint, a strong blur and a bright rim, so the page shows through. */
-  .vpill { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 50%; z-index: 8; display: flex; align-items: center; padding: 4px;
-    border-radius: 999px; transform: translate(-50%, -14px) scale(.96); opacity: 0; pointer-events: none;
-    transition: opacity .25s, transform .35s cubic-bezier(.2,.8,.2,1); }
-  /* the glass is a layer behind, so the drop-down's own glass (inside the
-     pill) still blurs the page rather than only the pill */
-  .vpill::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
-    -webkit-backdrop-filter: blur(16px) saturate(190%); backdrop-filter: blur(16px) saturate(190%);
-    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.32), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 10px 28px -6px rgba(0,0,0,0.5); }
-  .vpill.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-  html.lock .vpill { opacity: 0; pointer-events: none; }   /* not over an open popup */
-  .vpill > button { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+  /* ---- the view picker: a glass pill at the bottom, in reach of a thumb ----
+     Always there, centred over the home indicator: the view's icon, its name
+     and a chevron; the menu opens upwards from it. Clear glass: a light tint,
+     a strong blur and a bright rim, the glass a layer behind (::before) so
+     the menu's own glass still blurs the page. Hidden under a popup. */
+  .vbar { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 8; translate: -50% 0;
+    display: flex; align-items: center; padding: 4px; border-radius: 999px; transition: opacity .25s, transform .3s cubic-bezier(.2,.8,.2,1); }
+  .vbar::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    -webkit-backdrop-filter: blur(18px) saturate(190%); backdrop-filter: blur(18px) saturate(190%);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.32), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 12px 30px -6px rgba(0,0,0,0.6); }
+  html.lock .vbar { opacity: 0; transform: translateY(12px); pointer-events: none; }   /* not over an open popup */
+  .vbar > button { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 14px 0 12px; border-radius: 999px; white-space: nowrap;
     font-size: 16px; font-weight: 700; letter-spacing: -0.2px; text-shadow: 0 1px 8px rgba(0,0,0,0.45); transition: background .2s; }
-  .vpill > button:active { background: rgba(255,255,255,0.12); }
-  .vpill .vp-home { color: rgba(255,255,255,0.62); }
-  .vpill .vp-sep { width: 0.5px; height: 18px; background: rgba(255,255,255,0.3); }
-  .vpill .vp-view { padding-right: 8px; }
-  .vpill .vp-view svg { opacity: .7; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-  .vpill .vp-view[aria-expanded="true"] svg { transform: rotate(180deg); }
-  .vpill .viewmenu { left: 0; top: calc(100% + 8px); width: max-content; }
-  /* the status bar keeps clear of what scrolls under it */
-  body::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: calc(env(safe-area-inset-top) + 6px); z-index: 7; pointer-events: none;
-    background: linear-gradient(180deg, var(--bg) 55%, rgba(10,10,12,0)); }
-  @media (prefers-reduced-transparency: reduce) { .vpill::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  .vbar > button:active { background: rgba(255,255,255,0.12); }
+  .vbar .vb-ic { display: flex; width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); }
+  .vbar .vb-chev { display: flex; opacity: .7; margin-left: -2px; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .vbar button[aria-expanded="true"] .vb-chev { transform: rotate(180deg); }
+  .vbar .viewmenu { top: auto; bottom: calc(100% + 10px); left: 50%; translate: -50% 0; width: max-content; transform-origin: 50% 100%; animation-name: menu-up; }
+  @keyframes menu-up { from { opacity: 0; transform: scale(.92) translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-transparency: reduce) { .vbar::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* ---- top bar ---- */
   .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 4px 14px; }
   .top h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
@@ -159,11 +151,6 @@
 
   /* ---- the view drop-down: Dehumidifiers / Thermostats ---- */
   .sec { position: relative; }
-  .viewbtn { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 0 -2px; padding: 2px 4px; border-radius: 10px; transition: background .2s; }
-  .viewbtn:active { background: rgba(255,255,255,0.08); }
-  .viewbtn h2 { pointer-events: none; }
-  .viewbtn svg { opacity: .7; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-  .viewbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
   .viewmenu {
     position: absolute; left: -4px; top: calc(100% + 6px); z-index: 5; min-width: 250px; padding: 6px; border-radius: 22px;
     background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom)); backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
@@ -432,7 +419,7 @@
 
   /* ---- toast ---- */
   .toast {
-    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 20; width: max-content; max-width: min(92vw, 480px);
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 70px); z-index: 20;   /* above the view picker */ width: max-content; max-width: min(92vw, 480px);
     transform: translate(-50%, calc(100% + 40px + env(safe-area-inset-bottom))); visibility: hidden;
     transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s linear .3s;
     padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.35; color: var(--text);
@@ -537,15 +524,14 @@
   </header>
 
   <div class="sec">
-    <button class="viewbtn" id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><h2 id="viewName">Favorites</h2></button>
+    <h2 id="viewName">Favorites</h2>
     <small id="secSum"></small>
-    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
   </div>
 
-  <!-- Once the title has scrolled away: Home and the view, in a glass pill. -->
-  <nav class="vpill" id="vpill" aria-hidden="true">
-    <button class="vp-home" id="vpHome" type="button" tabindex="-1">Home</button><i class="vp-sep"></i>
-    <button class="vp-view" id="vpView" type="button" tabindex="-1" aria-haspopup="listbox" aria-expanded="false"><span id="vpName">Favorites</span></button>
+  <!-- The view picker, at the bottom in reach of a thumb; the menu opens upwards. -->
+  <nav class="vbar" id="vbar">
+    <button id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Show a view"><span class="vb-ic" id="vbIcon"></span><span id="vbName">Favorites</span><span class="vb-chev"></span></button>
+    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
   </nav>
 
   <div class="banner" id="banner" hidden>
@@ -1966,27 +1952,14 @@ let shownView = null;
 function renderViewHead() {
   const v = VIEWS.find(x => x.id === curView);
   if (shownView !== curView) { const from = shownView; shownView = curView; if (from) window.dispatchEvent(new CustomEvent('viewchange', { detail: { from, to: curView } })); }
-  $('viewName').textContent = v.name; $('vpName').textContent = v.name;
-  if (!$('viewBtn').querySelector('svg')) $('viewBtn').insertAdjacentHTML('beforeend', svg('chev', 22));
-  if (!$('vpView').querySelector('svg')) $('vpView').insertAdjacentHTML('beforeend', svg('chev', 20));
+  $('viewName').textContent = v.name; $('vbName').textContent = v.name;
+  if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = svg(v.icon, 18); }
+  if (!$('viewBtn').querySelector('.vb-chev svg')) $('viewBtn').querySelector('.vb-chev').innerHTML = svg('chev', 20).replace('<svg', '<svg style="transform:rotate(180deg)"');
   $('secSum').textContent = viewSum(v);
   for (const x of VIEWS) { const box = $('g-' + x.id); if (box) box.hidden = x.id !== curView; }
   for (const x of SECTIONS) { const h = document.querySelector(`.vsec[data-sec="${x.id}"] .vsec-h small`); if (h) h.textContent = x.sum(); }
   if (!$('viewMenu').hidden) drawViewMenu();
 }
-// The glass pill shows once the drop-down has scrolled out of sight.
-function showPill() {
-  const p = $('vpill'), on = $('viewBtn').getBoundingClientRect().bottom < 4;
-  if (on === p.classList.contains('on')) return;
-  p.classList.toggle('on', on); p.setAttribute('aria-hidden', String(!on));
-  p.querySelectorAll('button').forEach(b => b.tabIndex = on ? 0 : -1);
-  if (!on && $('viewMenu').parentElement === p) closeViewMenu();
-}
-window.addEventListener('scroll', showPill, { passive: true });
-window.addEventListener('resize', showPill, { passive: true });
-showPill();
-$('vpHome').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-$('vpView').addEventListener('click', e => openViewMenu(e, $('vpView'), $('vpill')));
 function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
 // A view with nothing in it (Labs between ideas) is left out of the menu.
 const viewShown = v => { const box = $('g-' + v.id); return !box || box.children.length > 0; };
@@ -1994,26 +1967,20 @@ function drawViewMenu() {
   put($('viewMenu'), VIEWS.filter(viewShown).map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
       <span class="ic">${svg(v.icon, 20)}</span><span class="k">${v.name}<small>${esc(viewSum(v))}</small></span><span class="tick">${svg('check', 20)}</span></button>`).join(''));
 }
-function closeViewMenu() { $('viewMenu').hidden = true; for (const b of [$('viewBtn'), $('vpView')]) b.setAttribute('aria-expanded', 'false'); }
-// One menu, opened under whichever button was tapped: the title's or the pill's.
-function openViewMenu(e, btn, home) {
+function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
+$('viewBtn').addEventListener('click', e => {
   e.stopPropagation();
   const m = $('viewMenu');
-  if (!m.hidden && m.parentElement === home) return closeViewMenu();
-  closeViewMenu();
-  if (m.parentElement !== home) home.appendChild(m);
-  drawViewMenu(); m.hidden = false; btn.setAttribute('aria-expanded', 'true');
-  const sel = m.querySelector('[aria-selected="true"]');
-  if (sel) m.scrollTop = sel.offsetTop - m.clientHeight / 2 + sel.offsetHeight / 2;
-}
-$('viewBtn').addEventListener('click', e => openViewMenu(e, $('viewBtn'), $('viewBtn').parentElement));
+  if (!m.hidden) return closeViewMenu();
+  drawViewMenu(); m.hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true');
+});
 $('viewMenu').addEventListener('click', e => {
   const b = e.target.closest('[data-view]'); if (!b) return;
   curView = b.dataset.view;
   closeViewMenu(); renderViewHead();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
-document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn, #vpView')) closeViewMenu(); });
+document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
 
 let toastTimer;
 function toast(msg) {

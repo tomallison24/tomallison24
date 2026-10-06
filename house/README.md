@@ -5,10 +5,9 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` is the AllisonOS
 launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It has every device on the Signal
-dashboard in six views, picked from the drop-down under the
-title. Once they have scrolled away, a floating Liquid Glass pill takes
-their place at the top: **Home** (back to the top) and the view (the same
-drop-down):
+dashboard in six views, picked from a floating Liquid Glass pill at the
+bottom of the screen, in reach of a thumb (the view's icon and name; the
+menu opens upwards). The view's name is the title at the top:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -215,7 +214,8 @@ Scripts that wait (Snapshot, the motion pause, Hand off) are started with
 
 ## Energy
 
-Each view with estimated devices starts with a strip: their power **now**,
+Each view with estimated devices starts with a round Liquid Glass pill (the
+bolt's gold glowing faintly through it): their power **now**,
 **today** and **this month** (with the month's cost at $0.13/kWh), from Home
 Assistant's own totals - the house on Favorites, climate plus fans &
 dehumidifiers on Climate, lighting on Lights, the TV on Media. Tap it for
