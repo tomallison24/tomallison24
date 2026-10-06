@@ -23,10 +23,17 @@ sit behind the glass in Mail and News.
   every app loads it, and it stays quiet in an app opened from its own icon.
   The phone's own swipe, from the very edge, still goes to the phone's home
   screen.
-- **Welcome (in design):** `welcome.js` is the welcome that will play once,
-  the first time anyone opens an AllisonOS app on a device: a brand moment,
-  then a four-card tour. Three designs are in `welcome-lab.html` to choose
-  from (A Glass bloom, B Constellation, C Quiet type); no app loads it yet.
+- **Welcome**: the first time anyone opens an AllisonOS app on a device -
+  any of them, once overall - `welcome.js` plays the welcome (design C,
+  Quiet type, chosen in `welcome-lab.html`): "AllisonOS" drawn on in soft
+  pastels (sky, lilac, rose, peach, mint) over a hairline, then "Welcome" and
+  "Part of the Allison Corporation"; then a four-card tour on one glass
+  panel (everything in one place, swipe up to come home, looks like your
+  phone, yours alone). Skip ends it; it is remembered in `aos.welcomed`,
+  which every app on the site shares. Every app loads it as
+  `<script src="../home/welcome.js" data-auto defer>`. On iPhone, an app
+  added to the Home Screen on its own keeps its own storage, so it plays
+  once there too. `welcome-lab.html` replays it.
 - **No build step, no server, no accounts.** `index.html` is the whole app
   and `sw.js` keeps it working offline. The order, dock, use counts and
   theme are kept in `localStorage`.
