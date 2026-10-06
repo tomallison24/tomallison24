@@ -363,6 +363,23 @@ then paste the link into Address there (the Join screen says so in Safari).
 The link points at the copy of the site it was made on (GitHub Pages or the
 Cloudflare one).
 
+### Devices with access, and alerts
+
+Locked sheet → **Devices with access** (asks for the PIN) lists everything
+that can get into Home Assistant as you (`auth/refresh_tokens`), newest
+first: devices that joined by a share link (`Home · <name>`), share links
+still in flight, other long-lived tokens, and sign-ins from the Home
+Assistant app or a browser. **Remove** (two taps) deletes one and it stops
+working at once; this device's own is marked and left to Disconnect.
+
+Alerts come from Home Assistant, not the app (ha-config: `access_watch.py`,
+`sensor.home_access`, automation `security_new_access`). Once a minute HA
+reads its own login store (`.storage/auth`) - names, ids, kinds and times,
+never the token values - and pushes to Tom's and Elena's iPhones and the
+Pixel Tablet whenever a new one appears. Because it reads HA's store rather
+than anything the app reports, it also catches a token used by hand by
+someone who got a link and its code.
+
 ### Security
 
 - **Nothing secret is in this repository.** The address and token exist
