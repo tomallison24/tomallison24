@@ -4,7 +4,8 @@
 // sections and Recent, a hold timed in seconds, an exercise typed in under
 // "Other…", editing and deleting (with Undo), moving between weeks,
 // Calendar's week start and ?date= link, Calendar showing the workouts as a
-// layer, Google Sheet sync end to end (the real google-sheet-sync.gs,
+// layer, the Analysis view (the drop-down under the title, Week and Month,
+// stronger / weaker / new, muscle groups missed), Google Sheet sync end to end (the real google-sheet-sync.gs,
 // running on fake-sheet.mjs) including a second phone set up from the
 // setup link, dark mode, and that nothing trips the page's Content
 // Security Policy. Screenshots go to the folder given as the second argument.
@@ -97,7 +98,8 @@ await test('the week shows seven days from Monday, today marked', async () => {
   assert.equal(days.length, 7);
   assert.equal(days[0], weekStart(false));
   assert.equal(await page.$eval('.drow.today', e => e.dataset.day), TODAY);
-  assert.equal((await page.textContent('#titleSub')).trim(), 'This week');
+  assert.match(await page.textContent('.navrow .lbl'), /^This week · /);
+  assert.equal(await page.textContent('#viewName'), 'Week');
   assert.ok(await page.isHidden('#todayBtn'), 'no "this week" button on this week');
   await shot(page, '01-week');
 });
@@ -328,6 +330,76 @@ await test('Google Sheet: a deletion syncs; a second phone set up from the link 
   assert.deepEqual((await stored(phone2.page)).exercises.map(x => x.name), ['Reverse hyper'], 'your typed-in exercises come across too');
   violations.push(...(await phone2.page.evaluate(() => window.__csp || [])));
   await phone2.ctx.close();
+});
+
+await test('Analysis: from the drop-down under the title; stronger, weaker, new and missed', async () => {
+  const D = n => ymd(day(n));
+  const seed = { v: 2, exercises: [], logs: [
+    { id: 'a1', date: D(-10), group: 'chest', exercise: 'Barbell Bench Press', weight: 100, reps: 8, sets: 3, updated: 1 },
+    { id: 'a2', date: D(-10), group: 'legs', exercise: 'Barbell Back Squat', weight: 155, reps: 5, sets: 4, updated: 2 },
+    { id: 'a3', date: D(-10), group: 'back', exercise: 'Pull-Up', weight: 0, reps: 8, sets: 3, updated: 3 },
+    { id: 'a4', date: D(-40), group: 'shoulders', exercise: 'Lateral Raise', weight: 20, reps: 12, sets: 3, updated: 4 },
+    { id: 'a5', date: D(-2), group: 'chest', exercise: 'Barbell Bench Press', weight: 110, reps: 6, sets: 3, updated: 5 },
+    { id: 'a6', date: D(-2), group: 'back', exercise: 'Pull-Up', weight: 0, reps: 10, sets: 3, updated: 6 },
+    { id: 'a7', date: D(-3), group: 'shoulders', exercise: 'Lateral Raise', weight: 15, reps: 12, sets: 3, updated: 7 },
+    { id: 'a8', date: D(-3), group: 'arms', exercise: 'Dumbbell Curl', weight: 30, reps: 10, sets: 3, updated: 8 },
+  ] };
+  const an = await newPage('light', seed);
+  const p = an.page;
+  await p.goto(BASE + '/fitness/');
+  await p.waitForFunction(() => window.__fitness);
+  await p.click('#viewBtn');
+  assert.equal(await p.getAttribute('#viewBtn', 'aria-expanded'), 'true');
+  assert.deepEqual(await p.$$eval('#viewMenu [data-view]', bs => bs.map(b => [b.dataset.view, b.getAttribute('aria-selected')])), [['week', 'true'], ['analysis', 'false']]);
+  assert.match(await p.textContent('#viewMenu [data-view="analysis"] small'), /Improving 2 · needs work 2/);
+  await shot(p, '08-view-menu');
+  await p.click('#viewMenu [data-view="analysis"]');
+  assert.ok(await p.isHidden('#viewMenu'));
+  assert.equal(await p.textContent('#viewName'), 'Analysis');
+  assert.ok(await p.isHidden('#todayBtn'));
+  // Totals: 2 days and 12 sets in the last 7, against 1 day and 10 sets before.
+  const kpis = await p.$$eval('.kpi', ks => ks.map(k => k.textContent));
+  assert.match(kpis[0], /Days trained2↑ \+1$/);
+  assert.match(kpis[1], /Sets12↑ \+2$/);
+  assert.match(kpis[2], /Volume \(lb\)3,420↓ −2\.1K$/);
+  assert.match(await p.getAttribute('.kpi:nth-child(3)', 'aria-label'), /down 2,080, 38% on the 7 before/);
+  const up = await p.$$eval('#anUp .xrow:not(.quiet)', rs => rs.map(r => r.textContent));
+  assert.equal(up.length, 2);
+  assert.match(up[0], /Pull-Up10 reps · was 8 reps25%/);
+  assert.match(up[1], /Barbell Bench Press110 lb × 6 · was 100 lb × 84%/);
+  assert.match(await p.textContent('#anUp .quiet'), /New\s*Dumbbell Curl/);
+  const work = await p.$$eval('#anWork .xrow', rs => rs.map(r => r.textContent));
+  assert.match(work[0], /Lateral Raise15 lb × 12 · was 20 lb × 12 on .+25%/);
+  assert.match(work[1], /LegsNot trained in the last 7 days \(4 sets in the 7 before\)/);
+  assert.equal(await p.$eval('.gbar[data-g="legs"] .gv', e => e.textContent), '0 −4');
+  assert.ok(await p.$('.seg > .slthumb'), 'the Week / Month switch has its sliding thumb');
+  await shot(p, '09-analysis-week');
+  // Month: the four weeks before hold the old lateral raise, so the bench is new.
+  await p.click('[data-period="month"]');
+  assert.match(await p.textContent('#anUp .quiet'), /New\s*(.*Barbell Bench Press)/);
+  assert.match(await p.textContent('#anWork'), /Lateral Raise.*was 20 lb × 12/);
+  assert.ok(!/ on /.test(await p.textContent('#anWork .xrow')), 'compared within the window before, so no date');
+  // The view and the reading are remembered.
+  await p.reload(); await p.waitForFunction(() => window.__fitness);
+  assert.equal(await p.textContent('#viewName'), 'Analysis');
+  assert.equal(await p.getAttribute('[data-period="month"]', 'aria-pressed'), 'true');
+  await p.click('#viewBtn'); await p.click('#viewMenu [data-view="week"]');
+  assert.equal(await p.$$eval('.drow', e => e.length), 7);
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await an.ctx.close();
+  const dk = await newPage('dark', seed, { 'allison-fitness-v1-view': 'analysis' });
+  await dk.page.goto(BASE + '/fitness/'); await dk.page.waitForFunction(() => window.__fitness); await dk.page.waitForTimeout(500);
+  await shot(dk.page, '10-analysis-dark');
+  if (SHOTS) await dk.page.screenshot({ path: path.join(SHOTS, '11-analysis-dark-full.png'), fullPage: true });
+  violations.push(...(await dk.page.evaluate(() => window.__csp || [])));
+  await dk.ctx.close();
+});
+
+await test('Analysis with nothing logged says so', async () => {
+  const e = await newPage('light', { v: 2, logs: [], exercises: [] }, { 'allison-fitness-v1-view': 'analysis' });
+  await e.page.goto(BASE + '/fitness/'); await e.page.waitForFunction(() => window.__fitness);
+  assert.match(await e.page.textContent('#main'), /Nothing to compare yet/);
+  await e.ctx.close();
 });
 
 await test('dark mode renders', async () => {

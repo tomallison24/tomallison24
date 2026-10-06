@@ -27,6 +27,48 @@ each day what you did.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
+- **Analysis**: switch to it with the drop-down under the title (**Week ⌄**),
+  as Home's views used to work. See below.
+
+## Analysis
+
+Analysis compares two windows of the same length, both ending today:
+
+- **Week**: the last 7 days against the 7 before.
+- **Month**: the last 4 weeks against the 4 weeks before. Using whole weeks
+  means each window has the same weekdays.
+
+The dates of both windows are shown under the switch. The page shows:
+
+- **Totals**: days trained, sets, and volume (weight × reps × sets, for
+  exercises done with a weight). Each has its change against the window
+  before, shown as an arrow and a signed number.
+- **Improving**: exercises you did better than before, biggest gain first,
+  with today's best and what it was before. **New** lists exercises done for
+  the first time.
+- **Needs work**: exercises that went backwards, plus muscle groups that
+  slipped. A group "slipped" if you trained it in the window before but not
+  in this one, or did under 70% of its sets (from at least 3).
+  **Holding steady** lists the exercises within 1% of before.
+- **Sets by muscle group**: a bar per group, with the change against the
+  window before.
+
+**How an exercise is judged.** Its best entry in this window is compared
+with its best in the window before. If you didn't do it in the window
+before, it is compared with the last time you did it, and that date is
+shown.
+
+| Kind of exercise | Measured by |
+|---|---|
+| With a weight | Estimated one-rep max, weight × (1 + reps ÷ 30) (the Epley formula), so 110 lb × 6 counts as stronger than 100 lb × 8 |
+| Bodyweight | Reps |
+| A hold | Seconds |
+
+A change of 1% or less either way counts as steady. A bodyweight entry and a
+weighted entry of the same exercise aren't compared with each other.
+
+The sums are in `analysis.js`, separate from the page, so they can be tested
+on their own.
 
 ## The exercises
 
@@ -74,8 +116,8 @@ iPhone, it keeps separate storage, and Calendar can't see its log.
 
 **No build step.** `index.html` is the page and its look: Notes' style block,
 unchanged, plus Fitness's own pieces at the end. The day sheet is the same
-Liquid Glass sheet as Calendar's. `app.js` is the app, and `sw.js` is the
-offline shell.
+Liquid Glass sheet as Calendar's. `app.js` is the app, `analysis.js` does
+Analysis's comparisons, and `sw.js` is the offline shell.
 
 - **Security**: a strict Content Security Policy (no inline script), and the
   app refuses to run inside another page's frame.
@@ -142,8 +184,9 @@ through slate to ink.
 ## Tests
 
 ```sh
+node fitness/scripts/analysis-test.mjs                           # Analysis's sums: the windows, totals, stronger / weaker / steady, groups missed
 node fitness/scripts/sheet-test.mjs                              # google-sheet-sync.gs on an in-memory Sheet: secret, merge, deletions, the Workouts tab
-node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, a timed hold, editing, deleting, Calendar's layer, Sheet sync end to end, dark mode, the CSP
+node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps
