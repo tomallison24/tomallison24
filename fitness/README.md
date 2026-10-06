@@ -10,7 +10,19 @@ each day what you did.
   comes back to this week. Under it, the week's totals: days trained,
   exercises and sets.
 - **A day**: tap it and its sheet opens. At the top is what you logged that
-  day. Under that is the form, which you fill in from the top down:
+  day. Under that, two ways to add an exercise.
+- **Search** (quickest): type in the bar to search every exercise in every
+  group, plus your own. Tapping a result (or pressing Enter for the first
+  one) picks its muscle group and the exercise, and fills in last time's
+  numbers, so you only check the weight, reps and sets.
+  - Each word you type must start a word of the name or its group, in any
+    order. So "db curl" finds Dumbbell Curl, and "press shoulder" finds
+    every shoulder press.
+  - Short forms work: db, bb, ez, ohp and rdl.
+  - Exercises you've done come first, showing what you did last time.
+  - If nothing matches, **Add "…"** makes it one of your own; you then pick
+    its muscle group.
+- **Step by step**, filling in the form from the top down:
   1. **Muscle group**: Chest, Back, Lower back, Shoulders, Arms, Core, Legs
      or Glutes.
   2. **Exercise**: a dropdown of that group's exercises (see below). The
@@ -187,7 +199,7 @@ through slate to ink.
 ```sh
 node fitness/scripts/analysis-test.mjs                           # Analysis's sums: the windows, totals, stronger / weaker / steady, groups missed
 node fitness/scripts/sheet-test.mjs                              # google-sheet-sync.gs on an in-memory Sheet: secret, merge, deletions, the Workouts tab
-node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP
+node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, search, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps

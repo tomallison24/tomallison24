@@ -1,7 +1,7 @@
 // Drives the Fitness app in headless Chromium at iPhone size: the week, a
 // day's sheet, adding an exercise through the muscle group, exercise and
 // weight / reps / sets pickers, last time's numbers filling in, the lists'
-// sections and Recent, a hold timed in seconds, an exercise typed in under
+// sections and Recent, searching every exercise from one bar, a hold timed in seconds, an exercise typed in under
 // "Other…", editing and deleting (with Undo), moving between weeks,
 // Calendar's week start and ?date= link, Calendar showing the workouts as a
 // layer, the Analysis view (the drop-down under the title, Week and Month,
@@ -408,6 +408,71 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   if (SHOTS) await dk.page.screenshot({ path: path.join(SHOTS, '11-analysis-dark-full.png'), fullPage: true });
   violations.push(...(await dk.page.evaluate(() => window.__csp || [])));
   await dk.ctx.close();
+});
+
+await test('Search: every exercise from one bar; picking one fills in the group, the exercise and last time', async () => {
+  const seed = { v: 2, exercises: [{ id: 'm1', group: 'core', name: 'Pallof Press', updated: 1 }], logs: [
+    { id: 's1', date: ymd(day(-3)), group: 'legs', exercise: 'Leg Curl', weight: 70, reps: 12, sets: 3, updated: 1 },
+  ] };
+  const se = await newPage('light', seed);
+  const p = se.page;
+  await p.goto(BASE + '/fitness/');
+  await p.waitForFunction(() => window.__fitness);
+  await p.click('.drow.today');
+  assert.ok(await p.isVisible('#fxSearch'));
+  // Across groups: curls in Arms and in Legs; the one you've done first.
+  await p.fill('#fxSearch', 'curl');
+  const hits = await p.$$eval('#fxResults [data-pick]', bs => bs.map(b => b.dataset.pick + '|' + b.dataset.pg));
+  assert.equal(hits[0], 'Leg Curl|legs', 'done before, so first');
+  assert.ok(hits.includes('Dumbbell Curl|arms') && hits.includes('Hammer Curl|arms'));
+  assert.match(await p.textContent('#fxResults [data-pick="Leg Curl"]'), /Legs · last 3 × 12 · 70 lb/);
+  assert.equal(await p.$$eval('.opt[data-group]', e => e.length), 0, 'the groups make way for the results');
+  assert.equal(await p.$eval('#fxSearch', e => e === document.activeElement), true, 'typing carries on');
+  await shot(p, '12a-search-results');
+  // Short forms and any word order.
+  await p.fill('#fxSearch', 'db curl');
+  assert.equal(await p.$eval('#fxResults [data-pick]', b => b.dataset.pick), 'Dumbbell Curl');
+  await p.fill('#fxSearch', 'press shoulder');
+  const sh = await p.$$eval('#fxResults [data-pick]', bs => bs.map(b => b.dataset.pick));
+  assert.ok(sh.includes('Seated Dumbbell Shoulder Press') && sh.includes('Shoulder Press Machine') && sh.includes('Overhead Barbell Press'), 'the group’s name counts too: ' + sh);
+  // Your own exercises are found as well.
+  await p.fill('#fxSearch', 'pallof');
+  assert.equal(await p.$eval('#fxResults [data-pick]', b => b.dataset.pg), 'core');
+  // Picking one: group chosen, exercise chosen, last time's numbers in.
+  await p.fill('#fxSearch', 'leg cu');
+  await p.click('#fxResults [data-pick="Leg Curl"]');
+  assert.equal(await p.inputValue('#fxSearch'), '', 'the search clears');
+  assert.equal(await p.getAttribute('.opt[data-group="legs"]', 'aria-checked'), 'true');
+  assert.equal(await p.inputValue('#fxEx'), 'Leg Curl');
+  assert.equal(await p.inputValue('#fxW'), '70');
+  assert.equal(await p.inputValue('#fxR'), '12');
+  await p.click('#fxAdd');
+  assert.match(await p.textContent('#fxList'), /Leg Curl\s*Legs · 3 × 12 · 70 lb/);
+  // Enter takes the first result.
+  await p.fill('#fxSearch', 'plank');
+  await p.press('#fxSearch', 'Enter');
+  assert.equal(await p.inputValue('#fxEx'), 'Plank');
+  assert.equal(await p.textContent('label[for="fxR"]'), 'Time', 'a hold, so timed');
+  await shot(p, '12-search');
+  // Nothing found: add it as your own, then pick its group.
+  await p.fill('#fxSearch', 'Landmine Press');
+  assert.match(await p.textContent('#fxResults'), /No exercise matches “Landmine Press”/);
+  await p.click('[data-addnew]');
+  assert.match(await p.textContent('#fxPick .hint'), /Now pick the muscle group for Landmine Press/);
+  assert.equal(await p.$$eval('#fxEx', e => e.length), 0);
+  await p.click('.opt[data-group="shoulders"]');
+  assert.equal(await p.inputValue('#fxOther'), 'Landmine Press');
+  await p.selectOption('#fxW', '45');
+  await p.click('#fxAdd');
+  const d = await stored(p);
+  assert.ok(d.logs.some(x => x.exercise === 'Landmine Press' && x.group === 'shoulders' && x.weight === 45));
+  assert.ok(d.exercises.some(x => x.name === 'Landmine Press' && x.group === 'shoulders'), 'kept, so search finds it next time');
+  await p.fill('#fxSearch', 'landmine');
+  assert.equal(await p.$eval('#fxResults [data-pick]', b => b.dataset.pick), 'Landmine Press');
+  await p.fill('#fxSearch', 'landmine press');
+  assert.equal(await p.$$eval('[data-addnew]', e => e.length), 0, 'no "Add" for a name that already exists');
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await se.ctx.close();
 });
 
 await test('Analysis with nothing logged says so', async () => {
