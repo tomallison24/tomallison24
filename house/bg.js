@@ -7,10 +7,13 @@
 //   Ripples        rings opening slowly from random points, as rain on still water
 //   Aurora         two soft ribbons of light swaying across the top
 //   Beach          the blurred dusk beach (an SVG in index.html)
-//   None           the plain near-black
+//   None           just the page's colour
 // Under it all, the page's own colour: a dark, quiet tone (house.tone) -
 // Slate, a dark blue-grey as Google Home's, until another is picked:
 //   Slate, Navy, Sage, Dusk (mauve), Sand (taupe), Graphite, Black
+// Each tone has a pale twin for light mode, which follows the phone's
+// Appearance setting (and switches live with it); the drawings swap their
+// light-on-dark for faint ink on light.
 // All but Beach are drawn on one canvas at about 30 frames a second, paused
 // while the app is hidden; with reduced motion they are drawn once, still.
 'use strict';
@@ -20,25 +23,29 @@ const BG_IDEAS = [
   { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
   { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
-  { id: 'none', name: 'None', note: 'The plain near-black.' },
+  { id: 'none', name: 'None', note: 'Just the colour, nothing moving.' },
 ];
-const BG_TONES = [
-  { id: 'slate', name: 'Slate', hex: '#1A212B' }, { id: 'navy', name: 'Navy', hex: '#151C2C' }, { id: 'sage', name: 'Sage', hex: '#18221F' },
-  { id: 'dusk', name: 'Dusk', hex: '#211C27' }, { id: 'sand', name: 'Sand', hex: '#221F1B' }, { id: 'graphite', name: 'Graphite', hex: '#1C1D21' },
-  { id: 'black', name: 'Black', hex: '#0A0A0C' },
+const BG_TONES = [   // hex in dark mode, lite in light mode
+  { id: 'slate', name: 'Slate', hex: '#1A212B', lite: '#E6EBF1' }, { id: 'navy', name: 'Navy', hex: '#151C2C', lite: '#E2E8F4' },
+  { id: 'sage', name: 'Sage', hex: '#18221F', lite: '#E4EDE7' }, { id: 'dusk', name: 'Dusk', hex: '#211C27', lite: '#ECE6F0' },
+  { id: 'sand', name: 'Sand', hex: '#221F1B', lite: '#F2ECE4' }, { id: 'graphite', name: 'Graphite', hex: '#1C1D21', lite: '#E9EAED' },
+  { id: 'black', name: 'Black', hex: '#0A0A0C', lite: '#F5F5F7' },
 ];
 const BG = {
   id: null, c: null, x: null, w: 0, h: 0, dpr: 1, t0: 0, last: 0, raf: 0, s: null,
   still: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  get light() { return matchMedia('(prefers-color-scheme: light)').matches; },
+  // a colour for each mode: light-on-dark, or ink on light
+  ink(dark, lite) { return this.light ? lite : dark; },
   pick() { const v = store.get('bg'); return BG_IDEAS.some(i => i.id === v) ? v : 'bubbles'; },
   set(id) { store.set('bg', id); this.start(id); },
   tone() { const v = store.get('tone'); return BG_TONES.find(t => t.id === v) || BG_TONES[0]; },
   setTone(id) { store.set('tone', id); this.paintTone(); },
   // The page's colour, and the phone's bar over it.
   paintTone() {
-    const t = this.tone();
-    document.documentElement.style.setProperty('--bg', t.hex);
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.hex;
+    const t = this.tone(), c = this.light ? t.lite : t.hex;
+    document.documentElement.style.setProperty('--bg', c);
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c;
   },
   start(id = this.pick()) {
     this.id = id;
@@ -78,15 +85,15 @@ const BG = {
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
       if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); } if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy); }
-      const tint = ['200,220,255', '190,240,235', '230,220,255'][b.hue];
+      const tint = (this.light ? ['70,100,150', '50,125,120', '110,90,150'] : ['200,220,255', '190,240,235', '230,220,255'])[b.hue];
       // the body: brighter toward the rim, as a soap bubble
       const body = g.createRadialGradient(b.x, b.y, b.r * 0.2, b.x, b.y, b.r);
       body.addColorStop(0, `rgba(${tint},0.006)`); body.addColorStop(0.75, `rgba(${tint},0.02)`); body.addColorStop(1, `rgba(${tint},0.05)`);
       g.fillStyle = body; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.fill();
-      g.strokeStyle = `rgba(255,255,255,0.045)`; g.lineWidth = 0.75; g.stroke();
+      g.strokeStyle = this.ink('rgba(255,255,255,0.045)', 'rgba(40,60,90,0.045)'); g.lineWidth = 0.75; g.stroke();
       // a highlight up and to the left
       const hx = b.x - b.r * 0.42, hy = b.y - b.r * 0.42, hl = g.createRadialGradient(hx, hy, 0, hx, hy, b.r * 0.32);
-      hl.addColorStop(0, 'rgba(255,255,255,0.07)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+      hl.addColorStop(0, this.ink('rgba(255,255,255,0.07)', 'rgba(255,255,255,0.3)')); hl.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = hl; g.beginPath(); g.arc(hx, hy, b.r * 0.32, 0, 6.2832); g.fill();
     }
   },
@@ -99,9 +106,9 @@ const BG = {
     g.lineWidth = 0.6;
     for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
       const dx = P[i].x - P[j].x, dy = P[i].y - P[j].y, d = Math.hypot(dx, dy);
-      if (d < R) { g.strokeStyle = `rgba(200,215,255,${(0.16 * (1 - d / R)).toFixed(3)})`; g.beginPath(); g.moveTo(P[i].x, P[i].y); g.lineTo(P[j].x, P[j].y); g.stroke(); }
+      if (d < R) { g.strokeStyle = `rgba(${this.ink('200,215,255', '60,80,130')},${(0.16 * (1 - d / R)).toFixed(3)})`; g.beginPath(); g.moveTo(P[i].x, P[i].y); g.lineTo(P[j].x, P[j].y); g.stroke(); }
     }
-    g.fillStyle = 'rgba(220,230,255,0.45)';
+    g.fillStyle = this.ink('rgba(220,230,255,0.45)', 'rgba(50,65,110,0.32)');
     for (const p of P) { g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.2832); g.fill(); }
   },
   // Ripples: a new one every ~2.6 s, opening to 170 px over 9 s.
@@ -115,7 +122,7 @@ const BG = {
       for (const off of [0, 0.18, 0.36]) {
         const kk = k - off; if (kk <= 0) continue;
         const rad = 170 * Math.sqrt(kk), a = 0.16 * (1 - kk) * (1 - off);
-        g.strokeStyle = `rgba(200,225,255,${a.toFixed(3)})`; g.lineWidth = 1;
+        g.strokeStyle = `rgba(${this.ink('200,225,255', '60,90,140')},${a.toFixed(3)})`; g.lineWidth = 1;
         g.beginPath(); g.ellipse(r.x, r.y, rad, rad * 0.62, 0, 0, 6.2832); g.stroke();
       }
     }
@@ -124,7 +131,9 @@ const BG = {
   // of thin strokes whose brightness falls off away from its middle, so it
   // has no edge (a canvas blur filter isn't on every iPhone).
   aurora(g, W, H, time) {
-    g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.lineWidth = 12;
+    // light added to light in dark mode; on a pale page, a soft wash of colour
+    g.globalCompositeOperation = this.light ? 'source-over' : 'lighter'; g.lineCap = 'round'; g.lineWidth = 12;
+    const L = this.light;
     const ribbon = (y0, amp, len, sp, ph, rgb, a) => {
       for (let k = -12; k <= 12; k++) {
         const off = k * 4.5, fall = Math.exp(-(k * k) / 32);
@@ -136,14 +145,17 @@ const BG = {
         g.strokeStyle = `rgba(${rgb},${(a * fall).toFixed(4)})`; g.stroke();
       }
     };
-    ribbon(H * 0.17, H * 0.05, W * 0.55, 0.12, 0, '110,220,200', 0.045);
-    ribbon(H * 0.27, H * 0.06, W * 0.7, -0.09, 2, '140,160,255', 0.04);
+    ribbon(H * 0.17, H * 0.05, W * 0.55, 0.12, 0, L ? '40,170,150' : '110,220,200', L ? 0.035 : 0.045);
+    ribbon(H * 0.27, H * 0.06, W * 0.7, -0.09, 2, L ? '90,110,230' : '140,160,255', L ? 0.03 : 0.04);
     g.globalCompositeOperation = 'source-over';
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
 BG.paintTone();
 BG.start();
+// The phone switched between light and dark: the colour, and a still drawing redrawn.
+BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its listener lives as long as the page
+BG.scheme.addEventListener('change', () => { BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.
@@ -157,7 +169,7 @@ const BG_FAM = family({
       title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
       fx: '',
       parts: [
-        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${t.hex}">
+        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.light ? t.lite : t.hex}">
             <i></i><span>${t.name}</span></button>`).join('')}</div>`],
         ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
             <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],

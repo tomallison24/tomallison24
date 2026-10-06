@@ -8,12 +8,22 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all, the page is a dark, quiet tone - Slate, a blue-grey as Google Home's,
+all, the page is a quiet tone (dark, or pale in light mode) - Slate, a blue-grey as Google Home's,
 by default - with something slow moving behind the glass, small faint
 Bubbles by default (`bg.js`; both picked in **Settings → Customization →
 Background** and kept on the phone). Every card is as clear as the energy
 tiles: the faint tile over the background, a hairline edge, and its own
-colour only as a light tint:
+colour only as a light tint.
+
+**Light and dark** follow the phone (Settings → Display & Brightness), and
+switch live with it. Light mode is the same designs with the ink flipped:
+dark text on a pale twin of the picked colour, frosted white glass instead of
+smoked, the card and popup skies in their own hue but light, the moving
+backgrounds as faint ink. Camera pictures keep their white labels. Most of
+the light rules are generated from the dark ones by `tools/lightgen.py`
+(between the `LIGHT-BEGIN`/`LIGHT-END` markers in `index.html` and
+`devices.css`; re-run it after changing a colour); the rest are written by
+hand just after the block in `index.html`.
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -276,7 +286,7 @@ Background** (`bg.js`): a popup with **Colour** - Slate (the default, a
 dark blue-grey as Google Home's), Navy, Sage, Dusk, Sand, Graphite, Black -
 and **Movement** - Bubbles (the default: nine small, very faint glass
 bubbles drifting and bouncing off the edges), Constellation, Ripples,
-Aurora, Beach, None. Kept on the phone; drawn on one canvas at ~30 fps,
+Aurora, Beach, None. Each colour has a pale twin for light mode. Kept on the phone; drawn on one canvas at ~30 fps,
 paused while the app is hidden, still with reduced motion.
 
 ## Connecting to Home Assistant
