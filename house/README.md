@@ -8,9 +8,9 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all, something slow moves behind the glass (`bg.js`), picked in Labs and
-kept on the phone - Bubbles (soft glass orbs drifting and bouncing off the
-edges), Constellation, Ripples, Aurora, the blurred Beach or None:
+all, the page is a dark, quiet tone - Slate, a blue-grey as Google Home's,
+by default - with something slow moving behind the glass, small faint
+Bubbles by default (`bg.js`; both picked in Labs and kept on the phone):
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -271,13 +271,17 @@ is left out of the drop-down while it has none. From here so far: the
 thermostat ruler (design G of seven) and the automation tiles (design D of
 four).
 
-Today: **backgrounds** (`bg.js`). Tap one to put it behind the whole app;
+Today: **backgrounds** (`bg.js`). **Colour** is the page's tone: Slate (the
+default, a dark blue-grey as Google Home's), Navy, Sage, Dusk (mauve), Sand
+(taupe), Graphite or Black. **Movement** is what drifts over it. Tap one to
+put it behind the whole app;
 it stays (on this phone) until another is picked. All slow, minimal and
 nearly colourless, drawn on one canvas at ~30 fps, paused while the app is
 hidden, still with reduced motion:
 
-- **Bubbles** (the default): seven soft glass orbs, brighter at the rim
-  with a highlight, drifting 5-12 px a second and bouncing off the edges.
+- **Bubbles** (the default): nine small, faint glass bubbles (14-48 px),
+  brighter at the rim with a highlight, drifting 4-10 px a second and
+  bouncing off the edges.
 - **Constellation**: faint points drifting, joined by hairlines when near.
 - **Ripples**: rings opening slowly from random points and fading.
 - **Aurora**: two soft ribbons of light swaying across the top.
