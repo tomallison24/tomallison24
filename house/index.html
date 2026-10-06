@@ -519,7 +519,8 @@
   .lockline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 14px 8px 0; }
   .lockline svg { flex: none; }
   /* Share: the code to read out, and how long it has left */
-  .sharecode { margin: 6px 0 0; text-align: center; font-size: 44px; font-weight: 300; letter-spacing: 6px; font-variant-numeric: tabular-nums; }
+  .sharecode { margin: 6px 0 0; text-align: center; font-size: 32px; font-weight: 300; letter-spacing: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 360px) { .sharecode { font-size: 26px; letter-spacing: 2px; } }   /* 10 wide characters at 32px need ~320px */
   .sharecode.gone { opacity: .35; text-decoration: line-through; }
   .sharelft { text-align: center; font-size: 14px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   .sharebtn { width: 100%; margin-top: 14px; }
@@ -724,7 +725,7 @@
         <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
       </div>
 
-      <!-- Share: a one-off link and a 6-digit code, good for 5 minutes. -->
+      <!-- Share: a one-off link and a 10-character code, good for 5 minutes. -->
       <div class="view" id="vShare" hidden>
         <div class="sharecode" id="shCode"></div>
         <div class="sharelft" id="shLeft"></div>
@@ -733,7 +734,7 @@
           <button class="btn primary" type="button" id="shSend">Send link</button>
         </div>
         <div class="status" id="shStatus"></div>
-        <p class="help">Send the link (Messages, AirDrop), then tell them the code <b>separately</b>. Both stop working after <b>5 minutes</b>. The device gets its own token, named <b>Home · its name</b>. To remove one later: Home Assistant → your profile → Security → Long-lived access tokens.</p>
+        <p class="help">Send the link (Messages, AirDrop), then tell them the code <b>separately</b>. They have <b>5 minutes</b>: keep this screen open until they've joined, so it can cancel the link at 0:00. The device gets its own token, named <b>Home · its name</b>. To remove one later: Home Assistant → your profile → Security → Long-lived access tokens.</p>
         <p class="help">It connects as you, with everything you can do.</p>
         <div class="btns"><button class="btn" type="button" id="shDone">Done</button></div>
       </div>
@@ -742,7 +743,7 @@
       <form class="view" id="vJoin" autocomplete="off" hidden>
         <p class="help" id="jnFrom"></p>
         <label class="field"><span>Code</span>
-          <input id="jnCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="6 digits" spellcheck="false"></label>
+          <input id="jnCode" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" maxlength="14" placeholder="10 letters and numbers" spellcheck="false"></label>
         <label class="field"><span>Name this device</span>
           <input id="jnName" maxlength="40" spellcheck="false"></label>
         <div class="status" id="jnStatus"></div>
@@ -2308,7 +2309,7 @@ $('haForm').addEventListener('submit', e => {
 //   1. Home Assistant makes a new long-lived token just for this share
 //      ("Home share …", good for one day at most).
 //   2. It goes in a link, encrypted (AES-GCM, key from the code by PBKDF2) with
-//      a random 6-digit code shown here, which is told to the other person
+//      a random 10-character code shown here, which is told to the other person
 //      separately. The link carries the address, that token and the time it
 //      runs out (5 minutes).
 //   3. The other device opens the link (or pastes it into Address), types the
@@ -2344,12 +2345,23 @@ const SHARE = {
   },
   // The encrypted part of a share link, or null.
   parse(text) { const m = /#join=([A-Za-z0-9_-]{40,})/.exec(String(text || '')); return m ? m[1] : null; },
-  code() { const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; return String(n).padStart(6, '0'); },
+  // The code: 10 characters from Crockford's base32 - digits and letters
+  // without I, L, O or U, so nothing reads as something else - 50 bits. Six
+  // digits were only a million guesses: anyone holding the link could try them
+  // all offline in about a minute on a gaming graphics card, PBKDF2 or not,
+  // and Home Assistant honours the token inside for a day. 2^50 at that rate
+  // is thousands of years. 32 symbols, so a random byte & 31 has no bias.
+  ABC: '0123456789ABCDEFGHJKMNPQRSTVWXYZ', LEN: 10,
+  code() { return [...crypto.getRandomValues(new Uint8Array(this.LEN))].map(b => this.ABC[b & 31]).join(''); },
+  // What was typed, as the code: any case, spaces and dashes ignored, and the
+  // look-alikes Crockford leaves out read as what they look like (O -> 0, I / L -> 1).
+  norm(typed) { return String(typed || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1').replace(/[^0-9A-Z]/g, ''); },
+  show(code) { return code.slice(0, 5) + ' ' + code.slice(5); },
 
   // ---- this phone, sharing
   async start() {
     showView('share');
-    $('shCode').textContent = '······'; $('shCode').className = 'sharecode'; $('shLeft').textContent = 'Making a link…';
+    $('shCode').textContent = '····· ·····'; $('shCode').className = 'sharecode'; $('shLeft').textContent = 'Making a link…';
     $('shStatus').className = 'status'; $('shStatus').textContent = '';
     $('shSend').disabled = $('shCopy').disabled = true;
     try {
@@ -2370,7 +2382,7 @@ const SHARE = {
   tick() {
     const c = this.cur; if (!c) return;
     const left = Math.max(0, Math.ceil((c.until - Date.now()) / 1000));
-    $('shCode').textContent = c.code.slice(0, 3) + ' ' + c.code.slice(3);
+    $('shCode').textContent = this.show(c.code);
     $('shCode').classList.toggle('gone', !left);
     $('shLeft').textContent = left ? `Expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Expired';
     $('shSend').disabled = $('shCopy').disabled = !left;
@@ -2400,7 +2412,7 @@ const SHARE = {
     const go = () => {
       this.link = link;
       showView('join');
-      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 6-digit code they told you.';
+      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 10-character code they told you.';
       $('jnCode').value = ''; $('jnStatus').className = 'status'; $('jnStatus').textContent = '';
       $('jnName').value = /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'This device';
       $('jnIos').hidden = !(navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent));
@@ -2411,8 +2423,8 @@ const SHARE = {
   },
   async join() {
     const bad = m => { $('jnStatus').className = 'status bad'; $('jnStatus').textContent = m; };
-    const code = $('jnCode').value.replace(/\D/g, ''), name = $('jnName').value.trim() || 'This device';
-    if (code.length !== 6) return bad('Enter the 6-digit code.');
+    const code = this.norm($('jnCode').value), name = $('jnName').value.trim() || 'This device';
+    if (code.length !== this.LEN) return bad('Enter the 10-character code.');
     let p;
     try { p = await this.open(this.parse(this.link), code); } catch { return bad("That code doesn't match this link."); }
     if (!p || p.v !== 1 || !p.u || !p.t) return bad('That link is damaged. Ask for a new one.');

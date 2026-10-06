@@ -346,23 +346,34 @@ itself never leaves the phone:
 
 1. Home Assistant makes a **new long-lived token just for this share**
    (`Home share <time>`, good for one day at most).
-2. The app shows a random **6-digit code** with a 5-minute countdown, and
-   makes a link (`…/house/#join=…`) holding the address, that token and the
-   time it runs out, encrypted with the code (AES-GCM, key by PBKDF2-SHA-256,
-   310,000 rounds). **Send link** opens the share sheet; **Copy link** copies
-   it. Tell the person the code separately (not in the same message).
+2. The app shows a random **10-character code** (`XXXXX XXXXX`: digits and
+   letters, without I, L, O or U) with a 5-minute countdown, and makes a link
+   (`…/house/#join=…`) holding the address, that token and the time it runs
+   out, encrypted with the code (AES-GCM, key by PBKDF2-SHA-256, 310,000
+   rounds). **Send link** opens the share sheet; **Copy link** copies it.
+   Tell the person the code separately (not in the same message). Typing it,
+   case, spaces and dashes don't matter, and O / I / L read as 0 / 1 / 1.
+   *Why 10 characters:* the code is all that locks the link, and anyone who
+   gets hold of a link can guess codes offline. Six digits were a million
+   guesses - about a minute on a gaming graphics card, even at 310,000
+   rounds. Ten base32 characters are 2^50 guesses: thousands of years.
 3. On the other device, opening the link (or pasting it into **Address**)
    shows **Join Home**: the code and a name for the device. It connects with
    the share token, makes **its own** long-lived token
    (`Home · <name> (<date>)`, ten years), deletes the share token, and asks
    for its own settings PIN. On a device already connected, joining needs
    that device's PIN.
-4. **The 5 minutes are enforced by Home Assistant**, not only by the app: at
-   0:00 the sharing phone deletes the share token if it is still there.
-   If the app was closed before then, any device signed in as you deletes
-   share tokens over 5 minutes old when it next connects, and Home
-   Assistant itself ends them after a day. Joining also refuses a link over
-   5 minutes old.
+4. **Keep the share screen open until they've joined.** At 0:00 the sharing
+   phone deletes the share token if it is still there - but only while the
+   app is on screen: iOS pauses it in the background or when the phone
+   locks. Otherwise any device signed in as you deletes share tokens over 5
+   minutes old when it next connects, and Home Assistant itself only ends
+   them after a day - so until one of those happens, a link and its code
+   still work. Home Assistant alerts both iPhones and the tablet if a share
+   token is still there after 7 minutes (ha-config,
+   `security_share_still_open`); remove it under **Devices with access**.
+   Joining refuses a link over 5 minutes old, but that check is in the app,
+   not in Home Assistant.
 
 Every joined device **connects as you**, with everything you can do in Home
 Assistant. Remove one in Home Assistant: your profile → Security →
