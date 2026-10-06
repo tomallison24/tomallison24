@@ -8,9 +8,12 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all, something slow moves behind the glass (`bg.js`), picked in Labs and
-kept on the phone - Bubbles (soft glass orbs drifting and bouncing off the
-edges), Constellation, Ripples, Aurora, the blurred Beach or None:
+all, the page is a dark, quiet tone - Slate, a blue-grey as Google Home's,
+by default - with something slow moving behind the glass, small faint
+Bubbles by default (`bg.js`; both picked in **Settings → Customization →
+Background** and kept on the phone). Every card is as clear as the energy
+tiles: the faint tile over the background, a hairline edge, and its own
+colour only as a light tint:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -80,32 +83,29 @@ the same rules:
   (`automation.hvac_sync_window_ac_with_main_thermostat` - the id says
   window/main, the registry's, not a typo): it keeps the AC 3° under the
   Office (2° at 80° and up) and turns it off with the Office.
-- **The card** says as little as it can: one line ("70° inside · Idle · 52°
-  outside"), the next schedule change, Power, and **the ruler** (Labs' design
-  G): the target(s) as glass lenses on one ruler - Heat amber, Cool blue, the
-  comfort band between them, the room a white dot - with their numbers above.
-  **Drag a lens**, or **tap beside it** (left lowers, right raises; between
-  two lenses the space is split at the middle). A drag moves in whole
-  degrees, keeps 3° between Heat and Cool, and sends one change when you let
-  go. The ruler centres on the targets and widens with them. Off and Fan
-  only have no ruler.
-- **Eco** (the Living Room and Office Nests) has its own look: a moss-green
-  sky with slow drifting motes and a green glow, and the ruler in green and
-  fixed - the Eco range as a band with thin pins at its edges, **Eco low**
-  and **Eco high** over them (one of them in Heat or Cool mode), the room a
-  dot, and a line saying where the room is ("70° inside · within Eco,
-  resting", or heating / cooling to the edge). The Eco temperatures are set
-  in the Nest app, so there is nothing to drag; **Exit Eco** goes back to
-  your own temperatures. Heating or cooling in Eco shows the ember or frost
-  sky as usual. Power
-  remembers the mode it was in. The popup has the rest (mode, fan, humidity,
-  runtime).
+- **The card** says as little as it can: its name with the room beside it
+  ("Living Room › 70° inside"), the next schedule change, Power, and **the
+  targets as the hero** (Labs' design B): each a big thin number - Heat
+  amber, Cool blue, Auto's two joined by a dash - with a soft chevron above
+  to raise it and below to lower it, its name under it, and "Idle · 52°
+  outside" beneath. Taps add up into one call; Auto keeps 3° between Heat and
+  Cool. Off and Fan only show the word. Power remembers the mode it was in.
+  The popup has the rest (mode, fan, humidity, runtime).
+- **Eco** (the Living Room and Office Nests) keeps its own view, as before
+  design B: a moss-green sky with slow drifting motes and a green glow, and
+  a ruler in green and fixed - the Eco range as a band with thin pins at its
+  edges, **Eco low** and **Eco high** over them (one of them in Heat or Cool
+  mode), the room a dot, and a line saying where the room is ("70° inside ·
+  within Eco, resting", or heating / cooling to the edge). The Eco
+  temperatures are set in the Nest app, so there is nothing to step; **Exit
+  Eco** goes back to your own temperatures. Heating or cooling in Eco shows
+  the ember or frost sky as usual.
 - **The sky** is what the unit is doing: embers while heating, frost while
   cooling, airflow with the fan, graphite when off. Idle, each room has its
   own palette (Living Room lounge, Office focus, Windmill breeze), a touch
   brighter as the sun climbs and darker after sunset (`sun.sun`).
-- **The popup** (tap a card): the room as a big number, what it is doing,
-  mode / humidity / outside (`weather.forecast_home`), the same ruler, Power,
+- **The popup** (tap a card): what it is doing, the room / mode / humidity /
+  outside (`weather.forecast_home`), the same targets (larger), Power,
   Mode, Fan, the Windmill's
   sync, and Readings (humidity or the compressor, running today from
   `sensor.*_ac_runtime_today`, outside).
@@ -267,21 +267,17 @@ thermostat in its `entities`.
 ## Labs
 
 **Labs** is a view for trying ideas live before they replace anything; it
-is left out of the drop-down while it has none. From here so far: the
-thermostat ruler (design G of seven) and the automation tiles (design D of
-four).
+is left out of the drop-down while it has none - as now. From here so far:
+the thermostat cards (design B of the second round, after G of the first),
+the automation tiles (design D of four) and the backgrounds.
 
-Today: **backgrounds** (`bg.js`). Tap one to put it behind the whole app;
-it stays (on this phone) until another is picked. All slow, minimal and
-nearly colourless, drawn on one canvas at ~30 fps, paused while the app is
-hidden, still with reduced motion:
-
-- **Bubbles** (the default): seven soft glass orbs, brighter at the rim
-  with a highlight, drifting 5-12 px a second and bouncing off the edges.
-- **Constellation**: faint points drifting, joined by hairlines when near.
-- **Ripples**: rings opening slowly from random points and fading.
-- **Aurora**: two soft ribbons of light swaying across the top.
-- **Beach**: the blurred dusk beach. **None**: the plain near-black.
+The backgrounds that were tried here moved to **Settings → Customization →
+Background** (`bg.js`): a popup with **Colour** - Slate (the default, a
+dark blue-grey as Google Home's), Navy, Sage, Dusk, Sand, Graphite, Black -
+and **Movement** - Bubbles (the default: nine small, very faint glass
+bubbles drifting and bouncing off the edges), Constellation, Ripples,
+Aurora, Beach, None. Kept on the phone; drawn on one canvas at ~30 fps,
+paused while the app is hidden, still with reduced motion.
 
 ## Connecting to Home Assistant
 

@@ -1,29 +1,45 @@
 // BACKGROUNDS: what moves behind the glass. Glass only reads with something
 // behind it to bend; these are slow, minimal and nearly colourless, so the
-// page stays calm. One is shown at a time, chosen in Labs and kept on this
-// phone (house.bg); Bubbles until another is picked.
+// page stays calm. One is shown at a time, chosen in Settings → Customization
+// and kept on this phone (house.bg); Bubbles until another is picked.
 //   Bubbles        a few soft glass orbs drifting, bouncing off the screen's edges
 //   Constellation  faint points drifting, joined by hairlines when near
 //   Ripples        rings opening slowly from random points, as rain on still water
 //   Aurora         two soft ribbons of light swaying across the top
 //   Beach          the blurred dusk beach (an SVG in index.html)
 //   None           the plain near-black
+// Under it all, the page's own colour: a dark, quiet tone (house.tone) -
+// Slate, a dark blue-grey as Google Home's, until another is picked:
+//   Slate, Navy, Sage, Dusk (mauve), Sand (taupe), Graphite, Black
 // All but Beach are drawn on one canvas at about 30 frames a second, paused
 // while the app is hidden; with reduced motion they are drawn once, still.
 'use strict';
 const BG_IDEAS = [
-  { id: 'bubbles', name: 'Bubbles', note: 'A few soft glass orbs drift slowly and bounce off the edges of the screen.' },
+  { id: 'bubbles', name: 'Bubbles', note: 'Small, very faint glass bubbles drift slowly and bounce off the edges of the screen.' },
   { id: 'stars', name: 'Constellation', note: 'Faint points drift, joined by hairlines when they come near each other.' },
   { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
   { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
   { id: 'none', name: 'None', note: 'The plain near-black.' },
 ];
+const BG_TONES = [
+  { id: 'slate', name: 'Slate', hex: '#1A212B' }, { id: 'navy', name: 'Navy', hex: '#151C2C' }, { id: 'sage', name: 'Sage', hex: '#18221F' },
+  { id: 'dusk', name: 'Dusk', hex: '#211C27' }, { id: 'sand', name: 'Sand', hex: '#221F1B' }, { id: 'graphite', name: 'Graphite', hex: '#1C1D21' },
+  { id: 'black', name: 'Black', hex: '#0A0A0C' },
+];
 const BG = {
   id: null, c: null, x: null, w: 0, h: 0, dpr: 1, t0: 0, last: 0, raf: 0, s: null,
   still: matchMedia('(prefers-reduced-motion: reduce)').matches,
   pick() { const v = store.get('bg'); return BG_IDEAS.some(i => i.id === v) ? v : 'bubbles'; },
   set(id) { store.set('bg', id); this.start(id); },
+  tone() { const v = store.get('tone'); return BG_TONES.find(t => t.id === v) || BG_TONES[0]; },
+  setTone(id) { store.set('tone', id); this.paintTone(); },
+  // The page's colour, and the phone's bar over it.
+  paintTone() {
+    const t = this.tone();
+    document.documentElement.style.setProperty('--bg', t.hex);
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.hex;
+  },
   start(id = this.pick()) {
     this.id = id;
     const box = document.querySelector('.bgfx'); box.dataset.bg = id;
@@ -54,9 +70,9 @@ const BG = {
     this[this.id](g, W, H, time, dt);
   },
 
-  // Bubbles: 7 orbs, 36-120 px, 5-12 px a second, bouncing off the edges.
+  // Bubbles: 9 small orbs, 14-48 px, 4-10 px a second, bouncing off the edges.
   bubbles(g, W, H, time, dt) {
-    if (!this.s) this.s = Array.from({ length: 7 }, (_, i) => { const r = this.rnd(36, 120), a = this.rnd(0, 6.28), v = this.rnd(5, 12);
+    if (!this.s) this.s = Array.from({ length: 9 }, (_, i) => { const r = this.rnd(14, 48), a = this.rnd(0, 6.28), v = this.rnd(4, 10);
       return { r, x: this.rnd(r, W - r), y: this.rnd(r, H - r), vx: Math.cos(a) * v, vy: Math.sin(a) * v, hue: i % 3 }; });
     for (const b of this.s) {
       b.x += b.vx * dt; b.y += b.vy * dt;
@@ -65,12 +81,12 @@ const BG = {
       const tint = ['200,220,255', '190,240,235', '230,220,255'][b.hue];
       // the body: brighter toward the rim, as a soap bubble
       const body = g.createRadialGradient(b.x, b.y, b.r * 0.2, b.x, b.y, b.r);
-      body.addColorStop(0, `rgba(${tint},0.015)`); body.addColorStop(0.75, `rgba(${tint},0.05)`); body.addColorStop(1, `rgba(${tint},0.11)`);
+      body.addColorStop(0, `rgba(${tint},0.006)`); body.addColorStop(0.75, `rgba(${tint},0.02)`); body.addColorStop(1, `rgba(${tint},0.05)`);
       g.fillStyle = body; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.fill();
-      g.strokeStyle = `rgba(255,255,255,0.10)`; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = `rgba(255,255,255,0.045)`; g.lineWidth = 0.75; g.stroke();
       // a highlight up and to the left
       const hx = b.x - b.r * 0.42, hy = b.y - b.r * 0.42, hl = g.createRadialGradient(hx, hy, 0, hx, hy, b.r * 0.32);
-      hl.addColorStop(0, 'rgba(255,255,255,0.16)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+      hl.addColorStop(0, 'rgba(255,255,255,0.07)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = hl; g.beginPath(); g.arc(hx, hy, b.r * 0.32, 0, 6.2832); g.fill();
     }
   },
@@ -126,21 +142,41 @@ const BG = {
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+BG.paintTone();
 BG.start();
 
-// Labs: the backgrounds, tried live - tapping one puts it behind the whole app.
-family({
-  id: 'labs', name: 'Backgrounds', group: 'Labs', order: 1,
-  mount(el) {
-    el.innerHTML = `<p class="tnote lab-intro">Backgrounds to try behind the glass. Tap one to use it across the app; it stays until you pick another.</p>
-      <div class="bglist" data-dv="labs:bg"></div>`;
+// Settings → Customization → Background: a popup with the colours and the
+// movements; a tap puts it behind the whole app at once.
+const BG_FAM = family({
+  id: 'custom', name: 'Customization', noSection: true,
+  label() { return BG.tone().name + ' · ' + BG_IDEAS.find(i => i.id === BG.id).name; },
+  sheet(id) {
+    if (id !== 'bg') return null;
+    const on = BG.id, tn = BG.tone();
+    return {
+      title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
+      fx: '',
+      parts: [
+        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${t.hex}">
+            <i></i><span>${t.name}</span></button>`).join('')}</div>`],
+        ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
+            <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],
+        ['note', '<p class="tnote">Kept on this phone. Movement stops while the app is in the background, and stays still with Reduce Motion.</p>'],
+      ],
+    };
   },
-  render() {
-    const on = BG.id;
-    put(this.el.querySelector('.bglist'), BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
-        <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join(''));
-    this.sum = BG_IDEAS.find(i => i.id === on).name;
+  act(id, a, b) {
+    if (a === 'bg') BG.set(b.dataset.v);
+    if (a === 'tone') BG.setTone(b.dataset.v);
+    const v = $('custBgV'); if (v) v.textContent = this.label();
+    render();
   },
-  act(id, a, b) { if (a === 'bg') { BG.set(b.dataset.v); render(); } },
-  sheet() { return null; },
 });
+// Its row in Settings: the palette, the current pick, a chevron; it opens
+// the popup (in place of the settings sheet).
+(() => {
+  const b = $('custBg'); if (!b) return;
+  $('custBgIc').innerHTML = svg('palette', 18); $('custBgChev').innerHTML = svg('chevR', 16);
+  $('custBgV').textContent = BG_FAM.label();
+  b.addEventListener('click', () => openDev(BG_FAM, 'bg'));
+})();
