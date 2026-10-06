@@ -47,6 +47,9 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
   - **Mail**: Remind Me days, as all-day items, using Mail's own Gmail
     sign-in (opened from Home, the apps share it); each opens the
     conversation in Mail.
+  - **Fitness**: each day's workout as one all-day item ("Workout ·
+    Shoulders, Core"), with the exercises and their sets, reps and weight
+    in its details, and **Open in Fitness**, which opens that day.
   - **Weather**: a forecast line on each day for the next 16 days, from
     Open-Meteo (as the Weather app uses), with the phone's location. °F or
     °C follows the phone's language, or set it.

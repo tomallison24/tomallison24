@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- "Iron": a white dumbbell on a sky from steel blue through slate to ink, a colour no other AllisonOS icon uses. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#9DB4CC"/>
+      <stop offset="0.55" stop-color="#4E6480"/>
+      <stop offset="1" stop-color="#1F2738"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="120" cy="90" r="220" fill="url(#glow)"/>
+  <!-- the dumbbell, tilted up to the right -->
+  <g transform="rotate(-30 256 256) translate(256 256) scale(.86) translate(-256 -256)" fill="#FFFFFF">
+    <rect x="150" y="238" width="212" height="36" rx="18"/>
+    <rect x="96" y="172" width="54" height="168" rx="22"/>
+    <rect x="362" y="172" width="54" height="168" rx="22"/>
+    <rect x="58" y="204" width="44" height="104" rx="18"/>
+    <rect x="410" y="204" width="44" height="104" rx="18"/>
+  </g>
+</svg>

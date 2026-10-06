@@ -12,9 +12,9 @@
 //   deletions of one occurrence, all future ones or the whole series; drag
 //   an event in Day or Week to move it, or its bottom edge to resize it.
 // - Layers alongside the Family calendar: US holidays (worked out here),
-//   Notes' reminders and nudges, Travel's trips, Mail's Remind Me days
-//   (they share this phone's storage when opened from AllisonOS Home), and
-//   the weather (Open-Meteo, as in the Weather app).
+//   Notes' reminders and nudges, Travel's trips, Mail's Remind Me days,
+//   Fitness's workouts (they share this phone's storage when opened from
+//   AllisonOS Home), and the weather (Open-Meteo, as in the Weather app).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -64,6 +64,7 @@ if (window.top !== window.self) {
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
     hotel: '<svg viewBox="0 0 24 24"><path d="M3.2 19.6V6.4"/><path d="M3.2 15.2h17.6v4.4"/><path d="M20.8 15.2v-3.4a3 3 0 0 0-3-3h-6.6v6.4"/><circle cx="7.4" cy="11.4" r="2"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
+    dumbbell: '<svg viewBox="0 0 24 24"><path d="M8.4 12h7.2"/><rect x="5" y="7.4" width="3.4" height="9.2" rx="1.2"/><rect x="15.6" y="7.4" width="3.4" height="9.2" rx="1.2"/><path d="M5 10H3.6a.6.6 0 0 0-.6.6v2.8a.6.6 0 0 0 .6.6H5M19 10h1.4a.6.6 0 0 1 .6.6v2.8a.6.6 0 0 1-.6.6H19"/></svg>',
     flag: '<svg viewBox="0 0 24 24"><path d="M5.5 21V4.2"/><path d="M5.5 4.6c3.6-1.8 6.2 1.6 9.8-.2v9.2c-3.6 1.8-6.2-1.6-9.8.2"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
     cloudSun: '<svg viewBox="0 0 24 24"><path d="M7 18.5h9.5a3.5 3.5 0 0 0 .5-7 5 5 0 0 0-9.6-1.3A4.2 4.2 0 0 0 7 18.5z"/><path d="M15.5 6.2a3 3 0 0 1 3.6 3.9M17 3v1.4M21 7.2h1.4M19.9 4.3l1-1"/></svg>',
@@ -79,9 +80,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 1, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { holidays: true, notes: true, travel: true, mail: true, weather: true },
+    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, weather: true }, settings.layers || {});
+  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true }, settings.layers || {});
   const saveSettings = () => ls.set(K.settings, JSON.stringify(settings));
 
   // Clock: the phone's own, or forced.
@@ -134,6 +135,7 @@ if (window.top !== window.self) {
     note: { name: 'Notes', color: 'var(--nt)', sub: 'Reminders with a date, and notes with a nudge' },
     travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and car hire from Travel' },
     mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days, using Mail’s Gmail sign-in' },
+    fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'The workouts logged in Fitness, one a day' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
   };
   const calColor = () => st.calendar && /^#[0-9a-f]{6}$/i.test(st.calendar.color || '') ? st.calendar.color : 'var(--cal)';
@@ -259,6 +261,7 @@ if (window.top !== window.self) {
     if (settings.layers.holidays) out.push(...holidayItems(w));
     if (settings.layers.notes) out.push(...noteItems(w));
     if (settings.layers.travel) out.push(...travelItems(w));
+    if (settings.layers.fitness) out.push(...fitnessItems(w));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
     out.sort((a, b) => (b.allDay - a.allDay) || a.start - b.start || (b.end - b.start) - (a.end - a.start));
     st.occ = out;
@@ -353,6 +356,28 @@ if (window.top !== window.self) {
         const s = at(b.start), e = at(b.end);
         if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id, b.title || 'Booking', s, isNaN(e) || e <= s ? s + H : e, { sub: b.place || '', link: '../travel/', notes: desc }));
       }
+    }
+    return out;
+  }
+
+  // ---- Fitness: each day's workout, as one all-day item ----
+  function fitnessItems(w) {
+    const data = ls.json('allison-fitness-v1', null);
+    if (!data || !Array.isArray(data.logs)) return [];
+    const GROUPS = { chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes' };
+    const days = new Map();
+    for (const x of data.logs) {
+      if (!x || !/^\d{4}-\d{2}-\d{2}$/.test(x.date || '') || typeof x.exercise !== 'string') continue;
+      if (dayMs(x.date) < w.from - D || dayMs(x.date) >= w.to) continue;
+      if (!days.has(x.date)) days.set(x.date, []);
+      days.get(x.date).push(x);
+    }
+    const out = [];
+    for (const [date, logs] of days) {
+      const groups = [...new Set(logs.map(x => GROUPS[x.group] || 'Other'))];
+      const sets = logs.reduce((a, x) => a + (+x.sets || 0), 0);
+      const notes = logs.map(x => x.exercise + ': ' + x.sets + ' × ' + x.reps + ' · ' + (+x.weight ? (+x.weight).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb' : 'Bodyweight')).join('\n');
+      out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub: plural(logs.length, 'exercise') + ' · ' + plural(sets, 'set'), link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
     }
     return out;
   }
@@ -513,7 +538,7 @@ if (window.top !== window.self) {
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
       : esc(fmtTime(x.start)) + '<small>' + esc(x.end > x.start ? fmtTime(x.end) : '') + '</small>';
-    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : ICON.flag) + '<span>' + esc(x.sub) + '</span></span>' : '';
+    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : ICON.flag) + '<span>' + esc(x.sub) + '</span></span>' : '';
     return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t">' + esc(x.title) + '</span>' + sub + '</span></button>';
   }
 
@@ -915,7 +940,7 @@ if (window.top !== window.self) {
       if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organiser</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', esc(o.description)));
     } else {
-      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : 'flag', esc(x.sub)));
+      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : 'flag', esc(x.sub)));
       if (x.notes) rows.push(kv('notes', esc(x.notes)));
     }
     const cn = fam ? (st.calendar && st.calendar.name || 'Family') : LAYER[x.kind].name;
@@ -1250,8 +1275,8 @@ if (window.top !== window.self) {
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
-      + ['holiday', 'note', 'travel', 'mail', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div><p class="hint">Notes, Travel and Mail share this phone’s storage when they are opened from AllisonOS Home; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
+      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
+      + '</div><p class="hint">Notes, Travel, Mail and Fitness share this phone’s storage when they are opened from AllisonOS Home; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[1, 'Monday'], [0, 'Sunday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'
