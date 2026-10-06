@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1116">
+<title>Welcome Lab</title>
+<!--
+  Welcome Lab: plays each design for the AllisonOS welcome (welcome.js) so one
+  can be chosen. Nothing here is remembered; each Play runs it from the start.
+-->
+<style>
+  :root { --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.12); color-scheme: dark; }
+  @media (prefers-color-scheme: light) { :root { --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.7); --edge: rgba(0,0,0,.07); color-scheme: light; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 24px); }
+  main { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 34px; margin: 6px 4px 4px; letter-spacing: -0.4px; }
+  .lede { color: var(--muted); margin: 0 4px 18px; font-size: 15px; line-height: 1.4; }
+  .opt { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px; margin-bottom: 10px; border: 0; border-radius: 24px; font: inherit; color: inherit;
+    background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); cursor: pointer; }
+  .opt:active { transform: scale(.98); }
+  .opt b { display: block; font-size: 17px; }
+  .opt small { display: block; color: var(--muted); font-size: 14px; line-height: 1.35; margin-top: 3px; }
+  .opt .k { flex: 1; }
+  .opt .play { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #0A84FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .opt .tag { display: inline-flex; width: 26px; height: 26px; border-radius: 8px; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; background: var(--edge); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Welcome Lab</h1>
+  <p class="lede">Three designs for the welcome that plays the first time someone opens any AllisonOS app: a brand moment, then a short tour. Tap one to play it; Skip ends it early. Try light and dark mode too.</p>
+  <button class="opt" data-d="A" type="button"><span class="k"><span class="tag">A</span><b>Glass bloom</b><small>The launcher's colour fields drift in, a glass tile forms round the AllisonOS icon and the name rises letter by letter. The tour is a floating glass card you swipe through.</small></span><span class="play">▶</span></button>
+  <button class="opt" data-d="B" type="button"><span class="k"><span class="tag">B</span><b>Constellation</b><small>Every app's icon drifts in from the edges into a ring that turns and gathers into the name. The tour is full-screen pages with story-style bars that move on by themselves; tap to skip ahead or back.</small></span><span class="play">▶</span></button>
+  <button class="opt" data-d="C" type="button"><span class="k"><span class="tag">C</span><b>Quiet type</b><small>Just the name, drawn on with a hairline beneath it. The tour is one glass panel whose words and line drawings change in place.</small></span><span class="play">▶</span></button>
+</main>
+<script src="welcome.js"></script>
+<script>
+  for (const b of document.querySelectorAll('.opt')) b.onclick = () => AllisonOS.welcome.play(b.dataset.d);
+</script>
+</body>
+</html>

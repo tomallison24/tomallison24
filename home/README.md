@@ -23,6 +23,10 @@ sit behind the glass in Mail and News.
   every app loads it, and it stays quiet in an app opened from its own icon.
   The phone's own swipe, from the very edge, still goes to the phone's home
   screen.
+- **Welcome (in design):** `welcome.js` is the welcome that will play once,
+  the first time anyone opens an AllisonOS app on a device: a brand moment,
+  then a four-card tour. Three designs are in `welcome-lab.html` to choose
+  from (A Glass bloom, B Constellation, C Quiet type); no app loads it yet.
 - **No build step, no server, no accounts.** `index.html` is the whole app
   and `sw.js` keeps it working offline. The order, dock, use counts and
   theme are kept in `localStorage`.
