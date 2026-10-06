@@ -75,6 +75,24 @@
   * { box-sizing: border-box; }
   /* clip, not hidden: hidden would make the body its own scroller */
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
+  body { background: transparent; }   /* the page's colour is html's, so the light below shows through */
+  /* ---- the light behind the glass ----
+     Glass only reads with something behind it to bend. A few wide, very soft
+     fields of colour - indigo high on the left, teal on the right, a warm
+     amber low down - sit behind everything, barely there on the near-black,
+     and drift slowly (a minute and more a cycle), so every glass pane, pill
+     and tile carries a faint, living tint. Fixed to the screen, not the page;
+     transforms only, so it stays smooth; still for reduced motion. */
+  .bgfx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .bgfx i { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
+  .bgfx i:nth-child(1) { left: -38vmax; top: -34vmax; background: radial-gradient(closest-side, rgba(104,112,255,0.20), rgba(104,112,255,0.07) 45%, rgba(104,112,255,0) 100%); animation: bg-a 70s ease-in-out infinite alternate; }
+  .bgfx i:nth-child(2) { right: -46vmax; top: 22vh; background: radial-gradient(closest-side, rgba(56,196,186,0.14), rgba(56,196,186,0.05) 45%, rgba(56,196,186,0) 100%); animation: bg-b 85s ease-in-out infinite alternate; }
+  .bgfx i:nth-child(3) { left: -30vmax; bottom: -48vmax; background: radial-gradient(closest-side, rgba(255,164,96,0.12), rgba(255,164,96,0.04) 45%, rgba(255,164,96,0) 100%); animation: bg-c 95s ease-in-out infinite alternate; }
+  .bgfx::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.025), rgba(255,255,255,0) 60%); }   /* a breath of light from the top */
+  @keyframes bg-a { to { transform: translate(14vmax, 10vmax) scale(1.08); } }
+  @keyframes bg-b { to { transform: translate(-12vmax, 16vmax) scale(.94); } }
+  @keyframes bg-c { to { transform: translate(18vmax, -12vmax) scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { .bgfx i { animation: none; } }
   @supports not (overflow: clip) { html { overflow-x: hidden; } }
   html { scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }   /* what's scrolled to lands above the view picker */
   html.lock, html.lock body { overflow: hidden; }
@@ -514,6 +532,7 @@
 </style>
 </head>
 <body>
+<div class="bgfx" aria-hidden="true"><i></i><i></i><i></i></div>
 <main>
   <header class="top">
     <h1>Home</h1>

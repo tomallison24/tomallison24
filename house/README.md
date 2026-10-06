@@ -7,7 +7,9 @@ launcher, and its `localStorage` keys are `house.*` so the two never clash
 when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
-menu opens upwards). The view's name is the title at the top:
+menu opens upwards). The view's name is the title at the top. Behind it
+all, a few very soft fields of colour (indigo, teal, a warm amber) drift
+slowly on the near-black, so the glass has something to diffuse:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
