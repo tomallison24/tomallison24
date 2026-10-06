@@ -6,6 +6,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.
+  The fetching and normalising is in `data.js` (all on `WXD`), which Home's
+  weather pill loads too, so the two always show the same reading.
 - **Current temperature**: the NWS forecast for your exact spot at this
   minute (between the hourly values), corrected by the nearest weather
   station: by how far its latest reading is from what NWS forecast at the
