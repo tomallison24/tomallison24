@@ -253,10 +253,16 @@
   @media (prefers-reduced-motion: reduce) { .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
 
   /* ---- DG1 card ---- */
+  /* Every card as clear as the energy tiles: the faint tile over the
+     background, a hairline edge, and its own colour (the sky) only as a light
+     tint - the glows, embers and frost stay. */
   .dg {
-    position: relative; overflow: hidden; border-radius: 26px; padding: 18px 16px 16px; background: #16171B;
+    position: relative; overflow: hidden; border-radius: 26px; padding: 18px 16px 16px; background: var(--tile);
     transition: box-shadow .6s, opacity .4s;
   }
+  .dg::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2; box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
+  .dg > .dg-fx > .dg-sky { opacity: .22; }
+  .dg > .dg-fx > .dg-sheen { opacity: .5; }
   .dg.offline { opacity: 0.6; }
   .dg-in { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
   .dg-fx { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
@@ -371,6 +377,8 @@
   .rowi .k { flex: 1; min-width: 0; }
   .rowi .v { font-weight: 600; font-variant-numeric: tabular-nums; opacity: .9; }
   .rowi .v.full { color: rgb(240,179,187); opacity: 1; }
+  #custBg .v { font-weight: 500; opacity: .6; } #custBg .chev { display: flex; opacity: .4; margin-left: -6px; }
+  #custBlock[hidden] { display: none; }
   .rowi .v.due { color: rgb(236,214,150); opacity: 1; }
   /* Glass switches: a clear track with a lit rim that lets the sky through,
      and a frosted knob. On, the track takes a soft wash of the unit's colour
@@ -631,6 +639,12 @@
           <button type="button" class="txt" data-k="cancel">Cancel</button><button type="button" data-k="0">0</button><button type="button" class="txt" data-k="del" aria-label="Delete"></button>
         </div>
         <button type="button" class="linkbtn" id="pinForgot">Forgot PIN?</button>
+      </div>
+
+      <!-- Customization: how the app looks, kept on this phone. -->
+      <div id="custBlock">
+        <div class="glbl">CUSTOMIZATION</div>
+        <div class="group"><button class="rowi" type="button" id="custBg"><span class="ic" id="custBgIc"></span><span class="k">Background</span><span class="v" id="custBgV"></span><span class="chev" id="custBgChev"></span></button></div>
       </div>
     </div>
   </div>
@@ -2067,6 +2081,8 @@ function showView(v) {
   $('vLocked').hidden = v !== 'locked';
   $('haForm').hidden = v !== 'edit';
   $('vPin').hidden = v !== 'pin';
+  $('custBlock').hidden = v === 'pin';
+  if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
   $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : 'Home Assistant';
   if (v === 'edit') {
     const s = saved();

@@ -1,7 +1,7 @@
 // BACKGROUNDS: what moves behind the glass. Glass only reads with something
 // behind it to bend; these are slow, minimal and nearly colourless, so the
-// page stays calm. One is shown at a time, chosen in Labs and kept on this
-// phone (house.bg); Bubbles until another is picked.
+// page stays calm. One is shown at a time, chosen in Settings → Customization
+// and kept on this phone (house.bg); Bubbles until another is picked.
 //   Bubbles        a few soft glass orbs drifting, bouncing off the screen's edges
 //   Constellation  faint points drifting, joined by hairlines when near
 //   Ripples        rings opening slowly from random points, as rain on still water
@@ -145,28 +145,38 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && BG
 BG.paintTone();
 BG.start();
 
-// Labs: the backgrounds, tried live - tapping one puts it behind the whole app.
-family({
-  id: 'labs', name: 'Backgrounds', group: 'Labs', order: 1,
-  mount(el) {
-    el.innerHTML = `<p class="tnote lab-intro">Try what sits behind the glass. Tap one to use it across the app; it stays until you pick another.</p>
-      <div class="lab-sh">Colour</div>
-      <div class="tones" data-dv="labs:tone"></div>
-      <div class="lab-sh">Movement</div>
-      <div class="bglist" data-dv="labs:bg"></div>`;
-  },
-  render() {
-    const on = BG.id;
-    put(this.el.querySelector('.bglist'), BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
-        <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join(''));
-    const tn = BG.tone();
-    put(this.el.querySelector('.tones'), BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${t.hex}">
-        <i></i><span>${t.name}</span></button>`).join(''));
-    this.sum = tn.name + ' · ' + BG_IDEAS.find(i => i.id === on).name;
+// Settings → Customization → Background: a popup with the colours and the
+// movements; a tap puts it behind the whole app at once.
+const BG_FAM = family({
+  id: 'custom', name: 'Customization', noSection: true,
+  label() { return BG.tone().name + ' · ' + BG_IDEAS.find(i => i.id === BG.id).name; },
+  sheet(id) {
+    if (id !== 'bg') return null;
+    const on = BG.id, tn = BG.tone();
+    return {
+      title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
+      fx: '',
+      parts: [
+        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${t.hex}">
+            <i></i><span>${t.name}</span></button>`).join('')}</div>`],
+        ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
+            <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],
+        ['note', '<p class="tnote">Kept on this phone. Movement stops while the app is in the background, and stays still with Reduce Motion.</p>'],
+      ],
+    };
   },
   act(id, a, b) {
-    if (a === 'bg') { BG.set(b.dataset.v); render(); }
-    if (a === 'tone') { BG.setTone(b.dataset.v); render(); }
+    if (a === 'bg') BG.set(b.dataset.v);
+    if (a === 'tone') BG.setTone(b.dataset.v);
+    const v = $('custBgV'); if (v) v.textContent = this.label();
+    render();
   },
-  sheet() { return null; },
 });
+// Its row in Settings: the palette, the current pick, a chevron; it opens
+// the popup (in place of the settings sheet).
+(() => {
+  const b = $('custBg'); if (!b) return;
+  $('custBgIc').innerHTML = svg('palette', 18); $('custBgChev').innerHTML = svg('chevR', 16);
+  $('custBgV').textContent = BG_FAM.label();
+  b.addEventListener('click', () => openDev(BG_FAM, 'bg'));
+})();
