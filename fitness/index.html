@@ -4,33 +4,31 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Calendar</title>
-<meta name="description" content="The iCloud Family calendar as a home-screen web app, in the same frosted glass as Mail, Notes, News and Travel: day, week, month, year and list views, repeating events, alerts, and the other AllisonOS apps' dates alongside.">
+<title>Fitness</title>
+<meta name="description" content="A simple workout log as a home-screen web app, in the same frosted glass as Calendar, Notes and Travel: the week as a list of days, and for each day the muscle group, the exercise, and the weight, reps and sets done.">
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08080B" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Calendar">
+<meta name="apple-mobile-web-app-title" content="Fitness">
 <meta name="referrer" content="no-referrer">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  Calendar - the iCloud Family calendar, with the everyday parts of iOS
-  Calendar and Google Calendar: Day, Week, Month, Year and List views, a
-  search, events that repeat, alerts, travel time, and edits to one
-  occurrence or the whole series. Alongside it, as layers you can switch on
-  and off: US holidays, the reminders and nudges from Notes, the trips from
-  Travel, Mail's Remind Me days, the workouts from Fitness, and the weather.
+  Fitness - a workout log, kept deliberately small: the week as seven days,
+  and a sheet for each day where you pick a muscle group (chest, back, lower
+  back, shoulders, arms, core, legs, glutes), then the exercise, then the
+  weight, reps and sets done. Choosing an exercise fills in what you did last
+  time, so the next session starts from there.
 
-  Data: the events live in iCloud. A small Cloudflare Pages Function on this
-  site (functions/calendar/api) talks to iCloud for the phone, holding the
-  Apple ID and its app-specific password as secrets; the phone keeps a copy
-  of the events it last saw so the calendar opens at once and works offline
-  for reading. Code: ical.js (reading and writing iCalendar) and app.js (the
-  app). The look is Notes' own style block, unchanged, plus Calendar's own
-  pieces at the end.
+  Data: everything stays on this phone, in localStorage (allison-fitness-v1).
+  Calendar shows each day's workout as a layer, and Fitness starts its week
+  on the day Calendar's setting says; both work because the apps share this
+  phone's storage when they are opened from AllisonOS Home. Code: app.js.
+  The look is Notes' own style block, unchanged, plus Fitness's own pieces
+  at the end.
 -->
 <style>
 /* Allison OS family look, shared with Mail and News: frosted glass over a slow aurora. */
@@ -491,246 +489,87 @@ svg.fs{fill:currentColor}
   .iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
-/* ---- Calendar's own pieces ---- */
-:root{--cal:#FF2968;--hol:#1F9D55;--nt:#8B5CF6;--tr:#18A58A;--ml:#7B6CF6;--fit:#F2780C;--now:#FF3B30;--ok:#1F9D55;--bad:#E5281D;--hour:56px;--gutter:46px;--cols:7}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--hol:#30D158;--ok:#30D158;--bad:#FF453A}}
-:root[data-theme="dark"]{--hol:#30D158;--ok:#30D158;--bad:#FF453A}
-.enter .mgrid,.enter .timeview,.enter .rgroup,.enter .ymon,.enter .strip{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
-/* Cards - the month grid, the day and week grids and their strip, the year's
-   months, the event lists, notices and empty states - are very faint flat
+
+/* ---- Fitness's own pieces ---- */
+/* Cards - the week, its totals, a day's exercises - are very faint flat
    tiles, the same in every AllisonOS app: no blur, lit rim or shadow. */
-.rgroup,.empty,.notice,.mgrid,.timeview,.strip,.ymon{background:var(--tile);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
-.titlebtn{flex:1;min-width:0;text-align:left;display:flex;align-items:center;gap:6px}
-.titlebtn .title{flex:none;max-width:100%;font-size:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.titlebtn svg{width:16px;height:16px;color:var(--faint);stroke-width:2.2;margin-top:6px}
+.rgroup,.empty,.notice,.stats{background:var(--tile);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.enter .rgroup,.enter .stats,.enter .navrow{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
 .list{gap:10px}
+.dock{justify-content:flex-end;transition:opacity .2s}
+/* the + would show through a day's sheet, right over its Add button */
+html.locked .dock{opacity:0;pointer-events:none}
 .navrow{display:flex;align-items:center;gap:6px;padding:0 2px}
 .navrow .lbl{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .navrow .iconbtn{width:32px;height:32px}
 .navrow .iconbtn svg{width:20px;height:20px}
 
-/* the week's initials over the month grid */
-.wkhead{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:0 4px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);text-align:center}
-.wkhead .we{opacity:.7}
+/* the week: one row a day, the muscle groups worked as coloured chips */
+.week{border-radius:22px;overflow:hidden;touch-action:pan-y}
+.drow{display:flex;align-items:center;gap:14px;width:100%;min-height:66px;text-align:left;padding:10px 12px 10px 12px;border-top:1px solid var(--hair-2);color:var(--text)}
+.drow:first-child{border-top:0}
+.drow:active{background:var(--fill)}
+.dn{width:44px;flex:none;display:flex;flex-direction:column;align-items:center;gap:1px}
+.dn small{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.dn b{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.drow.today .dn small{color:var(--accent-text)}
+.drow.today .dn b{background:var(--accent);color:#fff}
+.dsum{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.dline{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rest{font-size:14px;color:var(--faint)}
+.drow > svg{width:16px;height:16px;color:var(--faint)}
 
-/* month grid */
-.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-radius:22px;overflow:hidden;touch-action:pan-y}
-.mday{min-height:86px;padding:5px 3px 4px;display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--hair-2);border-left:1px solid var(--hair-2);text-align:left;min-width:0;color:var(--text)}
-.mday:nth-child(-n+7){border-top:0}
-.mday:nth-child(7n+1){border-left:0}
-.mday:active{background:var(--fill)}
-.mday.out .n{opacity:.4}
-.mday.out .mev{opacity:.55}
-.mday .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;margin:0 auto 1px;font-variant-numeric:tabular-nums}
-.mday.today .n{background:var(--accent);color:#fff}
-.mday.sel .n{box-shadow:inset 0 0 0 2px var(--accent)}
-.mday.sel.today .n{box-shadow:none}
-.mev{--c:var(--cal);font-size:10.5px;line-height:1.3;padding:1px 3px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:clip;color:var(--text);
-  background:color-mix(in srgb,var(--c) 24%,transparent);border-left:2px solid var(--c);min-width:0}
-.mev.timed{background:none;border-left:0;padding-left:2px;display:flex;gap:3px;align-items:center}
-.mev.timed::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
-.mev.more{background:none;border:0;color:var(--faint);font-weight:600;padding-left:6px}
-.mev.done{text-decoration:line-through;opacity:.55}
-.mday .wx{font-size:9.5px;color:var(--faint);text-align:center;margin-top:auto;white-space:nowrap}
-@media (max-width:389px){.mday{min-height:76px}.mev{font-size:10px}}
+/* the week's totals */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:22px;overflow:hidden}
+.stat{padding:12px 8px 11px;text-align:center;border-left:1px solid var(--hair-2);min-width:0}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:12px;color:var(--faint)}
 
-/* the selected day under the month grid, and the List and Search views */
-.dayhead{display:flex;align-items:baseline;gap:8px;padding:10px 6px 0;min-width:0}
-.dayhead b{font-size:17px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
-.dayhead.today b{color:var(--accent-text)}
-.dayhead span{font-size:13px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dayhead .wx{margin-left:auto;font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;flex:none}
-.dayhead .wx svg{width:16px;height:16px;color:var(--icon)}
-.evrow{--c:var(--cal);display:grid;grid-template-columns:66px minmax(0,1fr);gap:0 10px;align-items:start;width:100%;text-align:left;padding:11px 14px 11px 12px;border-top:1px solid var(--hair-2);color:var(--text)}
-.evrow:first-child{border-top:0}
-.evrow:active{background:var(--fill)}
-.evrow .tm{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;padding-top:2px}
-.evrow .tm small{display:block;font-size:11px;font-weight:500;color:var(--faint)}
-.evrow .bd{min-width:0;display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--c);padding-left:10px;border-radius:2px}
-.evrow .t{font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere;line-height:1.3}
-.evrow .s{font-size:13px;color:var(--muted);overflow-wrap:anywhere;display:flex;gap:5px;align-items:center;min-width:0}
-.evrow .s svg{width:13px;height:13px;flex:none}
-.evrow .s span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.evrow.past{opacity:.62}
-.evrow.done .t{text-decoration:line-through;color:var(--faint)}
-.lsec{display:flex;flex-direction:column;gap:6px}
-.loadmore{align-self:center}
+/* muscle groups: one hue each, on the chips, the pickers and the dots */
+[data-g="chest"]{--h:4} [data-g="back"]{--h:211} [data-g="lowerback"]{--h:188} [data-g="shoulders"]{--h:28}
+[data-g="arms"]{--h:268} [data-g="core"]{--h:46} [data-g="legs"]{--h:145} [data-g="glutes"]{--h:328} [data-g="other"]{--h:220}
+.opt .gd{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 90% 58%);box-shadow:0 0 8px hsl(var(--h) 90% 58% / .55);flex:none}
 
-/* the time grid: Day and Week */
-.timeview{display:flex;flex-direction:column;border-radius:22px;overflow:hidden;height:var(--tv-h,60vh);touch-action:pan-y}
-.tghead{flex:none;display:grid;grid-template-columns:var(--gutter) repeat(var(--cols),minmax(0,1fr));border-bottom:1px solid var(--hair)}
-.tghead .dh{padding:8px 1px 5px;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;color:var(--text)}
-.tghead .dh span{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
-.tghead .dh b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
-.tghead .dh.today b{background:var(--accent);color:#fff}
-.tghead .dh.sel:not(.today) b{box-shadow:inset 0 0 0 2px var(--accent)}
-.tghead .dh .wx{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;max-width:100%;text-overflow:ellipsis;display:inline-flex;gap:3px;align-items:center}
-.tghead .dh .wx svg{width:13px;height:13px;color:var(--icon)}
-.tghead .gl{align-self:end;font-size:10px;color:var(--faint);text-align:right;padding:0 5px 5px 0}
-.allday{grid-column:1 / -1;display:grid;grid-template-columns:var(--gutter) repeat(var(--cols),minmax(0,1fr));border-top:1px solid var(--hair-2)}
-.allday .gl{padding:5px 5px 0 0;align-self:start}
-.allday .ad{display:flex;flex-direction:column;gap:2px;padding:3px 1px;min-width:0}
-.allday .mev{font-size:11px;text-align:left;width:100%}
-.tgbody{flex:1;overflow-y:auto;overscroll-behavior:contain;position:relative;scrollbar-width:none}
-.tgbody::-webkit-scrollbar{display:none}
-.tgin{position:relative;display:grid;grid-template-columns:var(--gutter) repeat(var(--cols),minmax(0,1fr));height:calc(var(--hour) * 24);padding-bottom:8px}
-.gut{position:relative}
-.gut span{position:absolute;right:6px;transform:translateY(-50%);font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
-.col{position:relative;border-left:1px solid var(--hair-2);background-image:linear-gradient(var(--hair-2) 1px,transparent 1px);background-size:100% var(--hour);min-width:0}
-.col.today{background-color:color-mix(in srgb,var(--accent) 4%,transparent)}
-.tev{--c:var(--cal);position:absolute;left:1px;right:2px;border-radius:8px;padding:3px 6px;overflow:hidden;font-size:12px;line-height:1.25;text-align:left;color:var(--text);
-  background:color-mix(in srgb,var(--c) 26%,var(--glass-2));border-left:3px solid var(--c);box-shadow:0 1px 3px var(--lift);touch-action:none;-webkit-user-select:none;user-select:none;min-height:14px}
-.tev b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tev span{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tev.short{padding:0 6px;font-size:11px;line-height:1.2}
-.tev.short span{display:none}
-.tev.past{opacity:.72}
-.tev.drag{opacity:.9;box-shadow:0 10px 28px var(--lift-strong);z-index:6}
-.tev .rs{position:absolute;left:0;right:0;bottom:0;height:12px;cursor:ns-resize}
-.tev .rs::after{content:"";position:absolute;left:50%;bottom:3px;width:22px;height:3px;border-radius:2px;background:var(--c);transform:translateX(-50%);opacity:0}
-.tev.drag .rs::after{opacity:.8}
-.nowline{position:absolute;left:0;right:0;height:2px;background:var(--now);z-index:3;pointer-events:none}
-.nowline::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--now)}
-.nowlbl{position:absolute;right:6px;transform:translateY(-100%);font-size:10.5px;font-weight:700;color:var(--now);background:var(--bg);padding:0 3px;border-radius:4px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums}
-.dragtime{position:absolute;left:0;width:var(--gutter);text-align:right;padding-right:6px;font-size:10.5px;font-weight:700;color:var(--accent-text);transform:translateY(-50%);z-index:6;pointer-events:none;background:var(--bg);border-radius:4px}
+/* a day: what was logged, then the form */
+.erow{display:flex;align-items:center;gap:4px;padding:2px 6px 2px 0;border-top:1px solid var(--hair-2)}
+.erow:first-child{border-top:0}
+.erow.editing{background:var(--lgs-field)}
+.ebody{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 6px 10px 16px;text-align:left;color:var(--text)}
+.ebody i{width:10px;height:10px;border-radius:50%;background:hsl(var(--h) 90% 58%);box-shadow:0 0 8px hsl(var(--h) 90% 58% / .55);flex:none}
+.ebody .et{flex:1;min-width:0;font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.ebody .et small{display:block;font-size:13px;font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:0}
+.erow .del{width:36px;height:36px;color:var(--faint);background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.erow .del svg{width:16px;height:16px}
+.dempty{padding:16px;font-size:14px;color:var(--faint);text-align:center}
+.formbtns{display:flex;gap:8px}
+.formbtns .btn{flex:1;min-height:50px;border-radius:26px}
+.btn[disabled]{opacity:.45;pointer-events:none}
 
-.timeview[data-cols="7"] .tev{padding:2px 3px 2px 4px;font-size:11px;border-left-width:2.5px}
-.timeview[data-cols="7"] .tev span{display:none}
-.timeview[data-cols="7"] .allday .mev{padding:1px 3px}
-/* the week strip over the Day view */
-.strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:5px 4px;border-radius:999px;touch-action:pan-y}
-.strip button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:3px 0;color:var(--text);min-width:0}
-.strip span{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
-.strip b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.strip button[aria-selected="true"] b{background:var(--text);color:var(--bg)}
-.strip button.today b{color:var(--accent-text)}
-.strip button.today[aria-selected="true"] b{background:var(--accent);color:#fff}
-.strip i{width:4px;height:4px;border-radius:50%;background:var(--faint)}
-.strip i.none{background:transparent}
-
-/* year */
-.year{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.ymon{border-radius:18px;padding:9px 7px 8px;text-align:left;color:var(--text);transition:transform .18s var(--ease)}
-.ymon:active{transform:scale(.97)}
-.ymon h4{margin:0 0 4px 3px;font-size:14px;font-weight:700;color:var(--text)}
-.ymon.cur h4{color:var(--accent-text)}
-.ygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));font-size:9.5px;text-align:center;row-gap:1px;font-variant-numeric:tabular-nums;color:var(--muted)}
-.ygrid span{height:15px;line-height:15px;position:relative}
-.ygrid .today{background:var(--accent);color:#fff;border-radius:50%;font-weight:700}
-.ygrid .has::after{content:"";position:absolute;left:50%;bottom:-1px;width:3px;height:3px;border-radius:50%;background:var(--faint);transform:translateX(-50%)}
-.ygrid .today.has::after{display:none}
-@media (max-width:359px){.year{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-/* an event, opened */
-.evhead{display:flex;flex-direction:column;gap:6px;padding:0 4px}
-.evhead .cn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.evhead .cn i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--cal))}
-.evhead h3{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
-.evhead h3.done{text-decoration:line-through;color:var(--faint)}
-.evhead .when{font-size:15px;color:var(--muted);line-height:1.4}
-.evhead .when b{color:var(--text);font-weight:600}
-.kvrow{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-top:1px solid var(--hair-2);font-size:15px;width:100%;text-align:left;color:var(--text)}
-.kvrow:first-child{border-top:0}
-.kvrow .ic{color:var(--icon);flex:none;padding-top:1px;width:26px;display:grid;place-items:center}
-.kvrow .ic svg{width:22px;height:22px}
-.kvrow .v{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere;white-space:pre-line;line-height:1.4}
-.kvrow .v small{color:var(--faint);font-size:12px;white-space:normal}
-.kvrow .v a{color:var(--accent-text);text-decoration:none;overflow-wrap:anywhere}
-.kvrow .go{color:var(--faint);flex:none;padding-top:2px}
-.kvrow .go svg{width:18px;height:18px;stroke-width:2.2}
-button.kvrow:active{background:var(--fill)}
-.att{display:flex;align-items:center;gap:8px}
-.att i{width:8px;height:8px;border-radius:50%;background:var(--ring);flex:none}
-.att.yes i{background:var(--ok)}
-.att.no i{background:var(--bad)}
-.att small{color:var(--faint)}
-.actrow{display:flex;gap:10px}
-.actrow .btn{flex:1}
-
-/* the editor */
+/* form rows inside the sheet (as Calendar's editor) */
 .frow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:48px}
 .frow:first-child{border-top:0}
 .frow > label,.frow > .l{flex:1;min-width:0}
-.frow .l small{display:block;color:var(--faint);font-size:12px}
-.frow input[type="date"],.frow input[type="time"],.frow input[type="datetime-local"],.frow select,.frow input[type="number"]{border:1px solid var(--hair);background:var(--fill);border-radius:10px;padding:6px 9px;font-size:15px;min-width:0;color:var(--text);max-width:62%;font-variant-numeric:tabular-nums}
-.frow input[type="number"]{width:64px;text-align:center}
+.frow select{border:1px solid var(--hair);background:var(--fill);border-radius:10px;padding:6px 9px;font-size:15px;min-width:0;color:var(--text);max-width:62%;font-variant-numeric:tabular-nums}
 .frow select{appearance:none;-webkit-appearance:none;padding-right:26px;text-overflow:ellipsis;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 7px center;background-size:14px}
-.frow input.txt,.frow textarea{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
-.frow input.txt::placeholder,.frow textarea::placeholder{color:var(--faint)}
-.frow textarea{resize:none;min-height:72px;font-size:15px;line-height:1.45}
-.frow.big input{font-size:20px;font-weight:600;letter-spacing:-.01em}
-.frow.big{padding-top:12px;padding-bottom:12px}
-.frow .ic{color:var(--icon);flex:none;width:26px;display:grid;place-items:center}
-.frow .ic svg{width:22px;height:22px}
-.frow.sub{padding-left:42px}
-.switch{width:51px;height:31px;border-radius:999px;background:var(--fill);border:1px solid var(--hair);position:relative;flex:none;transition:background .2s,border-color .2s}
-.switch::after{content:"";position:absolute;top:2px;left:2px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);transition:transform .22s var(--ease)}
-.switch[aria-checked="true"]{background:var(--n-green);border-color:transparent}
-.switch[aria-checked="true"]::after{transform:translateX(20px)}
-.switch[disabled]{opacity:.5}
-.wdays{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
-.wdays button{width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:600;background:var(--fill);border:1px solid var(--hair);color:var(--muted)}
-.wdays button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:transparent}
-.seg.two{grid-template-columns:repeat(2,1fr)}
-.seg.three{grid-template-columns:repeat(3,1fr)}
-.seg.small button{padding:6px 4px;font-size:13px}
-.frow .seg{max-width:62%;flex:1}
-.calpick{display:flex;align-items:center;gap:8px}
-.calpick i{width:12px;height:12px;border-radius:50%;background:var(--c,var(--cal))}
-
-/* settings */
-.status{display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:14px;color:var(--muted);line-height:1.4}
-.status i{width:10px;height:10px;border-radius:50%;background:var(--ring);flex:none}
-.status.ok i{background:var(--ok)}
-.status.bad i{background:var(--bad)}
-.status span{flex:1;min-width:0}
-.status b{color:var(--text)}
-.lrow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--hair-2);font-size:15px;font-weight:600}
-.lrow:first-child{border-top:0}
-.lrow i{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 8px color-mix(in srgb,var(--c) 60%,transparent)}
-.lrow .l{flex:1;min-width:0}
-.lrow .l small{display:block;font-weight:400;color:var(--muted);font-size:12px}
-.empty .btn{margin-top:12px}
-
-/* the header's search bar */
-.top .search{margin:0 2px}
-.sheet.full .sheetbody{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
-.pickrow{width:100%;text-align:center;padding:15px 14px;font-size:17px;font-weight:600;color:var(--accent-text);border-top:1px solid var(--hair-2)}
-.pickrow:first-child{border-top:0}
-.pickrow.danger{color:var(--danger-text)}
-.pickrow:active{background:var(--fill)}
-a.rowbtn{color:var(--text);text-decoration:none}
+.frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
+.frow input.txt::placeholder{color:var(--faint)}
 .sheetbody > *{flex-shrink:0}
 
-/* ---- switches with a sliding glass thumb ----
-   The view bar, the Day view's week strip and Settings' segmented choices:
-   the options stay clear, and one thumb under them glides to the chosen
-   one, stretching as it goes, as iOS 26's do (home/slide.js). */
+/* ---- switches with a sliding glass thumb (home/slide.js) ---- */
 .slides{position:relative;isolation:isolate}
 .slides > :not(.slthumb){position:relative;z-index:1}
 .slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
   background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
   transition:opacity .25s ease,scale .25s var(--ease),background-color .3s}
 .slthumb.off{opacity:0;scale:.7}
-.tab[aria-selected="true"]{background:none;box-shadow:none;color:var(--accent-text)}
-.tab[aria-selected="true"] svg{color:var(--accent-text)}
-@media (max-width:389px){.tab svg{display:block}.tab{padding:0 11px}}
-.seg.slides button[aria-pressed="true"]{background:none;box-shadow:none}
-.seg > .slthumb{border-radius:17px}
-.strip.slides button[aria-selected="true"] b{background:none}
-.strip b{transition:color .25s .12s}
-.strip > .slthumb{background:var(--gb-shine),var(--text);background-color:var(--text);box-shadow:0 2px 8px var(--lift)}
-.strip > .slthumb.today{background:var(--gb-shine),var(--accent);background-color:var(--accent);box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 35%,transparent)}
-.enter .strip.keep{animation:none}
 
-/* ---- the sheets: Liquid Glass ----
-   New Event, an event's details, Settings and the this-or-all choice are
-   each one sheet of clear glass floating just inside the screen's edges:
-   the calendar blurs and brightens through it, a lit rim runs round it, the
-   rows sit on it as the same faint tiles as the cards, and the fields and
-   buttons are lighter glass on top. The rows don't blur again (the sheet
-   already has), which keeps it smooth on a phone. */
+/* ---- the sheets: Liquid Glass, as in Calendar ----
+   A day is one sheet of clear glass floating just inside the screen's
+   edges: the week blurs and brightens through it, a lit rim runs round it,
+   the rows sit on it as the same faint tiles as the cards, and the fields
+   and buttons are lighter glass on top. */
 :root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
   --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
@@ -741,48 +580,39 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .lg .sheet{width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
   background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
   box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
-.lg .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 32px)}
 @media (min-width:576px){.lg .sheet{margin:0 auto 8px;max-width:544px}}
 .lg .sheethead{padding:6px 12px 10px}
-#evSheet .sheethead{justify-content:flex-end}
-.lg .sheethead h2{font-size:17px;font-weight:600}
-#stLbl,#pkLbl{padding-left:8px}
+.lg .sheethead h2{font-size:17px;font-weight:600;padding-left:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lg .sheethead .iconbtn{width:44px;height:44px}
 .lg .sheethead .iconbtn svg{width:22px;height:22px}
-.lg .sheethead .textbtn{height:44px;padding:0 18px;font-size:16px}
 .lg .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
 .lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
-.lg .okbtn[disabled]{opacity:.6}
 .lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
 .lg .rgroup{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
-.lg a.kvrow{text-decoration:none}
-.lg .rowbtn:active,.lg button.kvrow:active,.lg a.kvrow:active,.lg .pickrow:active{background:var(--lgs-field)}
 .lg .label{margin:4px 8px -6px}
 .lg .hint{text-align:center;margin:0 12px}
-.lg .evhead{padding:4px 8px 2px}
-.lg .evhead h3{font-size:28px}
+.lg .opts{padding:0 4px}
+.lg .opt{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim)}
+.lg .opt[aria-checked="true"]{background:var(--gb-shine),color-mix(in srgb,hsl(var(--h) 90% 58%) 26%,transparent);color:var(--text);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,hsl(var(--h) 90% 58%) 60%,transparent),inset 0 1px 1px var(--lgs-rim)}
 .lg .frow{border-top-color:var(--hair-2)}
 .lg .frow > label{flex:1 0 auto;white-space:nowrap}
-.lg .frow input.txt:focus-visible,.lg .frow textarea:focus-visible{outline:0}
-.lg .frow.big input{font-size:22px;font-weight:700;letter-spacing:-.02em}
-.lg .frow input[type="date"],.lg .frow input[type="datetime-local"],.lg .frow input[type="number"],.lg .frow select{
-  border:0;border-radius:999px;padding:7px 13px;background-color:var(--lgs-field);
+.lg .frow input.txt:focus-visible{outline:0}
+.lg .frow select{border:0;border-radius:999px;padding:7px 30px 7px 13px;background-color:var(--lgs-field);background-position:right 11px center;
   box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift);transition:box-shadow .2s}
-.lg .frow select{padding-right:30px;background-position:right 11px center}
-.lg .frow input:not(.txt):focus-visible,.lg .frow select:focus-visible{outline:0;
+.lg .frow select:focus-visible{outline:0;
   box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
-.lg .seg{background:var(--fill);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 2px var(--lift)}
-/* iOS 26's switch: a pill-shaped knob that swells into a clear lens while pressed */
-.lg .switch{width:58px;height:30px;border:0;background:var(--fill);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 2px var(--lift)}
-.lg .switch::after{top:3px;left:3px;width:34px;height:24px;border-radius:999px;transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s var(--ease),background .2s}
-.lg .switch[aria-checked="true"]{background:var(--n-green)}
-.lg .switch[aria-checked="true"]::after{transform:translateX(18px)}
-.lg .switch:not([disabled]):active::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
-.lg .wdays button{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
-.lg .wdays button:active{transform:scale(.9)}
-.lg .wdays button[aria-pressed="true"]{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 3px 10px color-mix(in srgb,var(--accent) 30%,transparent)}
+.lg .erow .del:active{background:var(--lgs-field)}
+/* the Google Sheet sheet: its fields on a faint tile, as in Travel */
+.lg .box{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.lg .box .label{margin:0}
+.lg .plain{font-size:16px;color:var(--text)}
 .lg .btn.danger{border-radius:26px}
+#syForm .btn{min-height:50px;border-radius:26px}
+#syStatus{font-size:13px;line-height:1.5}
+/* the header's Sheet button turns red while sync is failing */
+.iconbtn.warn{color:var(--danger-text)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 </style>
@@ -792,97 +622,82 @@ a.rowbtn{color:var(--text);text-decoration:none}
 <div class="app" id="app">
   <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
-  <section class="view" id="calView" aria-label="Calendar">
-    <header class="top" id="top">
+  <section class="view" aria-label="Fitness">
+    <header class="top">
       <div class="titlerow">
-        <button class="titlebtn" id="titleBtn" type="button" aria-label="Go to the year">
-          <h1 class="title" id="title">Calendar<small id="titleSub"></small></h1>
-        </button>
+        <h1 class="title" id="title">Fitness<small id="titleSub"></small></h1>
         <div class="acts">
-          <button class="iconbtn glass" id="todayBtn" type="button" aria-label="Today"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" class="fs"/></svg></button>
-          <button class="iconbtn glass" id="searchBtn" type="button" aria-label="Search" aria-pressed="false">
-            <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
-          </button>
-          <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings and calendars">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/></svg>
-          </button>
+          <button class="iconbtn glass" id="syncBtn" type="button" aria-label="Google Sheet backup"><svg viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .6-8 5.5 5.5 0 0 0-10.6-1.4A4.7 4.7 0 0 0 7 18.5z"/><path d="M12 15.6v-5M9.8 12.6l2.2-2.2 2.2 2.2"/></svg></button>
+          <button class="iconbtn glass" id="todayBtn" type="button" aria-label="This week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" class="fs"/></svg></button>
         </div>
-      </div>
-      <div class="search" id="searchBar" hidden role="search">
-        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
-        <input type="search" id="searchIn" placeholder="Search events" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search events">
-        <button class="clear" id="searchClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
     </header>
     <main class="list" id="main"></main>
   </section>
 
-  <!-- DOCK: the views, and New Event -->
+  <!-- DOCK: log today -->
   <div class="dock">
-    <nav class="tabs glass" role="tablist" aria-label="Views">
-      <span class="slthumb" id="tabThumb" aria-hidden="true"></span>
-      <button class="tab" type="button" role="tab" data-view="day" aria-selected="false" aria-label="Day"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M8 14h8"/></svg></button>
-      <button class="tab" type="button" role="tab" data-view="week" aria-selected="false" aria-label="Week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M9.2 9.6v11M14.8 9.6v11"/></svg></button>
-      <button class="tab" type="button" role="tab" data-view="month" aria-selected="true" aria-label="Month"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><path d="M3.4 15.1h17.2M9.2 9.6v11M14.8 9.6v11"/></svg></button>
-      <button class="tab" type="button" role="tab" data-view="year" aria-selected="false" aria-label="Year"><svg viewBox="0 0 24 24"><rect x="3.4" y="3.4" width="7.2" height="7.2" rx="2"/><rect x="13.4" y="3.4" width="7.2" height="7.2" rx="2"/><rect x="3.4" y="13.4" width="7.2" height="7.2" rx="2"/><rect x="13.4" y="13.4" width="7.2" height="7.2" rx="2"/></svg></button>
-      <button class="tab" type="button" role="tab" data-view="list" aria-selected="false" aria-label="List"><svg viewBox="0 0 24 24"><path d="M8.4 6.4h12M8.4 12h12M8.4 17.6h12"/><circle cx="4.4" cy="6.4" r=".9" class="fs"/><circle cx="4.4" cy="12" r=".9" class="fs"/><circle cx="4.4" cy="17.6" r=".9" class="fs"/></svg></button>
-    </nav>
     <div class="dockr">
-      <button class="fab" id="fab" type="button" aria-label="New event">
+      <button class="fab" id="fab" type="button" aria-label="Log today’s workout">
         <svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- One event -->
-  <div class="sheetwrap lg" id="evSheet" hidden>
+  <!-- One day: what was done, and the form to add to it -->
+  <div class="sheetwrap lg" id="daySheet" hidden>
     <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="evLbl">
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="dayLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="evLbl" class="vh">Event</h2><div class="acts" id="evActs"></div></div>
-      <div class="sheetbody" id="evBody"></div>
+      <div class="sheethead"><h2 id="dayLbl">Today</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
+      <div class="sheetbody" id="dayBody"></div>
     </div>
   </div>
 
-  <!-- New or edited event -->
-  <div class="sheetwrap lg" id="edSheet" hidden>
-    <div class="scrim"></div>
-    <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="edLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><button class="iconbtn" id="edCancel" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="edLbl">New Event</h2><div class="acts"><button class="iconbtn okbtn" id="edSave" type="button" aria-label="Add"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
-      <div class="sheetbody" id="edBody"></div>
-    </div>
-  </div>
-
-  <!-- A choice: this event, all future, all -->
-  <div class="sheetwrap lg" id="pickSheet" hidden>
+  <!-- Google Sheet backup: connect, sync now, set up the other phone -->
+  <div class="sheetwrap lg" id="syncSheet" hidden>
     <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="pkLbl">
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="pkLbl">Choose</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
-      <div class="sheetbody"><p class="hint" id="pkHint" style="margin:0 4px"></p><div class="rgroup glass" id="pkRows"></div></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <form id="syForm" class="field" autocomplete="on" action="#">
+          <div class="box">
+            <label class="label" for="syUrl">Web app link</label>
+            <input class="plain" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false">
+            <label class="label" for="sySecret">Secret code</label>
+            <input class="plain" id="sySecret" name="password" type="password" placeholder="The SECRET you set in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+          </div>
+          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
+          <p class="hint">Set up the Sheet first (steps in the Fitness README; it is a Sheet of its own, not Notes’ or Travel’s). On a second phone, open the setup link from the first instead.</p>
+        </form>
+        <div id="syOn" class="field" hidden>
+          <div class="rgroup">
+            <button class="rowbtn" type="button" id="syNow">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
+              <span>Sync now<span class="sub">Sends this phone’s changes and loads the other phone’s</span></span>
+            </button>
+            <button class="rowbtn" type="button" id="syShare">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
+              <span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up the other phone. Keep it private.</span></span>
+            </button>
+          </div>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Settings and calendars -->
-  <div class="sheetwrap lg" id="setSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="stLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="stLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
-      <div class="sheetbody" id="stBody"></div>
-    </div>
-  </div>
-
-  <!-- Shown once after an update; and while iCloud is read or written -->
+  <!-- Shown once after an update; and while the Sheet syncs -->
   <div class="updpill" id="updPill" role="status" hidden><svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Updated</div>
-  <div class="updpill syncpill" id="syncPill" role="status" hidden><svg class="spin" viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg><svg class="tick b" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg><span id="syncPillTxt">Updating</span></div>
+
+  <div class="updpill syncpill" id="syncPill" role="status" hidden><svg class="spin" viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg><svg class="tick b" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg><span id="syncPillTxt">Syncing</span></div>
 
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
 <script src="../home/slide.js"></script>
-<script src="ical.js"></script>
 <script src="app.js"></script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
 <script src="../home/back.js" defer></script>
