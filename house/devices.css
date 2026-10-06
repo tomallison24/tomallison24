@@ -474,6 +474,23 @@
 .wx-t b { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .wx-t small { font-size: 14px; font-weight: 600; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wx-go { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: 13px; font-weight: 600; opacity: .55; }
+/* Recent activity: the latest event in the same pill; the list in its popup */
+.acpill { width: 100%; text-align: left; font: inherit; }
+.ac-t { flex-direction: column; align-items: flex-start; gap: 1px; }
+.ac-t b { font-size: 16px; font-weight: 600; letter-spacing: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-t small { font-size: 13px; font-weight: 500; opacity: .7; }
+.actlist { margin-top: 6px; }
+.actrow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; }
+.actrow + .actrow { border-top: 0.5px solid rgba(255,255,255,0.08); }
+.act-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgb(var(--c));
+  background: rgba(var(--c),0.14); box-shadow: inset 0 0 0 0.5px rgba(var(--c),0.35); }
+.act-k { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.act-k b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-k small { font-size: 13px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-r { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.act-r time { font-size: 12.5px; font-weight: 600; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.act-who { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; letter-spacing: .04em; opacity: .55; }
+.act-who.you { opacity: .7; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .ag:not(.lit) { background: rgba(40,40,46,0.9); } }
 .bugform .field textarea { width: 100%; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 4px 0 2px; resize: none; }
 .bugform { margin-top: 6px; }
