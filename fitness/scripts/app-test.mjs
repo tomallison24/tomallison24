@@ -2,7 +2,7 @@
 // day's sheet, adding an exercise through the muscle group, exercise and
 // weight / reps / sets pickers, last time's numbers filling in, the lists'
 // sections and Recent, searching every exercise from one bar, a hold timed in seconds, an exercise typed in under
-// "Other…", editing and deleting (with Undo), moving between weeks,
+// "Other…", cardio by time and distance, editing and deleting (with Undo), moving between weeks,
 // Calendar's week start and ?date= link, Calendar showing the workouts as a
 // layer, the Analysis view (the drop-down under the title, Week and Month,
 // stronger / weaker / new, muscle groups missed), Google Sheet sync end to end (the real google-sheet-sync.gs,
@@ -199,8 +199,9 @@ await test('the lists: the sheet’s exercises in short sections, what you did l
   const groups = await page.$$eval('#fxEx optgroup', gs => gs.map(g => [g.label, [...g.children].map(o => o.textContent)]));
   assert.deepEqual(groups[0], ['Recent', ['Overhead Barbell Press']]);
   assert.deepEqual(groups.slice(1).map(g => g[0]), ['Presses', 'Raises', 'Rear delts and traps']);
-  const total = await page.evaluate(() => new Set(window.__fitness.GROUPS.flatMap(g => g.ex)).size);
-  assert.ok(total >= 70 && total <= 80, total + ' exercises in all');
+  const total = await page.evaluate(() => new Set(window.__fitness.GROUPS.filter(g => g.id !== 'cardio').flatMap(g => g.ex)).size);
+  assert.ok(total >= 70 && total <= 80, total + ' strength exercises');
+  assert.equal(await page.evaluate(() => window.__fitness.GROUPS.find(g => g.id === 'cardio').ex.length), 12, 'and the gym’s 12 cardio machines, track and pool');
 });
 
 await test('a hold is timed in seconds', async () => {
@@ -473,6 +474,72 @@ await test('Search: every exercise from one bar; picking one fills in the group,
   assert.equal(await p.$$eval('[data-addnew]', e => e.length), 0, 'no "Add" for a name that already exists');
   violations.push(...(await p.evaluate(() => window.__csp || [])));
   await se.ctx.close();
+});
+
+await test('Cardio: the gym’s machines, logged by time and distance, in the week, Analysis and Calendar', async () => {
+  const seed = { v: 2, exercises: [], logs: [
+    { id: 'k1', date: ymd(day(-8)), group: 'cardio', exercise: 'Treadmill', weight: 0, reps: 0, sets: 0, cardio: true, mins: 30, dist: 2.5, unit: 'mi', updated: 1 },
+  ] };
+  const ca = await newPage('light', seed);
+  const p = ca.page;
+  await p.goto(BASE + '/fitness/');
+  await p.waitForFunction(() => window.__fitness);
+  await p.click('.drow.today');
+  // Search by what you'd call it: "run" finds the treadmill and the track.
+  await p.fill('#fxSearch', 'run');
+  const runs = await p.$$eval('#fxResults [data-pick]', bs => bs.map(b => b.dataset.pick));
+  assert.deepEqual(runs.slice(0, 2), ['Treadmill', 'Indoor Track']);
+  await p.fill('#fxSearch', 'rower');
+  assert.equal(await p.$eval('#fxResults [data-pick]', b => b.dataset.pick), 'Rowing Machine');
+  await p.fill('#fxSearch', 'tread');
+  await p.click('#fxResults [data-pick="Treadmill"]');
+  assert.equal(await p.getAttribute('.opt[data-group="cardio"]', 'aria-checked'), 'true');
+  assert.equal(await p.$$eval('#fxW, #fxR, #fxS', e => e.length), 0, 'no weight, reps or sets');
+  assert.equal(await p.inputValue('#fxM'), '30', 'last time’s minutes');
+  assert.equal(await p.inputValue('#fxD'), '2.5', 'and distance');
+  assert.equal(await p.$eval('#fxD', s => s.selectedOptions[0].textContent), '2.5 mi');
+  await p.selectOption('#fxD', '3');
+  await p.click('#fxAdd');
+  assert.match(await p.textContent('#fxList'), /Treadmill\s*Cardio · 30 min · 3 mi/);
+  // The rower in metres, and distance can be left out.
+  await p.click('.opt[data-group="cardio"]');
+  const secs = await p.$$eval('#fxEx optgroup', gs => gs.map(g => g.label));
+  assert.ok(['Machines', 'Bikes', 'Track and pool'].every(l => secs.includes(l)), secs.join());
+  await p.selectOption('#fxEx', 'Rowing Machine');
+  assert.equal(await p.inputValue('#fxM'), '20', 'a first time starts at 20 minutes');
+  assert.equal(await p.inputValue('#fxD'), '', 'no distance unless you choose one');
+  assert.ok((await p.$$eval('#fxD option', os => os.map(o => o.textContent))).includes('2,000 m'));
+  await p.selectOption('#fxM', '15');
+  await p.click('#fxAdd');
+  assert.match(await p.textContent('#fxList'), /Rowing Machine\s*Cardio · 15 min(?! ·)/);
+  const d = await stored(p);
+  const row = d.logs.find(x => x.exercise === 'Rowing Machine');
+  assert.deepEqual({ cardio: row.cardio, mins: row.mins, dist: row.dist, unit: row.unit, sets: row.sets }, { cardio: true, mins: 15, dist: 0, unit: 'm', sets: 0 });
+  // Editing one brings its minutes and distance back.
+  await p.click('.ebody[aria-label="Edit Treadmill"]');
+  assert.equal(await p.inputValue('#fxM'), '30'); assert.equal(await p.inputValue('#fxD'), '3');
+  await p.click('#fxCancel');
+  await shot(p, '13-cardio');
+  await p.keyboard.press('Escape');
+  assert.match(await p.textContent('.drow.today'), /Cardio.*45 min cardio/);
+  // Analysis: minutes on their own tile, and the faster treadmill.
+  await p.evaluate(() => window.__fitness.setView('analysis'));
+  // Week: today's 45 minutes against last week's 30.
+  const kp = await p.$$eval('.kpi', ks => ks.map(k => k.textContent));
+  assert.match(kp[3], /Cardio \(min\)45↑ \+15$/);
+  assert.match(await p.textContent('#anUp'), /Treadmill30 min · 3 mi · was 30 min · 2\.5 mi/);
+  assert.ok(!(await p.$('.gbar[data-g="cardio"]')), 'not a muscle group bar');
+  await p.waitForTimeout(900);   // past the cards' entrance
+  await shot(p, '14-cardio-analysis');
+  // Calendar shows it too.
+  await p.goto(BASE + '/calendar/?date=' + TODAY + '&view=day');
+  await p.waitForFunction(() => window.__calendar); await p.waitForTimeout(300);
+  const it = await p.evaluate(d => window.__calendar.eventsOn(d).find(x => x.kind === 'fitness'), TODAY);
+  assert.equal(it.title, 'Workout · Cardio');
+  assert.equal(it.sub, '45 min cardio');
+  assert.match(it.notes, /Treadmill: 30 min · 3 mi\nRowing Machine: 15 min$/);
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await ca.ctx.close();
 });
 
 await test('Analysis with nothing logged says so', async () => {

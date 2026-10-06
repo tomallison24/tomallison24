@@ -364,7 +364,7 @@ if (window.top !== window.self) {
   function fitnessItems(w) {
     const data = ls.json('allison-fitness-v1', null);
     if (!data || !Array.isArray(data.logs)) return [];
-    const GROUPS = { chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes' };
+    const GROUPS = { chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes', cardio: 'Cardio' };
     const days = new Map();
     for (const x of data.logs) {
       if (!x || !/^\d{4}-\d{2}-\d{2}$/.test(x.date || '') || typeof x.exercise !== 'string') continue;
@@ -375,10 +375,14 @@ if (window.top !== window.self) {
     const out = [];
     for (const [date, logs] of days) {
       const groups = [...new Set(logs.map(x => GROUPS[x.group] || 'Other'))];
-      const sets = logs.reduce((a, x) => a + (+x.sets || 0), 0);
+      const lift = logs.filter(x => !x.cardio), sets = lift.reduce((a, x) => a + (+x.sets || 0), 0);
+      const mins = logs.reduce((a, x) => a + (x.cardio ? +x.mins || 0 : 0), 0);
       const secs = n => n < 60 ? n + ' s' : Math.floor(n / 60) + ' min' + (n % 60 ? ' ' + n % 60 + ' s' : '');
-      const notes = logs.map(x => x.exercise + ': ' + x.sets + ' × ' + (x.timed ? secs(+x.reps) : x.reps) + ' · ' + (+x.weight ? (+x.weight).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb' : 'Bodyweight')).join('\n');
-      out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub: plural(logs.length, 'exercise') + ' · ' + plural(sets, 'set'), link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
+      const line = x => x.cardio ? (+x.mins || 0) + ' min' + (+x.dist > 0 ? ' · ' + (+x.dist).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + (x.unit || 'mi') : '')
+        : x.sets + ' × ' + (x.timed ? secs(+x.reps) : x.reps) + ' · ' + (+x.weight ? (+x.weight).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb' : 'Bodyweight');
+      const notes = logs.map(x => x.exercise + ': ' + line(x)).join('\n');
+      const sub = [lift.length ? plural(lift.length, 'exercise') + ' · ' + plural(sets, 'set') : '', mins ? mins + ' min cardio' : ''].filter(Boolean).join(' · ');
+      out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub, link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
     }
     return out;
   }

@@ -24,7 +24,7 @@ each day what you did.
     its muscle group.
 - **Step by step**, filling in the form from the top down:
   1. **Muscle group**: Chest, Back, Lower back, Shoulders, Arms, Core, Legs
-     or Glutes.
+     or Glutes, or **Cardio**.
   2. **Exercise**: a dropdown of that group's exercises (see below). The
      ones you did lately come first, under **Recent**. **Other…** lets you
      type one in, and it stays in that group's list after that, under
@@ -53,8 +53,8 @@ Analysis compares two windows of the same length, both ending today:
 
 The dates of both windows are shown under the switch. The page shows:
 
-- **Totals**: days trained, sets, and volume (weight × reps × sets, for
-  exercises done with a weight). Each has its change against the window
+- **Totals**: days trained, sets, volume (weight × reps × sets, for
+  exercises done with a weight) and cardio minutes, as a 2 × 2 grid. Each has its change against the window
   before, shown as an arrow and a signed number.
 - **Improving**: exercises you did better than before, biggest gain first,
   with today's best and what it was before. **New** lists exercises done for
@@ -82,6 +82,41 @@ weighted entry of the same exercise aren't compared with each other.
 
 The sums are in `analysis.js`, separate from the page, so they can be tested
 on their own.
+
+## Cardio
+
+**Cardio** is a ninth group holding the gym's cardio equipment, from the
+GymEquipment tab:
+
+| Section | Equipment |
+|---|---|
+| Machines | Treadmill, Elliptical, Stair Climber, Rowing Machine, ARC Trainer, Adaptive Motion Trainer, Seated Elliptical |
+| Bikes | Upright Bike, Recumbent Bike, Spin Bike |
+| Track and pool | Indoor Track, Swimming |
+
+**What you log:** cardio asks for **Time** and an optional **Distance**,
+instead of weight, reps and sets.
+
+- Time runs from 1 minute to 3 hours.
+- Distance uses the unit the equipment shows: metres on the rower, yards in
+  the pool, and miles on everything else.
+- Choosing a machine fills in last time's minutes and distance. A first
+  time starts at 20 minutes.
+
+**Searching:** search knows the other names, so "run" finds the treadmill
+and the track, "cycle" the bikes, "rower" or "erg" the rowing machine, and
+"pool" swimming.
+
+**Where cardio shows up:**
+- **The week**: each day's line adds its cardio minutes, e.g. "3 exercises
+  · 9 sets · 20 min cardio". Cardio adds no sets.
+- **Analysis**: a **Cardio (min)** total sits beside the other three.
+  - Each machine is compared by speed (distance ÷ time) when you logged a
+    distance both times, and by minutes when you didn't.
+  - "No cardio in the last 7 days" counts under Needs work.
+  - Cardio isn't one of the muscle-group bars.
+- **Calendar**: the day's workout lists cardio as "Treadmill: 30 min · 3 mi".
+- **The Sheet**: cardio fills the Minutes, Distance and Unit columns.
 
 ## The exercises
 
@@ -166,8 +201,10 @@ same design as Travel, with **its own Sheet and script**:
 
 **What the Sheet holds**
 - **Workouts**: Date, Day, Muscle group, Exercise, Sets, Reps (or Seconds
-  for a hold), Weight (lb) and Volume (sets × reps × weight). Newest is at
-  the top.
+  for a hold), Weight (lb), Volume (sets × reps × weight), and for cardio
+  Minutes, Distance and Unit. Newest is at the top. If you set the Sheet up
+  before cardio was added, paste the script in again and deploy a new
+  version to get the new columns. The data itself syncs either way.
 - Hidden `_logs`, `_exercises` and `_deleted` tabs, which the app reads
   back.
 

@@ -17,26 +17,33 @@
 //                     (Epley), so 105 lb × 6 counts as stronger than 95 lb × 8
 //     bodyweight      reps
 //     a hold          seconds
+//     cardio          speed (distance ÷ minutes) when a distance was
+//                     logged, otherwise minutes
 //   Under 1% either way is "steady"; entries of different kinds (a
-//   bodyweight pull-up against a weighted one) aren't compared.
+//   bodyweight pull-up against a weighted one, or a timed treadmill against
+//   one with a distance) aren't compared.
+// - Cardio minutes are totalled on their own; cardio done before but none
+//   now needs work too.
 // - Muscle groups: sets in each window. A group trained before but not now,
 //   or with under 70% of its sets (from at least 3), needs work.
 (function (root) {
   const D = 864e5;
   const add = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * D).toISOString().slice(0, 10);
-  const kindOf = x => x.timed ? 'time' : +x.weight > 0 ? 'load' : 'reps';
-  const score = x => x.timed ? +x.reps : +x.weight > 0 ? +x.weight * (1 + +x.reps / 30) : +x.reps;
+  const kindOf = x => x.cardio ? (+x.dist > 0 ? 'pace' : 'mins') : x.timed ? 'time' : +x.weight > 0 ? 'load' : 'reps';
+  const score = x => x.cardio ? (+x.dist > 0 ? +x.dist / Math.max(1, +x.mins || 0) : +x.mins || 0)
+    : x.timed ? +x.reps : +x.weight > 0 ? +x.weight * (1 + +x.reps / 30) : +x.reps;
   const key = x => String(x.exercise).trim().toLowerCase();
   const better = (a, b) => !b || score(a) > score(b) || (score(a) === score(b) && a.date > b.date);
 
   // Totals and each exercise's best for the logs in [from, to].
   function summarize(logs, from, to) {
     const days = new Set(), groups = {}, ex = new Map();
-    let sets = 0, volume = 0;
+    let sets = 0, volume = 0, mins = 0;
     for (const x of logs) {
       if (x.date < from || x.date > to) continue;
       const n = Math.max(0, +x.sets || 0);
       days.add(x.date); sets += n;
+      if (x.cardio) mins += Math.max(0, +x.mins || 0);
       groups[x.group] = (groups[x.group] || 0) + n;
       if (!x.timed && +x.weight > 0) volume += +x.weight * (+x.reps || 0) * n;
       const k = key(x), cur = ex.get(k);
@@ -48,7 +55,7 @@
         if (x.date >= cur.last.date) { cur.last = x; cur.name = x.exercise; cur.group = x.group; }
       }
     }
-    return { workouts: days.size, sets, volume: Math.round(volume), groups, ex };
+    return { workouts: days.size, sets, volume: Math.round(volume), cardio: mins, groups, ex, any: days.size > 0 };
   }
 
   function analyze(logs, today, days, groupIds) {
@@ -82,9 +89,10 @@
     const missed = groups.filter(g => g.before > 0 && g.now === 0);
     const dropped = groups.filter(g => g.before >= 3 && g.now > 0 && g.now < g.before * 0.7);
 
-    const totals = ['workouts', 'sets', 'volume'].map(k => ({ id: k, now: now[k], before: before[k] }));
-    return { range, days, totals, up, down, same, fresh, groups, missed, dropped,
-      hasNow: now.sets > 0, hasBefore: before.sets > 0, score, kindOf };
+    const totals = ['workouts', 'sets', 'volume', 'cardio'].map(k => ({ id: k, now: now[k], before: before[k] }));
+    const cardioMissed = before.cardio > 0 && now.cardio === 0 ? { before: before.cardio } : null;
+    return { range, days, totals, up, down, same, fresh, groups, missed, dropped, cardioMissed,
+      hasNow: now.any, hasBefore: before.any, score, kindOf };
   }
 
   root.FitnessAnalysis = { analyze, score, kindOf, add };

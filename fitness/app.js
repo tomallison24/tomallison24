@@ -93,6 +93,12 @@ if (window.top !== window.self) {
       ['Calves and inner thigh', ['Calf Raise', 'Hip Adduction Machine']]] },
     { id: 'glutes', name: 'Glutes', sec: [
       ['', ['Hip Thrust', 'Glute Bridge*', 'Cable Kickback', 'Hip Abduction Machine']]] },
+    // The gym's cardio equipment (the GymEquipment tab): logged by time, and
+    // distance if you like, instead of weight, reps and sets.
+    { id: 'cardio', name: 'Cardio', sec: [
+      ['Machines', ['Treadmill', 'Elliptical', 'Stair Climber', 'Rowing Machine', 'ARC Trainer', 'Adaptive Motion Trainer', 'Seated Elliptical']],
+      ['Bikes', ['Upright Bike', 'Recumbent Bike', 'Spin Bike']],
+      ['Track and pool', ['Indoor Track', 'Swimming']]] },
   ];
   const BODYWEIGHT = new Set(), TIMED = new Set();
   for (const g of GROUPS) {
@@ -107,6 +113,20 @@ if (window.top !== window.self) {
   const GROUP = Object.fromEntries(GROUPS.map(g => [g.id, g]));
   const groupName = id => GROUP[id] ? GROUP[id].name : 'Other';
   const isTimed = name => TIMED.has(String(name).toLowerCase());
+  // Cardio: minutes, and a distance in the unit the machine shows - metres
+  // on the rower, yards in the pool, miles on everything else.
+  const isCardio = gid => gid === 'cardio';
+  const unitFor = name => /rowing|rower/i.test(name) ? 'm' : /swim/i.test(name) ? 'yd' : 'mi';
+  const MINS = [];
+  for (let m = 1; m <= 60; m++) MINS.push(m);
+  for (let m = 65; m <= 180; m += 5) MINS.push(m);
+  const DIST = { mi: [], m: [], yd: [] };
+  for (let d = 0.25; d <= 10; d += 0.25) DIST.mi.push(+d.toFixed(2));
+  for (let d = 10.5; d <= 30; d += 0.5) DIST.mi.push(d);
+  for (let d = 250; d <= 10000; d += 250) DIST.m.push(d);
+  for (let d = 50; d <= 3000; d += 50) DIST.yd.push(d);
+  const fmtDist = (d, u) => (+d).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + u;
+  const fmtMins = n => n < 60 ? n + ' min' : Math.floor(n / 60) + ' h' + (n % 60 ? ' ' + n % 60 + ' min' : '');
 
   // Weights in pounds: 2.5 lb steps to 100, then 5 lb steps to 500. 0 is
   // bodyweight. Reps 1-50, sets 1-10.
@@ -119,7 +139,8 @@ if (window.top !== window.self) {
   const SETS = Array.from({ length: 10 }, (_, i) => i + 1);
   const fmtW = w => +w === 0 ? 'Bodyweight' : (+w).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb';
   const fmtSecs = n => n < 60 ? n + ' s' : Math.floor(n / 60) + ' min' + (n % 60 ? ' ' + n % 60 + ' s' : '');
-  const fmtLine = x => x.sets + ' × ' + (x.timed ? fmtSecs(+x.reps) : x.reps) + ' · ' + fmtW(x.weight);
+  const fmtLine = x => x.cardio ? fmtMins(+x.mins) + (+x.dist > 0 ? ' · ' + fmtDist(x.dist, x.unit || 'mi') : '')
+    : x.sets + ' × ' + (x.timed ? fmtSecs(+x.reps) : x.reps) + ' · ' + fmtW(x.weight);
 
   // ---------------------------------------------------------------------
   // Data: { v: 2, logs: [{id, date, group, exercise, weight, reps, sets,
@@ -204,7 +225,7 @@ if (window.top !== window.self) {
   // State
   // ---------------------------------------------------------------------
   const st = { week: weekStartOf(today()), day: null, form: null, view: ls.get(K.view, 'week') === 'analysis' ? 'analysis' : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
-  const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false, q: '' });
+  const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false, q: '', mins: 20, dist: '' });
 
   // ---------------------------------------------------------------------
   // The week
@@ -229,7 +250,7 @@ if (window.top !== window.self) {
       const n = logs.reduce((a, x) => a + (+x.sets || 0), 0);
       if (logs.length) { days++; exCount += logs.length; sets += n; }
       const sum = logs.length
-        ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(groupName(g)) + '</span>').join('') + '</span><span class="dline">' + plural(logs.length, 'exercise') + ' · ' + plural(n, 'set') + '</span>'
+        ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(groupName(g)) + '</span>').join('') + '</span><span class="dline">' + dayLine(logs) + '</span>'
         : '<span class="rest">' + (d < tod ? 'Rest day' : d === tod ? 'Nothing logged yet' : '') + '</span>';
       rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '')) + '">'
         + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span>' + ICON.chevR + '</button>';
@@ -239,6 +260,12 @@ if (window.top !== window.self) {
       + '<div class="rgroup week" style="--i:1">' + rows + '</div>'
       + '<p class="sechead">' + (thisWeek ? 'This week' : 'That week') + '</p>'
       + '<div class="stats" style="--i:2"><div class="stat"><b>' + days + '</b><span>' + (days === 1 ? 'day' : 'days') + ' trained</span></div><div class="stat"><b>' + exCount + '</b><span>' + (exCount === 1 ? 'exercise' : 'exercises') + '</span></div><div class="stat"><b>' + sets + '</b><span>' + (sets === 1 ? 'set' : 'sets') + '</span></div></div>';
+  }
+  // "3 exercises · 9 sets · 20 min cardio"
+  function dayLine(logs) {
+    const lift = logs.filter(x => !x.cardio), mins = logs.reduce((a, x) => a + (x.cardio ? +x.mins || 0 : 0), 0);
+    const sets = lift.reduce((a, x) => a + (+x.sets || 0), 0);
+    return [lift.length ? plural(lift.length, 'exercise') + ' · ' + plural(sets, 'set') : '', mins ? fmtMins(mins) + ' cardio' : ''].filter(Boolean).join(' · ');
   }
   function goWeek(n) { st.week = addDays(st.week, 7 * n); render(); animateIn(main); }
   main.addEventListener('click', e => {
@@ -263,7 +290,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const VIEWS = [
     { id: 'week', name: 'Week', icon: 'week', sum: () => { const n = new Set(data.logs.filter(x => x.date >= weekStartOf(today()) && x.date <= today()).map(x => x.date)).size; return n ? plural(n, 'day') + ' trained this week' : 'Log each day’s workout'; } },
-    { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => { const a = analysisNow(); return a.hasNow || a.hasBefore ? 'Improving ' + a.up.length + ' · needs work ' + (a.down.length + a.missed.length + a.dropped.length) : 'Where you’re improving, and what needs work'; } },
+    { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => { const a = analysisNow(); return a.hasNow || a.hasBefore ? 'Improving ' + a.up.length + ' · needs work ' + (a.down.length + a.missed.length + a.dropped.length + (a.cardioMissed ? 1 : 0)) : 'Where you’re improving, and what needs work'; } },
   ];
   function drawViewMenu() {
     $('viewMenu').innerHTML = VIEWS.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === st.view) + '"><span class="ic">' + ICON[v.icon] + '</span><span class="k">' + esc(v.name) + '<small>' + esc(v.sum()) + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
@@ -286,11 +313,11 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const A = window.FitnessAnalysis;
   const PERIODS = { week: { days: 7, name: 'Week', words: 'the last 7 days', before: 'the 7 before' }, month: { days: 28, name: 'Month', words: 'the last 4 weeks', before: 'the 4 weeks before' } };
-  const analysisNow = () => A.analyze(data.logs, today(), PERIODS[st.period].days, GROUPS.map(g => g.id));
+  const analysisNow = () => A.analyze(data.logs, today(), PERIODS[st.period].days, GROUPS.filter(g => !isCardio(g.id)).map(g => g.id));
   const compact = n => n >= 1000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString('en-US');
   const short = s => fmt(s, { day: 'numeric', month: 'short' });
   // One entry, as you'd say it: 100 lb × 6, 12 reps, 45 s.
-  const said = x => x.timed ? fmtSecs(+x.reps) : +x.weight > 0 ? fmtW(x.weight) + ' × ' + x.reps : x.reps + ' reps';
+  const said = x => x.cardio ? fmtLine(x) : x.timed ? fmtSecs(+x.reps) : +x.weight > 0 ? fmtW(x.weight) + ' × ' + x.reps : x.reps + ' reps';
   function renderAnalysis() {
     $('todayBtn').hidden = true;
     const P = PERIODS[st.period], a = analysisNow(), r = a.range;
@@ -301,7 +328,7 @@ if (window.top !== window.self) {
       slideSeg(); return;
     }
     // Totals, each with its change against the window before.
-    const LBL = { workouts: 'Days trained', sets: 'Sets', volume: 'Volume (lb)' };
+    const LBL = { workouts: 'Days trained', sets: 'Sets', volume: 'Volume (lb)', cardio: 'Cardio (min)' };
     const kpis = '<div class="kpis" style="--i:1">' + a.totals.map(t => {
       const d = t.now - t.before, dir = !a.hasBefore || d === 0 ? '' : d > 0 ? 'up' : 'down';
       const delta = !a.hasBefore ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '+' : '−') + compact(Math.abs(d));
@@ -316,7 +343,8 @@ if (window.top !== window.self) {
     const improving = a.up.map(x => exRow(x, 'up')).join('');
     const work = a.down.map(x => exRow(x, 'down')).join('')
       + a.missed.map(gr => grpRow(gr, 'Not trained in ' + P.words + ' (' + plural(gr.before, 'set') + ' in ' + P.before + ')')).join('')
-      + a.dropped.map(gr => grpRow(gr, plural(gr.now, 'set') + ', down from ' + gr.before)).join('');
+      + a.dropped.map(gr => grpRow(gr, plural(gr.now, 'set') + ', down from ' + gr.before)).join('')
+      + (a.cardioMissed ? grpRow({ id: 'cardio' }, 'None in ' + P.words + ' (' + fmtMins(a.cardioMissed.before) + ' in ' + P.before + ')') : '');
     const quiet = (title, list) => list.length ? '<div class="xrow quiet"><span class="xt">' + esc(title) + '<small>' + esc(list.map(x => x.name).join(', ')) + '</small></span></div>' : '';
     // Sets by muscle group: one colour, scaled to the biggest of either window.
     const max = Math.max(1, ...a.groups.map(x => Math.max(x.now, x.before)));
@@ -328,7 +356,7 @@ if (window.top !== window.self) {
       + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
       + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
       + '<p class="sechead" style="--i:4">Sets by muscle group<span>' + (a.hasBefore ? 'change vs before' : '') + '</span></p><div class="rgroup bars" id="anGroups" style="--i:4">' + bars + '</div>'
-      + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time. Volume counts weighted sets only.</p>';
+      + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time, and cardio by speed (distance ÷ time) when you log a distance, otherwise by minutes. Volume counts weighted sets only.</p>';
     slideSeg();
   }
   const slideSeg = () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
@@ -373,7 +401,11 @@ if (window.top !== window.self) {
       const isOther = f.exercise === OTHER;
       form += '<div class="rgroup"><div class="frow"><label for="fxEx">Exercise</label><select id="fxEx">' + exerciseOptions(f.group, f.exercise) + '</select></div>'
         + (isOther ? '<div class="frow"><input class="txt" id="fxOther" type="text" maxlength="60" placeholder="Name of the exercise" autocomplete="off" aria-label="Name of the exercise" value="' + esc(f.other) + '"></div>' : '');
-      if (formName(f)) {
+      if (formName(f) && isCardio(f.group)) {
+        const u = unitFor(formName(f)), ds = DIST[u].includes(+f.dist) || f.dist === '' ? DIST[u] : DIST[u].concat(+f.dist).sort((a, b) => a - b);
+        form += '<div class="frow"><label for="fxM">Time</label><select id="fxM">' + opts(MINS.includes(+f.mins) ? MINS : MINS.concat(+f.mins).sort((a, b) => a - b), f.mins, fmtMins) + '</select></div>'
+          + '<div class="frow"><label for="fxD">Distance <small>optional</small></label><select id="fxD"><option value=""' + (f.dist === '' ? ' selected' : '') + '>—</option>' + opts(ds, f.dist, d => fmtDist(d, u)) + '</select></div>';
+      } else if (formName(f)) {
         const ws = WEIGHTS.slice(); if (f.weight !== '' && !ws.includes(+f.weight)) ws.push(+f.weight), ws.sort((a, b) => a - b);
         form += '<div class="frow"><label for="fxW">Weight</label><select id="fxW">' + (f.weight === '' ? '<option value="" selected disabled>Choose…</option>' : '') + opts(ws, f.weight, fmtW) + '</select></div>'
           + (f.timed ? '<div class="frow"><label for="fxR">Time</label><select id="fxR">' + opts(SECS.includes(+f.reps) ? SECS : SECS.concat(+f.reps).sort((a, b) => a - b), f.reps, fmtSecs) + '</select></div>'
@@ -397,7 +429,9 @@ if (window.top !== window.self) {
   // for dumbbell, barbell and EZ-bar. Names that start with what you typed,
   // then ones you've done, come first.
   // ---------------------------------------------------------------------
-  const ALIAS = { db: 'dumbbell', bb: 'barbell', ez: 'ez-bar', ohp: 'overhead', rdl: 'romanian' };
+  const ALIAS = { db: 'dumbbell', bb: 'barbell', ez: 'ez-bar', ohp: 'overhead', rdl: 'romanian', rower: 'rowing', erg: 'rowing', stairmaster: 'stair', amt: 'adaptive', arc: 'arc' };
+  // Other words a cardio machine goes by, so "run" or "cycle" finds it.
+  const ALSO = { 'treadmill': 'run walk jog', 'indoor track': 'run walk jog', 'swimming': 'pool laps swim', 'upright bike': 'cycle cycling', 'recumbent bike': 'cycle cycling', 'spin bike': 'cycle cycling spinning', 'stair climber': 'stairs steps', 'rowing machine': 'row' };
   const words = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
   function allExercises() {
     const out = new Map();   // one entry a name; Romanian Deadlift is in two groups, so keep where you last logged it
@@ -413,7 +447,7 @@ if (window.top !== window.self) {
     const done = new Set(data.logs.map(x => x.exercise.toLowerCase()));
     const ql = String(q).trim().toLowerCase();
     return allExercises().map(x => {
-      const ws = words(x.name + ' ' + groupName(x.group));
+      const ws = words(x.name + ' ' + groupName(x.group) + ' ' + (ALSO[x.name.toLowerCase()] || ''));
       if (!qs.every(w => ws.some(v => v.startsWith(w) || (w.length > 3 && v.includes(w))))) return null;
       const rank = (x.name.toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
       return Object.assign({ rank }, x);
@@ -457,7 +491,7 @@ if (window.top !== window.self) {
   const formName = f => f.exercise === OTHER ? f.other.trim() : f.exercise;
   // The Add button follows the form (it isn't there while search results show).
   const syncAdd = () => { const b = $('fxAdd'); if (b) b.disabled = !formReady(); };
-  const formReady = () => { const f = st.form; return !!(f.group && formName(f) && f.weight !== '' && f.reps && f.sets); };
+  const formReady = () => { const f = st.form; return !!(f.group && formName(f) && (isCardio(f.group) ? +f.mins > 0 : f.weight !== '' && f.reps && f.sets)); };
   // Choosing an exercise starts its numbers from the last time it was done.
   function pickExercise(name) {
     const f = st.form;
@@ -465,6 +499,7 @@ if (window.top !== window.self) {
     f.timed = name !== OTHER && isTimed(name);
     if (name === OTHER) { f.weight = ''; f.reps = 10; return; }
     const last = lastOf(name, st.day, f.editing);
+    if (isCardio(f.group)) { f.mins = last && last.cardio ? last.mins : 20; f.dist = last && last.cardio && +last.dist > 0 && (last.unit || 'mi') === unitFor(name) ? last.dist : ''; return; }
     if (last && !!last.timed === f.timed) { f.weight = last.weight; f.reps = last.reps; f.sets = last.sets; }
     else { f.weight = BODYWEIGHT.has(name.toLowerCase()) ? 0 : ''; f.reps = f.timed ? 30 : 10; f.sets = 3; }
   }
@@ -491,7 +526,8 @@ if (window.top !== window.self) {
     if (ed) {
       const x = data.logs.find(l => l.id === ed.dataset.edit); if (!x) return;
       if (f.editing === x.id) { st.form = blankForm(); renderDay(); return; }
-      st.form = Object.assign(blankForm(), { editing: x.id, group: x.group, exercise: x.exercise, weight: x.weight, reps: x.reps, sets: x.sets, timed: !!x.timed });
+      st.form = Object.assign(blankForm(), { editing: x.id, group: x.group, exercise: x.exercise, weight: x.weight, reps: x.reps, sets: x.sets, timed: !!x.timed },
+        x.cardio ? { mins: +x.mins || 20, dist: +x.dist > 0 ? +x.dist : '' } : {});
       renderDay(); return;
     }
     const del = e.target.closest('[data-del]');
@@ -509,8 +545,10 @@ if (window.top !== window.self) {
   body.addEventListener('change', e => {
     const f = st.form, t = e.target;
     if (t.id === 'fxEx') { pickExercise(t.value === OTHER ? OTHER : t.value); renderDay(); if (f.exercise === OTHER) $('fxOther').focus(); return; }
-    if (!/^fx[WRS]$/.test(t.id)) return;
-    if (t.id === 'fxW') f.weight = +t.value;
+    if (!/^fx[WRSMD]$/.test(t.id)) return;
+    if (t.id === 'fxM') f.mins = +t.value;
+    else if (t.id === 'fxD') f.dist = t.value === '' ? '' : +t.value;
+    else if (t.id === 'fxW') f.weight = +t.value;
     else if (t.id === 'fxR') f.reps = +t.value;
     else if (t.id === 'fxS') f.sets = +t.value;
     syncAdd();
@@ -528,7 +566,7 @@ if (window.top !== window.self) {
     f.other = e.target.value;
     // The weight, reps and sets appear once the exercise has a name.
     if (had !== !!f.other.trim()) {
-      if (!had && f.weight === '') { const last = lastOf(f.other.trim(), st.day, f.editing); if (last && !last.timed) { f.weight = last.weight; f.reps = last.reps; f.sets = last.sets; } }
+      if (!had && f.weight === '' && !isCardio(f.group)) { const last = lastOf(f.other.trim(), st.day, f.editing); if (last && !last.timed && !last.cardio) { f.weight = last.weight; f.reps = last.reps; f.sets = last.sets; } }
       const pos = e.target.selectionStart; renderDay(); const o = $('fxOther'); o.focus(); o.setSelectionRange(pos, pos);
     }
     syncAdd();
@@ -545,11 +583,15 @@ if (window.top !== window.self) {
     if (f.exercise === OTHER && !exercisesFor(f.group).some(n => n.toLowerCase() === name.toLowerCase())) {
       data.exercises.push({ id: newId(), group: f.group, name });
     }
-    const fields = { group: f.group, exercise: name, weight: +f.weight, reps: +f.reps, sets: +f.sets };
-    if (f.timed) fields.timed = true;
+    // Cardio keeps weight, reps and sets at 0, so everything that adds up
+    // sets or volume leaves it out without asking.
+    const fields = isCardio(f.group)
+      ? { group: f.group, exercise: name, weight: 0, reps: 0, sets: 0, cardio: true, mins: +f.mins, dist: f.dist === '' ? 0 : +f.dist, unit: unitFor(name) }
+      : { group: f.group, exercise: name, weight: +f.weight, reps: +f.reps, sets: +f.sets };
+    if (f.timed && !fields.cardio) fields.timed = true;
     if (f.editing) {
       const x = data.logs.find(l => l.id === f.editing);
-      if (x) { delete x.timed; Object.assign(x, fields); }
+      if (x) { for (const k of ['timed', 'cardio', 'mins', 'dist', 'unit']) delete x[k]; Object.assign(x, fields); }
       toast('Saved ' + name);
     } else {
       data.logs.push(Object.assign({ id: newId(), date: st.day }, fields));

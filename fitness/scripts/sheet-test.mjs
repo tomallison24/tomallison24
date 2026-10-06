@@ -29,9 +29,20 @@ test('a first sync stores the log and builds the Workouts tab, newest first', ()
   assert.equal(r.logs.length, 2);
   assert.equal(r.exercises[0].name, 'Reverse Hyper');
   const w = s.tab('Workouts');
-  assert.deepEqual(w[0], ['Date', 'Day', 'Muscle group', 'Exercise', 'Sets', 'Reps', 'Seconds', 'Weight (lb)', 'Volume (lb)']);
-  assert.deepEqual(w[1], ['2026-10-06', 'Tue', 'Core', 'Plank', 3, '', 45, 'Bodyweight', '']);
-  assert.deepEqual(w[2], ['2026-10-05', 'Mon', 'Shoulders', 'Overhead Barbell Press', 3, 8, '', 95, 2280]);
+  assert.deepEqual(w[0], ['Date', 'Day', 'Muscle group', 'Exercise', 'Sets', 'Reps', 'Seconds', 'Weight (lb)', 'Volume (lb)', 'Minutes', 'Distance', 'Unit']);
+  assert.deepEqual(w[1], ['2026-10-06', 'Tue', 'Core', 'Plank', 3, '', 45, 'Bodyweight', '', '', '', '']);
+  assert.deepEqual(w[2], ['2026-10-05', 'Mon', 'Shoulders', 'Overhead Barbell Press', 3, 8, '', 95, 2280, '', '', '']);
+});
+
+test('cardio: minutes and a distance in place of sets, reps and weight', () => {
+  const s = fakeSheet();
+  s.post({ secret: SECRET, action: 'sync', logs: [
+    log('c1', { group: 'cardio', exercise: 'Rowing Machine', weight: 0, reps: 0, sets: 0, cardio: true, mins: 20, dist: 4000, unit: 'm' }),
+    log('c2', { group: 'cardio', exercise: 'Treadmill', weight: 0, reps: 0, sets: 0, cardio: true, mins: 30, dist: 0, unit: 'mi' }),
+  ], graves: {} });
+  const w = s.tab('Workouts');
+  assert.ok(w.some(r => JSON.stringify(r) === JSON.stringify(['2026-10-05', 'Mon', 'Cardio', 'Rowing Machine', '', '', '', '', '', 20, 4000, 'm'])));
+  assert.ok(w.some(r => JSON.stringify(r) === JSON.stringify(['2026-10-05', 'Mon', 'Cardio', 'Treadmill', '', '', '', '', '', 30, '', ''])), 'no distance logged: left blank');
   assert.ok(s.sheets.get('_logs').hidden && s.sheets.get('_deleted').hidden);
   assert.equal(s.tab('Sheet1'), null, 'the empty first tab is tidied away');
 });
