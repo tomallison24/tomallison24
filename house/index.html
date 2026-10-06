@@ -191,51 +191,28 @@
   .viewmenu button[aria-selected="true"] .tick { opacity: 1; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .viewmenu { background: var(--lgs-solid); } }
 
-  /* ---- thermostats: the ruler (Labs' G) ----
-     One ruler for both targets: a glass lens each (Heat amber, Cool blue),
-     the comfort band between them, the room a white dot; the targets'
-     numbers ride above their lenses. Drag a lens, or tap beside it: left
-     lowers it, right raises it (between two lenses the space is split at
-     the middle). The ruler is centred on the band and widens with it. */
+  /* ---- thermostats: the targets as the hero (Labs' B) ----
+     Each target a big thin number in its own light, a soft chevron above to
+     raise it and below to lower it, its name under it; Auto's two joined by
+     a dash. The room and what it is doing are small lines. */
   .tg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .tg-head .pwr { flex: none; }
-  .tg-tags { position: relative; height: 44px; margin: 2px 0 6px; }
-  .tg-tag { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; transition: left .4s cubic-bezier(.2,.8,.2,1); text-shadow: 0 1px 8px rgba(0,0,0,0.3); }
-  .tg-tag small { white-space: nowrap; display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
-  .tg-tag b { font-size: 28px; font-weight: 200; font-variant-numeric: tabular-nums; }
-  .tg-ruler { position: relative; height: 56px; border-radius: 16px; overflow: hidden; touch-action: pan-y;
-    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
-  .tg-rt { position: absolute; top: 10px; width: 1px; height: 12px; margin-left: -0.5px; background: rgba(255,255,255,0.35); }
-  .tg-rt.big { height: 20px; top: 8px; background: rgba(255,255,255,0.7); }
-  .tg-rt em { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 10px; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
-  .tg-now { position: absolute; top: 4px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.9); }
-  .tg-band { position: absolute; top: 4px; bottom: 4px; pointer-events: none; background: linear-gradient(90deg, rgba(var(--a),0.22), rgba(var(--b),0.22));
-    transition: left .4s cubic-bezier(.2,.8,.2,1), width .4s cubic-bezier(.2,.8,.2,1); }
-  .tg-lens { position: absolute; top: 4px; bottom: 4px; width: 26px; margin-left: -13px; border-radius: 12px; pointer-events: none;
-    background: linear-gradient(180deg, rgba(var(--c),0.35), rgba(var(--c),0.12)); box-shadow: inset 0 0 0 1px rgba(var(--c),0.75), inset 0 1px 0 rgba(255,255,255,0.5), 0 0 14px rgba(var(--c),0.4);
-    transition: left .4s cubic-bezier(.2,.8,.2,1), transform .2s, box-shadow .2s; }
-  .tg-lens.drag { transition: transform .2s, box-shadow .2s; transform: scale(1.12); z-index: 2;
-    box-shadow: inset 0 0 0 1px rgba(var(--c),0.95), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 22px rgba(var(--c),0.7); }
-  .tg-ruler:has(.drag) .tg-band, .tg-wrap:has(.drag) .tg-tag { transition: none; }   /* follow the finger */
-  .tg-ruler.locked .tg-lens { opacity: .6; }
-  /* Eco: green and fixed - a band for the range, thin pins at its edges */
-  .tg-ruler.eco .tg-band { background: linear-gradient(90deg, rgba(140,214,160,0.16), rgba(140,214,160,0.3) 50%, rgba(140,214,160,0.16)); }
-  .tg-ruler.eco .tg-lens { opacity: 1; width: 8px; margin-left: -4px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(var(--c),0.9), 0 0 10px rgba(var(--c),0.5); }
-  .tg-eco { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 10px; text-align: center; }
-  .tg-eco span { font-size: 13px; font-weight: 600; color: rgb(170,230,185); }
-  .tg-eco small { font-size: 11.5px; opacity: .55; }
-  .tg-z { position: absolute; top: 0; bottom: 0; z-index: 1; }
-  .tg-z:active { background: rgba(255,255,255,0.05); }
-  .tg-ends { display: flex; justify-content: space-between; align-items: center; min-height: 18px; padding: 6px 10px 0; }
-  .tg-ends > span { opacity: .4; }
-  .tg-ends .ecobtn { margin: 4px auto 0; height: 36px; }
-  .tg-none { padding: 18px 0 6px; text-align: center; font-size: 15px; font-weight: 600; opacity: .55; }
-  .tc .tg-wrap { margin-top: 2px; }
-  .tc .dg-sub { white-space: normal; }   /* the one line may wrap on a small phone rather than lose Outside */
-  .tg-big { font-size: 72px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
-  .tg-big span { font-size: 32px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
-  .uhero .tg-big + .dg-title { margin-top: 6px; }
+  .tc .dg-name em { font-style: normal; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .65; margin-left: 8px; font-size: 13px; }
+  .tb-tgs { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; }
+  .tb-tg { display: flex; flex-direction: column; align-items: center; min-width: 92px; }
+  .tb-tg b { font-size: 60px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 24px rgba(var(--c),0.25); }
+  .tb-tg b span { font-size: 26px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
+  .tb-tg small { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-top: 4px; }
+  .tb-tgs.eco b { color: rgb(var(--c)); }
+  .tb-chev { width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; opacity: .5; border-radius: 12px; transition: opacity .2s, background .2s; }
+  .tb-chev:active { background: rgba(255,255,255,0.1); opacity: 1; }
+  .tb-chev:disabled { opacity: .15; }
+  .tb-gap { display: block; height: 30px; }
+  .tb-dash { font-style: normal; font-size: 40px; font-weight: 100; opacity: .35; margin-top: -26px; }
+  .tb-sub { text-align: center; font-size: 13px; font-weight: 600; opacity: .62; margin-top: 8px; }
+  .tb-off { text-align: center; font-size: 44px; font-weight: 100; opacity: .6; padding: 10px 0 4px; }
+  .tb-eco { display: flex; justify-content: center; margin-top: 12px; }
+  .usheet .tb-tg b { font-size: 72px; }
   .usheet [data-s="tgt"] { margin-top: 4px; }
   .tc-ember { position: absolute; bottom: -6px; width: 3px; height: 3px; border-radius: 50%; animation: dg-rise linear infinite; }
   .tc-frost { position: absolute; top: -8px; width: 3px; height: 3px; border-radius: 50%; background: rgba(235,245,255,0.75); animation: tc-fall linear infinite; }
@@ -677,7 +654,7 @@
     <h2><span class="who"><span id="tTitle"></span><span data-s="pill"></span></span><button data-close aria-label="Close"></button></h2>
     <div class="sheet-body">
       <div data-s="hero"></div>
-      <div class="tg-wrap" data-s="tgt"></div>
+      <div data-s="tgt"></div>
       <div class="group first" data-s="power"></div>
       <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Eco holds the wider Eco temperatures, which are set in the Nest app. Turn it off to go back to your own.</p></div>
       <div data-s="schedWrap"><div class="glbl">SCHEDULE</div><div data-s="sched"></div></div>
@@ -1500,9 +1477,9 @@ document.addEventListener('click', e => {
 //   - the sky is what the unit is DOING: heating ember, cooling ice, fan
 //     teal, off graphite; idle is the room's own palette (lounge, focus,
 //     breeze), eased from day to night by the sun's elevation
-//   - the targets are glass lenses on one ruler (the app's own, from Labs'
-//     design G, in place of the orb): Heat amber, Cool blue, the comfort
-//     band between them and the room a dot; drag a lens or tap beside it
+//   - the targets are the hero (Labs' design B): big thin numbers, a soft
+//     chevron above and below each to raise or lower it, Heat amber, Cool
+//     blue; the room beside the name
 //   - Auto (heat_cool) keeps 3 F between Heat and Cool and always sends both
 //   - the Windmill never reports hvac_action: in cool or eco with the room
 //     above the setpoint it is cooling. Its `auto` is the unit's Eco mode, its
@@ -1627,11 +1604,12 @@ function tWord(t, r) {
   if (r.offline) return tStatus(t, r);
   return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : r.eco ? 'Eco' : 'Idle';
 }
-// The card's one line: "70° inside · Idle · 52° outside".
+// The line under the targets: what it is doing and the temperature outside
+// (the room is beside the name).
 function tLine(t, r) {
-  if (r.offline) return esc(tStatus(t, r));
+  if (r.offline) return '';
   const wo = st('weather.forecast_home'), o = wo && Number(wo.attributes.temperature);
-  return [r.cur == null ? '' : Math.round(r.cur) + '° inside', tWord(t, r), Number.isFinite(o) ? Math.round(o) + '° outside' : ''].filter(Boolean).join(' · ');
+  return [tWord(t, r), Number.isFinite(o) ? Math.round(o) + '° outside' : ''].filter(Boolean).join(' · ');
 }
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
 // The line under the popup's status: the mode, the humidity (or the
@@ -1662,40 +1640,28 @@ function tSets(t, r) {
   if (r.range) return [['target_temp_low', 'Heat', r.lo, T_HEAT], ['target_temp_high', 'Cool', r.hi, T_COOL]];
   return [['temperature', r.s === 'heat' ? 'Heat' : r.s === 'cool' ? 'Cool' : modeName(t, r.s), r.temp, r.s === 'heat' ? T_HEAT : T_COOL]];
 }
-// The ruler: tags, ticks, band, room dot, lenses and the tap zones beside
-// them (tminus / tplus, as the steppers were). In Eco the targets are the
-// Eco temperatures and can't be stepped one at a time (see tread), so the
-// ruler is shown without zones and offers Exit Eco.
-function tRulerHTML(t, r) {
-  const sets = tSets(t, r);
-  if (!sets.length) return `<div class="tg-none">${r.s === 'fan_only' ? 'Fan only' : r.offline ? esc(tStatus(t, r)) : 'Off'}</div>`;
-  if (r.eco) return tEcoHTML(t, r, sets);
-  const vals = sets.map(x => x[2] == null ? 70 : Math.round(x[2]));
-  const lo = Math.min(...vals), hi = Math.max(...vals), mid = (lo + hi) / 2;
-  // The window: centred on the band, wide enough for it and a margin.
-  const W = Math.max(24, Math.ceil((hi - lo) * 1.6) + 6), a = mid - W / 2;
-  const pc = v => ((v - a) / W * 100).toFixed(2);
-  let ticks = '';
-  for (let x = Math.ceil(a); x <= a + W; x++) ticks += `<i class="tg-rt${x % 5 ? '' : ' big'}" style="left:${pc(x)}%">${x % 5 ? '' : `<em>${x}</em>`}</i>`;
-  const now = r.cur != null && r.cur >= a && r.cur <= a + W ? `<i class="tg-now" style="left:${pc(r.cur)}%"></i>` : '';
-  const band = sets.length === 2 ? `<i class="tg-band" style="left:${pc(lo)}%;width:${((hi - lo) / W * 100).toFixed(2)}%;--a:${sets[0][3]};--b:${sets[1][3]}"></i>` : '';
-  // Tap zones: left of a lens lowers it, right raises it; between two
-  // lenses the space is split at the middle.
-  const xs = vals.map(v => (v - a) / W * 100), edges = [0, ...xs.slice(1).map((x, i) => (x + xs[i]) / 2), 100];
-  let zones = '', tags = '', lenses = '';
-  sets.forEach(([f, label, v], i) => {
-    const x = xs[i], rgb = sets[i][3];
-    if (!r.eco) zones += `<button class="tg-z" style="left:${edges[i].toFixed(2)}%;width:${(x - edges[i]).toFixed(2)}%" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${v == null || v <= r.min ? ' disabled' : ''}></button>`
-      + `<button class="tg-z" style="left:${x.toFixed(2)}%;width:${(edges[i + 1] - x).toFixed(2)}%" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${v == null || v >= r.max ? ' disabled' : ''}></button>`;
-    lenses += `<i class="tg-lens" data-f="${f}" data-v="${vals[i]}" style="left:${x.toFixed(2)}%;--c:${rgb}"></i>`;
-    tags += `<div class="tg-tag" data-f="${f}" style="left:${x.toFixed(2)}%;--c:${rgb}"><small>${r.eco ? svg('leaf', 11) : ''}${esc(label)}</small><b>${v == null ? '--' : Math.round(v)}°</b></div>`;
-  });
-  const ends = r.eco ? `<button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button>`
-    : `<span>${svg('minus', 12)}</span><span>${svg('plus', 12)}</span>`;
-  return `<div class="tg-tags">${tags}</div>
-    <div class="tg-ruler${r.eco ? ' locked' : ''}" data-a0="${a}" data-w="${W}">${ticks}${band}${now}${lenses}${zones}</div>
-    <div class="tg-ends">${ends}</div>`;
+// The targets as the hero (Labs' design B): each a big thin number with a
+// soft chevron above (raise) and below (lower), the target's name under it;
+// Auto's two joined by a dash. The chevrons are the card's steppers (tplus /
+// tminus): taps add up into one call, Auto keeps Heat and Cool 3° apart. In
+// Eco the numbers are the Eco temperatures, in green with a leaf, without
+// chevrons (Home Assistant can't step one of them), and Exit Eco below.
+function tTargetHTML(t, r, sub) {
+  const sets = tSets(t, r), n = v => v == null ? '--' : Math.round(v);
+  const foot = sub ? `<div class="tb-sub">${sub}</div>` : '';
+  if (!sets.length) return `<div class="tb-off">${r.s === 'fan_only' ? 'Fan only' : r.offline ? esc(tStatus(t, r)) : 'Off'}</div>${foot}`;
+  const one = ([f, label, v, rgb]) => {
+    const up = r.eco || v == null || v >= r.max, dn = r.eco || v == null || v <= r.min;
+    return `<div class="tb-tg" data-f="${f}" style="--c:${r.eco ? T_ACC.eco : rgb}">
+      ${r.eco ? '<i class="tb-gap"></i>' : `<button class="tb-chev" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${up ? ' disabled' : ''}>${svg('chevUp', 20)}</button>`}
+      <b>${n(v)}<span>°</span></b>
+      ${r.eco ? '<i class="tb-gap"></i>' : `<button class="tb-chev" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${dn ? ' disabled' : ''}>${svg('chev', 20)}</button>`}
+      <small>${r.eco ? svg('leaf', 11) + (sets.length === 2 ? (f === 'target_temp_low' ? 'Eco low' : 'Eco high') : 'Eco') : label}</small></div>`;
+  };
+  const eco = r.eco ? `<div class="tb-eco"><button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>` : '';
+  return `<div class="tb-tgs${r.eco ? ' eco' : ''}">${sets.map(one).join('<i class="tb-dash">–</i>')}</div>${foot}${eco}`;
 }
+
 function tEcoRow(t, r) {
   return `<button class="rowi${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="${r.eco ? 'none' : 'eco'}" role="switch" aria-checked="${r.eco}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${icon('leaf')}<span class="k">Eco</span><span class="sw${r.eco ? ' on' : ''}" style="--tint:120,200,120"></span></button>`;
 }
@@ -1720,98 +1686,6 @@ function tReadHTML(t, r) {
   return first + row('timer', 'Running today', mins == null ? '—' : Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm') + row('outside', 'Outside', outT) + fanRow;
 }
 
-// Dragging a lens: it follows the finger in whole degrees (on the ruler as
-// drawn, inside the unit's range, and 3° from the other in Auto) and the
-// ruler isn't redrawn under it (rangeHeld); letting go sends the change as
-// taps would (tStep), and the click a drag ends with is not a tap. A touch
-// further than a lens's reach from every lens is a tap on the zone under it.
-let tDrag = null, tDragged = 0;
-document.addEventListener('pointerdown', e => {
-  const ru = e.target.closest && e.target.closest('.tg-ruler');
-  if (!ru || ru.classList.contains('locked') || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  const host = ru.closest('[data-th]'), t = host && THERMOS.find(x => x.id === host.dataset.th); if (!t) return;
-  const box = ru.getBoundingClientRect(), a = Number(ru.dataset.a0), W = Number(ru.dataset.w);
-  const lenses = [...ru.querySelectorAll('.tg-lens')];
-  let best = null;
-  for (const l of lenses) {
-    const d = Math.abs(e.clientX - (box.left + (Number(l.dataset.v) - a) / W * box.width));
-    if (d <= 24 && (!best || d < best.d)) best = { l, d };
-  }
-  if (!best) return;
-  const other = lenses.find(l => l !== best.l);
-  tDrag = { t, ru, box, a, W, lens: best.l, f: best.l.dataset.f, from: Number(best.l.dataset.v), v: Number(best.l.dataset.v),
-    other: other ? Number(other.dataset.v) : null, x0: e.clientX, id: e.pointerId, moved: false };
-});
-document.addEventListener('pointermove', e => {
-  const D = tDrag; if (!D || e.pointerId !== D.id) return;
-  if (!D.moved) {
-    if (Math.abs(e.clientX - D.x0) < 5) return;
-    D.moved = true; rangeHeld = D.ru; D.lens.classList.add('drag');
-    try { D.ru.setPointerCapture(e.pointerId); } catch {}
-  }
-  const r = tread(D.t);
-  let v = Math.round(D.a + (e.clientX - D.box.left) / D.box.width * D.W);
-  v = Math.max(Math.ceil(D.a), Math.min(Math.floor(D.a + D.W), Math.max(r.min, Math.min(r.max, v))));
-  if (D.other != null) v = D.f === 'target_temp_low' ? Math.min(v, D.other - T_GAP) : Math.max(v, D.other + T_GAP);
-  if (v === D.v) return;
-  D.v = v;
-  const x = ((v - D.a) / D.W * 100).toFixed(2) + '%';
-  D.lens.style.left = x; D.lens.dataset.v = v;
-  const tag = D.ru.parentElement.querySelector(`.tg-tag[data-f="${D.f}"]`);
-  if (tag) { tag.style.left = x; tag.querySelector('b').textContent = v + '°'; }
-  const band = D.ru.querySelector('.tg-band');
-  if (band && D.other != null) {
-    const lo = Math.min(v, D.other), hi = Math.max(v, D.other);
-    band.style.left = ((lo - D.a) / D.W * 100).toFixed(2) + '%'; band.style.width = ((hi - lo) / D.W * 100).toFixed(2) + '%';
-  }
-});
-function tDrop(e, keep) {
-  const D = tDrag; if (!D || e.pointerId !== D.id) return;
-  tDrag = null;
-  if (!D.moved) return;
-  tDragged = Date.now(); rangeHeld = null;
-  last.delete(D.ru.parentElement);   // moved by hand: draw it afresh
-  if (keep && D.v !== D.from) tStep(D.t, D.f, D.v - D.from);
-  render();
-}
-document.addEventListener('pointerup', e => tDrop(e, true));
-document.addEventListener('pointercancel', e => tDrop(e, false));
-document.addEventListener('click', e => {
-  if (Date.now() - tDragged < 400 && e.target.closest && e.target.closest('[data-th]')) { e.stopPropagation(); e.preventDefault(); tDragged = 0; }
-}, true);
-
-// Eco: the same ruler, in green and fixed. The Eco temperatures are the
-// edges of a wide band the Nest keeps the room inside - it heats only below
-// the low one (Eco low) and cools only above the high one (Eco high) - set in the Nest app, so
-// there's nothing to drag or tap; a line says where the room is, and Exit
-// Eco goes back to your own temperatures.
-function tEcoHTML(t, r, sets) {
-  const G = T_ACC.eco, vals = sets.map(x => x[2] == null ? 70 : Math.round(x[2]));
-  const lo = Math.min(...vals), hi = Math.max(...vals);
-  // The window takes in the room too, so with one target you see which side of it the room is.
-  const wLo = r.cur == null ? lo : Math.min(lo, r.cur), wHi = r.cur == null ? hi : Math.max(hi, r.cur), mid = (wLo + wHi) / 2;
-  const W = Math.max(24, Math.ceil((wHi - wLo) * 1.4) + 8), a = mid - W / 2, pc = v => ((v - a) / W * 100).toFixed(2);
-  let ticks = '';
-  for (let x = Math.ceil(a); x <= a + W; x++) ticks += `<i class="tg-rt${x % 5 ? '' : ' big'}" style="left:${pc(x)}%">${x % 5 ? '' : `<em>${x}</em>`}</i>`;
-  const now = r.cur != null && r.cur >= a && r.cur <= a + W ? `<i class="tg-now" style="left:${pc(r.cur)}%"></i>` : '';
-  // One target (Heat or Cool in Eco): the band runs from it outwards.
-  const bLo = sets.length === 2 ? lo : sets[0][0] === 'temperature' && r.s === 'cool' ? a : lo;
-  const bHi = sets.length === 2 ? hi : sets[0][0] === 'temperature' && r.s === 'cool' ? lo : a + W;
-  const band = `<i class="tg-band" style="left:${pc(bLo)}%;width:${((bHi - bLo) / W * 100).toFixed(2)}%"></i>`;
-  const word = (f, label) => f === 'target_temp_low' || label === 'Heat' ? 'Eco low' : 'Eco high';
-  let pins = '', tags = '';
-  sets.forEach(([f, label, v], i) => {
-    pins += `<i class="tg-lens" data-f="${f}" data-v="${vals[i]}" style="left:${pc(vals[i])}%;--c:${G}"></i>`;
-    tags += `<div class="tg-tag" data-f="${f}" style="left:${pc(vals[i])}%;--c:${G}"><small>${svg('leaf', 11)}${word(f, label)}</small><b>${v == null ? '--' : Math.round(v)}°</b></div>`;
-  });
-  const n = Math.round(r.cur), inLo = sets.length === 2 ? lo : r.s === 'cool' ? -Infinity : lo, inHi = sets.length === 2 ? hi : r.s === 'cool' ? hi : Infinity;
-  const where = r.cur == null ? '' : r.act === 'heating' ? `${n}° inside · heating to ${lo}°` : r.act === 'cooling' ? `${n}° inside · cooling to ${hi}°`
-    : n < inLo ? `${n}° inside · below Eco` : n > inHi ? `${n}° inside · above Eco` : `${n}° inside · within Eco, resting`;
-  return `<div class="tg-tags">${tags}</div>
-    <div class="tg-ruler eco locked" data-a0="${a}" data-w="${W}">${ticks}${band}${now}${pins}</div>
-    <div class="tg-eco"><span>${where}</span><small>Eco temperatures are set in the Nest app.</small></div>
-    <div class="tg-ends"><button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>`;
-}
 
 // ---- cards ----
 const thermosEl = $('thermos');
@@ -1820,7 +1694,7 @@ const tCardHTML = t => `
       <div class="dg-fx" data-r="fx"></div>
       <div class="dg-in">
         <div class="tg-head"><div class="dg-info" data-r="info"></div><div data-r="pwr"></div></div>
-        <div class="tg-wrap" data-r="tgt"></div>
+        <div data-r="tgt"></div>
       </div>
     </article>`;
 for (const t of THERMOS) thermosEl.insertAdjacentHTML('beforeend', tCardHTML(t));
@@ -1836,10 +1710,10 @@ function renderThermos() {
     for (const card of document.querySelectorAll(`.dg[data-th="${t.id}"]`)) {
     const R = n => card.querySelector(`[data-r="${n}"]`);
     put(R('fx'), tfxHTML(t, r, 60));
-    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
-      <div class="dg-sub">${tLine(t, r)}</div>${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
+    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}${r.cur != null && !r.offline ? `<em>${Math.round(r.cur)}° inside</em>` : ''}</button>
+      ${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
-    put(R('tgt'), tRulerHTML(t, r));
+    put(R('tgt'), tTargetHTML(t, r, tLine(t, r)));
     card.classList.toggle('offline', r.offline);
     card.style.boxShadow = `0 18px 40px -16px rgba(${T_ACC[r.mood] || T_ACC.idle},0.26)`;
     }
@@ -1854,8 +1728,8 @@ function renderThermo() {
   $('tTitle').textContent = t.name;
   put(S('fx'), tfxHTML(t, r, 150));
   put(S('pill'), tPill(t, r));
-  put(S('hero'), `<div class="uhero"><div class="tg-big">${r.cur == null ? '--' : Math.round(r.cur)}<span>°</span></div><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${tSub(t, r, true)}</div></div>`);
-  put(S('tgt'), tRulerHTML(t, r));
+  put(S('hero'), `<div class="uhero"><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${r.cur != null && !r.offline ? Math.round(r.cur) + '° inside · ' : ''}${tSub(t, r, true)}</div></div>`);
+  put(S('tgt'), tTargetHTML(t, r));
   put(S('power'), tPowerRow(t, r));
   S('ecoWrap').hidden = !r.canEco;
   if (r.canEco) put(S('eco'), tEcoRow(t, r));
@@ -2253,7 +2127,6 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="schedule.js"></script>
 <script src="favorites.js"></script>
 <script src="bg.js"></script>
-<script src="labs.js"></script>
 <script src="../home/back.js" defer></script>
 </body>
 </html>
