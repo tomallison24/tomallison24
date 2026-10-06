@@ -519,6 +519,11 @@
   #vLocked .rowi .v { flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lockline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 14px 8px 0; }
   .lockline svg { flex: none; }
+  /* Share: the code to read out, and how long it has left */
+  .sharecode { margin: 6px 0 0; text-align: center; font-size: 44px; font-weight: 300; letter-spacing: 6px; font-variant-numeric: tabular-nums; }
+  .sharecode.gone { opacity: .35; text-decoration: line-through; }
+  .sharelft { text-align: center; font-size: 14px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .sharebtn { width: 100%; margin-top: 14px; }
 
   /* The PIN pad: glass keys, as on the iPhone's lock screen */
   .pinv { display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; }
@@ -699,7 +704,37 @@
           <button class="btn primary" type="button" id="lkEdit">Change</button>
         </div>
         <div class="lockline" id="lkLine"></div>
+        <button class="btn sharebtn" type="button" id="lkShare">Share with another device</button>
       </div>
+
+      <!-- Share: a one-off link and a 6-digit code, good for 5 minutes. -->
+      <div class="view" id="vShare" hidden>
+        <div class="sharecode" id="shCode"></div>
+        <div class="sharelft" id="shLeft"></div>
+        <div class="btns">
+          <button class="btn" type="button" id="shCopy">Copy link</button>
+          <button class="btn primary" type="button" id="shSend">Send link</button>
+        </div>
+        <div class="status" id="shStatus"></div>
+        <p class="help">Send the link (Messages, AirDrop), then tell them the code <b>separately</b>. Both stop working after <b>5 minutes</b>. The device gets its own token, named <b>Home · its name</b>. To remove one later: Home Assistant → your profile → Security → Long-lived access tokens.</p>
+        <p class="help">It connects as you, with everything you can do.</p>
+        <div class="btns"><button class="btn" type="button" id="shDone">Done</button></div>
+      </div>
+
+      <!-- Join: a share link opened (or pasted into Address) on the other device. -->
+      <form class="view" id="vJoin" autocomplete="off" hidden>
+        <p class="help" id="jnFrom"></p>
+        <label class="field"><span>Code</span>
+          <input id="jnCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="6 digits" spellcheck="false"></label>
+        <label class="field"><span>Name this device</span>
+          <input id="jnName" maxlength="40" spellcheck="false"></label>
+        <div class="status" id="jnStatus"></div>
+        <div class="btns">
+          <button class="btn" type="button" id="jnCancel">Cancel</button>
+          <button class="btn primary" type="submit" id="jnGo">Join</button>
+        </div>
+        <p class="help" id="jnIos" hidden>On an iPhone, Safari and the Home Screen app keep separate settings. To use Home as an app, add it to your Home Screen first, open it, and paste this link into <b>Address</b> under the gear. <button type="button" class="linkbtn" id="jnCopy">Copy link</button></p>
+      </form>
 
       <!-- Edit: the address and token. A saved token is never put back in the box. -->
       <form class="view" id="haForm" autocomplete="off" hidden>
@@ -714,6 +749,7 @@
         </div>
         <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your <b>Nabu Casa</b> address (in Home Assistant: Settings → Home Assistant Cloud, under Remote Access). A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
         <p class="help">Make a token in Home Assistant: your <b>profile</b> (bottom left) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. It is kept on this phone only.</p>
+        <p class="help">Sent a share link? Paste it into <b>Address</b> and tap Connect.</p>
       </form>
 
       <!-- PIN: enter it, or choose one (twice). -->
@@ -2100,9 +2136,11 @@ function showView(v) {
   $('vLocked').hidden = v !== 'locked';
   $('haForm').hidden = v !== 'edit';
   $('vPin').hidden = v !== 'pin';
-  $('custBlock').hidden = v === 'pin';
+  $('vShare').hidden = v !== 'share';
+  $('vJoin').hidden = v !== 'join';
+  $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join';
   if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
-  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : 'Home Assistant';
+  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : 'Home Assistant';
   if (v === 'edit') {
     const s = saved();
     $('haUrl').value = s.url || '';
@@ -2203,6 +2241,7 @@ function finishSave() {
 }
 function onStatus(s, detail) {
   if (detail !== undefined) statusDetail = detail;
+  if (s === 'live') SHARE.onLive();
   if (s === 'live' && pendingSave) { pendingSave = false; if (sheetWrap.classList.contains('open')) PIN.get() ? finishSave() : askPin('choose', finishSave, 'done'); }
   if (s === 'error') pendingSave = false;
   const chip = $('chip'), words = { live: 'Live', connecting: 'Connecting', reconnecting: 'Reconnecting', error: 'Not connected', off: 'Preview' };
@@ -2230,6 +2269,7 @@ function cleanUrl(raw) {
 $('haForm').addEventListener('submit', e => {
   e.preventDefault();
   const bad = msg => { $('haStatus').className = 'status hastatus bad'; $('haStatus').textContent = msg; };
+  if (SHARE.parse($('haUrl').value)) return SHARE.openJoin($('haUrl').value);   // a share link pasted into Address
   let url; try { url = cleanUrl($('haUrl').value); } catch (err) { return bad(err.message); }
   // A blank token box keeps the saved token: it is never shown again once saved.
   const token = $('haToken').value.trim() || saved().token;
@@ -2241,6 +2281,164 @@ $('haForm').addEventListener('submit', e => {
   pendingSave = true;
   goLive();
 });
+
+// ---------------------------------------------------------------------------
+// Sharing the connection with another device, without the token itself ever
+// leaving this phone:
+//   1. Home Assistant makes a new long-lived token just for this share
+//      ("Home share …", good for one day at most).
+//   2. It goes in a link, encrypted (AES-GCM, key from the code by PBKDF2) with
+//      a random 6-digit code shown here, which is told to the other person
+//      separately. The link carries the address, that token and the time it
+//      runs out (5 minutes).
+//   3. The other device opens the link (or pastes it into Address), types the
+//      code, connects with the share token, makes its own long-lived token
+//      ("Home · its name") and deletes the share token.
+//   4. After 5 minutes this phone deletes the share token if it is still
+//      there (unused). Any device signed in as you tidies away share tokens
+//      over 5 minutes old whenever it connects, and Home Assistant itself ends
+//      them after a day.
+// So the link stops working within 5 minutes while this app is open, and
+// otherwise as soon as any of your devices next connects. The 5 minutes are
+// also checked when joining.
+const b64u = {
+  enc: buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  dec: str => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)),
+};
+const SHARE = {
+  LIFE: 5 * 60000, PREFIX: 'Home share ',
+  cur: null, timer: 0, tidied: false, link: '',
+  async key(code, salt) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  },
+  async seal(obj, code) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.key(code, salt), new TextEncoder().encode(JSON.stringify(obj)));
+    return b64u.enc(new Uint8Array([...salt, ...iv, ...new Uint8Array(ct)]));
+  },
+  async open(blob, code) {
+    const b = b64u.dec(blob);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(16, 28) }, await this.key(code, b.slice(0, 16)), b.slice(28));
+    return JSON.parse(new TextDecoder().decode(pt));
+  },
+  // The encrypted part of a share link, or null.
+  parse(text) { const m = /#join=([A-Za-z0-9_-]{40,})/.exec(String(text || '')); return m ? m[1] : null; },
+  code() { const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; return String(n).padStart(6, '0'); },
+
+  // ---- this phone, sharing
+  async start() {
+    showView('share');
+    $('shCode').textContent = '······'; $('shCode').className = 'sharecode'; $('shLeft').textContent = 'Making a link…';
+    $('shStatus').className = 'status'; $('shStatus').textContent = '';
+    $('shSend').disabled = $('shCopy').disabled = true;
+    try {
+      if (HA.status !== 'live') throw new Error('Connect to Home Assistant first.');
+      const name = this.PREFIX + new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const token = await HA.send({ type: 'auth/long_lived_access_token', lifespan: 1, client_name: name });
+      const code = this.code(), until = Date.now() + this.LIFE;
+      const blob = await this.seal({ v: 1, u: saved().url, t: token, x: until }, code);
+      clearInterval(this.timer);
+      this.cur = { name, code, until, link: location.origin + location.pathname + '#join=' + blob };
+      this.timer = setInterval(() => this.tick(), 1000);
+      $('shSend').disabled = $('shCopy').disabled = false;
+      this.tick();
+    } catch (e) {
+      $('shLeft').textContent = ''; $('shStatus').className = 'status bad'; $('shStatus').textContent = e.message || String(e);
+    }
+  },
+  tick() {
+    const c = this.cur; if (!c) return;
+    const left = Math.max(0, Math.ceil((c.until - Date.now()) / 1000));
+    $('shCode').textContent = c.code.slice(0, 3) + ' ' + c.code.slice(3);
+    $('shCode').classList.toggle('gone', !left);
+    $('shLeft').textContent = left ? `Expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Expired';
+    $('shSend').disabled = $('shCopy').disabled = !left;
+    if (!left) { clearInterval(this.timer); this.end(c.name); this.cur = null; }
+  },
+  // Delete a share token if it is still there (the other device deletes it when it joins).
+  async end(name) {
+    try {
+      const list = await HA.send({ type: 'auth/refresh_tokens' });
+      const t = list.find(x => x.client_name === name);
+      if (t) await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: t.id });
+    } catch { /* tidied when a device next connects, or by Home Assistant in a day */ }
+  },
+  async send() {
+    const c = this.cur; if (!c) return;
+    try { if (navigator.share) return await navigator.share({ title: 'Home', url: c.link }); } catch (e) { if (e && e.name === 'AbortError') return; }
+    this.copy();
+  },
+  async copy(link = this.cur && this.cur.link, out = $('shStatus')) {
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link); out.className = 'status good'; out.textContent = 'Link copied. Now tell them the code.'; }
+    catch { out.className = 'status bad'; out.textContent = 'Could not copy. Use Send link instead.'; }
+  },
+
+  // ---- the other device, joining
+  openJoin(link) {
+    const go = () => {
+      this.link = link;
+      showView('join');
+      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 6-digit code they told you.';
+      $('jnCode').value = ''; $('jnStatus').className = 'status'; $('jnStatus').textContent = '';
+      $('jnName').value = /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'This device';
+      $('jnIos').hidden = !(navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent));
+      $('jnGo').disabled = false;
+    };
+    if (!sheetWrap.classList.contains('open')) { showSheet(sheetWrap); }
+    saved().token ? guarded(go) : go();   // replacing a connection needs this phone's PIN
+  },
+  async join() {
+    const bad = m => { $('jnStatus').className = 'status bad'; $('jnStatus').textContent = m; };
+    const code = $('jnCode').value.replace(/\D/g, ''), name = $('jnName').value.trim() || 'This device';
+    if (code.length !== 6) return bad('Enter the 6-digit code.');
+    let p;
+    try { p = await this.open(this.parse(this.link), code); } catch { return bad("That code doesn't match this link."); }
+    if (!p || p.v !== 1 || !p.u || !p.t) return bad('That link is damaged. Ask for a new one.');
+    if (Date.now() > p.x) return bad('This link has expired. Ask for a new one.');
+    let url; try { url = cleanUrl(p.u); } catch (e) { return bad(e.message); }
+    $('jnGo').disabled = true;
+    // Connect with the share token; once live, swap it for this device's own (onLive).
+    store.set('ha', { url, token: p.t, swap: name });
+    pendingSave = true;
+    goLive();
+  },
+  // On every connection: finish a join's swap, and tidy away old share tokens.
+  async onLive() {
+    const s = saved();
+    if (s.swap) {
+      try {
+        const name = `Home · ${s.swap} (${new Date().toISOString().slice(0, 16).replace('T', ' ')})`;
+        const token = await HA.send({ type: 'auth/long_lived_access_token', lifespan: 3650, client_name: name });
+        const list = await HA.send({ type: 'auth/refresh_tokens' });
+        const old = list.find(x => x.is_current);
+        store.set('ha', { url: s.url, token });
+        HA.token = token;                    // the drop that deleting the old one causes reconnects with the new one
+        if (old) await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: old.id }).catch(() => {});
+      } catch (e) { toast('Joined, but could not make this device its own token: ' + (e.message || e)); }
+      return;
+    }
+    if (this.tidied) return;
+    this.tidied = true;
+    try {
+      const list = await HA.send({ type: 'auth/refresh_tokens' });
+      for (const t of list) {
+        if (!String(t.client_name || '').startsWith(this.PREFIX) || t.is_current) continue;
+        if (this.cur && t.client_name === this.cur.name) continue;   // the share on screen now
+        if (Date.now() - Date.parse(t.created_at) > this.LIFE) await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: t.id });
+      }
+    } catch { /* next time */ }
+  },
+};
+$('lkShare').onclick = () => guarded(() => SHARE.start());
+$('shSend').onclick = () => SHARE.send();
+$('shCopy').onclick = () => SHARE.copy();
+$('shDone').onclick = () => showView('locked');
+$('vJoin').addEventListener('submit', e => { e.preventDefault(); SHARE.join(); });
+$('jnCancel').onclick = () => showView(saved().token ? 'locked' : 'edit');
+$('jnCopy').onclick = () => SHARE.copy(SHARE.link, $('jnStatus'));
+$('jnCode').oninput = () => { $('jnStatus').textContent = ''; };
 
 function goPreview() { mode = 'preview'; ents = sampleStates(); onStatus('off'); }
 function goLive() {
@@ -2257,6 +2455,11 @@ document.addEventListener('DOMContentLoaded', () => {
   try { layoutViews(); } catch (e) { drawError('the views', e); }
   ready = true;
   if (saved().url && saved().token) goLive(); else goPreview();
+  if (SHARE.parse(location.href)) {
+    const link = location.href;
+    history.replaceState(null, '', location.pathname + location.search);   // the link isn't kept in the address bar or history
+    SHARE.openJoin(link);
+  }
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
