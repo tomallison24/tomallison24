@@ -81,7 +81,7 @@ const statsHTML = list => `<div class="stats" style="grid-template-columns:repea
 const lbl = t => `<div class="glbl">${t}</div>`;
 const grp = (inner, first) => inner ? `<div class="group${first ? ' first' : ''}">${inner}</div>` : '';
 function pwrBtn(on, acc, label, o = {}) {
-  const lit = on ? `background:rgba(${acc},0.85);box-shadow:0 0 14px rgba(${acc},0.5), inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  const lit = on ? `background:rgba(${acc},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
   return `<button class="pwr${o.wait ? ' wait' : ''}" data-a="${o.a || 'power'}" style="${lit}" aria-pressed="${!!on}" aria-label="${label}"${o.dis ? ' disabled' : ''}>${svg(o.icon || 'power', 22)}</button>`;
 }
 // A stepper: the dehumidifiers' target, for any number.
@@ -106,7 +106,7 @@ function infoHTML2(name, title, sub, extra = '') {
   return `<button class="dg-name" data-a="open" aria-label="All of the ${esc(name)}'s controls">${esc(name)}${svg('chevR', 16)}</button>
     <div class="dg-title">${title}</div><div class="dg-sub">${sub}</div>${extra}`;
 }
-const pillHTML2 = (word, dot) => `<span class="dg-pill">${dot ? `<i style="background:rgb(${dot});box-shadow:0 0 6px rgba(${dot},0.8)"></i>` : ''}${word}</span>`;
+const pillHTML2 = (word, dot) => `<span class="dg-pill">${dot ? `<i style="background:rgb(${dot})"></i>` : ''}${word}</span>`;
 // The card's frame: sky behind, then the family's own regions.
 const cardsOf = key => document.querySelectorAll(`[data-dv="${key}"]:not(.sheet)`);   // not the popup, which carries its device's key too
 const cardHTML = (key, inner, cls = '') => `<article class="dg dvc ${cls}" data-dv="${key}"><div class="dg-fx" data-r="fx"></div><div class="dg-in">${inner}</div></article>`;

@@ -3,7 +3,7 @@
 // bars, and the whole-house On | Off pill - in this app's layout. Same rules:
 //   - every light shares one warm colour (255,196,128, a warm amber), whatever its own:
 //     the dashboard tinted each by its rgb_color; this keeps the view as one
-//   - the halo round the badge grows with the brightness (k = .35 + .65 x it)
+//   - the warm wash behind the badge grows with the brightness (k = .35 + .65 x it)
 //   - preset chips 1 / 25 / 50 / 75 / 100, lit within 2% (25 reads back 25.1)
 //   - the Fireplace socket is on / off only
 //   - the room's disc turns the whole room off if anything in it is on, else on
@@ -78,8 +78,7 @@ family({
     return `<i class="lp-halo" style="background:radial-gradient(380px circle at ${cx} 50%, rgba(${r.pc},${(0.46 * k).toFixed(3)}) 0%, rgba(${r.pc},${(0.16 * k).toFixed(3)}) 30%, rgba(${r.pc},0) 62%)"></i>`;
   },
   badge(r, size = 40) {
-    const k = 0.35 + 0.65 * (r.onoff ? 1 : r.bri / 100);
-    const st2 = !r.on ? '' : size > 50 ? `background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:0 0 ${(8 + 14 * k).toFixed(0)}px rgba(${r.pc},${(0.45 * k).toFixed(2)}), inset 0 0.5px 0 rgba(255,255,255,0.6)`
+    const st2 = !r.on ? '' : size > 50 ? `background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6)`
       : `background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
     return `<button class="lp-badge${tWaiting(r.d, 'power') ? ' wait' : ''}" data-a="toggle" style="width:${size}px;height:${size}px;${st2}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} ${esc(r.L.name)}"${r.offline ? ' disabled' : ''}>${svg(r.on ? 'lightbulb' : 'lightbulbOff', size > 50 ? 30 : 22)}</button>`;
   },

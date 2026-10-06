@@ -18,7 +18,7 @@
 .pwr.big { width: 60px; height: 60px; }
 .pwr.big svg { width: 28px; height: 28px; }
 .dvc.flat { cursor: default; }
-.alert.aq i { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--aq)); box-shadow: 0 0 6px rgba(var(--aq),0.8); margin: 0 2px 0 3px; }
+.alert.aq i { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--aq)); margin: 0 2px 0 3px; }
 .alert.aq { background: rgba(var(--aq),0.18); }
 .alert.guest svg { color: #FA903E; }
 .warnbar { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 16px; margin: 0 0 12px; font-size: 14px; font-weight: 600;
@@ -124,7 +124,7 @@
 .rotor.osc svg { animation: dv-osc 6s ease-in-out infinite alternate; }
 @keyframes dv-osc { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
 .rotor .hub { position: absolute; left: 50%; top: 50%; width: 52%; height: 52%; transform: translate(-50%, -50%); border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: radial-gradient(120% 90% at 30% 20%, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
   -webkit-backdrop-filter: blur(10px) saturate(160%); backdrop-filter: blur(10px) saturate(160%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 0.5px rgba(255,255,255,0.25), 0 10px 22px -10px rgba(0,0,0,0.6); }
@@ -283,7 +283,7 @@
 .cbadge { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em;
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: rgba(0,0,0,0.45); }
 .cbadge.active { color: #7BE495; }
-.cbadge.active i { width: 7px; height: 7px; border-radius: 50%; background: #30D158; box-shadow: 0 0 6px #30D158; animation: blink 1s ease-in-out infinite alternate; }
+.cbadge.active i { width: 7px; height: 7px; border-radius: 50%; background: #30D158; animation: blink 1s ease-in-out infinite alternate; }
 .cbadge.standby { color: #FFB44E; }
 .cbadge.off { color: #9AA0A6; }
 .cmotion { position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
@@ -322,7 +322,7 @@
 .varc.lg { --s: 210px; margin: 0 auto; }
 .varc svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .varc .t-flow { animation: t-flow 1.6s linear infinite; }
-.varc .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+.varc .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .varc .num em { font-style: normal; font-weight: 700; letter-spacing: .14em; opacity: .75; font-size: 7.5px; }
 .varc .num b { font-weight: 200; line-height: 1; letter-spacing: -1px; font-size: 32px; font-variant-numeric: tabular-nums; }
 .varc .num b span { font-size: 14px; vertical-align: top; line-height: 1.3; }
@@ -424,13 +424,13 @@
 .runpanel { border-radius: 22px; padding: 14px 14px 12px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
 .runpanel[hidden] { display: none; }
 .run-h { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; opacity: .85; margin: 0 2px 10px; }
-.run-h i { width: 6px; height: 6px; border-radius: 50%; background: #8BE0A4; box-shadow: 0 0 6px rgba(139,224,164,0.8); animation: blink 1.2s ease-in-out infinite alternate; }
+.run-h i { width: 6px; height: 6px; border-radius: 50%; background: #8BE0A4; animation: blink 1.2s ease-in-out infinite alternate; }
 .run-h span { margin-left: auto; opacity: .6; letter-spacing: 0; font-size: 12px; }
 .runchips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .runchip { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 16px;
   background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.12); transition: transform .18s; min-width: 0; }
 .runchip:active { transform: scale(0.96); }
-.runchip i { grid-row: span 2; width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--a)); box-shadow: 0 0 8px rgba(var(--a),0.8); }
+.runchip i { grid-row: span 2; width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--a)); }
 .runchip b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .runchip span { font-size: 12px; opacity: .65; }
 /* Automations: Liquid Glass tiles, three across (Labs' design D). Glass
@@ -454,11 +454,10 @@
 .ag:disabled { opacity: .4; }
 .ag.wait { opacity: .75; }
 .ag-disc { flex: none; width: 34px; height: 34px; margin-left: -4px; display: flex; align-items: center; justify-content: center; transition: color .3s; }
-.ag-name { font-size: 13.5px; font-weight: 600; line-height: 1.2; min-width: 0; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.ag-name { font-size: 13.5px; font-weight: 600; line-height: 1.2; min-width: 0; }
 .ag.lit { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78)); color: #1A1A1C;
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.9), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
 .ag.lit .ag-disc { color: rgb(var(--c)); filter: saturate(1.4) brightness(.8); }
-.ag.lit .ag-name { text-shadow: none; }
 /* The weather pill over the automations: the same glass, full width, a glow
    of the condition's colour behind it; a link to the Weather app. */
 .wxw { margin-bottom: 10px; }
@@ -469,8 +468,8 @@
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
   transition: transform .2s cubic-bezier(.22,1,.36,1); -webkit-tap-highlight-color: transparent; }
 .wxpill:active { transform: scale(0.98); }
-.wx-ic { flex: none; display: flex; color: rgb(var(--c)); filter: drop-shadow(0 0 8px rgba(var(--c),0.5)); }
-.wx-t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.wx-ic { flex: none; display: flex; color: rgb(var(--c)); }
+.wx-t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
 .wx-t b { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .wx-t small { font-size: 14px; font-weight: 600; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wx-go { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: 13px; font-weight: 600; opacity: .55; }
@@ -497,18 +496,18 @@
 
 /* ---- the energy strip at the top of a view ---- */
 /* A round Liquid Glass pill: a light tint over a strong blur, a bright top
-   rim and a softer lower one, and the bolt's gold glowing faintly through it
-   from behind the icon. Open, it eases to a rounded panel for the list. */
+   rim and a softer lower one.
+   Open, it eases to a rounded panel for the list. */
 .estrip { position: relative; overflow: hidden; border-radius: 32px; transition: border-radius .35s cubic-bezier(.2,.8,.2,1);
-  background: radial-gradient(140px circle at 36px 30px, rgba(255,214,10,0.10), rgba(255,214,10,0) 70%), linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
+  background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
   -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7); }
 .estrip.open { border-radius: 26px; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .estrip { background: var(--tile); } }
-.es-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 18px 12px 12px; text-align: left; text-shadow: 0 1px 6px rgba(0,0,0,0.3); }
+.es-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 18px 12px 12px; text-align: left; }
 .es-row:active { background: rgba(255,255,255,0.05); }
 .es-ic { width: 34px; height: 34px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: #FFD60A;
-  background: rgba(255,214,10,0.14); box-shadow: inset 0 0 0 0.5px rgba(255,214,10,0.35), 0 0 14px rgba(255,214,10,0.18); }
+  background: rgba(255,214,10,0.14); box-shadow: inset 0 0 0 0.5px rgba(255,214,10,0.35); }
 .es-now, .es-st { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .es-now { flex: 1.1; }
 .es-st { flex: 1; }
@@ -626,7 +625,7 @@
     .ag.lit { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.495), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
     .wxpill { background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .actrow + .actrow { border-top: 0.5px solid rgba(28,32,40,0.064); }
-    .estrip { background: radial-gradient(140px circle at 36px 30px, rgba(255,214,10,0.10), rgba(255,214,10,0) 70%), linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
+    .estrip { background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .es-row:active { background: rgba(28,32,40,0.038); }
     .es-list { border-top: 0.5px solid rgba(28,32,40,0.08); }
     .es-item + .es-item { border-top: 0.5px solid rgba(28,32,40,0.056); }

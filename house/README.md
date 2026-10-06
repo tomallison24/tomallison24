@@ -233,7 +233,7 @@ Scripts that wait (Snapshot, the motion pause, Hand off) are started with
 ## Energy
 
 Each view with estimated devices starts with a round Liquid Glass pill (the
-bolt's gold glowing faintly through it): their power **now**,
+bolt in a gold disc): their power **now**,
 **today** and **this month** (with the month's cost at $0.13/kWh), from Home
 Assistant's own totals - the house on Favorites, climate plus fans &
 dehumidifiers on Climate, lighting on Lights, the TV on Media. Tap it for
