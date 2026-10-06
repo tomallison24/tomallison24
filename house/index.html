@@ -76,7 +76,10 @@
   /* clip, not hidden: hidden would make the body its own scroller */
   html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
   body { background: transparent; }   /* the page's colour is html's, so the light below shows through */
-  /* ---- behind the glass: a beach, out of focus ----
+  /* ---- behind the glass ----
+     bg.js draws what moves behind the page (picked in Labs). One of the
+     choices is this beach: */
+  /* ---- a beach, out of focus ----
      Glass only reads with something behind it to bend. Behind everything sits
      a beach as a camera would see it far out of focus - a dusk sky going warm
      at the horizon, a low sun's glow, the sea, a soft line of surf and the
@@ -85,6 +88,9 @@
      title is, lifting a little toward the sand. The surf breathes in and out
      very slowly; still for reduced motion. Fixed to the screen, not the page. */
   .bgfx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .bgfx canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bgfx canvas[hidden] { display: none; }
+  .bgfx:not([data-bg="beach"]) svg, .bgfx:not([data-bg="beach"])::after { display: none; }   /* the beach only when it is the one picked (bg.js) */
   .bgfx svg { position: absolute; inset: -6%; width: 112%; height: 112%; }
   .bgfx .surf { animation: bg-surf 14s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 50%; }
   @keyframes bg-surf { to { transform: translateY(4%) scaleY(1.25); opacity: .75; } }
@@ -2230,6 +2236,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="energy.js"></script>
 <script src="schedule.js"></script>
 <script src="favorites.js"></script>
+<script src="bg.js"></script>
 <script src="../home/back.js" defer></script>
 </body>
 </html>

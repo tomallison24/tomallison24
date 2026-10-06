@@ -8,9 +8,9 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all is a beach far out of focus - a dusk sky warming at the horizon, the
-sea, a slow line of surf and the sand, drawn and dimmed - so the glass has
-something to diffuse without the page losing its calm:
+all, something slow moves behind the glass (`bg.js`), picked in Labs and
+kept on the phone - Bubbles (soft glass orbs drifting and bouncing off the
+edges), Constellation, Ripples, Aurora, the blurred Beach or None:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -266,11 +266,22 @@ thermostat in its `entities`.
 
 ## Labs
 
-**Labs** is a view for trying ideas live, wired to the real devices, before
-they replace anything: an idea is a family in a `labs.js` with the group
-`Labs`. It is left out of the drop-down while it has none - as now. From
-here so far: the thermostat ruler (design G of seven) and the automation
-tiles (design D of four).
+**Labs** is a view for trying ideas live before they replace anything; it
+is left out of the drop-down while it has none. From here so far: the
+thermostat ruler (design G of seven) and the automation tiles (design D of
+four).
+
+Today: **backgrounds** (`bg.js`). Tap one to put it behind the whole app;
+it stays (on this phone) until another is picked. All slow, minimal and
+nearly colourless, drawn on one canvas at ~30 fps, paused while the app is
+hidden, still with reduced motion:
+
+- **Bubbles** (the default): seven soft glass orbs, brighter at the rim
+  with a highlight, drifting 5-12 px a second and bouncing off the edges.
+- **Constellation**: faint points drifting, joined by hairlines when near.
+- **Ripples**: rings opening slowly from random points and fading.
+- **Aurora**: two soft ribbons of light swaying across the top.
+- **Beach**: the blurred dusk beach. **None**: the plain near-black.
 
 ## Connecting to Home Assistant
 
