@@ -112,8 +112,11 @@ the same rules:
   the ember or frost sky as usual.
 - **The sky** is what the unit is doing: embers while heating, frost while
   cooling, airflow with the fan, graphite when off. Idle, each room has its
-  own palette (Living Room lounge, Office focus, Windmill breeze), a touch
-  brighter as the sun climbs and darker after sunset (`sun.sun`).
+  own palette (Living Room a warm graphite, Office a cool slate, Windmill
+  breeze; no pink or purple), a touch brighter as the sun climbs and darker
+  after sunset (`sun.sun`). The HEAT / COOL / ECO labels are plain black or
+  white (with light or dark mode); the colour stays on the power button and
+  the sky.
 - **The popup** (tap a card): what it is doing, the room / mode / humidity /
   outside (`weather.forecast_home`), the same targets (larger), Power,
   Mode, Fan, the Windmill's

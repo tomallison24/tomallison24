@@ -202,8 +202,7 @@
   .tb-tg { display: flex; flex-direction: column; align-items: center; min-width: 92px; }
   .tb-tg b { font-size: 60px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   .tb-tg b span { font-size: 26px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
-  .tb-tg small { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-top: 4px; }
-  .tb-tgs.eco b { color: rgb(var(--c)); }
+  .tb-tg small { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text); opacity: .75; margin-top: 4px; }   /* plain ink: coloured, it was hard to read */
   .tb-chev { width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; opacity: .5; border-radius: 12px; transition: opacity .2s, background .2s; }
   .tb-chev:active { background: rgba(255,255,255,0.1); opacity: 1; }
   .tb-chev:disabled { opacity: .15; }
@@ -219,7 +218,7 @@
      room a dot, a line saying where the room is, and Exit Eco. */
   .tg-tags { position: relative; height: 44px; margin: 2px 0 6px; }
   .tg-tag { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; transition: left .4s cubic-bezier(.2,.8,.2,1); }
-  .tg-tag small { white-space: nowrap; display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c)); margin-bottom: 4px; }
+  .tg-tag small { white-space: nowrap; display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text); opacity: .75; margin-bottom: 4px; }
   .tg-tag b { font-size: 28px; font-weight: 200; font-variant-numeric: tabular-nums; }
   .tg-ruler { position: relative; height: 56px; border-radius: 16px; overflow: hidden; touch-action: pan-y;
     background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
@@ -236,7 +235,7 @@
   .tg-ruler.eco .tg-band { background: linear-gradient(90deg, rgba(140,214,160,0.16), rgba(140,214,160,0.3) 50%, rgba(140,214,160,0.16)); }
   .tg-ruler.eco .tg-lens { opacity: 1; width: 8px; margin-left: -4px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(var(--c),0.9), 0 0 10px rgba(var(--c),0.5); }
   .tg-eco { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 10px; text-align: center; }
-  .tg-eco span { font-size: 13px; font-weight: 600; color: rgb(170,230,185); }
+  .tg-eco span { font-size: 13px; font-weight: 600; color: var(--text); }
   .tg-eco small { font-size: 11.5px; opacity: .55; }
   .tg-ends { display: flex; justify-content: space-between; align-items: center; min-height: 18px; padding: 6px 10px 0; }
   .tg-ends > span { opacity: .4; }
@@ -1643,8 +1642,8 @@ document.addEventListener('click', e => {
 //     teal, off graphite; idle is the room's own palette (lounge, focus,
 //     breeze), eased from day to night by the sun's elevation
 //   - the targets are the hero (Labs' design B): big thin numbers, a soft
-//     chevron above and below each to raise or lower it, Heat amber, Cool
-//     blue; the room beside the name
+//     chevron above and below each to raise or lower it, labelled HEAT and
+//     COOL in plain ink; the room beside the name
 //   - Auto (heat_cool) keeps 3 F between Heat and Cool and always sends both
 //   - the Windmill never reports hvac_action: in cool or eco with the room
 //     above the setpoint it is cooling. Its `auto` is the unit's Eco mode, its
@@ -1663,18 +1662,19 @@ const THERMOS = [
 ];
 const T_LO = 50, T_HI = 90, T_GAP = 3, T_HOLD = 20000;
 const T_SKY = {
-  heat: 'linear-gradient(160deg, #221C1C 0%, #372A28 50%, #5A4540 100%)',
+  heat: 'linear-gradient(160deg, #221E19 0%, #382E24 50%, #5C4A36 100%)',   // amber, not red (light mode made red read as pink)
   cool: 'linear-gradient(160deg, #1A1E26 0%, #262E3B 50%, #3E4B5E 100%)',
   fan: 'linear-gradient(160deg, #1A2224 0%, #26343A 50%, #3E5358 100%)',
   off: 'linear-gradient(160deg, #18191D 0%, #23242B 50%, #34363F 100%)',
   eco: 'linear-gradient(160deg, #161D19 0%, #1F2C25 50%, #34473C 100%)',   // a Nest resting in Eco: moss
 };
 const T_SCENES = {
-  lounge: { day: 'linear-gradient(160deg, #221E26 0%, #332D39 50%, #4F4656 100%)', night: 'linear-gradient(160deg, #1B1920 0%, #28242E 50%, #3D3643 100%)', glow: '201,163,154' },
-  focus: { day: 'linear-gradient(160deg, #1E1E2A 0%, #2B2B3F 50%, #44455E 100%)', night: 'linear-gradient(160deg, #19191F 0%, #23232E 50%, #353545 100%)', glow: '138,136,184' },
+  // Neutral: no pink or purple. Lounge a warm graphite, Focus a cool slate.
+  lounge: { day: 'linear-gradient(160deg, #1F2023 0%, #2C2E32 50%, #45484E 100%)', night: 'linear-gradient(160deg, #18191B 0%, #232427 50%, #35373C 100%)', glow: '205,208,214' },
+  focus: { day: 'linear-gradient(160deg, #1C2025 0%, #283039 50%, #3E4854 100%)', night: 'linear-gradient(160deg, #17191C 0%, #21262C 50%, #323A44 100%)', glow: '170,190,210' },
   breeze: { day: 'linear-gradient(170deg, #1C2226 0%, #293539 50%, #405049 100%)', night: 'linear-gradient(170deg, #17191D 0%, #212A2E 50%, #2F3B35 100%)', glow: '110,170,130' },
 };
-const T_ACC = { heat: '255,179,138', cool: '156,210,255', fan: '142,227,214', idle: '195,198,242', eco: '140,214,160', off: '154,160,166', offline: '154,160,166' };
+const T_ACC = { heat: '255,166,92', cool: '156,210,255', fan: '142,227,214', idle: '205,210,218', eco: '140,214,160', off: '154,160,166', offline: '154,160,166' };
 
 // What was tapped, shown until the unit reports it (or 20 s).
 const tpend = {};
@@ -1799,7 +1799,7 @@ function tPowerHTML(t, r) {
 }
 // The targets the ruler shows: Auto has two (Heat, Cool), Heat / Cool /
 // the Windmill's Eco one, Off and Fan only none.
-const T_HEAT = '255,179,138', T_COOL = '156,210,255';
+const T_HEAT = '255,166,92', T_COOL = '156,210,255';
 function tSets(t, r) {
   if (r.offline || r.s === 'off' || r.s === 'fan_only') return [];
   if (r.range) return [['target_temp_low', 'Heat', r.lo, T_HEAT], ['target_temp_high', 'Cool', r.hi, T_COOL]];
