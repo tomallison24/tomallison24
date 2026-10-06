@@ -376,7 +376,8 @@ if (window.top !== window.self) {
     for (const [date, logs] of days) {
       const groups = [...new Set(logs.map(x => GROUPS[x.group] || 'Other'))];
       const sets = logs.reduce((a, x) => a + (+x.sets || 0), 0);
-      const notes = logs.map(x => x.exercise + ': ' + x.sets + ' × ' + x.reps + ' · ' + (+x.weight ? (+x.weight).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb' : 'Bodyweight')).join('\n');
+      const secs = n => n < 60 ? n + ' s' : Math.floor(n / 60) + ' min' + (n % 60 ? ' ' + n % 60 + ' s' : '');
+      const notes = logs.map(x => x.exercise + ': ' + x.sets + ' × ' + (x.timed ? secs(+x.reps) : x.reps) + ' · ' + (+x.weight ? (+x.weight).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' lb' : 'Bodyweight')).join('\n');
       out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub: plural(logs.length, 'exercise') + ' · ' + plural(sets, 'set'), link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
     }
     return out;

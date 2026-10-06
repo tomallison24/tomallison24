@@ -1,9 +1,12 @@
 // Drives the Fitness app in headless Chromium at iPhone size: the week, a
 // day's sheet, adding an exercise through the muscle group, exercise and
-// weight / reps / sets pickers, last time's numbers filling in, an exercise
-// typed in under "Other…", editing and deleting (with Undo), moving between
-// weeks, Calendar's week start and ?date= link, Calendar showing the
-// workouts as a layer, dark mode, and that nothing trips the page's Content
+// weight / reps / sets pickers, last time's numbers filling in, the lists'
+// sections and Recent, a hold timed in seconds, an exercise typed in under
+// "Other…", editing and deleting (with Undo), moving between weeks,
+// Calendar's week start and ?date= link, Calendar showing the workouts as a
+// layer, Google Sheet sync end to end (the real google-sheet-sync.gs,
+// running on fake-sheet.mjs) including a second phone set up from the
+// setup link, dark mode, and that nothing trips the page's Content
 // Security Policy. Screenshots go to the folder given as the second argument.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -14,6 +17,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from './fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -44,10 +48,14 @@ const TODAY = ymd(day(0));
 const weekStart = sunday => { const d = day(0); d.setDate(d.getDate() - (sunday ? d.getDay() : (d.getDay() + 6) % 7)); return ymd(d); };
 const LAST_WEEK = ymd(day(-7));
 // A shoulder day a week ago, so "last time" has something to fill in.
-const SEED = { v: 1, custom: {}, logs: [
-  { id: 'old1', date: LAST_WEEK, group: 'shoulders', exercise: 'Overhead press', weight: 95, reps: 8, sets: 3, updated: 1 },
-  { id: 'old2', date: LAST_WEEK, group: 'core', exercise: 'Crunches', weight: 0, reps: 20, sets: 3, updated: 2 },
+const SEED = { v: 2, exercises: [], logs: [
+  { id: 'old1', date: LAST_WEEK, group: 'shoulders', exercise: 'Overhead Barbell Press', weight: 95, reps: 8, sets: 3, updated: 1 },
+  { id: 'old2', date: LAST_WEEK, group: 'core', exercise: 'Sit-Up', weight: 0, reps: 20, sets: 3, updated: 2 },
 ] };
+// The Google Sheet: the real Apps Script, on an in-memory Sheet.
+const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
+const sheet = fakeSheet(undefined, SECRET);
+const sheetCalls = [];
 
 const browser = await chromium.launch();
 const violations = [], errors = [];
@@ -56,6 +64,12 @@ async function newPage(scheme, seed = SEED, extra = null) {
   // Calendar reaches for iCloud and the weather; nothing is there in a test.
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"no-config"}' }));
   await ctx.route('**/api.open-meteo.com/**', route => route.fulfill({ status: 503, body: '' }));
+  await ctx.route('https://script.google.com/**', route => {
+    const req = route.request(), cors = { 'Access-Control-Allow-Origin': '*' };
+    if (req.method() === 'GET') return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.get()) });
+    sheetCalls.push(JSON.parse(req.postData()));
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.post(req.postData())) });
+  });
   await ctx.addInitScript(({ seed, extra }) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -107,9 +121,9 @@ await test('a day: muscle group, then exercise, then weight, reps and sets; last
   assert.ok(await page.isDisabled('#fxAdd'));
   await page.click('.opt[data-group="shoulders"]');
   const names = await page.$$eval('#fxEx option', os => os.map(o => o.textContent));
-  assert.ok(names.includes('Overhead press') && names.includes('Lateral raise') && names.at(-1) === 'Other…');
+  assert.ok(names.includes('Overhead Barbell Press') && names.includes('Lateral Raise') && names.at(-1) === 'Other…');
   assert.equal(await page.$$eval('#fxW', e => e.length), 0, 'no weight before an exercise');
-  await page.selectOption('#fxEx', 'Overhead press');
+  await page.selectOption('#fxEx', 'Overhead Barbell Press');
   assert.equal(await page.inputValue('#fxW'), '95');
   assert.equal(await page.inputValue('#fxR'), '8');
   assert.equal(await page.inputValue('#fxS'), '3');
@@ -121,15 +135,15 @@ await test('a day: muscle group, then exercise, then weight, reps and sets; last
   await page.click('#fxAdd');
   const d = await stored(page);
   const x = d.logs.find(l => l.date === TODAY);
-  assert.deepEqual({ group: x.group, exercise: x.exercise, weight: x.weight, reps: x.reps, sets: x.sets }, { group: 'shoulders', exercise: 'Overhead press', weight: 100, reps: 6, sets: 4 });
-  assert.match(await page.textContent('#fxList'), /Overhead press\s*Shoulders · 4 × 6 · 100 lb/);
+  assert.deepEqual({ group: x.group, exercise: x.exercise, weight: x.weight, reps: x.reps, sets: x.sets }, { group: 'shoulders', exercise: 'Overhead Barbell Press', weight: 100, reps: 6, sets: 4 });
+  assert.match(await page.textContent('#fxList'), /Overhead Barbell Press\s*Shoulders · 4 × 6 · 100 lb/);
   assert.equal(await page.getAttribute('.opt[data-group="shoulders"]', 'aria-checked'), 'true', 'group kept for the next one');
   assert.match(await page.textContent('.drow.today'), /Shoulders.*1 exercise · 4 sets/);
 });
 
 await test('a bodyweight exercise starts at Bodyweight; one typed in under Other is kept', async () => {
   await page.click('.opt[data-group="back"]');
-  await page.selectOption('#fxEx', 'Pull-ups');
+  await page.selectOption('#fxEx', 'Pull-Up');
   assert.equal(await page.inputValue('#fxW'), '0');
   assert.equal(await page.$eval('#fxW', s => s.selectedOptions[0].textContent), 'Bodyweight');
   await page.click('#fxAdd');
@@ -143,36 +157,70 @@ await test('a bodyweight exercise starts at Bodyweight; one typed in under Other
   await page.selectOption('#fxW', '45');
   await page.click('#fxAdd');
   const d = await stored(page);
-  assert.deepEqual(d.custom, { lowerback: ['Reverse hyper'] });
+  assert.deepEqual(d.exercises.map(x => [x.group, x.name]), [['lowerback', 'Reverse hyper']]);
   assert.equal(d.logs.filter(l => l.date === TODAY).length, 3);
-  const names = await page.$$eval('#fxEx option', os => os.map(o => o.textContent));
-  assert.ok(names.includes('Reverse hyper'), 'in the list next time');
+  const yours = await page.$$eval('#fxEx optgroup[label="Yours"] option', os => os.map(o => o.textContent));
+  assert.ok(yours.includes('Reverse hyper'), 'in the list next time, under Yours');
   await shot(page, '03-day-list');
 });
 
 await test('editing an exercise, then deleting one and undoing it', async () => {
-  await page.click('.ebody[aria-label="Edit Pull-ups"]');
-  assert.equal(await page.inputValue('#fxEx'), 'Pull-ups');
+  await page.click('.ebody[aria-label="Edit Pull-Up"]');
+  assert.equal(await page.inputValue('#fxEx'), 'Pull-Up');
   assert.equal(await page.textContent('#fxAdd'), 'Save changes');
   await page.selectOption('#fxR', '12');
   await page.click('#fxAdd');
   let d = await stored(page);
-  assert.equal(d.logs.find(l => l.exercise === 'Pull-ups').reps, 12);
+  assert.equal(d.logs.find(l => l.exercise === 'Pull-Up').reps, 12);
   assert.equal(d.logs.filter(l => l.date === TODAY).length, 3);
-  await page.click('[aria-label="Delete Pull-ups"]');
+  await page.click('[aria-label="Delete Pull-Up"]');
   d = await stored(page);
   assert.equal(d.logs.filter(l => l.date === TODAY).length, 2);
-  assert.match(await page.textContent('#toastMsg'), /Deleted Pull-ups/);
+  assert.match(await page.textContent('#toastMsg'), /Deleted Pull-Up/);
+  assert.ok(Object.keys(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-fitness-v1-graves')))).some(k => k.startsWith('logs:')), 'a grave for the Sheet');
   await page.click('#toastAct');
   d = await stored(page);
   assert.equal(d.logs.filter(l => l.date === TODAY).length, 3);
-  assert.equal(d.logs.filter(l => l.date === TODAY)[1].exercise, 'Pull-ups', 'back where it was');
+  assert.equal(d.logs.filter(l => l.date === TODAY)[1].exercise, 'Pull-Up', 'back where it was');
+});
+
+await test('the lists: the sheet’s exercises in short sections, what you did lately first', async () => {
+  await page.click('.opt[data-group="arms"]');
+  assert.deepEqual(await page.$$eval('#fxEx optgroup', gs => gs.map(g => g.label)), ['Biceps', 'Triceps']);
+  await page.click('.opt[data-group="legs"]');
+  const legs = await page.$$eval('#fxEx option', os => os.map(o => o.textContent));
+  assert.ok(legs.includes('Leg Curl') && !legs.includes('Lying Leg Curl') && !legs.includes('Seated Leg Curl'), 'one leg curl, as the gym has one machine');
+  await page.click('.opt[data-group="core"]');
+  const core = await page.$$eval('#fxEx option', os => os.map(o => o.textContent));
+  assert.ok(!core.includes('Ab Wheel Rollout') && core.includes('Ab Crunch Machine'), 'no ab wheel at the gym; its ab machine instead');
+  await page.click('.opt[data-group="shoulders"]');
+  const groups = await page.$$eval('#fxEx optgroup', gs => gs.map(g => [g.label, [...g.children].map(o => o.textContent)]));
+  assert.deepEqual(groups[0], ['Recent', ['Overhead Barbell Press']]);
+  assert.deepEqual(groups.slice(1).map(g => g[0]), ['Presses', 'Raises', 'Rear delts and traps']);
+  const total = await page.evaluate(() => new Set(window.__fitness.GROUPS.flatMap(g => g.ex)).size);
+  assert.ok(total >= 70 && total <= 80, total + ' exercises in all');
+});
+
+await test('a hold is timed in seconds', async () => {
+  await page.click('.opt[data-group="core"]');
+  await page.selectOption('#fxEx', 'Plank');
+  assert.equal(await page.textContent('label[for="fxR"]'), 'Time');
+  assert.equal(await page.$eval('#fxR', s => s.selectedOptions[0].textContent), '30 s');
+  assert.equal(await page.$eval('#fxW', s => s.selectedOptions[0].textContent), 'Bodyweight');
+  await page.selectOption('#fxR', '45');
+  await page.click('#fxAdd');
+  assert.match(await page.textContent('#fxList'), /Plank\s*Core · 3 × 45 s · Bodyweight/);
+  const x = (await stored(page)).logs.find(l => l.exercise === 'Plank');
+  assert.equal(x.timed, true); assert.equal(x.reps, 45);
+  await page.selectOption('#fxEx', 'Cable Crunch');
+  assert.equal(await page.textContent('label[for="fxR"]'), 'Reps', 'back to reps for the next one');
+  await page.click('.opt[data-group="shoulders"]');
 });
 
 await test('the sheet closes; the + button opens today', async () => {
   await page.click('#daySheet .sheethead [data-close]');
   assert.ok(await page.isHidden('#daySheet'));
-  assert.match(await page.textContent('.drow.today'), /Shoulders.*Back.*Lower back.*3 exercises · 10 sets/);
+  assert.match(await page.textContent('.drow.today'), /Shoulders.*Back.*Lower back.*Core.*4 exercises · 13 sets/);
   await shot(page, '04-week-after');
   await page.click('#fab');
   await page.waitForSelector('#daySheet:not([hidden])');
@@ -187,10 +235,11 @@ await test('Calendar shows the workouts as a layer, and links back to the day', 
   await page.waitForTimeout(400);
   const items = await page.evaluate(d => window.__calendar.eventsOn(d).filter(x => x.kind === 'fitness').map(x => ({ title: x.title, sub: x.sub, link: x.link, notes: x.notes })), TODAY);
   assert.equal(items.length, 1);
-  assert.equal(items[0].title, 'Workout · Shoulders, Back, Lower back');
-  assert.equal(items[0].sub, '3 exercises · 10 sets');
+  assert.equal(items[0].title, 'Workout · Shoulders, Back, Lower back, Core');
+  assert.equal(items[0].sub, '4 exercises · 13 sets');
   assert.equal(items[0].link, '../fitness/?date=' + TODAY);
-  assert.match(items[0].notes, /Overhead press: 4 × 6 · 100 lb/);
+  assert.match(items[0].notes, /Overhead Barbell Press: 4 × 6 · 100 lb/);
+  assert.match(items[0].notes, /Plank: 3 × 45 s · Bodyweight/);
   const past = await page.evaluate(d => window.__calendar.eventsOn(d).filter(x => x.kind === 'fitness').length, LAST_WEEK);
   assert.equal(past, 1);
   await page.click('#setBtn');
@@ -201,7 +250,7 @@ await test('Calendar shows the workouts as a layer, and links back to the day', 
   await page.click('#setSheet .sheethead [data-close]');
   await page.goto(BASE + '/fitness/?date=' + LAST_WEEK);
   await page.waitForSelector('#daySheet:not([hidden])');
-  assert.match(await page.textContent('#fxList'), /Overhead press/);
+  assert.match(await page.textContent('#fxList'), /Overhead Barbell Press/);
   const lw = day(-7); lw.setDate(lw.getDate() - (lw.getDay() + 6) % 7);
   assert.equal(await page.$eval('.drow', e => e.dataset.day), ymd(lw), 'opens on that day’s week');
 });
@@ -230,6 +279,57 @@ await test('a sideways swipe on the week moves a week', async () => {
   assert.equal(next, ymd(d));
 });
 
+await test('Google Sheet: a wrong code is refused; the right one connects and sends the log', async () => {
+  await page.goto(BASE + '/fitness/');
+  await page.waitForFunction(() => window.__fitness);
+  await page.click('#syncBtn');
+  await page.waitForSelector('#syncSheet:not([hidden])');
+  await page.fill('#syUrl', 'https://example.com/not-a-script');
+  await page.fill('#sySecret', SECRET);
+  await page.click('#syConnect');
+  assert.match(await page.textContent('#syStatus'), /starts with https:\/\/script\.google\.com/);
+  await page.fill('#syUrl', SHEET_URL);
+  await page.fill('#sySecret', 'wrong code');
+  await page.click('#syConnect');
+  await page.waitForFunction(() => /doesn’t match/.test(document.getElementById('syStatus').textContent));
+  assert.ok(await page.isVisible('#syForm'), 'still asking');
+  await page.fill('#sySecret', SECRET);
+  await page.click('#syConnect');
+  await page.waitForSelector('#syOn:not([hidden])');
+  assert.match(await page.textContent('#syStatus'), /Connected/);
+  const mine = (await stored(page)).logs.length;
+  const rows = sheet.tab('Workouts');
+  assert.equal(rows.length, mine + 1, 'every exercise in the Workouts tab');
+  assert.ok(rows.some(r => r[3] === 'Plank' && r[6] === 45), 'the plank in seconds');
+  await shot(page, '07-sheet-connected');
+  await page.click('#syncSheet .sheethead [data-close]');
+});
+
+await test('Google Sheet: a deletion syncs; a second phone set up from the link gets the log', async () => {
+  await page.click('.drow.today');
+  await page.click('[aria-label="Delete Reverse hyper"]');
+  await page.waitForFunction(() => window.__fitness && true);
+  const deleted = (await page.evaluate(() => Object.keys(window.__fitness.graves())))[0];
+  await page.waitForTimeout(2600);   // the sync after a change waits 2 s
+  assert.ok(sheetCalls.at(-1).graves[deleted], 'the grave was sent');
+  assert.ok(!sheet.tab('Workouts').some(r => r[3] === 'Reverse hyper'), 'gone from the Sheet');
+  await page.keyboard.press('Escape');
+  const phone2 = await newPage('light', { v: 2, logs: [], exercises: [] });
+  const link = BASE + '/fitness/#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SECRET })).toString('base64url');
+  await phone2.page.goto(link);
+  await phone2.page.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await phone2.page.textContent('#syStatus'), /setup link/);
+  assert.equal(await phone2.page.inputValue('#syUrl'), SHEET_URL);
+  assert.ok(!(await phone2.page.evaluate(() => location.hash)), 'the code is taken out of the address');
+  await phone2.page.click('#syConnect');
+  await phone2.page.waitForSelector('#syOn:not([hidden])');
+  await phone2.page.click('#syncSheet .sheethead [data-close]');
+  assert.match(await phone2.page.textContent('.drow.today'), /Shoulders.*Back.*Core.*3 exercises · 10 sets/);
+  assert.deepEqual((await stored(phone2.page)).exercises.map(x => x.name), ['Reverse hyper'], 'your typed-in exercises come across too');
+  violations.push(...(await phone2.page.evaluate(() => window.__csp || [])));
+  await phone2.ctx.close();
+});
+
 await test('dark mode renders', async () => {
   const dark = await newPage('dark', (await stored(page)));
   await dark.page.goto(BASE + '/fitness/');
@@ -238,7 +338,7 @@ await test('dark mode renders', async () => {
   await shot(dark.page, '05-week-dark');
   await dark.page.click('.drow.today');
   await dark.page.click('.opt[data-group="legs"]');
-  await dark.page.selectOption('#fxEx', 'Back squat');
+  await dark.page.selectOption('#fxEx', 'Barbell Back Squat');
   await dark.page.waitForTimeout(500);
   await shot(dark.page, '06-day-dark');
   violations.push(...(await dark.page.evaluate(() => window.__csp || [])));
