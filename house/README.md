@@ -91,12 +91,15 @@ the same rules:
   outside" beneath. Taps add up into one call; Auto keeps 3° between Heat and
   Cool. Off and Fan only show the word. Power remembers the mode it was in.
   The popup has the rest (mode, fan, humidity, runtime).
-- **Eco** (the Living Room and Office Nests) has its own look: a moss-green
-  sky with slow drifting motes and a green glow, and the Eco temperatures as
-  the numbers, in green with a leaf - **Eco low** and **Eco high** (one in
-  Heat or Cool mode) - without chevrons, as they are set in the Nest app;
-  **Exit Eco** goes back to your own temperatures. Heating or cooling in Eco
-  shows the ember or frost sky as usual.
+- **Eco** (the Living Room and Office Nests) keeps its own view, as before
+  design B: a moss-green sky with slow drifting motes and a green glow, and
+  a ruler in green and fixed - the Eco range as a band with thin pins at its
+  edges, **Eco low** and **Eco high** over them (one of them in Heat or Cool
+  mode), the room a dot, and a line saying where the room is ("70° inside ·
+  within Eco, resting", or heating / cooling to the edge). The Eco
+  temperatures are set in the Nest app, so there is nothing to step; **Exit
+  Eco** goes back to your own temperatures. Heating or cooling in Eco shows
+  the ember or frost sky as usual.
 - **The sky** is what the unit is doing: embers while heating, frost while
   cooling, airflow with the fan, graphite when off. Idle, each room has its
   own palette (Living Room lounge, Office focus, Windmill breeze), a touch
