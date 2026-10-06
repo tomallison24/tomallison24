@@ -27,8 +27,9 @@ each day what you did.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
-- **Analysis**: switch to it with the drop-down under the title (**Week ⌄**),
-  as Home's views used to work. See below.
+- **Week and Analysis**: pick between them from the Liquid Glass pill at the
+  bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
+  it, and the app remembers the view you were on. See below.
 
 ## Analysis
 

@@ -16,10 +16,11 @@
 //   reads it to show each workout as a layer, linking back here with
 //   ?date=YYYY-MM-DD; and the week starts on the day Calendar's own setting
 //   says, so the two agree.
-// - Analysis (the drop-down under the title): the last 7 days against the 7
+// - Analysis: the last 7 days against the 7
 //   before, or the last 4 weeks against the 4 before - totals, the
 //   exercises getting stronger or weaker, and muscle groups missed or cut
-//   back. The comparisons are analysis.js's.
+//   back. The comparisons are analysis.js's. Week and Analysis are picked
+//   from a Liquid Glass pill at the bottom of the screen, as in Home.
 // - Optionally it syncs with a Google Sheet of your own through a small
 //   Apps Script (google-sheet-sync.gs), the same design as Travel's: a
 //   backup, a readable Workouts tab, and a second phone kept in step.
@@ -210,7 +211,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const main = $('main');
   function render() {
-    $('viewName').textContent = st.view === 'analysis' ? 'Analysis' : 'Week';
+    const v = VIEWS.find(x => x.id === st.view);
+    $('viewName').textContent = v.name;
+    if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = ICON[v.icon]; }
     if (!$('viewMenu').hidden) drawViewMenu();
     if (st.view === 'analysis') renderAnalysis(); else renderWeek();
   }
@@ -256,7 +259,7 @@ if (window.top !== window.self) {
   $('fab').onclick = () => { st.week = weekStartOf(today()); render(); openDay(today()); };
 
   // ---------------------------------------------------------------------
-  // The view drop-down under the title (as Home's was): Week or Analysis
+  // The view picker: a glass pill at the bottom, as Home's; Week or Analysis
   // ---------------------------------------------------------------------
   const VIEWS = [
     { id: 'week', name: 'Week', icon: 'week', sum: () => { const n = new Set(data.logs.filter(x => x.date >= weekStartOf(today()) && x.date <= today()).map(x => x.date)).size; return n ? plural(n, 'day') + ' trained this week' : 'Log each day’s workout'; } },
