@@ -271,7 +271,20 @@ is left out of the drop-down while it has none. From here so far: the
 thermostat ruler (design G of seven) and the automation tiles (design D of
 four).
 
-Today: **backgrounds** (`bg.js`). **Colour** is the page's tone: Slate (the
+Today, first: **thermostat ideas, round two** (`labs.js`), on the Living
+Room, live. The ruler on the cards asks too much of the eye; these keep only
+what's needed, each on a plain glass pane:
+
+- **A · Quiet**: the room as one big thin number; the targets as two slim
+  glass capsules, − value +.
+- **B · Target**: the target is the hero ("68 – 74°") with a soft chevron
+  above and below each number; the room a small line.
+- **C · Line**: one hairline with a dot per target, dragged; the room a
+  small tick. Nothing else.
+- **D · Tile**: as the Home app - name, what it's doing, the target; tap
+  for the popup, small − + for each target.
+
+Then **backgrounds** (`bg.js`). **Colour** is the page's tone: Slate (the
 default, a dark blue-grey as Google Home's), Navy, Sage, Dusk (mauve), Sand
 (taupe), Graphite or Black. **Movement** is what drifts over it. Tap one to
 put it behind the whole app;
@@ -279,7 +292,7 @@ it stays (on this phone) until another is picked. All slow, minimal and
 nearly colourless, drawn on one canvas at ~30 fps, paused while the app is
 hidden, still with reduced motion:
 
-- **Bubbles** (the default): nine small, faint glass bubbles (14-48 px),
+- **Bubbles** (the default): nine small, very faint glass bubbles (14-48 px),
   brighter at the rim with a highlight, drifting 4-10 px a second and
   bouncing off the edges.
 - **Constellation**: faint points drifting, joined by hairlines when near.

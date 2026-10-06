@@ -564,3 +564,72 @@
 .tone.on { background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06)); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.45); }
 .tone.on i { box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.5), 0 0 0 2px rgba(255,255,255,0.85); }
 .tone.on span { opacity: 1; }
+
+/* ---- Labs: thermostat ideas, round two (labs.js) - a plain glass pane each ---- */
+.tl-idea { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.tl-idea .lab-sh { margin: 8px 6px 0; }
+.tl-note { margin: 0 6px 6px; font-size: 13px; color: var(--muted); line-height: 1.35; }
+.tl { position: relative; padding: 18px 18px 18px; border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+  -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.22), inset 0 1px 0.5px rgba(255,255,255,0.42), 0 14px 30px -16px rgba(var(--a, 195,198,242),0.35); }
+.tl.offline { opacity: .55; }
+.tl-head { display: flex; align-items: center; gap: 10px; }
+.tl-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+.tl-name em { font-style: normal; font-size: 13px; font-weight: 500; opacity: .55; }
+.tl-room { font-size: 15px; font-weight: 500; opacity: .7; font-variant-numeric: tabular-nums; }
+.tl-pwr { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.2); transition: background .3s, color .3s; }
+.tl-pwr.on { background: rgba(var(--a),0.9); color: #16171B; box-shadow: 0 0 12px rgba(var(--a),0.4); }
+.tl-big { font-size: 64px; font-weight: 100; letter-spacing: -2px; line-height: 1; margin: 14px 0 4px; font-variant-numeric: tabular-nums; }
+.tl-big span { font-size: 28px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
+.tl-off { font-size: 44px; text-align: center; opacity: .6; }
+.tl-sub { font-size: 13px; opacity: .6; }
+.tl-mid { text-align: center; justify-content: center; }
+.tl-row { display: flex; gap: 10px; margin-top: 16px; }
+.tl-eco { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: rgba(255,255,255,0.12); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4); }
+.tl-eco svg { color: #A8E6A1; }
+.tl button:disabled { opacity: .25; }
+/* A · Quiet: two slim capsules */
+.tl-cap { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 4px; border-radius: 999px;
+  background: rgba(255,255,255,0.06); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14); }
+.tl-cap button { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: .75; }
+.tl-cap button:active { background: rgba(255,255,255,0.1); }
+.tl-cap span { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.tl-cap small { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
+.tl-cap b { font-size: 19px; font-weight: 400; font-variant-numeric: tabular-nums; }
+/* B · Target: the target is the hero */
+.tl-tgs { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 8px 0 6px; }
+.tl-tg { display: flex; flex-direction: column; align-items: center; }
+.tl-tg b { font-size: 56px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tl-tg b span { font-size: 24px; font-weight: 200; vertical-align: top; letter-spacing: 0; }
+.tl-tg small { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .55; margin-top: 2px; }
+.tl-chev { width: 44px; height: 28px; display: flex; align-items: center; justify-content: center; opacity: .45; border-radius: 12px; }
+.tl-chev:active { background: rgba(255,255,255,0.08); opacity: .9; }
+.tl-dash { font-style: normal; font-size: 40px; font-weight: 100; opacity: .35; margin-top: -26px; }
+/* C · Line: a hairline and a dot per target */
+.tl-vals { display: flex; gap: 18px; margin: 14px 0 0; font-size: 15px; }
+.tl-vals small { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.tl-vals b { font-weight: 400; font-variant-numeric: tabular-nums; }
+.tl-line { position: relative; height: 44px; margin: 6px 4px 6px; touch-action: none; }
+.tl-hair { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35) 12%, rgba(255,255,255,0.35) 88%, rgba(255,255,255,0)); }
+.tl-now { position: absolute; top: calc(50% - 7px); width: 1.5px; height: 14px; margin-left: -0.75px; background: rgba(255,255,255,0.85); border-radius: 1px; }
+.tl-dot { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; cursor: grab;
+  background: radial-gradient(circle at 35% 30%, #fff, rgba(var(--c),0.95) 55%); box-shadow: 0 0 0 4px rgba(var(--c),0.18), 0 2px 8px rgba(0,0,0,0.4); transition: left .35s cubic-bezier(.2,.8,.2,1), transform .2s; }
+.tl-dot::before { content: ''; position: absolute; inset: -12px; }   /* a finger-sized target */
+.tl-dot.drag { transform: scale(1.2); transition: transform .2s; }
+.tl-line.locked .tl-dot { opacity: .6; }
+/* D · Tile: the Home app's */
+.tl-d { padding: 14px 14px 14px 14px; }
+.tl-tile { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
+.tl-ic { flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgb(var(--a)); background: rgba(var(--a),0.16); }
+.tl-k { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tl-k b { font-size: 16px; font-weight: 600; }
+.tl-k small { font-size: 13px; opacity: .6; }
+.tl-t { flex: none; font-size: 28px; font-weight: 200; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.tl-mini { display: flex; justify-content: flex-end; gap: 14px; margin-top: 10px; }
+.tl-mini span { display: flex; align-items: center; gap: 4px; }
+.tl-mini small { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-right: 4px; }
+.tl-mini button { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.16); }
+.tl-mini button:active { background: rgba(255,255,255,0.16); }
