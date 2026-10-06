@@ -16,9 +16,10 @@
 //     Green is script.hatch_bedtime with the green light, lit while it runs.
 //     Report a Bug fills the same helpers as the dashboard's form and runs
 //     script.log_bug, which appends it to bug_log.md.
-//   - Weather: a glass pill over the automations - the condition, the
-//     temperature outside (weather.forecast_home) - that opens the AllisonOS
-//     Weather app (../weather/, a plain link, as the launcher's own)
+//   - Weather: a glass pill over the automations - the condition and the
+//     temperature outside, the Weather app's own reading (WXNOW below) - that
+//     opens the AllisonOS Weather app (../weather/, a plain link, as the
+//     launcher's own)
 //   - Activity: a glass pill under the weather with the latest event; it
 //     opens the last 10 from the dashboard's own log, sensor.signal_activity_log
 //     (ha-config configuration.yaml: `events`, newest first, each t epoch,
@@ -41,8 +42,8 @@ const FAV_AUTOS = [
 ];
 const FAV_THERMOS = ['lr', 'of'], FAV_CAMS = ['living_room', 'door'], FAV_LAMPS = ['light.tom_lamp', 'light.elena_lamp'];
 const famOf = id => FAMILIES.find(f => f.id === id);
-// The weather pill: Home Assistant's condition as the Weather app shows it -
-// its icon (the night's after sunset), its name, and a glow of its colour.
+// The weather pill: the condition as the Weather app shows it - its icon (the
+// night's after sunset), its name, and a glow of its colour.
 const FAV_WX = {
   sunny: ['sun', 'Sunny', '255,214,120'], 'clear-night': ['night', 'Clear', '150,160,255'], partlycloudy: ['wxPartly', 'Partly Cloudy', '160,200,255'],
   cloudy: ['wxCloudy', 'Cloudy', '170,182,198'], rainy: ['wxRainy', 'Rain', '120,170,255'], pouring: ['wxPouring', 'Heavy Rain', '110,150,255'],
@@ -67,14 +68,48 @@ function favActivity() {
   if (!x) return { c: '190,194,204', html: `<span class="wx-ic">${svg('clock', 24)}</span><span class="wx-t ac-t"><b>Activity</b><small>${gone(ACT_LOG) ? 'Not available' : 'Nothing yet'}</small></span><span class="wx-go">${svg('chevR', 18)}</span>` };
   return { c: actRgb(x.c), html: `<span class="wx-ic">${svg(actIcon(x), 24)}</span><span class="wx-t ac-t"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span><span class="wx-go">${esc(ago(Number(x.t)))}${svg('chevR', 18)}</span>` };
 }
+// Its reading is the Weather app's own (../weather/data.js, loaded before
+// this): the NWS forecast for the spot corrected by the nearest station's
+// latest report, or Open-Meteo - so the pill and Weather agree. Home Assistant's
+// weather.forecast_home (Met.no) is fetched only about hourly and is a forecast.
+// For home: zone.home's position, else Weather's last GPS fix. Fetched when 10
+// minutes old (checked each minute and on coming back to the app), and kept
+// on the phone (house.wxnow) so it shows at once. Until there is a reading, or
+// when it is over 3 hours old, Home Assistant's stands. Preview: the sample.
+const WXNOW = {
+  d: store.get('wxnow'), busy: 0,
+  where() {
+    const a = (st('zone.home') || {}).attributes || {};
+    if (Number.isFinite(a.latitude) && Number.isFinite(a.longitude)) return { lat: a.latitude, lon: a.longitude };
+    try { const h = JSON.parse(localStorage.getItem('wx.here')); if (h && Number.isFinite(h.lat) && Number.isFinite(h.lon)) return h; } catch {}
+    return null;
+  },
+  age() { return this.d && Number.isFinite(this.d.tF) ? Date.now() - this.d.at : Infinity; },
+  async get() {
+    if (mode !== 'live' || typeof WXD === 'undefined' || document.hidden || this.age() < 10 * 60000) return;
+    if (this.busy && Date.now() - this.busy < 45000) return;   // one out at a time; one out for 45 s is lost
+    const p = this.where(); if (!p) return;
+    this.busy = Date.now();
+    try {
+      const b = await WXD.fetchBase(p.lat, p.lon);
+      if (b && b.cur && Number.isFinite(b.cur.tF)) { this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src }; store.set('wxnow', this.d); render(); }
+    } catch { /* Home Assistant's, or the last reading, stands; tried again in a minute */ }
+    finally { this.busy = 0; }
+  },
+};
+setInterval(() => WXNOW.get(), 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) WXNOW.get(); });
 function favWeather() {
-  const w = st('weather.forecast_home');
+  WXNOW.get();
+  const ha = st('weather.forecast_home'), own = mode === 'live' && WXNOW.age() < 3 * 3600000 ? WXNOW.d : null;
+  const w = own ? { state: own.c, attributes: { temperature: own.tF, temperature_unit: '°F' } } : ha;
   if (!w || w.state === 'unavailable' || w.state === 'unknown') return { html: `<span class="wx-ic">${svg('wxCloudy', 26)}</span><span class="wx-t"><b>--°</b><small>Weather</small></span><span class="wx-go">${svg('chevR', 18)}</span>`, c: '170,182,198' };
   const night = val('sun.sun') === 'below_horizon';
   let [ic, word, c] = FAV_WX[w.state] || ['wxCloudy', w.state.replace(/-/g, ' ').replace(/^\w/, x => x.toUpperCase()), '170,182,198'];
   if (night && w.state === 'partlycloudy') ic = 'wxNightPartly';
   if (night && w.state === 'sunny') { ic = 'night'; word = 'Clear'; c = '150,160,255'; }
-  const t = Number(w.attributes.temperature), u = w.attributes.temperature_unit || '°';
+  let t = Number(w.attributes.temperature), u = w.attributes.temperature_unit || '°';
+  if (own) { try { if (JSON.parse(localStorage.getItem('wx.units')) === 'metric') { t = (t - 32) * 5 / 9; u = '°C'; } } catch {} }   // as Weather is set
   return { c, html: `<span class="wx-ic">${svg(ic, 26)}</span><span class="wx-t"><b>${Number.isFinite(t) ? Math.round(t) + (u.includes('C') ? '°C' : '°') : '--°'}</b><small>${esc(word)}</small></span><span class="wx-go">Weather${svg('chevR', 18)}</span>` };
 }
 

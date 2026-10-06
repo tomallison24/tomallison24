@@ -133,8 +133,14 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
 - **Weather**: a full-width glass pill over the automations - the
   condition's icon (the night's after sunset), the temperature outside and
-  the condition from `weather.forecast_home`, with a glow of its colour -
-  that opens the AllisonOS Weather app (`../weather/`).
+  the condition, with a glow of its colour - that opens the AllisonOS
+  Weather app (`../weather/`). The reading is the Weather app's own, from its
+  shared `../weather/data.js` (NWS corrected by the nearest station, or
+  Open-Meteo), for home (`zone.home`), so the two agree. It is fetched when
+  10 minutes old, checked every minute and on coming back to the app, and
+  kept on the phone. Home Assistant's `weather.forecast_home` (Met.no, which
+  HA fetches only about hourly) stands in until there is a reading, or when
+  the reading is over 3 hours old.
 - **Activity**: a pill under it, the same glass, with the latest event
   (what, what happened, how long ago) and a glow of its colour; it opens
   the last 10 from the house's activity log (`sensor.signal_activity_log`,
