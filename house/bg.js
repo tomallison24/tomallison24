@@ -8,8 +8,10 @@
 //   Aurora         two soft ribbons of light swaying across the top
 //   Beach          the blurred dusk beach (an SVG in index.html)
 //   None           just the page's colour
-// Under it all, the page's own colour: a dark, quiet tone (house.tone) -
-// Slate, a dark blue-grey as Google Home's, until another is picked:
+// Under it all, the page's own colour (house.tone). By default it follows
+// the temperature outside (Temperature): Google Home's grey at 70°F, eased
+// toward a faint blue at 50°F and a faint red at 90°F (held beyond them) -
+// the same reading as the weather pill, rechecked every 30 s. Or a fixed one:
 //   Slate, Navy, Sage, Dusk (mauve), Sand (taupe), Graphite, Black
 // Each tone has a pale twin for light mode, which follows the phone's
 // Appearance setting (and switches live with it); the drawings swap their
@@ -25,7 +27,8 @@ const BG_IDEAS = [
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
   { id: 'none', name: 'None', note: 'Just the colour, nothing moving.' },
 ];
-const BG_TONES = [   // hex in dark mode, lite in light mode
+const BG_TONES = [   // hex in dark mode, lite in light mode; Temperature works its own out
+  { id: 'temp', name: 'Temperature', temp: true },
   { id: 'slate', name: 'Slate', hex: '#1A212B', lite: '#E6EBF1' }, { id: 'navy', name: 'Navy', hex: '#151C2C', lite: '#E2E8F4' },
   { id: 'sage', name: 'Sage', hex: '#18221F', lite: '#E4EDE7' }, { id: 'dusk', name: 'Dusk', hex: '#211C27', lite: '#ECE6F0' },
   { id: 'sand', name: 'Sand', hex: '#221F1B', lite: '#F2ECE4' }, { id: 'graphite', name: 'Graphite', hex: '#1C1D21', lite: '#E9EAED' },
@@ -43,9 +46,33 @@ const BG = {
   setTone(id) { store.set('tone', id); this.paintTone(); },
   // The page's colour, and the phone's bar over it.
   paintTone() {
-    const t = this.tone(), c = this.light ? t.lite : t.hex;
+    const t = this.tone(), c = t.temp ? this.tempColour(this.outsideF()) : this.light ? t.lite : t.hex;
+    if (c === this.painted) return;
+    this.painted = c;
     document.documentElement.style.setProperty('--bg', c);
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c;
+  },
+  // Temperature: cold, Google Home's grey, warm - at 50, 70 and 90°F - for each mode.
+  TEMP: { dark: ['#1A2130', '#202124', '#291E20'], lite: ['#E4EBF5', '#F1F3F4', '#F6E8E7'] },
+  tempColour(f) {
+    const [cold, mid, warm] = this.TEMP[this.light ? 'lite' : 'dark'];
+    if (!Number.isFinite(f)) return mid;
+    const k = Math.max(-1, Math.min(1, (f - 70) / 20));
+    const a = k < 0 ? cold : warm, w = Math.abs(k);
+    const ch = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+    return '#' + [0, 1, 2].map(i => Math.round(ch(mid, i) + (ch(a, i) - ch(mid, i)) * w).toString(16).padStart(2, '0')).join('').toUpperCase();
+  },
+  // Outside, in °F: the weather pill's reading (WXNOW, favorites.js), else Home Assistant's.
+  outsideF() {
+    if (typeof WXNOW !== 'undefined' && mode === 'live' && WXNOW.age() < 3 * 3600000) return WXNOW.d.tF;
+    const w = st('weather.forecast_home'), t = w ? Number(w.attributes.temperature) : NaN;
+    if (!Number.isFinite(t)) return null;
+    return /C/.test(w.attributes.temperature_unit || '') ? t * 9 / 5 + 32 : t;
+  },
+  swatch(t) {
+    if (!t.temp) return this.light ? t.lite : t.hex;
+    const [c, m, w] = this.TEMP[this.light ? 'lite' : 'dark'];
+    return `linear-gradient(135deg, ${c}, ${m} 50%, ${w})`;
   },
   start(id = this.pick()) {
     this.id = id;
@@ -151,11 +178,14 @@ const BG = {
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+// Temperature is now the default; a phone that had a colour picked moves to it once, as asked.
+if (store.get('toneV') !== 2) { store.set('tone', 'temp'); store.set('toneV', 2); }
 BG.paintTone();
 BG.start();
+setInterval(() => BG.paintTone(), 30000);   // the reading moves; the colour follows (eased by the page's .5s transition)
 // The phone switched between light and dark: the colour, and a still drawing redrawn.
 BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its listener lives as long as the page
-BG.scheme.addEventListener('change', () => { BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+BG.scheme.addEventListener('change', () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.
@@ -169,7 +199,7 @@ const BG_FAM = family({
       title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
       fx: '',
       parts: [
-        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.light ? t.lite : t.hex}">
+        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
             <i></i><span>${t.name}</span></button>`).join('')}</div>`],
         ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
             <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],

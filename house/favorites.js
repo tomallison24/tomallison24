@@ -92,7 +92,7 @@ const WXNOW = {
     this.busy = Date.now();
     try {
       const b = await WXD.fetchBase(p.lat, p.lon);
-      if (b && b.cur && Number.isFinite(b.cur.tF)) { this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src }; store.set('wxnow', this.d); render(); }
+      if (b && b.cur && Number.isFinite(b.cur.tF)) { this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src }; store.set('wxnow', this.d); render(); if (typeof BG !== 'undefined') BG.paintTone(); }
     } catch { /* Home Assistant's, or the last reading, stands; tried again in a minute */ }
     finally { this.busy = 0; }
   },

@@ -291,8 +291,11 @@ the thermostat cards (design B of the second round, after G of the first),
 the automation tiles (design D of four) and the backgrounds.
 
 The backgrounds that were tried here moved to **Settings → Customization →
-Background** (`bg.js`): a popup with **Colour** - Slate (the default, a
-dark blue-grey as Google Home's), Navy, Sage, Dusk, Sand, Graphite, Black -
+Background** (`bg.js`): a popup with **Colour** - **Temperature** (the
+default: Google Home's grey at 70°F outside, eased toward a very faint blue
+at 50°F and a faint red at 90°F, held beyond them; the weather pill's
+reading, rechecked every 30 s and on every update), or a fixed Slate, Navy,
+Sage, Dusk, Sand, Graphite, Black -
 and **Movement** - Bubbles (the default: nine small, very faint glass
 bubbles drifting and bouncing off the edges), Constellation, Ripples,
 Aurora, Beach, None. Each colour has a pale twin for light mode. Kept on the phone; drawn on one canvas at ~30 fps,
