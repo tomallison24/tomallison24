@@ -1,0 +1,146 @@
+// BACKGROUNDS: what moves behind the glass. Glass only reads with something
+// behind it to bend; these are slow, minimal and nearly colourless, so the
+// page stays calm. One is shown at a time, chosen in Labs and kept on this
+// phone (house.bg); Bubbles until another is picked.
+//   Bubbles        a few soft glass orbs drifting, bouncing off the screen's edges
+//   Constellation  faint points drifting, joined by hairlines when near
+//   Ripples        rings opening slowly from random points, as rain on still water
+//   Aurora         two soft ribbons of light swaying across the top
+//   Beach          the blurred dusk beach (an SVG in index.html)
+//   None           the plain near-black
+// All but Beach are drawn on one canvas at about 30 frames a second, paused
+// while the app is hidden; with reduced motion they are drawn once, still.
+'use strict';
+const BG_IDEAS = [
+  { id: 'bubbles', name: 'Bubbles', note: 'A few soft glass orbs drift slowly and bounce off the edges of the screen.' },
+  { id: 'stars', name: 'Constellation', note: 'Faint points drift, joined by hairlines when they come near each other.' },
+  { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
+  { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
+  { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
+  { id: 'none', name: 'None', note: 'The plain near-black.' },
+];
+const BG = {
+  id: null, c: null, x: null, w: 0, h: 0, dpr: 1, t0: 0, last: 0, raf: 0, s: null,
+  still: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  pick() { const v = store.get('bg'); return BG_IDEAS.some(i => i.id === v) ? v : 'bubbles'; },
+  set(id) { store.set('bg', id); this.start(id); },
+  start(id = this.pick()) {
+    this.id = id;
+    const box = document.querySelector('.bgfx'); box.dataset.bg = id;
+    if (!this.c) { this.c = document.createElement('canvas'); box.prepend(this.c); this.x = this.c.getContext('2d'); addEventListener('resize', () => this.size()); }
+    this.c.hidden = id === 'beach' || id === 'none';
+    this.size(); this.s = null;
+    cancelAnimationFrame(this.raf);
+    if (!this.c.hidden) { this.t0 = performance.now(); this.last = 0; this.raf = requestAnimationFrame(t => this.frame(t)); }
+  },
+  size() {
+    if (!this.c) return;
+    this.dpr = Math.min(2, devicePixelRatio || 1); this.w = innerWidth; this.h = innerHeight;
+    this.c.width = Math.round(this.w * this.dpr); this.c.height = Math.round(this.h * this.dpr);
+    this.x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (this.still && this.s) this.draw(0, 0);
+  },
+  frame(t) {
+    if (this.c.hidden) return;
+    if (document.hidden) { this.raf = requestAnimationFrame(n => this.frame(n)); this.last = 0; return; }
+    const dt = this.last ? Math.min(0.1, (t - this.last) / 1000) : 0;
+    if (!this.last || t - this.last >= 33) { this.last = t; this.draw((t - this.t0) / 1000, dt); }
+    if (!this.still) this.raf = requestAnimationFrame(n => this.frame(n));
+  },
+  rnd: (a, b) => a + Math.random() * (b - a),
+  draw(time, dt) {
+    const g = this.x, W = this.w, H = this.h;
+    g.clearRect(0, 0, W, H);
+    this[this.id](g, W, H, time, dt);
+  },
+
+  // Bubbles: 7 orbs, 36-120 px, 5-12 px a second, bouncing off the edges.
+  bubbles(g, W, H, time, dt) {
+    if (!this.s) this.s = Array.from({ length: 7 }, (_, i) => { const r = this.rnd(36, 120), a = this.rnd(0, 6.28), v = this.rnd(5, 12);
+      return { r, x: this.rnd(r, W - r), y: this.rnd(r, H - r), vx: Math.cos(a) * v, vy: Math.sin(a) * v, hue: i % 3 }; });
+    for (const b of this.s) {
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
+      if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); } if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy); }
+      const tint = ['200,220,255', '190,240,235', '230,220,255'][b.hue];
+      // the body: brighter toward the rim, as a soap bubble
+      const body = g.createRadialGradient(b.x, b.y, b.r * 0.2, b.x, b.y, b.r);
+      body.addColorStop(0, `rgba(${tint},0.015)`); body.addColorStop(0.75, `rgba(${tint},0.05)`); body.addColorStop(1, `rgba(${tint},0.11)`);
+      g.fillStyle = body; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.fill();
+      g.strokeStyle = `rgba(255,255,255,0.10)`; g.lineWidth = 1; g.stroke();
+      // a highlight up and to the left
+      const hx = b.x - b.r * 0.42, hy = b.y - b.r * 0.42, hl = g.createRadialGradient(hx, hy, 0, hx, hy, b.r * 0.32);
+      hl.addColorStop(0, 'rgba(255,255,255,0.16)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = hl; g.beginPath(); g.arc(hx, hy, b.r * 0.32, 0, 6.2832); g.fill();
+    }
+  },
+  // Constellation: a point per ~9000 px², joined within 110 px.
+  stars(g, W, H, time, dt) {
+    if (!this.s) this.s = Array.from({ length: Math.round(Math.min(70, W * H / 9000)) }, () => { const a = this.rnd(0, 6.28), v = this.rnd(3, 8);
+      return { x: this.rnd(0, W), y: this.rnd(0, H), vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: this.rnd(0.8, 1.6) }; });
+    const P = this.s, R = 110;
+    for (const p of P) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1; }
+    g.lineWidth = 0.6;
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      const dx = P[i].x - P[j].x, dy = P[i].y - P[j].y, d = Math.hypot(dx, dy);
+      if (d < R) { g.strokeStyle = `rgba(200,215,255,${(0.16 * (1 - d / R)).toFixed(3)})`; g.beginPath(); g.moveTo(P[i].x, P[i].y); g.lineTo(P[j].x, P[j].y); g.stroke(); }
+    }
+    g.fillStyle = 'rgba(220,230,255,0.45)';
+    for (const p of P) { g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.2832); g.fill(); }
+  },
+  // Ripples: a new one every ~2.6 s, opening to 170 px over 9 s.
+  ripples(g, W, H, time) {
+    if (!this.s) this.s = { list: [], next: 0 };
+    const S = this.s;
+    if (time >= S.next) { S.list.push({ x: this.rnd(0.1, 0.9) * W, y: this.rnd(0.1, 0.9) * H, t: time }); S.next = time + this.rnd(1.8, 3.4); }
+    S.list = S.list.filter(r => time - r.t < 9);
+    for (const r of S.list) {
+      const k = (time - r.t) / 9;
+      for (const off of [0, 0.18, 0.36]) {
+        const kk = k - off; if (kk <= 0) continue;
+        const rad = 170 * Math.sqrt(kk), a = 0.16 * (1 - kk) * (1 - off);
+        g.strokeStyle = `rgba(200,225,255,${a.toFixed(3)})`; g.lineWidth = 1;
+        g.beginPath(); g.ellipse(r.x, r.y, rad, rad * 0.62, 0, 0, 6.2832); g.stroke();
+      }
+    }
+  },
+  // Aurora: two soft ribbons swaying, light added to light. Each is a stack
+  // of thin strokes whose brightness falls off away from its middle, so it
+  // has no edge (a canvas blur filter isn't on every iPhone).
+  aurora(g, W, H, time) {
+    g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.lineWidth = 12;
+    const ribbon = (y0, amp, len, sp, ph, rgb, a) => {
+      for (let k = -12; k <= 12; k++) {
+        const off = k * 4.5, fall = Math.exp(-(k * k) / 32);
+        g.beginPath();
+        for (let x = -20; x <= W + 20; x += 12) {
+          const y = y0 + off + Math.sin(x / len + time * sp + ph) * amp + Math.sin(x / (len * 0.37) - time * sp * 1.6) * amp * 0.25 + Math.sin(x / (len * 0.6) + time * sp * 0.7 + k * 0.08) * off * 0.3;
+          x === -20 ? g.moveTo(x, y) : g.lineTo(x, y);
+        }
+        g.strokeStyle = `rgba(${rgb},${(a * fall).toFixed(4)})`; g.stroke();
+      }
+    };
+    ribbon(H * 0.17, H * 0.05, W * 0.55, 0.12, 0, '110,220,200', 0.045);
+    ribbon(H * 0.27, H * 0.06, W * 0.7, -0.09, 2, '140,160,255', 0.04);
+    g.globalCompositeOperation = 'source-over';
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+BG.start();
+
+// Labs: the backgrounds, tried live - tapping one puts it behind the whole app.
+family({
+  id: 'labs', name: 'Backgrounds', group: 'Labs', order: 1,
+  mount(el) {
+    el.innerHTML = `<p class="tnote lab-intro">Backgrounds to try behind the glass. Tap one to use it across the app; it stays until you pick another.</p>
+      <div class="bglist" data-dv="labs:bg"></div>`;
+  },
+  render() {
+    const on = BG.id;
+    put(this.el.querySelector('.bglist'), BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
+        <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join(''));
+    this.sum = BG_IDEAS.find(i => i.id === on).name;
+  },
+  act(id, a, b) { if (a === 'bg') { BG.set(b.dataset.v); render(); } },
+  sheet() { return null; },
+});
