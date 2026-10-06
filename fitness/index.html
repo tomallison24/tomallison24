@@ -686,6 +686,24 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
 .gbar .gv small{font-weight:500;color:var(--faint)}
 .rgroup.bars{padding:6px 0}
 .enter .kpis,.enter .seg{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+/* the search over every exercise: a field of the sheet's lighter glass,
+   and its results as rows on a faint tile */
+.lg .search{height:44px;padding:0 7px 0 14px;gap:9px;background:var(--lgs-field);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
+.lg .search:focus-within{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent),inset 0 1px 1px var(--lgs-rim),0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.lg .search > svg{width:19px;height:19px;color:var(--icon)}
+.lg .search .clear{width:28px;height:28px;color:var(--muted);background:var(--fill);border-radius:50%;display:grid;place-items:center}
+.lg .search .clear svg{width:13px;height:13px}
+#fxPick{gap:14px}
+.srow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px 10px 16px;text-align:left;border-top:1px solid var(--hair-2);color:var(--text)}
+.srow:first-child{border-top:0}
+.srow:active{background:var(--lgs-field)}
+.srow > i{width:10px;height:10px;border-radius:50%;background:hsl(var(--h) 90% 58%);flex:none}
+.srow .st{flex:1;min-width:0;font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.srow .st small{display:block;font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0;font-variant-numeric:tabular-nums}
+.srow > svg{width:16px;height:16px;color:var(--faint)}
+.srow.add .st{color:var(--accent-text)}
+
 /* the Google Sheet sheet: its fields on a faint tile, as in Travel */
 .lg .box{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
 .lg .box .label{margin:0}

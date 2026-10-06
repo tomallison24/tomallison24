@@ -204,7 +204,7 @@ if (window.top !== window.self) {
   // State
   // ---------------------------------------------------------------------
   const st = { week: weekStartOf(today()), day: null, form: null, view: ls.get(K.view, 'week') === 'analysis' ? 'analysis' : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
-  const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false });
+  const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false, q: '' });
 
   // ---------------------------------------------------------------------
   // The week
@@ -355,6 +355,18 @@ if (window.top !== window.self) {
       ? logs.map(x => '<div class="erow' + (f.editing === x.id ? ' editing' : '') + '" data-g="' + esc(GROUP[x.group] ? x.group : 'other') + '"><button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Edit ' + esc(x.exercise) + '"><i></i><span class="et">' + esc(x.exercise) + '<small>' + esc(groupName(x.group)) + ' · ' + esc(fmtLine(x)) + '</small></span></button>'
         + '<button class="iconbtn del" type="button" data-del="' + esc(x.id) + '" aria-label="Delete ' + esc(x.exercise) + '">' + ICON.close + '</button></div>').join('')
       : '<div class="dempty">Nothing logged ' + (day === today() ? 'today' : 'this day') + ' yet.</div>';
+    $('dayBody').innerHTML = '<p class="label">Done</p><div class="rgroup" id="fxList">' + list + '</div>'
+      + '<p class="label">' + (f.editing ? 'Change exercise' : 'Add an exercise') + '</p>'
+      + '<div class="search" role="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>'
+      + '<input type="search" id="fxSearch" placeholder="Search all exercises" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Search all exercises" aria-controls="fxPick" value="' + esc(f.q) + '">'
+      + '<button class="clear" type="button" id="fxSearchClear" aria-label="Clear search"' + (f.q ? '' : ' hidden') + '>' + ICON.close + '</button></div>'
+      + '<div class="field" id="fxPick">' + pickHtml() + '</div>';
+  }
+  // Under the search bar: the results while searching, else the muscle
+  // groups and the form.
+  function pickHtml() {
+    const day = st.day, f = st.form;
+    if (f.q.trim()) return searchHtml(f.q);
     const groups = '<div class="opts" role="radiogroup" aria-label="Muscle group">' + GROUPS.map(g => '<button class="opt" type="button" role="radio" data-g="' + g.id + '" data-group="' + g.id + '" aria-checked="' + (f.group === g.id) + '"><span class="gd"></span>' + esc(g.name) + '</button>').join('') + '</div>';
     let form = '';
     if (f.group) {
@@ -372,11 +384,58 @@ if (window.top !== window.self) {
       const name = isOther ? f.other.trim() : f.exercise;
       const last = name && lastOf(name, day, f.editing);
       if (last) form += '<p class="hint">Last time, ' + esc(fmt(last.date, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(last.date) ? undefined : 'numeric' })) + ': ' + esc(fmtLine(last)) + '</p>';
-    } else form += '<p class="hint">Pick a muscle group, then the exercise.</p>';
+    } else form += '<p class="hint">' + (f.exercise === OTHER && f.other ? 'Now pick the muscle group for ' + esc(f.other) + '.' : 'Search, or pick a muscle group and then the exercise.') + '</p>';
     form += '<div class="formbtns">' + (f.editing ? '<button class="btn quiet" type="button" id="fxCancel">Cancel</button>' : '')
       + '<button class="btn" type="button" id="fxAdd"' + (formReady() ? '' : ' disabled') + '>' + (f.editing ? 'Save changes' : 'Add to ' + esc(day === today() ? 'today' : fmt(day, { weekday: 'long' }))) + '</button></div>';
-    $('dayBody').innerHTML = '<p class="label">Done</p><div class="rgroup" id="fxList">' + list + '</div>'
-      + '<p class="label">' + (f.editing ? 'Change exercise' : 'Add an exercise') + '</p>' + groups + form;
+    return groups + form;
+  }
+
+  // ---------------------------------------------------------------------
+  // Search: every exercise in every group, and your own. Each word typed
+  // must start a word of the name (or its group's), in any order, so "db
+  // curl" finds Dumbbell Curl and "raise" every raise; db, bb and ez stand
+  // for dumbbell, barbell and EZ-bar. Names that start with what you typed,
+  // then ones you've done, come first.
+  // ---------------------------------------------------------------------
+  const ALIAS = { db: 'dumbbell', bb: 'barbell', ez: 'ez-bar', ohp: 'overhead', rdl: 'romanian' };
+  const words = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  function allExercises() {
+    const out = new Map();   // one entry a name; Romanian Deadlift is in two groups, so keep where you last logged it
+    const add = (name, group) => { const k = name.toLowerCase(); if (!out.has(k)) out.set(k, { name, group }); };
+    for (const x of [...data.logs].sort((a, b) => b.date.localeCompare(a.date))) if (GROUP[x.group]) add(x.exercise, x.group);
+    for (const g of GROUPS) for (const n of g.ex) add(n, g.id);
+    for (const x of data.exercises) if (GROUP[x.group]) add(x.name, x.group);
+    return [...out.values()];
+  }
+  function searchExercises(q) {
+    const qs = words(q).map(w => ALIAS[w] || w);
+    if (!qs.length) return [];
+    const done = new Set(data.logs.map(x => x.exercise.toLowerCase()));
+    const ql = String(q).trim().toLowerCase();
+    return allExercises().map(x => {
+      const ws = words(x.name + ' ' + groupName(x.group));
+      if (!qs.every(w => ws.some(v => v.startsWith(w) || (w.length > 3 && v.includes(w))))) return null;
+      const rank = (x.name.toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
+      return Object.assign({ rank }, x);
+    }).filter(Boolean).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).slice(0, 12);
+  }
+  function searchHtml(q) {
+    const hits = searchExercises(q), t = q.trim().replace(/\s+/g, ' ').slice(0, 60);
+    const rows = hits.map(x => {
+      const last = lastOf(x.name, st.day, st.form.editing);
+      return '<button class="srow" type="button" data-pick="' + esc(x.name) + '" data-pg="' + x.group + '" data-g="' + x.group + '"><i></i><span class="st">' + esc(x.name)
+        + '<small>' + esc(groupName(x.group)) + (last ? ' · last ' + esc(fmtLine(last)) : '') + '</small></span>' + ICON.chevR + '</button>';
+    }).join('');
+    const known = hits.some(x => x.name.toLowerCase() === t.toLowerCase());
+    const add = known ? '' : '<button class="srow add" type="button" data-addnew="' + esc(t) + '"><span class="st">Add “' + esc(t) + '”<small>A new exercise of your own; pick its muscle group next</small></span>' + ICON.chevR + '</button>';
+    return '<div class="rgroup" id="fxResults" role="list" aria-label="Exercises found">' + (rows || '<div class="dempty">No exercise matches “' + esc(t) + '”.</div>') + add + '</div>';
+  }
+  function pickFromSearch(name, gid) {
+    const f = st.form;
+    f.q = ''; f.group = gid; f.other = '';
+    pickExercise(name);
+    renderDay();
+    const w = $('fxW'); if (w) w.focus({ preventScroll: true });
   }
   // The exercise list: what you did lately in this group first, then the
   // group's sections, then your own, then Other… to type one in.
@@ -396,6 +455,8 @@ if (window.top !== window.self) {
       + '<option value="' + OTHER + '"' + (val === OTHER ? ' selected' : '') + '>Other…</option>';
   }
   const formName = f => f.exercise === OTHER ? f.other.trim() : f.exercise;
+  // The Add button follows the form (it isn't there while search results show).
+  const syncAdd = () => { const b = $('fxAdd'); if (b) b.disabled = !formReady(); };
   const formReady = () => { const f = st.form; return !!(f.group && formName(f) && f.weight !== '' && f.reps && f.sets); };
   // Choosing an exercise starts its numbers from the last time it was done.
   function pickExercise(name) {
@@ -411,12 +472,26 @@ if (window.top !== window.self) {
   body.addEventListener('click', e => {
     const f = st.form;
     const g = e.target.closest('[data-group]');
-    if (g) { if (f.group !== g.dataset.group) { f.group = g.dataset.group; f.exercise = ''; f.other = ''; f.weight = ''; } renderDay(); const ex = $('fxEx'); if (ex) ex.focus({ preventScroll: true }); return; }
+    if (g) {
+      if (!f.group && f.exercise === OTHER && f.other) f.group = g.dataset.group;   // a new name from the search: keep it
+      else if (f.group !== g.dataset.group) { f.group = g.dataset.group; f.exercise = ''; f.other = ''; f.weight = ''; }
+      renderDay(); const ex = $(f.exercise === OTHER ? 'fxOther' : 'fxEx'); if (ex) ex.focus({ preventScroll: true }); return;
+    }
+    const pk = e.target.closest('[data-pick]');
+    if (pk) { pickFromSearch(pk.dataset.pick, pk.dataset.pg); return; }
+    const nw = e.target.closest('[data-addnew]');
+    if (nw) {
+      // A new name of your own: you say which muscle group it belongs to.
+      f.q = ''; f.group = null; f.exercise = OTHER; f.other = nw.dataset.addnew; f.weight = ''; f.timed = false;
+      renderDay();
+      return;
+    }
+    if (e.target.closest('#fxSearchClear')) { f.q = ''; renderDay(); $('fxSearch').focus(); return; }
     const ed = e.target.closest('[data-edit]');
     if (ed) {
       const x = data.logs.find(l => l.id === ed.dataset.edit); if (!x) return;
       if (f.editing === x.id) { st.form = blankForm(); renderDay(); return; }
-      st.form = { editing: x.id, group: x.group, exercise: x.exercise, other: '', weight: x.weight, reps: x.reps, sets: x.sets, timed: !!x.timed };
+      st.form = Object.assign(blankForm(), { editing: x.id, group: x.group, exercise: x.exercise, weight: x.weight, reps: x.reps, sets: x.sets, timed: !!x.timed });
       renderDay(); return;
     }
     const del = e.target.closest('[data-del]');
@@ -434,12 +509,20 @@ if (window.top !== window.self) {
   body.addEventListener('change', e => {
     const f = st.form, t = e.target;
     if (t.id === 'fxEx') { pickExercise(t.value === OTHER ? OTHER : t.value); renderDay(); if (f.exercise === OTHER) $('fxOther').focus(); return; }
+    if (!/^fx[WRS]$/.test(t.id)) return;
     if (t.id === 'fxW') f.weight = +t.value;
     else if (t.id === 'fxR') f.reps = +t.value;
     else if (t.id === 'fxS') f.sets = +t.value;
-    $('fxAdd').disabled = !formReady();
+    syncAdd();
   });
   body.addEventListener('input', e => {
+    if (e.target.id === 'fxSearch') {
+      // Only the part under the search bar is redrawn, so typing carries on.
+      st.form.q = e.target.value;
+      $('fxPick').innerHTML = pickHtml();
+      $('fxSearchClear').hidden = !st.form.q;
+      return;
+    }
     if (e.target.id !== 'fxOther') return;
     const f = st.form, had = !!f.other.trim();
     f.other = e.target.value;
@@ -448,9 +531,13 @@ if (window.top !== window.self) {
       if (!had && f.weight === '') { const last = lastOf(f.other.trim(), st.day, f.editing); if (last && !last.timed) { f.weight = last.weight; f.reps = last.reps; f.sets = last.sets; } }
       const pos = e.target.selectionStart; renderDay(); const o = $('fxOther'); o.focus(); o.setSelectionRange(pos, pos);
     }
-    $('fxAdd').disabled = !formReady();
+    syncAdd();
   });
-  body.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'fxOther' && formReady()) addOrSave(); });
+  body.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'fxOther' && formReady()) addOrSave();
+    // Enter in the search takes the first result.
+    if (e.key === 'Enter' && e.target.id === 'fxSearch') { e.preventDefault(); const b = $('fxPick').querySelector('[data-pick], [data-addnew]'); if (b) b.click(); }
+  });
   function addOrSave() {
     if (!formReady()) return;
     const f = st.form, name = formName(f).replace(/\s+/g, ' ').slice(0, 60);
@@ -756,5 +843,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (fitness/scripts/app-test.mjs) only.
-  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow };
+  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises };
 })();
