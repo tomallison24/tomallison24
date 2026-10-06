@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Home</title>
 <meta name="description" content="The Signal dashboard's devices as an AllisonOS app, talking to Home Assistant directly.">
-<meta name="theme-color" content="#0A0A0C">
+<meta name="theme-color" content="#1A212B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,7 +48,7 @@
 -->
 <style>
   :root {
-    --bg: #0A0A0C;
+    --bg: #1A212B;   /* Slate, a dark blue-grey; bg.js sets the one picked in Labs */
     --text: #FFFFFF;
     --muted: rgba(235, 235, 245, 0.6);
     --accent: #0A84FF;
@@ -74,7 +74,7 @@
   }
   * { box-sizing: border-box; }
   /* clip, not hidden: hidden would make the body its own scroller */
-  html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: clip; transition: background-color .5s; }
   body { background: transparent; }   /* the page's colour is html's, so the light below shows through */
   /* ---- behind the glass ----
      bg.js draws what moves behind the page (picked in Labs). One of the
