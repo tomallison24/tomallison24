@@ -147,17 +147,19 @@ function merge(db, req) {
 
 // ---------- the readable tab ----------
 
-const GROUP_NAMES = {chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes'};
+const GROUP_NAMES = {chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes', cardio: 'Cardio'};
 
 function views(ss, db) {
   const list = Array.from(db.logs.values())
     .filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.date || '')))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(a.updated) || 0) - (Number(b.updated) || 0));
-  const header = ['Date', 'Day', 'Muscle group', 'Exercise', 'Sets', 'Reps', 'Seconds', 'Weight (lb)', 'Volume (lb)'];
+  const header = ['Date', 'Day', 'Muscle group', 'Exercise', 'Sets', 'Reps', 'Seconds', 'Weight (lb)', 'Volume (lb)', 'Minutes', 'Distance', 'Unit'];
   const body = list.map(x => {
     const d = new Date(x.date + 'T12:00:00Z'), w = Number(x.weight) || 0, reps = Number(x.reps) || 0, sets = Number(x.sets) || 0;
-    return [x.date, Utilities.formatDate(d, 'UTC', 'EEE'), GROUP_NAMES[x.group] || 'Other', String(x.exercise || ''), sets,
-      x.timed ? '' : reps, x.timed ? reps : '', w ? w : 'Bodyweight', !x.timed && w ? w * reps * sets : ''];
+    const day = [x.date, Utilities.formatDate(d, 'UTC', 'EEE'), GROUP_NAMES[x.group] || 'Other', String(x.exercise || '')];
+    // Cardio: minutes and a distance, in place of sets, reps and weight.
+    if (x.cardio) return day.concat(['', '', '', '', '', Number(x.mins) || 0, Number(x.dist) > 0 ? Number(x.dist) : '', Number(x.dist) > 0 ? String(x.unit || 'mi') : '']);
+    return day.concat([sets, x.timed ? '' : reps, x.timed ? reps : '', w ? w : 'Bodyweight', !x.timed && w ? w * reps * sets : '', '', '', '']);
   });
   const sh = ss.getSheetByName('Workouts') || ss.insertSheet('Workouts');
   sh.clearContents();

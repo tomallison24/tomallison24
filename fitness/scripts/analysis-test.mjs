@@ -34,7 +34,7 @@ test('totals: days trained, sets, and volume from weighted exercises only', () =
     L('2026-09-01', 'chest', 'Bench', 60, 8, 3),   // outside both windows
   ], TODAY, 7, GROUPS);
   const t = Object.fromEntries(a.totals.map(x => [x.id, [x.now, x.before]]));
-  assert.deepEqual(t, { workouts: [2, 1], sets: [9, 3], volume: [2400, 2280] });
+  assert.deepEqual(t, { workouts: [2, 1], sets: [9, 3], volume: [2400, 2280], cardio: [0, 0] });
 });
 
 test('stronger, weaker and steady, by estimated one-rep max', () => {
@@ -90,6 +90,27 @@ test('muscle groups: missed, and cut back to under 70%', () => {
   assert.deepEqual(a.dropped.map(g => g.id), ['chest']);
   assert.deepEqual(a.groups.map(g => g.id), GROUPS, 'every group, in order');
   assert.deepEqual(a.groups.find(g => g.id === 'back'), { id: 'back', now: 4, before: 5 });
+});
+
+test('cardio: minutes totalled; faster over a distance is better; minutes when no distance; none now needs work', () => {
+  const C = (date, exercise, mins, dist, unit) => L(date, 'cardio', exercise, 0, 0, 0, { cardio: true, mins, dist, unit });
+  const a = analyze([
+    C('2026-10-05', 'Treadmill', 30, 3, 'mi'), C('2026-09-28', 'Treadmill', 30, 2.5, 'mi'),    // 0.1 vs 0.083 mi/min: faster
+    C('2026-10-04', 'Spin Bike', 20, 0, 'mi'), C('2026-09-27', 'Spin Bike', 30, 0, 'mi'),       // fewer minutes
+    C('2026-10-03', 'Rowing Machine', 20, 4000, 'm'), C('2026-09-27', 'Rowing Machine', 25, 0, 'm'),   // distance now, none before: not compared
+    L('2026-10-05', 'chest', 'Bench', 100, 8, 3),
+  ], TODAY, 7, GROUPS);
+  assert.deepEqual(a.up.map(x => x.name), ['Treadmill']);
+  assert.ok(Math.abs(a.up[0].change - 0.2) < 1e-9, 'a fifth faster');
+  assert.deepEqual(a.down.map(x => x.name), ['Spin Bike']);
+  assert.deepEqual(a.fresh.map(x => x.name).sort(), ['Bench', 'Rowing Machine']);
+  const t = Object.fromEntries(a.totals.map(x => [x.id, [x.now, x.before]]));
+  assert.deepEqual(t.cardio, [70, 85]);
+  assert.deepEqual(t.sets, [3, 0], 'cardio adds no sets');
+  assert.equal(a.cardioMissed, null);
+  assert.ok(!a.groups.some(g => g.id === 'cardio'), 'not among the muscle groups');
+  const b = analyze([C('2026-09-28', 'Treadmill', 30, 3, 'mi'), L('2026-10-05', 'chest', 'Bench', 100, 8, 3)], TODAY, 7, GROUPS);
+  assert.deepEqual(b.cardioMissed, { before: 30 });
 });
 
 test('Month: four whole weeks against the four before', () => {
