@@ -16,6 +16,10 @@
 //   reads it to show each workout as a layer, linking back here with
 //   ?date=YYYY-MM-DD; and the week starts on the day Calendar's own setting
 //   says, so the two agree.
+// - Analysis (the drop-down under the title): the last 7 days against the 7
+//   before, or the last 4 weeks against the 4 before - totals, the
+//   exercises getting stronger or weaker, and muscle groups missed or cut
+//   back. The comparisons are analysis.js's.
 // - Optionally it syncs with a Google Sheet of your own through a small
 //   Apps Script (google-sheet-sync.gs), the same design as Travel's: a
 //   backup, a readable Workouts tab, and a second phone kept in step.
@@ -38,12 +42,17 @@ if (window.top !== window.self) {
   const OTHER = '__other__';   // the exercise list's "Other…": a name typed in
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-fitness-v1';
-  const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at' };
+  const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period' };
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
     chevR: '<svg viewBox="0 0 24 24" class="b"><path d="M9.4 5.4l6.2 5.9a1 1 0 0 1 0 1.4l-6.2 5.9"/></svg>',
     close: '<svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg>',
+    week: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
+    chart: '<svg viewBox="0 0 24 24"><path d="M4 19.6h16"/><path d="M4.6 15.4l4.6-4.8 3.6 3.2 6.6-7.2"/><path d="M15.4 6.6h4v4"/></svg>',
+    tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
+    up: '<svg viewBox="0 0 24 24" class="b"><path d="M12 19V5.6M6.4 11.2L12 5.6l5.6 5.6"/></svg>',
+    down: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5v13.4M6.4 12.8l5.6 5.6 5.6-5.6"/></svg>',
   };
   const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
 
@@ -193,7 +202,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  const st = { week: weekStartOf(today()), day: null, form: null };
+  const st = { week: weekStartOf(today()), day: null, form: null, view: ls.get(K.view, 'week') === 'analysis' ? 'analysis' : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
   const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false });
 
   // ---------------------------------------------------------------------
@@ -201,10 +210,15 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const main = $('main');
   function render() {
+    $('viewName').textContent = st.view === 'analysis' ? 'Analysis' : 'Week';
+    if (!$('viewMenu').hidden) drawViewMenu();
+    if (st.view === 'analysis') renderAnalysis(); else renderWeek();
+  }
+  function renderWeek() {
     const ws = st.week, we = addDays(ws, 6), tod = today();
     const thisWeek = ws === weekStartOf(tod);
-    $('titleSub').textContent = thisWeek ? 'This week' : ws === weekStartOf(addDays(tod, -7)) ? 'Last week' : ws === weekStartOf(addDays(tod, 7)) ? 'Next week' : 'Week of ' + fmt(ws, { day: 'numeric', month: 'short', year: sameYear(ws) ? undefined : 'numeric' });
-    const label = fmt(ws, { day: 'numeric', month: 'short' }) + ' – ' + fmt(we, { day: 'numeric', month: 'short', year: sameYear(we) ? undefined : 'numeric' });
+    const rel = thisWeek ? 'This week' : ws === weekStartOf(addDays(tod, -7)) ? 'Last week' : ws === weekStartOf(addDays(tod, 7)) ? 'Next week' : '';
+    const label = (rel ? rel + ' · ' : '') + fmt(ws, { day: 'numeric', month: 'short' }) + ' – ' + fmt(we, { day: 'numeric', month: 'short', year: sameYear(we) ? undefined : 'numeric' });
     let rows = '', days = 0, exCount = 0, sets = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i), logs = logsOn(d);
@@ -240,6 +254,87 @@ if (window.top !== window.self) {
   });
   $('todayBtn').onclick = () => { st.week = weekStartOf(today()); render(); animateIn(main); };
   $('fab').onclick = () => { st.week = weekStartOf(today()); render(); openDay(today()); };
+
+  // ---------------------------------------------------------------------
+  // The view drop-down under the title (as Home's was): Week or Analysis
+  // ---------------------------------------------------------------------
+  const VIEWS = [
+    { id: 'week', name: 'Week', icon: 'week', sum: () => { const n = new Set(data.logs.filter(x => x.date >= weekStartOf(today()) && x.date <= today()).map(x => x.date)).size; return n ? plural(n, 'day') + ' trained this week' : 'Log each day’s workout'; } },
+    { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => { const a = analysisNow(); return a.hasNow || a.hasBefore ? 'Improving ' + a.up.length + ' · needs work ' + (a.down.length + a.missed.length + a.dropped.length) : 'Where you’re improving, and what needs work'; } },
+  ];
+  function drawViewMenu() {
+    $('viewMenu').innerHTML = VIEWS.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === st.view) + '"><span class="ic">' + ICON[v.icon] + '</span><span class="k">' + esc(v.name) + '<small>' + esc(v.sum()) + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
+  }
+  function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
+  $('viewBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (!$('viewMenu').hidden) return closeViewMenu();
+    drawViewMenu(); $('viewMenu').hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true');
+  });
+  $('viewMenu').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
+  document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+  function setView(v) {
+    st.view = v === 'analysis' ? 'analysis' : 'week'; ls.set(K.view, st.view);
+    closeViewMenu(); render(); animateIn(main); window.scrollTo({ top: 0 });
+  }
+
+  // ---------------------------------------------------------------------
+  // Analysis: this window against the one before (analysis.js does the sums)
+  // ---------------------------------------------------------------------
+  const A = window.FitnessAnalysis;
+  const PERIODS = { week: { days: 7, name: 'Week', words: 'the last 7 days', before: 'the 7 before' }, month: { days: 28, name: 'Month', words: 'the last 4 weeks', before: 'the 4 weeks before' } };
+  const analysisNow = () => A.analyze(data.logs, today(), PERIODS[st.period].days, GROUPS.map(g => g.id));
+  const compact = n => n >= 1000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString('en-US');
+  const short = s => fmt(s, { day: 'numeric', month: 'short' });
+  // One entry, as you'd say it: 100 lb × 6, 12 reps, 45 s.
+  const said = x => x.timed ? fmtSecs(+x.reps) : +x.weight > 0 ? fmtW(x.weight) + ' × ' + x.reps : x.reps + ' reps';
+  function renderAnalysis() {
+    $('todayBtn').hidden = true;
+    const P = PERIODS[st.period], a = analysisNow(), r = a.range;
+    const seg = '<div class="seg two small slides" role="radiogroup" aria-label="Compare" style="--i:0">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
+    const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
+    if (!a.hasNow && !a.hasBefore) {
+      main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few workouts and this fills in: where you’re getting stronger, and what needs work.</div>';
+      slideSeg(); return;
+    }
+    // Totals, each with its change against the window before.
+    const LBL = { workouts: 'Days trained', sets: 'Sets', volume: 'Volume (lb)' };
+    const kpis = '<div class="kpis" style="--i:1">' + a.totals.map(t => {
+      const d = t.now - t.before, dir = !a.hasBefore || d === 0 ? '' : d > 0 ? 'up' : 'down';
+      const delta = !a.hasBefore ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '+' : '−') + compact(Math.abs(d));
+      const said = !a.hasBefore || !d ? delta : (d > 0 ? 'up ' : 'down ') + Math.abs(d).toLocaleString('en-US') + (t.before ? ', ' + Math.round(Math.abs(d) / t.before * 100) + '%' : '') + ' on ' + P.before;
+      return '<div class="kpi" aria-label="' + esc(LBL[t.id] + ': ' + t.now.toLocaleString('en-US') + ', ' + said) + '"><span class="kl">' + LBL[t.id] + '</span><span class="kv">' + (t.now >= 100000 ? compact(t.now) : t.now.toLocaleString('en-US')) + '</span><span class="kd ' + dir + '">' + (dir ? (dir === 'up' ? '↑ ' : '↓ ') : '') + esc(delta) + '</span></div>';
+    }).join('') + '</div>';
+    const g = id => GROUP[id] ? id : 'other';
+    const was = x => x.was ? 'was ' + said(x.was) + (x.when === 'earlier' ? ' on ' + short(x.was.date) : '') : '';
+    const pct = x => Math.max(1, Math.round(Math.abs(x.change) * 100)) + '%';
+    const exRow = (x, dir) => '<div class="xrow" data-g="' + g(x.group) + '"><i></i><span class="xt">' + esc(x.name) + '<small>' + esc(said(x.now) + ' · ' + was(x)) + '</small></span><span class="chg ' + dir + '" aria-label="' + (dir === 'up' ? 'up ' : 'down ') + pct(x) + '">' + ICON[dir] + pct(x) + '</span></div>';
+    const grpRow = (gr, words) => '<div class="xrow" data-g="' + gr.id + '"><i></i><span class="xt">' + esc(groupName(gr.id)) + '<small>' + esc(words) + '</small></span><span class="chg down" aria-label="down">' + ICON.down + '</span></div>';
+    const improving = a.up.map(x => exRow(x, 'up')).join('');
+    const work = a.down.map(x => exRow(x, 'down')).join('')
+      + a.missed.map(gr => grpRow(gr, 'Not trained in ' + P.words + ' (' + plural(gr.before, 'set') + ' in ' + P.before + ')')).join('')
+      + a.dropped.map(gr => grpRow(gr, plural(gr.now, 'set') + ', down from ' + gr.before)).join('');
+    const quiet = (title, list) => list.length ? '<div class="xrow quiet"><span class="xt">' + esc(title) + '<small>' + esc(list.map(x => x.name).join(', ')) + '</small></span></div>' : '';
+    // Sets by muscle group: one colour, scaled to the biggest of either window.
+    const max = Math.max(1, ...a.groups.map(x => Math.max(x.now, x.before)));
+    const bars = a.groups.map(x => {
+      const d = x.now - x.before;
+      return '<div class="gbar" data-g="' + x.id + '" aria-label="' + esc(groupName(x.id) + ': ' + plural(x.now, 'set') + ', ' + x.before + ' before') + '"><span class="gn"><i></i>' + esc(groupName(x.id)) + '</span><span class="track"><span class="bar' + (x.now ? '' : ' zero') + '" style="width:' + (x.now / max * 72).toFixed(1) + '%"></span><span class="gv">' + x.now + (a.hasBefore && d ? ' <small>' + (d > 0 ? '+' : '−') + Math.abs(d) + '</small>' : '') + '</span></span></div>';
+    }).join('');
+    main.innerHTML = seg + note + kpis
+      + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
+      + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
+      + '<p class="sechead" style="--i:4">Sets by muscle group<span>' + (a.hasBefore ? 'change vs before' : '') + '</span></p><div class="rgroup bars" id="anGroups" style="--i:4">' + bars + '</div>'
+      + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time. Volume counts weighted sets only.</p>';
+    slideSeg();
+  }
+  const slideSeg = () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
+  main.addEventListener('click', e => {
+    const b = e.target.closest('[data-period]'); if (!b) return;
+    st.period = b.dataset.period === 'month' ? 'month' : 'week'; ls.set(K.period, st.period);
+    render();
+  });
+  window.addEventListener('resize', () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); });
 
   // ---------------------------------------------------------------------
   // A day: what was done, and the form
@@ -598,6 +693,7 @@ if (window.top !== window.self) {
   });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (!$('viewMenu').hidden) { closeViewMenu(); return; }
     const open = [...document.querySelectorAll('.sheetwrap')].reverse().find(w => !w.hidden);
     if (open) closeWrap(open);
   });
@@ -623,7 +719,7 @@ if (window.top !== window.self) {
   if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
   // Opened from Calendar's Fitness layer: ?date=YYYY-MM-DD opens that day.
   const q = new URLSearchParams(location.search).get('date');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.week = weekStartOf(q); render(); openDay(q); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
   // Another tab may have changed the log, or Calendar's week start.
   window.addEventListener('storage', e => {
     if (e.key !== KEY && e.key !== 'allison-calendar-v1-settings') return;
@@ -657,5 +753,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (fitness/scripts/app-test.mjs) only.
-  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED };
+  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow };
 })();
