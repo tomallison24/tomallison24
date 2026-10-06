@@ -395,8 +395,10 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   await p.click('#viewBtn'); await p.click('#viewMenu [data-view="week"]');
   assert.equal(await p.$$eval('.drow', e => e.length), 7);
   await p.click('.drow.today');
-  await p.waitForTimeout(400);   // it fades out over a quarter of a second
-  assert.equal(await p.$eval('#vbar', e => getComputedStyle(e).opacity), '0', 'the pill hides under a popup');
+  assert.ok(await p.evaluate(() => document.documentElement.classList.contains('locked')), 'a popup is open');
+  // It fades out over a quarter of a second: wait for the end, not a guess at it.
+  await p.waitForFunction(() => getComputedStyle(document.getElementById('vbar')).opacity === '0', null, { timeout: 3000 });
+  assert.equal(await p.$eval('#vbar', e => getComputedStyle(e).pointerEvents), 'none', 'the pill hides under a popup');
   await p.keyboard.press('Escape');
   violations.push(...(await p.evaluate(() => window.__csp || [])));
   await an.ctx.close();
