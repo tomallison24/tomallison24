@@ -524,6 +524,14 @@
   .sharecode.gone { opacity: .35; text-decoration: line-through; }
   .sharelft { text-align: center; font-size: 14px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   .sharebtn { width: 100%; margin-top: 14px; }
+  .sharebtn + .sharebtn { margin-top: 8px; }
+  /* Devices with access: one row per way in, with Remove */
+  .acc .rowi { min-height: 60px; padding: 8px 14px; }
+  .acc .k b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acc .k small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .acc .rm { flex: none; font-size: 14px; font-weight: 600; color: #FF8A80; padding: 8px 4px; }
+  .acc .rm.arm { color: #fff; background: #FF453A; border-radius: 999px; padding: 6px 12px; }
+  .acc .me { flex: none; font-size: 13px; color: var(--muted); }
 
   /* The PIN pad: glass keys, as on the iPhone's lock screen */
   .pinv { display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; }
@@ -705,6 +713,15 @@
         </div>
         <div class="lockline" id="lkLine"></div>
         <button class="btn sharebtn" type="button" id="lkShare">Share with another device</button>
+        <button class="btn sharebtn" type="button" id="lkAccess">Devices with access</button>
+      </div>
+
+      <!-- Devices with access: every token and sign-in of this Home Assistant user. -->
+      <div class="view" id="vAccess" hidden>
+        <div class="status" id="acStatus"></div>
+        <div class="group acc" id="acList"></div>
+        <p class="help">Everything that can get into Home Assistant as you: devices that joined through a share link (<b>Home · …</b>), other long-lived tokens, and sign-ins from the Home Assistant app or a browser. Remove one and it stops working at once. Home Assistant also alerts your phones and the tablet when a new one appears.</p>
+        <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
       </div>
 
       <!-- Share: a one-off link and a 6-digit code, good for 5 minutes. -->
@@ -2138,9 +2155,10 @@ function showView(v) {
   $('vPin').hidden = v !== 'pin';
   $('vShare').hidden = v !== 'share';
   $('vJoin').hidden = v !== 'join';
-  $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join';
+  $('vAccess').hidden = v !== 'access';
+  $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join' || v === 'access';
   if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
-  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : 'Home Assistant';
+  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : v === 'access' ? 'Devices with access' : 'Home Assistant';
   if (v === 'edit') {
     const s = saved();
     $('haUrl').value = s.url || '';
@@ -2439,6 +2457,56 @@ $('vJoin').addEventListener('submit', e => { e.preventDefault(); SHARE.join(); }
 $('jnCancel').onclick = () => showView(saved().token ? 'locked' : 'edit');
 $('jnCopy').onclick = () => SHARE.copy(SHARE.link, $('jnStatus'));
 $('jnCode').oninput = () => { $('jnStatus').textContent = ''; };
+
+// ---------------------------------------------------------------------------
+// Devices with access: this Home Assistant user's tokens and sign-ins (HA's
+// auth/refresh_tokens), newest first, each removable (auth/delete_refresh_token,
+// two taps). Behind the PIN. This device's own is marked, not removable here
+// (Disconnect does that). Home Assistant's "Security - New access" automation
+// (ha-config) alerts the phones when a new one appears.
+const ACCESS = {
+  APPS: { 'https://home-assistant.io/iOS': 'Home Assistant app (iPhone)', 'https://home-assistant.io/android': 'Home Assistant app (Android)' },
+  armed: null,
+  label(t) {
+    const n = t.client_name || '';
+    if (n.startsWith(SHARE.PREFIX)) return ['Share link', 'Made ' + this.when(t.created_at) + ' · lasts 5 minutes'];
+    if (n.startsWith('Home · ')) return [n.slice(7).replace(/ \(\d{4}-\d\d-\d\d \d\d:\d\d\)$/, ''), 'Joined ' + this.when(t.created_at) + ' · shared link'];
+    if (t.type === 'long_lived_access_token') return [n || 'Long-lived token', 'Made ' + this.when(t.created_at) + ' · long-lived token'];
+    let host = ''; try { host = new URL(t.client_id).hostname; } catch {}
+    return [this.APPS[t.client_id] || (host ? 'Browser · ' + host : 'Sign-in'), 'Signed in ' + this.when(t.created_at)];
+  },
+  when(iso) {
+    const d = new Date(iso); if (isNaN(d)) return '';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  },
+  async open() {
+    showView('access');
+    $('acStatus').className = 'status'; $('acStatus').textContent = 'Loading…'; $('acList').innerHTML = '';
+    this.armed = null;
+    try {
+      if (HA.status !== 'live') throw new Error('Connect to Home Assistant first.');
+      const list = (await HA.send({ type: 'auth/refresh_tokens' })).filter(t => t.type !== 'system')
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+      $('acStatus').textContent = '';
+      $('acList').innerHTML = list.map(t => { const [a, b] = this.label(t); return `<div class="rowi"><span class="k"><b>${esc(a)}</b><small>${esc(b)}</small></span>${
+        t.is_current ? '<span class="me">This device</span>' : `<button type="button" class="rm" data-id="${esc(t.id)}">Remove</button>`}</div>`; }).join('');
+    } catch (e) { $('acStatus').className = 'status bad'; $('acStatus').textContent = e.message || String(e); }
+  },
+  async remove(b) {
+    if (this.armed !== b) {                         // first tap arms, second removes
+      if (this.armed) { this.armed.classList.remove('arm'); this.armed.textContent = 'Remove'; }
+      this.armed = b; b.classList.add('arm'); b.textContent = 'Remove now';
+      return;
+    }
+    b.disabled = true;
+    try { await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: b.dataset.id }); b.closest('.rowi').remove(); }
+    catch (e) { b.disabled = false; $('acStatus').className = 'status bad'; $('acStatus').textContent = e.message || String(e); }
+    this.armed = null;
+  },
+};
+$('lkAccess').onclick = () => guarded(() => ACCESS.open());
+$('acDone').onclick = () => showView('locked');
+$('acList').addEventListener('click', e => { const b = e.target.closest('.rm'); if (b && !b.disabled) ACCESS.remove(b); });
 
 function goPreview() { mode = 'preview'; ents = sampleStates(); onStatus('off'); }
 function goLive() {
