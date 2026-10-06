@@ -496,8 +496,8 @@
 
 /* ---- the energy strip at the top of a view ---- */
 /* A round Liquid Glass pill: a light tint over a strong blur, a bright top
-   rim and a softer lower one, and the bolt's gold glowing faintly through it
-   from behind the icon. Open, it eases to a rounded panel for the list. */
+   rim and a softer lower one.
+   Open, it eases to a rounded panel for the list. */
 .estrip { position: relative; overflow: hidden; border-radius: 32px; transition: border-radius .35s cubic-bezier(.2,.8,.2,1);
   background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
   -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
