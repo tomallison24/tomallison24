@@ -111,6 +111,7 @@ family({
       const sum = i => ESTRIP[v].cats.reduce((s, c) => s + (num(c[i]) || 0), 0), any = ESTRIP[v].cats.some(c => !isNaN(num(c[0])));
       const now = any ? sum(0) : null, day = any ? sum(1) : null, month = any ? sum(2) : null, open = !!stripOpen[v];
       const list = open ? stripDevices(v) : [];
+      el.classList.toggle('open', open);
       put(el, `<button class="es-row" data-a="toggle" aria-expanded="${open}">
           <span class="es-ic">${svg('lightning', 16)}</span>
           <span class="es-now"><b>${fmtW(now)}</b><small>now</small></span>
