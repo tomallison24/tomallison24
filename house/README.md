@@ -10,7 +10,10 @@ bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
 all, the page is a dark, quiet tone - Slate, a blue-grey as Google Home's,
 by default - with something slow moving behind the glass, small faint
-Bubbles by default (`bg.js`; both picked in Labs and kept on the phone):
+Bubbles by default (`bg.js`; both picked in **Settings → Customization →
+Background** and kept on the phone). Every card is as clear as the energy
+tiles: the faint tile over the background, a hairline edge, and its own
+colour only as a light tint:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -284,21 +287,13 @@ what's needed, each on a plain glass pane:
 - **D · Tile**: as the Home app - name, what it's doing, the target; tap
   for the popup, small − + for each target.
 
-Then **backgrounds** (`bg.js`). **Colour** is the page's tone: Slate (the
-default, a dark blue-grey as Google Home's), Navy, Sage, Dusk (mauve), Sand
-(taupe), Graphite or Black. **Movement** is what drifts over it. Tap one to
-put it behind the whole app;
-it stays (on this phone) until another is picked. All slow, minimal and
-nearly colourless, drawn on one canvas at ~30 fps, paused while the app is
-hidden, still with reduced motion:
-
-- **Bubbles** (the default): nine small, very faint glass bubbles (14-48 px),
-  brighter at the rim with a highlight, drifting 4-10 px a second and
-  bouncing off the edges.
-- **Constellation**: faint points drifting, joined by hairlines when near.
-- **Ripples**: rings opening slowly from random points and fading.
-- **Aurora**: two soft ribbons of light swaying across the top.
-- **Beach**: the blurred dusk beach. **None**: the plain near-black.
+The backgrounds that were tried here moved to **Settings → Customization →
+Background** (`bg.js`): a popup with **Colour** - Slate (the default, a
+dark blue-grey as Google Home's), Navy, Sage, Dusk, Sand, Graphite, Black -
+and **Movement** - Bubbles (the default: nine small, very faint glass
+bubbles drifting and bouncing off the edges), Constellation, Ripples,
+Aurora, Beach, None. Kept on the phone; drawn on one canvas at ~30 fps,
+paused while the app is hidden, still with reduced motion.
 
 ## Connecting to Home Assistant
 
