@@ -430,7 +430,16 @@
 .runchip { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 16px;
   background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.12); transition: transform .18s; min-width: 0; }
 .runchip:active { transform: scale(0.96); }
-.runchip i { grid-row: span 2; width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--a)); }
+/* The dot: green and softly pulsing while the device is working (heating,
+   cooling, fan, drying, cleaning); a still grey one while it is only on
+   (a dehumidifier holding, or its tank full). The pulse is a faint ring
+   easing out from the dot every 2.4 s; the dot itself stays put. */
+.runchip i { position: relative; grid-row: span 2; width: 8px; height: 8px; border-radius: 50%; background: #34C759; }
+.runchip i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #34C759; animation: run-pulse 2.4s cubic-bezier(.2,.7,.3,1) infinite; }
+.runchip.idle i { background: rgba(160,166,176,0.75); }
+.runchip.idle i::after { display: none; }
+@keyframes run-pulse { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(2.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .runchip i::after { display: none; } }
 .runchip b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .runchip span { font-size: 12px; opacity: .65; }
 /* Automations: Liquid Glass tiles, three across (Labs' design D). Glass

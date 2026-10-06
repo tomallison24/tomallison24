@@ -142,12 +142,12 @@ family({
     for (const t of THERMOS) {
       const r = tread(t);
       if (!r.offline && (r.act === 'heating' || r.act === 'cooling' || r.mood === 'fan'))
-        out.push({ name: t.name, word: r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : 'Fan', rgb: T_ACC[r.mood], view: 'climate', open: () => openThermo(t.id) });
+        out.push({ name: t.name, word: r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : 'Fan', view: 'climate', open: () => openThermo(t.id) });
     }
-    for (const h of HEATERS) { const r = heat.read(h); if (r.mood === 'heating') out.push({ name: h.name, word: 'Heating', rgb: h.acc.heating, view: 'climate', open: () => openDev(heat, h.id) }); }
-    for (const y of DYSONS) { const r = dy.read(y); if (r.on) out.push({ name: y.name, word: r.mood === 'heating' ? 'Heating' : 'Fan ' + r.spd, rgb: dy.acc(y, r), view: 'climate', open: () => openDev(dy, y.id) }); }
-    for (const u of UNITS) { const r = read(u); if (r.on) out.push({ name: u.name, word: r.mood === 'drying' ? 'Drying' : r.mood === 'full' ? 'Tank full' : 'Holding', rgb: u.accents[r.mood] || u.accents.holding, view: 'climate', open: () => openUnit(u.id) }); }
-    for (const v of VACS) { const r = vac.read(v); if (r.mood === 'cleaning' || r.mood === 'returning') out.push({ name: v.name, word: V_WORD[r.mood], rgb: V_ACC[r.mood], view: 'around', open: () => openDev(vac, v.id) }); }
+    for (const h of HEATERS) { const r = heat.read(h); if (r.mood === 'heating') out.push({ name: h.name, word: 'Heating', view: 'climate', open: () => openDev(heat, h.id) }); }
+    for (const y of DYSONS) { const r = dy.read(y); if (r.on) out.push({ name: y.name, word: r.mood === 'heating' ? 'Heating' : 'Fan ' + r.spd, view: 'climate', open: () => openDev(dy, y.id) }); }
+    for (const u of UNITS) { const r = read(u); if (r.on) out.push({ name: u.name, word: r.mood === 'drying' ? 'Drying' : r.mood === 'full' ? 'Tank full' : 'Holding', view: 'climate', open: () => openUnit(u.id), idle: r.mood !== 'drying' }); }
+    for (const v of VACS) { const r = vac.read(v); if (r.mood === 'cleaning' || r.mood === 'returning') out.push({ name: v.name, word: V_WORD[r.mood], view: 'around', open: () => openDev(vac, v.id) }); }
     return out;
   },
   autoState(a) {
@@ -169,7 +169,7 @@ family({
     const run = this.el.querySelector('[data-r="run"]');
     run.hidden = !this.run.length;
     put(run, `<div class="run-h"><i></i>RUNNING NOW<span>${this.run.length}</span></div><div class="runchips">${this.run.map((x, i) =>
-      `<button class="runchip" data-a="go" data-v="${i}" style="--a:${x.rgb}"><i></i><b>${esc(x.name)}</b><span>${esc(x.word)}</span></button>`).join('')}</div>`);
+      `<button class="runchip${x.idle ? ' idle' : ''}" data-a="go" data-v="${i}"><i></i><b>${esc(x.name)}</b><span>${esc(x.word)}</span></button>`).join('')}</div>`);
     run.dataset.dv = 'fav:run';
 
     const wx = favWeather();

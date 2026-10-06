@@ -134,6 +134,9 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
 - **Now Playing**: a Sonos that is playing, one card per group.
 - **Running Now**: every device that is doing something (heating, cooling,
   a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
+  A green dot with a faint ring easing out from it every 2.4 s marks one that
+  is working; a dehumidifier only holding (or with a full tank) has a still
+  grey dot. Still with Reduce Motion.
 - **Weather**: a full-width glass pill over the automations - the
   condition's icon (the night's after sunset), the temperature outside and
   the condition, with a glow of its colour - that opens the AllisonOS
