@@ -19,6 +19,11 @@
 //   - Weather: a glass pill over the automations - the condition, the
 //     temperature outside (weather.forecast_home) - that opens the AllisonOS
 //     Weather app (../weather/, a plain link, as the launcher's own)
+//   - Activity: a glass pill under the weather with the latest event; it
+//     opens the last 10 from the dashboard's own log, sensor.signal_activity_log
+//     (ha-config configuration.yaml: `events`, newest first, each t epoch,
+//     n what, d what happened, i icon, c colour, k kind, w who - auto (an
+//     automation or script), you (a tap) or device (it reported itself))
 //   - Thermostats: Living Room and Office (the Windmill is left out, as on
 //     the dashboard)
 //   - Cameras: the living room Blink and the doorbell
@@ -45,6 +50,23 @@ const FAV_WX = {
   hail: ['wxHail', 'Hail', '190,215,255'], lightning: ['wxStorm', 'Thunderstorms', '170,150,255'], 'lightning-rainy': ['wxStormRain', 'Thunderstorms', '170,150,255'],
   windy: ['wxWindy', 'Windy', '170,220,210'], 'windy-variant': ['wxWindy', 'Windy', '170,220,210'], exceptional: ['alert', 'Weather alert', '255,170,120'],
 };
+// Recent activity: the log's events, its kinds as the app's icons.
+const ACT_LOG = 'sensor.signal_activity_log';
+const ACT_ICON = { security: 'motion', presence: 'home', routine: 'play', lights: 'lightbulb', climate: 'thermostat', covers: 'blinds', vacuum: 'vacuum', media: 'music' };
+const actIcon = x => /cctv|video/.test(x.i || '') ? 'cctv' : /shield/.test(x.i || '') ? 'shield' : ACT_ICON[x.k] || 'clock';
+const actRgb = c => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || '')); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)).join(',') : '190,194,204'; };
+function actEvents() { const a = attr(ACT_LOG, 'events'); return Array.isArray(a) ? a.filter(x => x && Number.isFinite(Number(x.t))) : []; }
+// A clock time, with the day when it isn't today.
+function actWhen(t) {
+  const d = new Date(Number(t) * 1000), now = new Date(), tm = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  return days === 0 ? tm : days === 1 ? 'Yesterday ' + tm : d.toLocaleDateString([], { weekday: 'short' }) + ' ' + tm;
+}
+function favActivity() {
+  const ev = actEvents(), x = ev[0];
+  if (!x) return { c: '190,194,204', html: `<span class="wx-ic">${svg('clock', 24)}</span><span class="wx-t ac-t"><b>Activity</b><small>${gone(ACT_LOG) ? 'Not available' : 'Nothing yet'}</small></span><span class="wx-go">${svg('chevR', 18)}</span>` };
+  return { c: actRgb(x.c), html: `<span class="wx-ic">${svg(actIcon(x), 24)}</span><span class="wx-t ac-t"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span><span class="wx-go">${esc(ago(Number(x.t)))}${svg('chevR', 18)}</span>` };
+}
 function favWeather() {
   const w = st('weather.forecast_home');
   if (!w || w.state === 'unavailable' || w.state === 'unknown') return { html: `<span class="wx-ic">${svg('wxCloudy', 26)}</span><span class="wx-t"><b>--°</b><small>Weather</small></span><span class="wx-go">${svg('chevR', 18)}</span>`, c: '170,182,198' };
@@ -68,6 +90,7 @@ family({
       <div class="runpanel" data-r="run" hidden></div>
       <div class="vsec-h"><span>Automations</span></div>
       <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weather/" aria-label="Open Weather"></a></div>
+      <div class="agw wxw acw" data-r="acw" data-dv="fav:activity"><i class="ag-glow"></i><button class="wxpill acpill" data-r="ac" data-a="activity" aria-label="Recent activity"></button></div>
       <div class="autos" data-dv="fav:autos"></div>
       <div class="vsec-h"><span>Thermostats</span></div>
       <div class="fcards">${THERMOS.filter(t => FAV_THERMOS.includes(t.id)).map(tCardHTML).join('')}</div>
@@ -117,6 +140,9 @@ family({
     const wx = favWeather();
     put(this.el.querySelector('[data-r="wx"]'), wx.html);
     this.el.querySelector('[data-r="wxw"]').style.setProperty('--c', wx.c);
+    const ac = favActivity();
+    put(this.el.querySelector('[data-r="ac"]'), ac.html);
+    this.el.querySelector('[data-r="acw"]').style.setProperty('--c', ac.c);
     put(this.el.querySelector('.autos'), FAV_AUTOS.map(a => {
       const s = this.autoState(a), name = s.lit && a.onName ? a.onName : a.name;
       return `<div class="agw${s.lit ? ' lit' : ''}" style="--c:${a.acc}"><i class="ag-glow"></i>
@@ -127,6 +153,22 @@ family({
   },
 
   sheet(id) {
+    if (id === 'activity') {
+      const ev = actEvents().slice(0, 10);
+      const who = w => w === 'auto' ? `<span class="act-who" title="An automation or script">${svg('bolt', 14)}Auto</span>` : w === 'you' ? '<span class="act-who you">You</span>' : '';
+      return {
+        title: 'Activity', accent: '190,194,204', pill: ev.length ? pillHTML2(ago(Number(ev[0].t))) : '',
+        fx: skyHTML(grad('#16171B', '#1F2026', '#2E3038'), '160,170,255', {}, 150),
+        parts: [
+          ['list', ev.length ? `<div class="group actlist">${ev.map(x => `<div class="actrow" style="--c:${actRgb(x.c)}">
+              <span class="act-ic">${svg(actIcon(x), 18)}</span>
+              <span class="act-k"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span>
+              <span class="act-r"><time>${esc(actWhen(x.t))}</time>${who(x.w)}</span></div>`).join('')}</div>`
+            : `<p class="tnote">${gone(ACT_LOG) ? "Home Assistant has no activity log (sensor.signal_activity_log)." : 'Nothing has happened yet.'}</p>`],
+          ['note', '<p class="tnote">The latest 10 from the house\'s activity log, newest first. <b>Auto</b>: an automation or script did it. <b>You</b>: a tap. Neither: the device reported it.</p>'],
+        ],
+      };
+    }
     if (id !== 'bug') return null;
     const ack = isOn('input_boolean.signal_bug_logged_ack');
     return {
@@ -145,6 +187,7 @@ family({
   },
   act(id, a, b) {
     if (a === 'go') { const x = this.run[Number(b.dataset.v)]; if (x) { goView(x.view); x.open(); } return; }
+    if (a === 'activity') return openDev(this, 'activity');
     if (a === 'auto') {
       const au = FAV_AUTOS.find(x => x.id === b.dataset.v), s = this.autoState(au);
       if (au.form) return openDev(this, 'bug');
@@ -173,6 +216,22 @@ family({
   },
 
   samples: e => ({
+    [ACT_LOG]: e('on', { events: (() => {
+      const now = Math.round(Date.now() / 1000), m = 60;
+      return [
+        [4, 'Front Door', 'Person detected', 'mdi:motion-sensor', '#F28B82', 'security', 'device'],
+        [22, 'Living Room', 'Heat 68° · Cool 74°', 'mdi:thermostat', '#F5A623', 'climate', 'you'],
+        [47, 'Evening Lights', 'Ran', 'mdi:play-circle-outline', '#D0BCFF', 'routine', 'you'],
+        [48, 'Floor Lamps', 'On · 62%', 'mdi:lightbulb', '#F9AB00', 'lights', 'auto'],
+        [95, 'Yard', 'Motion detection off', 'mdi:video-outline', '#4EA1FF', 'security', 'auto'],
+        [130, 'Tom', 'Arrived home', 'mdi:home-import-outline', '#81C995', 'presence', 'device'],
+        [180, 'Kitchen', 'Playing · Harvest Moon', 'mdi:music-note', '#9B8CFF', 'media', 'you'],
+        [260, 'Blinds', 'Opened', 'mdi:blinds-horizontal', '#8AB4F8', 'covers', 'auto'],
+        [600, 'Shark', 'Cleaning', 'mdi:robot-vacuum', '#2DD4BF', 'vacuum', 'auto'],
+        [1500, 'Blink', 'Armed', 'mdi:shield-home', '#4EA1FF', 'security', 'auto'],
+        [1600, 'Garage', 'Motion detected', 'mdi:motion-sensor', '#F28B82', 'security', 'device'],
+      ].map(([ago, n, d, i, c, k, w]) => ({ t: now - ago * m, n, d, i, c, k, w, e: '' }));
+    })() }),
     'input_boolean.signal_goodnight_ack': e('off'), 'input_boolean.signal_evening_lights_ack': e('off'), 'input_boolean.signal_moms_awake_ack': e('off'),
     'input_boolean.signal_bug_logged_ack': e('off'), 'input_boolean.babysitter_mode': e('off'),
     'script.goodnight': e('off'), 'script.evening_lights': e('off'), 'script.moms_awake': e('off'), 'script.hatch_bedtime': e('off'), 'script.log_bug': e('off'),

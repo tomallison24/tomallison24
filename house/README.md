@@ -8,8 +8,9 @@ when it is opened from the launcher. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
-all, a few very soft fields of colour (indigo, teal, a warm amber) drift
-slowly on the near-black, so the glass has something to diffuse:
+all, a few soft fields of colour drift
+slowly on the near-black - indigo, teal, a warm amber and a violet, soft
+but clearly there - so the glass has something to diffuse:
 
 - **Favorites** (where it opens): what is on the dashboard's Favorites
 - **Climate**: Thermostats, Heaters, Air Purifiers (the Dysons), Dehumidifiers
@@ -124,6 +125,11 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   condition's icon (the night's after sunset), the temperature outside and
   the condition from `weather.forecast_home`, with a glow of its colour -
   that opens the AllisonOS Weather app (`../weather/`).
+- **Activity**: a pill under it, the same glass, with the latest event
+  (what, what happened, how long ago) and a glow of its colour; it opens
+  the last 10 from the house's activity log (`sensor.signal_activity_log`,
+  the dashboard's own), newest first - each with its icon, the time, and
+  **Auto** (an automation or script did it) or **You** (a tap).
 - **Automations** (Liquid Glass tiles, three across: each carries a glow of
   its colour behind the glass - Goodnight indigo, Evening Lights amber, Mom's
   Awake gold, Report a Bug grey, Babysitter rose, Hatch Green green - and
