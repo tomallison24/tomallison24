@@ -15,7 +15,7 @@
 // while the app is hidden; with reduced motion they are drawn once, still.
 'use strict';
 const BG_IDEAS = [
-  { id: 'bubbles', name: 'Bubbles', note: 'Small, faint glass bubbles drift slowly and bounce off the edges of the screen.' },
+  { id: 'bubbles', name: 'Bubbles', note: 'Small, very faint glass bubbles drift slowly and bounce off the edges of the screen.' },
   { id: 'stars', name: 'Constellation', note: 'Faint points drift, joined by hairlines when they come near each other.' },
   { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
   { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
@@ -81,12 +81,12 @@ const BG = {
       const tint = ['200,220,255', '190,240,235', '230,220,255'][b.hue];
       // the body: brighter toward the rim, as a soap bubble
       const body = g.createRadialGradient(b.x, b.y, b.r * 0.2, b.x, b.y, b.r);
-      body.addColorStop(0, `rgba(${tint},0.01)`); body.addColorStop(0.75, `rgba(${tint},0.03)`); body.addColorStop(1, `rgba(${tint},0.07)`);
+      body.addColorStop(0, `rgba(${tint},0.006)`); body.addColorStop(0.75, `rgba(${tint},0.02)`); body.addColorStop(1, `rgba(${tint},0.05)`);
       g.fillStyle = body; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.fill();
-      g.strokeStyle = `rgba(255,255,255,0.065)`; g.lineWidth = 0.75; g.stroke();
+      g.strokeStyle = `rgba(255,255,255,0.045)`; g.lineWidth = 0.75; g.stroke();
       // a highlight up and to the left
       const hx = b.x - b.r * 0.42, hy = b.y - b.r * 0.42, hl = g.createRadialGradient(hx, hy, 0, hx, hy, b.r * 0.32);
-      hl.addColorStop(0, 'rgba(255,255,255,0.10)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+      hl.addColorStop(0, 'rgba(255,255,255,0.07)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = hl; g.beginPath(); g.arc(hx, hy, b.r * 0.32, 0, 6.2832); g.fill();
     }
   },
