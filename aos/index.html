@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="aOS">
+<meta name="theme-color" content="#F2F4F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1116" media="(prefers-color-scheme: dark)">
+<title>aOS</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  aOS - the home of every AllisonOS app, laid out like an app store.
+
+  - The aOS mark: aOS with the version as a superscript, shining, and "The
+    Power of aOS1"; a tap replays the AllisonOS welcome.
+  - Apps: every AllisonOS app with its tagline and version. Get opens the app
+    (a new tab in a browser, where Share -> Add to Home Screen adds it); tap
+    the row for its page: what it does, how to add it, its walkthrough and
+    what's new.
+  - What's new in aOS: the release log, newest first.
+  - Appearance: System, Light or Dark, for every app (the launcher's setting).
+
+  The welcome, the walkthroughs, the update screens and the release log are all
+  in ../home/welcome.js, which every app loads; this page reads its data. With
+  data-app="aos" it plays the AllisonOS welcome the first time, and aOS's own
+  update screens after an update.
+
+  No build step: this file is the whole app and sw.js keeps it working offline.
+-->
+<style>
+  :root {
+    --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.7); --edge: rgba(0,0,0,.07); --dot: rgba(0,0,0,.08);
+    --sheet: rgba(250,250,252,.97); --accent: #0A84FF;
+    --pastel: linear-gradient(100deg, #6EA8F2 0%, #9C86EC 26%, #EC86AA 50%, #EDA766 74%, #5FC6A6 100%); --glow: rgba(156,134,236,.4);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
+    --sheet: rgba(24,25,30,.97);
+    --pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --glow: rgba(195,177,255,.5);
+    color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
+    --sheet: rgba(24,25,30,.97);
+    --pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --glow: rgba(195,177,255,.5);
+    color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    padding: calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 40px); }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  main { max-width: 560px; margin: 0 auto; }
+  /* the pastel colour fields behind everything, faint */
+  .fields { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .fields i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); opacity: .18; }
+  .fields i:nth-child(1) { background: #9CC8FF; left: -30vmax; top: -30vmax; }
+  .fields i:nth-child(2) { background: #FFB8CF; right: -35vmax; top: 20vh; }
+  .fields i:nth-child(3) { background: #A6EAD3; left: -20vmax; bottom: -40vmax; }
+
+  /* the hero: the aOS mark, shining */
+  .hero { display: flex; flex-direction: column; align-items: center; padding: 34px 0 24px; text-align: center; }
+  .mark { position: relative; font-size: 72px; font-weight: 800; letter-spacing: -2.4px; line-height: 1; }
+  .ink { background: linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,.95) 48%, transparent 58% 100%), var(--pastel); background-size: 260% 100%, 100% 100%; background-position: 130% 0, 0 0;
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: shine 4s cubic-bezier(.45,0,.2,1) 1s infinite; }
+  @keyframes shine { 0% { background-position: 130% 0, 0 0; } 40%, 100% { background-position: -30% 0, 0 0; } }
+  .mark sup { position: relative; display: inline-block; font-size: .5em; letter-spacing: 0; margin-left: 2px; top: -.78em; vertical-align: 0; filter: drop-shadow(0 0 12px var(--glow)); }
+  .star { position: absolute; width: 12px; height: 12px; opacity: 0; animation: twinkle 3s ease-in-out infinite; }
+  .star:nth-of-type(1) { right: -26px; top: -30px; animation-delay: .6s; }
+  .star:nth-of-type(2) { right: 6px; top: -46px; width: 8px; height: 8px; animation-delay: 1.5s; }
+  .star:nth-of-type(3) { right: -40px; top: 2px; width: 9px; height: 9px; animation-delay: 2.3s; }
+  @keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 15% { opacity: .9; transform: scale(1) rotate(45deg); } 35% { opacity: 0; transform: scale(.4) rotate(90deg); } }
+  .power { margin-top: 14px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .power sup { font-size: .75em; letter-spacing: 0; }
+  .replay { margin-top: 18px; height: 38px; padding: 0 18px; border-radius: 999px; font-size: 15px; font-weight: 600; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); }
+  .replay:active { transform: scale(.97); }
+
+  h2 { font-size: 22px; margin: 26px 4px 10px; letter-spacing: -.3px; display: flex; align-items: baseline; justify-content: space-between; }
+  h2 small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .group { border-radius: 24px; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); overflow: hidden; }
+  /* an app's row */
+  .app { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; text-align: left; }
+  .app + .app { border-top: .5px solid var(--edge); }
+  .app:active { background: var(--dot); }
+  .app img { width: 56px; height: 56px; border-radius: 13px; flex: none; box-shadow: 0 4px 12px rgba(0,0,0,.14); }
+  .app .k { flex: 1; min-width: 0; }
+  .app b { display: block; font-size: 17px; }
+  .app small { display: block; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .app .v { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .get { flex: none; min-width: 64px; height: 30px; padding: 0 14px; border-radius: 999px; background: var(--dot); color: var(--accent); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  /* what's new in aOS */
+  .rel { padding: 16px; }
+  .rel + .rel { border-top: .5px solid var(--edge); }
+  .rel h3 { margin: 0; font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; }
+  .rel h3 sup { font-size: .65em; }
+  .rel h3 small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .rel ul { margin: 8px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  /* appearance */
+  .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--dot); margin: 0 4px; }
+  .seg button { flex: 1; height: 36px; border-radius: 999px; font-size: 15px; font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.14), inset 0 0 0 .5px var(--edge); }
+  .foot { text-align: center; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 34px; }
+
+  /* an app's page: a sheet from the bottom */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.3); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto; max-height: 90vh; overflow-y: auto; z-index: 11; border-radius: 30px 30px 0 0; background: var(--sheet);
+    -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); padding: 10px 20px calc(env(safe-area-inset-bottom) + 24px); transform: translateY(calc(100% + 40px)); visibility: hidden; transition: transform .35s cubic-bezier(.2,.8,.2,1), visibility 0s linear .35s; }
+  .open .scrim { opacity: 1; pointer-events: auto; }
+  .open .sheet { transform: none; visibility: visible; transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+  .grab { width: 38px; height: 5px; border-radius: 3px; background: var(--dot); margin: 0 auto 12px; }
+  .close { position: absolute; right: 14px; top: 14px; width: 32px; height: 32px; border-radius: 50%; background: var(--dot); font-size: 18px; line-height: 32px; }
+  .top { display: flex; gap: 16px; align-items: center; margin-top: 6px; }
+  .top img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 10px 26px -8px rgba(0,0,0,.3); }
+  .top h3 { margin: 0; font-size: 24px; }
+  .top p { margin: 4px 0 10px; color: var(--muted); }
+  .open-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 22px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
+  .sheet h4 { margin: 24px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .feat { display: flex; gap: 12px; padding: 10px 0; }
+  .feat + .feat { border-top: .5px solid var(--edge); }
+  .feat svg { width: 30px; height: 30px; flex: none; margin-top: 2px; }
+  .feat b { display: block; font-size: 16px; }
+  .feat span { display: block; font-size: 14px; color: var(--muted); line-height: 1.4; margin-top: 2px; }
+  ol.steps { margin: 0; padding-left: 20px; line-height: 1.5; font-size: 15px; }
+  ol.steps li { margin-bottom: 4px; }
+  .wide { display: block; width: 100%; height: 48px; margin-top: 18px; border-radius: 999px; background: var(--dot); font-size: 16px; font-weight: 600; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  @media (prefers-reduced-motion: reduce) { .ink, .star { animation: none; } .star { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="fields"><i></i><i></i><i></i></div>
+<main>
+  <section class="hero">
+    <div class="mark" id="mark"></div>
+    <div class="power" id="power"></div>
+    <button class="replay" id="replay" type="button">Replay the welcome</button>
+  </section>
+
+  <h2>Apps <small id="count"></small></h2>
+  <div class="group" id="apps"></div>
+
+  <h2>What's new in aOS</h2>
+  <div class="group" id="rels"></div>
+
+  <h2>Appearance</h2>
+  <div class="seg" id="theme" role="group" aria-label="Appearance"></div>
+
+  <p class="foot">Part of the Allison Corporation</p>
+</main>
+
+<div id="wrap">
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sName">
+    <div class="grab"></div>
+    <button class="close" type="button" data-close aria-label="Close">✕</button>
+    <div id="page"></div>
+  </div>
+</div>
+
+<script src="../home/welcome.js" data-app="aos" data-auto></script>
+<script>
+'use strict';
+(() => {
+  const W = AllisonOS.welcome, D = W.data, $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const STAR = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
+  const icon = id => `../${id}/icon-512.png`;
+  const appUrl = id => new URL(`../${id}/`, location.href).href;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const v = D.latest('aos');
+
+  // the mark
+  $('mark').innerHTML = `<span class="ink">aOS</span><sup class="ink">${esc(v)}</sup>${STAR}${STAR}${STAR}`;
+  $('power').innerHTML = `The Power of aOS<sup>${esc(v)}</sup>`;
+  $('replay').onclick = () => W.play();
+
+  // the apps
+  $('count').textContent = D.APPS.length + ' apps';
+  $('apps').innerHTML = D.APPS.map(id => `<div class="app" role="button" tabindex="0" data-id="${id}"><img src="${icon(id)}" alt=""><span class="k"><b>${esc(D.NAMES[id])}</b><small>${esc((D.TOURS[id] || {}).tag || '')}</small><span class="v">Version ${esc(D.latest(id))}</span></span>
+    <a class="get" href="${appUrl(id)}" target="_blank" rel="noopener">Get</a></div>`).join('');
+  $('apps').addEventListener('click', e => {
+    if (e.target.closest('.get')) return;   // Get opens the app itself
+    const row = e.target.closest('.app'); if (row) openApp(row.dataset.id);
+  });
+  $('apps').addEventListener('keydown', e => { const row = e.target.closest('.app'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openApp(row.dataset.id); } });
+
+  // what's new in aOS
+  $('rels').innerHTML = D.RELEASES.aos.map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
+    ${(r.notes || []).length ? `<ul>${r.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div>`).join('');
+
+  // appearance
+  const paintSeg = () => { const t = W.theme.read(); for (const b of $('theme').children) b.setAttribute('aria-pressed', String(b.dataset.t === t)); };
+  $('theme').innerHTML = W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}">${n}</button>`).join('');
+  $('theme').onclick = e => { const b = e.target.closest('button'); if (b) { W.theme.set(b.dataset.t); paintSeg(); } };
+  paintSeg();
+
+  // an app's page
+  function openApp(id) {
+    const T = D.TOURS[id] || { cards: [] }, rels = D.RELEASES[id] || [];
+    const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(W.lines || {})[k] || ''}</svg>`;
+    $('page').innerHTML = `<div class="top"><img src="${icon(id)}" alt=""><div><h3 id="sName">${esc(D.NAMES[id])}</h3><p>${esc(T.tag || '')}</p>
+        <a class="open-btn" href="${appUrl(id)}" target="_blank" rel="noopener">Open</a></div></div>
+      <h4>What it does</h4>${T.cards.map(c => `<div class="feat">${line(c.i)}<div><b>${esc(c.t)}</b><span>${esc(c.d)}</span></div></div>`).join('')}
+      <h4>Add it to your Home Screen</h4>
+      ${ios ? `<ol class="steps"><li>Tap <b>Open</b> above; it opens in Safari</li><li>Tap <b>•••</b> by the address bar, then <b>Share</b></li><li>Tap <b>Add to Home Screen</b>, leave <b>Open as Web App</b> on, and tap <b>Add</b></li></ol>`
+            : `<p class="note">Tap Open, then use your browser's Install or Add to Home Screen option.</p>`}
+      <button class="wide" type="button" id="walk">Show the walkthrough</button>
+      <h4>What's new</h4>${rels.map(r => `<div class="feat"><div><b>Version ${esc(r.v)}</b><span>${(r.notes || []).length ? r.notes.map(esc).join(' · ') : 'First release in aOS.'}</span></div></div>`).join('')}`;
+    $('walk').onclick = () => { closeApp(); setTimeout(() => W.playApp(id), 300); };
+    $('wrap').classList.add('open');
+  }
+  function closeApp() { $('wrap').classList.remove('open'); }
+  $('wrap').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeApp(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeApp(); });
+})();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+<script src="../home/back.js" defer></script>
+</body>
+</html>

@@ -1,10 +1,7 @@
-// Offline shell for the Weather app. Pages load network-first so a new
-// deploy shows up on the next open; the cache is the fallback when offline.
-// Forecast requests are never cached here - the page keeps the last one in
-// localStorage and labels it with its time.
-const CACHE = 'weather-v43';
-// slide.js is Home's, shared by every app (the switches' sliding thumb).
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', '../home/slide.js', '../home/welcome.js', 'data.js'];
+// Offline shell for aOS. Same-origin requests load network-first, so a new
+// deploy shows on the next open; the cache is only the fallback offline.
+const CACHE = 'aos-v1';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/welcome.js', '../home/back.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -12,7 +9,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('weather-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('aos-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
