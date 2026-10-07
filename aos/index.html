@@ -17,10 +17,10 @@
 
   - The aOS mark: aOS with the version as a superscript, shining, and "The
     Power of aOS1"; a tap replays the AllisonOS welcome.
-  - Apps: every AllisonOS app with its tagline and version. Get opens the app
-    (a new tab in a browser, where Share -> Add to Home Screen adds it); tap
-    the row for its page: what it does, how to add it, its walkthrough and
-    what's new.
+  - Apps: every AllisonOS app as a tile, as the Home app's automations (glass,
+    three across, a glow of the app's colour behind it), with its version. A tap
+    opens its page: Open (a new tab in a browser, where Share -> Add to Home
+    Screen adds it), what it does, how to add it, its walkthrough, what's new.
   - What's new in aOS: the release log, newest first.
   - Appearance: System, Light or Dark, for every app (the launcher's setting).
 
@@ -36,17 +36,23 @@
     --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.7); --edge: rgba(0,0,0,.07); --dot: rgba(0,0,0,.08);
     --sheet: rgba(250,250,252,.97); --accent: #0A84FF;
     --pastel: linear-gradient(100deg, #6EA8F2 0%, #9C86EC 26%, #EC86AA 50%, #EDA766 74%, #5FC6A6 100%); --glow: rgba(156,134,236,.4);
+    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42));
+    --ag-edge: inset 0 0 0 0.5px rgba(28,32,40,0.1), inset 0 1px 0.5px rgba(255,255,255,0.9), 0 10px 24px -12px rgba(30,40,60,0.28);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
     --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
     --sheet: rgba(24,25,30,.97);
     --pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --glow: rgba(195,177,255,.5);
+    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
+    --ag-edge: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
     color-scheme: dark; } }
   :root[data-theme="dark"] {
     --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
     --sheet: rgba(24,25,30,.97);
     --pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --glow: rgba(195,177,255,.5);
+    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
+    --ag-edge: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
     color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -73,7 +79,7 @@
   .star:nth-of-type(2) { right: 6px; top: -46px; width: 8px; height: 8px; animation-delay: 1.5s; }
   .star:nth-of-type(3) { right: -40px; top: 2px; width: 9px; height: 9px; animation-delay: 2.3s; }
   @keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 15% { opacity: .9; transform: scale(1) rotate(45deg); } 35% { opacity: 0; transform: scale(.4) rotate(90deg); } }
-  .power { margin-top: 14px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .power { margin-top: 14px; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }   /* never capitals: aOS keeps its lowercase a */
   .power sup { font-size: .75em; letter-spacing: 0; }
   .replay { margin-top: 18px; height: 38px; padding: 0 18px; border-radius: 999px; font-size: 15px; font-weight: 600; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); }
   .replay:active { transform: scale(.97); }
@@ -81,16 +87,21 @@
   h2 { font-size: 22px; margin: 26px 4px 10px; letter-spacing: -.3px; display: flex; align-items: baseline; justify-content: space-between; }
   h2 small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
   .group { border-radius: 24px; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); overflow: hidden; }
-  /* an app's row */
-  .app { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; text-align: left; }
-  .app + .app { border-top: .5px solid var(--edge); }
-  .app:active { background: var(--dot); }
-  .app img { width: 56px; height: 56px; border-radius: 13px; flex: none; box-shadow: 0 4px 12px rgba(0,0,0,.14); }
-  .app .k { flex: 1; min-width: 0; }
-  .app b { display: block; font-size: 17px; }
-  .app small { display: block; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-  .app .v { font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .get { flex: none; min-width: 64px; height: 30px; padding: 0 14px; border-radius: 999px; background: var(--dot); color: var(--accent); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  /* the apps: the Home app's automation tiles (design D) - square Liquid Glass, three across,
+     a soft glow of the app's own colour behind each; a tap opens its page */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .agw { position: relative; isolation: isolate; }
+  .ag-glow { position: absolute; inset: 14%; z-index: -1; border-radius: 999px; pointer-events: none; filter: blur(16px);
+    background: radial-gradient(closest-side, rgba(var(--c),0.9), rgba(var(--c),0)); opacity: .3; transition: opacity .5s, inset .5s; }
+  .agw:active .ag-glow { opacity: .8; inset: 4%; }
+  .ag { position: relative; width: 100%; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 8px;
+    padding: 13px; border-radius: 26px; text-align: left; color: inherit;
+    background: var(--ag-bg); -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: var(--ag-edge); transition: transform .2s cubic-bezier(.22,1,.36,1); }
+  .ag:active { transform: scale(0.96); }
+  .ag img { width: 42px; height: 42px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,.18); }
+  .ag b { display: block; font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .ag small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
   /* what's new in aOS */
   .rel { padding: 16px; }
   .rel + .rel { border-top: .5px solid var(--edge); }
@@ -140,7 +151,7 @@
   </section>
 
   <h2>Apps <small id="count"></small></h2>
-  <div class="group" id="apps"></div>
+  <div class="tiles" id="apps"></div>
 
   <h2>What's new in aOS</h2>
   <div class="group" id="rels"></div>
@@ -179,13 +190,11 @@
 
   // the apps
   $('count').textContent = D.APPS.length + ' apps';
-  $('apps').innerHTML = D.APPS.map(id => `<div class="app" role="button" tabindex="0" data-id="${id}"><img src="${icon(id)}" alt=""><span class="k"><b>${esc(D.NAMES[id])}</b><small>${esc((D.TOURS[id] || {}).tag || '')}</small><span class="v">Version ${esc(D.latest(id))}</span></span>
-    <a class="get" href="${appUrl(id)}" target="_blank" rel="noopener">Get</a></div>`).join('');
-  $('apps').addEventListener('click', e => {
-    if (e.target.closest('.get')) return;   // Get opens the app itself
-    const row = e.target.closest('.app'); if (row) openApp(row.dataset.id);
-  });
-  $('apps').addEventListener('keydown', e => { const row = e.target.closest('.app'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openApp(row.dataset.id); } });
+  // each app's own colour, from its icon, for the glow behind its tile
+  const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', house: '125,105,245' };
+  $('apps').innerHTML = D.APPS.map(id => `<div class="agw" style="--c:${HUE[id] || '190,194,204'}"><i class="ag-glow"></i>
+    <button class="ag" type="button" data-id="${id}" aria-label="${esc(D.NAMES[id])}"><img src="${icon(id)}" alt=""><span><b>${esc(D.NAMES[id])}</b><small>Version ${esc(D.latest(id))}</small></span></button></div>`).join('');
+  $('apps').addEventListener('click', e => { const t = e.target.closest('.ag'); if (t) openApp(t.dataset.id); });
 
   // what's new in aOS
   $('rels').innerHTML = D.RELEASES.aos.map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
