@@ -24,6 +24,8 @@
     <div class="card">
       <h3>Already made your account in the other test app?</h3>
       <button type="button" id="signin">Continue with Face ID</button>
+      <p>Or tap this box: your passkey may show above the keyboard.</p>
+      <input id="who" placeholder="Tap for your passkey" autocomplete="username webauthn" readonly onfocus="this.removeAttribute('readonly')">
     </div>
     <div class="card">
       <h3>First time? Make your account</h3>
@@ -36,6 +38,8 @@
     <button type="button" class="soft" id="reset">Sign out of this app</button>
   </div>
   <div class="log" id="log"></div>
+  <h2>What this phone reports</h2>
+  <div class="log" id="report"></div>
 </main>
 <script src="../passkey.js"></script>
 </body>
