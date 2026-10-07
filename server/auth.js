@@ -12,6 +12,8 @@
 //   invite:<token>   { name, by } - one use, gone after 24 hours
 //   chal:<id>        a sign-in or sign-up challenge, gone after 5 minutes
 //   secret           the key sessions are signed with, made on first use
+//   config:home      the family's Home Assistant address (an https origin), set by
+//                    the owner in aOS; only signed-in family can read it
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry }; it holds
 // only while the user is still in the family, so removing someone signs them out
 // everywhere (within KV's ~60 seconds).

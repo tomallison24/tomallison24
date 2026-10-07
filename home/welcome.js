@@ -65,9 +65,9 @@
   //   apps        { weather: { highlights: [...], notes: [...] } } - what changed in
   //               each app; a plain list is all notes
   //   cards       (major only) aOS's own setup cards after the new mark
-  //   silent      true: logged in aOS's What's new, but nowhere else - the apps keep
-  //               showing the last version that wasn't silent, and no update
-  //               screen plays for it
+  //   silent      true: logged here only, shown nowhere - not in aOS's What's new;
+  //               the apps keep showing the last version that wasn't silent, and
+  //               no update screen plays for it
   // What shows where:
   //   major (aOS2)   aOS: the name, the new mark, then its cards (or highlights).
   //                  Every app: the new number rising in, the release's highlights
@@ -78,7 +78,7 @@
   // ===========================================================================
   const RELEASES = [
     { v: '1.2', date: '2026-10-08', title: 'Straight back to aOS', silent: true,
-      notes: ['An app opened from aOS shows only how to add it: tap ✕ to go back to aOS'] },
+      notes: ['An app opened from aOS shows only how to add it: tap ✕ to go back to aOS', 'The owner saves the family\'s Home Assistant address in aOS, and Home fills it in for everyone', 'Silent releases are no longer listed in aOS'] },
     { v: '1.1', date: '2026-10-07', title: 'Your family account', silent: true,
       highlights: ['Family accounts: Face ID signs you in to every app', 'Calendar and Travel only answer your family now'],
       notes: ['The owner invites family from aOS, with a link good once for 24 hours', 'Removing someone signs them out of every app'],
@@ -1050,7 +1050,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   //     "Visit aOS" for what's new.
   function playUpdate(id, from, to = latest()) {
     const big = major(to) > major(from);
-    const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only in aOS's log
+    const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only logged here
     const notes = big ? top(fresh) : top(fresh.map(r => (r.apps || {})[id]).filter(Boolean));
     if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
     const base = big ? '' : String(major(to)), newT = String(to).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);

@@ -318,6 +318,10 @@ and go nowhere except to that address.
   `http://homeassistant.local:8123` address does not work: the app is served
   over https, and browsers block an https page from opening an http
   connection. A pasted dashboard link is fine; only its origin is kept.
+  For the family it fills itself in: the owner saves it once in aOS (Your
+  account → **Home Assistant address**), and Home, signed in to the family
+  account (`../home/account.js`), puts it in the box while the box is empty.
+  Signed out, **Use your family's address** asks for Face ID first.
 - **Token**: in Home Assistant, your profile (bottom left) → **Security** →
   **Long-lived access tokens** → **Create token**. The token can do anything
   your user can, so it is worth making one just for this app, which you can

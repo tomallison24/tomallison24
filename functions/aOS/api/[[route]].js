@@ -6,9 +6,11 @@
 //   POST signup/finish    the new passkey      -> { token, user }
 //   POST signin/begin                          -> a challenge
 //   POST signin/finish    the passkey's proof  -> { token, user }
+//   GET  home             (family) the family's Home Assistant address, for the Home app
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
 //   POST remove           (owner) { id }       -> signs them out everywhere
+//   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
 
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
 
@@ -88,8 +90,13 @@ export async function onRequest({ request, params, env }) {
       return reply({ token: await issue(db, user.id), user: pub(user) });
     }
 
-    // ---- the owner's tools ----
+    // ---- for the family ----
     if (!me) return reply({ error: 'signin' }, 401);
+
+    // Home fills this in for a new person, so they only need their own token.
+    if (route === 'home' && method === 'GET') return reply({ address: (await db.get('config:home')) || null });
+
+    // ---- the owner's tools ----
     if (me.role !== 'owner') return reply({ error: 'owner-only' }, 403);
 
     if (route === 'family' && method === 'GET') {
@@ -120,6 +127,15 @@ export async function onRequest({ request, params, env }) {
       for (const c of u.creds || []) await db.delete('cred:' + c);
       await db.delete('user:' + id);
       return reply({ ok: true });
+    }
+
+    if (route === 'home' && method === 'POST') {
+      const a = String((await body(request)).address || '').trim();
+      if (!a) { await db.delete('config:home'); return reply({ address: null }); }
+      let u; try { u = new URL(a); } catch { return reply({ error: 'address' }, 400); }
+      if (u.protocol !== 'https:' || u.username || u.password) return reply({ error: 'address' }, 400);
+      await db.put('config:home', u.origin);
+      return reply({ address: u.origin });
     }
 
     return reply({ error: 'not-found' }, 404);

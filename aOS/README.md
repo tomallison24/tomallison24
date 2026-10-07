@@ -32,7 +32,9 @@ they make their account (a passkey, saved to their iCloud Keychain) before
 adding aOS to the Home Screen. Every app then signs in with one Face ID tap -
 passkeys reach every app on the site even though each keeps its own storage.
 Calendar and Travel's server routes only answer signed-in family; removing
-someone signs them out of every app. Details and the one Cloudflare step:
+someone signs them out of every app. The owner also saves the family's Home
+Assistant address there (**Home Assistant address**); Home fills it in for
+anyone signed in, so each person only makes their own token. Details and the one Cloudflare step:
 `RELEASING.md`, "Family accounts".
 
 ## The page
@@ -43,7 +45,8 @@ someone signs them out of every app. Details and the one Cloudflare step:
   (square Liquid Glass, three across, a soft glow of the app's own colour
   behind it), with its tagline, or "New in aOS1.1" when the latest release
   changed it. A tap opens the app's address in a new tab.
-- **What's new in aOS**: the release log by version, newest first: each
+- **What's new in aOS**: the release log by version, newest first (silent
+  releases left out): each
   version's highlights (starred), its notes, then what changed in each app.
 - **Appearance**: System, Light or Dark for aOS (`home.settings.theme`). Each
   app on the Home Screen keeps its own storage, so each asks for itself, at
