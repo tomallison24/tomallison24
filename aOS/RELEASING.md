@@ -44,6 +44,26 @@ headlines; it never publishes unreleased app changes. The one exception is
 `labs/` (test pages for you, not apps), which always comes from the latest
 merged code.
 
+## Family accounts
+
+Everyone signs in with a passkey (Face ID): the owner once with the owner code,
+everyone else with an invite from aOS (**Your account → Invite someone**). Calendar
+and Travel's server routes then only answer signed-in family. The server side is
+`server/auth.js` and `functions/aOS/api`; the apps' side is `home/account.js`.
+
+They need storage on Cloudflare, which the publish makes and attaches by itself
+once the Cloudflare token is allowed to:
+
+1. dash.cloudflare.com → **My Profile → API Tokens** → the token the GitHub
+   workflows use → **Edit**.
+2. Add **Account · Workers KV Storage · Edit** (and, for Notes' reminder
+   notifications too, **Account · Workers Scripts · Edit**). Keep what's there.
+3. **Continue to summary → Update token.** The token's value doesn't change.
+
+Until then accounts stay off and everything works as before. After a release,
+the owner opens aOS, enters the owner code and their name, and makes their
+passkey; from that moment the lock is on.
+
 ## The log
 
 `home/welcome.js`'s `RELEASES` is the log, by aOS version. aOS shows all of it

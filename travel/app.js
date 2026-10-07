@@ -921,6 +921,8 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   let liveAvail = null;   // null: not asked yet; true/false once the server has answered
   const API = new URL('api/', location.href).href;
+  // calls to the locked server routes go signed in (home/account.js), once accounts are on
+  const aosFetch = (u, o) => window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch(u, o) : fetch(u, o);
   function lookupsThisMonth() { const o = ls.json(K.lookups, {}); const m = todayStr().slice(0, 7); return o.m === m ? o.n || 0 : 0; }
   function countLookup() { const m = todayStr().slice(0, 7), n = lookupsThisMonth() + 1; ls.set(K.lookups, JSON.stringify({ m, n })); }
   const liveWindow = b => {
@@ -939,7 +941,7 @@ if (window.top !== window.self) {
     const p = (async () => {
       let r, data;
       try {
-        r = await fetch(API + 'flight?' + new URLSearchParams({ no: b.airlineCode + b.flightNo, date: b.dep.slice(0, 10) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+        r = await aosFetch(API + 'flight?' + new URLSearchParams({ no: b.airlineCode + b.flightNo, date: b.dep.slice(0, 10) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
         data = await r.json();
       } catch { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; return; }   // no server here (e.g. GitHub Pages)
       liveAvail = true;
@@ -1011,7 +1013,7 @@ if (window.top !== window.self) {
   async function addToCalendar(text, title, what) {
     if (calAvail !== false) {
       try {
-        const r = await fetch(CAL_API + 'import', { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
+        const r = await aosFetch(CAL_API + 'import', { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
         let d = null; try { d = await r.json(); } catch {}
         if (r.ok && d && d.ok) { calAvail = true; toast('Added ' + what + ' to the ' + (d.calendar && d.calendar.name || 'Family') + ' calendar.'); return; }
         if (r.status === 404 || (d && d.error === 'no-account')) calAvail = false;
@@ -1133,7 +1135,7 @@ if (window.top !== window.self) {
   }
   async function pingLive() {
     try {
-      const r = await fetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+      const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
       const d = await r.json();
       liveAvail = !!d.status;
     } catch { liveAvail = false; }

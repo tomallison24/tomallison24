@@ -74,6 +74,13 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.1', date: '2026-10-07', title: 'Your family account',
+      highlights: ['Family accounts: Face ID signs you in to every app', 'Calendar and Travel only answer your family now'],
+      notes: ['The owner invites family from aOS, with a link good once for 24 hours', 'Removing someone signs them out of every app'],
+      apps: {
+        calendar: { highlights: ['Sign in once with Face ID: the Family calendar is private to your family'] },
+        travel: { highlights: ['Sign in once with Face ID for live flight status and adding trips to the calendar'] },
+      } },
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
       highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app'],
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours'],

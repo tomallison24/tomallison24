@@ -146,7 +146,8 @@ if (window.top !== window.self) {
   async function api(path, opts = {}) {
     let res;
     try {
-      res = await fetch(API + path, { method: opts.method || 'GET', body: opts.body, cache: 'no-store', headers: Object.assign({ 'X-Calendar': '1' }, opts.headers || {}) });
+      const init = { method: opts.method || 'GET', body: opts.body, cache: 'no-store', headers: Object.assign({ 'X-Calendar': '1' }, opts.headers || {}) };
+      res = await (window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch(API + path, init) : fetch(API + path, init));   // signed in (home/account.js), once accounts are on
     } catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let data = null;
     const ctype = res.headers.get('Content-Type') || '';

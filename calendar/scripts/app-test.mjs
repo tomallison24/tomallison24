@@ -58,6 +58,7 @@ const browser = await chromium.launch();
 const violations = [], errors = [];
 async function newPage(scheme) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US', geolocation: { latitude: 39.74, longitude: -104.99 }, permissions: ['geolocation'] });
+  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' })));   // no aOS walkthrough over the page
   await ctx.route('**/calendar/api/**', async route => {
     const req = route.request(), u = new URL(req.url()), r = u.pathname.split('/api/')[1];
     const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });

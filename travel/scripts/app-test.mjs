@@ -82,6 +82,7 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error') problems.push(m.text()); });
@@ -278,6 +279,7 @@ for (const scheme of ['light', 'dark']) {
 // Google Sheet: a "wrong secret" says which link it was.
 await step('a Notes Sheet link is recognised, and an old Travel script is named', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   let app = 'allison-notes-sync';
   await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
@@ -297,6 +299,7 @@ await step('a Notes Sheet link is recognised, and an old Travel script is named'
 // Without the server function (GitHub Pages): no lookups, a clear message.
 await step('without the flight status server, it says so', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   await page.goto(BASE + '/travel/');
   await page.click('#setBtn');

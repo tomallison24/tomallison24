@@ -45,6 +45,12 @@ notice, add a line for it:
 - Every app loads `<script src="../home/welcome.js" data-app="<id>" data-auto
   defer>`. On iPhone in Safari (or opened from aOS, `?via=aos`) it shows how to
   add the app; from the Home Screen, the app's walkthrough and update screens.
+- Family accounts: passkeys (Face ID). `server/auth.js` (not a route) has the
+  rules and storage (Workers KV bound as `ACCOUNTS`); `functions/aOS/api` the
+  accounts API; `functions/<app>/api/_middleware.js` locks an app's server route
+  to signed-in family once the owner exists. Apps that call a locked route load
+  `../home/account.js` and use `AllisonOS.account.fetch`, which asks for Face ID
+  on a 401. See `aOS/RELEASING.md`, "Family accounts".
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.

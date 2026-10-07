@@ -21,6 +21,17 @@ Its address ends in `/aOS/`.
 Safari or the Home Screen is told apart by `display-mode: standalone` (or
 `navigator.standalone`). Every app's manifest asks for `standalone`.
 
+## Family accounts
+
+**Your account** at the top of aOS. The owner sets up once with the owner code,
+then invites people: a link good once for 24 hours, opened in Safari, where
+they make their account (a passkey, saved to their iCloud Keychain) before
+adding aOS to the Home Screen. Every app then signs in with one Face ID tap -
+passkeys reach every app on the site even though each keeps its own storage.
+Calendar and Travel's server routes only answer signed-in family; removing
+someone signs them out of every app. Details and the one Cloudflare step:
+`RELEASING.md`, "Family accounts".
+
 ## The page
 
 - **The aOS mark**: aOS with the version as a superscript, shining, and "The
