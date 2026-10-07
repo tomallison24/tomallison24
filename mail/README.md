@@ -27,11 +27,16 @@ days you never open the app — but only once its Google credentials are set up
 
 ## Finding your way around
 
-- **Tap the title** (**Inbox ⌄**) for the mailbox menu, as in Mail:
-  **Inbox** and **Flagged**; Gmail's own categories (**Primary**,
-  **Promotions**, **Updates** — the inbox as Gmail sorted it); your tags;
-  **Marketing**; and **Manage Tags**. The one you're on is ticked, and the
-  title changes to match. Tap outside it to close it.
+- **The pill at the bottom** (**Inbox ⌃**) opens the mailbox menu, upwards, in
+  reach of your thumb — the same Liquid Glass pill as Fitness and Home:
+  the icon of where you are, its name and a chevron. The menu lists **Inbox**
+  and **Flagged**; Gmail's own categories (**Primary**, **Promotions**,
+  **Updates** — the inbox as Gmail sorted it); your tags; **Marketing**; and
+  **Manage Tags**. The one you're on is ticked, and the pill and the large
+  title change to match. Tap outside the menu to close it. The pill sits
+  centred over the home indicator, left of the compose button (a long tag name
+  is cut with …), and gives way to the select bar and Settings. Messages
+  (Undo, errors) show just above it.
 - **Home** (the house, left of the magnifier) is on every page and goes
   straight back to the inbox as the app opens: All mail, no tag, no search,
   at the top. It hides while you're selecting, as search does.
@@ -41,7 +46,7 @@ days you never open the app — but only once its Google credentials are set up
   longer one also fetches the list afresh (the glass spinner turns blue when
   letting go will refresh). The magnifier opens search too.
 - The header **stays at the top** as you scroll: the large title shrinks to a
-  compact one on a rounded, see-through Liquid Glass bar, with the mailbox menu, Home, search, **Edit** and
+  compact one on a rounded, see-through Liquid Glass bar, with Home, search, **Edit** and
   Settings still to hand. (Tapping the iPhone's status bar, at the very top,
   scrolls back up — iOS's own shortcut.)
 - **Edit** selects messages, as in Mail.
@@ -299,7 +304,7 @@ straight away — and type a name, say *Sofia's school*:
   (archived mail included), and **all new mail** from it gets the tag — the
   last by a Gmail filter, so it happens whether or not the app is open;
 - tagged mail **stays in the inbox** (only Marketing skips it);
-- the tag joins the mailbox menu under the title; choose it to see just that
+- the tag joins the mailbox menu (the pill at the bottom); choose it to see just that
   tag, and **Inbox** to go back.
 - **every tag has its own colour**, the same in the menu, the list, the Tags
   page and the tag sheet. Travel is blue, Money green, Health pink and Orders
