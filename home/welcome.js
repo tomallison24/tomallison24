@@ -18,8 +18,9 @@
 //                     More power in your palm." and its notes
 //   any other app (data-app "weather", "fitness", ...)
 //     first time      that app's own walkthrough: its icon and name, then what
-//                     it does, card by card (and how to add it, in a browser);
-//                     under its name, aOS with the version as a superscript
+//                     it does, card by card; under its name, aOS with the
+//                     version as a superscript. On iPhone it waits until the
+//                     app is opened from the Home Screen (aOS shows how to add it)
 //     its own update  what's new in that app, if that release has anything to
 //                     show; an app with nothing new shows nothing
 //
@@ -399,7 +400,7 @@
   // share sheet to Add to Home Screen -> Open as Web App (on) -> Add -> the icon
   // lands on the Home Screen. Drawn after iOS 26's Safari (compact tab bar, glass
   // menus and sheets); a likeness, not a screenshot. Light and dark follow the page.
-  //   AllisonOS.welcome.safariDemo(host, name, iconUrl)  - fills host, loops while it's on the page
+  //   AllisonOS.welcome.safariDemo(host, name, iconUrl, { onDone })  - fills host, loops while it's on the page; onDone after the first run
   // ===========================================================================
   const SD_CSS = `
 .aos-sd { --s-bg: #F2F2F7; --s-group: #fff; --s-text: #000; --s-sub: rgba(60,60,67,.6); --s-sep: rgba(60,60,67,.18); --s-glass: rgba(255,255,255,.72); --s-page: #fff; --s-frame: #1C1C1E;
@@ -494,7 +495,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
     note: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2" width="11" height="12" rx="2"/><path d="M5 6h6M5 9h4"/></svg>',
   };
   const SD_STEPS = ['Tap <b>•••</b>, then <b>Share</b>', 'Scroll down, tap <b>Add to Home Screen</b>', 'Keep <b>Open as Web App</b> on, tap <b>Add</b>', 'It\'s on your Home Screen'];
-  function safariDemo(host, name, iconUrl) {
+  function safariDemo(host, name, iconUrl, opts = {}) {   // opts.onDone: once, after the first play-through
     if (!document.getElementById('aos-sd-css')) { const st = document.createElement('style'); st.id = 'aos-sd-css'; st.textContent = SD_CSS; document.head.appendChild(st); }
     const row = (t, k, cls = '') => `<div class="sd-row ${cls}"><span>${t}</span>${SD_ICON[k]}</div>`;
     const dom = location.host || 'tomallison24.github.io';
@@ -539,8 +540,10 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
       at(7600, () => to('.sd-addbtn')); at(8200, () => tap('.sd-addbtn'));
       at(8400, () => { q('.sd-add').classList.remove('on'); q('.sd-home').classList.add('on'); fin.classList.remove('on'); cap(3); });
       at(8900, () => q('.sd-slot').classList.add('sd-new'));
+      at(10000, () => { if (!played++ && opts.onDone) opts.onDone(); });
       at(11500, loop);
     }
+    let played = 0;
     loop();
   }
 
@@ -1026,7 +1029,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const v = latest(id), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
       <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(latest('aos'))}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
-    const cards = [...T.cards, ...(standalone() ? [] : [{ x: 'install', noart: true, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }])];
+    const cards = T.cards;   // no install card: aOS shows how to add it, and this plays once it's on the Home Screen
     return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
 
@@ -1042,6 +1045,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       return major(v) > major(s) ? playMajor() : playUpdate('aos', s, v);
     }
     if (!RELEASES[APP]) return;
+    if (ios && !standalone()) return;   // on iPhone an app's walkthrough waits until it's opened from the Home Screen
     const v = latest(APP), s = seen[APP];
     if (!s) return playApp(APP);
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
