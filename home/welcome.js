@@ -18,7 +18,8 @@
 //                     More power in your palm." and its notes
 //   any other app (data-app "weather", "fitness", ...)
 //     first time      that app's own walkthrough: its icon and name, then what
-//                     it does, card by card (and how to add it, in a browser)
+//                     it does, card by card (and how to add it, in a browser);
+//                     under its name, aOS with the version as a superscript
 //     its own update  what's new in that app, if that release has anything to
 //                     show; an app with nothing new shows nothing
 //
@@ -34,7 +35,7 @@
 // dark, and the Appearance chosen in it (System / Light / Dark, the launcher's
 // own setting home.settings.theme, applied by every app that loads this). With
 // Reduce Motion it is plain fades. Skip ends it at any point; all its styles are
-// scoped to #aos-welcome.
+// scoped to #aos-welcome. "aOS" is never set in capitals: its a stays lowercase.
 //
 // iPhone: an app added to the Home Screen on its own keeps its own storage, so
 // "first time" counts per install there; apps opened from the launcher or aOS
@@ -47,6 +48,8 @@
   const APP = (me && me.dataset.app) || null;
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = ms => new Promise(r => setTimeout(r, still() ? Math.min(ms, 250) : ms));
+  const PACE = 1.25;                       // the aOS intro runs a touch slower than the app intros
+  const slow = ms => wait(ms * PACE);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   // ===========================================================================
@@ -480,8 +483,49 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .c-word { display: flex; font-size: 46px; font-weight: 700; letter-spacing: -1px; line-height: 1.15; padding: 0 2px; perspective: 600px;
   clip-path: inset(0 100% 0 0); transition: clip-path 1.6s cubic-bezier(.65,0,.35,1); }
 #aos-welcome .c-word.on { clip-path: inset(-20px -20px -20px -20px); }
-#aos-welcome .c-word span { display: inline-block; overflow: hidden; background: var(--w-pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
-  transition: transform .5s cubic-bezier(.5,0,.75,0), opacity .5s, max-width .7s cubic-bezier(.65,0,.35,1); }
+#aos-welcome .c-word { position: relative; transform-origin: 50% 50%; transition: clip-path 1.6s cubic-bezier(.65,0,.35,1), transform .95s cubic-bezier(.4,0,.2,1); }
+#aos-welcome .c-word > span, #aos-welcome .c-word .g { display: inline-block; background: var(--w-pastel); background-size: var(--sw, 100%) 100%; background-position: var(--sx, 0) 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  transition: transform .5s cubic-bezier(.5,0,.75,0), opacity .5s, max-width .9s cubic-bezier(.45,0,.25,1), background-size .9s cubic-bezier(.45,0,.25,1), background-position .9s cubic-bezier(.45,0,.25,1); }
+#aos-welcome .c-word > span { overflow: hidden; }
+/* the A of AllisonOS holds an A and an a; as the letters fold away it melts from one into the other */
+#aos-welcome .c-word > span.L-A { position: relative; background: none; overflow: visible; }
+#aos-welcome .c-word .g-a { position: absolute; left: 0; bottom: 0; opacity: 0; transform-origin: 50% 100%; transform: scale(1, 1.38); filter: blur(3px); }
+#aos-welcome .c-word .g-A { transform-origin: 50% 100%; }
+#aos-welcome .c-word .g-A, #aos-welcome .c-word .g-a { transition: opacity .8s cubic-bezier(.45,0,.25,1), transform .9s cubic-bezier(.45,0,.25,1), filter .8s, background-size .9s cubic-bezier(.45,0,.25,1), background-position .9s cubic-bezier(.45,0,.25,1); }
+#aos-welcome .c-word .L-A.to-a .g-A { opacity: 0; transform: scale(.82, .72); filter: blur(3px); }
+#aos-welcome .c-word .L-A.to-a .g-a { opacity: 1; transform: none; filter: none; }
+#aos-welcome .c-word > span.fold { transform: scale(.55); transition: opacity .9s cubic-bezier(.6,0,.9,.4), transform .9s cubic-bezier(.45,0,.25,1), max-width .9s cubic-bezier(.45,0,.25,1); }   /* still faintly there as it narrows, so no gap opens */
+/* the version, hung on the word once it is aOS: drops in, rings, twinkles; then a shine runs across */
+#aos-welcome .w-sup { position: absolute; left: 100%; top: -.12em; margin-left: .04em; font-size: .5em; letter-spacing: 0; background: var(--w-pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px var(--w-glow)); opacity: 0; transform: translateY(-1.1em) scale(1.7); transition: opacity .25s, transform .75s cubic-bezier(.34,1.56,.64,1); }
+#aos-welcome .c-word.marked .w-sup { opacity: 1; transform: none; }
+#aos-welcome .w-ring { position: absolute; left: calc(100% - .2em); top: -.42em; width: .95em; height: .95em; border-radius: 50%; border: 1.5px solid var(--w-glow); opacity: 0; transform: scale(.3); }
+#aos-welcome .c-word.marked .w-ring { animation: v-ring 1.1s cubic-bezier(.2,.8,.2,1) .45s forwards; }
+#aos-welcome .w-star { position: absolute; width: .18em; height: .18em; color: var(--w-text); opacity: 0; }
+#aos-welcome .w-star svg { width: 100%; height: 100%; display: block; }
+#aos-welcome .c-word.marked .w-star { animation: v-twinkle 2.6s ease-in-out infinite; }
+#aos-welcome .w-star:nth-of-type(1) { left: calc(100% + .42em); top: -.5em; animation-delay: .7s !important; }
+#aos-welcome .w-star:nth-of-type(2) { left: calc(100% - .02em); top: -.72em; width: .12em; height: .12em; animation-delay: 1.3s !important; }
+#aos-welcome .w-star:nth-of-type(3) { left: calc(100% + .6em); top: .02em; width: .13em; height: .13em; animation-delay: 1.9s !important; }
+#aos-welcome .w-star:nth-of-type(4) { left: -.3em; bottom: -.06em; width: .1em; height: .1em; animation-delay: 2.4s !important; }
+#aos-welcome .c-word.shine > span:not(.fold):not(.L-A), #aos-welcome .c-word.shine .g-a { background-image: linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,.95) 48%, transparent 58% 100%), var(--w-pastel);
+  background-size: var(--bw) 100%, var(--sw) 100%; background-position: var(--b0) 0, var(--sx) 0; animation: w-shine 3.2s cubic-bezier(.45,0,.2,1) .2s infinite; }
+@keyframes w-shine { 0% { background-position: var(--b0) 0, var(--sx) 0; } 45%, 100% { background-position: var(--b1) 0, var(--sx) 0; } }
+#aos-welcome .m-power { position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--w-muted);
+  opacity: 0; transition: opacity .8s, top .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+#aos-welcome .m-power.on { opacity: 1; }
+/* the aOS intro, a touch slower (PACE in the script): its drawing, folding, growing and dropping */
+#aos-welcome.slow .c-word { transition: clip-path 2s cubic-bezier(.65,0,.35,1), transform 1.2s cubic-bezier(.4,0,.2,1); }
+#aos-welcome.slow .c-rule { transition-duration: 1.75s; transition-delay: .6s; }
+#aos-welcome.slow .c-sub, #aos-welcome.slow .c-corp { transition-duration: 1s; }
+#aos-welcome.slow .c-word > span, #aos-welcome.slow .c-word .g { transition-duration: .62s, .62s, 1.12s, 1.12s, 1.12s; }
+#aos-welcome.slow .c-word > span.fold { transition-duration: 1.12s, 1.12s, 1.12s; }
+#aos-welcome.slow .c-word .g-A, #aos-welcome.slow .c-word .g-a { transition-duration: 1s, 1.12s, 1s, 1.12s, 1.12s; }
+#aos-welcome.slow .w-sup { transition-duration: .3s, .95s; }
+#aos-welcome.slow .m-power { transition-duration: 1s, 1.12s, 1.12s; }
+#aos-welcome.slow .c-fly img { transition-duration: .7s, .5s, 1.12s, 1.12s, 1.12s, 1.12s; }
+#aos-welcome .m-power sup { font-size: .75em; letter-spacing: 0; }
 #aos-welcome .c-word span.flip { transform: rotateY(90deg) scale(.7); opacity: 0; }
 #aos-welcome .c-word span.fold { max-width: 0 !important; opacity: 0; }
 #aos-welcome .c-rule { height: 1.5px; width: 0; border-radius: 1px; background: var(--w-pastel); opacity: .8; margin-top: 14px; transition: width 1.4s cubic-bezier(.65,0,.35,1) .5s; }
@@ -512,7 +556,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .v-star:nth-of-type(3) { right: -44px; top: 2px; width: 10px; height: 10px; animation-delay: 1.9s !important; }
 #aos-welcome .v-star:nth-of-type(4) { left: -18px; bottom: -6px; width: 8px; height: 8px; animation-delay: 2.4s !important; }
 @keyframes v-twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 18% { opacity: .95; transform: scale(1) rotate(45deg); } 40% { opacity: 0; transform: scale(.4) rotate(90deg); } }
-#aos-welcome .v-power { margin-top: 18px; font-size: 13px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
+#aos-welcome .v-power { margin-top: 18px; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
 #aos-welcome .v-power.on { opacity: 1; }
 #aos-welcome .v-power sup { font-size: .75em; letter-spacing: 0; }
 #aos-welcome.parked .v-wrap { transform: translateY(-50%) scale(.56); }
@@ -521,13 +565,13 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .c-fly img { position: absolute; border-radius: 24%; box-shadow: 0 6px 18px rgba(0,0,0,.22); opacity: 0; transform: rotateY(-90deg) scale(.7);
   transition: transform .55s cubic-bezier(.25,1,.5,1), opacity .4s, left .9s cubic-bezier(.2,.8,.2,1), top .9s cubic-bezier(.2,.8,.2,1), width .9s cubic-bezier(.2,.8,.2,1), height .9s cubic-bezier(.2,.8,.2,1); }
 #aos-welcome .c-fly img.on { opacity: 1; transform: none; }
-#aos-welcome.tall .c-fly, #aos-welcome.tall .v-wrap, #aos-welcome.tall .a-head { opacity: 0; }   /* tall cards need the room */
+#aos-welcome.tall .c-fly, #aos-welcome.tall .v-wrap, #aos-welcome.tall .a-head, #aos-welcome.tall .c-brand, #aos-welcome.tall .m-power { opacity: 0; }   /* tall cards need the room */
 /* an app's own walkthrough: its icon and name */
 #aos-welcome .a-head { display: flex; flex-direction: column; align-items: center; transition: transform .9s cubic-bezier(.2,.8,.2,1), opacity .5s; }
 #aos-welcome .a-icon { width: 96px; height: 96px; border-radius: 24%; box-shadow: 0 18px 40px -12px rgba(0,0,0,.4); opacity: 0; transform: scale(.6); filter: blur(10px);
   transition: opacity .8s, transform 1s cubic-bezier(.2,.8,.2,1), filter 1s; margin-bottom: 20px; }
 #aos-welcome .a-icon.on { opacity: 1; transform: none; filter: none; }
-#aos-welcome .a-by { margin-top: 10px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
+#aos-welcome .a-by { margin-top: 10px; font-size: 15px; font-weight: 700; letter-spacing: .02em; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
 #aos-welcome .a-by.on { opacity: 1; }
 #aos-welcome .a-by sup { font-size: .75em; letter-spacing: 0; }
 #aos-welcome .a-tag { margin-top: 8px; font-size: 16px; opacity: 0; transition: opacity .8s .2s; }
@@ -604,18 +648,18 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   };
 
   // Give each letter its slice of the one gradient, so the word reads as one sweep.
+  // (--sw the gradient's width, --sx this letter's offset into it; the A's two glyphs carry it themselves.)
   function paintLetters(word) {
     const W = word.getBoundingClientRect();
-    for (const sp of word.children) {
+    for (const sp of word.querySelectorAll(':scope > span')) {
       const b = sp.getBoundingClientRect();
-      sp.style.backgroundSize = `${W.width}px 100%`;
-      sp.style.backgroundPosition = `${-(b.left - W.left)}px 0`;
+      for (const g of sp.classList.contains('L-A') ? sp.querySelectorAll('.g') : [sp]) { g.style.setProperty('--sw', W.width + 'px'); g.style.setProperty('--sx', -(b.left - W.left) + 'px'); }
       sp.style.maxWidth = (b.width + 2) + 'px';
     }
   }
   const letters = s => [...s].map(c => `<span>${esc(c)}</span>`).join('');
   const BRAND = `<div class="w-stage"><div class="c-brand">
-      <div class="c-word">${letters('AllisonOS')}</div><div class="c-rule"></div>
+      <div class="c-word"><span class="L-A"><b class="g g-A">A</b><b class="g g-a">a</b></span>${letters('llisonOS')}</div><div class="c-rule"></div>
       <div class="c-sub">Welcome</div><div class="c-corp">Part of the Allison Corporation</div></div></div>`;
   const MARK = v => `<div class="v-wrap"><div class="v-mark"><span class="v-ink">aOS</span><sup class="v-ink">${esc(v)}</sup><i class="v-ring"></i>
       <span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span></div>
@@ -625,41 +669,63 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   async function sceneName(o) {
     paintLetters(o.q('.c-word'));
     APPS.forEach(id => { new Image().src = icon(id); });   // warm the icons up for what follows
-    await wait(300); o.q('.c-word').classList.add('on'); o.q('.c-rule').classList.add('on');
-    await wait(1700); o.q('.c-sub').classList.add('on'); o.q('.c-corp').classList.add('on');
-    await wait(1800);
+    await slow(300); o.q('.c-word').classList.add('on'); o.q('.c-rule').classList.add('on');
+    await slow(1700); o.q('.c-sub').classList.add('on'); o.q('.c-corp').classList.add('on');
+    await slow(1800);
   }
   // AllisonOS folds into aOS, which hands over to the version mark: the number drops
   // in as a superscript, a ring pulses out, stars twinkle and a shine runs across.
+  // One motion, on the word itself: "llison" folds away while the A melts into an a and
+  // slides along to meet "OS", the colours spreading back across what is left; then aOS
+  // grows to the middle, the version drops in beside it, and a shine runs across.
   async function sceneMark(o, v) {
-    for (const c of ['.c-rule', '.c-sub', '.c-corp']) o.q(c).classList.add('c-fade');
-    const sp = [...o.q('.c-word').children];
-    sp.forEach((s, k) => { if (k >= 1 && k <= 6) s.classList.add('fold'); });   // l l i s o n
-    await wait(800);
-    o.q('.c-brand').classList.add('c-fade');
-    o.q('.v-mark').classList.add('on');
-    await wait(550); o.q('.v-mark').classList.add('drop');
-    await wait(900); o.q('.v-power').classList.add('on');
-    await wait(1900);
+    const { el, q } = o, word = q('.c-word'), sp = [...word.querySelectorAll(':scope > span')], A = sp[0], O = sp[7], S = sp[8];
+    for (const c of ['.c-rule', '.c-sub', '.c-corp']) q(c).classList.add('c-fade');
+    word.style.clipPath = 'none';                                   // drawn on; the version and its stars hang outside it
+    const wa = A.querySelector('.g-a').getBoundingClientRect().width, wO = O.getBoundingClientRect().width, wS = S.getBoundingClientRect().width, W = wa + wO + wS;
+    const slice = (g, left) => { g.style.setProperty('--sw', W + 'px'); g.style.setProperty('--sx', -left + 'px'); };
+    for (const g of A.querySelectorAll('.g')) slice(g, 0);
+    slice(O, wa); slice(S, wa + wO);
+    // (the word stays centred in its row as it narrows, so where it ends up is known now)
+    const box = el.getBoundingClientRect(), r0 = word.getBoundingClientRect(), s = 78 / 46;
+    const cx0 = r0.left + r0.width / 2, cy0 = r0.top + r0.height / 2, cy = box.top + box.height * 0.47;
+    A.style.maxWidth = wa + 'px';
+    A.classList.add('to-a');
+    sp.slice(1, 7).forEach((s, k) => { s.style.transitionDelay = ((5 - k) * 0.035).toFixed(3) + 's'; s.classList.add('fold'); });   // l l i s o n, nearest the OS first
+    await slow(450);   // halfway through the fold, aOS starts to grow towards the middle
+    word.insertAdjacentHTML('beforeend', `<span class="w-sup">${esc(v)}</span><i class="w-ring"></i>${`<span class="w-star">${STAR}</span>`.repeat(4)}`);
+    q('.w-sup').style.setProperty('--sw', W * 0.5 + 'px');
+    word.style.transform = `translate(${box.left + box.width / 2 - cx0 - 6}px, ${cy - cy0}px) scale(${s})`;
+    o.mark = { word, cx0, cy0, s, W };
+    const pw = document.createElement('div'); pw.className = 'm-power'; pw.innerHTML = `The Power of aOS<sup>${esc(v)}</sup>`;
+    el.appendChild(pw); pw.style.top = (cy - box.top + r0.height * s / 2 + 18) + 'px';
+    await slow(1150);
+    word.classList.add('marked');
+    // the shine: one band across aOS, each letter showing its part of it
+    const parts = [[A.querySelector('.g-a'), 0], [O, wa], [S, wa + wO]];
+    for (const [g, left] of parts) { g.style.setProperty('--bw', 2.6 * W + 'px'); g.style.setProperty('--b0', -left + 'px'); g.style.setProperty('--b1', (-1.5 * W - left) + 'px'); }
+    await slow(900); pw.classList.add('on'); word.classList.add('shine');
+    await slow(1900);
   }
   // The apps burst out of the mark into a 5 x 2 grid at the top; the mark settles
   // between them and the panel.
   async function sceneBurst(o) {
-    const { el, q } = o, fly = q('.c-fly'), box = el.getBoundingClientRect(), m = q('.v-mark').getBoundingClientRect();
+    const { el, q } = o, fly = q('.c-fly'), box = el.getBoundingClientRect(), m = o.mark.word.getBoundingClientRect();
     const imgs = APPS.map(id => { const im = new Image(); im.src = icon(id); im.alt = ''; fly.appendChild(im); return im; });
     const at = (im, x, y, size) => { im.style.width = im.style.height = size + 'px'; im.style.left = (x - size / 2 - box.left) + 'px'; im.style.top = (y - size / 2 - box.top) + 'px'; };
     imgs.forEach(im => at(im, m.left + m.width / 2, m.top + m.height / 2, 20));
     const S = Math.min(56, (box.width - 32 - 4 * 14) / 5), G = 14, gy = box.top + Math.max(110, box.height * 0.2) + 20;
-    await wait(60);
+    await slow(60);
     imgs.forEach((im, k) => setTimeout(() => {
       im.classList.add('on');
       at(im, box.left + box.width / 2 + (k % 5 - 2) * (S + G), gy + (Math.floor(k / 5) - 0.5) * (S + G), S);
-    }, still() ? 0 : k * 70));
-    // the mark settles below the grid, smaller
-    const gridBottom = gy + S + G, panelTop = box.height - 400;
-    q('.v-wrap').style.top = Math.max(gridBottom + 50, (gridBottom + panelTop) / 2) + 'px';
+    }, still() ? 0 : k * 70 * PACE));
+    // the mark settles below the grid, smaller, its line under it
+    const gridBottom = gy + S + G, panelTop = box.height - 400, my = Math.max(gridBottom + 50, (gridBottom + panelTop) / 2), M = o.mark, k = 0.56;
+    M.word.style.transform = `translate(${box.left + box.width / 2 - M.cx0 - 6 * k}px, ${my - M.cy0}px) scale(${M.s * k})`;
+    const pw = q('.m-power'); pw.style.top = (my - box.top + 46 * M.s * k / 2 + 10) + 'px'; pw.style.transform = 'scale(.8)';
     el.classList.add('parked');
-    await wait(1300);
+    await slow(1300);
   }
   // An app's own opening: its icon blooms in, its name is drawn on, then it moves up.
   async function sceneApp(o, id) {
@@ -720,10 +786,12 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   // ===========================================================================
   // The AllisonOS welcome: the name, the aOS mark, the apps, the tour.
   const play = () => { const v = latest('aos'); return run('Welcome to AllisonOS', BRAND + MARK(v), () => markSeen('aos', v), async o => {
+    o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o); await tour(o, OS_TOUR());
   }); };
   // A major aOS update: the name and the new mark, then that release's setup cards.
   const playMajor = () => { const v = latest('aos'), r = RELEASES.aos[0]; return run(`aOS${v}`, BRAND + MARK(v), () => markSeen('aos', v), async o => {
+    o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o);
     await tour(o, r.cards && r.cards.length ? r.cards : [{ x: 'notes', i: 'sparkle', h: esc(r.title || `aOS${v}`), notes: r.notes || [] }], 'Done');
   }); };
@@ -746,7 +814,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const T = TOURS[id]; if (!T) return Promise.resolve();
     const v = latest(id), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
-      <div class="c-word">${letters(name)}</div><div class="a-by">AllisonOS · aOS<sup>${esc(latest('aos'))}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
+      <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(latest('aos'))}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
     const cards = [...T.cards, ...(standalone() ? [] : [{ x: 'install', i: 'plus', t: `Add ${name} to your Home Screen`, name }])];
     return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
