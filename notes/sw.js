@@ -1,7 +1,7 @@
 // Offline shell for the Notes app. Same-origin files load network-first so a
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Notes themselves live in localStorage, never in this cache.
-const CACHE = 'notes-v38';
+const CACHE = 'notes-v39';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest?v=4', 'icon.svg', 'icon-180.png?v=4', 'icon-512.png?v=4', '../home/slide.js', '../home/welcome.js', 'aisles.js'];
 
 self.addEventListener('install', e => {

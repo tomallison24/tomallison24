@@ -1,6 +1,6 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v8';
+const CACHE = 'aos-v9';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/welcome.js'];
 
 self.addEventListener('install', e => {

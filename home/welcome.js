@@ -475,7 +475,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 @keyframes sd-glow { 50% { box-shadow: 0 0 0 4px rgba(52,199,89,.35); } }
 .aos-sd .sd-note { font-size: 7.5px; color: var(--s-sub); padding: 4px 12px 0; line-height: 1.3; }
 /* the Home Screen */
-.aos-sd .sd-home { position: absolute; inset: 0; z-index: 4; padding: 34px 12px 0; background: linear-gradient(160deg, #6FA6F4, #9A86F0 45%, #E889B4 80%, #F2AE78); opacity: 0; transition: opacity .45s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; align-content: start; }
+.aos-sd .sd-home { position: absolute; inset: 0; z-index: 4; padding: 34px 12px 0; background: linear-gradient(160deg, #8DBDB0, #A3B2D4 45%, #D3ABA8 78%, #DCC19A); opacity: 0; transition: opacity .45s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; align-content: start; }
 .aos-sd .sd-home.on { opacity: 1; }
 .aos-sd .sd-home span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 7px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .aos-sd .sd-home i { width: 36px; height: 36px; border-radius: 9px; background: rgba(255,255,255,.35); display: block; }
@@ -628,14 +628,18 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 #aos-welcome { position: fixed; inset: 0; z-index: 2147483000; overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
   --w-bg: #0F1116; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
-  --w-pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --w-glow: rgba(195,177,255,.55);
+  --w-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --w-glow: rgba(185,198,224,.5);
+  --w-hot: linear-gradient(120deg, #86CBB8 0%, #A3B4E4 55%, #E2B0AB 100%); --w-hot-glow: rgba(163,180,228,.75); --w-hot-glow2: rgba(226,176,171,.8);
   background: var(--w-bg); color: var(--w-text); opacity: 0; transition: opacity .5s; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-welcome { --w-bg: #F2F4F8; --w-text: #0B0B0F; --w-muted: rgba(60,60,67,.62); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
-  --w-pastel: linear-gradient(100deg, #6EA8F2 0%, #9C86EC 26%, #EC86AA 50%, #EDA766 74%, #5FC6A6 100%); --w-glow: rgba(156,134,236,.4); } }
+  --w-pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); --w-glow: rgba(129,147,188,.32);
+  --w-hot: linear-gradient(120deg, #4F9583 0%, #6A80BC 55%, #B17C78 100%); --w-hot-glow: rgba(106,128,188,.5); --w-hot-glow2: rgba(177,124,120,.55); } }
 html[data-theme="light"] #aos-welcome { --w-bg: #F2F4F8; --w-text: #0B0B0F; --w-muted: rgba(60,60,67,.62); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
-  --w-pastel: linear-gradient(100deg, #6EA8F2 0%, #9C86EC 26%, #EC86AA 50%, #EDA766 74%, #5FC6A6 100%); --w-glow: rgba(156,134,236,.4); }
+  --w-pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); --w-glow: rgba(129,147,188,.32);
+  --w-hot: linear-gradient(120deg, #4F9583 0%, #6A80BC 55%, #B17C78 100%); --w-hot-glow: rgba(106,128,188,.5); --w-hot-glow2: rgba(177,124,120,.55); }
 html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
-  --w-pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); --w-glow: rgba(195,177,255,.55); }
+  --w-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --w-glow: rgba(185,198,224,.5);
+  --w-hot: linear-gradient(120deg, #86CBB8 0%, #A3B4E4 55%, #E2B0AB 100%); --w-hot-glow: rgba(163,180,228,.75); --w-hot-glow2: rgba(226,176,171,.8); }
 #aos-welcome.in { opacity: 1; }
 #aos-welcome.out { opacity: 0; transition: opacity .6s; }
 #aos-welcome * { box-sizing: border-box; }
@@ -729,24 +733,24 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .v-old, #aos-welcome .v-new { display: inline-block; vertical-align: baseline; transition: width .55s cubic-bezier(.2,.8,.2,1), opacity .3s, transform .45s cubic-bezier(.4,0,.2,1); }
 #aos-welcome .v-new { position: relative; width: 0; }
 #aos-welcome .v-new::after { content: ''; position: absolute; left: .08em; right: -.02em; bottom: -.12em; height: .12em; border-radius: 999px; transform: scaleX(0); transform-origin: left;
-  background: linear-gradient(90deg, #FF8FC0, #B48CFF, #6FC8FF); box-shadow: 0 0 10px rgba(180,140,255,.7); transition: transform .6s cubic-bezier(.2,.8,.2,1) .95s; }
+  background: var(--w-hot); box-shadow: 0 0 10px var(--w-hot-glow); transition: transform .6s cubic-bezier(.2,.8,.2,1) .95s; }
 #aos-welcome .v-mark.grow .v-new::after { transform: none; }
 #aos-welcome .v-mark.grow .v-old { opacity: 0; transform: translateY(-.55em) scale(.7); }
 #aos-welcome .v-new i { display: inline-block; font-style: normal; opacity: 0; transform: translateY(.75em) scale(.35); filter: blur(5px);
-  background: linear-gradient(135deg, #FF8FC0 0%, #B48CFF 50%, #6FC8FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  background: var(--w-hot); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
   transition: opacity .3s, transform .7s cubic-bezier(.34,1.7,.5,1), filter .5s; }
-#aos-welcome .v-mark.grow .v-new i { opacity: 1; transform: none; filter: drop-shadow(0 0 10px rgba(180,140,255,.75)); }
+#aos-welcome .v-mark.grow .v-new i { opacity: 1; transform: none; filter: drop-shadow(0 0 10px var(--w-hot-glow)); }
 #aos-welcome .v-mark.grow .v-new i:nth-child(1) { transition-delay: .3s; }
 #aos-welcome .v-mark.grow .v-new i:nth-child(2) { transition-delay: .42s; }
 #aos-welcome .v-mark.grow .v-new i:nth-child(3) { transition-delay: .54s; }
 #aos-welcome .v-mark.lit .v-new i { animation: v-hot 2.4s ease-in-out infinite; }
-@keyframes v-hot { 0%, 100% { filter: drop-shadow(0 0 6px rgba(180,140,255,.55)); } 50% { filter: drop-shadow(0 0 16px rgba(255,143,192,.9)); } }
+@keyframes v-hot { 0%, 100% { filter: drop-shadow(0 0 5px var(--w-hot-glow)); } 50% { filter: drop-shadow(0 0 13px var(--w-hot-glow2)); } }
 #aos-welcome .v-halo { position: absolute; left: 50%; top: 55%; width: 2.6em; height: 1.6em; margin: -.8em 0 0 -1.3em; border-radius: 50%; z-index: -1; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(196,150,255,.7), rgba(255,143,192,.3) 60%, transparent); filter: blur(6px); opacity: 0; transform: scale(.2); }
+  background: radial-gradient(closest-side, var(--w-hot-glow), var(--w-hot-glow2) 55%, transparent); filter: blur(6px); opacity: 0; transform: scale(.2); }
 #aos-welcome .v-mark.grow .v-halo { animation: v-halo 1.6s cubic-bezier(.2,.8,.2,1) .45s forwards; }
 @keyframes v-halo { 0% { opacity: 0; transform: scale(.2); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: .55; transform: scale(1); } }
 #aos-welcome .c-body h2 sup { white-space: nowrap; }
-#aos-welcome .h-new { display: inline-block; background: linear-gradient(135deg, #FF8FC0 0%, #B48CFF 50%, #6FC8FF 100%); -webkit-background-clip: text; background-clip: text;
+#aos-welcome .h-new { display: inline-block; background: var(--w-hot); -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent; animation: h-new .8s cubic-bezier(.34,1.7,.5,1) .35s both; }
 @keyframes h-new { 0% { opacity: 0; transform: translateY(.5em) scale(.4); } 100% { opacity: 1; transform: none; } }
 #aos-welcome .v-power { margin-top: 18px; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
