@@ -30,10 +30,15 @@ All of it is in `../home/welcome.js`, which every app loads with its own name
   a and slides along to meet "OS", the colours spreading back across what is
   left, and aOS grows to the middle; the 1 drops in as a superscript, a ring
   pulses out, stars twinkle and a shine runs across; "The Power of aOS1", the apps bursting out of it into a grid, then
-  the tour (Light or dark, how to add it, aOS for apps). A major version
+  the tour (everything in one place and working together, swipe up, always
+  up to date, made to work for you, Light or dark, how to add it, aOS for
+  apps). On a short screen a card that would cover the mark fades it instead. A major version
   (aOS2) replays the name and the new mark, then that release's setup cards.
-  A minor one (aOS1.1) is one screen: "aOS1 updated to aOS1.1. More power in
-  your palm." and its notes.
+  A minor one (aOS1.1) is one screen: aOS¹ on its own, then the new .1 rises
+  in after the 1 (the old .x lifting away, for 1.1 -> 1.2) in its own brighter
+  gradient, with a glow, a ring, an underline sweep and a soft pulse; then
+  "aOS1 updated to aOS1.1. More power in your palm." with the .1 lit the same
+  way, and its notes.
 - **Each app**: the first time it is opened, its own walkthrough - its icon
   and name with aOS¹ under it, then four or five cards on what it does (written from its
   README), and how to add it in a browser. After that app's own update, what's
