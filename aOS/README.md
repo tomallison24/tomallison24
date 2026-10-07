@@ -14,7 +14,10 @@ Its address ends in `/aOS/`.
    the in-app Safari view an installed aOS opens links in, it shows how to add
    that app. The in-app view may call itself standalone, so `?via=aos` is what
    counts there: remembered for that view and taken off the address at once,
-   so the address added to the Home Screen is clean.
+   so the address added to the Home Screen is clean. In that view the steps
+   stay, with no **Not now**: the view's **✕** is the only way out, back to
+   aOS's tiles, so the view never shows the app itself and coming back to aOS
+   later lands on aOS.
 4. The app opened from the Home Screen: its own walkthrough, ending with
    Light or dark.
 
