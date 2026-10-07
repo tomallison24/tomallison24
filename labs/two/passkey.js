@@ -29,16 +29,22 @@
     if (!name) { $('name').focus(); return; }
     if (!window.PublicKeyCredential) return log('This browser has no passkeys.');
     try {
-      await navigator.credentials.create({ publicKey: {
+      const c = await navigator.credentials.create({ publicKey: {
         challenge: rnd(32),
         rp: { name: 'AllisonOS (test)' },
         user: { id: enc.encode(JSON.stringify({ n: name })), name: name + ' (AllisonOS test)', displayName: name },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', userVerification: 'required' },
         hints: ['client-device'],   // prefer this phone's own passkeys (browsers that know hints)
+        extensions: { credProps: true },   // asks the phone whether it kept a findable passkey
         timeout: 60000,
       } });
-      set({ name, via: 'created', at: Date.now() }); log(''); paint();
+      set({ name, via: 'created', at: Date.now() }); paint();
+      // Where it went: a passkey other apps can find is "discoverable" and on this phone ("platform")
+      const rk = (c.getClientExtensionResults().credProps || {}).rk;
+      log('Saved: ' + (rk === true ? 'a findable passkey' : rk === false ? 'NOT findable by other apps' : 'findable? the phone didn\'t say') +
+        ', on ' + (c.authenticatorAttachment === 'platform' ? 'this phone' : (c.authenticatorAttachment || 'unknown') + ' device') +
+        '. Now check Settings, Passwords for this site.');
     } catch (e) { log(e.name === 'NotAllowedError' ? 'Cancelled, or Face ID did not finish.' : e.name + ': ' + e.message); }
   }
 
