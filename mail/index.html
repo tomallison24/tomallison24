@@ -1247,6 +1247,53 @@
   .menu button:active { background: var(--lgs-field); }
   .menu .mhead { padding-left: 38px; }
   .menu hr { margin: 5px 10px; }
+  /* ...and then styled as Liquid Glass proper: a deeper, clearer pane with a lit
+     rim and a soft sheen across the top; every row an icon on its own small
+     glass tile in the mailbox's colour; the one you're on lifted on a glass
+     pill of its own with a tick; counts as little capsules; the rows float
+     in one after another. */
+  .menu {
+    padding: 8px; border-radius: 30px; width: min(300px, calc(100vw - 32px));
+    background:
+      radial-gradient(120% 60% at 50% -12%, rgba(255, 255, 255, 0.22), transparent 60%),
+      linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
+    backdrop-filter: blur(34px) saturate(210%) brightness(1.02); -webkit-backdrop-filter: blur(34px) saturate(210%) brightness(1.02);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), inset 0 -1px 1px rgba(255, 255, 255, 0.07),
+      0 26px 60px -10px var(--lift-strong), 0 6px 18px var(--lift);
+  }
+  /* a little more body than the sheets, so a list behind it never reads through the rows */
+  .menu { --lgs-top: rgba(46, 46, 54, 0.74); --lgs-bottom: rgba(24, 24, 30, 0.68); }
+  @media (prefers-color-scheme: light) { .menu { --lgs-top: rgba(255, 255, 255, 0.82); --lgs-bottom: rgba(250, 250, 253, 0.70); } }
+  #boxmenu .catch { backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); }
+  .menu button {
+    --itile: hsl(var(--h) 85% 58% / 0.17); --ink: hsl(var(--h) 90% var(--tl));
+    position: relative; gap: 12px; min-height: 52px; padding: 0 12px 0 8px; border-radius: 22px;
+    animation: menuRow .42s var(--ease) both; animation-delay: calc(var(--n, 0) * 24ms + 40ms);
+  }
+  .menu button:active { background: var(--lgs-field); transform: scale(0.985); }
+  .menu .ico {
+    order: -1; width: 36px; height: 36px; border-radius: 12px; flex: none; align-items: center; justify-content: center; color: var(--ink);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0)), var(--itile);
+    box-shadow: inset 0 0 0 1px hsl(var(--h) 90% 70% / 0.26), inset 0 1px 1px rgba(255, 255, 255, 0.34);
+  }
+  .menu .ico svg { width: 20px; height: 20px; }
+  .menu .ico.plain { --itile: var(--lgs-field); --ink: var(--muted); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim); }
+  .menu .dot { width: 11px; height: 11px; }
+  .menu .name { font-size: 16.5px; letter-spacing: -.01em; }
+  .menu .cnt {
+    order: 1; min-width: 26px; padding: 2px 8px; border-radius: 999px; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted);
+    background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge);
+  }
+  .menu .tick { order: 2; width: 20px; margin-left: -2px; }
+  .menu .tick svg { width: 18px; height: 18px; }
+  .menu [aria-checked="true"] {
+    background: linear-gradient(180deg, var(--lgs-field), var(--lgs-row));
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lift);
+  }
+  .menu [aria-checked="true"] .name { font-weight: 700; }
+  .menu .mhead { padding: 10px 14px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  .menu hr { margin: 6px 12px; height: 1px; background: linear-gradient(90deg, transparent, var(--hair) 18%, var(--hair) 82%, transparent); }
+  @keyframes menuRow { from { opacity: 0; transform: translateY(8px) scale(.97); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
   /* ---- the mailbox pill: Liquid Glass at the bottom, as in Fitness and Home ----
      Centred over the home indicator, in reach of a thumb: the mailbox's icon,
      its name and a chevron; the menu opens upwards from it. A light tint, a
