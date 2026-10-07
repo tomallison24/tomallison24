@@ -618,6 +618,8 @@
   });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   window.addEventListener('resize', () => slideTheme(true));
+  // The welcome's setup (welcome.js) chose an appearance: the same setting as Appearance here.
+  addEventListener('aos:theme', e => { if (['auto', 'light', 'dark'].includes(e.detail)) { settings.theme = e.detail; save(); applyTheme(); } });
 
   // Press and hold the home screen to open Settings, as holding the iPhone's
   // does. A finger that moves is a scroll, not a hold; a hold that fires
