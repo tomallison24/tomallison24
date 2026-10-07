@@ -26,6 +26,9 @@ At the top of `RELEASES` in `home/welcome.js` (newest first):
   `cards` (or its highlights). Every app shows the new number rising in, the
   release's highlights and **Open aOS** for the rest.
 - A patch with nothing to announce (`1.0.1`, no `apps`) shows nothing anywhere.
+- `silent: true`: released and logged in aOS's **What's new**, but the apps keep
+  showing the last version that wasn't silent (aOS1.1 silent: they still say
+  aOS1), and no update screen plays for it.
 
 Merge it with the changes it describes.
 
