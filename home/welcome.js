@@ -20,7 +20,9 @@
 //     first time      that app's own walkthrough: its icon and name, then what
 //                     it does, card by card; under its name, aOS with the
 //                     version as a superscript. On iPhone it waits until the
-//                     app is opened from the Home Screen (aOS shows how to add it)
+//                     app is opened from the Home Screen
+//     in Safari       (iPhone, not from the Home Screen) how to add it: Safari's
+//                     steps animated; "Not now" until a new tab
 //     its own update  what's new in that app, if that release has anything to
 //                     show; an app with nothing new shows nothing
 //
@@ -1023,6 +1025,17 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       await tour(o, [first, ...cards], 'Done');
     });
   }
+  // An app opened in Safari on iPhone, not from its Home Screen icon: how to add it.
+  // "Not now" lets it be used in the browser; it asks again in a new tab.
+  function playInstall(id = APP) {
+    const k = 'aos.later.' + id;
+    try { if (sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
+    const name = NAMES[id] || 'AllisonOS';
+    return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
+      o.q('.w-skip').hidden = true;
+      await tour(o, [{ x: 'install', noart: true, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }], 'Not now');
+    });
+  }
   // An app's own walkthrough.
   function playApp(id) {
     const T = TOURS[id]; if (!T) return Promise.resolve();
@@ -1033,7 +1046,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major }, seen: () => !!(seenAll() || {}).aos || metBefore() };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major }, seen: () => !!(seenAll() || {}).aos || metBefore() };
 
   // ---- deciding what to show, once ----
   function auto() {
@@ -1045,7 +1058,9 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       return major(v) > major(s) ? playMajor() : playUpdate('aos', s, v);
     }
     if (!RELEASES[APP]) return;
-    if (ios && !standalone()) return;   // on iPhone an app's walkthrough waits until it's opened from the Home Screen
+    // On iPhone, Safari or the Home Screen? (display-mode: standalone, or navigator.standalone)
+    // In Safari: how to add it. From the Home Screen: its walkthrough and updates.
+    if (ios && !standalone()) return playInstall(APP);
     const v = latest(APP), s = seen[APP];
     if (!s) return playApp(APP);
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
