@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test store</title>
+<meta name="theme-color" content="#F2F4F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1116" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Test store">
+<link rel="apple-touch-icon" href="../../aOS/icon-180.png">
+<link rel="icon" type="image/png" href="../../aOS/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  Labs mock-up (not an app): aOS as an App Store, once it's on the Home Screen.
+  Today (stories), Apps (a list with GET), an app page for each, and your account
+  under the avatar (family, Appearance, update history). GET plays the install
+  steps here, and only Install opens the app's own address. The data - names,
+  taglines, walkthrough cards, the release log - is the real aOS's, from
+  ../../home/welcome.js. "Installed" is an example on two apps; the previews are
+  drawn from each app's walkthrough cards, not screenshots. See ../index.html.
+-->
+<style>
+  :root { --bg: #F2F4F8; --card: #fff; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --line: rgba(60,60,67,.16); --dot: rgba(120,120,128,.14);
+    --glass: rgba(255,255,255,.72); --edge: rgba(0,0,0,.08); --accent: #0A84FF; --get: rgba(120,120,128,.14);
+    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0F1116; --card: #1C1D22; --text: #fff; --muted: rgba(235,235,245,.6); --line: rgba(84,84,88,.5); --dot: rgba(120,120,128,.24);
+    --glass: rgba(40,42,48,.7); --edge: rgba(255,255,255,.1); --get: rgba(120,120,128,.26);
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #0F1116; --card: #1C1D22; --text: #fff; --muted: rgba(235,235,245,.6); --line: rgba(84,84,88,.5); --dot: rgba(120,120,128,.24);
+    --glass: rgba(40,42,48,.7); --edge: rgba(255,255,255,.1); --get: rgba(120,120,128,.26);
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  .ink { background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  sup { font-size: .55em; vertical-align: .55em; line-height: 0; }
+
+  /* the tabs: one scrolling page each */
+  .tab { padding: calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 110px); max-width: 640px; margin: 0 auto; }
+  .tab[hidden] { display: none; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 10px 0 18px; }
+  .head small { display: block; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+  .head h1 { margin: 2px 0 0; font-size: 34px; letter-spacing: -.5px; line-height: 1.1; }
+  .avatar { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 16px; color: #fff; background: var(--pastel); box-shadow: inset 0 0 0 .5px var(--edge); margin-bottom: 4px; }
+
+  /* Today: story cards */
+  .story { position: relative; display: block; cursor: pointer; width: 100%; height: 440px; margin: 0 0 26px; border-radius: 26px; overflow: hidden; text-align: left; color: #fff; background: #222;
+    box-shadow: 0 14px 34px rgba(0,0,0,.18); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .story:active { transform: scale(.97); }
+  .story .art { position: absolute; inset: 0; background: radial-gradient(120% 80% at 70% 30%, rgba(var(--c), .95), rgba(var(--c), .35) 55%, #0B0C10 100%); }
+  .story .art img { position: absolute; width: 150px; height: 150px; border-radius: 34px; right: 24px; bottom: 112px; transform: rotate(-8deg); box-shadow: 0 24px 50px rgba(0,0,0,.35); }
+  .story .art svg { position: absolute; left: -30px; bottom: 60px; width: 260px; height: 260px; color: rgba(255,255,255,.14); }
+  .story .txt { position: absolute; left: 20px; right: 20px; top: 20px; }
+  .story .txt small { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .75; }
+  .story .txt h2 { margin: 4px 0 0; font-size: 28px; line-height: 1.12; letter-spacing: -.3px; }
+  .story .foot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(20,20,24,.35); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .story .foot img { width: 44px; height: 44px; border-radius: 11px; }
+  .story .foot span { flex: 1; min-width: 0; } .story .foot b { display: block; font-size: 15px; } .story .foot i { font-style: normal; font-size: 13px; opacity: .75; }
+  .story .foot .get { background: rgba(255,255,255,.25); color: #fff; }
+  .story.plain .art { background: var(--card); } .story.plain { color: var(--text); background: var(--card); }
+  .story.plain .txt small { color: var(--muted); opacity: 1; }
+  .story.plain .mk { position: absolute; left: 20px; right: 20px; top: 120px; text-align: center; font-size: 96px; font-weight: 800; letter-spacing: -3px; }
+
+  /* Apps: the list */
+  .row { cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 10px 0; width: 100%; text-align: left; }
+  .row img { width: 64px; height: 64px; border-radius: 15px; flex: 0 0 64px; box-shadow: inset 0 0 0 .5px var(--edge); }
+  .row .t { flex: 1; min-width: 0; border-bottom: .5px solid var(--line); padding: 10px 0 18px; align-self: stretch; display: flex; align-items: center; gap: 10px; }
+  .row:last-child .t { border-bottom: 0; }
+  .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 600; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .get { flex: 0 0 auto; min-width: 74px; height: 30px; padding: 0 16px; border-radius: 999px; background: var(--get); color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: .02em; }
+  .get.done { color: var(--muted); font-weight: 600; letter-spacing: 0; }
+  .sec { display: flex; align-items: baseline; justify-content: space-between; margin: 28px 0 8px; }
+  .sec h2 { margin: 0; font-size: 22px; letter-spacing: -.2px; }
+  .sec a, .sec button { color: var(--accent); font-size: 17px; }
+
+  /* the tab bar, iOS 26: a glass capsule of tabs, and a round search button */
+  .bar { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 12px); display: flex; justify-content: center; gap: 10px; pointer-events: none; z-index: 20; }
+  .bar > * { pointer-events: auto; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: inset 0 0 0 .5px var(--edge), 0 10px 30px rgba(0,0,0,.18); }
+  .tabs { display: flex; padding: 4px; border-radius: 999px; }
+  .tabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 88px; height: 54px; justify-content: center; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .tabs button svg { width: 25px; height: 25px; }
+  .tabs button[aria-selected="true"] { color: var(--accent); background: var(--dot); }
+  .srch { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; color: var(--text); }
+  .srch[aria-selected="true"] { color: var(--accent); }
+  .srch svg { width: 24px; height: 24px; }
+  .find { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: var(--dot); color: var(--muted); margin-bottom: 10px; }
+  .find input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
+
+  /* pages that slide in: an app, a story, the account */
+  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .38s cubic-bezier(.2,.8,.2,1); }
+  .page.on { transform: none; }
+  .page.up { transform: translateY(100%); } .page.up.on { transform: none; }
+  .page .in { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 20px calc(env(safe-area-inset-bottom) + 40px); }
+  .back, .close { position: fixed; top: calc(env(safe-area-inset-top) + 10px); z-index: 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0 0 .5px var(--edge), 0 6px 18px rgba(0,0,0,.14); font-size: 22px; }
+  .back { left: 14px; } .close { right: 14px; font-size: 17px; }
+  .apphead { display: flex; gap: 16px; align-items: flex-start; }
+  .apphead img { width: 118px; height: 118px; border-radius: 27px; box-shadow: inset 0 0 0 .5px var(--edge), 0 10px 26px rgba(var(--c), .35); }
+  .apphead h1 { margin: 4px 0 2px; font-size: 24px; letter-spacing: -.3px; } .apphead p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+  .apphead .get { min-width: 84px; height: 32px; background: var(--accent); color: #fff; }
+  .apphead .get.done { background: var(--get); color: var(--muted); }
+  .strip { display: flex; overflow-x: auto; margin: 22px -20px 0; padding: 12px 20px; border-top: .5px solid var(--line); border-bottom: .5px solid var(--line); scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .strip div { flex: 0 0 auto; min-width: 104px; padding: 0 14px; text-align: center; border-left: .5px solid var(--line); }
+  .strip div:first-child { border-left: 0; padding-left: 0; }
+  .strip small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .strip b { display: block; margin: 4px 0 2px; font-size: 20px; color: var(--muted); } .strip i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
+  .strip svg { width: 24px; height: 24px; margin: 4px 0 2px; color: var(--muted); }
+  .wn small { color: var(--muted); font-size: 15px; } .wn ul, .needs { margin: 8px 0 0; padding-left: 20px; } .wn li, .needs li { margin: 4px 0; }
+  .shots { display: flex; gap: 12px; overflow-x: auto; margin: 0 -20px; padding: 4px 20px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .shots::-webkit-scrollbar { display: none; }
+  .shot { flex: 0 0 210px; height: 430px; border-radius: 28px; scroll-snap-align: start; position: relative; overflow: hidden; padding: 26px 18px; color: #fff;
+    background: radial-gradient(130% 70% at 50% 0%, rgba(var(--c), .9), rgba(var(--c), .25) 60%, #0B0C10 100%); box-shadow: inset 0 0 0 .5px var(--edge); }
+  .shot svg { width: 120px; height: 120px; display: block; margin: 40px auto 26px; color: rgba(255,255,255,.92); }
+  .shot b { display: block; font-size: 19px; line-height: 1.2; text-align: center; } .shot p { font-size: 13px; line-height: 1.4; text-align: center; opacity: .82; margin: 8px 0 0; }
+  .desc p { margin: 0 0 10px; } .muted { color: var(--muted); }
+  .info { margin-top: 6px; } .info div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: .5px solid var(--line); }
+  .info div span:first-child { color: var(--muted); }
+  .need { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--card); margin-top: 8px; box-shadow: inset 0 0 0 .5px var(--edge); }
+  .need em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .need .ok { background: rgba(52,199,89,.16); color: #2E9E4F; } .need .once { background: rgba(10,132,255,.14); color: var(--accent); }
+  .need span { flex: 1; font-size: 15px; }
+
+  /* a story, opened */
+  .hero { position: relative; height: 380px; margin: calc(-1 * (env(safe-area-inset-top) + 64px)) -20px 20px; color: #fff; overflow: hidden; }
+  .hero .art { position: absolute; inset: 0; background: radial-gradient(120% 80% at 70% 30%, rgba(var(--c), .95), rgba(var(--c), .35) 55%, #0B0C10 100%); }
+  .hero .art img { position: absolute; width: 150px; height: 150px; border-radius: 34px; right: 24px; top: calc(env(safe-area-inset-top) + 100px); transform: rotate(-8deg); box-shadow: 0 24px 50px rgba(0,0,0,.35); }
+  .hero .txt { position: absolute; left: 20px; right: 20px; bottom: 24px; } .hero small { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .75; }
+  .hero h2 { margin: 4px 0 0; font-size: 30px; line-height: 1.1; }
+  .body h3 { margin: 22px 0 6px; font-size: 20px; } .body p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; } .body p b { color: var(--text); }
+  .body ol { padding-left: 22px; color: var(--muted); line-height: 1.5; } .body ol b { color: var(--text); }
+  .approw { display: flex; align-items: center; gap: 12px; margin-top: 26px; padding: 14px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--edge); }
+  .approw img { width: 52px; height: 52px; border-radius: 12px; } .approw span { flex: 1; } .approw b { display: block; } .approw i { font-style: normal; font-size: 14px; color: var(--muted); }
+
+  /* the account */
+  .group { border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--edge); overflow: hidden; margin-top: 10px; }
+  .group > * { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; border-bottom: .5px solid var(--line); text-align: left; }
+  .group > *:last-child { border-bottom: 0; }
+  .me { display: flex; align-items: center; gap: 14px; }
+  .me .avatar { width: 56px; height: 56px; flex-basis: 56px; font-size: 22px; margin: 0; }
+  .chev { color: var(--muted); }
+  .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--dot); }
+  .seg button { flex: 1; height: 34px; border-radius: 999px; font-size: 15px; font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+  .rel h4 { margin: 0; font-size: 17px; } .rel small { color: var(--muted); font-size: 14px; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  .group .rel { display: block; }
+  .glbl { margin: 26px 4px 0; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+  /* GET: the install steps, in a sheet */
+  .shade { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.36); opacity: 0; transition: opacity .3s; }
+  .shade.on { opacity: 1; }
+  .sheet { position: fixed; left: 8px; right: 8px; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 41; max-width: 520px; margin: 0 auto; padding: 22px 20px 18px; border-radius: 34px;
+    background: var(--card); box-shadow: 0 20px 60px rgba(0,0,0,.3); transform: translateY(110%); transition: transform .4s cubic-bezier(.2,.8,.2,1); text-align: center; }
+  .sheet.on { transform: none; }
+  .sheet h2 { margin: 6px 0 2px; font-size: 22px; } .sheet p { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
+  .sheet .sdh { margin: 6px 0 0; }
+  .sheet .go { display: flex; align-items: center; justify-content: center; width: 100%; height: 50px; margin-top: 12px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; transition: opacity .3s; }
+  .sheet .go[aria-disabled="true"] { opacity: .35; pointer-events: none; }
+  .sheet .not { height: 40px; margin-top: 4px; color: var(--muted); font-size: 15px; width: 100%; }
+  .lab { margin: 30px 0 0; padding: 14px 16px; border-radius: 16px; background: var(--dot); color: var(--muted); font-size: 14px; line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { .page, .sheet, .story { transition: none; } }
+</style>
+</head>
+<body>
+
+<section class="tab" id="today">
+  <div class="head"><div><small id="date"></small><h1>Today</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div id="stories"></div>
+  <p class="lab">Labs mock-up of aOS as an App Store. Apps' names, cards and the release log are the real ones; <b>Installed</b> on Weather and Home is only an example, and the previews are drawn from each app's walkthrough, not screenshots.</p>
+</section>
+
+<section class="tab" id="apps" hidden>
+  <div class="head"><div><h1>Apps</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div id="list"></div>
+</section>
+
+<section class="tab" id="search" hidden>
+  <div class="head"><div><h1>Search</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <label class="find"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg><input id="q" type="search" placeholder="Apps, or what they do" autocomplete="off"></label>
+  <div id="found"></div>
+</section>
+
+<nav class="bar" aria-label="aOS">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="4"/><path d="M8 8h8M8 12h5"/></svg>Today</button>
+    <button type="button" role="tab" data-tab="apps" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5"/></svg>Apps</button>
+  </div>
+  <button type="button" class="srch" role="tab" data-tab="search" aria-selected="false" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
+</nav>
+
+<script src="../../home/account.js"></script>
+<script src="../../home/welcome.js" data-app="aos"></script>
+<script>
+'use strict';
+(() => {
+  const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
+  const icon = id => `../../${id}/icon-512.png`;
+  const appUrl = id => new URL(`../../${id}/`, location.href).href + '?via=aos';
+  const T = id => D.TOURS[id] || { tag: '', cards: [] };
+  const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
+  const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', house: '125,105,245' };
+  const CAT = { mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', house: 'Lifestyle' };
+  const SHARED = ['calendar', 'travel', 'notes', 'places'];
+  // what each app needs from a new person today: ok = nothing to do, once = a one-time step
+  const NEEDS = {
+    mail: [['once', 'Sign in with your own Google account']],
+    calendar: [['ok', 'Your family account (Face ID)']],
+    news: [['ok', 'Nothing']],
+    weather: [['ok', 'Your location, if you allow it']],
+    notes: [['once', 'The family Google Sheet, to share notes (optional)']],
+    podcasts: [['ok', 'Nothing']],
+    travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
+    places: [['once', 'The family Google Sheet, to share lists (optional)']],
+    fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
+    house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
+  };
+  const INSTALLED = ['weather', 'house'];   // an example, for the look
+  const getBtn = (id, cls = '') => INSTALLED.includes(id) ? `<button type="button" class="get done ${cls}" data-get="${id}">Installed</button>` : `<button type="button" class="get ${cls}" data-get="${id}">GET</button>`;
+  const mk = sv => `aOS<sup>${esc(sv)}</sup>`;
+
+  // ---- account: the avatar everywhere ----
+  const user = () => ACC.user();
+  const paintAvatars = () => { const u = user(); for (const a of document.querySelectorAll('[data-acct]')) a.innerHTML = u ? esc(u.name[0].toUpperCase()) : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c.8-4.4 4-6.6 8-6.6s7.2 2.2 8 6.6z"/></svg>'; };
+  paintAvatars(); addEventListener('aos:account', paintAvatars);
+
+  // ---- Today ----
+  $('date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const day = Math.floor(Date.now() / 864e5), aotd = D.APPS[day % D.APPS.length];
+  const STORIES = [
+    { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
+      <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
+      <h3>1. The address fills itself in</h3><p>Signed in to your family account, Home already knows where your house is. Nothing to type.</p>
+      <h3>2. Make your own token</h3><p>In the Home Assistant app: your <b>profile</b> → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>Home</b> and copy it straight away: it's only shown once.</p>
+      <p class="muted">(In the real one, this step is animated, drawn after Home Assistant's own screens.)</p>
+      <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` },
+    { id: aotd, k: 'App of the day', h: `${D.NAMES[aotd]}: ${T(aotd).tag}`, art: (T(aotd).cards[0] || {}).i, body: () => T(aotd).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
+    { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${[...(r.highlights || []), ...(r.notes || [])].map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
+    { id: 'travel', k: 'Meet', h: 'Every trip, the whole family\'s', art: 'plane', body: () => T('travel').cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
+    { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
+      <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
+      <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
+      <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` },
+  ];
+  $('stories').innerHTML = STORIES.map((s, i) => s.plain
+    ? `<div class="story plain" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><small>${esc(s.k)}</small><h2>${s.h}</h2></div><div class="mk ink">${mk(v)}</div></div>`
+    : `<div class="story" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
+       <div class="txt"><small>${esc(s.k)}</small><h2>${esc(s.h)}</h2></div>
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
+
+  // ---- Apps, and Search ----
+  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${esc(T(id).tag)}</i></span>${getBtn(id)}</span></div>`).join('');
+  $('list').innerHTML = `<div class="sec"><h2>Every AllisonOS app</h2></div>${rows(D.APPS)}`;
+  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = D.APPS.filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
+  $('q').oninput = find; find();
+
+  // ---- tabs ----
+  const tabs = document.querySelectorAll('[data-tab]');
+  const show = t => { for (const s of ['today', 'apps', 'search']) $(s).hidden = s !== t; tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
+  tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
+
+  // ---- pages that slide over ----
+  function page(html, { up = false, c = '', cls = '' } = {}) {
+    const el = document.createElement('div');
+    el.className = 'page' + (up ? ' up' : ''); el.style.setProperty('--c', c);
+    el.innerHTML = `${up ? '<button type="button" class="close" aria-label="Close">✕</button>' : '<button type="button" class="back" aria-label="Back">‹</button>'}<div class="in ${cls}">${html}</div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
+    const done = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 400); };
+    el.querySelector('.back, .close').onclick = done;
+    if (!up) swipeBack(el, done);
+    return el;
+  }
+  // swipe right from the left edge, as iOS goes back
+  function swipeBack(el, done) {
+    let x0 = null, dx = 0;
+    el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX < 30 ? t.clientX : null; dx = 0; }, { passive: true });
+    el.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.max(0, e.touches[0].clientX - x0); el.style.transition = 'none'; el.style.transform = `translateX(${dx}px)`; }, { passive: true });
+    el.addEventListener('touchend', () => { if (x0 == null) return; el.style.transition = ''; el.style.transform = ''; if (dx > 90) done(); x0 = null; });
+  }
+
+  function appPage(id) {
+    const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
+    const e = r ? D.entry(r.apps[id]) : null;
+    const hist = live.filter(x => { const y = D.entry((x.apps || {})[id]); return y.highlights.length + y.notes.length; });
+    page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}</div></div>
+      <div class="strip">
+        <div><small>Version</small><b>${mk(v)}</b><i>Latest</i></div>
+        <div><small>Category</small>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
+        <div><small>Made by</small>${line('sparkle')}<i>Allison Corporation</i></div>
+        <div><small>${SHARED.includes(id) ? 'Family' : 'Yours'}</small>${line(SHARED.includes(id) ? 'people' : 'lock')}<i>${SHARED.includes(id) ? 'Shared' : 'Just you'}</i></div>
+      </div>
+      <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
+      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${[...e.highlights, ...e.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
+      <div class="sec"><h2>Preview</h2></div>
+      <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
+      <div class="sec"><h2>What it needs</h2></div>
+      ${(NEEDS[id] || []).map(([k, t]) => `<div class="need"><span>${esc(t)}</span><em class="${k}">${k === 'ok' ? 'Ready' : 'Once'}</em></div>`).join('')}
+      <div class="sec"><h2>About</h2></div>
+      <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
+      <div class="sec"><h2>Information</h2></div>
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iPhone</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
+      .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); });
+  }
+  function histPage(id, hist) {
+    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => { const y = D.entry(x.apps[id]); return `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${[...y.highlights, ...y.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`; }).join('')}`);
+  }
+  function storyPage(i) {
+    const s = STORIES[i];
+    page(`<div class="hero" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
+      <div class="txt"><small>${esc(s.k)}</small><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
+      <div class="body">${s.body()}</div>
+      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
+  }
+  function acctPage() {
+    const u = user();
+    const el = page(`<h1 style="margin:0 0 14px;font-size:30px">Account</h1>
+      <div class="group"><div class="me"><span class="avatar">${u ? esc(u.name[0].toUpperCase()) : '?'}</span><span style="flex:1"><b>${u ? esc(u.name) : 'Not signed in'}</b><br><small class="muted">${u ? (u.role === 'owner' ? 'Owner' : 'Family') : 'Face ID signs you in to every app'}</small></span></div>
+        ${u ? '' : '<button type="button" data-signin style="color:var(--accent)">Sign in with Face ID</button>'}</div>
+      <div class="glbl">Family</div>
+      <div class="group"><a href="../../aOS/">Your family, invites, the Home Assistant address<span class="chev">›</span></a></div>
+      <div class="glbl">Appearance</div>
+      <div class="group"><div><div class="seg" id="seg" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
+      <div class="glbl">Updates</div>
+      <div class="group">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small><ul>${[...(r.highlights || []), ...(r.notes || [])].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div>`).join('')}</div>
+      <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>
+      <p class="lab">In the real one, the family list and invites move in here too; this mock-up links to aOS for them.</p>`, { up: true });
+    el.addEventListener('click', async ev => {
+      const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      if (ev.target.closest('[data-replay]')) W.play();
+      if (ev.target.closest('[data-signin]')) { try { await ACC.signIn(); el.querySelector('.close').click(); setTimeout(acctPage, 420); } catch {} }
+    });
+  }
+
+  // ---- GET: the install steps, here; Install opens the app's own address ----
+  function getSheet(id) {
+    const shade = document.createElement('div'); shade.className = 'shade';
+    const sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Get ' + D.NAMES[id]);
+    sh.innerHTML = `<h2>Get ${esc(D.NAMES[id])}</h2><p>Watch once, then tap Install and do the same.</p><div class="sdh"></div>
+      <a class="go" href="${appUrl(id)}" target="_blank" rel="noopener" aria-disabled="true">Install</a><button type="button" class="not">Not now</button>`;
+    document.body.append(shade, sh);
+    W.safariDemo(sh.querySelector('.sdh'), D.NAMES[id], icon(id), { onDone: () => sh.querySelector('.go').setAttribute('aria-disabled', 'false') });
+    requestAnimationFrame(() => requestAnimationFrame(() => { shade.classList.add('on'); sh.classList.add('on'); }));
+    const done = () => { shade.classList.remove('on'); sh.classList.remove('on'); setTimeout(() => { shade.remove(); sh.remove(); }, 420); };
+    shade.onclick = done; sh.querySelector('.not').onclick = done;
+  }
+
+  // ---- taps ----
+  document.addEventListener('click', ev => {
+    const g = ev.target.closest('[data-get]'); if (g) { ev.stopPropagation(); if (!g.classList.contains('done')) getSheet(g.dataset.get); return; }
+    const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
+    const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
+    if (ev.target.closest('[data-acct]')) return acctPage();
+  });
+})();
+</script>
+</body>
+</html>
