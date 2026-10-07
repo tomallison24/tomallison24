@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test app</title>
+<link rel="stylesheet" href="../../lab.css">
+<!-- Stands in for an app opened from aOS (../hub/). Not an app; see ../../index.html. -->
+</head>
+<body>
+<main>
+  <h1>Test <span class="ink" id="m"></span></h1>
+  <p id="how"></p>
+  <div class="card">
+    <h3>Now</h3>
+    <ol>
+      <li>Swipe up to the Home Screen.</li>
+      <li>Open <b>Test tiles</b> from its icon again.</li>
+      <li>Do you see the tiles, or this page?</li>
+    </ol>
+    <button type="button" id="close">Close (tap)</button>
+    <div class="log" id="log"></div>
+  </div>
+</main>
+<script>
+  const m = new URLSearchParams(location.search).get('m') || '?', $ = id => document.getElementById(id);
+  $('m').textContent = m.toUpperCase();
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  $('how').textContent = `Opened ${window.opener ? 'by a script (it has an opener)' : 'with no opener'}, ${history.length} page(s) in this window's history, ${standalone ? 'calls itself standalone' : 'not standalone'}.`;
+  const note = t => { $('log').textContent += t + '\n'; };
+  $('close').onclick = () => { window.close(); setTimeout(() => note('Close tapped: still here (window.close() did nothing).'), 400); };
+  // A, C and D: close itself on the way out
+  if (m !== 'b') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') window.close(); else note('Back again: closing on the way out did nothing.'); });
+</script>
+</body>
+</html>
