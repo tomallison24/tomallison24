@@ -179,7 +179,7 @@
   const STAR = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
   const icon = id => `../${id}/icon-512.png`;
   const appUrl = id => new URL(`../${id}/`, location.href).href;
-  const v = D.latest();
+  const v = D.shown();   // a silent release is only in the log below
 
   // the mark
   $('mark').innerHTML = `<span class="ink">aOS</span><sup class="ink">${esc(v)}</sup>${STAR}${STAR}${STAR}`;
@@ -190,7 +190,7 @@
   $('count').textContent = D.APPS.length + ' apps';
   // each app's own colour, from its icon, for the glow behind its tile
   const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', house: '125,105,245' };
-  const now = D.RELEASES[0];
+  const now = D.RELEASES.find(r => !r.silent) || D.RELEASES[0];
   const changed = id => { const e = D.entry((now.apps || {})[id]); return e.highlights.length + e.notes.length > 0; };
   const sub = id => changed(id) ? `New in aOS<sup>${esc(now.v)}</sup>` : esc((D.TOURS[id] || {}).tag || '');
   $('apps').innerHTML = D.APPS.map(id => `<div class="agw" style="--c:${HUE[id] || '190,194,204'}"><i class="ag-glow"></i>

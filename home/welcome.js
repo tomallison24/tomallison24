@@ -65,6 +65,9 @@
   //   apps        { weather: { highlights: [...], notes: [...] } } - what changed in
   //               each app; a plain list is all notes
   //   cards       (major only) aOS's own setup cards after the new mark
+  //   silent      true: logged in aOS's What's new, but nowhere else - the apps keep
+  //               showing the last version that wasn't silent, and no update
+  //               screen plays for it
   // What shows where:
   //   major (aOS2)   aOS: the name, the new mark, then its cards (or highlights).
   //                  Every app: the new number rising in, the release's highlights
@@ -74,7 +77,7 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '1.1', date: '2026-10-07', title: 'Your family account',
+    { v: '1.1', date: '2026-10-07', title: 'Your family account', silent: true,
       highlights: ['Family accounts: Face ID signs you in to every app', 'Calendar and Travel only answer your family now'],
       notes: ['The owner invites family from aOS, with a link good once for 24 hours', 'Removing someone signs them out of every app'],
       apps: {
@@ -387,6 +390,7 @@
   const cmp = (a, b) => { const A = parts(a), B = parts(b); for (let i = 0; i < Math.max(A.length, B.length); i++) { const d = (A[i] || 0) - (B[i] || 0); if (d) return d; } return 0; };
   const major = v => parts(v)[0];
   const latest = () => RELEASES[0].v;   // one number for everything
+  const shown = () => (RELEASES.find(r => !r.silent) || RELEASES[0]).v;   // what the apps show: the newest that isn't silent
   const supV = v => `aOS<sup>${esc(v)}</sup>`;
   // What this device has seen: { app: the aOS version it last showed }. An app
   // on the Home Screen keeps its own storage, so each install counts for itself.
@@ -1025,12 +1029,12 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   // THE FLOWS
   // ===========================================================================
   // aOS, the first time: the AllisonOS name, the aOS mark, the apps, the tour.
-  const play = () => { const v = latest(); return run('Welcome to AllisonOS', BRAND + MARK(v), () => markSeen('aos', v), async o => {
+  const play = () => { const v = shown(); return run('Welcome to AllisonOS', BRAND + MARK(v), () => markSeen('aos', latest()), async o => {
     o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o); await tour(o, OS_TOUR());
   }); };
   // aOS, after a major update: the name and the new mark, then that release's cards.
-  const playMajor = () => { const v = latest(), r = RELEASES[0]; return run(`aOS${v}`, BRAND + MARK(v), () => markSeen('aos', v), async o => {
+  const playMajor = () => { const v = shown(), r = RELEASES.find(x => !x.silent) || RELEASES[0]; return run(`aOS${v}`, BRAND + MARK(v), () => markSeen('aos', latest()), async o => {
     o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o);
     await tour(o, r.cards && r.cards.length ? r.cards : [{ x: 'notes', i: 'sparkle', h: esc(r.title || `aOS${v}`), notes: top([r], 5) }], 'Done');
@@ -1042,7 +1046,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   //     "Visit aOS" for what's new.
   function playUpdate(id, from, to = latest()) {
     const big = major(to) > major(from);
-    const fresh = RELEASES.filter(r => cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);
+    const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only in aOS's log
     const notes = big ? top(fresh) : top(fresh.map(r => (r.apps || {})[id]).filter(Boolean));
     if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
     const base = big ? '' : String(major(to)), newT = String(to).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
@@ -1080,16 +1084,16 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   const DARK_ONLY = ['weather'];   // drawn for dark only, like the iPhone's own Weather: no Light or dark card
   function playApp(id) {
     const T = TOURS[id]; if (!T) return Promise.resolve();
-    const v = latest(), name = NAMES[id];
+    const v = shown(), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
       <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
     // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
     // last: each app on the Home Screen keeps its own settings, so each one asks.
     const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
-    return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
+    return run(`Welcome to ${name}`, head, () => markSeen(id, latest()), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
 
   // ---- deciding what to show, once ----
   function auto() {
@@ -1098,6 +1102,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     // In Safari: how to add it. From the Home Screen: the welcome, walkthrough or update.
     if (ios && (!standalone() || viaAOS())) return playInstall(APP);
     const v = latest(), s = seen[APP];
+    // only silent releases since: note them as seen and say nothing
+    if (s && cmp(v, s) > 0 && RELEASES.filter(r => cmp(r.v, s) > 0 && cmp(r.v, v) <= 0).every(r => r.silent)) { markSeen(APP, v); return; }
     if (APP === 'aos') {
       if (!s) return play();
       if (major(v) > major(s)) return playMajor();

@@ -30,6 +30,8 @@ notice, add a line for it:
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
   list is all notes). An app a minor release doesn't mention shows no update
   screen.
+- `silent: true` on an entry: it's only logged in aOS's What's new; the apps
+  keep showing the last version that wasn't silent, with no update screens.
 
 ## Layout
 
