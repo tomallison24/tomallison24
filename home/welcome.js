@@ -546,10 +546,11 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'Mail, Calendar, News, Weather, Notes, Podcasts, Travel, Places, Fitness and Home, side by side.' },
+    { noart: true, t: 'Everything in one place', d: 'Mail, Calendar, News, Weather, Notes, Podcasts, Travel, Places, Fitness and Home, side by side. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'swipe', t: 'Swipe up to come home', d: 'In an app opened from the AllisonOS home screen, swipe up from just above the bottom edge to come back to it. Press and hold the home screen for Settings.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
-    { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep AllisonOS always light or always dark. You can change it later in Settings.' },
+    { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: arrange and hide your apps, choose your dock or let it fill with what you use most, and set up each app your way.' },
+    { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep it always light or always dark. Change it any time in Settings.' },
     { i: 'lock', t: 'Yours alone', d: 'What you set up stays on this phone.' },
     ...(standalone() ? [] : [{ x: 'install', noart: true, t: 'Add it to your Home Screen', name: APP === 'aos' ? 'aOS' : 'AllisonOS', icon: icon(APP === 'aos' ? 'aos' : 'home') }]),
     APP === 'aos'
@@ -597,6 +598,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
     swipe: '<rect x="18" y="4" width="28" height="56" rx="7"/><path d="M26 52h12"/><path d="M32 40V18M24 26l8-8 8 8"/>',
     grid: '<rect x="8" y="8" width="18" height="18" rx="5"/><rect x="38" y="8" width="18" height="18" rx="5"/><rect x="8" y="38" width="18" height="18" rx="5"/><rect x="38" y="38" width="18" height="18" rx="5"/>',
     refresh: '<path d="M50 30a18 18 0 0 1-31 13"/><path d="M14 34a18 18 0 0 1 31-13"/><path d="M45 11v10H35"/><path d="M19 53V43h10"/>',
+    sliders: '<path d="M10 18h7M27 18h27M10 32h27M47 32h7M10 46h13M33 46h21"/><circle cx="22" cy="18" r="5"/><circle cx="42" cy="32" r="5"/><circle cx="28" cy="46" r="5"/>',
     moon: '<circle cx="32" cy="32" r="22"/><path d="M32 10a22 22 0 0 1 0 44z" fill="currentColor"/>',
     share: '<path d="M22 22h-8v34h36V22h-8"/><path d="M32 40V6M23 15l9-9 9 9"/>',
     plus: '<rect x="12" y="12" width="40" height="40" rx="11"/><path d="M32 23v18M23 32h18"/>',
@@ -702,6 +704,33 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .v-star:nth-of-type(3) { right: -44px; top: 2px; width: 10px; height: 10px; animation-delay: 1.9s !important; }
 #aos-welcome .v-star:nth-of-type(4) { left: -18px; bottom: -6px; width: 8px; height: 8px; animation-delay: 2.4s !important; }
 @keyframes v-twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 18% { opacity: .95; transform: scale(1) rotate(45deg); } 40% { opacity: 0; transform: scale(.4) rotate(90deg); } }
+/* a minor update: the new .x rises in after the major number and lights up */
+#aos-welcome .v-mark.minor .v-ring { animation: none; right: auto; left: calc(var(--rx, 100%) - 35px); }
+#aos-welcome .v-mark.minor.grow .v-ring { animation: v-ring 1.1s cubic-bezier(.2,.8,.2,1) .75s forwards; }
+#aos-welcome .v-tail { display: inline-block; position: relative; white-space: nowrap; }
+#aos-welcome .v-old, #aos-welcome .v-new { display: inline-block; vertical-align: baseline; transition: width .55s cubic-bezier(.2,.8,.2,1), opacity .3s, transform .45s cubic-bezier(.4,0,.2,1); }
+#aos-welcome .v-new { position: relative; width: 0; }
+#aos-welcome .v-new::after { content: ''; position: absolute; left: .08em; right: -.02em; bottom: -.12em; height: .12em; border-radius: 999px; transform: scaleX(0); transform-origin: left;
+  background: linear-gradient(90deg, #FF8FC0, #B48CFF, #6FC8FF); box-shadow: 0 0 10px rgba(180,140,255,.7); transition: transform .6s cubic-bezier(.2,.8,.2,1) .95s; }
+#aos-welcome .v-mark.grow .v-new::after { transform: none; }
+#aos-welcome .v-mark.grow .v-old { opacity: 0; transform: translateY(-.55em) scale(.7); }
+#aos-welcome .v-new i { display: inline-block; font-style: normal; opacity: 0; transform: translateY(.75em) scale(.35); filter: blur(5px);
+  background: linear-gradient(135deg, #FF8FC0 0%, #B48CFF 50%, #6FC8FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  transition: opacity .3s, transform .7s cubic-bezier(.34,1.7,.5,1), filter .5s; }
+#aos-welcome .v-mark.grow .v-new i { opacity: 1; transform: none; filter: drop-shadow(0 0 10px rgba(180,140,255,.75)); }
+#aos-welcome .v-mark.grow .v-new i:nth-child(1) { transition-delay: .3s; }
+#aos-welcome .v-mark.grow .v-new i:nth-child(2) { transition-delay: .42s; }
+#aos-welcome .v-mark.grow .v-new i:nth-child(3) { transition-delay: .54s; }
+#aos-welcome .v-mark.lit .v-new i { animation: v-hot 2.4s ease-in-out infinite; }
+@keyframes v-hot { 0%, 100% { filter: drop-shadow(0 0 6px rgba(180,140,255,.55)); } 50% { filter: drop-shadow(0 0 16px rgba(255,143,192,.9)); } }
+#aos-welcome .v-halo { position: absolute; left: 50%; top: 55%; width: 2.6em; height: 1.6em; margin: -.8em 0 0 -1.3em; border-radius: 50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(196,150,255,.7), rgba(255,143,192,.3) 60%, transparent); filter: blur(6px); opacity: 0; transform: scale(.2); }
+#aos-welcome .v-mark.grow .v-halo { animation: v-halo 1.6s cubic-bezier(.2,.8,.2,1) .45s forwards; }
+@keyframes v-halo { 0% { opacity: 0; transform: scale(.2); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: .55; transform: scale(1); } }
+#aos-welcome .c-body h2 sup { white-space: nowrap; }
+#aos-welcome .h-new { display: inline-block; background: linear-gradient(135deg, #FF8FC0 0%, #B48CFF 50%, #6FC8FF 100%); -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent; animation: h-new .8s cubic-bezier(.34,1.7,.5,1) .35s both; }
+@keyframes h-new { 0% { opacity: 0; transform: translateY(.5em) scale(.4); } 100% { opacity: 1; transform: none; } }
 #aos-welcome .v-power { margin-top: 18px; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--w-muted); opacity: 0; transition: opacity .8s; }
 #aos-welcome .v-power.on { opacity: 1; }
 #aos-welcome .v-power sup { font-size: .75em; letter-spacing: 0; }
@@ -762,6 +791,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 @media (prefers-reduced-motion: reduce) {
   #aos-welcome *, #aos-welcome *::before, #aos-welcome *::after { animation: none !important; transition-duration: .2s !important; transition-delay: 0s !important; }
   #aos-welcome .c-art path, #aos-welcome .c-art rect, #aos-welcome .c-art circle { stroke-dashoffset: 0; }
+  #aos-welcome .v-new i { opacity: 1; transform: none; filter: none; }
 }`;
 
   // ---- the overlay ----
@@ -915,7 +945,17 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
       q('.c-back').hidden = i === 0;
       q('.c-btns .w-btn').textContent = i === cards.length - 1 ? last : 'Continue';
+      fit();
     };
+    // On a short screen (Safari with its bars) a card can reach up over the mark and
+    // "The Power of aOS1": then fade them, as tall cards do, rather than cover them.
+    const fit = () => {
+      if (!el.isConnected) return removeEventListener('resize', fit);
+      const p = q('.c-panel'), top = el.getBoundingClientRect().top + p.offsetTop;
+      const over = [...el.querySelectorAll('.m-power.on, .v-mark.on, .a-head, .c-word.on')].some(x => { const r = x.getBoundingClientRect(); return r.height && r.bottom > top - 6; });
+      el.classList.toggle('tall', cards[i].x === 'install' || !!cards[i].tall || over);
+    };
+    addEventListener('resize', fit);
     const go = async d => {
       if (i + d >= cards.length) return close();
       if (i + d < 0) return;
@@ -949,13 +989,26 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const notes = fresh.flatMap(r => r.notes || []);
     const cards = id === 'aos' ? [] : fresh.flatMap(r => r.cards || []);
     if (id !== 'aos' && !cards.length && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
+    // aOS1 -> aOS1.1: the major number stays, the old .x (if any) lifts away and the new .x rises in, lit
+    const base = String(major(to)), tailOf = v => String(v || '').slice(base.length), oldT = String(major(from || to)) === base ? tailOf(from) : '', newT = tailOf(to);
     const head = id === 'aos'
-      ? `<div class="v-wrap" style="top:34%"><div class="v-mark on drop"><span class="v-ink">aOS</span><sup class="v-ink">${esc(to)}</sup><i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span></div></div>`
+      ? `<div class="v-wrap" style="top:34%"><div class="v-mark minor on drop"><span class="v-ink">aOS</span><sup><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup><i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span></div></div>`
       : `<div class="w-stage" style="justify-content:flex-start;padding-top:18vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt=""></div></div>`;
     const first = id === 'aos'
-      ? { x: 'notes', noart: true, h: `${supV(from || major(to))} updated to ${supV(to)}`, d: 'More power in your palm.', notes }
+      ? { x: 'notes', noart: true, h: `${supV(from || major(to))} updated to aOS<sup>${esc(base)}<span class="h-new">${esc(newT)}</span></sup>`, d: 'More power in your palm.', notes }
       : { x: notes.length ? 'notes' : null, noart: true, h: `What's new in ${esc(NAMES[id])}`, d: `${NAMES[id]} ${to}`, notes };
-    return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => { await wait(300); await tour(o, [first, ...cards], 'Done'); });
+    return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
+      const m = o.el.querySelector('.v-mark.minor');
+      if (m) {   // the reveal, then the card
+        const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('sup');
+        ow.style.width = ow.scrollWidth + 'px'; const w = [...nw.querySelectorAll('i:not(.v-halo)')].reduce((a, i) => a + i.offsetWidth, 0);
+        await wait(still() ? 0 : 650);
+        m.style.setProperty('--rx', (sup.offsetLeft + sup.offsetWidth - ow.offsetWidth + w - nw.offsetWidth) + 'px');
+        nw.style.width = w + 'px'; ow.style.width = '0px'; m.classList.add('grow');
+        await wait(still() ? 0 : 1300); m.classList.add('lit');
+      } else await wait(300);
+      await tour(o, [first, ...cards], 'Done');
+    });
   }
   // An app's own walkthrough.
   function playApp(id) {
