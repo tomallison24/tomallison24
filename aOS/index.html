@@ -179,7 +179,7 @@
   const STAR = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
   const icon = id => `../${id}/icon-512.png`;
   const appUrl = id => new URL(`../${id}/`, location.href).href;
-  const v = D.shown();   // a silent release is only in the log below
+  const v = D.shown();   // a silent release is only logged in welcome.js, shown nowhere
 
   // the mark
   $('mark').innerHTML = `<span class="ink">aOS</span><sup class="ink">${esc(v)}</sup>${STAR}${STAR}${STAR}`;
@@ -203,7 +203,7 @@
   // the log, by version: the highlights (starred), the rest, then each app's changes
   const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
   const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
-  $('rels').innerHTML = D.RELEASES.map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
+  $('rels').innerHTML = D.RELEASES.filter(r => !r.silent).map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
     ${r.title ? `<p class="rt">${esc(r.title)}</p>` : ''}${block(r) ? `<ul>${block(r)}</ul>` : ''}
     ${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h4>${esc(D.NAMES[id] || id)}</h4><ul>${block(x)}</ul>` : '').join('')}</div>`).join('');
 
@@ -274,7 +274,9 @@
       <p>Every app signs in with Face ID; Calendar and Travel only answer the family.</p>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(); };
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<hr><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
+    box.insertAdjacentHTML('beforeend', `<hr><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
+      <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div>
+      <hr><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div>
       <div class="fam" id="fam"></div>`);
     $('iGo').onclick = async () => {
@@ -290,6 +292,13 @@
       busy($('iGo'), false);
     };
     paintFamily();
+    ACC.call('home').then(r => { if (r.address && !$('hAddr').value) $('hAddr').value = r.address; }).catch(() => {});
+    $('hSave').onclick = async () => {
+      busy($('hSave'), true); const m = $('hErr'); m.textContent = ''; m.style.color = '';
+      try { const r = await ACC.call('home', { address: $('hAddr').value.trim() }); $('hAddr').value = r.address || ''; m.style.color = 'var(--muted)'; m.textContent = r.address ? 'Saved: Home fills this in for the family.' : 'Cleared.'; }
+      catch (e) { m.textContent = e.message === 'address' ? 'Use the https address, like https://xxxxxxxx.ui.nabu.casa.' : why(e); }
+      busy($('hSave'), false);
+    };
   }
 
   async function paintFamily() {

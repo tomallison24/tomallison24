@@ -757,6 +757,7 @@
       <form class="view" id="haForm" autocomplete="off" hidden>
         <label class="field"><span>Address</span>
           <input id="haUrl" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" spellcheck="false" autocapitalize="off"></label>
+        <button type="button" class="linkbtn" id="haFam" hidden>Use your family's address (Face ID)</button>
         <label class="field"><span>Long-lived access token</span>
           <input id="haToken" type="password" placeholder="Paste the token" spellcheck="false" autocapitalize="off"></label>
         <div class="status hastatus" id="haStatus"></div>
@@ -2167,9 +2168,26 @@ function showView(v) {
     $('haToken').value = '';
     $('haToken').placeholder = s.token ? 'Saved. Leave blank to keep it' : 'Paste the token';
     $('haCancel').hidden = !s.token;
+    famFill(false);
   }
   syncSheet();
 }
+
+// The family's Home Assistant address, from aOS (the owner sets it there, under Your
+// account): filled in while the box is empty, so a new person only needs their own
+// token. Signed out, it's offered as a button, since Face ID needs a tap.
+const FAM_URL = new URL('../aOS/api/home', location.href).href;
+async function famFill(ask) {
+  const A = window.AllisonOS && AllisonOS.account, b = $('haFam');
+  b.hidden = true;
+  if (!A || saved().url || $('haUrl').value.trim()) return;
+  if (!ask && !A.token()) { b.hidden = false; return; }
+  let a = null;
+  try { const r = await A.fetch(FAM_URL, { cache: 'no-store' }); if (r.ok) a = (await r.json()).address || null; } catch {}
+  if (a) { if (!$('haUrl').value.trim()) $('haUrl').value = a; return; }
+  if (ask) { b.hidden = false; b.textContent = 'No family address yet: the owner adds it in aOS'; }
+}
+$('haFam').onclick = () => famFill(true);
 
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 const PIN = {
@@ -2546,6 +2564,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 <script src="../weather/data.js"></script>   <!-- the Weather app's data, for the weather pill -->
 <script src="favorites.js"></script>
 <script src="bg.js"></script>
+<script src="../home/account.js" defer></script>   <!-- the family account: fills in the family's Home Assistant address -->
 <script src="../home/welcome.js" data-app="house" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>

@@ -26,9 +26,9 @@ At the top of `RELEASES` in `home/welcome.js` (newest first):
   `cards` (or its highlights). Every app shows the new number rising in, the
   release's highlights and **Open aOS** for the rest.
 - A patch with nothing to announce (`1.0.1`, no `apps`) shows nothing anywhere.
-- `silent: true`: released and logged in aOS's **What's new**, but the apps keep
-  showing the last version that wasn't silent (aOS1.1 silent: they still say
-  aOS1), and no update screen plays for it.
+- `silent: true`: released and logged here (`RELEASES`), but shown nowhere: not
+  in aOS's **What's new**, and the apps keep showing the last version that
+  wasn't silent (aOS1.1 silent: they still say aOS1), with no update screen.
 
 Merge it with the changes it describes.
 
@@ -66,6 +66,11 @@ once the Cloudflare token is allowed to:
 Until then accounts stay off and everything works as before. After a release,
 the owner opens aOS, enters the owner code and their name, and makes their
 passkey; from that moment the lock is on.
+
+The owner can then save the family's Home Assistant address (aOS → Your account
+→ **Home Assistant address**, the Nabu Casa one). It's kept in that storage, not
+in the repository, and only signed-in family can read it: Home fills it in for
+them, so each person only makes their own token.
 
 ## The log
 
