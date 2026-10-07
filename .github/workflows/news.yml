@@ -49,6 +49,7 @@ on:
       - 'aOS/**'
       - 'labs/**'
       - 'functions/**'
+      - 'server/**'
       - '.github/workflows/news.yml'
 
 permissions:
