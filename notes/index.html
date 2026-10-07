@@ -1099,6 +1099,7 @@ svg.fs{fill:currentColor}
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
+<script src="../home/account.js"></script>   <!-- family accounts: signs "Add to calendar" in -->
 <script src="../home/slide.js"></script>
 <script src="aisles.js"></script>
 <script>
@@ -2053,7 +2054,7 @@ svg.fs{fill:currentColor}
     const text = icsFor(t);
     if (calAvail !== false) {
       try {
-        const r = await fetch(new URL('../calendar/api/import', location.href).href, { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
+        const r = await (window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch : (u, o) => fetch(u, o))(new URL('../calendar/api/import', location.href).href, { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'text/calendar; charset=utf-8' }, body: text, cache: 'no-store' });
         let d = null; try { d = await r.json(); } catch(e) {}
         if (r.ok && d && d.ok) { calAvail = true; toast('Added to the ' + (d.calendar && d.calendar.name || 'Family') + ' calendar'); return; }
         if (r.status === 404 || (d && d.error === 'no-account')) calAvail = false;

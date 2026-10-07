@@ -1,7 +1,7 @@
 // Offline shell for the Fitness app. Same-origin files load network-first, so
 // a new deploy shows up on the next open and the cache is only the fallback.
 // The log itself never passes through here: it lives in this phone's storage.
-const CACHE = 'fitness-v14';
+const CACHE = 'fitness-v15';
 const SHELL = ['./', 'index.html', 'app.js', 'analysis.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/slide.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {

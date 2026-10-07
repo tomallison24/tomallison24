@@ -123,6 +123,25 @@
   .foot { text-align: center; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 34px; }
 
   .note { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  /* your account: family accounts with passkeys (../home/account.js) */
+  .acct { padding: 16px; }
+  .acct h3 { margin: 0 0 4px; font-size: 17px; }
+  .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
+  .acct input { display: block; width: 100%; height: 46px; margin-top: 10px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--dot); color: var(--text); font-family: inherit; font-size: 17px; }
+  .acct .go, .acct .soft { display: block; width: 100%; height: 48px; margin-top: 12px; border-radius: 999px; font-size: 17px; font-weight: 600; }
+  .acct .go { background: var(--accent); color: #fff; }
+  .acct .soft { background: var(--dot); color: var(--text); }
+  .acct .row2 { display: flex; gap: 10px; } .acct .row2 > * { flex: 1; }
+  .acct .err { min-height: 18px; margin-top: 8px; font-size: 14px; color: #D9534F; }
+  .acct .link { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--dot); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all; -webkit-user-select: all; }
+  .acct .who { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .acct .who b { font-size: 17px; }
+  .acct .who small { color: var(--muted); }
+  .acct .fam { margin-top: 14px; border-top: .5px solid var(--edge); }
+  .acct .fam div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: .5px solid var(--edge); }
+  .acct .fam small { color: var(--muted); margin-left: 6px; }
+  .acct .fam button { color: #D9534F; font-size: 15px; font-weight: 600; }
+  .acct hr { border: 0; border-top: .5px solid var(--edge); margin: 16px 0 12px; }
   @media (prefers-reduced-motion: reduce) { .ink, .star { animation: none; } .star { opacity: 0; } }
 </style>
 </head>
@@ -134,6 +153,9 @@
     <div class="power" id="power"></div>
     <button class="replay" id="replay" type="button">Replay the welcome</button>
   </section>
+
+  <h2>Your account</h2>
+  <div class="group acct" id="acct"><p class="note">Checking…</p></div>
 
   <h2>Apps <small id="count"></small></h2>
   <div class="tiles" id="apps"></div>
@@ -147,6 +169,7 @@
   <p class="foot">Part of the Allison Corporation</p>
 </main>
 
+<script src="../home/account.js"></script>
 <script src="../home/welcome.js" data-app="aos" data-auto></script>
 <script>
 'use strict';
@@ -190,6 +213,97 @@
   $('theme').onclick = e => { const b = e.target.closest('button'); if (b) { W.theme.set(b.dataset.t); paintSeg(); } };
   paintSeg();
 
+  // ---- your account: family accounts with passkeys (Face ID) ----
+  // The owner sets up once with the owner code; everyone else joins with an
+  // invite link (#invite=...), opened in Safari: the account is made there, then
+  // aOS shows how to add it to the Home Screen. Every app signs in with Face ID.
+  const ACC = AllisonOS.account;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const invite = (/[#&]invite=([A-Za-z0-9_-]+)/.exec(location.hash) || [])[1] || null;
+  if (invite) { try { sessionStorage.setItem('aos.later.aos', '1'); } catch {} }   // the account first, then how to add aOS
+  const WHY = { code: 'That code isn\'t right.', invite: 'This invite has expired or was already used. Ask for a new one.', name: 'Use letters and spaces for your name.',
+    storage: 'Family accounts aren\'t switched on yet.', 'owner-exists': 'The owner\'s account already exists: sign in instead.', unknown: 'That account isn\'t in the family any more.',
+    NotAllowedError: 'Cancelled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.' };
+  const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
+  const box = $('acct');
+  const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
+
+  async function paintAccount() {
+    let st;
+    try { st = await ACC.call('state'); } catch { box.innerHTML = '<p>Accounts can\'t be reached right now.</p>'; return; }
+    if (!st.storage) { box.innerHTML = '<h3>Family accounts</h3><p>Not switched on yet: the site needs its account storage on Cloudflare (aOS/RELEASING.md).</p>'; return; }
+    if (!st.user && ACC.token()) ACC.signOut();   // removed from the family, or a stale session
+    if (st.user) return paintSignedIn(st.user);
+    if (invite) {
+      box.innerHTML = `<h3>Join the family</h3><p>You've been invited to AllisonOS. Your account is a passkey: Face ID signs you in to every app.</p>
+        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create my account</button><div class="err" id="aErr"></div>`;
+      $('aGo').onclick = async () => {
+        busy($('aGo'), true);
+        try {
+          await ACC.signUp({ name: $('aName').value.trim(), invite });
+          history.replaceState(null, '', location.pathname);
+          try { sessionStorage.removeItem('aos.later.aos'); } catch {}
+          await paintAccount();
+          if (iphone && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen
+        } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
+      };
+      return;
+    }
+    if (!st.setup) {
+      box.innerHTML = `<h3>Set up your family account</h3><p>Once, by the owner: enter your owner code and your name, then Face ID.</p>
+        <input id="aCode" placeholder="Owner code" autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create the owner account</button><div class="err" id="aErr"></div>`;
+      $('aGo').onclick = async () => {
+        busy($('aGo'), true);
+        try { await ACC.signUp({ name: $('aName').value.trim(), code: $('aCode').value }); await paintAccount(); }
+        catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
+      };
+      return;
+    }
+    box.innerHTML = `<h3>Sign in</h3><p>With the passkey you made when you joined.</p><button type="button" class="go" id="aGo">Continue with Face ID</button><div class="err" id="aErr"></div>
+      <p class="note">New here? Ask the owner for an invite link.</p>`;
+    $('aGo').onclick = async () => {
+      busy($('aGo'), true);
+      try { await ACC.signIn(); await paintAccount(); } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
+    };
+  }
+
+  async function paintSignedIn(u) {
+    box.innerHTML = `<div class="who"><span><b>${esc(u.name)}</b> <small>${u.role === 'owner' ? 'Owner' : 'Family'}</small></span><button type="button" class="soft" id="aOut" style="width:auto;height:36px;margin:0;padding:0 16px;font-size:15px">Sign out</button></div>
+      <p>Every app signs in with Face ID; Calendar and Travel only answer the family.</p>`;
+    $('aOut').onclick = () => { ACC.signOut(); paintAccount(); };
+    if (u.role !== 'owner') return;
+    box.insertAdjacentHTML('beforeend', `<hr><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
+      <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div>
+      <div class="fam" id="fam"></div>`);
+    $('iGo').onclick = async () => {
+      busy($('iGo'), true); $('iErr').textContent = '';
+      try {
+        const r = await ACC.call('invite', { name: $('iName').value.trim() });
+        const link = new URL('./#invite=' + r.token, location.href).href;
+        $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
+        $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari.', url: link }).catch(() => {}) : $('iCopy').click();
+        $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
+        $('iName').value = '';
+      } catch (e) { $('iErr').textContent = why(e); }
+      busy($('iGo'), false);
+    };
+    paintFamily();
+  }
+
+  async function paintFamily() {
+    let f; try { f = (await ACC.call('family')).family; } catch { return; }
+    $('fam').innerHTML = f.map(m => `<div><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : 'Family'}</small></span>${m.role === 'owner' ? '' : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
+    $('fam').onclick = async e => {
+      const b = e.target.closest('[data-rm]'); if (!b) return;
+      const name = b.parentElement.querySelector('span').firstChild.textContent;
+      if (!confirm(`Remove ${name}? They're signed out of every app straight away.`)) return;
+      try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
+      paintFamily();
+    };
+  }
+  paintAccount();
 })();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>

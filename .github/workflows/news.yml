@@ -160,6 +160,30 @@ jobs:
           # radar run time, /weather/api/*) as Pages Functions.
           mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness aOS aos _site/ && if [ -d labs ]; then cp -r labs _site/; fi
           npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
+          # Family accounts (server/auth.js, functions/aOS/api): a Workers KV
+          # namespace, "allisonos-accounts", bound to the Pages project as
+          # ACCOUNTS. Needs the token to have Account > Workers KV Storage >
+          # Edit; without it accounts stay off and the site works as before
+          # (aOS/RELEASING.md, "Family accounts"). Bound before the secrets
+          # below are put, and before the deploy, which picks the binding up.
+          cf="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          find_kv() { curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$cf/storage/kv/namespaces?per_page=100" | node -e '
+            let s = ""; process.stdin.on("data", d => s += d).on("end", () => { let j = {}; try { j = JSON.parse(s); } catch {}
+              if (!j.success) process.exit(2);
+              const n = (j.result || []).find(x => x.title === "allisonos-accounts"); if (!n) process.exit(1); console.log(n.id); });'; }
+          kv_rc=0; kv_id=$(find_kv) || kv_rc=$?
+          if [ "$kv_rc" = 1 ]; then
+            curl -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" "$cf/storage/kv/namespaces" -d '{"title":"allisonos-accounts"}' >/dev/null || true
+            kv_rc=0; kv_id=$(find_kv) || kv_rc=$?
+          fi
+          if [ "$kv_rc" != 0 ] || [ -z "$kv_id" ]; then
+            echo "::warning::Family accounts are off: the Cloudflare token can't use Workers KV. Give it Account > Workers KV Storage > Edit (aOS/RELEASING.md, Family accounts)."
+          else
+            bound=$(curl -sS -X PATCH -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" "$cf/pages/projects/tomallison24-news" \
+              -d "{\"deployment_configs\":{\"production\":{\"kv_namespaces\":{\"ACCOUNTS\":{\"namespace_id\":\"$kv_id\"}}}}}" \
+              | node -e 'let s = ""; process.stdin.on("data", d => s += d).on("end", () => { try { console.log(JSON.parse(s).success ? "yes" : "no"); } catch { console.log("no"); } });') || bound=no
+            if [ "$bound" = yes ]; then echo "Family accounts: storage bound ($kv_id)"; else echo "::warning::Couldn't bind the accounts storage to the Pages project (the token needs Account > Cloudflare Pages > Edit)."; fi
+          fi
           # Travel's live flight status key (travel/README.md, "Live flight
           # status"), handed to the Pages project as a secret. Skipped until
           # the AERODATABOX_KEY repository secret exists.
