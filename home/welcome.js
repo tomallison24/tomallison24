@@ -77,6 +77,8 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.2', date: '2026-10-08', title: 'Straight back to aOS', silent: true,
+      notes: ['An app opened from aOS shows only how to add it: tap ✕ to go back to aOS'] },
     { v: '1.1', date: '2026-10-07', title: 'Your family account', silent: true,
       highlights: ['Family accounts: Face ID signs you in to every app', 'Calendar and Travel only answer your family now'],
       notes: ['The owner invites family from aOS, with a link good once for 24 hours', 'Removing someone signs them out of every app'],
@@ -439,7 +441,7 @@
   function steps(name) {
     if (installEvt) return `<p>Add ${esc(name)} to this device, so it opens on its own like any other app.</p><button class="w-btn c-install" type="button">Install</button>`;
     if (!ios) return `<p>Use your browser's <b>Install</b> or <b>Add to Home Screen</b> option, in its menu, to keep ${esc(name)} on this device like an app.</p>`;
-    return `<div class="c-sd"></div>${viaAOS() ? `<p class="c-via">Opened from aOS? Use the <b>Share</b> button in this view, then <b>Add to Home Screen</b>. If it isn't there, open the page in Safari first.</p>` : ''}`;   // filled by safariDemo() once drawn
+    return `<div class="c-sd"></div>${viaAOS() ? `<p class="c-via">Use the <b>Share</b> button in this view, then <b>Add to Home Screen</b>. Then tap <b>✕</b> at the top to go back to aOS.</p>` : ''}`;   // filled by safariDemo() once drawn
   }
 
   // ===========================================================================
@@ -843,7 +845,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .c-btns { display: flex; gap: 10px; }
 #aos-welcome .w-btn { flex: 1; height: 52px; border-radius: 999px; font-size: 17px; font-weight: 600; color: #fff !important; background: #0A84FF !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), inset 0 1px 1px rgba(255,255,255,.5); }
 #aos-welcome .c-back { flex: 0 0 52px; height: 52px; border-radius: 50%; background: var(--w-dot) !important; font-size: 22px; }
-#aos-welcome .c-back[hidden] { display: none; }
+#aos-welcome .c-back[hidden], #aos-welcome .w-btn[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #aos-welcome *, #aos-welcome *::before, #aos-welcome *::after { animation: none !important; transition-duration: .2s !important; transition-delay: 0s !important; }
   #aos-welcome .c-art path, #aos-welcome .c-art rect, #aos-welcome .c-art circle { stroke-dashoffset: 0; }
@@ -1001,6 +1003,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
       q('.c-back').hidden = i === 0;
       q('.c-btns .w-btn').textContent = i === cards.length - 1 ? last : 'Continue';
+      q('.c-btns .w-btn').hidden = !!c.stay;   // stays until the view is closed (opened from aOS)
       fit();
     };
     // On a short screen (Safari with its bars) a card can reach up over the mark and
@@ -1013,6 +1016,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     };
     addEventListener('resize', fit);
     const go = async d => {
+      if (cards[i].stay && i + d >= cards.length) return;
       if (i + d >= cards.length) return close();
       if (i + d < 0) return;
       body.classList.add('fade'); await wait(260);
@@ -1071,13 +1075,16 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   }
   // An app opened in Safari on iPhone, not from its Home Screen icon: how to add it.
   // "Not now" lets it be used in the browser; it asks again in a new tab.
+  // Opened from aOS (the in-app Safari view an app tile opens), the steps stay, with
+  // no Not now: the only way out is the view's ✕, back to aOS's tiles. So that view
+  // never shows the app itself, and coming back to aOS later lands on aOS.
   function playInstall(id = APP) {
-    const k = 'aos.later.' + id;
-    try { if (sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
+    const k = 'aos.later.' + id, stay = viaAOS() && id !== 'aos';
+    try { if (!stay && sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
     const name = NAMES[id] || 'aOS';
     return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
       o.q('.w-skip').hidden = true;
-      await tour(o, [{ x: 'install', noart: true, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }], 'Not now');
+      await tour(o, [{ x: 'install', noart: true, stay, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }], 'Not now');
     });
   }
   // An app's own walkthrough.
