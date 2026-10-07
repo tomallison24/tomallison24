@@ -41,6 +41,9 @@ All of it is in `../home/welcome.js`, which every app loads with its own name
   way, and its notes. An app's update does the same under its icon: "Weather
   1.1" with the .1 rising in and lit, then what's new (an app going to a new
   major, 1.3 -> 2, has the whole number rise in).
+- **Each app in Safari** (iPhone, not opened from its Home Screen icon): how to add it - the same
+  animated Safari steps with its name and icon, and **Not now** (asks again in a new tab). The
+  check is `display-mode: standalone` (or `navigator.standalone`).
 - **Each app**: the first time it is opened (on iPhone, from the Home Screen), its own walkthrough - its icon
   and name with aOS¹ under it, then four or five cards on what it does (written from its
   README). After that app's own update, what's

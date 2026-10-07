@@ -34,6 +34,7 @@
   <p class="lede">aOS's welcome and update screens, played on demand. Nothing here is remembered. Skip ends each early; try light and dark mode too.</p>
   <button class="opt" data-d="first" type="button"><span class="k"><span class="tag">1</span><b>The AllisonOS welcome</b><small>The name in pastels, folding into aOS¹ with its shine, "The Power of aOS1", the apps bursting out, then the tour.</small></span><span class="play">▶</span></button>
   <button class="opt" data-d="minor" type="button"><span class="k"><span class="tag">.1</span><b>A minor update (example)</b><small>"aOS1 updated to aOS1.1. More power in your palm." with example notes.</small></span><span class="play">▶</span></button>
+  <button class="opt" data-d="install" type="button"><span class="k"><span class="tag">+</span><b>An app opened in Safari: Weather</b><small>On iPhone, an app opened in Safari rather than from its Home Screen icon shows how to add it.</small></span><span class="play">▶</span></button>
   <button class="opt" data-d="app" type="button"><span class="k"><span class="tag">W</span><b>An app's walkthrough: Weather</b><small>Each app has its own, the first time it is opened.</small></span><span class="play">▶</span></button>
 </main>
 <script src="welcome.js"></script>   <!-- no data-auto: nothing plays until asked -->
@@ -42,6 +43,7 @@
   for (const b of document.querySelectorAll('.opt')) b.onclick = () => {
     if (b.dataset.d === 'first') return W.play();
     if (b.dataset.d === 'app') return W.playApp('weather');
+    if (b.dataset.d === 'install') { try { sessionStorage.removeItem('aos.later.weather'); } catch {} return W.playInstall('weather'); }
     const R = W.data.RELEASES.aos;   // an example only, not kept
     if (!R.some(r => r.v === '1.1')) R.unshift({ v: '1.1', notes: ['An example note: something faster', 'Another: a new look somewhere'] });
     W.playUpdate('aos', '1', '1.1').then(() => { const k = R.findIndex(r => r.v === '1.1'); if (k >= 0) R.splice(k, 1); });
