@@ -38,7 +38,9 @@ All of it is in `../home/welcome.js`, which every app loads with its own name
   in after the 1 (the old .x lifting away, for 1.1 -> 1.2) in its own brighter
   gradient, with a glow, a ring, an underline sweep and a soft pulse; then
   "aOS1 updated to aOS1.1. More power in your palm." with the .1 lit the same
-  way, and its notes.
+  way, and its notes. An app's update does the same under its icon: "Weather
+  1.1" with the .1 rising in and lit, then what's new (an app going to a new
+  major, 1.3 -> 2, has the whole number rise in).
 - **Each app**: the first time it is opened, its own walkthrough - its icon
   and name with aOS¹ under it, then four or five cards on what it does (written from its
   README), and how to add it in a browser. After that app's own update, what's

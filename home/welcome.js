@@ -707,6 +707,9 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 /* a minor update: the new .x rises in after the major number and lights up */
 #aos-welcome .v-mark.minor .v-ring { animation: none; right: auto; left: calc(var(--rx, 100%) - 35px); }
 #aos-welcome .v-mark.minor.grow .v-ring { animation: v-ring 1.1s cubic-bezier(.2,.8,.2,1) .75s forwards; }
+#aos-welcome .v-app { margin-top: 26px; font-size: 40px; letter-spacing: -1px; }   /* an app's update: its name, then the version */
+#aos-welcome .v-app .v-name { color: var(--w-text); margin-right: .22em; }
+#aos-welcome .v-app .v-ring { top: -16px; }
 #aos-welcome .v-tail { display: inline-block; position: relative; white-space: nowrap; }
 #aos-welcome .v-old, #aos-welcome .v-new { display: inline-block; vertical-align: baseline; transition: width .55s cubic-bezier(.2,.8,.2,1), opacity .3s, transform .45s cubic-bezier(.4,0,.2,1); }
 #aos-welcome .v-new { position: relative; width: 0; }
@@ -937,7 +940,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       const extra = c.x === 'theme' ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`
         : c.x === 'store' ? `<a class="c-link" href="${url('../aos/')}">Open aOS</a>`
         : c.x === 'notes' ? `<ul class="c-notes">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
-      body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
+      body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
       for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
       const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('home'));
       const ib = body.querySelector('.c-install');
@@ -990,17 +993,24 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const cards = id === 'aos' ? [] : fresh.flatMap(r => r.cards || []);
     if (id !== 'aos' && !cards.length && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
     // aOS1 -> aOS1.1: the major number stays, the old .x (if any) lifts away and the new .x rises in, lit
-    const base = String(major(to)), tailOf = v => String(v || '').slice(base.length), oldT = String(major(from || to)) === base ? tailOf(from) : '', newT = tailOf(to);
+    // (an app going to a new major, Weather 1.3 -> 2, has no .x: the whole number rises in)
+    let base = String(major(to)), newT = String(to).slice(base.length);
+    if (!newT) { base = ''; newT = String(to); }
+    const oldT = base && String(major(from || to)) === base ? String(from || '').slice(base.length) : '';
+    const ver = tag => `<${tag} class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></${tag}>`;
+    const deco = `<i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span>`;
     const head = id === 'aos'
-      ? `<div class="v-wrap" style="top:34%"><div class="v-mark minor on drop"><span class="v-ink">aOS</span><sup><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup><i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span></div></div>`
-      : `<div class="w-stage" style="justify-content:flex-start;padding-top:18vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt=""></div></div>`;
+      ? `<div class="v-wrap" style="top:34%"><div class="v-mark minor on drop"><span class="v-ink">aOS</span>${ver('sup')}${deco}</div></div>`
+      : `<div class="w-stage" style="justify-content:flex-start;padding-top:18vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt="">
+          <div class="v-mark minor on drop v-app"><span class="v-name">${esc(NAMES[id])}</span>${ver('span')}${deco}</div></div></div>`;
+    const lit = `${esc(base)}<span class="h-new">${esc(newT)}</span>`;
     const first = id === 'aos'
-      ? { x: 'notes', noart: true, h: `${supV(from || major(to))} updated to aOS<sup>${esc(base)}<span class="h-new">${esc(newT)}</span></sup>`, d: 'More power in your palm.', notes }
-      : { x: notes.length ? 'notes' : null, noart: true, h: `What's new in ${esc(NAMES[id])}`, d: `${NAMES[id]} ${to}`, notes };
+      ? { x: 'notes', noart: true, h: `${supV(from || major(to))} updated to aOS<sup>${lit}</sup>`, d: 'More power in your palm.', notes }
+      : { x: notes.length ? 'notes' : null, noart: true, h: `What's new in ${esc(NAMES[id])}`, dh: `${esc(NAMES[id])} ${lit}`, notes };
     return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
       const m = o.el.querySelector('.v-mark.minor');
       if (m) {   // the reveal, then the card
-        const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('sup');
+        const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');
         ow.style.width = ow.scrollWidth + 'px'; const w = [...nw.querySelectorAll('i:not(.v-halo)')].reduce((a, i) => a + i.offsetWidth, 0);
         await wait(still() ? 0 : 650);
         m.style.setProperty('--rx', (sup.offsetLeft + sup.offsetWidth - ow.offsetWidth + w - nw.offsetWidth) + 'px');

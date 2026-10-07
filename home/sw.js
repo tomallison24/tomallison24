@@ -2,7 +2,7 @@
 // so a new deploy shows up on the next open; the cache is only the fallback
 // when offline. The other apps' icons are same-origin too, so they are kept
 // the same way.
-const CACHE = 'home-v16';
+const CACHE = 'home-v17';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'back.js', 'slide.js', 'welcome.js', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
