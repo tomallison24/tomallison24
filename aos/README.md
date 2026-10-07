@@ -7,10 +7,14 @@ glass and pastels as the AllisonOS welcome. Part of the Allison Corporation.
   Power of aOS1". **Replay the welcome** plays the AllisonOS welcome again.
 - **Apps**: every AllisonOS app as a tile, in the Home app's automation design
   (square Liquid Glass, three across, a soft glow of the app's own colour
-  behind it), with its version. A tap opens the app's page: **Open** (a new tab
-  in a browser, where Share → Add to Home Screen adds it as its own icon), what
-  it does (its walkthrough's cards), how to add it to the Home Screen, **Show
-  the walkthrough**, and what's new in each version.
+  behind it), with its version. A tap opens the app's own address in a new
+  tab, ready to add to the Home Screen as its own icon. Each app's walkthrough
+  plays the first time it is opened there.
+- **Add an app to your Home Screen**: Safari's steps, animated on a phone and
+  looping - ••• then Share, scroll to Add to Home Screen, Open as Web App on and
+  Add, and the icon popping onto the Home Screen. It is a likeness of iOS 26
+  Safari drawn in HTML (`AllisonOS.welcome.safariDemo`), not a recording; the
+  install card in every welcome uses the same animation.
 - **What's new in aOS**: the release log, newest first.
 - **Appearance**: System, Light or Dark for every app (the launcher's own
   setting, `home.settings.theme`).
