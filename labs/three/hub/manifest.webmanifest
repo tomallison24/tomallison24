@@ -1,0 +1,13 @@
+{
+  "name": "Test: back to the tiles",
+  "short_name": "Test tiles",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F1116",
+  "theme_color": "#0F1116",
+  "icons": [
+    { "src": "../../../aOS/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "../../../aOS/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,4 +1,4 @@
-/* The two set-up tests (labs/one, labs/two): one small shared style, in Sea glass. */
+/* The test pages (labs/one, two, three): one small shared style, in Sea glass. */
 :root { --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.8); --edge: rgba(0,0,0,.08); --accent: #0A84FF; --ok: #2E8B57;
   --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root { --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.07); --edge: rgba(255,255,255,.12); --ok: #6FD3A0;
