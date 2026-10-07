@@ -87,7 +87,8 @@ const WXNOW = {
   },
   age() { return this.d && Number.isFinite(this.d.tF) ? Date.now() - this.d.at : Infinity; },
   async get() {
-    if (mode !== 'live' || typeof WXD === 'undefined' || document.hidden || this.age() < 10 * 60000) return;
+    // A reading kept before the high and low were saved (no hF key) is fetched again at once.
+    if (mode !== 'live' || typeof WXD === 'undefined' || document.hidden || (this.age() < 10 * 60000 && this.d && 'hF' in this.d)) return;
     if (this.busy && Date.now() - this.busy < 45000) return;   // one out at a time; one out for 45 s is lost
     const p = this.where(); if (!p) return;
     this.busy = Date.now();
@@ -97,6 +98,7 @@ const WXNOW = {
         const d0 = b.daily && b.daily[0];   // today's high and low, as Weather's own day row
         this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src };
         if (d0 && Number.isFinite(d0.hF) && Number.isFinite(d0.lF)) Object.assign(this.d, { hF: d0.hF, lF: d0.lF, day: WXD.ymd(d0.t, b.tz), tz: b.tz });
+        else this.d.hF = null;   // no day row this time: still marked as fetched, so it waits its 10 minutes
         store.set('wxnow', this.d); render(); if (typeof BG !== 'undefined') BG.paintTone();
       }
     } catch { /* Home Assistant's, or the last reading, stands; tried again in a minute */ }
