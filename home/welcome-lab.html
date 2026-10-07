@@ -31,12 +31,21 @@
 <body>
 <main>
   <h1>Welcome Lab</h1>
-  <p class="lede">The welcome that plays the first time someone opens any AllisonOS app on a device: Quiet type (design C), a brand moment and then a short tour. Tap to play it again; Skip ends it early. Try light and dark mode too.</p>
-  <button class="opt" data-d="C" type="button"><span class="k"><span class="tag">C</span><b>Quiet type</b><small>"AllisonOS" drawn on in soft pastels with a hairline beneath, "Welcome" and "Part of the Allison Corporation" under it. Then each letter flips into an app's icon, the icons gather into a grid and float up, and the tour is one glass panel under them: the essentials, Light or dark, how to install, and every app to choose from.</small></span><span class="play">▶</span></button>
+  <p class="lede">aOS's welcome and update screens, played on demand. Nothing here is remembered. Skip ends each early; try light and dark mode too.</p>
+  <button class="opt" data-d="first" type="button"><span class="k"><span class="tag">1</span><b>The AllisonOS welcome</b><small>The name in pastels, folding into aOS¹ with its shine, "The Power of aOS1", the apps bursting out, then the tour.</small></span><span class="play">▶</span></button>
+  <button class="opt" data-d="minor" type="button"><span class="k"><span class="tag">.1</span><b>A minor update (example)</b><small>"aOS1 updated to aOS1.1. More power in your palm." with example notes.</small></span><span class="play">▶</span></button>
+  <button class="opt" data-d="app" type="button"><span class="k"><span class="tag">W</span><b>An app's walkthrough: Weather</b><small>Each app has its own, the first time it is opened.</small></span><span class="play">▶</span></button>
 </main>
-<script src="welcome.js"></script>
+<script src="welcome.js"></script>   <!-- no data-auto: nothing plays until asked -->
 <script>
-  for (const b of document.querySelectorAll('.opt')) b.onclick = () => AllisonOS.welcome.play();
+  const W = AllisonOS.welcome;
+  for (const b of document.querySelectorAll('.opt')) b.onclick = () => {
+    if (b.dataset.d === 'first') return W.play();
+    if (b.dataset.d === 'app') return W.playApp('weather');
+    const R = W.data.RELEASES.aos;   // an example only, not kept
+    if (!R.some(r => r.v === '1.1')) R.unshift({ v: '1.1', notes: ['An example note: something faster', 'Another: a new look somewhere'] });
+    W.playUpdate('aos', '1', '1.1').then(() => { const k = R.findIndex(r => r.v === '1.1'); if (k >= 0) R.splice(k, 1); });
+  };
 </script>
 </body>
 </html>

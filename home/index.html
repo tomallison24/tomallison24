@@ -408,6 +408,7 @@
   // /tomallison24/, Cloudflare at the root). The tile uses the folder's
   // own icon-512.png.
   const APPS = [
+    { id: 'aos',     name: 'aOS',     path: '../aos/' },    // the home of every app: get them, learn them, what's new
     { id: 'mail',    name: 'Mail',    path: '../mail/' },
     { id: 'calendar', name: 'Calendar', path: '../calendar/' },
     { id: 'news',    name: 'News',    path: '../news/' },
@@ -648,6 +649,6 @@
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 </script>
-<script src="welcome.js" data-auto defer></script>   <!-- the AllisonOS welcome, once per device -->
+<script src="welcome.js" data-app="home" data-auto defer></script>   <!-- aOS: the AllisonOS welcome the first time, aOS's update screens after -->
 </body>
 </html>
