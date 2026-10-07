@@ -1685,21 +1685,24 @@ function drawPill() {
 
 function boxMenuHTML() {
   const inbox = state.view === 'inbox';
-  const row = (act, attrs, name, on, right) => '<button role="menuitemradio" aria-checked="' + on + '" data-act="' + act + '" ' + attrs + '>' +
-    '<span class="tick">' + MENU_ICON.tick + '</span><span class="name">' + esc(name) + '</span>' + right + '</button>';
-  const count = n => n ? '<span class="cnt">' + n + '</span>' : '';
-  const ico = svg => '<span class="ico">' + svg + '</span>';
+  let n = 0;                                       // each row floats in a beat after the one above
+  const row = (act, attrs, name, on, right, hue) => '<button role="menuitemradio" aria-checked="' + on + '" data-act="' + act + '" ' + attrs +
+    ' style="--n:' + (n++) + (hue == null ? '' : ';--h:' + hue) + '">' +
+    '<span class="name">' + esc(name) + '</span>' + right + '<span class="tick">' + MENU_ICON.tick + '</span></button>';
+  const count = c => c ? '<span class="cnt">' + c + '</span>' : '';
+  const ico = (svg, plain) => '<span class="ico' + (plain ? ' plain' : '') + '">' + svg + '</span>';
   const tags = chipTags();
+  const CAT_HUE = { 'cat:primary': 187, 'cat:promotions': 145, 'cat:updates': 250 };
   return '<div class="catch" data-act="box-close"></div><div class="menu" role="menu" aria-label="Mailboxes">' +
-    row('chip', 'data-id=""', 'Inbox', inbox && !state.tag, count(state.lists.inbox?.items?.length) + ico(MENU_ICON.inbox)) +
-    row('chip', 'data-id="STARRED"', 'Flagged', inbox && state.tag === 'STARRED', ico(ICON.flag)) +
+    row('chip', 'data-id=""', 'Inbox', inbox && !state.tag, count(state.lists.inbox?.items?.length) + ico(MENU_ICON.inbox), 211) +
+    row('chip', 'data-id="STARRED"', 'Flagged', inbox && state.tag === 'STARRED', ico(ICON.flag), 22) +
     '<hr>' +
-    CATEGORIES.map(c => row('chip', 'data-id="' + c.id + '"', c.name, inbox && state.tag === c.id, ico(MENU_ICON[c.id]))).join('') +
-    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '" style="--h:' + tagHue(l.name) + '"',
-      l.name, inbox && state.tag === l.id, ico('<i class="dot"></i>'))).join('') : '') +
+    CATEGORIES.map(c => row('chip', 'data-id="' + c.id + '"', c.name, inbox && state.tag === c.id, ico(MENU_ICON[c.id]), CAT_HUE[c.id])).join('') +
+    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '"',
+      l.name, inbox && state.tag === l.id, ico('<i class="dot"></i>'), tagHue(l.name))).join('') : '') +
     '<hr>' +
-    row('box-view', 'data-view="marketing"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt)) +
-    row('box-view', 'data-view="rules"', 'Manage Tags', state.view === 'rules', ico(ICON.label)) +
+    row('box-view', 'data-view="marketing"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt), 36) +
+    row('box-view', 'data-view="rules"', 'Manage Tags', state.view === 'rules', ico(ICON.label, true)) +
   '</div>';
 }
 
@@ -1710,7 +1713,7 @@ function openBoxMenu() {
   el.classList.remove('hide', 'leaving');
   // Upwards from the pill, centred over it, as Fitness's view menu opens.
   const r = btn.getBoundingClientRect(), menu = el.querySelector('.menu');
-  const w = Math.min(290, innerWidth - 32), cx = Math.min(Math.max(r.left + r.width / 2, 16 + w / 2), innerWidth - 16 - w / 2);
+  const w = Math.min(300, innerWidth - 32), cx = Math.min(Math.max(r.left + r.width / 2, 16 + w / 2), innerWidth - 16 - w / 2);
   menu.style.left = Math.round(cx - w / 2) + 'px';
   menu.style.bottom = Math.round(innerHeight - r.top + 10) + 'px';
   menu.style.maxHeight = Math.max(160, Math.round(r.top - 10 - 64)) + 'px';

@@ -32,7 +32,10 @@ days you never open the app — but only once its Google credentials are set up
   the icon of where you are, its name and a chevron. The menu lists **Inbox**
   and **Flagged**; Gmail's own categories (**Primary**, **Promotions**,
   **Updates** — the inbox as Gmail sorted it); your tags; **Marketing**; and
-  **Manage Tags**. The one you're on is ticked, and the pill and the large
+  **Manage Tags**. It is a pane of Liquid Glass: each row is an icon on a
+  small glass tile in its own colour (a tag keeps its tag colour), counts sit
+  in little capsules, and the one you're on is lifted on a glass pill with a
+  tick. The rows float in one after another. The pill and the large
   title change to match. Tap outside the menu to close it. The pill sits
   centred over the home indicator, left of the compose button (a long tag name
   is cut with …), and gives way to the select bar and Settings. Messages
