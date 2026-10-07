@@ -390,12 +390,158 @@
   function steps(name) {
     if (installEvt) return `<p>Add ${esc(name)} to this device, so it opens on its own like any other app.</p><button class="w-btn c-install" type="button">Install</button>`;
     if (!ios) return `<p>Use your browser's <b>Install</b> or <b>Add to Home Screen</b> option, in its menu, to keep ${esc(name)} on this device like an app.</p>`;
-    return `<p>Add ${esc(name)} to your Home Screen so it opens like an app, full screen:</p><ol class="c-steps">
-      <li>In Safari, tap <b>•••</b> by the address bar, then <b>Share</b> <small>(on older iOS, tap Share <svg class="c-share" viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7H3.5v9.5h9V7H11M8 11.5V1.5M5 4.5l3-3 3 3"/></svg> straight away)</small></li>
-      <li>Scroll down and tap <b>Add to Home Screen</b></li>
-      <li>Leave <b>Open as Web App</b> on</li>
-      <li>Tap <b>Add</b></li></ol>
-      <p class="c-tip">Chrome, Edge and Firefox have Add to Home Screen in their Share menu too.</p>`;
+    return `<div class="c-sd"></div>`;   // filled by safariDemo() once drawn
+  }
+
+  // ===========================================================================
+  // ADD TO HOME SCREEN, SHOWN: a small iPhone running Safari, looping through the
+  // real steps with a finger: ••• by the address bar -> Share -> scroll down the
+  // share sheet to Add to Home Screen -> Open as Web App (on) -> Add -> the icon
+  // lands on the Home Screen. Drawn after iOS 26's Safari (compact tab bar, glass
+  // menus and sheets); a likeness, not a screenshot. Light and dark follow the page.
+  //   AllisonOS.welcome.safariDemo(host, name, iconUrl)  - fills host, loops while it's on the page
+  // ===========================================================================
+  const SD_CSS = `
+.aos-sd { --s-bg: #F2F2F7; --s-group: #fff; --s-text: #000; --s-sub: rgba(60,60,67,.6); --s-sep: rgba(60,60,67,.18); --s-glass: rgba(255,255,255,.72); --s-page: #fff; --s-frame: #1C1C1E;
+  --s-blue: #007AFF; --s-green: #34C759; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: var(--s-text); user-select: none; -webkit-user-select: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #fff; --s-sub: rgba(235,235,245,.6); --s-sep: rgba(84,84,88,.6); --s-glass: rgba(44,44,48,.78); --s-page: #121214; --s-frame: #3A3A3C; --s-blue: #0A84FF; --s-green: #30D158; } }
+html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #fff; --s-sub: rgba(235,235,245,.6); --s-sep: rgba(84,84,88,.6); --s-glass: rgba(44,44,48,.78); --s-page: #121214; --s-frame: #3A3A3C; --s-blue: #0A84FF; --s-green: #30D158; }
+.aos-sd * { box-sizing: border-box; }
+.aos-sd .sd-phone { position: relative; width: 200px; height: min(372px, 46vh); margin: 0 auto; border-radius: 34px; padding: 5px; background: var(--s-frame); box-shadow: 0 18px 40px -16px rgba(0,0,0,.45); }
+.aos-sd .sd-screen { position: relative; width: 100%; height: 100%; border-radius: 29px; overflow: hidden; background: var(--s-page); font-size: 10px; }
+.aos-sd .sd-island { position: absolute; left: 50%; top: 6px; width: 54px; height: 15px; margin-left: -27px; border-radius: 10px; background: #000; z-index: 9; }
+/* the web page: the app's own */
+.aos-sd .sd-page { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 44px; }
+.aos-sd .sd-page img { width: 54px; height: 54px; border-radius: 13px; box-shadow: 0 6px 14px rgba(0,0,0,.18); }
+.aos-sd .sd-page b { margin-top: 8px; font-size: 14px; }
+.aos-sd .sd-page i { display: block; width: 70%; height: 7px; border-radius: 4px; background: var(--s-sep); margin-top: 9px; }
+.aos-sd .sd-page i:nth-of-type(2) { width: 54%; } .aos-sd .sd-page i:nth-of-type(3) { width: 62%; }
+/* Safari's compact tab bar: back, the address, ••• - floating glass at the bottom */
+.aos-sd .sd-bar { position: absolute; left: 7px; right: 7px; bottom: 9px; display: flex; align-items: center; gap: 5px; transition: opacity .3s; }
+.aos-sd .sd-round { flex: none; width: 27px; height: 27px; border-radius: 50%; background: var(--s-glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 .5px rgba(255,255,255,.5), 0 2px 8px rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+.aos-sd .sd-addr { flex: 1; height: 27px; border-radius: 14px; background: var(--s-glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 .5px rgba(255,255,255,.5), 0 2px 8px rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; white-space: nowrap; overflow: hidden; }
+.aos-sd .sd-more { letter-spacing: -1px; font-size: 11px; }
+/* the ••• menu, opening from its button */
+.aos-sd .sd-menu { position: absolute; right: 7px; bottom: 42px; width: 132px; border-radius: 14px; overflow: hidden; background: var(--s-glass); -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25), inset 0 0 0 .5px rgba(255,255,255,.4); transform-origin: 90% 100%; transform: scale(.4); opacity: 0; transition: transform .35s cubic-bezier(.3,1.4,.5,1), opacity .25s; }
+.aos-sd .sd-menu.on { transform: none; opacity: 1; }
+.aos-sd .sd-row { display: flex; align-items: center; justify-content: space-between; padding: 0 9px; height: 23px; font-size: 9.5px; border-top: .5px solid var(--s-sep); }
+.aos-sd .sd-row:first-child { border-top: 0; }
+.aos-sd .sd-row svg { width: 11px; height: 11px; flex: none; }
+.aos-sd .sd-hit { background: var(--s-sep); }
+/* the share sheet */
+.aos-sd .sd-share, .aos-sd .sd-add { position: absolute; left: 0; right: 0; bottom: 0; height: 84%; border-radius: 16px 16px 0 0; background: var(--s-bg); overflow: hidden;
+  transform: translateY(102%); transition: transform .45s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -6px 24px rgba(0,0,0,.18); z-index: 3; }
+.aos-sd .sd-share.on, .aos-sd .sd-add.on { transform: none; }
+.aos-sd .sd-grab { width: 26px; height: 3px; border-radius: 2px; background: var(--s-sep); margin: 5px auto 6px; }
+.aos-sd .sd-scroll { transition: transform .9s cubic-bezier(.4,0,.2,1); }
+.aos-sd .sd-head { display: flex; align-items: center; gap: 6px; padding: 2px 10px 8px; }
+.aos-sd .sd-head img { width: 24px; height: 24px; border-radius: 6px; }
+.aos-sd .sd-head b { display: block; font-size: 9.5px; } .aos-sd .sd-head small { display: block; font-size: 8px; color: var(--s-sub); }
+.aos-sd .sd-x { margin-left: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--s-sep); font-size: 8px; display: flex; align-items: center; justify-content: center; color: var(--s-sub); }
+.aos-sd .sd-apps { display: flex; gap: 8px; padding: 2px 10px 9px; border-bottom: .5px solid var(--s-sep); }
+.aos-sd .sd-apps span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 7px; color: var(--s-sub); }
+.aos-sd .sd-apps i { width: 30px; height: 30px; border-radius: 8px; display: block; }
+.aos-sd .sd-group { margin: 7px 8px 0; border-radius: 10px; background: var(--s-group); overflow: hidden; }
+.aos-sd .sd-group .sd-row { height: 25px; font-size: 9.5px; }
+/* Add to Home Screen */
+.aos-sd .sd-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; height: 26px; font-size: 9.5px; }
+.aos-sd .sd-nav b { font-size: 9.5px; } .aos-sd .sd-nav span { color: var(--s-blue); } .aos-sd .sd-nav .sd-addbtn { font-weight: 700; }
+.aos-sd .sd-card { display: flex; gap: 8px; align-items: center; margin: 6px 8px 0; padding: 8px; border-radius: 10px; background: var(--s-group); }
+.aos-sd .sd-card img { width: 38px; height: 38px; border-radius: 9px; }
+.aos-sd .sd-card b { display: block; font-size: 10px; font-weight: 500; border-bottom: .5px solid var(--s-sep); padding-bottom: 4px; }
+.aos-sd .sd-card small { display: block; font-size: 8px; color: var(--s-sub); padding-top: 4px; }
+.aos-sd .sd-tog { margin-left: auto; width: 26px; height: 16px; border-radius: 8px; background: var(--s-green); position: relative; flex: none; }
+.aos-sd .sd-tog::after { content: ''; position: absolute; right: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.aos-sd .sd-glow { animation: sd-glow 1s ease-in-out 2; }
+@keyframes sd-glow { 50% { box-shadow: 0 0 0 4px rgba(52,199,89,.35); } }
+.aos-sd .sd-note { font-size: 7.5px; color: var(--s-sub); padding: 4px 12px 0; line-height: 1.3; }
+/* the Home Screen */
+.aos-sd .sd-home { position: absolute; inset: 0; z-index: 4; padding: 34px 12px 0; background: linear-gradient(160deg, #6FA6F4, #9A86F0 45%, #E889B4 80%, #F2AE78); opacity: 0; transition: opacity .45s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; align-content: start; }
+.aos-sd .sd-home.on { opacity: 1; }
+.aos-sd .sd-home span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 7px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.aos-sd .sd-home i { width: 36px; height: 36px; border-radius: 9px; background: rgba(255,255,255,.35); display: block; }
+.aos-sd .sd-home img { width: 36px; height: 36px; border-radius: 9px; transform: scale(0); transition: transform .55s cubic-bezier(.34,1.56,.64,1); box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+.aos-sd .sd-home .sd-new img { transform: scale(1); }
+.aos-sd .sd-home .sd-lbl { opacity: 0; transition: opacity .3s .3s; } .aos-sd .sd-home .sd-new .sd-lbl { opacity: 1; }
+/* the finger */
+.aos-sd .sd-finger { position: absolute; z-index: 10; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: rgba(255,255,255,.55); border: 1.5px solid rgba(0,0,0,.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3); opacity: 0; left: 50%; top: 95%; transition: left .6s cubic-bezier(.4,0,.2,1), top .6s cubic-bezier(.4,0,.2,1), opacity .3s, transform .15s; pointer-events: none; }
+.aos-sd .sd-finger.on { opacity: 1; }
+.aos-sd .sd-finger.press { transform: scale(.78); }
+.aos-sd .sd-finger::after { content: ''; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid rgba(255,255,255,.9); opacity: 0; }
+.aos-sd .sd-finger.press::after { animation: sd-ripple .5s ease-out; }
+@keyframes sd-ripple { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(2); } }
+/* the caption under the phone */
+.aos-sd .sd-cap { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; min-height: 36px; font-size: 15px; font-weight: 600; text-align: left; line-height: 1.25; transition: opacity .25s; }
+.aos-sd .sd-cap.fade { opacity: 0; }
+.aos-sd .sd-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--s-blue); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.aos-sd .sd-dots { display: flex; justify-content: center; gap: 5px; margin-top: 6px; }
+.aos-sd .sd-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--s-sep); transition: background .3s, width .3s; }
+.aos-sd .sd-dots i.on { background: var(--s-blue); width: 12px; border-radius: 3px; }
+.aos-sd .sd-old { margin-top: 6px; font-size: 12px; color: var(--s-sub); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .aos-sd * { transition-duration: .15s !important; animation: none !important; } }`;
+  const SD_ICON = {
+    share: '<svg viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7H3.5v9.5h9V7H11M8 11.5V1.5M5 4.5l3-3 3 3"/></svg>',
+    book: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3h5a2 2 0 0 1 2 2v9a2 2 0 0 0-2-2H2zM14 3H9v11a2 2 0 0 1 2-2h3z"/></svg>',
+    star: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 1.5l2 4.3 4.6.5-3.4 3.1 1 4.6L8 11.6 3.8 14l1-4.6L1.4 6.3 6 5.8z"/></svg>',
+    find: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>',
+    copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>',
+    glasses: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4.5" cy="10" r="2.5"/><circle cx="11.5" cy="10" r="2.5"/><path d="M7 10h2M2 9l1.5-5M14 9l-1.5-5"/></svg>',
+    add: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="3"/><path d="M8 5v6M5 8h6"/></svg>',
+    note: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2" width="11" height="12" rx="2"/><path d="M5 6h6M5 9h4"/></svg>',
+  };
+  const SD_STEPS = ['Tap <b>•••</b>, then <b>Share</b>', 'Scroll down, tap <b>Add to Home Screen</b>', 'Keep <b>Open as Web App</b> on, tap <b>Add</b>', 'It\'s on your Home Screen'];
+  function safariDemo(host, name, iconUrl) {
+    if (!document.getElementById('aos-sd-css')) { const st = document.createElement('style'); st.id = 'aos-sd-css'; st.textContent = SD_CSS; document.head.appendChild(st); }
+    const row = (t, k, cls = '') => `<div class="sd-row ${cls}"><span>${t}</span>${SD_ICON[k]}</div>`;
+    const dom = location.host || 'tomallison24.github.io';
+    host.innerHTML = `<div class="aos-sd"><div class="sd-phone"><div class="sd-screen"><i class="sd-island"></i>
+      <div class="sd-page"><img src="${iconUrl}" alt=""><b>${esc(name)}</b><i></i><i></i><i></i></div>
+      <div class="sd-bar"><span class="sd-round">‹</span><span class="sd-addr">${esc(dom)}</span><span class="sd-round sd-more">•••</span></div>
+      <div class="sd-menu">${row('Share', 'share', 'sd-t-share')}${row('Add to Bookmarks', 'book')}${row('Add to Favorites', 'star')}${row('Find on Page', 'find')}${row('Reader', 'glasses')}</div>
+      <div class="sd-share"><div class="sd-grab"></div><div class="sd-scroll">
+        <div class="sd-head"><img src="${iconUrl}" alt=""><span><b>${esc(name)}</b><small>${esc(dom)}</small></span><span class="sd-x">✕</span></div>
+        <div class="sd-apps"><span><i style="background:linear-gradient(#5AC8FA,#007AFF)"></i>AirDrop</span><span><i style="background:linear-gradient(#5CE27E,#30B94D)"></i>Messages</span><span><i style="background:linear-gradient(#4FB6FF,#1F7BF2)"></i>Mail</span><span><i style="background:linear-gradient(#FFE16B,#FFC800)"></i>Notes</span></div>
+        <div class="sd-group">${row('Copy', 'copy')}${row('Add to Reading List', 'glasses')}${row('Add Bookmark', 'book')}${row('Add to Favorites', 'star')}${row('Add to Quick Note', 'note')}${row('Find on Page', 'find')}${row('Add to Home Screen', 'add', 'sd-t-add')}</div>
+      </div></div>
+      <div class="sd-add"><div class="sd-grab"></div><div class="sd-nav"><span>Cancel</span><b>Add to Home Screen</b><span class="sd-addbtn">Add</span></div>
+        <div class="sd-card"><img src="${iconUrl}" alt=""><span style="flex:1;min-width:0"><b>${esc(name)}</b><small>${esc(dom)}</small></span></div>
+        <div class="sd-card" style="padding:7px 9px"><span style="font-size:9.5px">Open as Web App</span><span class="sd-tog"></span></div>
+        <div class="sd-note">An icon will be added to your Home Screen so you can quickly access this website.</div></div>
+      <div class="sd-home">${'<span><i></i>&nbsp;</span>'.repeat(6)}<span class="sd-slot"><img src="${iconUrl}" alt=""><span class="sd-lbl">${esc(name)}</span></span></div>
+      <div class="sd-finger"></div>
+    </div></div>
+    <div class="sd-cap"><span class="sd-n">1</span><span class="sd-t"></span></div>
+    <div class="sd-dots"><i></i><i></i><i></i><i></i></div>
+    <div class="sd-old">On older iOS, tap Share in the toolbar first.</div></div>`;
+    const R = host.querySelector('.aos-sd'), q = s => R.querySelector(s), scr = q('.sd-screen'), fin = q('.sd-finger');
+    const T = [];   // pending timers, cleared when it leaves the page
+    const at = (ms, fn) => T.push(setTimeout(() => { if (!R.isConnected) return T.forEach(clearTimeout); fn(); }, still() ? ms * 0.6 : ms));
+    const to = sel => { const e = q(sel), a = e.getBoundingClientRect(), s = scr.getBoundingClientRect(); fin.style.left = (a.left - s.left + a.width / 2) + 'px'; fin.style.top = (a.top - s.top + a.height / 2) + 'px'; fin.classList.add('on'); };
+    const tap = sel => { const e = q(sel); fin.classList.add('press'); e.classList.add('sd-hit'); setTimeout(() => { fin.classList.remove('press'); e.classList.remove('sd-hit'); }, 260); };
+    const cap = n => { const c = q('.sd-cap'); c.classList.add('fade'); setTimeout(() => { q('.sd-n').textContent = n + 1; q('.sd-t').innerHTML = SD_STEPS[n]; c.classList.remove('fade'); }, 200); R.querySelectorAll('.sd-dots i').forEach((d, k) => d.classList.toggle('on', k === n)); };
+    function loop() {
+      if (!R.isConnected) return;
+      for (const s of ['.sd-menu', '.sd-share', '.sd-add', '.sd-home', '.sd-slot']) q(s).classList.remove('on', 'sd-new');
+      q('.sd-scroll').style.transform = ''; q('.sd-tog').classList.remove('sd-glow');
+      fin.classList.remove('on'); fin.style.left = '50%'; fin.style.top = '96%';
+      cap(0);
+      at(500, () => to('.sd-more')); at(1200, () => tap('.sd-more')); at(1350, () => q('.sd-menu').classList.add('on'));
+      at(2100, () => to('.sd-t-share')); at(2700, () => tap('.sd-t-share'));
+      at(2900, () => { q('.sd-menu').classList.remove('on'); q('.sd-share').classList.add('on'); fin.classList.remove('on'); cap(1); });
+      at(3800, () => { const g = q('.sd-share'), add = q('.sd-t-add'); const over = add.getBoundingClientRect().bottom - g.getBoundingClientRect().bottom + 30; if (over > 0) q('.sd-scroll').style.transform = `translateY(${-over}px)`; });
+      at(4900, () => to('.sd-t-add')); at(5500, () => tap('.sd-t-add'));
+      at(5700, () => { q('.sd-share').classList.remove('on'); q('.sd-add').classList.add('on'); fin.classList.remove('on'); cap(2); });
+      at(6500, () => { to('.sd-tog'); q('.sd-tog').classList.add('sd-glow'); });
+      at(7600, () => to('.sd-addbtn')); at(8200, () => tap('.sd-addbtn'));
+      at(8400, () => { q('.sd-add').classList.remove('on'); q('.sd-home').classList.add('on'); fin.classList.remove('on'); cap(3); });
+      at(8900, () => q('.sd-slot').classList.add('sd-new'));
+      at(11500, loop);
+    }
+    loop();
   }
 
   // ---- the AllisonOS tour ----
@@ -405,7 +551,7 @@
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep AllisonOS always light or always dark. You can change it later in Settings.' },
     { i: 'lock', t: 'Yours alone', d: 'What you set up stays on this phone.' },
-    ...(standalone() ? [] : [{ x: 'install', i: 'plus', t: 'Add it to your Home Screen', name: APP === 'aos' ? 'aOS' : 'AllisonOS' }]),
+    ...(standalone() ? [] : [{ x: 'install', noart: true, t: 'Add it to your Home Screen', name: APP === 'aos' ? 'aOS' : 'AllisonOS', icon: icon(APP === 'aos' ? 'aos' : 'home') }]),
     APP === 'aos'
       ? { i: 'grid', t: 'Your apps live here', d: 'Every AllisonOS app is in aOS. Tap one to open it, then add it to your Home Screen.' }
       : { x: 'store', i: 'grid', t: 'Get your apps in aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
@@ -603,6 +749,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .c-notes { text-align: left; margin: 14px 0 0; padding: 0; list-style: none; }
 #aos-welcome .c-notes li { position: relative; padding: 0 0 9px 22px; font-size: 15px; line-height: 1.35; }
 #aos-welcome .c-notes li::before { content: ''; position: absolute; left: 4px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--w-pastel); }
+#aos-welcome .c-sd { margin-top: 12px; }
 #aos-welcome .c-install { display: block; width: 100%; margin-top: 16px; }
 #aos-welcome .w-dots { display: flex; justify-content: center; gap: 7px; margin: 18px 0; }
 #aos-welcome .w-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--w-dot); transition: background .3s, width .3s; }
@@ -762,6 +909,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
         : c.x === 'notes' ? `<ul class="c-notes">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
       for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+      const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('home'));
       const ib = body.querySelector('.c-install');
       if (ib) ib.onclick = async () => { const e = installEvt; installEvt = null; try { await e.prompt(); await e.userChoice; } catch {} draw(); };
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
@@ -815,11 +963,11 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const v = latest(id), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
       <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(latest('aos'))}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
-    const cards = [...T.cards, ...(standalone() ? [] : [{ x: 'install', i: 'plus', t: `Add ${name} to your Home Screen`, name }])];
+    const cards = [...T.cards, ...(standalone() ? [] : [{ x: 'install', noart: true, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }])];
     return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major }, seen: () => !!(seenAll() || {}).aos || metBefore() };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major }, seen: () => !!(seenAll() || {}).aos || metBefore() };
 
   // ---- deciding what to show, once ----
   function auto() {
