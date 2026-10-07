@@ -1,48 +1,48 @@
 // aOS: AllisonOS's welcome, walkthroughs and update screens, shared by every app.
 //
-// Every app loads it from the launcher's folder, as it does back.js, and says
-// which app it is:
+// Every app loads it from home/ (the retired launcher's folder, kept for the
+// shared scripts) and says which app it is:
 //   <script src="../home/welcome.js" data-app="weather" data-auto defer></script>
-// With data-auto it decides by itself, once per device, what (if anything) to
-// show, from the release log below and what this device has seen (localStorage
-// aos.seen, { app: version }, shared by every app on the site):
+// With data-auto it decides by itself what (if anything) to show, from the
+// release log below and what this install has seen (localStorage aos.seen,
+// { app: the aOS version it last showed }).
 //
-//   aOS itself (data-app "aos", the aOS app; and "home", the launcher)
+// The flow: the aOS link opens in Safari -> how to add aOS -> opened from the
+// Home Screen, the AllisonOS welcome and tour -> an app tapped in aOS opens in
+// Safari -> how to add that app -> opened from the Home Screen, its walkthrough.
+//
+//   on iPhone, in Safari (display-mode is not standalone): for aOS and every
+//     app alike, Safari's steps for adding it, animated; "Not now" until a new tab
+//   aOS (data-app "aos"), from the Home Screen
 //     first time      the AllisonOS welcome: the name, then the version mark
 //                     (aOS with a superscript 1 that drops in and shines) and
-//                     "The Power of aOS1", the apps bursting out of it, and the
-//                     tour (setup: Light or dark, how to install, aOS for apps)
+//                     "The Power of aOS1", the apps bursting out of it, and the tour
 //     major update    (aOS1 -> aOS2) the name and the new version mark, then
-//                     that release's setup cards, if it has any
-//     minor update    (aOS1 -> aOS1.1) one screen: "aOS1 updated to aOS1.1.
-//                     More power in your palm." and its notes
-//   any other app (data-app "weather", "fitness", ...)
-//     first time      that app's own walkthrough: its icon and name, then what
-//                     it does, card by card; under its name, aOS with the
-//                     version as a superscript. On iPhone it waits until the
-//                     app is opened from the Home Screen
-//     in Safari       (iPhone, not from the Home Screen) how to add it: Safari's
-//                     steps animated; "Not now" until a new tab
-//     its own update  what's new in that app, if that release has anything to
-//                     show; an app with nothing new shows nothing
+//                     that release's cards
+//     minor update    nothing (the apps announce their own)
+//   any other app (data-app "weather", "fitness", ...), from the Home Screen
+//     first time      its walkthrough: its icon and name with aOS1 under it,
+//                     what it does card by card, then Light or dark
+//     minor update    (aOS1 -> aOS1.1) aOS with the new .1 rising in under its
+//                     icon, then what's new in it; nothing, if nothing is
+//     major update    (aOS1 -> aOS2) the new number rising in, then "Visit aOS"
 //
-// Without data-auto (welcome-lab.html, the aOS app's buttons) nothing plays
-// until asked:
-//   AllisonOS.welcome.play()              the AllisonOS welcome
-//   AllisonOS.welcome.playApp('weather')  an app's walkthrough
+// Without data-auto (welcome-lab.html) nothing plays until asked:
+//   AllisonOS.welcome.play()                  the AllisonOS welcome
+//   AllisonOS.welcome.playApp('weather')      an app's walkthrough
 //   AllisonOS.welcome.playUpdate(app, from, to)
-//   AllisonOS.welcome.data                releases, tours, names (the aOS app reads it)
+//   AllisonOS.welcome.playInstall(app)        how to add it, as in Safari
+//   AllisonOS.welcome.data                    releases, tours, names (aOS reads it)
 //
 // The look is Quiet type (design C, picked in the Welcome Lab): pastel ink on a
 // plain page, a hairline, one glass panel for the words. It follows light and
-// dark, and the Appearance chosen in it (System / Light / Dark, the launcher's
-// own setting home.settings.theme, applied by every app that loads this). With
-// Reduce Motion it is plain fades. Skip ends it at any point; all its styles are
+// dark, and the Appearance chosen in it (System / Light / Dark, kept as
+// home.settings.theme and applied by every app that loads this). With Reduce
+// Motion it is plain fades. Skip ends it at any point; all its styles are
 // scoped to #aos-welcome. "aOS" is never set in capitals: its a stays lowercase.
 //
-// iPhone: an app added to the Home Screen on its own keeps its own storage, so
-// "first time" counts per install there; apps opened from the launcher or aOS
-// share one.
+// iPhone: an app on the Home Screen keeps its own storage, apart from Safari and
+// the other apps, so "first time" and Light or dark count per install.
 (() => {
   'use strict';
   const AOS = window.AllisonOS = window.AllisonOS || {};
@@ -56,24 +56,26 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   // ===========================================================================
-  // THE RELEASE LOG. Newest first, per app; "aos" is AllisonOS itself. A major
-  // aOS version (1, 2, ...) replays the name and the new mark; a minor one
-  // (1.1) is a single screen. For an app, a release with cards shows them as
-  // "What's new"; one without shows nothing. Add a release here (and bump the
-  // app's sw.js cache) to announce it.
+  // THE RELEASE LOG: aOS's versions, newest first. One number for everything.
+  //   major (aOS2)   aOS replays the name and the new mark, then the release's
+  //                  cards (or its notes); every app shows the new number and
+  //                  "Visit aOS" for the details
+  //   minor (aOS1.1) aOS says nothing; an app with notes in apps[id] shows the
+  //                  new .1 rising in and its notes; an app with none, nothing
+  // To announce one: add it here (a minor one with an apps: { weather: [...] }
+  // entry for each app it changes) and bump the apps' sw.js caches.
   // ===========================================================================
-  const RELEASES = {
-    aos: [
-      { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
-        notes: ['aOS: one place for every AllisonOS app', 'A walkthrough in every app', 'Light, dark or System, chosen once'],
-        cards: [
-          { i: 'grid', t: 'Meet aOS', d: 'aOS is the new home for every app: open it to add the ones you want, and to see what\'s new.' },
-          { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
-          { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep AllisonOS always light or always dark.' },
-        ] },
-    ],
-  };
-  // The apps, as the launcher orders them; house is shown as Home.
+  const RELEASES = [
+    { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
+      notes: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Light or dark in every app'],
+      cards: [
+        { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
+        { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
+        { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark.' },
+      ],
+      apps: {} },
+  ];
+  // The apps, in aOS's order; house is shown as Home.
   const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'house'];
   const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
@@ -359,29 +361,40 @@
       ]
     }
   };
-  for (const id of APPS) if (!RELEASES[id]) RELEASES[id] = [{ v: '1', date: '2026-10-07' }];   // every app starts at 1, nothing new to show
 
   // ---- versions ----
   const parts = v => String(v || '0').split('.').map(n => parseInt(n, 10) || 0);
   const cmp = (a, b) => { const A = parts(a), B = parts(b); for (let i = 0; i < Math.max(A.length, B.length); i++) { const d = (A[i] || 0) - (B[i] || 0); if (d) return d; } return 0; };
   const major = v => parts(v)[0];
-  const latest = id => (RELEASES[id] && RELEASES[id][0].v) || '1';
+  const latest = () => RELEASES[0].v;   // one number for everything
   const supV = v => `aOS<sup>${esc(v)}</sup>`;
-  // What this device has seen: { app: version }. The old welcome flag counts as having
-  // met AllisonOS before aOS had versions.
+  // What this device has seen: { app: the aOS version it last showed }. An app
+  // on the Home Screen keeps its own storage, so each install counts for itself.
   const SEEN = 'aos.seen';
   const seenAll = () => { try { return JSON.parse(localStorage.getItem(SEEN)) || {}; } catch { return null; } };   // null: no storage, never nag
-  const markSeen = (id, v) => { try { const s = seenAll() || {}; s[id] = v; localStorage.setItem(SEEN, JSON.stringify(s)); localStorage.setItem('aos.welcomed', localStorage.getItem('aos.welcomed') || String(Date.now())); } catch {} };
-  const metBefore = () => { try { return !!localStorage.getItem('aos.welcomed'); } catch { return true; } };
+  const markSeen = (id, v) => { try { const s = seenAll() || {}; s[id] = v; localStorage.setItem(SEEN, JSON.stringify(s)); } catch {} };
 
-  // ---- Appearance: the launcher's own setting, shared by every app on the site ----
+  // ---- Appearance: System, Light or Dark (home.settings.theme), applied by every app ----
   const THEMES = [['auto', 'System'], ['light', 'Light'], ['dark', 'Dark']];
   const readTheme = () => { try { const t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; return ['light', 'dark'].includes(t) ? t : 'auto'; } catch { return 'auto'; } };
-  const applyTheme = t => { const r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); };
+  const applyTheme = t => { const r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); forceScheme(t); };
+  // Some apps' CSS follows only the iPhone's setting (@media (prefers-color-scheme: ...)).
+  // A chosen Light or Dark switches those rules on or off to match, so every app follows
+  // it; System puts them back. The theme-color metas are matched the same way.
+  const SCHEME = /\(\s*prefers-color-scheme\s*:\s*(light|dark)\s*\)/i, orig = new WeakMap();
+  function forceScheme(t) {
+    const pick = o => { const m = o.match(SCHEME); return !m || t === 'auto' ? o : m[1].toLowerCase() === t ? o.replace(SCHEME, '(min-width: 0px)') : 'not all'; };
+    const walk = rules => { for (const r of rules) {
+      if (r.media && r.cssRules) { if (!orig.has(r)) orig.set(r, r.media.mediaText); const o = orig.get(r); if (SCHEME.test(o)) r.media.mediaText = pick(o); }
+      if (r.cssRules) walk(r.cssRules);
+    } };
+    for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch {} }   // another site's sheet can't be read; it's left alone
+    for (const m of document.querySelectorAll('meta[name="theme-color"][media]')) { if (!m.dataset.media) m.dataset.media = m.media; m.media = pick(m.dataset.media); }
+  }
   function setTheme(t) {
     try { const s = JSON.parse(localStorage.getItem('home.settings')) || {}; s.theme = t; localStorage.setItem('home.settings', JSON.stringify(s)); } catch {}
     applyTheme(t);
-    dispatchEvent(new CustomEvent('aos:theme', { detail: t }));   // the launcher, if this is it, updates its Settings
+    dispatchEvent(new CustomEvent('aos:theme', { detail: t }));   // for any page showing its own switch
   }
   applyTheme(readTheme());   // every app, every time
 
@@ -551,16 +564,13 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'Mail, Calendar, News, Weather, Notes, Podcasts, Travel, Places, Fitness and Home, side by side. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
-    { i: 'swipe', t: 'Swipe up to come home', d: 'In an app opened from the AllisonOS home screen, swipe up from just above the bottom edge to come back to it. Press and hold the home screen for Settings.' },
+    { noart: true, t: 'Everything in one place', d: 'Mail, Calendar, News, Weather, Notes, Podcasts, Travel, Places, Fitness and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
-    { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: arrange and hide your apps, choose your dock or let it fill with what you use most, and set up each app your way.' },
-    { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep it always light or always dark. Change it any time in Settings.' },
+    { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
+    { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
     { i: 'lock', t: 'Yours alone', d: 'What you set up stays on this phone.' },
-    ...(standalone() ? [] : [{ x: 'install', noart: true, t: 'Add it to your Home Screen', name: APP === 'aos' ? 'aOS' : 'AllisonOS', icon: icon(APP === 'aos' ? 'aos' : 'home') }]),
-    APP === 'aos'
-      ? { i: 'grid', t: 'Your apps live here', d: 'Every AllisonOS app is in aOS. Tap one to open it, then add it to your Home Screen.' }
-      : { x: 'store', i: 'grid', t: 'Get your apps in aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
+    ...(!ios && !standalone() ? [{ x: 'install', noart: true, t: 'Add aOS to this device', name: 'aOS', icon: icon('aos') }] : []),   // iPhone: Safari showed how already
+    { i: 'grid', t: 'Choose your apps', d: 'Every AllisonOS app is here. Tap one: it opens in Safari, ready to add to your Home Screen, and shows you around once it is there.' },
   ];
 
   // ---- line drawings, 64 x 64 ----
@@ -610,7 +620,8 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   };
   const lineSvg = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LINE[k] || LINE.sparkle}</svg>`;
   const url = p => new URL(p, BASE).href;
-  const icon = id => url(`../${id === 'home' ? 'home' : id}/icon-512.png`);
+  const DIR = id => id === 'aos' ? 'aOS' : id;   // aOS lives at /aOS/
+  const icon = id => url(`../${DIR(id)}/icon-512.png`);
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
 
   const CSS = `
@@ -712,9 +723,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 /* a minor update: the new .x rises in after the major number and lights up */
 #aos-welcome .v-mark.minor .v-ring { animation: none; right: auto; left: calc(var(--rx, 100%) - 35px); }
 #aos-welcome .v-mark.minor.grow .v-ring { animation: v-ring 1.1s cubic-bezier(.2,.8,.2,1) .75s forwards; }
-#aos-welcome .v-app { margin-top: 26px; font-size: 40px; letter-spacing: -1px; }   /* an app's update: its name, then the version */
-#aos-welcome .v-app .v-name { color: var(--w-text); margin-right: .22em; }
-#aos-welcome .v-app .v-ring { top: -16px; }
+#aos-welcome .v-app { margin-top: 30px; font-size: 64px; }   /* an app's update: aOS and the new number under its icon */
+#aos-welcome .v-app .v-ring { top: -22px; }
 #aos-welcome .v-tail { display: inline-block; position: relative; white-space: nowrap; }
 #aos-welcome .v-old, #aos-welcome .v-new { display: inline-block; vertical-align: baseline; transition: width .55s cubic-bezier(.2,.8,.2,1), opacity .3s, transform .45s cubic-bezier(.4,0,.2,1); }
 #aos-welcome .v-new { position: relative; width: 0; }
@@ -943,11 +953,11 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
       const c = cards[i];
       el.classList.toggle('tall', c.x === 'install' || !!c.tall);
       const extra = c.x === 'theme' ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`
-        : c.x === 'store' ? `<a class="c-link" href="${url('../aos/')}">Open aOS</a>`
+        : c.x === 'store' ? `<a class="c-link" href="${url('../aOS/')}">Open aOS</a>`
         : c.x === 'notes' ? `<ul class="c-notes">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
       for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
-      const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('home'));
+      const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('aos'));
       const ib = body.querySelector('.c-install');
       if (ib) ib.onclick = async () => { const e = installEvt; installEvt = null; try { await e.prompt(); await e.userChoice; } catch {} draw(); };
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
@@ -980,49 +990,45 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   // ===========================================================================
   // THE FLOWS
   // ===========================================================================
-  // The AllisonOS welcome: the name, the aOS mark, the apps, the tour.
-  const play = () => { const v = latest('aos'); return run('Welcome to AllisonOS', BRAND + MARK(v), () => markSeen('aos', v), async o => {
+  // aOS, the first time: the AllisonOS name, the aOS mark, the apps, the tour.
+  const play = () => { const v = latest(); return run('Welcome to AllisonOS', BRAND + MARK(v), () => markSeen('aos', v), async o => {
     o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o); await tour(o, OS_TOUR());
   }); };
-  // A major aOS update: the name and the new mark, then that release's setup cards.
-  const playMajor = () => { const v = latest('aos'), r = RELEASES.aos[0]; return run(`aOS${v}`, BRAND + MARK(v), () => markSeen('aos', v), async o => {
+  // aOS, after a major update: the name and the new mark, then that release's cards.
+  const playMajor = () => { const v = latest(), r = RELEASES[0]; return run(`aOS${v}`, BRAND + MARK(v), () => markSeen('aos', v), async o => {
     o.el.classList.add('slow');
     await sceneName(o); await sceneMark(o, v); await sceneBurst(o);
     await tour(o, r.cards && r.cards.length ? r.cards : [{ x: 'notes', i: 'sparkle', h: esc(r.title || `aOS${v}`), notes: r.notes || [] }], 'Done');
   }); };
-  // A minor update, for aOS or an app: one card, "aOS1 updated to aOS1.1".
-  function playUpdate(id = 'aos', from, to = latest(id)) {
-    const fresh = RELEASES[id].filter(r => cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);
-    const notes = fresh.flatMap(r => r.notes || []);
-    const cards = id === 'aos' ? [] : fresh.flatMap(r => r.cards || []);
-    if (id !== 'aos' && !cards.length && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
-    // aOS1 -> aOS1.1: the major number stays, the old .x (if any) lifts away and the new .x rises in, lit
-    // (an app going to a new major, Weather 1.3 -> 2, has no .x: the whole number rises in)
-    let base = String(major(to)), newT = String(to).slice(base.length);
-    if (!newT) { base = ''; newT = String(to); }
-    const oldT = base && String(major(from || to)) === base ? String(from || '').slice(base.length) : '';
-    const ver = tag => `<${tag} class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></${tag}>`;
+  // An app after an update: its icon, then aOS with the new number arriving.
+  //   minor (aOS1 -> aOS1.1): the 1 stays and the new .1 rises in, lit (an old .x
+  //     lifts away first); then what's new in this app. Nothing new here: nothing.
+  //   major (aOS1.3 -> aOS2): the old number lifts away and the 2 rises in; then
+  //     "Visit aOS" for what's new.
+  function playUpdate(id, from, to = latest()) {
+    const big = major(to) > major(from);
+    const fresh = RELEASES.filter(r => cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);
+    const notes = fresh.flatMap(r => (r.apps || {})[id] || []);
+    if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
+    const base = big ? '' : String(major(to)), newT = String(to).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
+    const ver = `<sup class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup>`;
     const deco = `<i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span>`;
-    const head = id === 'aos'
-      ? `<div class="v-wrap" style="top:34%"><div class="v-mark minor on drop"><span class="v-ink">aOS</span>${ver('sup')}${deco}</div></div>`
-      : `<div class="w-stage" style="justify-content:flex-start;padding-top:18vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt="">
-          <div class="v-mark minor on drop v-app"><span class="v-name">${esc(NAMES[id])}</span>${ver('span')}${deco}</div></div></div>`;
-    const lit = `${esc(base)}<span class="h-new">${esc(newT)}</span>`;
-    const first = id === 'aos'
-      ? { x: 'notes', noart: true, h: `${supV(from || major(to))} updated to aOS<sup>${lit}</sup>`, d: 'More power in your palm.', notes }
-      : { x: notes.length ? 'notes' : null, noart: true, h: `What's new in ${esc(NAMES[id])}`, dh: `${esc(NAMES[id])} ${lit}`, notes };
+    const head = `<div class="w-stage" style="justify-content:flex-start;padding-top:16vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt="">
+        <div class="v-mark minor on drop v-app"><span class="v-ink">aOS</span>${ver}${deco}</div></div></div>`;
+    const lit = `aOS<sup>${esc(base)}<span class="h-new">${esc(newT)}</span></sup>`, name = esc(NAMES[id]);
+    const first = big
+      ? { x: 'store', noart: true, h: `${name} is on ${lit}`, d: 'Visit aOS for everything new in this update.' }
+      : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes };
     return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
       const m = o.el.querySelector('.v-mark.minor');
-      if (m) {   // the reveal, then the card
-        const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');
-        ow.style.width = ow.scrollWidth + 'px'; const w = [...nw.querySelectorAll('i:not(.v-halo)')].reduce((a, i) => a + i.offsetWidth, 0);
-        await wait(still() ? 0 : 650);
-        m.style.setProperty('--rx', (sup.offsetLeft + sup.offsetWidth - ow.offsetWidth + w - nw.offsetWidth) + 'px');
-        nw.style.width = w + 'px'; ow.style.width = '0px'; m.classList.add('grow');
-        await wait(still() ? 0 : 1300); m.classList.add('lit');
-      } else await wait(300);
-      await tour(o, [first, ...cards], 'Done');
+      const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');
+      ow.style.width = ow.scrollWidth + 'px'; const w = [...nw.querySelectorAll('i:not(.v-halo)')].reduce((a, i) => a + i.offsetWidth, 0);
+      await wait(still() ? 0 : 650);
+      m.style.setProperty('--rx', (sup.offsetLeft + sup.offsetWidth - ow.offsetWidth + w - nw.offsetWidth) + 'px');
+      nw.style.width = w + 'px'; ow.style.width = '0px'; m.classList.add('grow');
+      await wait(still() ? 0 : 1300); m.classList.add('lit');
+      await tour(o, [first], 'Done');
     });
   }
   // An app opened in Safari on iPhone, not from its Home Screen icon: how to add it.
@@ -1030,38 +1036,41 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   function playInstall(id = APP) {
     const k = 'aos.later.' + id;
     try { if (sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
-    const name = NAMES[id] || 'AllisonOS';
+    const name = NAMES[id] || 'aOS';
     return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
       o.q('.w-skip').hidden = true;
       await tour(o, [{ x: 'install', noart: true, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }], 'Not now');
     });
   }
   // An app's own walkthrough.
+  const DARK_ONLY = ['weather'];   // drawn for dark only, like the iPhone's own Weather: no Light or dark card
   function playApp(id) {
     const T = TOURS[id]; if (!T) return Promise.resolve();
-    const v = latest(id), name = NAMES[id];
+    const v = latest(), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
-      <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(latest('aos'))}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
-    const cards = T.cards;   // no install card: aOS shows how to add it, and this plays once it's on the Home Screen
+      <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
+    // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
+    // last: each app on the Home Screen keeps its own settings, so each one asks.
+    const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
     return run(`Welcome to ${name}`, head, () => markSeen(id, v), async o => { await sceneApp(o, id); await tour(o, cards); });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major }, seen: () => !!(seenAll() || {}).aos || metBefore() };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, cmp, major, dir: DIR }, seen: () => !!(seenAll() || {}).aos };
 
   // ---- deciding what to show, once ----
   function auto() {
-    const seen = seenAll(); if (!seen || !APP) return;
-    if (APP === 'aos' || APP === 'home') {
-      const v = latest('aos'), s = seen.aos;
-      if (!s) return metBefore() ? playMajor() : play();          // met AllisonOS before aOS had versions: show aOS1
-      if (cmp(v, s) <= 0) return;
-      return major(v) > major(s) ? playMajor() : playUpdate('aos', s, v);
-    }
-    if (!RELEASES[APP]) return;
+    const seen = seenAll(); if (!seen || !APP || APP === 'home') return;   // home: the retired launcher
     // On iPhone, Safari or the Home Screen? (display-mode: standalone, or navigator.standalone)
-    // In Safari: how to add it. From the Home Screen: its walkthrough and updates.
+    // In Safari: how to add it. From the Home Screen: the welcome, walkthrough or update.
     if (ios && !standalone()) return playInstall(APP);
-    const v = latest(APP), s = seen[APP];
+    const v = latest(), s = seen[APP];
+    if (APP === 'aos') {
+      if (!s) return play();
+      if (major(v) > major(s)) return playMajor();
+      if (cmp(v, s) > 0) markSeen('aos', v);   // a minor one: aOS says nothing, the apps do
+      return;
+    }
+    if (!TOURS[APP]) return;
     if (!s) return playApp(APP);
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
   }

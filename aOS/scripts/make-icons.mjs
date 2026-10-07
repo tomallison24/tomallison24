@@ -1,9 +1,9 @@
-// Draws aos/icon-512.png and aos/icon-180.png: "aOS" in white with a
+// Draws aOS/icon-512.png and aOS/icon-180.png: "aOS" in white with a
 // superscript 1, on the AllisonOS pastels (sky, lilac, rose, peach), with a
 // soft glossy light from the top. Full-bleed: the phone rounds the corners.
 // The picture is HTML, photographed by headless Chromium.
 //
-//   CHROMIUM=/path/to/chrome node aos/scripts/make-icons.mjs
+//   CHROMIUM=/path/to/chrome node aOS/scripts/make-icons.mjs
 // (needs playwright-core where node can find it)
 import { chromium } from 'playwright-core';
 import { dirname, join } from 'node:path';

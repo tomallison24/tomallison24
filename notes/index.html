@@ -2591,9 +2591,8 @@ svg.fs{fill:currentColor}
     }, Math.max(0, 1000 - (Date.now() - pillAt)));
   }
   const place = () => {
-    let home = false; try { home = !!sessionStorage.getItem('allisonos.home'); } catch(e) {}
     const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-    return home ? 'AllisonOS Home' : app ? 'the Notes app' : 'this browser';
+    return app ? 'the Notes app' : 'this browser';
   };
   function openSyncSheet(pre){
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : '';
@@ -2936,7 +2935,6 @@ svg.fs{fill:currentColor}
 })();
 </script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
-<script src="../home/back.js" defer></script>
 <script src="../home/welcome.js" data-app="notes" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>
