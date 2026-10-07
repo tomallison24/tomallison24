@@ -21,7 +21,7 @@
     $('where').textContent = standalone ? 'Opened from its own Home Screen icon.' : 'Add this page to your Home Screen (Share, Add to Home Screen), then open it from there.';
     $('store').innerHTML = p ? '<span class="ok">This app remembers ' + p.name.replace(/[<&>"]/g, '') + '</span>' : 'This app\'s own storage is empty';
     $('in').classList.toggle('hide', !!p); $('out').classList.toggle('hide', !p);
-    if (p) $('how').textContent = p.via === 'created' ? 'Account created here with Face ID.' : 'Signed in with one Face ID tap: nothing typed, nothing copied from the other app.';
+    if (p) $('how').textContent = p.via === 'created' ? 'Account created here with Face ID.' : p.via === 'autofill' ? 'Signed in from the keyboard bar with Face ID: nothing typed, nothing copied from the other app.' : 'Signed in with one Face ID tap: nothing typed, nothing copied from the other app.';
   }
 
   async function create() {
@@ -35,6 +35,7 @@
         user: { id: enc.encode(JSON.stringify({ n: name })), name: name + ' (AllisonOS test)', displayName: name },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', userVerification: 'required' },
+        hints: ['client-device'],   // prefer this phone's own passkeys (browsers that know hints)
         timeout: 60000,
       } });
       set({ name, via: 'created', at: Date.now() }); log(''); paint();
@@ -44,16 +45,47 @@
   async function signIn() {
     if (!window.PublicKeyCredential) return log('This browser has no passkeys.');
     try {
-      const c = await navigator.credentials.get({ publicKey: { challenge: rnd(32), userVerification: 'required', timeout: 60000 } });
-      let name = '';
-      try { name = JSON.parse(dec.decode(c.response.userHandle)).n; } catch {}
-      if (!name) return log('That passkey is not from this test. Create the account in Test A first.');
-      set({ name, via: 'passkey', at: Date.now() }); log(''); paint();
-    } catch (e) { log(e.name === 'NotAllowedError' ? 'Cancelled, or no passkey for this site yet: create the account first.' : e.name + ': ' + e.message); }
+      if (auto) auto.abort();   // a request already waiting in the keyboard bar would block this one
+      const c = await navigator.credentials.get({ publicKey: { challenge: rnd(32), userVerification: 'required', hints: ['client-device'], timeout: 60000 } });
+      done(c, 'passkey');
+    } catch (e) { log(e.name === 'NotAllowedError' ? 'Cancelled, or no passkey for this site yet: create the account first.' : e.name + ': ' + e.message); waitInKeyboard(); }
+  }
+  function done(c, via) {
+    let name = '';
+    try { name = JSON.parse(dec.decode(c.response.userHandle)).n; } catch {}
+    if (!name) return log('That passkey is not from this test. Create the account in Test A first.');
+    set({ name, via, at: Date.now() }); log(''); paint();
+  }
+
+  // The second way in: passkey autofill. Tapping the name box shows saved passkeys
+  // above the keyboard ("conditional mediation"), a different path from the button.
+  let auto = null;
+  async function waitInKeyboard() {
+    if (get() || !window.PublicKeyCredential || !PublicKeyCredential.isConditionalMediationAvailable) return;
+    try { if (!(await PublicKeyCredential.isConditionalMediationAvailable())) return; } catch { return; }
+    auto = new AbortController();
+    try {
+      const c = await navigator.credentials.get({ mediation: 'conditional', signal: auto.signal, publicKey: { challenge: rnd(32), userVerification: 'required' } });
+      done(c, 'autofill');
+    } catch (e) { if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') log(e.name + ': ' + e.message); }
+  }
+
+  // What this phone reports, for working out why a passkey isn't offered
+  async function report() {
+    const out = [];
+    out.push('Opened from: ' + (standalone ? 'Home Screen icon' : 'Safari tab'));
+    out.push('iOS: ' + ((navigator.userAgent.match(/OS (\d+[_\d]*) like Mac/) || [])[1] || '?').replace(/_/g, '.'));
+    const P = window.PublicKeyCredential;
+    if (!P) { out.push('Passkeys: not available'); } else {
+      try { out.push('Face ID passkeys: ' + ((await P.isUserVerifyingPlatformAuthenticatorAvailable()) ? 'yes' : 'no')); } catch { out.push('Face ID passkeys: ?'); }
+      try { out.push('Passkey autofill: ' + (P.isConditionalMediationAvailable && (await P.isConditionalMediationAvailable()) ? 'yes' : 'no')); } catch { out.push('Passkey autofill: ?'); }
+      try { if (P.getClientCapabilities) { const k = await P.getClientCapabilities(); out.push('Capabilities: ' + ['passkeyPlatformAuthenticator', 'userVerifyingPlatformAuthenticator', 'conditionalGet', 'hybridTransport'].map(x => x + ' ' + (k[x] ? 'yes' : 'no')).join(', ')); } } catch {}
+    }
+    $('report').textContent = out.join('\n');
   }
 
   $('create').onclick = create;
   $('signin').onclick = signIn;
-  $('reset').onclick = () => { set(null); log(''); paint(); };
-  paint();
+  $('reset').onclick = () => { set(null); log(''); paint(); waitInKeyboard(); };
+  paint(); report(); waitInKeyboard();
 })();
