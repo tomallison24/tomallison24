@@ -93,6 +93,7 @@ const blocked = [];
 const watchCsp = p => p.on('console', m => { const t = m.text(); if (/Content Security Policy|Refused to/i.test(t) && !/directive: "img-src data:"/.test(t)) blocked.push(t); });
 watchCsp(page);
 page.on('pageerror', e => { blocked.push('pageerror: ' + e.message); });
+await page.route("**/home/welcome.js", r => r.abort());   // the aOS walkthrough would sit over the page
 await page.addInitScript(() => {
   if (sessionStorage.getItem('seeded')) return;       // a reload after Sign Out stays signed out
   sessionStorage.setItem('seeded', '1');

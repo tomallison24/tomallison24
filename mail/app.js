@@ -1672,6 +1672,17 @@ function viewName() {
   return catOf(state.tag)?.name || (state.tag === 'STARRED' ? 'Flagged' : labelsById.get(state.tag)?.name) || 'Inbox';
 }
 
+// The pill's icon and name: the mailbox or tag on screen.
+function drawPill() {
+  const t = state.tag;
+  const icon = state.view === 'marketing' ? ICON.mkt : state.view === 'rules' ? ICON.label
+    : t === 'STARRED' ? ICON.flag : catOf(t) ? MENU_ICON[t]
+    : t && labelsById.get(t) ? '<i class="dot" style="--h:' + tagHue(labelsById.get(t).name) + '"></i>' : MENU_ICON.inbox;
+  if ($('#vbIcon').dataset.k !== icon) { $('#vbIcon').innerHTML = icon; $('#vbIcon').dataset.k = icon; }
+  $('#vbName').textContent = viewName();
+  $('#boxbtn').setAttribute('aria-label', 'Show a mailbox. Now: ' + viewName());
+}
+
 function boxMenuHTML() {
   const inbox = state.view === 'inbox';
   const row = (act, attrs, name, on, right) => '<button role="menuitemradio" aria-checked="' + on + '" data-act="' + act + '" ' + attrs + '>' +
@@ -1694,15 +1705,15 @@ function boxMenuHTML() {
 
 function openBoxMenu() {
   const el = $('#boxmenu'), btn = $('#boxbtn');
-  if (btn.disabled) return;
+  if ($('#vbar').classList.contains('hide')) return;
   el.innerHTML = boxMenuHTML();
   el.classList.remove('hide', 'leaving');
-  // Just under the header, so the title and account line stay in view.
-  const r = btn.getBoundingClientRect(), top = Math.round($('header').getBoundingClientRect().bottom + 6);
-  const menu = el.querySelector('.menu');
-  menu.style.left = Math.max(16, r.left - 4) + 'px';
-  menu.style.top = top + 'px';
-  menu.style.maxHeight = 'calc(100dvh - ' + (top + 16) + 'px - env(safe-area-inset-bottom))';
+  // Upwards from the pill, centred over it, as Fitness's view menu opens.
+  const r = btn.getBoundingClientRect(), menu = el.querySelector('.menu');
+  const w = Math.min(290, innerWidth - 32), cx = Math.min(Math.max(r.left + r.width / 2, 16 + w / 2), innerWidth - 16 - w / 2);
+  menu.style.left = Math.round(cx - w / 2) + 'px';
+  menu.style.bottom = Math.round(innerHeight - r.top + 10) + 'px';
+  menu.style.maxHeight = Math.max(160, Math.round(r.top - 10 - 64)) + 'px';
   btn.setAttribute('aria-expanded', 'true');
   menu.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
 }
@@ -1764,8 +1775,9 @@ function renderChrome() {
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
   fitTitle();
-  $('#boxbtn').disabled = !main || !!sel;
-  if ($('#boxbtn').disabled) closeBoxMenu(true);
+  $('#vbar').classList.toggle('hide', !main || !!sel);
+  if ($('#vbar').classList.contains('hide')) closeBoxMenu(true);
+  else drawPill();
   $('#sub').textContent = sel ? 'Tap, or drag down the circles' : (state.me || (signedIn ? 'Connecting…' : 'Not connected'));
 
   $('#fab').classList.toggle('hide', !listView || !!sel);

@@ -304,7 +304,6 @@
   header h1.fit2 { font-size: 24px; }
   body.scrolled header h1 { font-size: 21px; letter-spacing: -0.02em; }
   body.scrolled header .sub { opacity: 0; max-height: 0; margin-top: 0; }
-  body.scrolled .boxbtn svg { width: 18px; height: 18px; margin-top: 2px; }
   .iconbtn {
     width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
     background: var(--glass); border: 1px solid var(--hair); color: var(--icon);
@@ -329,19 +328,9 @@
   .ptr.spin svg { animation: rot .8s linear infinite; }
   .iconbtn.turning svg { animation: rot .6s var(--ease); }
 
-  /* ---- the mailbox menu: tap the title, as in Mail ---- */
+  /* ---- the mailbox menu: the pill at the bottom opens it (see the Liquid Glass block below) ---- */
   header h1 { min-width: 0; }
-  .boxbtn {
-    display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 0; margin: 0;
-    font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; text-align: left;
-    transition: transform .18s var(--ease);
-  }
-  .boxbtn #title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .boxbtn svg { color: var(--icon); margin-top: 5px; transition: transform .3s var(--ease); }
-  .boxbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
-  .boxbtn:not(:disabled):active { transform: scale(0.97); }
-  .boxbtn:disabled { color: inherit; opacity: 1; }
-  .boxbtn:disabled svg { display: none; }
+  #title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #boxmenu { position: fixed; inset: 0; z-index: 45; }
   #boxmenu .catch { position: absolute; inset: 0; background: var(--scrim); opacity: .45; animation: fadeIn .2s ease both; }
   .menu {
@@ -350,12 +339,12 @@
     background: var(--sheet);
     backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
     box-shadow: 0 18px 50px var(--lift-strong), inset 0 1px 0 var(--hi);
-    transform-origin: 24px 0; animation: menuIn .34s var(--ease) both;
+    transform-origin: 50% 100%; animation: menuIn .34s var(--ease) both;
   }
   #boxmenu.leaving .menu { animation: menuOut .18s ease both; }
   #boxmenu.leaving .catch { animation: fadeOut .18s ease both; }
-  @keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.86); } }
-  @keyframes menuOut { to { opacity: 0; transform: translateY(-4px) scale(.94); } }
+  @keyframes menuIn { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+  @keyframes menuOut { to { opacity: 0; transform: translateY(6px) scale(.94); } }
   .menu hr { border: 0; height: 1px; margin: 5px 0; background: var(--hair); }
   .menu .mhead { padding: 6px 16px 2px 42px; font-size: 12px; color: var(--faint); }
   .menu button {
@@ -1258,6 +1247,54 @@
   .menu button:active { background: var(--lgs-field); }
   .menu .mhead { padding-left: 38px; }
   .menu hr { margin: 5px 10px; }
+  /* ---- the mailbox pill: Liquid Glass at the bottom, as in Fitness and Home ----
+     Centred over the home indicator, in reach of a thumb: the mailbox's icon,
+     its name and a chevron; the menu opens upwards from it. A light tint, a
+     strong blur and a bright rim, drawn a layer behind (::before) so the
+     menu's own glass still blurs the page. The compose button sits to its
+     right; both give way to the select bar. */
+  :root {
+    --vb-top: rgba(255, 255, 255, 0.14); --vb-bottom: rgba(255, 255, 255, 0.06);
+    --vb-rim: inset 0 0 0 .5px rgba(255, 255, 255, 0.32), inset 0 1px .5px rgba(255, 255, 255, 0.5), inset 0 -1px 1px rgba(255, 255, 255, 0.08), 0 12px 30px -6px rgba(0, 0, 0, 0.6);
+    --vb-chip: rgba(255, 255, 255, 0.12); --vb-press: rgba(255, 255, 255, 0.12);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --vb-top: rgba(255, 255, 255, 0.56); --vb-bottom: rgba(255, 255, 255, 0.24);
+      --vb-rim: inset 0 0 0 .5px rgba(28, 32, 40, 0.12), inset 0 1px .5px rgba(255, 255, 255, 0.9), 0 10px 26px -8px rgba(30, 40, 60, 0.28);
+      --vb-chip: rgba(28, 32, 40, 0.09); --vb-press: rgba(28, 32, 40, 0.09);
+    }
+  }
+  .vbar {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 15px); z-index: 15; translate: -50% 0;
+    display: flex; align-items: center; padding: 4px; border-radius: 999px;
+    max-width: calc(100vw - 180px);        /* never reaches the compose button */
+    transition: opacity .25s, transform .3s var(--ease);
+  }
+  .vbar.hide { display: none; }
+  .vbar::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, var(--vb-top), var(--vb-bottom));
+    -webkit-backdrop-filter: blur(18px) saturate(190%); backdrop-filter: blur(18px) saturate(190%);
+    box-shadow: var(--vb-rim);
+  }
+  .vbar > button {
+    display: inline-flex; align-items: center; gap: 8px; height: 46px; max-width: 100%; padding: 0 14px 0 8px; border-radius: 999px;
+    white-space: nowrap; font-size: 16px; font-weight: 700; letter-spacing: -.2px; color: var(--text); transition: background .2s;
+  }
+  .vbar > button:active { background: var(--vb-press); }
+  .vbar .vb-ic { display: flex; width: 30px; height: 30px; flex: none; border-radius: 50%; align-items: center; justify-content: center; background: var(--vb-chip); color: var(--icon); }
+  .vbar .vb-ic svg { width: 18px; height: 18px; }
+  .vbar .vb-ic .dot { width: 9px; height: 9px; border-radius: 50%; background: hsl(var(--h) 90% 62%); box-shadow: 0 0 8px hsl(var(--h) 90% 62% / .6); }
+  .vbar .vb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .vbar .vb-chev { display: flex; flex: none; opacity: .7; margin-left: -2px; }
+  .vbar .vb-chev svg { width: 20px; height: 20px; transform: rotate(180deg); color: var(--icon); transition: transform .25s var(--ease); }
+  .vbar button[aria-expanded="true"] .vb-chev svg { transform: rotate(0deg); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .vbar::before { background: var(--bar-solid); } }
+  @media (prefers-reduced-transparency: reduce) { .vbar::before { background: var(--bar-solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  /* a message to show goes above the pill, not over it */
+  body:has(#vbar:not(.hide)) #toast { bottom: calc(env(safe-area-inset-bottom) + 76px); }
+  body:has(#sheet:not(.hide)) #toast { bottom: auto; }
   /* the select bar floats too: a capsule just inside the screen's edges */
   #selbar {
     left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); max-width: 544px; padding: 8px; gap: 6px;
@@ -1313,7 +1350,7 @@
 <div class="ptr" id="ptr" aria-hidden="true"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg></div>
 <main>
   <header>
-    <h1><button class="boxbtn" id="boxbtn" data-act="box-menu" aria-haspopup="menu" aria-expanded="false" disabled><span id="title">Mail</span><svg class="i s bold" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.8 9.2l5.5 5.6a1 1 0 0 0 1.4 0l5.5-5.6"/></svg></button><span class="sub" id="sub">&nbsp;</span></h1>
+    <h1><span id="title">Mail</span><span class="sub" id="sub">&nbsp;</span></h1>
     <button class="textbtn hide" id="selall">Select All</button>
     <button class="iconbtn hide" id="home" data-act="home" aria-label="Back to the inbox"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><path d="M3.8 11.2 12 4.2l8.2 7"/><path d="M6 9.6v8.9a1.5 1.5 0 0 0 1.5 1.5h2.9v-5.1a1 1 0 0 1 1-1h1.2a1 1 0 0 1 1 1V20h2.9a1.5 1.5 0 0 0 1.5-1.5V9.6"/></svg></button>
     <button class="iconbtn hide" id="find" aria-label="Search"><svg class="i s" width="18" height="18" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg></button>
@@ -1346,6 +1383,9 @@
   <svg class="i s" width="28" height="28" viewBox="0 0 24 24"><path d="M11.5 3.8H7.6a3.8 3.8 0 0 0-3.8 3.8v8.8a3.8 3.8 0 0 0 3.8 3.8h8.8a3.8 3.8 0 0 0 3.8-3.8v-3.9"/><path d="M17.5 3.6a2.1 2.1 0 0 1 3 3l-7.4 7.4a2.4 2.4 0 0 1-1.1.6l-3 .8.8-3a2.4 2.4 0 0 1 .6-1.1z"/></svg>
 </button>
 <div id="sheet" class="hide"></div>
+<nav class="vbar hide" id="vbar" aria-label="Mailboxes">
+  <button id="boxbtn" type="button" data-act="box-menu" aria-haspopup="menu" aria-expanded="false" aria-label="Show a mailbox"><span class="vb-ic" id="vbIcon"></span><span class="vb-name" id="vbName">Inbox</span><span class="vb-chev"><svg class="i s bold" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.8 9.2l5.5 5.6a1 1 0 0 0 1.4 0l5.5-5.6"/></svg></span></button>
+</nav>
 <div id="boxmenu" class="hide"></div>
 <div id="selbar" class="hide" role="toolbar" aria-label="Selected messages">
   <button id="sel-mark" disabled>Mark</button>
