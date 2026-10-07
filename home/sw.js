@@ -1,9 +1,9 @@
-// Offline shell for the Home app. Everything same-origin loads network-first
+// Offline shell for the retired launcher's notice and the scripts every app shares.
 // so a new deploy shows up on the next open; the cache is only the fallback
 // when offline. The other apps' icons are same-origin too, so they are kept
 // the same way.
-const CACHE = 'home-v19';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'back.js', 'slide.js', 'welcome.js', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'home-v20';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'slide.js', 'welcome.js', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

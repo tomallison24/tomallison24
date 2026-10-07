@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Home</title>
-<meta name="description" content="AllisonOS Home: every app on one screen, laid out like the iPhone's own home screen.">
-<meta name="theme-color" content="#EEF0F4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#07080B" media="(prefers-color-scheme: dark)">
+<title>AllisonOS is now aOS</title>
+<meta name="description" content="The AllisonOS launcher has retired: every app is now in aOS.">
+<meta name="theme-color" content="#F2F4F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1116" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,640 +15,61 @@
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  Home - the AllisonOS launcher, laid out like the iPhone's home screen: a
-  grid of app icons with their names underneath, over the same drifting
-  colour fields that sit behind the glass in News and Mail.
+  The AllisonOS launcher has retired: aOS (../aOS/) is now the home of every
+  app, each added to the Home Screen on its own. This folder stays for the
+  scripts every app shares (welcome.js, slide.js) and the Welcome Lab.
 
-  Install this one app and the others open inside it: the manifest's scope is
-  the whole site, so a tap on Mail or News stays in the same window with no
-  browser bar, and the phone's back gesture returns here.
-
-  A dock along the bottom holds up to four apps with no names, as the
-  iPhone's does. It fills with the most used (each tap on an app is counted
-  here), or Settings turns that off and you pick them.
-
-  Settings (its own icon, or press and hold anywhere) orders the apps, takes
-  one off the screen, and forces Light or Dark; Auto follows the phone.
-
-  No build step: this file is the whole app and sw.js keeps it working
-  offline.
+  In a browser this page goes straight on to aOS. Opened from an old launcher
+  icon on the Home Screen it says so, with aOS's address to open in Safari
+  (a link from here would stay inside this icon's window, where Safari's Add
+  to Home Screen isn't offered) and how to remove the old icon.
 -->
+<script>
+  // a browser tab: straight on to aOS
+  if (!(matchMedia('(display-mode: standalone)').matches || navigator.standalone === true)) location.replace('../aOS/');
+</script>
 <style>
-  :root {
-    --bg: #EEF0F4;
-    --text: #0B0B0F;
-    --muted: rgba(60, 60, 67, 0.62);
-    --hairline: rgba(60, 60, 67, 0.14);
-    --label: #0B0B0F;
-    --label-shadow: 0 1px 6px rgba(255, 255, 255, 0.55);
-    --glass: rgba(255, 255, 255, 0.46);
-    --glass-strong: rgba(255, 255, 255, 0.62);
-    --glass-edge: rgba(255, 255, 255, 0.75);
-    --glass-shadow: 0 8px 32px rgba(31, 38, 64, 0.10);
-    --chip-on-bg: #0B0B0F;
-    --chip-on-text: #FFFFFF;
-    --accent: #0A64E0;
-    --scrim: rgba(15, 18, 30, 0.10);
-    --sheet: rgba(246, 247, 251, 0.94);
-    --field: rgba(118, 118, 128, 0.12);
-    --seg-on: #FFFFFF;
-    --icon-shadow: 0 4px 14px rgba(20, 24, 48, 0.22);
-    --blob-1: rgba(96, 150, 255, 0.70);
-    --blob-2: rgba(255, 158, 118, 0.62);
-    --blob-3: rgba(168, 138, 255, 0.62);
-    --blob-4: rgba(96, 208, 178, 0.55);
-    /* Cards: very faint tiles, the same in every AllisonOS app */
-    --tile: rgba(255, 255, 255, 0.40);
-    --tile-edge: rgba(60, 60, 67, 0.10);
-    /* Liquid Glass for the Settings sheet: clear glass, a lit rim, faint tile rows */
-    --lgs-top: rgba(255, 255, 255, 0.68);
-    --lgs-bottom: rgba(255, 255, 255, 0.50);
-    --lgs-rim: rgba(255, 255, 255, 0.92);
-    --lgs-edge: rgba(255, 255, 255, 0.62);
-    --lgs-field: rgba(255, 255, 255, 0.62);
-    --lgs-thumb: rgba(255, 255, 255, 0.92);
-    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%);
-    --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
-    --lgs-lift: rgba(31, 38, 64, 0.08);
-    --lgs-lift-strong: rgba(31, 38, 64, 0.16);
-    color-scheme: light;
-  }
-  /* Dark: the phone's own setting, unless Settings forces one or the other. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #07080B;
-      --text: #F5F5F7;
-      --muted: rgba(235, 235, 245, 0.58);
-      --hairline: rgba(255, 255, 255, 0.08);
-      --label: #FFFFFF;
-      --label-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
-      --glass: rgba(30, 31, 38, 0.46);
-      --glass-strong: rgba(40, 41, 50, 0.62);
-      --glass-edge: rgba(255, 255, 255, 0.10);
-      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-      --chip-on-bg: #F5F5F7;
-      --chip-on-text: #0B0B0F;
-      --accent: #5AA2FF;
-      --scrim: rgba(0, 0, 0, 0.30);
-      --sheet: rgba(22, 23, 30, 0.94);
-      --field: rgba(118, 118, 128, 0.24);
-      --seg-on: #636366;
-      --icon-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-      --blob-1: rgba(40, 100, 230, 0.55);
-      --blob-2: rgba(200, 80, 40, 0.45);
-      --blob-3: rgba(110, 60, 210, 0.50);
-      --blob-4: rgba(20, 150, 120, 0.42);
-      --tile: rgba(255, 255, 255, 0.05);
-      --tile-edge: rgba(255, 255, 255, 0.10);
-      --lgs-top: rgba(44, 44, 52, 0.60);
-      --lgs-bottom: rgba(22, 22, 28, 0.52);
-      --lgs-rim: rgba(255, 255, 255, 0.20);
-      --lgs-edge: rgba(255, 255, 255, 0.12);
-      --lgs-field: rgba(255, 255, 255, 0.10);
-      --lgs-thumb: rgba(255, 255, 255, 0.16);
-      --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
-      --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
-      --lgs-lift: rgba(0, 0, 0, 0.38);
-      --lgs-lift-strong: rgba(0, 0, 0, 0.5);
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #07080B;
-    --text: #F5F5F7;
-    --muted: rgba(235, 235, 245, 0.58);
-    --hairline: rgba(255, 255, 255, 0.08);
-    --label: #FFFFFF;
-    --label-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
-    --glass: rgba(30, 31, 38, 0.46);
-    --glass-strong: rgba(40, 41, 50, 0.62);
-    --glass-edge: rgba(255, 255, 255, 0.10);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-    --chip-on-bg: #F5F5F7;
-    --chip-on-text: #0B0B0F;
-    --accent: #5AA2FF;
-    --scrim: rgba(0, 0, 0, 0.30);
-    --sheet: rgba(22, 23, 30, 0.94);
-    --field: rgba(118, 118, 128, 0.24);
-    --seg-on: #636366;
-    --icon-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-    --blob-1: rgba(40, 100, 230, 0.55);
-    --blob-2: rgba(200, 80, 40, 0.45);
-    --blob-3: rgba(110, 60, 210, 0.50);
-    --blob-4: rgba(20, 150, 120, 0.42);
-    --tile: rgba(255, 255, 255, 0.05);
-    --tile-edge: rgba(255, 255, 255, 0.10);
-    --lgs-top: rgba(44, 44, 52, 0.60);
-    --lgs-bottom: rgba(22, 22, 28, 0.52);
-    --lgs-rim: rgba(255, 255, 255, 0.20);
-    --lgs-edge: rgba(255, 255, 255, 0.12);
-    --lgs-field: rgba(255, 255, 255, 0.10);
-    --lgs-thumb: rgba(255, 255, 255, 0.16);
-    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
-    --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
-    --lgs-lift: rgba(0, 0, 0, 0.38);
-    --lgs-lift-strong: rgba(0, 0, 0, 0.5);
-    color-scheme: dark;
-  }
-
+  :root { --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.75); --edge: rgba(0,0,0,.07); --accent: #0A84FF;
+    --pastel: linear-gradient(100deg, #6EA8F2 0%, #9C86EC 26%, #EC86AA 50%, #EDA766 74%, #5FC6A6 100%); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1);
+    --pastel: linear-gradient(100deg, #9CC8FF 0%, #C3B1FF 26%, #FFB8CF 50%, #FFD2A8 74%, #A6EAD3 100%); color-scheme: dark; } }
   * { box-sizing: border-box; }
-  html { background: var(--bg); }
-  body {
-    margin: 0; color: var(--text); /* background stays on html so the backdrop shows through */
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-text-size-adjust: 100%;
-    min-height: 100vh; min-height: 100dvh;
-    overflow-x: hidden;
-    -webkit-touch-callout: none;          /* press and hold opens Settings, not the link menu */
-    -webkit-user-select: none; user-select: none;
-  }
-  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-  a { color: inherit; text-decoration: none; }
-  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  /* ---- Backdrop: the wallpaper ---- */
-  .backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-  .blob { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
-  .blob.b1 { top: -40vmax; left: -30vmax; background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%); animation: drift1 38s ease-in-out infinite alternate; }
-  .blob.b2 { top: 10vmax; right: -45vmax; background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%); animation: drift2 44s ease-in-out infinite alternate; }
-  .blob.b3 { bottom: -50vmax; left: -20vmax; background: radial-gradient(circle, var(--blob-3) 0%, transparent 70%); animation: drift3 50s ease-in-out infinite alternate; }
-  .blob.b4 { bottom: -30vmax; right: -40vmax; background: radial-gradient(circle, var(--blob-4) 0%, transparent 70%); animation: drift1 56s ease-in-out infinite alternate-reverse; }
-  @keyframes drift1 { to { transform: translate(12vmax, 10vmax) scale(1.08); } }
-  @keyframes drift2 { to { transform: translate(-14vmax, 8vmax) scale(0.92); } }
-  @keyframes drift3 { to { transform: translate(10vmax, -12vmax) scale(1.05); } }
-  @media (prefers-reduced-motion: reduce) { .blob { animation: none !important; } }
-
-  /* ---- Glass ---- */
-  .glass {
-    background: var(--glass);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 0.5px solid var(--glass-edge);
-    box-shadow: var(--glass-shadow), inset 0 0.5px 0 var(--glass-edge);
-  }
-
-  .wrap { max-width: 480px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
-  main { padding-top: calc(env(safe-area-inset-top) + 28px); padding-bottom: calc(env(safe-area-inset-bottom) + 124px); }
-
-  /* ---- The grid: iOS's home screen, four icons to a row ---- */
-  .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 8px; padding: 6px 4px; }
-  .app { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
-  .app .icon { width: 60px; height: 60px; border-radius: 22.5%; box-shadow: var(--icon-shadow); background: var(--field); display: block; overflow: hidden; transition: transform 0.15s; }
-  .app:active .icon { transform: scale(0.92); }
-  .app img { width: 100%; height: 100%; display: block; }
-  .app .name {
-    max-width: 100%; font-size: 12px; font-weight: 500; letter-spacing: -0.01em; text-align: center;
-    color: var(--label); text-shadow: var(--label-shadow);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  /* Settings: the iPhone's grey gear on a grey gradient */
-  .app .icon.settings { background: linear-gradient(180deg, #9A9AA2, #5F5F66); display: grid; place-items: center; color: #F2F2F7; }
-  .app .icon.settings svg { width: 38px; height: 38px; }
-  @media (min-width: 400px) { .apps { gap: 26px 12px; } .app .icon { width: 64px; height: 64px; } }
-
-  /* ---- The dock: a frosted pill along the bottom, icons with no names ---- */
-  .dock {
-    position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom) + 14px); z-index: 5;
-    width: calc(100% - 32px); max-width: 448px;
-    display: flex; justify-content: space-evenly; align-items: center;
-    padding: 12px 8px; border-radius: 32px;
-  }
-  .dock[hidden] { display: none; }
-  .dock .app { gap: 0; }
-  .dock .app .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-
-  /* ---- Install ---- */
-  .install { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 22px; border-radius: 22px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
-  .install[hidden] { display: none; }
-  .install .text { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
-  .install .text b { display: block; font-size: 15px; font-weight: 600; }
-  .install .text span { color: var(--muted); }
-  /* Install: tinted glass in the chip-on colour (black in light, white in dark) with a lit rim;
-     Not now: a small clear glass disc, as the dock is made of */
-  .install .go {
-    flex: none; height: 34px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--chip-on-text);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), color-mix(in srgb, var(--chip-on-bg) 88%, transparent);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px var(--lgs-lift-strong);
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .install .go:active { transform: scale(0.96); background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), var(--chip-on-bg); }
-  .install .later {
-    flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--muted);
-    background: var(--lgs-shine), var(--glass);
-    backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
-    box-shadow: inset 0 0 0 1px var(--glass-edge), inset 0 1px 1px var(--lgs-rim), 0 2px 8px var(--lgs-lift);
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .install .later:active { transform: scale(0.9); }
-  .install .later svg { width: 14px; height: 14px; }
-
-  /* ---- Settings sheet: Liquid Glass ----
-     One sheet of clear glass floating just inside the screen's edges, as
-     iOS 26's are: the home screen blurs and brightens through it, a lit rim
-     runs round it, the buttons are lighter glass on top, and the lists are
-     the same faint tiles as every AllisonOS card (no blur of their own). */
-  html.locked, html.locked body { overflow: hidden; }
-  .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
-  .sheet-wrap[hidden] { display: none; }
-  .scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.25s; touch-action: none; }
-  .sheet {
-    position: relative; width: calc(100% - 16px); max-width: 544px; margin: 0 0 8px;
-    max-height: min(calc(100dvh - env(safe-area-inset-top) - 32px), 760px);
-    display: flex; flex-direction: column; overflow: hidden;
-    border: 0; border-radius: 34px;
-    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
-    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px var(--lgs-lift-strong), 0 2px 8px var(--lgs-lift);
-    transform: translateY(calc(100% + 24px)); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
-    -webkit-user-select: text; user-select: text;
-  }
-  .sheet:focus { outline: none; }
-  .sheet-wrap.open .scrim { opacity: 1; }
-  .sheet-wrap.open .sheet { transform: none; }
-  @media (min-width: 640px) {
-    .sheet-wrap { align-items: center; }
-    .sheet { max-height: min(720px, calc(100dvh - 48px)); }
-  }
-  @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
-  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--field); margin: 6px auto 0; flex: none; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 12px 10px 20px; flex: none; }
-  .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-  /* Close: a round glass button, as iOS 26's sheets have */
-  .close-btn {
-    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text);
-    background: var(--lgs-shine), var(--lgs-field);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lgs-lift);
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .close-btn:active { transform: scale(0.9); }
-  .close-btn svg { width: 16px; height: 16px; }
-  /* The list fades in under the header rather than being cut off by it. */
-  .sheet-body {
-    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px calc(env(safe-area-inset-bottom) + 16px);
-    -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
-  }
-  .sect h3 { margin: 18px 8px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-  .group { border-radius: 26px; overflow: hidden; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
-  .opt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px 8px 16px; text-align: left; font-size: 16px; }
-  .opt + .opt::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--hairline); }
-  .opt .label { flex: 1; min-width: 0; }
-  .opt .sub { display: block; color: var(--muted); font-size: 13px; }
-  .opt img { width: 28px; height: 28px; border-radius: 22.5%; flex: none; }
-  .opt.dim .label, .opt.dim img { opacity: 0.45; }
-  .segmented {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border-radius: 999px; background: var(--field);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift);
-  }
-  .seg { height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
-  .seg[aria-pressed="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
-  .mini {
-    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--text); flex: none;
-    background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim);
-  }
-  .mini:disabled { opacity: 0.3; cursor: default; }
-  .mini svg { width: 14px; height: 14px; }
-  /* iOS 26's switch: a pill-shaped knob that swells into a clear lens while pressed */
-  .switch {
-    position: relative; width: 58px; height: 30px; border-radius: 999px; background: var(--field); flex: none; transition: background-color 0.2s;
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift);
-  }
-  .switch::after {
-    content: ""; position: absolute; top: 3px; left: 3px; width: 34px; height: 24px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    transition: transform 0.3s cubic-bezier(0.3, 1.3, 0.5, 1), scale 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s;
-  }
-  .switch[aria-checked="true"] { background: #34C759; }
-  .switch[aria-checked="true"]::after { transform: translateX(18px); }
-  .switch:not([disabled]):active::after { scale: 1.18; background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.22); }
-  .switch:disabled { cursor: default; }
-  .sheet-note { margin: 10px 8px 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--sheet); } }
-  @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--sheet); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-
-  /* ---- A switch with a sliding glass thumb ----
-     Appearance's Auto / Light / Dark: the options stay clear, and one thumb
-     under them glides to the chosen one, stretching as it goes, as iOS 26's
-     do (slide.js). */
-  .slides { position: relative; isolation: isolate; }
-  .slides > :not(.slthumb) { position: relative; z-index: 1; }
-  .slthumb {
-    position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 999px; z-index: 0; pointer-events: none;
-    background: var(--lgs-shine), var(--lgs-thumb);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 0 var(--lgs-rim), 0 3px 10px var(--lgs-lift);
-    transition: opacity 0.25s ease, scale 0.25s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s;
-  }
-  .slthumb.off { opacity: 0; scale: 0.7; }
-  .segmented.slides .seg[aria-pressed="true"] { background: none; box-shadow: none; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center; padding: calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 24px); text-align: center; }
+  main { max-width: 420px; width: 100%; }
+  .mark { font-size: 72px; font-weight: 800; letter-spacing: -2.5px; line-height: 1; }
+  .mark span, .mark sup { background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  .mark sup { display: inline-block; font-size: .5em; letter-spacing: 0; vertical-align: 0; position: relative; top: -.78em; margin-left: 2px; }
+  h1 { font-size: 26px; margin: 22px 0 8px; letter-spacing: -.3px; }
+  p { color: var(--muted); font-size: 16px; line-height: 1.45; margin: 0 0 14px; }
+  .card { margin: 22px 0 0; padding: 18px; border-radius: 24px; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); text-align: left; }
+  .card ol { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  .card li + li { margin-top: 8px; }
+  .addr { display: block; margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--edge); font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all; -webkit-user-select: all; }
+  button { display: block; width: 100%; height: 50px; margin-top: 18px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-family: inherit; font-size: 17px; font-weight: 700; }
+  button:active { transform: scale(.98); }
 </style>
 </head>
 <body>
-<div class="backdrop" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
-
-<div class="wrap">
-  <main>
-    <section class="install" id="install" hidden>
-      <div class="text"><b>Add AllisonOS to your home screen</b><span id="install-sub">Every app opens inside it, with no browser bar.</span></div>
-      <button class="go" id="install-go" hidden>Install</button>
-      <button class="later" id="install-later" aria-label="Not now">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </section>
-
-    <nav class="apps" id="apps" aria-label="Apps"></nav>
-    <nav class="dock glass" id="dock" aria-label="Dock" hidden></nav>
-  </main>
-</div>
-
-<div class="sheet-wrap" id="sheet" hidden>
-  <div class="scrim" data-action="close-sheet"></div>
-  <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
-    <div class="grabber" aria-hidden="true"></div>
-    <header class="sheet-head">
-      <h2 id="sheet-title">Settings</h2>
-      <button class="close-btn" data-action="close-sheet" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </header>
-    <div class="sheet-body">
-      <div class="sect">
-        <h3>Appearance</h3>
-        <div class="segmented" id="theme" role="group" aria-label="Appearance">
-          <button class="seg" data-theme="auto">Auto</button>
-          <button class="seg" data-theme="light">Light</button>
-          <button class="seg" data-theme="dark">Dark</button>
-        </div>
-      </div>
-      <div class="sect">
-        <h3>Dock</h3>
-        <div class="group" id="dock-list"></div>
-        <p class="sheet-note" id="dock-note"></p>
-      </div>
-      <div class="sect">
-        <h3>Apps</h3>
-        <div class="group" id="app-list"></div>
-        <p class="sheet-note">Switch an app off to take it off the home screen. The arrows set the order. Press and hold the home screen to come back here.</p>
-      </div>
-      <div class="sect">
-        <h3>About</h3>
-        <div class="group"><div class="opt"><span class="label">AllisonOS Home<span class="sub" id="about"></span></span></div></div>
-      </div>
-    </div>
-  </section>
-</div>
-
-<script src="slide.js"></script>
+<main>
+  <div class="mark" aria-label="aOS 1"><span>aOS</span><sup>1</sup></div>
+  <h1>AllisonOS is now aOS</h1>
+  <p>This launcher has retired. aOS is the home for every app now, and each app goes on your Home Screen on its own.</p>
+  <div class="card">
+    <ol>
+      <li>Open this address in Safari:<span class="addr" id="addr"></span></li>
+      <li>Add aOS to your Home Screen, then add the apps you want from it.</li>
+      <li>Remove this icon: press and hold it, then tap <b>Remove App</b>.</li>
+    </ol>
+    <button type="button" id="copy">Copy the address</button>
+  </div>
+</main>
 <script>
-(() => {
-  'use strict';
-
-  // The apps, in their default order. Paths are relative so the same page
-  // works wherever the site is served from (GitHub Pages puts it under
-  // /tomallison24/, Cloudflare at the root). The tile uses the folder's
-  // own icon-512.png.
-  const APPS = [
-    { id: 'aos',     name: 'aOS',     path: '../aos/' },    // the home of every app: get them, learn them, what's new
-    { id: 'mail',    name: 'Mail',    path: '../mail/' },
-    { id: 'calendar', name: 'Calendar', path: '../calendar/' },
-    { id: 'news',    name: 'News',    path: '../news/' },
-    { id: 'weather', name: 'Weather', path: '../weather/' },
-    { id: 'notes',   name: 'Notes',   path: '../notes/' },
-    { id: 'podcasts', name: 'Podcasts', path: '../podcasts/' },
-    { id: 'travel',  name: 'Travel',  path: '../travel/' },
-    { id: 'places',  name: 'Places',  path: '../places/', v: 2 },
-    { id: 'fitness', name: 'Fitness', path: '../fitness/' },   // v: bumped when the icon changes, so the tile fetches it afresh
-    { id: 'house',   name: 'Home',    path: '../house/', v: 2 },   // v2: the house icon (was the dehumidifier tank)
-  ];
-  const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/><circle cx="12" cy="12" r="3"/></svg>';
-
-  const $ = id => document.getElementById(id);
-  const store = {
-    get(k) { try { return JSON.parse(localStorage.getItem('home.' + k)); } catch { return null; } },
-    set(k, v) { try { localStorage.setItem('home.' + k, JSON.stringify(v)); } catch {} },
-  };
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  // The sliding glass thumb under Appearance's choice (slide.js, loaded first).
-  const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
-  const slideTheme = jump => slide($('theme'), $('theme').querySelector('[aria-pressed="true"]'), 'theme', { jump });
-
-  // ---- settings ----
-  const DOCK_MAX = 4;
-  // dockAuto: the dock holds the most used apps; off, it holds settings.dock.
-  const settings = Object.assign({ theme: 'auto', order: APPS.map(a => a.id), hidden: [], dockAuto: true, dock: [] }, store.get('settings') || {});
-  settings.dock = (Array.isArray(settings.dock) ? settings.dock : []).filter(id => APPS.some(a => a.id === id)).slice(0, DOCK_MAX);
-  settings.dockAuto = settings.dockAuto !== false;
-  // How often each app has been opened from here, for the most-used dock.
-  const uses = Object.assign({}, store.get('uses') || {});
-  settings.order = settings.order.filter(id => APPS.some(a => a.id === id));
-  for (const a of APPS) if (!settings.order.includes(a.id)) settings.order.push(a.id);
-  settings.hidden = settings.hidden.filter(id => APPS.some(a => a.id === id));
-  if (!['auto', 'light', 'dark'].includes(settings.theme)) settings.theme = 'auto';
-  const save = () => store.set('settings', settings);
-
-  function applyTheme() {
-    const root = document.documentElement;
-    if (settings.theme === 'auto') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', settings.theme);
-    // The theme-color metas pick by the phone's setting; a forced theme sets both.
-    const dark = settings.theme === 'dark' || (settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = dark ? '#07080B' : '#EEF0F4';
-    for (const b of document.querySelectorAll('#theme .seg')) b.setAttribute('aria-pressed', String(b.dataset.theme === settings.theme));
-    slideTheme();   // hidden until Settings opens; openSheet places it then
-  }
-
-  // ---- the grid ----
-  const orderedApps = () => settings.order.map(id => APPS.find(a => a.id === id));
-
-  const shownApps = () => orderedApps().filter(a => !settings.hidden.includes(a.id));
-
-  // The dock's apps: the most used (ties keep the grid's order), or the
-  // ones chosen in Settings. Hidden apps never appear in it.
-  function dockApps() {
-    const shown = shownApps();
-    if (!settings.dockAuto) return shown.filter(a => settings.dock.includes(a.id)).slice(0, DOCK_MAX);
-    return shown.map((a, i) => ({ a, i, n: uses[a.id] || 0 }))
-      .sort((x, y) => y.n - x.n || x.i - y.i).slice(0, DOCK_MAX)
-      .sort((x, y) => x.i - y.i).map(x => x.a);
-  }
-
-  const tile = a => `
-      <a class="app" href="${a.path}" data-id="${a.id}" draggable="false">
-        <span class="icon"><img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="60" height="60" decoding="async" draggable="false"></span>
-        <span class="name">${esc(a.name)}</span>
-      </a>`;
-
-  function renderApps() {
-    const dock = dockApps();
-    $('apps').innerHTML = shownApps().filter(a => !dock.includes(a)).map(tile).join('')
-      + `<button class="app" id="gear" aria-haspopup="dialog"><span class="icon settings">${GEAR}</span><span class="name">Settings</span></button>`;
-    $('gear').addEventListener('click', openSheet);
-    $('dock').innerHTML = dock.map(tile).join('');
-    $('dock').hidden = !dock.length;
-  }
-
-  // Count each open, for the most-used dock. localStorage writes at once,
-  // so the count lands before the page goes.
-  document.addEventListener('click', e => {
-    const app = e.target.closest('a.app[data-id]');
-    if (!app || e.defaultPrevented) return;
-    uses[app.dataset.id] = (uses[app.dataset.id] || 0) + 1;
-    store.set('uses', uses);
-    // Tells the app it was opened from here, so a swipe up (home/back.js)
-    // comes back. sessionStorage lives as long as this window does.
-    try { sessionStorage.setItem('allisonos.home', location.href); } catch {}
-  });
-
-  function renderDockList() {
-    const auto = settings.dockAuto;
-    const inDock = dockApps().map(a => a.id);
-    const full = !auto && settings.dock.length >= DOCK_MAX;
-    $('dock-list').innerHTML = `
-      <div class="opt" data-dock="auto">
-        <span class="label">Most used<span class="sub">Fills the dock with the apps you open most</span></span>
-        <button class="switch" role="switch" aria-checked="${auto}" aria-label="Most used"></button>
-      </div>` + shownApps().map(a => {
-        const on = inDock.includes(a.id);
-        return `
-      <div class="opt${auto ? ' dim' : ''}" data-dock="${a.id}">
-        <img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="28" height="28">
-        <span class="label">${esc(a.name)}</span>
-        <button class="switch" role="switch" aria-checked="${on}" aria-label="${esc(a.name)} in the dock" ${auto || (full && !on) ? 'disabled' : ''}></button>
-      </div>`;
-      }).join('');
-    $('dock-note').textContent = auto
-      ? 'Turn Most used off to choose the dock yourself.'
-      : `Up to ${DOCK_MAX} apps. Apps in the dock leave the grid, as on an iPhone.`;
-  }
-
-  $('dock-list').addEventListener('click', e => {
-    const btn = e.target.closest('button.switch');
-    const row = e.target.closest('.opt');
-    if (!btn || !row || btn.disabled) return;
-    const id = row.dataset.dock;
-    if (id === 'auto') {
-      settings.dockAuto = !settings.dockAuto;
-      // Turning Most used off keeps what is there, so nothing jumps.
-      if (!settings.dockAuto) settings.dock = dockApps().map(a => a.id);
-    } else if (settings.dock.includes(id)) settings.dock = settings.dock.filter(x => x !== id);
-    else if (settings.dock.length < DOCK_MAX) settings.dock.push(id);
-    save(); renderApps(); renderDockList();
-  });
-
-  function renderAppList() {
-    const apps = orderedApps();
-    $('app-list').innerHTML = apps.map((a, i) => {
-      const on = !settings.hidden.includes(a.id);
-      return `
-      <div class="opt${on ? '' : ' dim'}" data-id="${a.id}">
-        <img src="${a.path}icon-512.png${a.v ? '?v=' + a.v : ''}" alt="" width="28" height="28">
-        <span class="label">${esc(a.name)}</span>
-        <button class="mini" data-move="-1" aria-label="Move ${esc(a.name)} up" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg></button>
-        <button class="mini" data-move="1" aria-label="Move ${esc(a.name)} down" ${i === apps.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></svg></button>
-        <button class="switch" role="switch" aria-checked="${on}" aria-label="Show ${esc(a.name)}"></button>
-      </div>`;
-    }).join('');
-  }
-
-  $('app-list').addEventListener('click', e => {
-    const btn = e.target.closest('button');
-    const row = e.target.closest('.opt');
-    if (!btn || !row) return;
-    const id = row.dataset.id;
-    if (btn.dataset.move) {
-      const i = settings.order.indexOf(id), j = i + Number(btn.dataset.move);
-      if (j < 0 || j >= settings.order.length) return;
-      [settings.order[i], settings.order[j]] = [settings.order[j], settings.order[i]];
-    } else if (btn.classList.contains('switch')) {
-      if (settings.hidden.includes(id)) settings.hidden = settings.hidden.filter(x => x !== id);
-      else settings.hidden.push(id);
-    }
-    save(); renderApps(); renderAppList(); renderDockList();
-  });
-
-  // ---- install ----
-  // Chrome on Android offers the app through beforeinstallprompt; Safari on
-  // iPhone has no such event, so it gets the Share -> Add to Home Screen hint.
-  let installEvent = null;
-  const installEl = $('install');
-  function showInstall() {
-    if (standalone || store.get('install.dismissed')) return;
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (installEvent) { $('install-go').hidden = false; installEl.hidden = false; }
-    else if (ios) {
-      $('install-sub').textContent = 'In Safari: Share, then Add to Home Screen. Every app opens inside it.';
-      installEl.hidden = false;
-    }
-  }
-  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; showInstall(); });
-  window.addEventListener('appinstalled', () => { installEl.hidden = true; installEvent = null; });
-  $('install-go').addEventListener('click', async () => {
-    if (!installEvent) return;
-    installEvent.prompt();
-    try { await installEvent.userChoice; } catch {}
-    installEvent = null; installEl.hidden = true;
-  });
-  $('install-later').addEventListener('click', () => { store.set('install.dismissed', true); installEl.hidden = true; });
-
-  // ---- settings sheet ----
-  const sheetWrap = $('sheet'), sheetEl = sheetWrap.querySelector('.sheet');
-  let lastFocus = null;
-  function openSheet() {
-    if (!sheetWrap.hidden) return;
-    lastFocus = document.activeElement;
-    renderAppList(); renderDockList();
-    sheetWrap.hidden = false;
-    slideTheme(true);
-    document.documentElement.classList.add('locked');
-    requestAnimationFrame(() => { sheetWrap.classList.add('open'); sheetEl.focus(); });
-  }
-  function closeSheet() {
-    sheetWrap.classList.remove('open');
-    document.documentElement.classList.remove('locked');
-    const done = () => { sheetWrap.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); };
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) done();
-    else sheetEl.addEventListener('transitionend', done, { once: true });
-  }
-  sheetWrap.addEventListener('click', e => { if (e.target.closest('[data-action="close-sheet"]')) closeSheet(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheetWrap.hidden) closeSheet(); });
-  $('theme').addEventListener('click', e => {
-    const b = e.target.closest('.seg');
-    if (!b) return;
-    settings.theme = b.dataset.theme; save(); applyTheme();
-  });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-  window.addEventListener('resize', () => slideTheme(true));
-  // The welcome's setup (welcome.js) chose an appearance: the same setting as Appearance here.
-  addEventListener('aos:theme', e => { if (['auto', 'light', 'dark'].includes(e.detail)) { settings.theme = e.detail; save(); applyTheme(); } });
-
-  // Press and hold the home screen to open Settings, as holding the iPhone's
-  // does. A finger that moves is a scroll, not a hold; a hold that fires
-  // swallows the tap that would otherwise open the app under it.
-  let hold = null, held = false;
-  const main = document.querySelector('main');
-  main.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || !sheetWrap.hidden) return;
-    held = false;
-    const x = e.clientX, y = e.clientY;
-    const cancel = () => { clearTimeout(hold); hold = null; main.removeEventListener('pointermove', move); };
-    const move = ev => { if (Math.hypot(ev.clientX - x, ev.clientY - y) > 10) cancel(); };
-    main.addEventListener('pointermove', move);
-    main.addEventListener('pointerup', cancel, { once: true });
-    main.addEventListener('pointercancel', cancel, { once: true });
-    hold = setTimeout(() => { cancel(); held = true; if (navigator.vibrate) navigator.vibrate(10); openSheet(); }, 500);
-  });
-  main.addEventListener('click', e => { if (held) { e.preventDefault(); held = false; } }, true);
-  main.addEventListener('contextmenu', e => e.preventDefault());
-
-  // ---- go ----
-  applyTheme();
-  renderApps();
-  $('about').textContent = standalone ? 'Installed' : 'Running in the browser';
-  showInstall();
+  const u = new URL('../aOS/', location.href).href;
+  document.getElementById('addr').textContent = u;
+  const b = document.getElementById('copy');
+  b.onclick = async () => { try { await navigator.clipboard.writeText(u); b.textContent = 'Copied'; } catch { b.textContent = 'Press and hold the address to copy it'; } setTimeout(() => { b.textContent = 'Copy the address'; }, 2500); };
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-})();
 </script>
-<script src="welcome.js" data-app="home" data-auto defer></script>   <!-- aOS: the AllisonOS welcome the first time, aOS's update screens after -->
 </body>
 </html>

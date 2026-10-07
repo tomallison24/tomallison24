@@ -2,9 +2,9 @@
 
 Home Assistant as an AllisonOS app: plain HTML talking to Home Assistant
 directly, instead of Lovelace and its community cards. It is called **Home**
-on the screen; the folder is `house/` because `home/` is the AllisonOS
-launcher, and its `localStorage` keys are `house.*` so the two never clash
-when it is opened from the launcher. It has every device on the Signal
+on the screen; the folder is `house/` because `home/` was the AllisonOS
+launcher (retired; it now holds the scripts every app shares), and its
+`localStorage` keys are `house.*`. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. Behind it
@@ -411,8 +411,9 @@ someone who got a link and its code.
   is public and shares `tomallison24.github.io` with any other Pages site on
   the account.
 
-On iPhone, this app opened from the launcher and the same app installed on
-its own keep separate storage (see `home/README.md`), so each needs the token once.
+On iPhone, the app on the Home Screen keeps its own storage, apart from Safari,
+so the token entered in Safari isn't there: enter it (or use a share code) once
+in the installed app.
 
 ### How it talks to Home Assistant
 
