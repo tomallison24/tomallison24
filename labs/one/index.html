@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test hub</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Test hub">
+<link rel="apple-touch-icon" href="../../aOS/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="../lab.css">
+<!--
+  Option 1 test: aOS as the only app. One Home Screen icon; the "apps" open
+  inside it (they are under its scope, ./), so they share one storage and one
+  set-up. Not an app; see ../index.html.
+-->
+</head>
+<body>
+<main>
+  <h1>Option 1: <span class="ink">one app</span></h1>
+  <p id="where"></p>
+
+  <div class="card" id="setup">
+    <h3>Set up once</h3>
+    <p>Stands in for everything a new person enters: Gmail, Home, the shared Sheets.</p>
+    <input id="name" placeholder="Your name" autocomplete="given-name">
+    <button type="button" id="save">Save</button>
+  </div>
+
+  <div class="card hide" id="done">
+    <h3 class="ok" id="hello"></h3>
+    <p>Now open the two apps below. Neither asks you anything: they live inside this one app, so they share its storage.</p>
+    <button type="button" class="soft" id="reset">Start over</button>
+  </div>
+
+  <div class="tiles">
+    <a class="tile" href="notes/"><img src="../../notes/icon-180.png" alt=""><b>Notes</b><small>Opens inside the hub</small></a>
+    <a class="tile" href="weather/"><img src="../../weather/icon-180.png" alt=""><b>Weather</b><small>Opens inside the hub</small></a>
+  </div>
+
+  <h2>What to notice</h2>
+  <ol>
+    <li>One icon on your Home Screen, one set-up.</li>
+    <li>Every app opens in the same window; the <b>aOS</b> pill at the bottom of each brings you back here.</li>
+    <li>The iPhone app switcher shows one app, not one per app.</li>
+  </ol>
+</main>
+<script>
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  document.getElementById('where').textContent = standalone ? 'Opened from your Home Screen.' : 'Add this page to your Home Screen first (Share, Add to Home Screen), then open it from there.';
+  const $ = id => document.getElementById(id);
+  const get = () => { try { return JSON.parse(localStorage.getItem('lab.one') || 'null'); } catch { return null; } };
+  const paint = () => { const p = get(); $('setup').classList.toggle('hide', !!p); $('done').classList.toggle('hide', !p); if (p) $('hello').textContent = `Set up as ${p.name}`; };
+  $('save').onclick = () => { const name = $('name').value.trim(); if (!name) return $('name').focus(); try { localStorage.setItem('lab.one', JSON.stringify({ name, at: Date.now() })); } catch {} paint(); };
+  $('reset').onclick = () => { try { localStorage.removeItem('lab.one'); } catch {} paint(); };
+  paint();
+</script>
+</body>
+</html>

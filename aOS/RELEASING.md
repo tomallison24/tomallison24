@@ -40,7 +40,9 @@ Cloudflare Pages and GitHub Pages. Each phone sees the update the next time it
 opens an app (the service workers load network-first).
 
 Run it with **release** blank to republish the live release with fresh
-headlines; it never publishes unreleased changes.
+headlines; it never publishes unreleased app changes. The one exception is
+`labs/` (test pages for you, not apps), which always comes from the latest
+merged code.
 
 ## The log
 
