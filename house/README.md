@@ -139,7 +139,9 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   grey dot. Still with Reduce Motion.
 - **Weather**: a full-width glass pill over the automations - the
   condition's icon (the night's after sunset), the temperature outside and
-  the condition, with a glow of its colour - that opens the AllisonOS
+  the condition with today's high and low small and dim beneath it (the
+  Weather app's own day, hidden when it isn't today's or when Home
+  Assistant's reading stands in), with a glow of its colour - that opens the AllisonOS
   Weather app (`../weather/`). The reading is the Weather app's own, from its
   shared `../weather/data.js` (NWS corrected by the nearest station, or
   Open-Meteo), for home (`zone.home`), so the two agree. It is fetched when

@@ -17,7 +17,8 @@
 //     Report a Bug fills the same helpers as the dashboard's form and runs
 //     script.log_bug, which appends it to bug_log.md.
 //   - Weather: a glass pill over the automations - the condition and the
-//     temperature outside, the Weather app's own reading (WXNOW below) - that
+//     temperature outside (with today's high and low, small, beneath the
+//     condition), the Weather app's own reading (WXNOW below) - that
 //     opens the AllisonOS Weather app (../weather/, a plain link, as the
 //     launcher's own)
 //   - Activity: a glass pill under the weather with the latest event; it
@@ -92,7 +93,12 @@ const WXNOW = {
     this.busy = Date.now();
     try {
       const b = await WXD.fetchBase(p.lat, p.lon);
-      if (b && b.cur && Number.isFinite(b.cur.tF)) { this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src }; store.set('wxnow', this.d); render(); if (typeof BG !== 'undefined') BG.paintTone(); }
+      if (b && b.cur && Number.isFinite(b.cur.tF)) {
+        const d0 = b.daily && b.daily[0];   // today's high and low, as Weather's own day row
+        this.d = { at: Date.now(), tF: b.cur.tF, c: b.cur.c, src: b.src };
+        if (d0 && Number.isFinite(d0.hF) && Number.isFinite(d0.lF)) Object.assign(this.d, { hF: d0.hF, lF: d0.lF, day: WXD.ymd(d0.t, b.tz), tz: b.tz });
+        store.set('wxnow', this.d); render(); if (typeof BG !== 'undefined') BG.paintTone();
+      }
     } catch { /* Home Assistant's, or the last reading, stands; tried again in a minute */ }
     finally { this.busy = 0; }
   },
@@ -110,7 +116,15 @@ function favWeather() {
   if (night && w.state === 'sunny') { ic = 'night'; word = 'Clear'; c = '150,160,255'; }
   let t = Number(w.attributes.temperature), u = w.attributes.temperature_unit || '°';
   if (own) { try { if (JSON.parse(localStorage.getItem('wx.units')) === 'metric') { t = (t - 32) * 5 / 9; u = '°C'; } } catch {} }   // as Weather is set
-  return { c, html: `<span class="wx-ic">${svg(ic, 26)}</span><span class="wx-t"><b>${Number.isFinite(t) ? Math.round(t) + (u.includes('C') ? '°C' : '°') : '--°'}</b><small>${esc(word)}</small></span><span class="wx-go">Weather${svg('chevR', 18)}</span>` };
+  // Today's high and low, small under the condition: only the Weather app's own, and only for today.
+  let hl = '';
+  if (own && Number.isFinite(own.hF) && Number.isFinite(own.lF) && own.day === WXD.ymd(Date.now() / 1000, own.tz)) {
+    let metric = false; try { metric = JSON.parse(localStorage.getItem('wx.units')) === 'metric'; } catch {}
+    const g = f => Math.round(metric ? (f - 32) * 5 / 9 : f) + '°';
+    hl = `<em class="wx-hl" aria-label="High ${g(own.hF)}, low ${g(own.lF)}">H:${g(own.hF)} L:${g(own.lF)}</em>`;
+  }
+  const tt = Number.isFinite(t) ? Math.round(t) + (u.includes('C') ? '°C' : '°') : '--°';
+  return { c, html: `<span class="wx-ic">${svg(ic, 26)}</span><span class="wx-t${hl ? ' hl' : ''}"><b>${tt}</b>${hl ? `<span class="wx-s"><small>${esc(word)}</small>${hl}</span>` : `<small>${esc(word)}</small>`}</span><span class="wx-go">Weather${svg('chevR', 18)}</span>` };
 }
 
 family({
