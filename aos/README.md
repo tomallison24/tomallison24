@@ -7,14 +7,14 @@ glass and pastels as the AllisonOS welcome. Part of the Allison Corporation.
   Power of aOS1". **Replay the welcome** plays the AllisonOS welcome again.
 - **Apps**: every AllisonOS app as a tile, in the Home app's automation design
   (square Liquid Glass, three across, a soft glow of the app's own colour
-  behind it), with its version. A tap opens the app's own address in a new
-  tab, ready to add to the Home Screen as its own icon. Each app's walkthrough
-  plays the first time it is opened there.
-- **Add an app to your Home Screen**: Safari's steps, animated on a phone and
-  looping - ••• then Share, scroll to Add to Home Screen, Open as Web App on and
-  Add, and the icon popping onto the Home Screen. It is a likeness of iOS 26
-  Safari drawn in HTML (`AllisonOS.welcome.safariDemo`), not a recording; the
-  install card in every welcome uses the same animation.
+  behind it), with its version. A tap opens a sheet, "Add Weather to your Home
+  Screen", with Safari's steps animated on a phone with that app's name and
+  icon, looping - ••• then Share, scroll to Add to Home Screen, Open as Web App
+  on and Add, and the icon popping onto the Home Screen. Once they have played
+  through, **Install** appears: it opens the app's address in a new tab, ready
+  to add. The animation is a likeness of iOS 26 Safari drawn in HTML
+  (`AllisonOS.welcome.safariDemo`), not a recording; the install card in the
+  AllisonOS welcome uses it too.
 - **What's new in aOS**: the release log, newest first.
 - **Appearance**: System, Light or Dark for every app (the launcher's own
   setting, `home.settings.theme`).
@@ -41,9 +41,9 @@ All of it is in `../home/welcome.js`, which every app loads with its own name
   way, and its notes. An app's update does the same under its icon: "Weather
   1.1" with the .1 rising in and lit, then what's new (an app going to a new
   major, 1.3 -> 2, has the whole number rise in).
-- **Each app**: the first time it is opened, its own walkthrough - its icon
+- **Each app**: the first time it is opened (on iPhone, from the Home Screen), its own walkthrough - its icon
   and name with aOS¹ under it, then four or five cards on what it does (written from its
-  README), and how to add it in a browser. After that app's own update, what's
+  README). After that app's own update, what's
   new in it, if that release has anything to show; an app with nothing new
   shows nothing.
 
