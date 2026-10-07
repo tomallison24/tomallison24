@@ -10,8 +10,11 @@ Its address ends in `/aOS/`.
    (Safari's steps, animated) and nothing else.
 2. aOS opened from the Home Screen: the AllisonOS welcome and its tour, ending
    on the apps.
-3. An app tapped in aOS opens its own address. In Safari (or the in-app
-   Safari view an installed aOS opens links in) it shows how to add that app.
+3. An app tapped in aOS opens its own address with `?via=aos`. In Safari, or
+   the in-app Safari view an installed aOS opens links in, it shows how to add
+   that app. The in-app view may call itself standalone, so `?via=aos` is what
+   counts there: remembered for that view and taken off the address at once,
+   so the address added to the Home Screen is clean.
 4. The app opened from the Home Screen: its own walkthrough, ending with
    Light or dark.
 
@@ -26,8 +29,8 @@ Safari or the Home Screen is told apart by `display-mode: standalone` (or
   (square Liquid Glass, three across, a soft glow of the app's own colour
   behind it), with its tagline, or "New in aOS1.1" when the latest release
   changed it. A tap opens the app's address in a new tab.
-- **What's new in aOS**: the release log, newest first, with what changed in
-  each app ("Weather: ...").
+- **What's new in aOS**: the release log by version, newest first: each
+  version's highlights (starred), its notes, then what changed in each app.
 - **Appearance**: System, Light or Dark for aOS (`home.settings.theme`). Each
   app on the Home Screen keeps its own storage, so each asks for itself, at
   the end of its walkthrough.
@@ -62,19 +65,20 @@ There is one version number for everything: aOS1, aOS1.1, aOS2.
 - **Each app, a minor update (aOS1.1)**: its icon, with aOS¹ under it and the
   new .1 rising in after the 1 (an old .x lifting away first) in its own
   brighter gradient, with a glow, a ring, an underline sweep and a soft pulse;
-  then "What's new in Weather" with the release's notes for that app. An app
-  the release doesn't mention shows nothing.
+  then "What's new in Weather" with that app's highlights from the release
+  (or its first notes) and a link to the full log in aOS. An app the release
+  doesn't mention shows nothing.
 - **Each app, a major update (aOS2)**: the old number lifts away and the 2
-  rises in, then "Weather is on aOS2" and **Open aOS** for what's new.
+  rises in, then "Weather is on aOS2" with the release's highlights and
+  **Open aOS** for the rest.
 
 What an install has seen is `localStorage` `aos.seen` (`{ app: the aOS version
 it last showed }`). On iPhone an app on the Home Screen keeps its own storage,
 apart from Safari and the other apps, so each install counts for itself.
 "aOS" is never set in capitals: its a is always lowercase.
 
-To announce an update, add a release to the top of `RELEASES` in
-`../home/welcome.js` - for a minor one, an `apps: { weather: ['...'] }` entry
-for each app it changes - and bump the apps' `sw.js` caches.
+Updates go out only when released: see `RELEASING.md`. Merged changes wait on
+the default branch until then.
 
 ## Light or dark in every app
 

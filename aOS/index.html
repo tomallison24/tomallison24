@@ -112,6 +112,10 @@
   .rel h3 sup { font-size: .65em; }
   .rel h3 small { font-size: 13px; font-weight: 500; color: var(--muted); }
   .rel ul { margin: 8px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .rel li.hi { color: var(--text); font-weight: 600; list-style: none; margin-left: -18px; padding-left: 18px; position: relative; }
+  .rel li.hi::before { content: '★'; position: absolute; left: 0; font-size: 11px; top: 3px; background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .rel .rt { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+  .rel h4 { margin: 12px 0 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   /* appearance */
   .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--dot); margin: 0 4px; }
   .seg button { flex: 1; height: 36px; border-radius: 999px; font-size: 15px; font-weight: 600; }
@@ -134,7 +138,7 @@
   <h2>Apps <small id="count"></small></h2>
   <div class="tiles" id="apps"></div>
 
-  <h2>What's new in aOS</h2>
+  <h2 id="whats-new">What's new in aOS</h2>
   <div class="group" id="rels"></div>
 
   <h2>Appearance</h2>
@@ -164,16 +168,21 @@
   // each app's own colour, from its icon, for the glow behind its tile
   const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', house: '125,105,245' };
   const now = D.RELEASES[0];
-  const sub = id => ((now.apps || {})[id] || []).length ? `New in aOS<sup>${esc(now.v)}</sup>` : esc((D.TOURS[id] || {}).tag || '');
+  const changed = id => { const e = D.entry((now.apps || {})[id]); return e.highlights.length + e.notes.length > 0; };
+  const sub = id => changed(id) ? `New in aOS<sup>${esc(now.v)}</sup>` : esc((D.TOURS[id] || {}).tag || '');
   $('apps').innerHTML = D.APPS.map(id => `<div class="agw" style="--c:${HUE[id] || '190,194,204'}"><i class="ag-glow"></i>
-    <a class="ag" href="${appUrl(id)}" target="_blank" rel="noopener" data-id="${id}" aria-label="${esc(D.NAMES[id])}"><img src="${icon(id)}" alt=""><span><b>${esc(D.NAMES[id])}</b><small>${sub(id)}</small></span></a></div>`).join('');
+    <a class="ag" href="${appUrl(id)}?via=aos" target="_blank" rel="noopener" data-id="${id}" aria-label="${esc(D.NAMES[id])}"><img src="${icon(id)}" alt=""><span><b>${esc(D.NAMES[id])}</b><small>${sub(id)}</small></span></a></div>`).join('');
 
-  // a tap opens the app's address (target _blank): in Safari it shows how to add it
+  // a tap opens the app's address (target _blank) with ?via=aos: there it shows how to add it,
+  // even in the in-app Safari view an installed aOS opens it in
 
   // what's new in aOS
-  const lines = r => [...(r.notes || []), ...Object.entries(r.apps || {}).flatMap(([id, ns]) => ns.map(n => `${D.NAMES[id] || id}: ${n}`))];
+  // the log, by version: the highlights (starred), the rest, then each app's changes
+  const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
+  const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
   $('rels').innerHTML = D.RELEASES.map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
-    ${lines(r).length ? `<ul>${lines(r).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div>`).join('');
+    ${r.title ? `<p class="rt">${esc(r.title)}</p>` : ''}${block(r) ? `<ul>${block(r)}</ul>` : ''}
+    ${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h4>${esc(D.NAMES[id] || id)}</h4><ul>${block(x)}</ul>` : '').join('')}</div>`).join('');
 
   // appearance
   const paintSeg = () => { const t = W.theme.read(); for (const b of $('theme').children) b.setAttribute('aria-pressed', String(b.dataset.t === t)); };

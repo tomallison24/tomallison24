@@ -1,13 +1,23 @@
-# Refreshes the News app's headlines and publishes the site.
+# Releases aOS, refreshes the News app's headlines and publishes the site.
 #
-# build:  fetches every feed in news/feeds.json into news/data/news.json and
-#         packages the repo (Home + News + Weather + Mail + Notes + Podcasts + Travel + Calendar + Places + Fitness + Home Assistant in house/ + aOS). Runs on any branch, so feed
-#         changes can be checked before merging. On the default branch it
-#         also publishes to Cloudflare Pages, once the CLOUDFLARE_API_TOKEN
-#         and CLOUDFLARE_ACCOUNT_ID repository secrets exist (the site sits
-#         behind Cloudflare Access, so only signed-in people can open it).
-# deploy: publishes the same package to GitHub Pages (public). To be removed
-#         once the Cloudflare site is confirmed working.
+# Only released versions go live (aOS/RELEASING.md). Merging to the default
+# branch publishes nothing; a release is a tag, aOS<version> (aOS1, aOS1.1),
+# made by running this workflow by hand with that version.
+#
+# release: (run by hand, with a version) checks that the newest entry in
+#          home/welcome.js's release log is that version and tags the default
+#          branch as aOS<version>.
+# build:   fetches every feed in news/feeds.json into news/data/news.json and
+#          packages the site (News, Weather, Mail, Notes, Podcasts, Travel,
+#          Calendar, Places, Fitness, Home Assistant in house/, aOS, and home/'s
+#          shared scripts). On a push it only checks the branch builds. Run by
+#          hand or on the schedule, it packages the live release - the newest
+#          aOS tag - with fresh headlines, and publishes it to Cloudflare Pages,
+#          once the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository
+#          secrets exist (the site sits behind Cloudflare Access, so only
+#          signed-in people can open it).
+# deploy:  publishes the same package to GitHub Pages (public). To be removed
+#          once the Cloudflare site is confirmed working.
 name: News
 
 on:
@@ -16,6 +26,11 @@ on:
     # at busy times such as :00 and :30.
     - cron: '15,45 * * * *'
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'aOS version to release, like 1.1 (its entry must be the newest in home/welcome.js). Blank: republish the live release with fresh headlines.'
+        required: false
+        default: ''
   push:
     paths:
       - 'news/**'
@@ -37,17 +52,56 @@ permissions:
   contents: read
 
 jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write   # to push the release tag
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+        with:
+          fetch-depth: 0
+      - name: Tag the release
+        env:
+          V: ${{ inputs.release }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+        run: |
+          [ "$GITHUB_REF_NAME" = "$DEFAULT" ] || { echo "::error::Release from $DEFAULT, not $GITHUB_REF_NAME"; exit 1; }
+          printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$' || { echo "::error::A version is numbers and dots, like 1.1"; exit 1; }
+          top=$(node -e "const m = require('fs').readFileSync('home/welcome.js', 'utf8').match(/const RELEASES = \[\s*\{\s*v:\s*'([^']+)'/); console.log(m ? m[1] : '')")
+          [ "$top" = "$V" ] || { echo "::error::The newest entry in home/welcome.js's release log is aOS$top, not aOS$V: add aOS$V's entry first"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/aOS$V" >/dev/null; then echo "::error::aOS$V is already released"; exit 1; fi
+          git tag "aOS$V" && git push origin "aOS$V"
+          echo "Released aOS$V at $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
   build:
+    needs: release
+    if: always() && needs.release.result != 'failure' && needs.release.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # One publish at a time, in order, so an older package can't land after a newer one.
+    # (Not the release job: a queued publish never stands in for a release.)
+    concurrency:
+      group: ${{ github.event_name == 'push' && format('check-{0}', github.ref) || 'publish' }}
+      cancel-in-progress: false
     env:
-      PUBLISH: ${{ github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch }}
+      PUBLISH: ${{ github.event_name != 'push' }}   # by hand or on the schedule; a push only checks
       HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
       # Actions are pinned to exact commits (version in the comment), not tags:
       # a tag can be moved to new code, and these jobs can read the repo's
       # secrets. To update, look up the new tag's commit and change both.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+        with:
+          fetch-depth: 0   # the release tags
+      - name: Use the live release
+        if: env.PUBLISH == 'true'
+        run: |
+          live=$(git tag --list 'aOS*' --sort=-v:refname | head -1)
+          if [ -z "$live" ]; then echo "::warning::No aOS release yet: publishing $GITHUB_REF_NAME as it is"; exit 0; fi
+          git checkout -q --detach "$live"
+          echo "Publishing $live ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
@@ -121,7 +175,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch
+    if: always() && needs.build.result == 'success' && github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
