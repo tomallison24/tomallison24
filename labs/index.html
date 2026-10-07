@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Set-up tests</title>
+<link rel="stylesheet" href="lab.css">
+<!--
+  labs/: test pages for the owner, not apps. They publish from the latest merged
+  code, not the release (.github/workflows/news.yml). These two compare how a new
+  person would set up AllisonOS: aOS as one app, or separate apps with a passkey.
+-->
+</head>
+<body>
+<main>
+  <h1>Two ways to <span class="ink">set up</span></h1>
+  <p>Try both on your iPhone, in Safari, then compare. Nothing here touches your real apps or settings.</p>
+
+  <div class="card">
+    <h3>Option 1 · aOS as one app</h3>
+    <p>One Home Screen icon. Every app opens inside it, so you set up once.</p>
+    <ol>
+      <li>Open <b>Test hub</b> below, then Share, <b>Add to Home Screen</b>.</li>
+      <li>Open it from the Home Screen and enter your name once.</li>
+      <li>Tap Notes, then Weather: both already know you. Use the <b>aOS</b> pill to go back.</li>
+    </ol>
+    <a class="btn" href="one/">Open Test hub</a>
+  </div>
+
+  <div class="card">
+    <h3>Option 2 · separate apps, Face ID account</h3>
+    <p>Each app has its own icon and its own (empty) storage. A passkey in your iCloud Keychain signs you in to each with one Face ID tap.</p>
+    <ol>
+      <li>Open <b>Test A</b>, Share, <b>Add to Home Screen</b>. Do the same for <b>Test B</b>.</li>
+      <li>Open Test A from the Home Screen: <b>Create my account</b> (name, then Face ID).</li>
+      <li>Open Test B from the Home Screen: <b>Continue with Face ID</b>. One tap, and it knows you.</li>
+    </ol>
+    <a class="btn" href="two/a/">Open Test A</a>
+    <a class="btn soft" href="two/b/">Open Test B</a>
+  </div>
+
+  <h2>Worth noting while you try</h2>
+  <ol>
+    <li>Did any app ask you to <b>sign in to Cloudflare</b> before it opened? Note which.</li>
+    <li>Option 2: did <b>Continue with Face ID</b> work from Test B's Home Screen icon?</li>
+    <li>Which felt better day to day: one icon with apps inside, or an icon per app?</li>
+  </ol>
+  <p>When you're done: remove the three test icons (press and hold, Remove App). The test passkey is in Settings, Passwords, under this site; you can delete it there.</p>
+</main>
+</body>
+</html>

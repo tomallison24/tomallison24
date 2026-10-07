@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notes (test)</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../../lab.css">
+<!-- Option 1 test: a stand-in app inside the hub (same scope, same storage). -->
+</head>
+<body>
+<main>
+  <h1><img src="../../../notes/icon-180.png" alt="" style="width:44px;height:44px;border-radius:10px;vertical-align:-8px;margin-right:8px">Notes</h1>
+  <div class="card">
+    <h3 id="who"></h3>
+    <p id="what"></p>
+  </div>
+  <p>Your notes would be here, already synced to the family Sheet.</p>
+</main>
+<a class="pill" href="../"><img src="../../../aOS/icon-180.png" alt="">aOS</a>
+<script>
+  let p = null; try { p = JSON.parse(localStorage.getItem('lab.one') || 'null'); } catch {}
+  document.getElementById('who').innerHTML = p ? '<span class="ok">Ready for ' + p.name.replace(/[<&>"]/g, '') + '</span>' : 'Not set up yet';
+  document.getElementById('what').textContent = p ? 'No sign-in, no set-up: this app read the hub\'s storage.' : 'Go back to aOS and set up once.';
+</script>
+</body>
+</html>

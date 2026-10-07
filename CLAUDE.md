@@ -10,6 +10,10 @@
   only when the owner asks for that release.
 - After merging, tell the owner the change is merged and waits for the next
   release - not that it is live.
+- The one exception: `labs/` holds test pages for the owner (not apps). It
+  publishes from the latest merged code on the next scheduled or hand-run
+  publish (a hand run with **release** blank republishes the live release
+  and refreshes labs - that is not a release).
 
 ## The release log
 

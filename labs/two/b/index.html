@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test B</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Test B">
+<link rel="apple-touch-icon" href="../../../weather/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="../../lab.css">
+<!-- Option 2 test, app B: its own Home Screen icon and storage; signs in with a passkey. See ../passkey.js. -->
+</head>
+<body>
+<main>
+  <h1><img src="../../../weather/icon-180.png" alt="" style="width:44px;height:44px;border-radius:10px;vertical-align:-8px;margin-right:8px">Test B <span class="ink">· Weather</span></h1>
+  <p id="where"></p>
+  <div class="card">
+    <h3 id="store"></h3>
+    <p id="how"></p>
+  </div>
+  <div id="in">
+    <div class="card">
+      <h3>Already made your account in the other test app?</h3>
+      <button type="button" id="signin">Continue with Face ID</button>
+    </div>
+    <div class="card">
+      <h3>First time? Make your account</h3>
+      <p>Once only, in either app. Face ID saves a passkey to your iCloud Keychain.</p>
+      <input id="name" placeholder="Your name" autocomplete="given-name" maxlength="40">
+      <button type="button" class="soft" id="create">Create my account</button>
+    </div>
+  </div>
+  <div id="out" class="hide">
+    <button type="button" class="soft" id="reset">Sign out of this app</button>
+  </div>
+  <div class="log" id="log"></div>
+</main>
+<script src="../passkey.js"></script>
+</body>
+</html>
