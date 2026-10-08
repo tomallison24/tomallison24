@@ -128,5 +128,5 @@ them back), and the theme-color metas with them, so every app follows it.
 ## Files
 
 - `index.html`: the whole app. `sw.js`: offline, network-first.
-- `icon-512.png`, `icon-180.png`: "aOS¹" in white on the pastels, drawn by
-  `scripts/make-icons.mjs` (headless Chromium).
+- `icon-512.png`, `icon-180.png`: "aOS" in white on the pastels - no version
+  number, since that changes - drawn by `scripts/make-icons.mjs` (headless Chromium).

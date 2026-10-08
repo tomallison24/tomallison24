@@ -85,7 +85,8 @@
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
-        'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it'],
+        'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
+        'The aOS icon is just aOS, without a version number'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
