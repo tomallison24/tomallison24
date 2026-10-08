@@ -23,174 +23,211 @@
   drawn from each app's walkthrough cards, not screenshots. See ../index.html.
 -->
 <style>
-  :root { --bg: #F2F4F8; --card: #fff; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --line: rgba(60,60,67,.16); --dot: rgba(120,120,128,.14);
-    --glass: rgba(255,255,255,.72); --edge: rgba(0,0,0,.08); --accent: #0A84FF; --get: rgba(120,120,128,.14);
-    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); color-scheme: light; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0F1116; --card: #1C1D22; --text: #fff; --muted: rgba(235,235,245,.6); --line: rgba(84,84,88,.5); --dot: rgba(120,120,128,.24);
-    --glass: rgba(40,42,48,.7); --edge: rgba(255,255,255,.1); --get: rgba(120,120,128,.26);
-    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); color-scheme: dark; } }
-  :root[data-theme="dark"] { --bg: #0F1116; --card: #1C1D22; --text: #fff; --muted: rgba(235,235,245,.6); --line: rgba(84,84,88,.5); --dot: rgba(120,120,128,.24);
-    --glass: rgba(40,42,48,.7); --edge: rgba(255,255,255,.1); --get: rgba(120,120,128,.26);
-    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); color-scheme: dark; }
+  /* Sea glass, not iOS: mist and sand grounds, a sea-glass accent, pastel for the
+     one thing to tap; soft rounded-square shapes rather than circles and hairlines */
+  :root { --bg: #EEF2F0; --card: rgba(255,255,255,.78); --solid: #FAFBFA; --text: #10181A; --muted: rgba(16,24,26,.56); --line: rgba(16,24,26,.08); --dot: rgba(16,24,26,.06);
+    --glass: rgba(250,252,251,.74); --edge: rgba(16,24,26,.08); --accent: #4E8C7E; --sand: #A77F45; --on: #fff;
+    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%);
+    --blob1: rgba(111,165,151,.22); --blob2: rgba(190,145,143,.18); --blob3: rgba(129,147,188,.18); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0D1213; --card: rgba(255,255,255,.055); --solid: #161C1D; --text: #EEF4F2; --muted: rgba(238,244,242,.58); --line: rgba(255,255,255,.07); --dot: rgba(255,255,255,.07);
+    --glass: rgba(22,28,29,.72); --edge: rgba(255,255,255,.09); --accent: #A9D3C7; --sand: #E9D6B4; --on: #0D1213;
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --blob1: rgba(169,211,199,.10); --blob2: rgba(227,197,195,.08); --blob3: rgba(185,198,224,.08); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #0D1213; --card: rgba(255,255,255,.055); --solid: #161C1D; --text: #EEF4F2; --muted: rgba(238,244,242,.58); --line: rgba(255,255,255,.07); --dot: rgba(255,255,255,.07);
+    --glass: rgba(22,28,29,.72); --edge: rgba(255,255,255,.09); --accent: #A9D3C7; --sand: #E9D6B4; --on: #0D1213;
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --blob1: rgba(169,211,199,.10); --blob2: rgba(227,197,195,.08); --blob3: rgba(185,198,224,.08); color-scheme: dark; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
   body { font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; }
+  body::before { content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    background: radial-gradient(40% 30% at 15% 10%, var(--blob1), transparent 70%), radial-gradient(35% 28% at 90% 35%, var(--blob2), transparent 70%), radial-gradient(45% 35% at 30% 90%, var(--blob3), transparent 70%); }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   a { color: inherit; text-decoration: none; }
   .ink { background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
   sup { font-size: .55em; vertical-align: .55em; line-height: 0; }
 
   /* the tabs: one scrolling page each */
-  .tab { padding: calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 110px); max-width: 640px; margin: 0 auto; }
+  .tab { padding: calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 112px); max-width: 640px; margin: 0 auto; }
   .tab[hidden] { display: none; }
-  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 10px 0 18px; }
-  .head small { display: block; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
-  .head h1 { margin: 2px 0 0; font-size: 34px; letter-spacing: -.5px; line-height: 1.1; }
-  .avatar { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 16px; color: #fff; background: var(--pastel); box-shadow: inset 0 0 0 .5px var(--edge); margin-bottom: 4px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 2px 20px; }
+  .head .mark { display: block; font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+  .head small { display: inline-block; margin-left: 8px; font-size: 13px; color: var(--muted); }
+  .head h1 { position: relative; margin: 2px 0 0; font-size: 32px; font-weight: 750; letter-spacing: -.6px; line-height: 1.1; padding-bottom: 8px; }
+  .head h1::after { content: ''; position: absolute; left: 1px; bottom: 0; width: 34px; height: 4px; border-radius: 2px; background: var(--pastel); }
+  .avatar { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 15px; display: grid; place-items: center; font-weight: 700; font-size: 17px; color: var(--on); background: var(--pastel);
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--edge), 0 8px 20px rgba(0,0,0,.12); }
 
-  /* Today: story cards */
-  .story { position: relative; display: block; cursor: pointer; width: 100%; height: 440px; margin: 0 0 26px; border-radius: 26px; overflow: hidden; text-align: left; color: #fff; background: #222;
-    box-shadow: 0 14px 34px rgba(0,0,0,.18); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-  .story:active { transform: scale(.97); }
-  .story .art { position: absolute; inset: 0; background: radial-gradient(120% 80% at 70% 30%, rgba(var(--c), .95), rgba(var(--c), .35) 55%, #0B0C10 100%); }
-  .story .art img { position: absolute; width: 150px; height: 150px; border-radius: 34px; right: 24px; bottom: 112px; transform: rotate(-8deg); box-shadow: 0 24px 50px rgba(0,0,0,.35); }
-  .story .art svg { position: absolute; left: -30px; bottom: 60px; width: 260px; height: 260px; color: rgba(255,255,255,.14); }
-  .story .txt { position: absolute; left: 20px; right: 20px; top: 20px; }
-  .story .txt small { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .75; }
-  .story .txt h2 { margin: 4px 0 0; font-size: 28px; line-height: 1.12; letter-spacing: -.3px; }
-  .story .foot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(20,20,24,.35); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
-  .story .foot img { width: 44px; height: 44px; border-radius: 11px; }
-  .story .foot span { flex: 1; min-width: 0; } .story .foot b { display: block; font-size: 15px; } .story .foot i { font-style: normal; font-size: 13px; opacity: .75; }
-  .story .foot .get { background: rgba(255,255,255,.25); color: #fff; }
-  .story.plain .art { background: var(--card); } .story.plain { color: var(--text); background: var(--card); }
-  .story.plain .txt small { color: var(--muted); opacity: 1; }
-  .story.plain .mk { position: absolute; left: 20px; right: 20px; top: 120px; text-align: center; font-size: 96px; font-weight: 800; letter-spacing: -3px; }
+  /* Today: postcards, laid out as a bento - one tall, two halves, one wide */
+  #stories { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .story { position: relative; display: block; cursor: pointer; grid-column: span 2; height: 420px; border-radius: 30px; overflow: hidden; text-align: left; color: #fff; background: #222;
+    box-shadow: inset 0 0 0 6px rgba(255,255,255,.07), 0 16px 34px rgba(0,0,0,.14); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .story:active { transform: scale(.975); }
+  .story .art { position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 30%, rgba(var(--c), .9), rgba(var(--c), .28) 58%, #0C1112 100%); }
+  .story .art::after { content: ''; position: absolute; inset: 6px; border-radius: 24px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); pointer-events: none; }
+  .story .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: 120px; box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); animation: float 6s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-6px); } }
+  .story .art svg { position: absolute; left: -24px; bottom: 70px; width: 230px; height: 230px; color: rgba(255,255,255,.12); }
+  .story .txt { position: absolute; left: 22px; right: 22px; top: 22px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 9px; font-size: 12.5px; font-weight: 650; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .chip::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
+  .story .txt h2 { margin: 10px 0 0; font-size: 27px; line-height: 1.12; letter-spacing: -.4px; max-width: 70%; }
+  .story .foot { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 22px; background: rgba(12,16,17,.38); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .story .foot img { width: 42px; height: 42px; border-radius: 12px; }
+  .story .foot span { flex: 1; min-width: 0; } .story .foot b { display: block; font-size: 15px; } .story .foot i { display: block; font-style: normal; font-size: 13px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* halves: the icon on top, the title under it, no band */
+  .story.half { grid-column: span 1; height: 250px; }
+  .story.half .art img { width: 64px; height: 64px; border-radius: 17px; left: 18px; right: auto; top: 56px; box-shadow: 0 0 0 6px rgba(255,255,255,.08), 0 0 40px 10px rgba(var(--c), .5); }
+  .story.half .art svg { width: 150px; height: 150px; left: auto; right: -30px; bottom: -20px; }
+  .story.half .txt { top: 16px; left: 16px; right: 16px; }
+  .story.half .txt h2 { font-size: 18px; max-width: none; position: absolute; top: 132px; }
+  .story.half .foot { display: none; }
+  /* wide: a band, the icon to the left */
+  .story.wide { height: 200px; }
+  .story.wide .art img { width: 76px; height: 76px; border-radius: 20px; left: 22px; right: auto; top: 62px; }
+  .story.wide .txt { left: 118px; top: 52px; } .story.wide .txt h2 { font-size: 22px; max-width: none; }
+  .story.wide .foot { display: none; }
+  .story.plain { color: var(--text); background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 16px 34px rgba(0,0,0,.08); }
+  .story.plain .art { background: radial-gradient(60% 60% at 50% 55%, var(--blob1), transparent 70%); }
+  .story.plain .art::after { box-shadow: inset 0 0 0 1px var(--edge); }
+  .story.plain .chip { background: var(--dot); }
+  .story.plain .mk { position: absolute; left: 0; right: 0; top: 112px; text-align: center; font-size: 92px; font-weight: 800; letter-spacing: -3px; }
+  .story.plain.half .mk { top: 62px; font-size: 50px; letter-spacing: -1.5px; }
 
-  /* Apps: the list */
-  .row { cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 10px 0; width: 100%; text-align: left; }
-  .row img { width: 64px; height: 64px; border-radius: 15px; flex: 0 0 64px; box-shadow: inset 0 0 0 .5px var(--edge); }
-  .row .t { flex: 1; min-width: 0; border-bottom: .5px solid var(--line); padding: 10px 0 18px; align-self: stretch; display: flex; align-items: center; gap: 10px; }
-  .row:last-child .t { border-bottom: 0; }
-  .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 600; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .get { flex: 0 0 auto; min-width: 74px; height: 30px; padding: 0 16px; border-radius: 999px; background: var(--get); color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: .02em; }
-  .get.done { color: var(--muted); font-weight: 600; letter-spacing: 0; }
-  .sec { display: flex; align-items: baseline; justify-content: space-between; margin: 28px 0 8px; }
-  .sec h2 { margin: 0; font-size: 22px; letter-spacing: -.2px; }
-  .sec a, .sec button { color: var(--accent); font-size: 17px; }
+  /* Apps: each one its own card, its colour glowing behind the icon */
+  #list, #found { display: grid; gap: 10px; }
+  .row { cursor: pointer; position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px; width: 100%; text-align: left; border-radius: 24px; background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
+  .row:active { transform: scale(.98); }
+  .row::before { content: ''; position: absolute; left: -30px; top: 50%; width: 130px; height: 130px; margin-top: -65px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .32), transparent 65%); pointer-events: none; }
+  .row img { position: relative; width: 58px; height: 58px; border-radius: 17px; flex: 0 0 58px; }
+  .row .t { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 650; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .get { position: relative; flex: 0 0 auto; min-width: 70px; height: 32px; padding: 0 16px; border-radius: 11px; background: var(--pastel); color: #10181A; font-size: 15px; font-weight: 700;
+    box-shadow: 0 4px 14px rgba(111,165,151,.3), inset 0 1px 0 rgba(255,255,255,.5); }
+  .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px currentColor; font-weight: 650; }
+  .get.done::before { content: '✓ '; }
+  .story .get.done { color: #fff; }
+  .sec { display: flex; align-items: center; justify-content: space-between; margin: 30px 2px 10px; }
+  .sec h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 20px; letter-spacing: -.2px; }
+  .sec h2::before { content: ''; width: 8px; height: 8px; border-radius: 3px; background: var(--pastel); }
+  .sec a, .sec button { color: var(--accent); font-size: 15px; font-weight: 600; }
 
-  /* the tab bar, iOS 26: a glass capsule of tabs, and a round search button */
-  .bar { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 12px); display: flex; justify-content: center; gap: 10px; pointer-events: none; z-index: 20; }
-  .bar > * { pointer-events: auto; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: inset 0 0 0 .5px var(--edge), 0 10px 30px rgba(0,0,0,.18); }
-  .tabs { display: flex; padding: 4px; border-radius: 999px; }
-  .tabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 88px; height: 54px; justify-content: center; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--muted); }
-  .tabs button svg { width: 25px; height: 25px; }
-  .tabs button[aria-selected="true"] { color: var(--accent); background: var(--dot); }
-  .srch { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; color: var(--text); }
-  .srch[aria-selected="true"] { color: var(--accent); }
-  .srch svg { width: 24px; height: 24px; }
-  .find { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: var(--dot); color: var(--muted); margin-bottom: 10px; }
+  /* the dock: one glass bar, three equal stops, a pastel indicator that slides */
+  .bar { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 20; max-width: 420px; margin: 0 auto; }
+  .tabs { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 6px; border-radius: 26px; background: var(--glass); -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 14px 34px rgba(0,0,0,.16); --i: 0; }
+  .tabs .ind { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 3); border-radius: 20px; background: var(--pastel); opacity: .9;
+    transform: translateX(calc(var(--i) * 100%)); transition: transform .45s cubic-bezier(.3,1.3,.5,1); box-shadow: 0 6px 16px rgba(111,165,151,.35); }
+  .tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 20px; font-size: 14px; font-weight: 650; color: var(--muted); transition: color .3s; }
+  .tabs button svg { width: 20px; height: 20px; }
+  .tabs button[aria-selected="true"] { color: #10181A; }
+  .find { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); color: var(--muted); margin-bottom: 14px; }
   .find input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
 
   /* pages that slide in: an app, a story, the account */
-  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .38s cubic-bezier(.2,.8,.2,1); }
+  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
   .page.on { transform: none; }
   .page.up { transform: translateY(100%); } .page.up.on { transform: none; }
-  .page .in { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 64px) 20px calc(env(safe-area-inset-bottom) + 40px); }
-  .back, .close { position: fixed; top: calc(env(safe-area-inset-top) + 10px); z-index: 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
-    background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0 0 .5px var(--edge), 0 6px 18px rgba(0,0,0,.14); font-size: 22px; }
-  .back { left: 14px; } .close { right: 14px; font-size: 17px; }
-  .apphead { display: flex; gap: 16px; align-items: flex-start; }
-  .apphead img { width: 118px; height: 118px; border-radius: 27px; box-shadow: inset 0 0 0 .5px var(--edge), 0 10px 26px rgba(var(--c), .35); }
-  .apphead h1 { margin: 4px 0 2px; font-size: 24px; letter-spacing: -.3px; } .apphead p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
-  .apphead .get { min-width: 84px; height: 32px; background: var(--accent); color: #fff; }
-  .apphead .get.done { background: var(--get); color: var(--muted); }
-  .strip { display: flex; overflow-x: auto; margin: 22px -20px 0; padding: 12px 20px; border-top: .5px solid var(--line); border-bottom: .5px solid var(--line); scrollbar-width: none; }
-  .strip::-webkit-scrollbar { display: none; }
-  .strip div { flex: 0 0 auto; min-width: 104px; padding: 0 14px; text-align: center; border-left: .5px solid var(--line); }
-  .strip div:first-child { border-left: 0; padding-left: 0; }
-  .strip small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  .strip b { display: block; margin: 4px 0 2px; font-size: 20px; color: var(--muted); } .strip i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
-  .strip svg { width: 24px; height: 24px; margin: 4px 0 2px; color: var(--muted); }
-  .wn small { color: var(--muted); font-size: 15px; } .wn ul, .needs { margin: 8px 0 0; padding-left: 20px; } .wn li, .needs li { margin: 4px 0; }
-  .shots { display: flex; gap: 12px; overflow-x: auto; margin: 0 -20px; padding: 4px 20px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .page .in { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 40px); }
+  .back, .close { position: fixed; top: calc(env(safe-area-inset-top) + 10px); z-index: 2; width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center;
+    background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0 0 1px var(--edge), 0 6px 18px rgba(0,0,0,.12); font-size: 22px; }
+  .back { left: 14px; } .close { right: 14px; font-size: 16px; }
+  /* an app: centred, its colour as a halo, the facts as chips */
+  .apphead { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 6px; }
+  .apphead::before { content: ''; position: absolute; top: -60px; left: 50%; width: 320px; height: 260px; margin-left: -160px; background: radial-gradient(rgba(var(--c), .35), transparent 65%); pointer-events: none; }
+  .apphead img { position: relative; width: 112px; height: 112px; border-radius: 30px; box-shadow: 0 0 0 8px var(--card), 0 16px 34px rgba(var(--c), .4); }
+  .apphead h1 { margin: 18px 0 2px; font-size: 28px; letter-spacing: -.5px; } .apphead p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  .apphead .get { min-width: 180px; height: 44px; border-radius: 15px; font-size: 16px; }
+  .strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 20px 0 0; }
+  .strip div { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); font-size: 13.5px; }
+  .strip small { color: var(--muted); font-size: 12px; } .strip b { font-size: 14px; } .strip i { font-style: normal; }
+  .strip svg { width: 17px; height: 17px; color: var(--accent); }
+  .wn { padding: 14px 16px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .wn small { color: var(--muted); font-size: 14px; } .wn ul { margin: 8px 0 0; padding-left: 20px; } .wn li { margin: 4px 0; } .wn p { margin: 6px 0 0; }
+  .shots { display: flex; gap: 12px; overflow-x: auto; margin: 0 -18px; padding: 4px 18px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .shots::-webkit-scrollbar { display: none; }
-  .shot { flex: 0 0 210px; height: 430px; border-radius: 28px; scroll-snap-align: start; position: relative; overflow: hidden; padding: 26px 18px; color: #fff;
-    background: radial-gradient(130% 70% at 50% 0%, rgba(var(--c), .9), rgba(var(--c), .25) 60%, #0B0C10 100%); box-shadow: inset 0 0 0 .5px var(--edge); }
-  .shot svg { width: 120px; height: 120px; display: block; margin: 40px auto 26px; color: rgba(255,255,255,.92); }
-  .shot b { display: block; font-size: 19px; line-height: 1.2; text-align: center; } .shot p { font-size: 13px; line-height: 1.4; text-align: center; opacity: .82; margin: 8px 0 0; }
+  .shot { flex: 0 0 200px; height: 380px; border-radius: 30px; scroll-snap-align: start; position: relative; overflow: hidden; padding: 24px 18px; color: #fff;
+    background: radial-gradient(120% 65% at 50% 0%, rgba(var(--c), .85), rgba(var(--c), .22) 60%, #0C1112 100%); box-shadow: inset 0 0 0 6px rgba(255,255,255,.06); }
+  .shot svg { width: 104px; height: 104px; display: block; margin: 34px auto 24px; color: rgba(255,255,255,.92); }
+  .shot b { display: block; font-size: 18px; line-height: 1.2; text-align: center; } .shot p { font-size: 13px; line-height: 1.4; text-align: center; opacity: .82; margin: 8px 0 0; }
   .desc p { margin: 0 0 10px; } .muted { color: var(--muted); }
-  .info { margin-top: 6px; } .info div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: .5px solid var(--line); }
+  .info { border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); padding: 2px 16px; }
+  .info div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); } .info div:last-child { border-bottom: 0; }
   .info div span:first-child { color: var(--muted); }
-  .need { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--card); margin-top: 8px; box-shadow: inset 0 0 0 .5px var(--edge); }
-  .need em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-  .need .ok { background: rgba(52,199,89,.16); color: #2E9E4F; } .need .once { background: rgba(10,132,255,.14); color: var(--accent); }
+  .need { display: flex; gap: 12px; align-items: center; padding: 13px 14px; border-radius: 18px; background: var(--card); margin-top: 8px; box-shadow: inset 0 0 0 1px var(--edge); }
+  .need em { font-style: normal; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; white-space: nowrap; }
+  .need .ok { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); } .need .once { background: color-mix(in srgb, var(--sand) 20%, transparent); color: var(--sand); }
   .need span { flex: 1; font-size: 15px; }
 
   /* a story, opened */
-  .hero { position: relative; height: 380px; margin: calc(-1 * (env(safe-area-inset-top) + 64px)) -20px 20px; color: #fff; overflow: hidden; }
-  .hero .art { position: absolute; inset: 0; background: radial-gradient(120% 80% at 70% 30%, rgba(var(--c), .95), rgba(var(--c), .35) 55%, #0B0C10 100%); }
-  .hero .art img { position: absolute; width: 150px; height: 150px; border-radius: 34px; right: 24px; top: calc(env(safe-area-inset-top) + 100px); transform: rotate(-8deg); box-shadow: 0 24px 50px rgba(0,0,0,.35); }
-  .hero .txt { position: absolute; left: 20px; right: 20px; bottom: 24px; } .hero small { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .75; }
-  .hero h2 { margin: 4px 0 0; font-size: 30px; line-height: 1.1; }
-  .body h3 { margin: 22px 0 6px; font-size: 20px; } .body p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; } .body p b { color: var(--text); }
-  .body ol { padding-left: 22px; color: var(--muted); line-height: 1.5; } .body ol b { color: var(--text); }
-  .approw { display: flex; align-items: center; gap: 12px; margin-top: 26px; padding: 14px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--edge); }
-  .approw img { width: 52px; height: 52px; border-radius: 12px; } .approw span { flex: 1; } .approw b { display: block; } .approw i { font-style: normal; font-size: 14px; color: var(--muted); }
+  .hero { position: relative; height: 380px; margin: calc(-1 * (env(safe-area-inset-top) + 66px)) -18px 20px; color: #fff; overflow: hidden; border-radius: 0 0 34px 34px; }
+  .hero .art { position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 35%, rgba(var(--c), .9), rgba(var(--c), .28) 58%, #0C1112 100%); }
+  .hero .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: calc(env(safe-area-inset-top) + 96px); box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); }
+  .hero .txt { position: absolute; left: 22px; right: 22px; bottom: 26px; }
+  .hero h2 { margin: 10px 0 0; font-size: 29px; line-height: 1.1; letter-spacing: -.4px; }
+  .body h3 { display: flex; align-items: center; gap: 9px; margin: 24px 0 6px; font-size: 19px; } .body h3::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: var(--pastel); flex: 0 0 7px; }
+  .body p { margin: 0 0 12px; color: var(--muted); line-height: 1.55; } .body p b { color: var(--text); }
+  .body ol { padding-left: 22px; color: var(--muted); line-height: 1.55; } .body ol b { color: var(--text); }
+  .approw { display: flex; align-items: center; gap: 12px; margin-top: 26px; padding: 12px 14px 12px 12px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .approw img { width: 52px; height: 52px; border-radius: 15px; } .approw span { flex: 1; } .approw b { display: block; } .approw i { font-style: normal; font-size: 14px; color: var(--muted); }
 
   /* the account */
-  .group { border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--edge); overflow: hidden; margin-top: 10px; }
-  .group > * { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; border-bottom: .5px solid var(--line); text-align: left; }
+  .group { border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; margin-top: 10px; }
+  .group > * { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; }
   .group > *:last-child { border-bottom: 0; }
   .me { display: flex; align-items: center; gap: 14px; }
-  .me .avatar { width: 56px; height: 56px; flex-basis: 56px; font-size: 22px; margin: 0; }
+  .me .avatar { width: 58px; height: 58px; flex-basis: 58px; border-radius: 20px; font-size: 23px; margin: 0; }
   .chev { color: var(--muted); }
-  .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--dot); }
-  .seg button { flex: 1; height: 34px; border-radius: 999px; font-size: 15px; font-weight: 600; }
-  .seg button[aria-pressed="true"] { background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+  .seg { position: relative; display: flex; padding: 4px; border-radius: 15px; background: var(--dot); }
+  .seg button { flex: 1; height: 36px; border-radius: 11px; font-size: 15px; font-weight: 650; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--pastel); color: #10181A; box-shadow: 0 4px 12px rgba(111,165,151,.3); }
   .rel h4 { margin: 0; font-size: 17px; } .rel small { color: var(--muted); font-size: 14px; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
   .group .rel { display: block; }
-  .glbl { margin: 26px 4px 0; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .glbl { display: flex; align-items: center; gap: 8px; margin: 26px 4px 0; font-size: 13px; font-weight: 650; color: var(--muted); }
+  .glbl::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
 
   /* GET: the install steps, in a sheet */
-  .shade { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.36); opacity: 0; transition: opacity .3s; }
+  .shade { position: fixed; inset: 0; z-index: 40; background: rgba(8,12,13,.4); opacity: 0; transition: opacity .3s; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .shade.on { opacity: 1; }
-  .sheet { position: fixed; left: 8px; right: 8px; bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 41; max-width: 520px; margin: 0 auto; padding: 22px 20px 18px; border-radius: 34px;
-    background: var(--card); box-shadow: 0 20px 60px rgba(0,0,0,.3); transform: translateY(110%); transition: transform .4s cubic-bezier(.2,.8,.2,1); text-align: center; }
+  .sheet { position: fixed; left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 41; max-width: 520px; margin: 0 auto; padding: 24px 20px 16px; border-radius: 32px; overflow: hidden;
+    background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 24px 60px rgba(0,0,0,.3); transform: translateY(110%); transition: transform .45s cubic-bezier(.2,.8,.2,1); text-align: center; }
+  .sheet::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--pastel); }
   .sheet.on { transform: none; }
-  .sheet h2 { margin: 6px 0 2px; font-size: 22px; } .sheet p { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
+  .sheet h2 { margin: 4px 0 2px; font-size: 22px; } .sheet p { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
   .sheet .sdh { margin: 6px 0 0; }
-  .sheet .go { display: flex; align-items: center; justify-content: center; width: 100%; height: 50px; margin-top: 12px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; transition: opacity .3s; }
+  .sheet .go { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 12px; border-radius: 17px; background: var(--pastel); color: #10181A; font-weight: 700; transition: opacity .3s; }
   .sheet .go[aria-disabled="true"] { opacity: .35; pointer-events: none; }
   .sheet .not { height: 40px; margin-top: 4px; color: var(--muted); font-size: 15px; width: 100%; }
-  .lab { margin: 30px 0 0; padding: 14px 16px; border-radius: 16px; background: var(--dot); color: var(--muted); font-size: 14px; line-height: 1.45; }
-  @media (prefers-reduced-motion: reduce) { .page, .sheet, .story { transition: none; } }
+  .lab { margin: 30px 0 0; padding: 14px 16px; border-radius: 18px; background: var(--dot); color: var(--muted); font-size: 14px; line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { .page, .sheet, .story, .tabs .ind { transition: none; } .story .art img { animation: none; } }
 </style>
 </head>
 <body>
 
 <section class="tab" id="today">
-  <div class="head"><div><small id="date"></small><h1>Today</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Today<small id="date"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
   <div id="stories"></div>
   <p class="lab">Labs mock-up of aOS as an App Store. Apps' names, cards and the release log are the real ones; <b>Installed</b> on Weather and Home is only an example, and the previews are drawn from each app's walkthrough, not screenshots.</p>
 </section>
 
 <section class="tab" id="apps" hidden>
-  <div class="head"><div><h1>Apps</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Apps</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
   <div id="list"></div>
 </section>
 
 <section class="tab" id="search" hidden>
-  <div class="head"><div><h1>Search</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Search</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
   <label class="find"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg><input id="q" type="search" placeholder="Apps, or what they do" autocomplete="off"></label>
   <div id="found"></div>
 </section>
 
 <nav class="bar" aria-label="aOS">
-  <div class="tabs" role="tablist">
+  <div class="tabs" role="tablist"><i class="ind" aria-hidden="true"></i>
     <button type="button" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="4"/><path d="M8 8h8M8 12h5"/></svg>Today</button>
     <button type="button" role="tab" data-tab="apps" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5"/></svg>Apps</button>
+    <button type="button" class="srch" role="tab" data-tab="search" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>Search</button>
   </div>
-  <button type="button" class="srch" role="tab" data-tab="search" aria-selected="false" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
 </nav>
 
 <script src="../../home/account.js"></script>
@@ -222,7 +259,7 @@
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
   };
   const INSTALLED = ['weather', 'house'];   // an example, for the look
-  const getBtn = (id, cls = '') => INSTALLED.includes(id) ? `<button type="button" class="get done ${cls}" data-get="${id}">Installed</button>` : `<button type="button" class="get ${cls}" data-get="${id}">GET</button>`;
+  const getBtn = (id, cls = '') => INSTALLED.includes(id) ? `<button type="button" class="get done ${cls}" data-get="${id}">Installed</button>` : `<button type="button" class="get ${cls}" data-get="${id}">Get</button>`;
   const mk = sv => `aOS<sup>${esc(sv)}</sup>`;
 
   // ---- account: the avatar everywhere ----
@@ -248,21 +285,22 @@
       <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
       <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` },
   ];
+  const SHAPE = ['', 'half', 'half', 'wide', ''];
   $('stories').innerHTML = STORIES.map((s, i) => s.plain
-    ? `<div class="story plain" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><small>${esc(s.k)}</small><h2>${s.h}</h2></div><div class="mk ink">${mk(v)}</div></div>`
-    : `<div class="story" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
-       <div class="txt"><small>${esc(s.k)}</small><h2>${esc(s.h)}</h2></div>
+    ? `<div class="story plain ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.h}</h2></div><div class="mk ink">${mk(v)}</div></div>`
+    : `<div class="story ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
+       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
        <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
 
   // ---- Apps, and Search ----
-  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${esc(T(id).tag)}</i></span>${getBtn(id)}</span></div>`).join('');
+  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${esc(T(id).tag)}</i></span>${getBtn(id)}</span></div>`).join('');
   $('list').innerHTML = `<div class="sec"><h2>Every AllisonOS app</h2></div>${rows(D.APPS)}`;
   const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = D.APPS.filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
   $('q').oninput = find; find();
 
   // ---- tabs ----
   const tabs = document.querySelectorAll('[data-tab]');
-  const show = t => { for (const s of ['today', 'apps', 'search']) $(s).hidden = s !== t; tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
+  const show = t => { for (const s of ['today', 'apps', 'search']) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', ['today', 'apps', 'search'].indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
   tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
 
   // ---- pages that slide over ----
@@ -291,10 +329,10 @@
     const hist = live.filter(x => { const y = D.entry((x.apps || {})[id]); return y.highlights.length + y.notes.length; });
     page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}</div></div>
       <div class="strip">
-        <div><small>Version</small><b>${mk(v)}</b><i>Latest</i></div>
-        <div><small>Category</small>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
-        <div><small>Made by</small>${line('sparkle')}<i>Allison Corporation</i></div>
-        <div><small>${SHARED.includes(id) ? 'Family' : 'Yours'}</small>${line(SHARED.includes(id) ? 'people' : 'lock')}<i>${SHARED.includes(id) ? 'Shared' : 'Just you'}</i></div>
+        <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
+        <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
+        <div>${line(SHARED.includes(id) ? 'people' : 'lock')}<i>${SHARED.includes(id) ? 'Shared with family' : 'Just you'}</i></div>
+        <div>${line('sparkle')}<i>Allison Corporation</i></div>
       </div>
       <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
       <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${[...e.highlights, ...e.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
@@ -314,7 +352,7 @@
   function storyPage(i) {
     const s = STORIES[i];
     page(`<div class="hero" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
-      <div class="txt"><small>${esc(s.k)}</small><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
+      <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
       ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
   }
