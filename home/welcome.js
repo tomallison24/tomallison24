@@ -77,11 +77,6 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '1.1', date: '2026-10-08', title: 'Tidier speaker controls',
-      notes: ['Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name'],
-      apps: {
-        house: { notes: ['Speaker popups: Bass, Treble, Balance and the Arc\'s levels are full-width sliders, one to a row, with the level beside the name'] },
-      } },
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
       highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours',
@@ -91,7 +86,8 @@
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
         'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
-        'The aOS icon is just aOS, without a version number'],
+        'The aOS icon is just aOS, without a version number',
+        'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
