@@ -24,7 +24,9 @@ notice, add a line for it:
 - If the top entry isn't released yet (no `aOS<v>` tag: `git ls-remote --tags
   origin 'aOS*'`), add to it. Otherwise add a new entry above it with the next
   minor version (`1.1` after `1`); the owner picks the final number when
-  releasing.
+  releasing. The owner may fold changes into the released top version instead
+  (everything is going into aOS1 for now): then add to that entry; releasing
+  it again moves its tag (`aOS/RELEASING.md`).
 - `highlights` are the most important changes - the update screens in the
   apps show these; `notes` are everything else, shown in aOS's full log.
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain

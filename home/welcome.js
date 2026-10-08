@@ -77,18 +77,13 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '1.2', date: '2026-10-08', title: 'Straight back to aOS', silent: true,
-      notes: ['An app opened from aOS shows only how to add it: tap ✕ to go back to aOS', 'The owner saves the family\'s Home Assistant address in aOS, and Home fills it in for everyone', 'Silent releases are no longer listed in aOS'] },
-    { v: '1.1', date: '2026-10-07', title: 'Your family account', silent: true,
-      highlights: ['Family accounts: Face ID signs you in to every app', 'Calendar and Travel only answer your family now'],
-      notes: ['The owner invites family from aOS, with a link good once for 24 hours', 'Removing someone signs them out of every app'],
-      apps: {
-        calendar: { highlights: ['Sign in once with Face ID: the Family calendar is private to your family'] },
-        travel: { highlights: ['Sign in once with Face ID for live flight status and adding trips to the calendar'] },
-      } },
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
-      highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app'],
-      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours'],
+      highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
+      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours',
+        'Calendar and Travel only answer your family',
+        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
+        'Home fills in your family\'s Home Assistant address, and shows how to make your token',
+        'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },

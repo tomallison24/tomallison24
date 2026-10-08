@@ -8,7 +8,9 @@
 #
 # release: (run by hand, with a version) checks that the newest entry in
 #          home/welcome.js's release log is that version and tags the default
-#          branch as aOS<version>.
+#          branch as aOS<version>. Released already (more added to aOS1, say):
+#          the tag moves to the latest code, and tags for versions no longer in
+#          the log (aOS1.1, folded into aOS1) are removed, so it's the live one.
 # build:   fetches every feed in news/feeds.json into news/data/news.json and
 #          packages the site (News, Weather, Mail, Notes, Podcasts, Travel,
 #          Calendar, Places, Fitness, Home Assistant in house/, aOS, and home/'s
@@ -75,9 +77,19 @@ jobs:
           printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$' || { echo "::error::A version is numbers and dots, like 1.1"; exit 1; }
           top=$(node -e "const m = require('fs').readFileSync('home/welcome.js', 'utf8').match(/const RELEASES = \[\s*\{\s*v:\s*'([^']+)'/); console.log(m ? m[1] : '')")
           [ "$top" = "$V" ] || { echo "::error::The newest entry in home/welcome.js's release log is aOS$top, not aOS$V: add aOS$V's entry first"; exit 1; }
-          if git rev-parse -q --verify "refs/tags/aOS$V" >/dev/null; then echo "::error::aOS$V is already released"; exit 1; fi
-          git tag "aOS$V" && git push origin "aOS$V"
-          echo "Released aOS$V at $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          # a release tag whose version isn't in the log any more (folded into another) goes
+          logged=$(node -e "const s = require('fs').readFileSync('home/welcome.js', 'utf8'); const i = s.indexOf('const RELEASES = ['); const b = s.slice(i, s.indexOf('];', i)); console.log([...b.matchAll(/\{\s*v:\s*'([^']+)'/g)].map(m => m[1]).join(' '))")
+          for t in $(git tag --list 'aOS*'); do
+            case " $logged " in *" ${t#aOS} "*) ;; *) git push origin ":refs/tags/$t" && echo "Removed $t: no longer in the log" >> "$GITHUB_STEP_SUMMARY";; esac
+          done
+          # released already: the tag moves to the latest code
+          if git rev-parse -q --verify "refs/tags/aOS$V" >/dev/null; then
+            git tag -f "aOS$V" && git push -f origin "refs/tags/aOS$V"
+            echo "Released aOS$V again, now at $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            git tag "aOS$V" && git push origin "aOS$V"
+            echo "Released aOS$V at $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   build:
     needs: release

@@ -37,9 +37,15 @@ Merge it with the changes it describes.
 On GitHub: **Actions → News → Run workflow**, branch = the default branch,
 **release** = the version (`1.1`), **Run**. Or ask Claude to release it.
 
-The run checks that the version is the newest entry in the log and isn't
-released already, tags the default branch as `aOS1.1`, and publishes it to
-Cloudflare Pages and GitHub Pages. Each phone sees the update the next time it
+The run checks that the version is the newest entry in the log, tags the
+default branch as `aOS1.1`, and publishes it to Cloudflare Pages and GitHub
+Pages.
+
+**Adding to a released version** (everything going out as aOS1 again): keep
+adding to its entry at the top of the log and release that version again. Its
+tag moves to the latest code, and the tag of any version that's no longer in
+the log (an aOS1.1 folded into aOS1) is removed, so it's the live one. Phones
+see the changes but no new version number and no update screen. Each phone sees the update the next time it
 opens an app (the service workers load network-first).
 
 Run it with **release** blank to republish the live release with fresh
