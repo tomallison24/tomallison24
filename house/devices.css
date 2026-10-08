@@ -52,7 +52,26 @@
 .gsl.dis { opacity: .4; }
 .gsl.inrow { padding: 10px 4px 2px; }
 .gsl.inrow .gsl-top { padding: 0 0 2px; }
-.group.pad { padding: 4px 0 8px; }
+/* Tone and Home Theatre (Media popups): one row per number - the name and
+   value on a line, then a 32px glass bar with a white bar for a thumb, as on
+   the Signal dashboard. NOT .pad: that is the PIN keypad's 3 x 72px grid in
+   index.html, which squeezed these into three tiny columns. On a range either
+   side of 0 (--zf, set by sliderHTML) a tick marks 0. */
+.group.tsl { padding: 0 0 6px; }
+.tsl .gsl.inrow { margin-top: 0; padding: 12px 2px 0; }
+.tsl .gsl-top { padding: 0 2px 8px; }
+.tsl .gsl-top span { font-size: 13px; font-weight: 600; letter-spacing: 0; opacity: 1; }
+.tsl .gsl-top b { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); }
+.tsl .gsl input { height: 32px; }
+.tsl .gsl input::-webkit-slider-runnable-track { height: 32px; border-radius: 12px; box-shadow: none;
+  background: linear-gradient(90deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.24) var(--p), rgba(255,255,255,0.10) var(--p)); }
+.tsl .gsl.zero input::-webkit-slider-runnable-track {
+  background: linear-gradient(rgba(255,255,255,0.35), rgba(255,255,255,0.35)) no-repeat calc(2px + (100% - 4px) * var(--zf)) 50% / 2px 12px,
+    linear-gradient(90deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.24) var(--p), rgba(255,255,255,0.10) var(--p)); }
+.tsl .gsl input::-webkit-slider-thumb { width: 6px; height: 20px; margin-top: 6px; border-radius: 3px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
+.tsl .gsl input::-moz-range-track { height: 32px; border-radius: 12px; background: rgba(255,255,255,0.10); }
+.tsl .gsl input::-moz-range-progress { height: 32px; border-radius: 12px 0 0 12px; background: rgba(255,255,255,0.24); }
+.tsl .gsl input::-moz-range-thumb { width: 6px; height: 20px; border-radius: 3px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
 .usheet .gsl { margin-top: 16px; }
 .usheet .gsl.thin { margin-top: 0; }
 
@@ -584,6 +603,14 @@
     .gsl input::-moz-range-track { background: rgba(28,32,40,0.09); }
     .gsl input::-webkit-slider-thumb { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.44), 0 2px 8px rgba(30,40,60,0.14); }
     .gsl input::-moz-range-thumb { box-shadow: 0 2px 8px rgba(30,40,60,0.14); }
+    .tsl .gsl-top b { color: rgba(28,32,40,0.75); }
+    .tsl .gsl input::-webkit-slider-runnable-track { background: linear-gradient(90deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.78) var(--p), rgba(255,255,255,0.4) var(--p)); }
+    .tsl .gsl.zero input::-webkit-slider-runnable-track { background: linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)) no-repeat calc(2px + (100% - 4px) * var(--zf)) 50% / 2px 12px,
+    linear-gradient(90deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.78) var(--p), rgba(255,255,255,0.4) var(--p)); }
+    .tsl .gsl input::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(30,40,60,0.18); }
+    .tsl .gsl input::-moz-range-track { background: rgba(28,32,40,0.075); }
+    .tsl .gsl input::-moz-range-progress { background: rgba(28,32,40,0.18); }
+    .tsl .gsl input::-moz-range-thumb { box-shadow: 0 1px 4px rgba(30,40,60,0.18); }
     .chip2 { background: rgba(28,32,40,0.075); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.32); }
     .chip2[aria-pressed="true"] { background: rgba(28,32,40,0.225); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.65), 0 4px 14px -6px rgba(30,40,60,0.2); }
     .tile.on { background: rgba(28,32,40,0.195); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.6); }
