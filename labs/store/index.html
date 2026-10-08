@@ -237,8 +237,8 @@
     { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
       <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
       <h3>1. The address fills itself in</h3><p>Signed in to your family account, Home already knows where your house is. Nothing to type.</p>
-      <h3>2. Make your own token</h3><p>In the Home Assistant app: your <b>profile</b> → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>Home</b> and copy it straight away: it's only shown once.</p>
-      <p class="muted">(In the real one, this step is animated, drawn after Home Assistant's own screens.)</p>
+      <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> at the bottom → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>AllisonOS</b> and your name, and tap <b>Copy</b> straight away: it's only shown once.</p>
+      <p class="muted">Home shows these steps animated, the first time you open it.</p>
       <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` },
     { id: aotd, k: 'App of the day', h: `${D.NAMES[aotd]}: ${T(aotd).tag}`, art: (T(aotd).cards[0] || {}).i, body: () => T(aotd).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
     { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${[...(r.highlights || []), ...(r.notes || [])].map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
