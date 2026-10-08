@@ -7,7 +7,8 @@
 // storage on an iPhone - can sign in with one tap. The server keeps, in a Workers
 // KV namespace bound as ACCOUNTS (made and bound by .github/workflows/news.yml):
 //   owner            the owner's id; until it exists, nothing is locked
-//   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by }
+//   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by,
+//                      apps: { <app>: when it was last opened from their Home Screen } }
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
 //   invite:<token>   { name, by } - one use, gone after 24 hours
 //   chal:<id>        a sign-in or sign-up challenge, gone after 5 minutes

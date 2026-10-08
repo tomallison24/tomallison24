@@ -84,7 +84,8 @@
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
-        'aOS is an app store: Today, Apps, Search, a page for every app, and your account'],
+        'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
+        'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -1098,6 +1099,40 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 
   AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
 
+  // ---- on this phone: an app on the Home Screen tells the family account ----
+  // aOS shows ✓ Installed for it. The report needs this app's own session (each
+  // Home Screen app keeps its own storage), so an app that has never signed in -
+  // most don't need to - asks once, after its walkthrough or update, with the
+  // family sign-in sheet (../home/account.js, loaded when needed). At most every
+  // 12 hours; "Not now" isn't asked again.
+  const SESSION = 'aos.session', ASKED = 'aos.signin.asked', REPORTED = 'aos.reported';
+  const token = () => { try { return (JSON.parse(localStorage.getItem(SESSION) || 'null') || {}).token || null; } catch { return null; } };
+  const api = p => url('../aOS/api/' + p);
+  async function report() {
+    const t = token(); if (!t) return false;
+    let last = 0; try { last = +localStorage.getItem(REPORTED) || 0; } catch {}
+    if (Date.now() - last < 12 * 3600e3) return true;
+    try {
+      const r = await fetch(api('installed'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app: APP }) });
+      if (r.ok) localStorage.setItem(REPORTED, String(Date.now()));
+    } catch {}
+    return true;
+  }
+  const loadAccount = () => AOS.account ? Promise.resolve(AOS.account) : new Promise((ok, no) => {
+    const s = document.createElement('script'); s.src = url('account.js'); s.onload = () => ok(AOS.account); s.onerror = no; document.head.appendChild(s);
+  });
+  async function onPhone() {
+    if (!APP || !APPS.includes(APP) || !standalone() || viaAOS()) return;
+    addEventListener('aos:account', e => { if (e.detail) report(); });   // signed in some other way (a locked route asked)
+    if (await report()) return;
+    try { if (localStorage.getItem(ASKED)) return; } catch { return; }
+    let st; try { const r = await fetch(api('state'), { cache: 'no-store' }); if (!r.ok) return; st = await r.json(); } catch { return; }
+    if (!st.storage || !st.setup) return;   // no family accounts yet: nothing to sign in to
+    try { localStorage.setItem(ASKED, '1'); } catch {}
+    const A = await loadAccount().catch(() => null);
+    if (A && !token()) await A.prompt(`Sign in once, so aOS knows ${esc(NAMES[APP])} is on this phone.`);
+  }
+
   // ---- deciding what to show, once ----
   function auto() {
     const seen = seenAll(); if (!seen || !APP || APP === 'home') return;   // home: the retired launcher
@@ -1118,6 +1153,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
   }
   if (me && me.hasAttribute('data-auto')) {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto, { once: true }); else auto();
+    const go = () => Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {});
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
   }
 })();

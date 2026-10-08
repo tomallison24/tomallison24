@@ -55,7 +55,10 @@ notice, add a line for it:
   accounts API; `functions/<app>/api/_middleware.js` locks an app's server route
   to signed-in family once the owner exists. Apps that call a locked route load
   `../home/account.js` and use `AllisonOS.account.fetch`, which asks for Face ID
-  on a 401. See `aOS/RELEASING.md`, "Family accounts".
+  on a 401. See `aOS/RELEASING.md`, "Family accounts". Every app, opened from
+  the Home Screen and signed in, reports itself (`welcome.js`, `POST
+  /aOS/api/installed`) so aOS shows it as Installed; one that has never signed
+  in asks once.
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.

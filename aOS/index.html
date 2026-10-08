@@ -301,7 +301,12 @@
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
   };
-  const getBtn = id => `<button type="button" class="get" data-get="${id}">Get</button>`;
+  // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
+  // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone
+  let INST = new Set();
+  const getBtn = id => INST.has(id) ? `<button type="button" class="get done" data-get="${id}">Installed</button>` : `<button type="button" class="get" data-get="${id}">Get</button>`;
+  const paintGets = () => document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
+  const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); };
   // an app the newest (non-silent) release changed says so under its name
   const now = live[0];
   const changed = id => { const e = D.entry((now.apps || {})[id]); return e.highlights.length + e.notes.length > 0; };
@@ -389,7 +394,7 @@
       <div class="sec"><h2>About</h2></div>
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
-      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iPhone</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
       .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); });
   }
   function histPage(id, hist) {
@@ -436,7 +441,7 @@
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
-  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } return state; };
+  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); return state; };
 
   // Today, signed out: a card that opens the account
   function paintSigninCard() {

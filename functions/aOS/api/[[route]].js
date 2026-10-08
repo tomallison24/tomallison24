@@ -7,6 +7,7 @@
 //   POST signin/begin                          -> a challenge
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
+//   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
 //   POST remove           (owner) { id }       -> signs them out everywhere
@@ -17,6 +18,8 @@ import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, ver
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 16 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
+// the apps aOS offers (home/welcome.js APPS), for "installed"
+const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'house'];
 
 async function body(request) {
   const t = await request.text();
@@ -30,7 +33,8 @@ export async function onRequest({ request, params, env }) {
   const db = kv(env);
   if (route === 'state' && method === 'GET') {
     if (!db) return reply({ storage: false, setup: false });
-    return reply({ storage: true, setup: !!(await db.get('owner')), user: pub(await sessionUser(db, request)) });
+    const u = await sessionUser(db, request);   // your own record also says which apps you've opened from the Home Screen, and when
+    return reply({ storage: true, setup: !!(await db.get('owner')), user: u && { ...pub(u), apps: u.apps || {} } });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -95,6 +99,15 @@ export async function onRequest({ request, params, env }) {
 
     // Home fills this in for a new person, so they only need their own token.
     if (route === 'home' && method === 'GET') return reply({ address: (await db.get('config:home')) || null });
+
+    // An app opened from your Home Screen says so (at most twice a day, from home/welcome.js).
+    if (route === 'installed' && method === 'POST') {
+      const app = String((await body(request)).app || '');
+      if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
+      me.apps = Object.assign({}, me.apps, { [app]: Date.now() });
+      await putJSON(db, 'user:' + me.id, me);
+      return reply({ ok: true });
+    }
 
     // ---- the owner's tools ----
     if (me.role !== 'owner') return reply({ error: 'owner-only' }, 403);

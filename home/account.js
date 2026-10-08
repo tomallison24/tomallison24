@@ -77,7 +77,7 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
 #aos-signin h2 { margin: 14px 0 6px; font-size: 22px; }
 #aos-signin p { margin: 0 0 4px; color: var(--s-muted); font-size: 15px; line-height: 1.4; }
 #aos-signin button { display: block; width: 100%; height: 50px; margin-top: 14px; border: 0; border-radius: 999px; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
-#aos-signin .s-go { background: #0A84FF; color: #fff; }
+#aos-signin .s-go { background: var(--s-pastel); color: #10181A; border-radius: 17px; font-weight: 700; }
 #aos-signin .s-not { height: 40px; margin-top: 6px; background: none; color: var(--s-muted); font-size: 15px; }
 #aos-signin .s-err { min-height: 20px; margin-top: 10px; font-size: 14px; color: #D9534F; }
 #aos-signin .s-new { margin-top: 6px; font-size: 13px; }`;
