@@ -1,7 +1,7 @@
 # aOS
 
-The home of every AllisonOS app, laid out like an app store, in the same
-glass and pastels as the AllisonOS welcome. Part of the Allison Corporation.
+The home of every AllisonOS app, laid out as an app store, in the same
+Sea glass as the AllisonOS welcome. Part of the Allison Corporation.
 Its address ends in `/aOS/`.
 
 ## The flow
@@ -39,18 +39,33 @@ anyone signed in, so each person only makes their own token. Details and the one
 
 ## The page
 
-- **The aOS mark**: aOS with the version as a superscript, shining, and "The
-  Power of aOS1". **Replay the welcome** plays the AllisonOS welcome again.
-- **Apps**: every AllisonOS app as a tile, in the Home app's automation design
-  (square Liquid Glass, three across, a soft glow of the app's own colour
-  behind it), with its tagline, or "New in aOS1.1" when the latest release
-  changed it. A tap opens the app's address in a new tab.
-- **What's new in aOS**: the release log by version, newest first (silent
-  releases left out): each
-  version's highlights (starred), its notes, then what changed in each app.
-- **Appearance**: System, Light or Dark for aOS (`home.settings.theme`). Each
-  app on the Home Screen keeps its own storage, so each asks for itself, at
-  the end of its walkthrough.
+An app store in Sea glass: a mist ground with soft colour fields, a sea-glass
+accent, and the Sea glass pastel for the one thing to tap (Get, the selected
+tab, Install). Rounded squares rather than circles; small pastel squares mark
+headings. A glass dock at the bottom - **Today**, **Apps**, **Search** - with a
+pastel stop that slides between them, and your avatar top right.
+
+- **Today**: postcards laid out as a bento (one tall, two halves, one wide):
+  setting up Home, the app of the day, what's new (the aOS mark), meet an app,
+  your family account. Each opens full screen. Signed out, a card at the top
+  asks you to sign in (or set up, or join).
+- **Apps**: each app its own card, glowing in its colour, with its tagline (or
+  "New in aOS1.1" when the newest release changed it) and **Get**.
+- **Search**: by name, tagline, category or what its walkthrough says.
+- **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
+  (version, category, shared or yours, maker); What's New and Version History;
+  Preview (drawn from its walkthrough cards, not screenshots); What it needs;
+  About; Information. Swipe from the left edge to go back.
+- **Get**: the install steps, animated, in a sheet; **Install** (once they've
+  played through) opens the app's own address with `?via=aos`, which shows how
+  to add it, and the view's ✕ comes back here.
+- **The avatar**: your account (the owner's set-up, an invite's Join, Sign in;
+  signed in, the owner's tools: the Home Assistant address, invites, the
+  family), Appearance (`home.settings.theme`; each app on the Home Screen keeps
+  its own, asked in its walkthrough), Updates (the release log, newest first,
+  silent releases left out, highlights starred) and Replay the welcome. An
+  invite link or the owner's first set-up opens it by itself, and
+  `../aOS/#whats-new` (the apps' update screens link there) opens it at Updates.
 
 ## Versions, welcomes and walkthroughs
 

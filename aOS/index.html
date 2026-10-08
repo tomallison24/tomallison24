@@ -1,30 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="aOS">
-<meta name="theme-color" content="#F2F4F8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <title>aOS</title>
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  aOS - the home of every AllisonOS app, laid out like an app store.
+  aOS - the home of every AllisonOS app, as an app store in Sea glass.
 
-  - The aOS mark: aOS with the version as a superscript, shining, and "The
-    Power of aOS1"; a tap replays the AllisonOS welcome.
-  - Apps: every AllisonOS app as a tile, as the Home app's automations (glass,
-    three across, a glow of the app's colour behind it), with its tagline (or
-    "New in aOS1.1" when the latest release changed it). A tap opens the app's
-    address: in Safari it shows how to add it to the Home Screen.
-  - What's new in aOS: the release log, newest first, with what changed in
-    each app.
-  - Appearance: System, Light or Dark, for aOS. Each app on the Home Screen
-    keeps its own, asked in its walkthrough.
+  - Today: postcards, as a bento (one tall, two halves, one wide): setting up
+    Home, the app of the day, what's new in aOS (the mark, #mark), meet an app,
+    your family account. Signed out, a card at the top asks you to sign in.
+  - Apps: every app as a card glowing in its own colour, with its tagline (or
+    "New in aOS1.1" when the latest release changed it) and Get.
+  - Search: by name, tagline or what the walkthrough says.
+  - An app's page: Get, its facts as chips, What's New (and Version History),
+    Preview (drawn from its walkthrough cards), What it needs, About.
+  - Get: the install steps, animated, in a sheet; Install (after one play-
+    through) opens the app's own address with ?via=aos, where it shows how to
+    add it, and the view's ✕ comes back here.
+  - The avatar: your account (#acct: the owner's set-up, an invite's Join,
+    Sign in; signed in, the owner's tools - the Home Assistant address, invites,
+    the family), Appearance, Updates (#whats-new, the release log without silent
+    releases) and Replay the welcome. An invite link (#invite=) or the owner's
+    first set-up opens it by itself; ../aOS/#whats-new opens it at Updates.
 
   The welcome, the walkthroughs, the update screens and the release log are all
   in ../home/welcome.js, which every app loads; this page reads its data. With
@@ -34,190 +41,391 @@
   No build step: this file is the whole app and sw.js keeps it working offline.
 -->
 <style>
-  :root {
-    --bg: #F2F4F8; --text: #0B0B0F; --muted: rgba(60,60,67,.62); --tile: rgba(255,255,255,.7); --edge: rgba(0,0,0,.07); --dot: rgba(0,0,0,.08);
-    --accent: #0A84FF;
-    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); --glow: rgba(129,147,188,.32);
-    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42));
-    --ag-edge: inset 0 0 0 0.5px rgba(28,32,40,0.1), inset 0 1px 0.5px rgba(255,255,255,0.9), 0 10px 24px -12px rgba(30,40,60,0.28);
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
-   
-    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --glow: rgba(185,198,224,.5);
-    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
-    --ag-edge: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
-    color-scheme: dark; } }
-  :root[data-theme="dark"] {
-    --bg: #0F1116; --text: #fff; --muted: rgba(235,235,245,.62); --tile: rgba(255,255,255,.06); --edge: rgba(255,255,255,.1); --dot: rgba(255,255,255,.12);
-   
-    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --glow: rgba(185,198,224,.5);
-    --ag-bg: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
-    --ag-edge: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
-    color-scheme: dark; }
-  * { box-sizing: border-box; }
+  /* Sea glass, not iOS: mist and sand grounds, a sea-glass accent, pastel for the
+     one thing to tap; soft rounded-square shapes rather than circles and hairlines */
+  :root { --bg: #EEF2F0; --card: rgba(255,255,255,.78); --solid: #FAFBFA; --text: #10181A; --muted: rgba(16,24,26,.56); --line: rgba(16,24,26,.08); --dot: rgba(16,24,26,.06);
+    --glass: rgba(250,252,251,.74); --edge: rgba(16,24,26,.08); --accent: #4E8C7E; --sand: #A77F45; --on: #fff;
+    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%);
+    --blob1: rgba(111,165,151,.22); --blob2: rgba(190,145,143,.18); --blob3: rgba(129,147,188,.18); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0D1213; --card: rgba(255,255,255,.055); --solid: #161C1D; --text: #EEF4F2; --muted: rgba(238,244,242,.58); --line: rgba(255,255,255,.07); --dot: rgba(255,255,255,.07);
+    --glass: rgba(22,28,29,.72); --edge: rgba(255,255,255,.09); --accent: #A9D3C7; --sand: #E9D6B4; --on: #0D1213;
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --blob1: rgba(169,211,199,.10); --blob2: rgba(227,197,195,.08); --blob3: rgba(185,198,224,.08); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #0D1213; --card: rgba(255,255,255,.055); --solid: #161C1D; --text: #EEF4F2; --muted: rgba(238,244,242,.58); --line: rgba(255,255,255,.07); --dot: rgba(255,255,255,.07);
+    --glass: rgba(22,28,29,.72); --edge: rgba(255,255,255,.09); --accent: #A9D3C7; --sand: #E9D6B4; --on: #0D1213;
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --blob1: rgba(169,211,199,.10); --blob2: rgba(227,197,195,.08); --blob3: rgba(185,198,224,.08); color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
-  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
-    padding: calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 40px); }
+  body { font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; }
+  body::before { content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    background: radial-gradient(40% 30% at 15% 10%, var(--blob1), transparent 70%), radial-gradient(35% 28% at 90% 35%, var(--blob2), transparent 70%), radial-gradient(45% 35% at 30% 90%, var(--blob3), transparent 70%); }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-  main { max-width: 560px; margin: 0 auto; }
-  /* the pastel colour fields behind everything, faint */
-  .fields { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-  .fields i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); opacity: .18; }
-  .fields i:nth-child(1) { background: #A9D3C7; left: -30vmax; top: -30vmax; }
-  .fields i:nth-child(2) { background: #E3C5C3; right: -35vmax; top: 20vh; }
-  .fields i:nth-child(3) { background: #B9C6E0; left: -20vmax; bottom: -40vmax; }
+  a { color: inherit; text-decoration: none; }
+  .ink { background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  sup { font-size: .55em; vertical-align: .55em; line-height: 0; }
 
-  /* the hero: the aOS mark, shining */
-  .hero { display: flex; flex-direction: column; align-items: center; padding: 34px 0 24px; text-align: center; }
-  .mark { position: relative; font-size: 72px; font-weight: 800; letter-spacing: -2.4px; line-height: 1; }
-  .ink { background: linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,.95) 48%, transparent 58% 100%), var(--pastel); background-size: 260% 100%, 100% 100%; background-position: 130% 0, 0 0;
-    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: shine 4s cubic-bezier(.45,0,.2,1) 1s infinite; }
-  @keyframes shine { 0% { background-position: 130% 0, 0 0; } 40%, 100% { background-position: -30% 0, 0 0; } }
-  .mark sup { position: relative; display: inline-block; font-size: .5em; letter-spacing: 0; margin-left: 2px; top: -.78em; vertical-align: 0; filter: drop-shadow(0 0 12px var(--glow)); }
-  .star { position: absolute; width: 12px; height: 12px; opacity: 0; animation: twinkle 3s ease-in-out infinite; }
-  .star:nth-of-type(1) { right: -26px; top: -30px; animation-delay: .6s; }
-  .star:nth-of-type(2) { right: 6px; top: -46px; width: 8px; height: 8px; animation-delay: 1.5s; }
-  .star:nth-of-type(3) { right: -40px; top: 2px; width: 9px; height: 9px; animation-delay: 2.3s; }
-  @keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 15% { opacity: .9; transform: scale(1) rotate(45deg); } 35% { opacity: 0; transform: scale(.4) rotate(90deg); } }
-  .power { margin-top: 14px; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }   /* never capitals: aOS keeps its lowercase a */
-  .power sup { font-size: .75em; letter-spacing: 0; }
-  .replay { margin-top: 18px; height: 38px; padding: 0 18px; border-radius: 999px; font-size: 15px; font-weight: 600; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); }
-  .replay:active { transform: scale(.97); }
+  /* the tabs: one scrolling page each */
+  .tab { padding: calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 112px); max-width: 640px; margin: 0 auto; }
+  .tab[hidden] { display: none; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 2px 20px; }
+  .head .mark { display: block; font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+  .head small { display: inline-block; margin-left: 8px; font-size: 13px; color: var(--muted); }
+  .head h1 { position: relative; margin: 2px 0 0; font-size: 32px; font-weight: 750; letter-spacing: -.6px; line-height: 1.1; padding-bottom: 8px; }
+  .head h1::after { content: ''; position: absolute; left: 1px; bottom: 0; width: 34px; height: 4px; border-radius: 2px; background: var(--pastel); }
+  .avatar { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 15px; display: grid; place-items: center; font-weight: 700; font-size: 17px; color: var(--on); background: var(--pastel);
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--edge), 0 8px 20px rgba(0,0,0,.12); }
 
-  h2 { font-size: 22px; margin: 26px 4px 10px; letter-spacing: -.3px; display: flex; align-items: baseline; justify-content: space-between; }
-  h2 small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
-  .group { border-radius: 24px; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--edge); overflow: hidden; }
-  /* the apps: the Home app's automation tiles (design D) - square Liquid Glass, three across,
-     a soft glow of the app's own colour behind each; a tap opens the app's address */
-  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .agw { position: relative; isolation: isolate; }
-  .ag-glow { position: absolute; inset: 14%; z-index: -1; border-radius: 999px; pointer-events: none; filter: blur(16px);
-    background: radial-gradient(closest-side, rgba(var(--c),0.9), rgba(var(--c),0)); opacity: .3; transition: opacity .5s, inset .5s; }
-  .agw:active .ag-glow { opacity: .8; inset: 4%; }
-  .ag { position: relative; width: 100%; text-decoration: none; -webkit-tap-highlight-color: transparent; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 8px;
-    padding: 13px; border-radius: 26px; text-align: left; color: inherit;
-    background: var(--ag-bg); -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
-    box-shadow: var(--ag-edge); transition: transform .2s cubic-bezier(.22,1,.36,1); }
-  .ag:active { transform: scale(0.96); }
-  .ag img { width: 42px; height: 42px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,.18); }
-  .ag b { display: block; font-size: 14px; font-weight: 600; line-height: 1.2; }
-  .ag small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; line-height: 1.25; color: var(--muted); margin-top: 2px; }
-  .ag small sup { font-size: .75em; line-height: 0; }
-  /* what's new in aOS */
-  .rel { padding: 16px; }
-  .rel + .rel { border-top: .5px solid var(--edge); }
-  .rel h3 { margin: 0; font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; }
-  .rel h3 sup { font-size: .65em; }
-  .rel h3 small { font-size: 13px; font-weight: 500; color: var(--muted); }
-  .rel ul { margin: 8px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.45; }
-  .rel li.hi { color: var(--text); font-weight: 600; list-style: none; margin-left: -18px; padding-left: 18px; position: relative; }
-  .rel li.hi::before { content: '★'; position: absolute; left: 0; font-size: 11px; top: 3px; background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .rel .rt { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
-  .rel h4 { margin: 12px 0 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  /* appearance */
-  .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--dot); margin: 0 4px; }
-  .seg button { flex: 1; height: 36px; border-radius: 999px; font-size: 15px; font-weight: 600; }
-  .seg button[aria-pressed="true"] { background: var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.14), inset 0 0 0 .5px var(--edge); }
-  .foot { text-align: center; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 34px; }
+  /* Today: postcards, laid out as a bento - one tall, two halves, one wide */
+  #stories { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .story { position: relative; display: block; cursor: pointer; grid-column: span 2; height: 420px; border-radius: 30px; overflow: hidden; text-align: left; color: #fff; background: #222;
+    box-shadow: inset 0 0 0 6px rgba(255,255,255,.07), 0 16px 34px rgba(0,0,0,.14); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .story:active { transform: scale(.975); }
+  .story .art { position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 30%, rgba(var(--c), .9), rgba(var(--c), .28) 58%, #0C1112 100%); }
+  .story .art::after { content: ''; position: absolute; inset: 6px; border-radius: 24px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); pointer-events: none; }
+  .story .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: 120px; box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); animation: float 6s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-6px); } }
+  .story .art svg { position: absolute; left: -24px; bottom: 70px; width: 230px; height: 230px; color: rgba(255,255,255,.12); }
+  .story .txt { position: absolute; left: 22px; right: 22px; top: 22px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 9px; font-size: 12.5px; font-weight: 650; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .chip::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
+  .story .txt h2 { margin: 10px 0 0; font-size: 27px; line-height: 1.12; letter-spacing: -.4px; max-width: 70%; }
+  .story .foot { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 22px; background: rgba(12,16,17,.38); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .story .foot img { width: 42px; height: 42px; border-radius: 12px; }
+  .story .foot span { flex: 1; min-width: 0; } .story .foot b { display: block; font-size: 15px; } .story .foot i { display: block; font-style: normal; font-size: 13px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* halves: the icon on top, the title under it, no band */
+  .story.half { grid-column: span 1; height: 250px; }
+  .story.half .art img { width: 64px; height: 64px; border-radius: 17px; left: 18px; right: auto; top: 56px; box-shadow: 0 0 0 6px rgba(255,255,255,.08), 0 0 40px 10px rgba(var(--c), .5); }
+  .story.half .art svg { width: 150px; height: 150px; left: auto; right: -30px; bottom: -20px; }
+  .story.half .txt { top: 16px; left: 16px; right: 16px; }
+  .story.half .txt h2 { font-size: 18px; max-width: none; position: absolute; top: 132px; }
+  .story.half .foot { display: none; }
+  /* wide: a band, the icon to the left */
+  .story.wide { height: 200px; }
+  .story.wide .art img { width: 76px; height: 76px; border-radius: 20px; left: 22px; right: auto; top: 62px; }
+  .story.wide .txt { left: 118px; top: 52px; } .story.wide .txt h2 { font-size: 22px; max-width: none; }
+  .story.wide .foot { display: none; }
+  .story.plain { color: var(--text); background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 16px 34px rgba(0,0,0,.08); }
+  .story.plain .art { background: radial-gradient(60% 60% at 50% 55%, var(--blob1), transparent 70%); }
+  .story.plain .art::after { box-shadow: inset 0 0 0 1px var(--edge); }
+  .story.plain .chip { background: var(--dot); }
+  .story.plain .mk { position: absolute; left: 0; right: 0; top: 112px; text-align: center; font-size: 92px; font-weight: 800; letter-spacing: -3px; }
+  .story.plain.half .mk { top: 62px; font-size: 50px; letter-spacing: -1.5px; }
 
-  .note { font-size: 13px; color: var(--muted); margin-top: 6px; }
-  /* your account: family accounts with passkeys (../home/account.js) */
-  .acct { padding: 16px; }
+  /* Apps: each one its own card, its colour glowing behind the icon */
+  #list, #found { display: grid; gap: 10px; }
+  .row { cursor: pointer; position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px; width: 100%; text-align: left; border-radius: 24px; background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
+  .row:active { transform: scale(.98); }
+  .row::before { content: ''; position: absolute; left: -30px; top: 50%; width: 130px; height: 130px; margin-top: -65px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .32), transparent 65%); pointer-events: none; }
+  .row img { position: relative; width: 58px; height: 58px; border-radius: 17px; flex: 0 0 58px; }
+  .row .t { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 650; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .get { position: relative; flex: 0 0 auto; min-width: 70px; height: 32px; padding: 0 16px; border-radius: 11px; background: var(--pastel); color: #10181A; font-size: 15px; font-weight: 700;
+    box-shadow: 0 4px 14px rgba(111,165,151,.3), inset 0 1px 0 rgba(255,255,255,.5); }
+  .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px currentColor; font-weight: 650; }
+  .get.done::before { content: '✓ '; }
+  .story .get.done { color: #fff; }
+  .sec { display: flex; align-items: center; justify-content: space-between; margin: 30px 2px 10px; }
+  .sec h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 20px; letter-spacing: -.2px; }
+  .sec h2::before { content: ''; width: 8px; height: 8px; border-radius: 3px; background: var(--pastel); }
+  .sec a, .sec button { color: var(--accent); font-size: 15px; font-weight: 600; }
+
+  /* the dock: one glass bar, three equal stops, a pastel indicator that slides */
+  .bar { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 20; max-width: 420px; margin: 0 auto; }
+  .tabs { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 6px; border-radius: 26px; background: var(--glass); -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 14px 34px rgba(0,0,0,.16); --i: 0; }
+  .tabs .ind { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 3); border-radius: 20px; background: var(--pastel); opacity: .9;
+    transform: translateX(calc(var(--i) * 100%)); transition: transform .45s cubic-bezier(.3,1.3,.5,1); box-shadow: 0 6px 16px rgba(111,165,151,.35); }
+  .tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 20px; font-size: 14px; font-weight: 650; color: var(--muted); transition: color .3s; }
+  .tabs button svg { width: 20px; height: 20px; }
+  .tabs button[aria-selected="true"] { color: #10181A; }
+  .find { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); color: var(--muted); margin-bottom: 14px; }
+  .find input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
+
+  /* pages that slide in: an app, a story, the account */
+  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+  .page.on { transform: none; }
+  .page.up { transform: translateY(100%); } .page.up.on { transform: none; }
+  .page .in { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 40px); }
+  .back, .close { position: fixed; top: calc(env(safe-area-inset-top) + 10px); z-index: 2; width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center;
+    background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0 0 1px var(--edge), 0 6px 18px rgba(0,0,0,.12); font-size: 22px; }
+  .back { left: 14px; } .close { right: 14px; font-size: 16px; }
+  /* an app: centred, its colour as a halo, the facts as chips */
+  .apphead { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 6px; }
+  .apphead::before { content: ''; position: absolute; top: -60px; left: 50%; width: 320px; height: 260px; margin-left: -160px; background: radial-gradient(rgba(var(--c), .35), transparent 65%); pointer-events: none; }
+  .apphead img { position: relative; width: 112px; height: 112px; border-radius: 30px; box-shadow: 0 0 0 8px var(--card), 0 16px 34px rgba(var(--c), .4); }
+  .apphead h1 { margin: 18px 0 2px; font-size: 28px; letter-spacing: -.5px; } .apphead p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  .apphead .get { min-width: 180px; height: 44px; border-radius: 15px; font-size: 16px; }
+  .strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 20px 0 0; }
+  .strip div { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); font-size: 13.5px; }
+  .strip small { color: var(--muted); font-size: 12px; } .strip b { font-size: 14px; } .strip i { font-style: normal; }
+  .strip svg { width: 17px; height: 17px; color: var(--accent); }
+  .wn { padding: 14px 16px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .wn small { color: var(--muted); font-size: 14px; } .wn ul { margin: 8px 0 0; padding-left: 20px; } .wn li { margin: 4px 0; } .wn p { margin: 6px 0 0; }
+  .shots { display: flex; gap: 12px; overflow-x: auto; margin: 0 -18px; padding: 4px 18px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .shots::-webkit-scrollbar { display: none; }
+  .shot { flex: 0 0 200px; height: 380px; border-radius: 30px; scroll-snap-align: start; position: relative; overflow: hidden; padding: 24px 18px; color: #fff;
+    background: radial-gradient(120% 65% at 50% 0%, rgba(var(--c), .85), rgba(var(--c), .22) 60%, #0C1112 100%); box-shadow: inset 0 0 0 6px rgba(255,255,255,.06); }
+  .shot svg { width: 104px; height: 104px; display: block; margin: 34px auto 24px; color: rgba(255,255,255,.92); }
+  .shot b { display: block; font-size: 18px; line-height: 1.2; text-align: center; } .shot p { font-size: 13px; line-height: 1.4; text-align: center; opacity: .82; margin: 8px 0 0; }
+  .desc p { margin: 0 0 10px; } .muted { color: var(--muted); }
+  .info { border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); padding: 2px 16px; }
+  .info div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); } .info div:last-child { border-bottom: 0; }
+  .info div span:first-child { color: var(--muted); }
+  .need { display: flex; gap: 12px; align-items: center; padding: 13px 14px; border-radius: 18px; background: var(--card); margin-top: 8px; box-shadow: inset 0 0 0 1px var(--edge); }
+  .need em { font-style: normal; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; white-space: nowrap; }
+  .need .ok { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); } .need .once { background: color-mix(in srgb, var(--sand) 20%, transparent); color: var(--sand); }
+  .need span { flex: 1; font-size: 15px; }
+
+  /* a story, opened */
+  .hero { position: relative; height: 380px; margin: calc(-1 * (env(safe-area-inset-top) + 66px)) -18px 20px; color: #fff; overflow: hidden; border-radius: 0 0 34px 34px; }
+  .hero .art { position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 35%, rgba(var(--c), .9), rgba(var(--c), .28) 58%, #0C1112 100%); }
+  .hero .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: calc(env(safe-area-inset-top) + 96px); box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); }
+  .hero .txt { position: absolute; left: 22px; right: 22px; bottom: 26px; }
+  .hero h2 { margin: 10px 0 0; font-size: 29px; line-height: 1.1; letter-spacing: -.4px; }
+  .body h3 { display: flex; align-items: center; gap: 9px; margin: 24px 0 6px; font-size: 19px; } .body h3::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: var(--pastel); flex: 0 0 7px; }
+  .body p { margin: 0 0 12px; color: var(--muted); line-height: 1.55; } .body p b { color: var(--text); }
+  .body ol { padding-left: 22px; color: var(--muted); line-height: 1.55; } .body ol b { color: var(--text); }
+  .approw { display: flex; align-items: center; gap: 12px; margin-top: 26px; padding: 12px 14px 12px 12px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .approw img { width: 52px; height: 52px; border-radius: 15px; } .approw span { flex: 1; } .approw b { display: block; } .approw i { font-style: normal; font-size: 14px; color: var(--muted); }
+
+  /* the account */
+  .group { border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; margin-top: 10px; }
+  .group > * { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; }
+  .group > *:last-child { border-bottom: 0; }
+  .me { display: flex; align-items: center; gap: 14px; }
+  .me .avatar { width: 58px; height: 58px; flex-basis: 58px; border-radius: 20px; font-size: 23px; margin: 0; }
+  .chev { color: var(--muted); }
+  .seg { position: relative; display: flex; padding: 4px; border-radius: 15px; background: var(--dot); }
+  .seg button { flex: 1; height: 36px; border-radius: 11px; font-size: 15px; font-weight: 650; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--pastel); color: #10181A; box-shadow: 0 4px 12px rgba(111,165,151,.3); }
+  .rel h4 { margin: 0; font-size: 17px; } .rel small { color: var(--muted); font-size: 14px; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  .group .rel { display: block; }
+  .glbl { display: flex; align-items: center; gap: 8px; margin: 26px 4px 0; font-size: 13px; font-weight: 650; color: var(--muted); }
+  .glbl::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
+
+  /* GET: the install steps, in a sheet */
+  .shade { position: fixed; inset: 0; z-index: 40; background: rgba(8,12,13,.4); opacity: 0; transition: opacity .3s; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .shade.on { opacity: 1; }
+  .sheet { position: fixed; left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 41; max-width: 520px; margin: 0 auto; padding: 24px 20px 16px; border-radius: 32px; overflow: hidden;
+    background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 24px 60px rgba(0,0,0,.3); transform: translateY(110%); transition: transform .45s cubic-bezier(.2,.8,.2,1); text-align: center; }
+  .sheet::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--pastel); }
+  .sheet.on { transform: none; }
+  .sheet h2 { margin: 4px 0 2px; font-size: 22px; } .sheet p { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
+  .sheet .sdh { margin: 6px 0 0; }
+  .sheet .go { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 12px; border-radius: 17px; background: var(--pastel); color: #10181A; font-weight: 700; transition: opacity .3s; }
+  .sheet .go[aria-disabled="true"] { opacity: .35; pointer-events: none; }
+  .sheet .not { height: 40px; margin-top: 4px; color: var(--muted); font-size: 15px; width: 100%; }
+  .ptitle { margin: 0 0 14px; font-size: 30px; letter-spacing: -.5px; }
+  .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .acct > div { display: block; }
+  .acct > .me { display: flex; }
   .acct h3 { margin: 0 0 4px; font-size: 17px; }
   .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
-  .acct input { display: block; width: 100%; height: 46px; margin-top: 10px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--dot); color: var(--text); font-family: inherit; font-size: 17px; }
-  .acct .go, .acct .soft { display: block; width: 100%; height: 48px; margin-top: 12px; border-radius: 999px; font-size: 17px; font-weight: 600; }
-  .acct .go { background: var(--accent); color: #fff; }
+  .acct input { display: block; width: 100%; height: 46px; margin-top: 10px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--dot); color: var(--text); font-family: inherit; font-size: 17px; outline: none; }
+  .acct input:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .acct .go, .acct .soft { display: block; width: 100%; height: 48px; margin-top: 12px; border-radius: 15px; font-size: 16px; font-weight: 700; }
+  .acct .go { background: var(--pastel); color: #10181A; }
   .acct .soft { background: var(--dot); color: var(--text); }
+  .acct .me .soft { width: auto; height: 36px; margin: 0; padding: 0 14px; font-size: 14px; }
   .acct .row2 { display: flex; gap: 10px; } .acct .row2 > * { flex: 1; }
   .acct .err { min-height: 18px; margin-top: 8px; font-size: 14px; color: #D9534F; }
   .acct .link { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--dot); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all; -webkit-user-select: all; }
-  .acct .who { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .acct .who b { font-size: 17px; }
-  .acct .who small { color: var(--muted); }
-  .acct .fam { margin-top: 14px; border-top: .5px solid var(--edge); }
-  .acct .fam div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: .5px solid var(--edge); }
-  .acct .fam small { color: var(--muted); margin-left: 6px; }
+  .acct .fam div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .acct .fam div:last-child { border-bottom: 0; }
+  .acct .fam small { color: var(--muted); margin-left: 6px; font-size: 13px; }
   .acct .fam button { color: #D9534F; font-size: 15px; font-weight: 600; }
-  .acct hr { border: 0; border-top: .5px solid var(--edge); margin: 16px 0 12px; }
-  @media (prefers-reduced-motion: reduce) { .ink, .star { animation: none; } .star { opacity: 0; } }
+  .rel h5 { margin: 10px 0 0; font-size: 14px; } .rel li.hi { color: var(--text); }
+  .rel li.hi::marker { content: '✦  '; color: var(--accent); }
+  #signin { margin-bottom: 12px; }
+  .signin { cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .signin .avatar { width: 44px; height: 44px; flex-basis: 44px; box-shadow: none; }
+  .signin span:nth-child(2) { flex: 1; } .signin b { display: block; } .signin i { display: block; font-style: normal; font-size: 14px; color: var(--muted); }
+  .lab { margin: 30px 0 0; padding: 14px 16px; border-radius: 18px; background: var(--dot); color: var(--muted); font-size: 14px; line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { .page, .sheet, .story, .tabs .ind { transition: none; } .story .art img { animation: none; } }
 </style>
 </head>
 <body>
-<div class="fields"><i></i><i></i><i></i></div>
-<main>
-  <section class="hero">
-    <div class="mark" id="mark"></div>
-    <div class="power" id="power"></div>
-    <button class="replay" id="replay" type="button">Replay the welcome</button>
-  </section>
 
-  <h2>Your account</h2>
-  <div class="group acct" id="acct"><p class="note">Checking…</p></div>
+<section class="tab" id="today">
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Today<small id="date"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div id="signin" hidden></div>
+  <div id="stories"></div>
+</section>
 
-  <h2>Apps <small id="count"></small></h2>
-  <div class="tiles" id="apps"></div>
+<section class="tab" id="apps" hidden>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Apps</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div id="list"></div>
+</section>
 
-  <h2 id="whats-new">What's new in aOS</h2>
-  <div class="group" id="rels"></div>
+<section class="tab" id="search" hidden>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Search</h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <label class="find"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg><input id="q" type="search" placeholder="Apps, or what they do" autocomplete="off"></label>
+  <div id="found"></div>
+</section>
 
-  <h2>Appearance</h2>
-  <div class="seg" id="theme" role="group" aria-label="Appearance"></div>
-
-  <p class="foot">Part of the Allison Corporation</p>
-</main>
+<nav class="bar" aria-label="aOS">
+  <div class="tabs" role="tablist"><i class="ind" aria-hidden="true"></i>
+    <button type="button" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="4"/><path d="M8 8h8M8 12h5"/></svg>Today</button>
+    <button type="button" role="tab" data-tab="apps" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5"/></svg>Apps</button>
+    <button type="button" class="srch" role="tab" data-tab="search" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>Search</button>
+  </div>
+</nav>
 
 <script src="../home/account.js"></script>
 <script src="../home/welcome.js" data-app="aos" data-auto></script>
 <script>
 'use strict';
 (() => {
-  const W = AllisonOS.welcome, D = W.data, $ = id => document.getElementById(id);
+  const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const STAR = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
+  const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   const icon = id => `../${id}/icon-512.png`;
-  const appUrl = id => new URL(`../${id}/`, location.href).href;
-  const v = D.shown();   // a silent release is only logged in welcome.js, shown nowhere
-
-  // the mark
-  $('mark').innerHTML = `<span class="ink">aOS</span><sup class="ink">${esc(v)}</sup>${STAR}${STAR}${STAR}`;
-  $('power').innerHTML = `The Power of aOS<sup>${esc(v)}</sup>`;
-  $('replay').onclick = () => W.play();
-
-  // the apps
-  $('count').textContent = D.APPS.length + ' apps';
-  // each app's own colour, from its icon, for the glow behind its tile
+  const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
+  const T = id => D.TOURS[id] || { tag: '', cards: [] };
+  const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
   const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', house: '125,105,245' };
-  const now = D.RELEASES.find(r => !r.silent) || D.RELEASES[0];
+  const CAT = { mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', house: 'Lifestyle' };
+  const SHARED = ['calendar', 'travel', 'notes', 'places'];
+  // what each app needs from a new person today: ok = nothing to do, once = a one-time step
+  const NEEDS = {
+    mail: [['once', 'Sign in with your own Google account']],
+    calendar: [['ok', 'Your family account (Face ID)']],
+    news: [['ok', 'Nothing']],
+    weather: [['ok', 'Your location, if you allow it']],
+    notes: [['once', 'The family Google Sheet, to share notes (optional)']],
+    podcasts: [['ok', 'Nothing']],
+    travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
+    places: [['once', 'The family Google Sheet, to share lists (optional)']],
+    fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
+    house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
+  };
+  const getBtn = id => `<button type="button" class="get" data-get="${id}">Get</button>`;
+  // an app the newest (non-silent) release changed says so under its name
+  const now = live[0];
   const changed = id => { const e = D.entry((now.apps || {})[id]); return e.highlights.length + e.notes.length > 0; };
-  const sub = id => changed(id) ? `New in aOS<sup>${esc(now.v)}</sup>` : esc((D.TOURS[id] || {}).tag || '');
-  $('apps').innerHTML = D.APPS.map(id => `<div class="agw" style="--c:${HUE[id] || '190,194,204'}"><i class="ag-glow"></i>
-    <a class="ag" href="${appUrl(id)}?via=aos" target="_blank" rel="noopener" data-id="${id}" aria-label="${esc(D.NAMES[id])}"><img src="${icon(id)}" alt=""><span><b>${esc(D.NAMES[id])}</b><small>${sub(id)}</small></span></a></div>`).join('');
+  const sub = id => changed(id) ? `New in aOS<sup>${esc(now.v)}</sup>` : esc(T(id).tag);
+  const mk = sv => `aOS<sup>${esc(sv)}</sup>`;
 
-  // a tap opens the app's address (target _blank) with ?via=aos: there it shows how to add it,
-  // even in the in-app Safari view an installed aOS opens it in
+  // ---- account: the avatar everywhere ----
+  const user = () => ACC.user();
+  const paintAvatars = () => { const u = user(); for (const a of document.querySelectorAll('[data-acct]')) a.innerHTML = u ? esc(u.name[0].toUpperCase()) : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c.8-4.4 4-6.6 8-6.6s7.2 2.2 8 6.6z"/></svg>'; };
+  paintAvatars(); addEventListener('aos:account', paintAvatars);
 
-  // what's new in aOS
-  // the log, by version: the highlights (starred), the rest, then each app's changes
-  const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
-  const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
-  $('rels').innerHTML = D.RELEASES.filter(r => !r.silent).map(r => `<div class="rel"><h3><span>aOS<sup>${esc(r.v)}</sup></span><small>${esc(r.date || '')}</small></h3>
-    ${r.title ? `<p class="rt">${esc(r.title)}</p>` : ''}${block(r) ? `<ul>${block(r)}</ul>` : ''}
-    ${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h4>${esc(D.NAMES[id] || id)}</h4><ul>${block(x)}</ul>` : '').join('')}</div>`).join('');
+  // ---- Today ----
+  $('date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const day = Math.floor(Date.now() / 864e5), aotd = D.APPS[day % D.APPS.length];
+  const STORIES = [
+    { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
+      <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
+      <h3>1. The address fills itself in</h3><p>Signed in to your family account, Home already knows where your house is. Nothing to type.</p>
+      <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> at the bottom → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>AllisonOS</b> and your name, and tap <b>Copy</b> straight away: it's only shown once.</p>
+      <p class="muted">Home shows these steps animated, the first time you open it.</p>
+      <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` },
+    { id: aotd, k: 'App of the day', h: `${D.NAMES[aotd]}: ${T(aotd).tag}`, art: (T(aotd).cards[0] || {}).i, body: () => T(aotd).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
+    { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${[...(r.highlights || []), ...(r.notes || [])].map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
+    { id: 'travel', k: 'Meet', h: 'Every trip, the whole family\'s', art: 'plane', body: () => T('travel').cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
+    { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
+      <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
+      <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
+      <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` },
+  ];
+  const SHAPE = ['', 'half', 'half', 'wide', ''];
+  $('stories').innerHTML = STORIES.map((s, i) => s.plain
+    ? `<div class="story plain ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
+    : `<div class="story ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
+       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
 
-  // appearance
-  const paintSeg = () => { const t = W.theme.read(); for (const b of $('theme').children) b.setAttribute('aria-pressed', String(b.dataset.t === t)); };
-  $('theme').innerHTML = W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}">${n}</button>`).join('');
-  $('theme').onclick = e => { const b = e.target.closest('button'); if (b) { W.theme.set(b.dataset.t); paintSeg(); } };
-  paintSeg();
+  // ---- Apps, and Search ----
+  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i></span>${getBtn(id)}</span></div>`).join('');
+  $('list').innerHTML = `<div class="sec"><h2>Every AllisonOS app</h2></div>${rows(D.APPS)}`;
+  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = D.APPS.filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
+  $('q').oninput = find; find();
 
-  // ---- your account: family accounts with passkeys (Face ID) ----
+  // ---- tabs ----
+  const tabs = document.querySelectorAll('[data-tab]');
+  const show = t => { for (const s of ['today', 'apps', 'search']) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', ['today', 'apps', 'search'].indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
+  tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
+
+  // ---- pages that slide over ----
+  function page(html, { up = false, c = '', cls = '' } = {}) {
+    const el = document.createElement('div');
+    el.className = 'page' + (up ? ' up' : ''); el.style.setProperty('--c', c);
+    el.innerHTML = `${up ? '<button type="button" class="close" aria-label="Close">✕</button>' : '<button type="button" class="back" aria-label="Back">‹</button>'}<div class="in ${cls}">${html}</div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
+    const done = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 400); };
+    el.querySelector('.back, .close').onclick = done;
+    if (!up) swipeBack(el, done);
+    return el;
+  }
+  // swipe right from the left edge, as iOS goes back
+  function swipeBack(el, done) {
+    let x0 = null, dx = 0;
+    el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX < 30 ? t.clientX : null; dx = 0; }, { passive: true });
+    el.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.max(0, e.touches[0].clientX - x0); el.style.transition = 'none'; el.style.transform = `translateX(${dx}px)`; }, { passive: true });
+    el.addEventListener('touchend', () => { if (x0 == null) return; el.style.transition = ''; el.style.transform = ''; if (dx > 90) done(); x0 = null; });
+  }
+
+  function appPage(id) {
+    const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
+    const e = r ? D.entry(r.apps[id]) : null;
+    const hist = live.filter(x => { const y = D.entry((x.apps || {})[id]); return y.highlights.length + y.notes.length; });
+    page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}</div></div>
+      <div class="strip">
+        <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
+        <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
+        <div>${line(SHARED.includes(id) ? 'people' : 'lock')}<i>${SHARED.includes(id) ? 'Shared with family' : 'Just you'}</i></div>
+        <div>${line('sparkle')}<i>Allison Corporation</i></div>
+      </div>
+      <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
+      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${[...e.highlights, ...e.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
+      <div class="sec"><h2>Preview</h2></div>
+      <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
+      <div class="sec"><h2>What it needs</h2></div>
+      ${(NEEDS[id] || []).map(([k, t]) => `<div class="need"><span>${esc(t)}</span><em class="${k}">${k === 'ok' ? 'Ready' : 'Once'}</em></div>`).join('')}
+      <div class="sec"><h2>About</h2></div>
+      <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
+      <div class="sec"><h2>Information</h2></div>
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iPhone</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
+      .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); });
+  }
+  function histPage(id, hist) {
+    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => { const y = D.entry(x.apps[id]); return `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${[...y.highlights, ...y.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`; }).join('')}`);
+  }
+  function storyPage(i) {
+    const s = STORIES[i];
+    page(`<div class="hero" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
+      <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
+      <div class="body">${s.body()}</div>
+      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
+  }
+  // ---- your account (the avatar): family accounts with passkeys (Face ID) ----
   // The owner sets up once with the owner code; everyone else joins with an
   // invite link (#invite=...), opened in Safari: the account is made there, then
   // aOS shows how to add it to the Home Screen. Every app signs in with Face ID.
-  const ACC = AllisonOS.account;
+  const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
+  const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
+  function acctPage(at) {
+    const el = page(`<h1 class="ptitle">Account</h1>
+      <div class="group acct" id="acct"><p class="note">Checking…</p></div>
+      <div class="glbl">Appearance</div>
+      <div class="group"><div><div class="seg" id="theme" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
+      <div class="glbl" id="whats-new">Updates</div>
+      <div class="group" id="rels">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
+        ${block(r) ? `<ul>${block(r)}</ul>` : ''}${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h5>${esc(D.NAMES[id] || id)}</h5><ul>${block(x)}</ul>` : '').join('')}</div>`).join('')}</div>
+      <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>`, { up: true });
+    el.addEventListener('click', ev => {
+      const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      if (ev.target.closest('[data-replay]')) W.play();
+    });
+    paintAccount(el.querySelector('#acct'));
+    if (at === 'updates') setTimeout(() => el.querySelector('#whats-new').scrollIntoView({ block: 'start' }), 450);
+    return el;
+  }
+
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const invite = (/[#&]invite=([A-Za-z0-9_-]+)/.exec(location.hash) || [])[1] || null;
@@ -226,59 +434,70 @@
     storage: 'Family accounts aren\'t switched on yet.', 'owner-exists': 'The owner\'s account already exists: sign in instead.', unknown: 'That account isn\'t in the family any more.',
     NotAllowedError: 'Cancelled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.' };
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
-  const box = $('acct');
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
+  let state = null;
+  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } return state; };
 
-  async function paintAccount() {
-    let st;
-    try { st = await ACC.call('state'); } catch { box.innerHTML = '<p>Accounts can\'t be reached right now.</p>'; return; }
-    if (!st.storage) { box.innerHTML = '<h3>Family accounts</h3><p>Not switched on yet: the site needs its account storage on Cloudflare (aOS/RELEASING.md).</p>'; return; }
+  // Today, signed out: a card that opens the account
+  function paintSigninCard() {
+    const c = $('signin'), st = state || {};
+    const what = st.error || !st.storage || st.user ? null : invite ? ['Join the family', 'You\'ve been invited: make your account with Face ID.'] : !st.setup ? ['Set up your family account', 'Once, by the owner, with the owner code.'] : ['Sign in', 'Face ID signs you in to every app.'];
+    c.hidden = !what;
+    c.innerHTML = what ? `<div class="signin" role="button" tabindex="0" data-signin-card><span class="avatar">${STAR}</span><span><b>${what[0]}</b><i>${what[1]}</i></span><span class="chev">›</span></div>` : '';
+  }
+  const STAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z"/></svg>';
+
+  async function paintAccount(box) {
+    const st = await getState(); paintSigninCard(); paintAvatars();
+    if (!box.isConnected) return;
+    if (st.error) { box.innerHTML = `<div><p>Accounts can\'t be reached right now (${esc(st.error === 'network' ? 'no connection' : 'error ' + st.error)}${/\.pages\.dev$/.test(location.hostname) ? '' : ', ' + esc(location.hostname)}).</p></div>`; return; }
+    if (!st.storage) { box.innerHTML = '<div><h3>Family accounts</h3><p>Not switched on yet: the site needs its account storage on Cloudflare (aOS/RELEASING.md).</p></div>'; return; }
     if (!st.user && ACC.token()) ACC.signOut();   // removed from the family, or a stale session
-    if (st.user) return paintSignedIn(st.user);
+    if (st.user) return paintSignedIn(box, st.user);
     if (invite) {
-      box.innerHTML = `<h3>Join the family</h3><p>You've been invited to AllisonOS. Your account is a passkey: Face ID signs you in to every app.</p>
-        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create my account</button><div class="err" id="aErr"></div>`;
+      box.innerHTML = `<div><h3>Join the family</h3><p>You've been invited to AllisonOS. Your account is a passkey: Face ID signs you in to every app.</p>
+        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create my account</button><div class="err" id="aErr"></div></div>`;
       $('aGo').onclick = async () => {
         busy($('aGo'), true);
         try {
           await ACC.signUp({ name: $('aName').value.trim(), invite });
           history.replaceState(null, '', location.pathname);
           try { sessionStorage.removeItem('aos.later.aos'); } catch {}
-          await paintAccount();
+          await paintAccount(box);
           if (iphone && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen
         } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
       };
       return;
     }
     if (!st.setup) {
-      box.innerHTML = `<h3>Set up your family account</h3><p>Once, by the owner: enter your owner code and your name, then Face ID.</p>
+      box.innerHTML = `<div><h3>Set up your family account</h3><p>Once, by the owner: enter your owner code and your name, then Face ID.</p>
         <input id="aCode" placeholder="Owner code" autocapitalize="characters" autocomplete="off" spellcheck="false">
-        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create the owner account</button><div class="err" id="aErr"></div>`;
+        <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create the owner account</button><div class="err" id="aErr"></div></div>`;
       $('aGo').onclick = async () => {
         busy($('aGo'), true);
-        try { await ACC.signUp({ name: $('aName').value.trim(), code: $('aCode').value }); await paintAccount(); }
+        try { await ACC.signUp({ name: $('aName').value.trim(), code: $('aCode').value }); await paintAccount(box); }
         catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
       };
       return;
     }
-    box.innerHTML = `<h3>Sign in</h3><p>With the passkey you made when you joined.</p><button type="button" class="go" id="aGo">Continue with Face ID</button><div class="err" id="aErr"></div>
-      <p class="note">New here? Ask the owner for an invite link.</p>`;
+    box.innerHTML = `<div><h3>Sign in</h3><p>With the passkey you made when you joined.</p><button type="button" class="go" id="aGo">Continue with Face ID</button><div class="err" id="aErr"></div>
+      <p class="note">New here? Ask the owner for an invite link.</p></div>`;
     $('aGo').onclick = async () => {
       busy($('aGo'), true);
-      try { await ACC.signIn(); await paintAccount(); } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
+      try { await ACC.signIn(); await paintAccount(box); } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
     };
   }
 
-  async function paintSignedIn(u) {
-    box.innerHTML = `<div class="who"><span><b>${esc(u.name)}</b> <small>${u.role === 'owner' ? 'Owner' : 'Family'}</small></span><button type="button" class="soft" id="aOut" style="width:auto;height:36px;margin:0;padding:0 16px;font-size:15px">Sign out</button></div>
-      <p>Every app signs in with Face ID; Calendar and Travel only answer the family.</p>`;
-    $('aOut').onclick = () => { ACC.signOut(); paintAccount(); };
+  async function paintSignedIn(box, u) {
+    box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small><br><small class="muted">Face ID signs you in to every app</small></span>
+      <button type="button" class="soft" id="aOut">Sign out</button></div>`;
+    $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<hr><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
-      <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div>
-      <hr><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
-      <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div>
-      <div class="fam" id="fam"></div>`);
+    box.insertAdjacentHTML('beforeend', `<div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
+      <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
+      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
+      <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
+      <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
       try {
@@ -303,6 +522,7 @@
 
   async function paintFamily() {
     let f; try { f = (await ACC.call('family')).family; } catch { return; }
+    if (!$('fam')) return;
     $('fam').innerHTML = f.map(m => `<div><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : 'Family'}</small></span>${m.role === 'owner' ? '' : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
     $('fam').onclick = async e => {
       const b = e.target.closest('[data-rm]'); if (!b) return;
@@ -312,7 +532,35 @@
       paintFamily();
     };
   }
-  paintAccount();
+
+  // ---- GET: the install steps, here; Install opens the app's own address ----
+  function getSheet(id) {
+    const shade = document.createElement('div'); shade.className = 'shade';
+    const sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Get ' + D.NAMES[id]);
+    sh.innerHTML = `<h2>Get ${esc(D.NAMES[id])}</h2><p>Watch once, then tap Install and do the same.</p><div class="sdh"></div>
+      <a class="go" href="${appUrl(id)}" target="_blank" rel="noopener" aria-disabled="true">Install</a><button type="button" class="not">Not now</button>`;
+    document.body.append(shade, sh);
+    W.safariDemo(sh.querySelector('.sdh'), D.NAMES[id], icon(id), { onDone: () => sh.querySelector('.go').setAttribute('aria-disabled', 'false') });
+    requestAnimationFrame(() => requestAnimationFrame(() => { shade.classList.add('on'); sh.classList.add('on'); }));
+    const done = () => { shade.classList.remove('on'); sh.classList.remove('on'); setTimeout(() => { shade.remove(); sh.remove(); }, 420); };
+    shade.onclick = done; sh.querySelector('.not').onclick = done;
+  }
+
+  // ---- taps ----
+  document.addEventListener('click', ev => {
+    const g = ev.target.closest('[data-get]'); if (g) { ev.stopPropagation(); getSheet(g.dataset.get); return; }
+    const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
+    const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
+    if (ev.target.closest('[data-signin-card]')) return acctPage();
+    if (ev.target.closest('[data-acct]')) return acctPage();
+  });
+
+  getState().then(st => {
+    paintSigninCard(); paintAvatars();
+    if (location.hash === '#whats-new') { history.replaceState(null, '', location.pathname); acctPage('updates'); }
+    else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
+  });
+  addEventListener('hashchange', () => { if (location.hash === '#whats-new') { history.replaceState(null, '', location.pathname); acctPage('updates'); } });
 })();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>

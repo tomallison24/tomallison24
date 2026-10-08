@@ -83,7 +83,8 @@
         'Calendar and Travel only answer your family',
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
-        'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS'],
+        'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
+        'aOS is an app store: Today, Apps, Search, a page for every app, and your account'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
