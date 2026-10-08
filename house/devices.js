@@ -95,7 +95,7 @@ function stepHTML(label, shown, pct, o = {}) {
 // shows at once and the region round it is left alone (rangeHeld).
 function sliderHTML(a, v, min, max, step, o = {}) {
   const x = v == null || isNaN(v) ? min : v, pct = (x - min) / (max - min) * 100;
-  return `<label class="gsl${o.cls ? ' ' + o.cls : ''}${o.dis ? ' dis' : ''}" style="--p:${pct.toFixed(1)}%;--tint:${o.tint || '255,255,255'}">
+  return `<label class="gsl${o.cls ? ' ' + o.cls : ''}${o.zf != null ? ' zero' : ''}${o.dis ? ' dis' : ''}" style="--p:${pct.toFixed(1)}%;--tint:${o.tint || '255,255,255'}${o.zf != null ? ';--zf:' + o.zf.toFixed(3) : ''}">
     ${o.label != null ? `<span class="gsl-top"><span>${o.label}</span><b data-shown>${o.shown != null ? o.shown : x}</b></span>` : ''}
     <input type="range" data-a="${a}"${o.v != null ? ` data-v="${esc(o.v)}"` : ''} min="${min}" max="${max}" step="${step}" value="${x}" aria-label="${esc(o.aria || o.label || a)}"${o.unit ? ` data-unit="${esc(o.unit)}"` : ''}${o.dis ? ' disabled' : ''}></label>`;
 }

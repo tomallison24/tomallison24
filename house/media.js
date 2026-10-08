@@ -142,7 +142,8 @@ function mediaFamily(cfg) {
       const numSl = (k, label) => {
         const id2 = 'number.' + p.pre + '_' + k; if (!st(id2)) return '';
         const v = Number(held(r.d, k, val(id2))), mn = attr(id2, 'min') ?? -10, mx = attr(id2, 'max') ?? 10, stp = attr(id2, 'step') ?? 1;
-        return sliderHTML('num', isNaN(v) ? 0 : v, mn, mx, stp, { v: k, label, tint: a, cls: 'inrow', dis: gone(id2), unit: attr(id2, 'unit_of_measurement') ? ' ' + attr(id2, 'unit_of_measurement') : '' });
+        // zf: where 0 sits on a range either side of it (bass, treble, balance, the levels) - the tick.
+        return sliderHTML('num', isNaN(v) ? 0 : v, mn, mx, stp, { v: k, label, tint: a, cls: 'inrow', dis: gone(id2), unit: attr(id2, 'unit_of_measurement') ? ' ' + attr(id2, 'unit_of_measurement') : '', zf: mn < 0 && mx > 0 ? -mn / (mx - mn) : null });
       };
       const status = [
         A.source && p.kind !== 'tv' ? readRow('input', 'Source', esc(A.source)) : '',
@@ -184,11 +185,11 @@ function mediaFamily(cfg) {
               const k = 'ho' + p.id + x.id, arm = isArmed(k);
               return `<button class="chip2${arm ? ' armed' : ''}" data-a="handoff" data-v="${x.ent}"${gone(x.ent) ? ' disabled' : ''}>${arm ? 'Tap to move to ' : ''}${esc(x.name)}</button>`;
             }).join('')}</div><p class="tnote">Moves what is playing to that speaker and stops it here.</p>`] : null,
-          sonos ? ['tone', lbl('TONE') + `<div class="group pad">${numSl('bass', 'Bass')}${numSl('treble', 'Treble')}${numSl('balance', 'Balance')}</div>`] : null,
+          sonos ? ['tone', lbl('TONE') + `<div class="group tsl">${numSl('bass', 'Bass')}${numSl('treble', 'Treble')}${numSl('balance', 'Balance')}</div>`] : null,
           p.ht ? ['ht', lbl('HOME THEATRE') + grp(sw('night_sound', 'Night sound', 'night') + sw('speech_enhancement', 'Speech enhancement', 'speech')
             + sw('subwoofer_enabled', 'Subwoofer', 'sub') + sw('surround_enabled', 'Surround', 'surround')
             + sw('surround_music_full_volume', 'Surround music at full volume', 'music', { sub: held(r.d, 'surround_music_full_volume', val('switch.' + p.pre + '_surround_music_full_volume')) === 'on' ? 'Full' : 'Ambient' }))
-            + `<div class="group pad">${numSl('sub_gain', 'Sub level')}${numSl('surround_level', 'Surround level')}${numSl('music_surround_level', 'Music surround level')}${numSl('audio_delay', 'Audio delay')}</div>`
+            + `<div class="group tsl">${numSl('sub_gain', 'Sub level')}${numSl('surround_level', 'Surround level')}${numSl('music_surround_level', 'Music surround level')}${numSl('audio_delay', 'Audio delay')}</div>`
             + grp(actRow('tvsrc', 'Switch to TV', 'tv', { dis: dis || A.source === 'TV', right: A.source === 'TV' ? 'On TV' : null })
               + readRow('input', 'Input format', esc(val('sensor.' + p.pre + '_audio_input_format') || '—')))] : null,
           status ? ['status', lbl('STATUS') + grp(status)] : null,
