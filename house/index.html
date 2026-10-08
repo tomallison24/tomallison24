@@ -2193,6 +2193,7 @@ async function famFill(ask) {
   if (ask) { b.hidden = false; b.textContent = 'No family address yet: the owner adds it in aOS'; }
 }
 $('haFam').onclick = () => famFill(true);
+addEventListener('aos:account', e => { if (e.detail && view === 'edit') famFill(false); });   // signed in (the family sign-in sheet): fill it in
 
 // How to make a token, shown (haguide.js): at the top of the sheet while there's
 // no token, and behind Show me how once there is. It loops only while on screen.

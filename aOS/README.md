@@ -50,7 +50,13 @@ pastel stop that slides between them, and your avatar top right.
   your family account. Each opens full screen. Signed out, a card at the top
   asks you to sign in (or set up, or join).
 - **Apps**: each app its own card, glowing in its colour, with its tagline (or
-  "New in aOS1.1" when the newest release changed it) and **Get**.
+  "New in aOS1.1" when the newest release changed it) and **Get**, or **✓
+  Installed** for an app opened from your Home Screen in the last 90 days. Each
+  app reports itself (`home/welcome.js`, at most every 12 hours) to your family
+  account (`POST /aOS/api/installed`); since each Home Screen app keeps its own
+  storage, an app that has never signed in asks once, after its walkthrough, with
+  the family sign-in sheet ("Not now" isn't asked again). A tap on Installed
+  still offers the install steps, in case it's been removed.
 - **Search**: by name, tagline, category or what its walkthrough says.
 - **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
   (version, category, shared or yours, maker); What's New and Version History;
