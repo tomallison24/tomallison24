@@ -322,10 +322,19 @@ and go nowhere except to that address.
   account → **Home Assistant address**), and Home, signed in to the family
   account (`../home/account.js`), puts it in the box while the box is empty.
   Signed out, **Use your family's address** asks for Face ID first.
-- **Token**: in Home Assistant, your profile (bottom left) → **Security** →
-  **Long-lived access tokens** → **Create token**. The token can do anything
-  your user can, so it is worth making one just for this app, which you can
-  delete there at any time to cut it off.
+- **Token**: in the Home Assistant app, **☰** → your name (bottom of the
+  menu) → **Security** (bottom bar) → **Long-lived access tokens** → **Create
+  token**, named **AllisonOS <your name>**, then **Copy** (it's shown only
+  once). The token can do anything your user can, so it is worth making one
+  just for this app, which you can delete there at any time to cut it off.
+
+**Shown, not just told** (`haguide.js`): while no token is saved, the top of
+the sheet plays those steps on a small iPhone running the Home Assistant app
+(drawn after its 2026.9 screens, dark; a likeness, with a made-up token),
+with a finger and a numbered caption, named after the signed-in person. With
+a token saved it's behind **Show me how**. The first time Home opens from the
+Home Screen with nothing saved, the sheet opens by itself once its
+walkthrough has finished (once only: `house.guided`).
 
 Once saved, the sheet opens **locked**: it shows the address and "Saved"
 for the token, never the token itself, and nothing is put back in a text box.
