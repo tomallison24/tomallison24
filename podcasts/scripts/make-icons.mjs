@@ -1,9 +1,9 @@
-// Draws travel/icon-512.png and travel/icon-180.png from travel/icon.svg (a white plane climbing away on
-// apricot sand, one of the Sea glass tints), by rendering the SVG in headless
+// Draws podcasts/icon-512.png and podcasts/icon-180.png from podcasts/icon.svg (a white signal on
+// lavender mist, one of the Sea glass tints), by rendering the SVG in headless
 // Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node travel/scripts/make-icons.mjs
+//   node podcasts/scripts/make-icons.mjs
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';

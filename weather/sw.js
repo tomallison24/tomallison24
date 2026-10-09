@@ -4,7 +4,7 @@
 // localStorage and labels it with its time.
 const CACHE = 'weather-v57';
 // slide.js is Home's, shared by every app (the switches' sliding thumb).
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', '../home/slide.js', '../home/welcome.js', 'data.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=4', 'icon-512.png?v=4', '../home/slide.js', '../home/welcome.js', 'data.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

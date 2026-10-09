@@ -9,7 +9,7 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', drinks: '176,72,120', house: '125,105,245' };
+  const HUE = { mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', house: '188,156,104' };   // each icon's Sea glass tint
   const CAT = { mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', drinks: 'Health & Fitness', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places'];
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step

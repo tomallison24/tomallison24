@@ -1,7 +1,6 @@
-// Draws fitness/icon-512.png and fitness/icon-180.png from fitness/icon.svg
-// ("Iron": a white dumbbell on a steel-to-ink sky) by rendering
-// the SVG in headless Chromium, as Travel's script does, so icon.svg stays the
-// single source of the picture.
+// Draws fitness/icon-512.png and fitness/icon-180.png from fitness/icon.svg (a white dumbbell on
+// slate, one of the Sea glass tints), by rendering the SVG in headless
+// Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node fitness/scripts/make-icons.mjs
