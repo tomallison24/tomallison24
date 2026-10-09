@@ -45,7 +45,7 @@ async function quickTeams() {
     return [];
   }
 }
-// Same rule as sameTeam() in index.html: the whole name, or its start
+// Same rule as sameTeam() in news/app.js: the whole name, or its start
 // ("Northampton" is Northampton Saints; "England" isn't New England).
 const sameTeam = (term, name) => { const n = String(name || '').trim(); return n === term || n.startsWith(`${term} `); };
 const playing = (g, teams) => teams.some(t => t.names.some(x => [g.home.name, g.home.short, g.away.name, g.away.short].some(n => sameTeam(x, n))));
@@ -67,7 +67,7 @@ async function upcoming(league, now, teams) {
     .map(({ home, away, ...g }) => ({ ...g, home: { name: home.name, short: home.short, logo: home.logo }, away: { name: away.name, short: away.short, logo: away.logo } }));
 }
 
-// Keep in step with normalize() in index.html.
+// Keep in step with normalize() in news/app.js.
 export function normalize(json, league) {
   return (json?.events || []).map(ev => {
     const comp = (ev.competitions || [])[0] || {};

@@ -149,7 +149,7 @@ an iPhone, so notifications are turned on in each one you want them in.
 
 ## How it's built
 
-- **No build step.** `index.html` is the whole app (with `aisles.js`, the
+- **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, for the page's Content-Security-Policy; with `aisles.js`, the
   grocery sections' word list); `sw.js` keeps it working
   offline and shows notifications; `manifest.webmanifest` and the icons make
   it installable. `push/` is the notification server (a Cloudflare Worker),

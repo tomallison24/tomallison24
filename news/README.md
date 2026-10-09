@@ -10,7 +10,7 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   keys needed.
 - **Updates:** `.github/workflows/news.yml` re-fetches every 30 minutes and
   publishes the site to GitHub Pages. `data/` is generated, not committed.
-- **No build step** for the app itself: `index.html` is the whole app;
+- **No build step** for the app itself: `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts);
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.

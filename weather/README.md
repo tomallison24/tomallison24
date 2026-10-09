@@ -83,7 +83,7 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   data); both are credited on the map. It covers the continental US; elsewhere
   it says so. If no tiles arrive it says that, with a link to the NWS radar.
   CARTO's map tiles need a free key (since late August 2026; without one they
-  are stamped "API KEY REQUIRED"): it is `CARTO_KEY` in `index.html`. The URL
+  are stamped "API KEY REQUIRED"): it is `CARTO_KEY` in `app.js`. The URL
   builders are `radarTile`, `hrrrTile` and `baseTile`.
 - **One screen**: the sky (its colours, sun, clouds, rain, snow and lightning)
   fills the whole screen behind everything, and the current weather, the
@@ -128,7 +128,7 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
   patters, snow sways, storms flicker, wind and fog drift). Everything else
   holds still: no entrance, no pulse, no nudge. It stops too under Reduce
   Motion, and a repaint keeps your place in the tray.
-- No build step. `index.html` is the whole app; `sw.js` keeps it working
+- No build step. `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts); `sw.js` keeps it working
   offline, and the last forecast is kept in `localStorage`.
 - The Location sheet is iOS 26 "Liquid Glass": clear glass floating just
   inside the screen's edges, the sky blurring through it, with a round ✕ to

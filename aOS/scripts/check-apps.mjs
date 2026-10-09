@@ -11,7 +11,7 @@
 // Wired in (errors):
 //   home/welcome.js     APPS, NAMES, TOURS (3 to 6 cards, each a known line
 //                       icon, a title and words)
-//   aOS/index.html      HUE, CAT, NEEDS (and SHARED only for family apps)
+//   aOS/app.js          HUE, CAT, NEEDS (and SHARED only for family apps)
 //   functions/aOS/api   APPS, the same apps in the same order as welcome.js
 //   news.yml            the folder in the push paths and in the copy to _site
 //   the folder          index.html, sw.js, manifest.webmanifest, icon-180.png,
@@ -29,8 +29,10 @@
 //   - the system font: no web fonts or stylesheets from other sites
 //   - the faint cards every app shares (--tile), except aOS's own store
 //   - "aOS" is written with a lowercase a: never "AOS" in the page's text
+//   - a Content-Security-Policy meta starting from default-src 'none', with
+//     base-uri 'none' and script-src 'self' only (no inline, eval or outside
+//     scripts), and no inline <script> in the page
 // Worth doing (warnings):
-//   - a Content-Security-Policy meta
 //   - :root[data-theme="dark"] rules, so the app's own CSS follows a chosen
 //     Light or Dark without relying on welcome.js rewriting the media queries
 //   - its sw.js CACHE named after the app ('<id>-vN')
@@ -72,10 +74,10 @@ const TOURS = constant(W, 'TOURS', 'home/welcome.js') || {};
 const DARK_ONLY = constant(W, 'DARK_ONLY', 'home/welcome.js') || [];
 const LINEsrc = (/const LINE = \{/.exec(W) || {}).index;
 const LINE = LINEsrc === undefined ? new Set() : new Set([...literal(W, LINEsrc + 'const LINE = '.length).matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]));
-const S = read('aOS/index.html') || '';
-const HUE = constant(S, 'HUE', 'aOS/index.html') || {};
-const CAT = constant(S, 'CAT', 'aOS/index.html') || {};
-const NEEDS = constant(S, 'NEEDS', 'aOS/index.html') || {};
+const S = (read('aOS/app.js') || '') + (read('aOS/index.html') || '');   // aOS's script is app.js (it was inline in index.html)
+const HUE = constant(S, 'HUE', 'aOS/app.js') || {};
+const CAT = constant(S, 'CAT', 'aOS/app.js') || {};
+const NEEDS = constant(S, 'NEEDS', 'aOS/app.js') || {};
 const API = read('functions/aOS/api/[[route]].js') || '';
 const API_APPS = constant(API, 'APPS', 'functions/aOS/api/[[route]].js') || [];
 const NEWS = read('.github/workflows/news.yml') || '';
@@ -109,9 +111,9 @@ for (const id of ids) {
         if (!LINE.has(c.i)) err(id, 'walkthrough card "' + c.t + '" uses icon "' + c.i + '", which isn’t in home/welcome.js LINE');
       }
     }
-    if (!HUE[id]) err(id, 'no colour in aOS/index.html HUE');
-    if (!CAT[id]) err(id, 'no category in aOS/index.html CAT');
-    if (!NEEDS[id]) err(id, 'nothing in aOS/index.html NEEDS (what it needs from a new person)');
+    if (!HUE[id]) err(id, 'no colour in aOS/app.js HUE');
+    if (!CAT[id]) err(id, 'no category in aOS/app.js CAT');
+    if (!NEEDS[id]) err(id, 'nothing in aOS/app.js NEEDS (what it needs from a new person)');
   }
   if (!new RegExp("^\\s+- '" + dir + "/\\*\\*'", 'm').test(NEWS)) err(id, ".github/workflows/news.yml push paths lack '" + dir + "/**'");
   if (!copied.has(dir)) err(id, '.github/workflows/news.yml doesn’t copy ' + dir + ' into _site, so it is never published');
@@ -164,7 +166,14 @@ for (const id of ids) {
   // Visible text only: strip scripts, styles and tags, then look for an uppercase AOS.
   const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ');
   rule(!/\bAOS\b/.test(text), 'writes "AOS": it is always "aOS", with a lowercase a');
-  if (!/http-equiv="Content-Security-Policy"/.test(html)) warn(id, 'no Content-Security-Policy meta');
+  const csp = (/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html) || [])[1] || '';
+  rule(csp, 'no Content-Security-Policy meta (every app has one: only its own scripts may run)');
+  if (csp) {
+    const scripts = (/script-src([^;]*)/.exec(csp) || [])[1] || '';
+    rule(/'self'/.test(scripts) && !/'unsafe-inline'|'unsafe-eval'|https?:|\*/.test(scripts), "its policy's script-src should be just 'self': no inline, eval or outside scripts");
+    rule(/default-src 'none'/.test(csp) && /base-uri 'none'/.test(csp), "its policy should start from default-src 'none' and set base-uri 'none'");
+  }
+  rule(!/<script>[\s\S]*?<\/script>|<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(html), 'has an inline <script>: put it in a file (app.js), so the policy can allow only this site\'s scripts');
   if (!DARK_ONLY.includes(id) && !/data-theme="dark"\]/.test(html)) warn(id, 'no :root[data-theme="dark"] rules: a chosen Dark relies on welcome.js rewriting the media queries');
 }
 
