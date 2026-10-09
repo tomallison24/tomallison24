@@ -337,6 +337,25 @@ await test('delete all data: tap twice; gone here and from the account', async (
   assert.equal(s.entries.length, 0); assert.equal(s.days.length, 0); assert.ok(Object.keys(s.graves).length >= 4);
 });
 
+await test('never wider than the phone, from the smallest iPhone up; the title is never cut off', async () => {
+  for (const [w, h] of [[320, 568], [375, 667], [393, 852], [440, 956]]) {
+    const p = await newPage('light', { 'aos.session': SESSION });
+    await p.page.setViewportSize({ width: w, height: h });
+    await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(600);
+    for (const where of ['week', 'day', 'form', 'analysis', 'more']) {
+      if (where === 'day') await p.page.click('#fab');
+      if (where === 'form') await p.page.click('#somethingElse');
+      if (where === 'analysis') { await p.page.click('#daySheet .okbtn'); await p.page.click('#sumBtn'); }
+      if (where === 'more') { await p.page.click('#anSheet [data-close].iconbtn'); await p.page.click('#moreBtn'); }
+      await p.page.waitForTimeout(250);
+      const m = await p.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: document.documentElement.clientWidth, title: document.querySelector('.title').getBoundingClientRect().left }));
+      assert.ok(m.sw <= m.w, w + 'px, ' + where + ': the page is ' + m.sw + 'px wide');
+      assert.ok(m.title >= 14, w + 'px, ' + where + ': the title starts at ' + m.title + 'px');
+    }
+    await p.ctx.close();
+  }
+});
+
 await test('no errors and no Content Security Policy violations', async () => {
   assert.deepEqual(await page.evaluate(() => window.__csp || []), []);
   assert.deepEqual(errors, []);
