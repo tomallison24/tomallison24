@@ -88,6 +88,7 @@
         'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
         'The aOS icon is just aOS, without a version number',
         'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name',
+        'Home: the Dysons\' Heat to stepper is back to its normal size, like the heaters\' Target',
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',

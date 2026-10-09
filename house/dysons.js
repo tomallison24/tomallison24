@@ -134,7 +134,7 @@ family({
         ['spd', lbl('SPEED') + segHTML('rail', Array.from({ length: 10 }, (_, i) => [i + 1, i + 1]), r.on ? r.spd : null, { cls: 'rail', dis: r.offline, wait: tWaiting(r.d, 'pct') })],
         ['power', grp(swRow('power', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
         r.hv != null ? ['mode', lbl('MODE') + segHTML('hvac', modes.map(m => [m, { off: 'Off', cool: 'Cool', heat: 'Heat' }[m]]), r.hv, { dis: r.offline, wait: tWaiting(r.d, 'hvac') })] : null,
-        r.hv === 'heat' ? ['heat', stepHTML('HEAT TO', r.tgt == null ? '--' : Math.round(r.tgt) + '°', r.tgt == null ? 0 : (r.tgt - lo) / (hi - lo) * 100, { a: 'hstep', cls: 'pad', dis: r.offline, atMin: r.tgt <= lo, atMax: r.tgt >= hi })] : null,
+        r.hv === 'heat' ? ['heat', stepHTML('HEAT TO', r.tgt == null ? '--' : Math.round(r.tgt) + '°', r.tgt == null ? 0 : (r.tgt - lo) / (hi - lo) * 100, { a: 'hstep', cls: 'tgt-gap', dis: r.offline, atMin: r.tgt <= lo, atMax: r.tgt >= hi })] : null,
         ['preset', lbl('CONTROL') + segHTML('preset', [['Auto', 'Auto'], ['Normal', 'Manual']], r.auto ? 'Auto' : 'Normal', { dis: r.offline || !r.on, wait: tWaiting(r.d, 'preset') })],
         ['flow', lbl('AIRFLOW') + (y.flow === 'dir'
           ? segHTML('flow', [['forward', 'Front'], ['reverse', 'Back']], r.flow, { dis: r.offline || !r.on, wait: tWaiting(r.d, 'flow') })
