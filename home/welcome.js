@@ -91,7 +91,8 @@
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
-        'Fitness: your drinks from Drinks in Analysis, beside your training'],
+        'Fitness: your drinks from Drinks in Analysis, beside your training',
+        'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, and you can change plans'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },

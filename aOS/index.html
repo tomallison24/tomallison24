@@ -208,6 +208,16 @@
   .glbl::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
 
   .ptitle { margin: 0 0 14px; font-size: 30px; letter-spacing: -.5px; }
+  /* Subscription (just for fun): Pro+, Pro or Trial, changed from the account page */
+  .plans .plan { align-items: flex-start; }
+  .plan .pn { flex: 1; min-width: 0; } .plan .pn b { display: flex; align-items: center; gap: 8px; font-size: 17px; }
+  .plan .pn i { display: block; margin-top: 3px; font-style: normal; font-size: 14px; line-height: 1.35; color: var(--muted); }
+  .plan .pp { flex: 0 0 auto; font-size: 17px; font-weight: 700; } .plan .pp small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .plan em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .plan[aria-pressed="true"] { box-shadow: inset 4px 0 0 var(--accent); }
+  .plans .pick { display: block; } .plans .pick .row2 { display: flex; gap: 10px; }
+  .plans .pick button { flex: 1; height: 46px; border-radius: 15px; font-size: 16px; font-weight: 700; background: var(--dot); }
+  .plans .pick .go { flex: 2; background: var(--pastel); color: #10181A; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
   .acct > div { display: block; }
   .acct > .me { display: flex; }
@@ -417,11 +427,39 @@
   // aOS shows how to add it to the Home Screen. Every app signs in with Face ID.
   const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
   const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
+  // ---- Subscription: just for fun, nothing is charged. Kept on this phone (aos.plan);
+  // Pro+ until changed. Trial is 7 days of the stock apps, from when it's picked.
+  const PLANS = [
+    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully custom, plus custom app designs: apps you make for your own needs' },
+    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app' },
+    { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days' },
+  ];
+  const TRIAL_DAYS = 7, DAY = 864e5;
+  const readPlan = () => { try { const x = JSON.parse(localStorage.getItem('aos.plan')); if (x && PLANS.some(p => p.id === x.id)) return x; } catch {} return { id: 'proplus', since: null }; };
+  const savePlan = id => { try { localStorage.setItem('aos.plan', JSON.stringify({ id, since: Date.now() })); } catch {} };
+  const price = p => p.p ? `$${p.p}<small> a month</small>` : 'Free';
+  const onDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const renews = since => { const d = new Date(since || Date.now()), now = Date.now(); while (d.getTime() <= now) d.setMonth(d.getMonth() + 1); return d; };
+  function paintPlans(el, pick) {
+    const cur = readPlan(), me = PLANS.find(p => p.id === cur.id), to = PLANS.find(p => p.id === pick);
+    el.querySelector('#plans').innerHTML = PLANS.map(p => `<button type="button" class="plan" data-plan="${p.id}" aria-pressed="${p.id === cur.id}">
+        <span class="pn"><b>${esc(p.n)}${p.id === cur.id ? ' <em>Your plan</em>' : ''}</b><i>${esc(p.d)}</i></span><span class="pp">${price(p)}</span></button>`).join('')
+      + (to ? `<div class="pick"><div class="row2"><button type="button" data-plan-no>Cancel</button><button type="button" class="go" data-plan-ok="${to.id}">${to.id === 'trial' ? 'Start the 7-day trial' : `Switch to ${esc(to.n)}`}</button></div></div>` : '');
+    let note;
+    if (me.id === 'trial') {
+      const left = Math.ceil(((cur.since || Date.now()) + TRIAL_DAYS * DAY - Date.now()) / DAY);
+      note = left > 0 ? `${left} ${left === 1 ? 'day' : 'days'} left in your trial.` : `Your trial ended on ${onDay(cur.since + TRIAL_DAYS * DAY)}: choose Pro or Pro+ to keep the stock apps.`;
+    } else note = `${me.n}, $${me.p} a month${cur.since ? `, since ${onDay(cur.since)}` : ''}. ${cur.since ? `Renews ${onDay(renews(cur.since))}.` : 'Renews monthly.'}`;
+    el.querySelector('#planNote').textContent = note + ' Just for fun: nothing is charged.';
+  }
   function acctPage(at) {
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="glbl">Appearance</div>
       <div class="group"><div><div class="seg" id="theme" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
+      <div class="glbl">Subscription</div>
+      <div class="group plans" id="plans"></div>
+      <p class="note" id="planNote"></p>
       <div class="glbl" id="whats-new">Updates</div>
       <div class="group" id="rels">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
         ${block(r) ? `<ul>${block(r)}</ul>` : ''}${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h5>${esc(D.NAMES[id] || id)}</h5><ul>${block(x)}</ul>` : '').join('')}</div>`).join('')}</div>
@@ -429,7 +467,11 @@
     el.addEventListener('click', ev => {
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
       if (ev.target.closest('[data-replay]')) W.play();
+      const pl = ev.target.closest('[data-plan]'); if (pl) paintPlans(el, pl.dataset.plan === readPlan().id ? null : pl.dataset.plan);
+      if (ev.target.closest('[data-plan-no]')) paintPlans(el);
+      const ok = ev.target.closest('[data-plan-ok]'); if (ok) { savePlan(ok.dataset.planOk); paintPlans(el); }
     });
+    paintPlans(el);
     paintAccount(el.querySelector('#acct'));
     if (at === 'updates') setTimeout(() => el.querySelector('#whats-new').scrollIntoView({ block: 'start' }), 450);
     return el;
