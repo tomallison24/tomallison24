@@ -71,9 +71,24 @@ once the Cloudflare token is allowed to:
    notifications too, **Account · Workers Scripts · Edit**). Keep what's there.
 3. **Continue to summary → Update token.** The token's value doesn't change.
 
-Until then accounts stay off and everything works as before. After a release,
-the owner opens aOS, enters the owner code and their name, and makes their
-passkey; from that moment the lock is on.
+Until then accounts stay off, and Calendar and Travel's server routes refuse
+everyone (they never open by default). After a release, the owner opens aOS,
+enters the owner code and their name, and makes their passkey; from then on
+signed-in family get through.
+
+**The owner code** is a Cloudflare Pages secret, `OWNER_CODE`, never in this
+repository: dash.cloudflare.com → **Workers & Pages** → the Pages project →
+**Settings → Variables and Secrets** → **Add** → type **Secret**, name
+`OWNER_CODE`, a long random value (at least 16 letters and digits; case and
+spaces don't count) → **Save**, for Production. It's only used to make the
+owner's account; with it unset no owner can be made. Once the owner exists it
+can be deleted, and set again only if the owner account ever has to be made
+again.
+
+**Removing someone** (Your account → Your family → Remove) signs them out of
+every app and forgets their passkeys, but deletes nothing of theirs: their
+Drinks log and the rest stay. **Invite back** next to their name makes an invite
+link that brings them back as they were.
 
 The owner can then save the family's Home Assistant address (aOS → Your account
 → **Home Assistant address**, the Nabu Casa one). It's kept in that storage, not

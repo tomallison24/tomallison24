@@ -81,7 +81,7 @@
       highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours',
         'Calendar and Travel only answer your family',
-        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
+        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
@@ -1087,11 +1087,13 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   //   major (aOS1.3 -> aOS2): the old number lifts away and the 2 rises in; then
   //     "Visit aOS" for what's new.
   function playUpdate(id, from, to = latest()) {
-    const big = major(to) > major(from);
+    // shows the newest release that isn't silent (a silent one is only logged); seen up to `to`
+    const v = (RELEASES.find(r => !r.silent && cmp(r.v, to) <= 0) || { v: to }).v;
+    const big = major(v) > major(from);
     const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only logged here
     const notes = big ? top(fresh) : top(fresh.map(r => (r.apps || {})[id]).filter(Boolean));
     if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
-    const base = big ? '' : String(major(to)), newT = String(to).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
+    const base = big ? '' : String(major(v)), newT = String(v).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
     const ver = `<sup class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup>`;
     const deco = `<i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span>`;
     const head = `<div class="w-stage" style="justify-content:flex-start;padding-top:16vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt="">
@@ -1099,7 +1101,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     const lit = `aOS<sup>${esc(base)}<span class="h-new">${esc(newT)}</span></sup>`, name = esc(NAMES[id]);
     const first = big
       ? { x: 'notes', noart: true, h: `${name} is on ${lit}`, notes, more: 'Open aOS for everything new' }
-      : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes, more: `Everything in aOS${esc(to)}` };
+      : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes, more: `Everything in aOS${esc(v)}` };
     return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
       const m = o.el.querySelector('.v-mark.minor');
       const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');

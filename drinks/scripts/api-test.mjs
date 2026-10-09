@@ -3,7 +3,7 @@
 // guard, accounts off, signing in, merging two phones (newer wins, graves),
 // that a sync with nothing new writes nothing (KV writes are scarce on the
 // free plan), that nobody can read anyone else's log, the summary for
-// Calendar, bad input, and that removing someone from the family deletes it.
+// Calendar, bad input, and that removing someone from the family keeps it but locks them out.
 //   node drinks/scripts/api-test.mjs
 import assert from 'assert/strict';
 import fs from 'fs';
@@ -149,13 +149,16 @@ await test('unknown routes and methods', async () => {
   assert.equal((await call('sync', { token: tom })).status, 404, 'GET sync');
 });
 
-await test('removing someone from the family deletes their Drinks log', async () => {
+await test('removing someone from the family signs them out but keeps their Drinks log, for an invite back', async () => {
   await putJSON(db, 'cred:c1', { user: 'KID1' });
+  const log = db.m.get('drinks:KID1'); assert.ok(log);
   const request = new Request('https://site.example/aOS/api/remove', { method: 'POST', headers: { Authorization: 'Bearer ' + tom, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'KID1' }) });
   const res = await accounts({ request, params: { route: ['remove'] }, env });
   assert.equal(res.status, 200);
-  assert.ok(!db.m.has('drinks:KID1')); assert.ok(db.m.has('drinks:OWNER1'));
+  assert.equal(db.m.get('drinks:KID1'), log, 'their log is untouched'); assert.ok(db.m.has('drinks:OWNER1'));
+  assert.ok(!db.m.has('cred:c1'), 'their passkey is forgotten');
   assert.equal((await call('sync', { body: {}, token: sam })).status, 401, 'and they are signed out');
+  assert.equal((await call('summary', { token: sam })).status, 401, 'nor can they read it');
 });
 
 await test('aOS accepts Drinks reporting itself as installed', async () => {

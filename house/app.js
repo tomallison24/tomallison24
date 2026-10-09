@@ -1497,7 +1497,8 @@ $('haForm').addEventListener('submit', e => {
 //   1. Home Assistant makes a new long-lived token just for this share
 //      ("Home share …", good for one day at most).
 //   2. It goes in a link, encrypted (AES-GCM, key from the code by PBKDF2) with
-//      a random 6-digit code shown here, which is told to the other person
+//      a random 10-character code shown here (letters and digits, none that look
+//      alike), which is told to the other person
 //      separately. The link carries the address, that token and the time it
 //      runs out (5 minutes).
 //   3. The other device opens the link (or pastes it into Address), types the
@@ -1533,7 +1534,11 @@ const SHARE = {
   },
   // The encrypted part of a share link, or null.
   parse(text) { const m = /#join=([A-Za-z0-9_-]{40,})/.exec(String(text || '')); return m ? m[1] : null; },
-  code() { const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; return String(n).padStart(6, '0'); },
+  // 31 letters and digits (no 0/O, 1/I/L), 10 of them: too many to guess even with the
+  // link in hand, where 6 digits would fall to a fast computer in minutes.
+  ABC: '23456789ABCDEFGHJKMNPQRSTUVWXYZ',
+  code() { return [...crypto.getRandomValues(new Uint8Array(10))].map(b => this.ABC[b % 31]).join(''); },
+  tidy: c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
 
   // ---- this phone, sharing
   async start() {
@@ -1559,7 +1564,7 @@ const SHARE = {
   tick() {
     const c = this.cur; if (!c) return;
     const left = Math.max(0, Math.ceil((c.until - Date.now()) / 1000));
-    $('shCode').textContent = c.code.slice(0, 3) + ' ' + c.code.slice(3);
+    $('shCode').textContent = c.code.slice(0, 5) + ' ' + c.code.slice(5);
     $('shCode').classList.toggle('gone', !left);
     $('shLeft').textContent = left ? `Expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Expired';
     $('shSend').disabled = $('shCopy').disabled = !left;
@@ -1589,7 +1594,7 @@ const SHARE = {
     const go = () => {
       this.link = link;
       showView('join');
-      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 6-digit code they told you.';
+      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 10-character code they told you.';
       $('jnCode').value = ''; $('jnStatus').className = 'status'; $('jnStatus').textContent = '';
       $('jnName').value = /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'This device';
       $('jnIos').hidden = !(navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent));
@@ -1600,8 +1605,8 @@ const SHARE = {
   },
   async join() {
     const bad = m => { $('jnStatus').className = 'status bad'; $('jnStatus').textContent = m; };
-    const code = $('jnCode').value.replace(/\D/g, ''), name = $('jnName').value.trim() || 'This device';
-    if (code.length !== 6) return bad('Enter the 6-digit code.');
+    const code = this.tidy($('jnCode').value), name = $('jnName').value.trim() || 'This device';
+    if (code.length !== 10) return bad('Enter the 10-character code.');
     let p;
     try { p = await this.open(this.parse(this.link), code); } catch { return bad("That code doesn't match this link."); }
     if (!p || p.v !== 1 || !p.u || !p.t) return bad('That link is damaged. Ask for a new one.');

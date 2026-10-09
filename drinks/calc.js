@@ -61,7 +61,9 @@
   const add = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * D).toISOString().slice(0, 10);
   const between = (s, from, to) => s >= from && s <= to;
 
-  const okEntry = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && num(x.vol) > 0 && num(x.qty) > 0 && num(x.abv) >= 0 && num(x.abv) <= 100;
+  // the same limits the server keeps (functions/drinks/api CLEAN), so nothing is kept here that it would drop
+  const okEntry = x => x && typeof x.id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.id) && ISO.test(x.date || '')
+    && num(x.vol) >= 0.01 && num(x.vol) <= 10000 && num(x.qty) >= 1 && num(x.qty) <= 100 && num(x.abv) >= 0 && num(x.abv) <= 100;
   // What was had each day: standard drinks, how many drinks, and by kind.
   function byDay(entries) {
     const m = new Map();
@@ -171,7 +173,7 @@
   // Drinks shows those on their own line, so the name keeps just the words.
   const shortName = s => String(s || '').replace(/\s+\d+(\.\d+)?\s?(oz|ml)\b/i, '').replace(/\s+\d+(\.\d+)?%$/, '').trim().slice(0, 60);
   const catOf = c => { const k = String(c || '').trim().toLowerCase(); return CAT[k] ? k : k === 'spirit' ? 'spirits' : 'other'; };
-  const cleanId = s => String(s || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+  const cleanId = s => String(s || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 36);   // 'abv-' + 36 = the server's 40
   function oneRow(r, out) {
     const date = isoDate(r.date), cat = String(r.category || '').trim().toLowerCase(), id = cleanId(r.id);
     if (!date || id === 'test' || /^__connection test__$/i.test(String(r.name || '').trim())) { out.skipped++; return; }
