@@ -18,7 +18,7 @@ const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
 const AHEAD_DAYS = 14;     // how far ahead to look for fixtures
 const AHEAD_MINE = 21;     // ...and in leagues a one-tap team plays in (past international breaks)
 const KEEP_UPCOMING = 10;  // fixtures kept per league
-const HEADERS = { Origin: 'https://tomallison24.github.io', 'User-Agent': 'news-home-screen-app/1.0' };
+const HEADERS = { Origin: 'https://tomallison24-news.pages.dev', 'User-Agent': 'news-home-screen-app/1.0' };
 
 const ymd = d => d.toISOString().slice(0, 10).replace(/-/g, '');
 

@@ -2,7 +2,7 @@
 
 ## Every merge releases
 
-- The site (Cloudflare Pages and GitHub Pages) only serves the newest released
+- The site (Cloudflare Pages, `tomallison24-news.pages.dev`) only serves the newest released
   version: a git tag `aOS<version>` (`aOS1`, `aOS1.1`, `aOS2`). See
   `aOS/RELEASING.md`.
 - The owner asked for releases to be automatic: **every merge to the default
@@ -13,6 +13,9 @@
   (phones pick it up the next time they open the app).
 - `labs/` holds test pages for the owner (not apps); it publishes with every
   release and every scheduled run.
+- GitHub Pages is retired: it only publishes "AllisonOS has moved" pages
+  (`.github/pages-moved.html`) that send each old address on to the Cloudflare
+  site. Don't publish the apps there again.
 
 ## Merging
 

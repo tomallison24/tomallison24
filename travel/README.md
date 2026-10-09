@@ -122,7 +122,7 @@ client once:
    project Mail uses → **APIs & Services → Credentials** → the Mail **Web
    application** client.
 2. **Authorised redirect URIs** → add, exactly (trailing slash included):
-   - `https://tomallison24.github.io/tomallison24/travel/`
+   - `https://tomallison24-news.pages.dev/travel/`
    - and the Cloudflare address too, if you use that one: `https://<your
      Cloudflare Pages address>/travel/`
 3. **Save**. Google can take a few minutes to pick it up.
@@ -143,8 +143,7 @@ to, and asks for one tap if Google can't answer quietly.
 Flight status comes from **AeroDataBox**, through RapidAPI, via a small
 Cloudflare Pages Function on the site (`functions/travel/api/[[route]].js`)
 that holds the key, so the key never reaches a phone. It only runs on the
-**Cloudflare** copy of the site; on the GitHub Pages copy Travel says it's
-not available there.
+Cloudflare site (the old GitHub Pages copy is retired and only sends people on).
 
 Set up (about 5 minutes):
 

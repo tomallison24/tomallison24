@@ -13,5 +13,5 @@ binding = "PUSH"
 id = "PUSH_KV_ID"              # replaced at deploy time
 
 [vars]
-ALLOWED_ORIGIN = "https://tomallison24.github.io"
+ALLOWED_ORIGIN = "https://tomallison24-news.pages.dev"
 MARKETING_LABEL = "Marketing"

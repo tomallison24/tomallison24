@@ -13,5 +13,5 @@ binding = "PUSH"
 id = "NOTES_PUSH_KV_ID"        # replaced at deploy time
 
 [vars]
-ALLOWED_ORIGIN = "https://tomallison24.github.io,https://tomallison24-news.pages.dev"
-VAPID_SUBJECT = "https://tomallison24.github.io/tomallison24/notes/"
+ALLOWED_ORIGIN = "https://tomallison24-news.pages.dev"
+VAPID_SUBJECT = "https://tomallison24-news.pages.dev/notes/"

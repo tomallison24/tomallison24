@@ -15,7 +15,7 @@
 // Environment (wrangler.toml [vars] and secrets):
 //   PUSH                  KV namespace binding
 //   ALLOWED_EMAIL         the one Gmail address allowed to subscribe
-//   ALLOWED_ORIGIN        where the app is served, e.g. https://tomallison24.github.io
+//   ALLOWED_ORIGIN        where the app is served, e.g. https://tomallison24-news.pages.dev
 //   MARKETING_LABEL       default "Marketing" - never notified
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN   (metadata scope)
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT            (see make-vapid-keys.mjs)

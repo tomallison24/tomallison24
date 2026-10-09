@@ -23,8 +23,10 @@
 #          once the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository
 #          secrets exist (the site sits behind Cloudflare Access, so only
 #          signed-in people can open it).
-# deploy:  publishes the same package to GitHub Pages (public). To be removed
-#          once the Cloudflare site is confirmed working.
+# deploy:  GitHub Pages is retired (the family uses the Cloudflare site): it
+#          now publishes only "AllisonOS has moved" pages (.github/pages-moved.html)
+#          at every old address, which send each one on to the same page on
+#          tomallison24-news.pages.dev and forget what AllisonOS kept there.
 name: News
 
 on:
@@ -162,9 +164,19 @@ jobs:
           <script>location.replace('../aOS/' + location.search + location.hash)</script></head>
           <body style="font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:40px 16px">aOS has moved: <a href="../aOS/">open aOS</a></body></html>
           HTML
+      - name: GitHub Pages, retired - "moved" pages only
+        # Not the apps: tomallison24.github.io is shared with every other Pages site of
+        # the account, so the apps (and their saved tokens) don't belong there. Each old
+        # app address, and 404.html for the rest, gets the page that sends it on.
+        run: |
+          rm -rf _ghpages && mkdir -p _ghpages
+          cp .github/pages-moved.html _ghpages/index.html && cp .github/pages-moved.html _ghpages/404.html
+          for d in aOS aos home news weather mail notes podcasts travel calendar places house fitness drinks labs; do
+            mkdir -p "_ghpages/$d" && cp .github/pages-moved.html "_ghpages/$d/index.html"
+          done
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b   # v4.0.0
         with:
-          path: .
+          path: _ghpages
       - name: Publish to Cloudflare Pages
         if: env.PUBLISH == 'true' && env.HAS_CLOUDFLARE == 'true'
         env:

@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
   deploy:
+    # Only from the default branch (or by hand): a push to any other branch must
+    # never deploy the Worker, which runs with the repository's secrets.
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

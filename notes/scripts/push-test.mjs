@@ -73,10 +73,10 @@ function world() {
     }
     throw new Error('unexpected fetch ' + url);
   };
-  w.env = { PUSH: makeKV(), ALLOWED_ORIGIN: 'https://tomallison24.github.io', VAPID_SUBJECT: 'https://tomallison24.github.io/tomallison24/notes/' };
+  w.env = { PUSH: makeKV(), ALLOWED_ORIGIN: 'https://tomallison24-news.pages.dev', VAPID_SUBJECT: 'https://tomallison24-news.pages.dev/notes/' };
   return w;
 }
-const req = (path, body, origin = 'https://tomallison24.github.io', method = 'POST') =>
+const req = (path, body, origin = 'https://tomallison24-news.pages.dev', method = 'POST') =>
   new Request('https://notes-push.example.workers.dev' + path, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
 const call = async (w, path, body, origin) => { const r = await handle(req(path, body, origin, body ? 'POST' : 'GET'), w.env, w.fetch); return { status: r.status, body: await r.json(), headers: r.headers }; };
 const NY = { tz: 'America/New_York', lang: 'en-US', morning: '09:00', skip: [], nudges: true };
@@ -132,7 +132,7 @@ const A = phone('a'), B = phone('b');
   const w = world();
   const k1 = await call(w, '/key', null, undefined), k2 = await call(w, '/key');
   ok('3. /key makes the push key once and keeps it', k1.body.key && k1.body.key === k2.body.key && b64u.dec(k1.body.key).length === 65);
-  ok('3. CORS: allowed for the app\'s address only', k2.headers.get('Access-Control-Allow-Origin') === 'https://tomallison24.github.io' && !(await call(w, '/key', null, 'https://evil.example')).headers.get('Access-Control-Allow-Origin'));
+  ok('3. CORS: allowed for the app\'s address only', k2.headers.get('Access-Control-Allow-Origin') === 'https://tomallison24-news.pages.dev' && !(await call(w, '/key', null, 'https://evil.example')).headers.get('Access-Control-Allow-Origin'));
 
   const sub = ph => ({ endpoint: ph.endpoint, keys: ph.keys });
   let r = await call(w, '/subscribe', { subscription: sub(A), prefs: NY });

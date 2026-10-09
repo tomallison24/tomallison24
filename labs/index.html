@@ -7,13 +7,13 @@
 <link rel="stylesheet" href="lab.css">
 <!--
   labs/: test pages for the owner, not apps. They publish from the latest merged
-  code, not the release (.github/workflows/news.yml). These two compare how a new
-  person would set up AllisonOS: aOS as one app, or separate apps with a passkey.
+  code, not the release (.github/workflows/news.yml). The passkey test (Option 2,
+  separate apps with Face ID) is gone: family accounts are real now (aOS).
 -->
 </head>
 <body>
 <main>
-  <h1>Two ways to <span class="ink">set up</span></h1>
+  <h1>Set-up <span class="ink">tests</span></h1>
   <p>Try both on your iPhone, in Safari, then compare. Nothing here touches your real apps or settings.</p>
 
   <div class="card">
@@ -28,40 +28,6 @@
   </div>
 
   <div class="card">
-    <h3>Option 2 · separate apps, Face ID account</h3>
-    <p>Each app has its own icon and its own (empty) storage. A passkey in your iCloud Keychain signs you in to each with one Face ID tap.</p>
-    <ol>
-      <li>Open <b>Test A</b>, Share, <b>Add to Home Screen</b>. Do the same for <b>Test B</b>.</li>
-      <li>Open Test A from the Home Screen: <b>Create my account</b> (name, then Face ID).</li>
-      <li>Open Test B from the Home Screen: <b>Continue with Face ID</b>. One tap, and it knows you.</li>
-    </ol>
-    <a class="btn" href="two/a/">Open Test A</a>
-    <a class="btn soft" href="two/b/">Open Test B</a>
-  </div>
-
-  <div class="card">
-    <h3>Try again with DuckDuckGo off</h3>
-    <ol>
-      <li><b>Settings → General → AutoFill &amp; Passwords</b>: switch <b>DuckDuckGo</b> off for now; keep <b>Passwords</b> on.</li>
-      <li>Open <b>Test A</b>, tap <b>Sign out of this app</b>, then <b>Create my account</b> again. Note what the save prompt says, and where it saves.</li>
-      <li>Read the line under the buttons: does it say a <b>findable passkey</b>, on <b>this phone</b>?</li>
-      <li>Check <b>Settings → Passwords</b> for <b>tomallison24-news.pages.dev</b>.</li>
-      <li>Open <b>Test B</b> from its icon: <b>Continue with Face ID</b>.</li>
-    </ol>
-  </div>
-
-  <div class="card">
-    <h3>If Test B only offers a QR code or security key</h3>
-    <ol>
-      <li>Check <b>Settings → General → AutoFill &amp; Passwords</b>: is anything besides <b>Passwords</b> (Apple's) switched on, like 1Password or Google? Apple has said another passkey manager can make the QR code appear.</li>
-      <li>In Test B, tap the <b>Tap for your passkey</b> box instead of the button: does "Tom" show above the keyboard?</li>
-      <li>Open Test B in a <b>Safari tab</b> (not the icon) and try again: does it find the passkey there?</li>
-      <li>Check <b>Settings → Passwords</b>: is there a passkey for tomallison24-news.pages.dev?</li>
-      <li>Screenshot the <b>What this phone reports</b> box at the bottom of Test B.</li>
-    </ol>
-  </div>
-
-  <div class="card">
     <h3>Back to the tiles</h3>
     <p>Can aOS put away an app it opened once you leave? Four ways to try.</p>
     <ol>
@@ -71,14 +37,12 @@
     <a class="btn" href="three/hub/">Open Test tiles</a>
   </div>
 
-
   <h2>Worth noting while you try</h2>
   <ol>
     <li>Did any app ask you to <b>sign in to Cloudflare</b> before it opened? Note which.</li>
-    <li>Option 2: did <b>Continue with Face ID</b> work from Test B's Home Screen icon?</li>
     <li>Which felt better day to day: one icon with apps inside, or an icon per app?</li>
   </ol>
-  <p>When you're done: remove the test icons (press and hold, Remove App). The test passkey is in Settings, Passwords, under this site; you can delete it there.</p>
+  <p>When you're done: remove the test icons (press and hold, Remove App). If you made a passkey with the old Test A or B, it's in Settings, Passwords, under this site, named like "Tom (AllisonOS test)": delete that one and keep your AllisonOS passkey.</p>
 </main>
 </body>
 </html>

@@ -104,11 +104,11 @@ function world() {
   return w;
 }
 const envFor = kv => ({
-  PUSH: kv, ALLOWED_EMAIL: ME, ALLOWED_ORIGIN: 'https://tomallison24.github.io', MARKETING_LABEL: 'Marketing',
+  PUSH: kv, ALLOWED_EMAIL: ME, ALLOWED_ORIGIN: 'https://tomallison24-news.pages.dev', MARKETING_LABEL: 'Marketing',
   GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret', GOOGLE_REFRESH_TOKEN: 'refresh',
   VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey, VAPID_SUBJECT: vapid.subject,
 });
-const req = (path, { method = 'POST', token, body, origin = 'https://tomallison24.github.io' } = {}) => new Request('https://mail-push.example.workers.dev' + path, {
+const req = (path, { method = 'POST', token, body, origin = 'https://tomallison24-news.pages.dev' } = {}) => new Request('https://mail-push.example.workers.dev' + path, {
   method, headers: { Origin: origin, ...(token && { Authorization: 'Bearer ' + token }), 'Content-Type': 'application/json' }, ...(body && { body: JSON.stringify(body) }),
 });
 const lastPush = (w, ph) => JSON.parse(decrypt(w.pushed.at(-1).body, ph).text);
@@ -118,7 +118,7 @@ const kv = makeKV(), env = envFor(kv), w = world(), ph = phone();
 const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph.keys };
 {
   const r = await handle(req('/key', { method: 'GET' }), env, w.fetch);
-  ok('3. /key gives the public key, with CORS for the app only', (await r.json()).key === vapid.publicKey && r.headers.get('Access-Control-Allow-Origin') === 'https://tomallison24.github.io');
+  ok('3. /key gives the public key, with CORS for the app only', (await r.json()).key === vapid.publicKey && r.headers.get('Access-Control-Allow-Origin') === 'https://tomallison24-news.pages.dev');
   const r2 = await handle(req('/key', { method: 'GET', origin: 'https://evil.example' }), env, w.fetch);
   ok('3. …no CORS for other sites', r2.headers.get('Access-Control-Allow-Origin') === null);
   ok('3. subscribing needs a Google token', (await handle(req('/subscribe', { body: { subscription: sub } }), env, w.fetch)).status === 403);
@@ -211,13 +211,13 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
     const L = {}, log = { shown: [], badge: [], opened: [], posted: [], focused: 0 };
     const self = {
       addEventListener: (t, f) => { L[t] = f; },
-      registration: { scope: 'https://tomallison24.github.io/tomallison24/mail/', showNotification: async (t, o) => { log.shown.push({ t, o }); } },
+      registration: { scope: 'https://tomallison24-news.pages.dev/mail/', showNotification: async (t, o) => { log.shown.push({ t, o }); } },
       navigator: { setAppBadge: async n => log.badge.push(n), clearAppBadge: async () => log.badge.push(0) },
       clients: {
         matchAll: async () => clientsList.map(() => ({ postMessage: m => log.posted.push(m), focus: async () => { log.focused++; } })),
         openWindow: async u => { log.opened.push(u); }, claim: async () => {},
       },
-      skipWaiting: () => {}, location: { origin: 'https://tomallison24.github.io' },
+      skipWaiting: () => {}, location: { origin: 'https://tomallison24-news.pages.dev' },
     };
     vm.runInNewContext(src, { self, caches: { open: async () => ({}), keys: async () => [] }, URL, location: self.location, fetch: async () => ({}) });
     const fire = async (type, ev) => { let p; L[type]({ ...ev, waitUntil: x => { p = x; } }); await p; };
@@ -230,7 +230,7 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
   await a.fire('push', { data: { json: () => { throw new Error('garbled'); } } });
   ok('7. even a garbled push still shows something (iOS requires it)', a.log.shown[1]?.t === 'Mail');
   await a.fire('notificationclick', { notification: { close() {}, data: { thread: 'tm1' } } });
-  ok('7. tapping it with the app closed opens the app on that conversation', a.log.opened[0] === 'https://tomallison24.github.io/tomallison24/mail/?thread=tm1');
+  ok('7. tapping it with the app closed opens the app on that conversation', a.log.opened[0] === 'https://tomallison24-news.pages.dev/mail/?thread=tm1');
   const b = make([1]);
   await b.fire('notificationclick', { notification: { close() {}, data: { thread: 'tm9' } } });
   ok('7. with the app open, it is brought forward and told which one', b.log.focused === 1 && b.log.posted[0]?.open === 'tm9' && b.log.opened.length === 0);

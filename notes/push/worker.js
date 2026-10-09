@@ -174,7 +174,7 @@ async function vapid(env) {
     await env.PUSH.put('vapid', JSON.stringify(k));
     k = (await env.PUSH.get('vapid', 'json')) || k;
   }
-  return { ...k, subject: env.VAPID_SUBJECT || 'https://tomallison24.github.io/tomallison24/notes/' };
+  return { ...k, subject: env.VAPID_SUBJECT || 'https://tomallison24-news.pages.dev/notes/' };
 }
 
 // A phone's keys must be a real P-256 point and a 16-byte secret, or nothing

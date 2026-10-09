@@ -9,7 +9,7 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   their feeds (CORS), so the feeds are fetched ahead of time instead. No API
   keys needed.
 - **Updates:** `.github/workflows/news.yml` re-fetches every 30 minutes and
-  publishes the site to GitHub Pages. `data/` is generated, not committed.
+  publishes the site to Cloudflare Pages. `data/` is generated, not committed.
 - **No build step** for the app itself: `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts);
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
@@ -179,7 +179,7 @@ npx http-server . -p 8080          # then open http://localhost:8080/news/
 
 1. On GitHub: Settings → Pages → Source: **GitHub Actions**.
 2. Once the workflow has run on the default branch, open
-   `https://tomallison24.github.io/tomallison24/news/` in Safari.
+   `https://tomallison24-news.pages.dev/news/` in Safari.
 3. Share → **Add to Home Screen**.
 
 Opened from the Home Screen, the topic tabs sit in a floating bar at the

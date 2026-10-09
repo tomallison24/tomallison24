@@ -37,7 +37,8 @@ Merge it with the changes it describes: the merge releases it.
 
 Merging to the default branch runs **Actions → News**, which tags the merged
 code as the newest version in the log (`aOS1.1`) and publishes it to
-Cloudflare Pages and GitHub Pages. To release by hand anyway (to re-release
+Cloudflare Pages (`tomallison24-news.pages.dev`). GitHub Pages is retired: it
+only gets "AllisonOS has moved" pages that send old addresses on. To release by hand anyway (to re-release
 without a merge): **Actions → News → Run workflow**, branch = the default
 branch, **release** = the version, **Run**.
 

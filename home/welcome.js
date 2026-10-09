@@ -85,6 +85,7 @@
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
         'Lost a phone? Sign out everywhere else, in your aOS account, ends every other sign-in at once',
         'Every app works on its own: add only the ones you want; what they share with each other is extra',
+        'AllisonOS lives at tomallison24-news.pages.dev; the old GitHub Pages address sends you there',
         'Weeks start on Sunday in Calendar, Fitness and Drinks (Calendar → Settings to pick Monday); Travel says rental car',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
@@ -591,7 +592,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   function safariDemo(host, name, iconUrl, opts = {}) {   // opts.onDone: once, after the first play-through
     if (!document.getElementById('aos-sd-css')) { const st = document.createElement('style'); st.id = 'aos-sd-css'; st.textContent = SD_CSS; document.head.appendChild(st); }
     const row = (t, k, cls = '') => `<div class="sd-row ${cls}"><span>${t}</span>${SD_ICON[k]}</div>`;
-    const dom = location.host || 'tomallison24.github.io';
+    const dom = location.host || 'tomallison24-news.pages.dev';
     host.innerHTML = `<div class="aos-sd"><div class="sd-phone"><div class="sd-screen"><i class="sd-island"></i>
       <div class="sd-page"><img src="${iconUrl}" alt=""><b>${esc(name)}</b><i></i><i></i><i></i></div>
       <div class="sd-bar"><span class="sd-round">‹</span><span class="sd-addr">${esc(dom)}</span><span class="sd-round sd-more">•••</span></div>
