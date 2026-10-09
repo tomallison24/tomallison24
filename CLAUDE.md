@@ -15,6 +15,14 @@
   publish (a hand run with **release** blank republishes the live release
   and refreshes labs - that is not a release).
 
+## Merging
+
+The owner has asked that Claude's pull requests merge without asking, once
+they're ready: every check on the latest commit passed (the News build and the
+Apps check), no merge conflict, and no review left unanswered. Merge then (or
+turn on GitHub's auto-merge for the PR), with a merge commit. Merging still
+publishes nothing: releasing waits for the owner to ask (above).
+
 ## The release log
 
 `RELEASES` at the top of `home/welcome.js`, newest first, one version number
@@ -35,6 +43,13 @@ notice, add a line for it:
 - `silent: true` on an entry: it's only logged in `RELEASES`, shown nowhere
   (not in aOS's What's new); the apps keep showing the last version that wasn't
   silent, with no update screens.
+
+## Adding or changing an app
+
+Follow `.claude/skills/new-aos-app/SKILL.md`: every place an app must be wired
+into aOS, and the ground rules every app shares. Then run
+`node aOS/scripts/check-apps.mjs` (CI runs it too, `apps-check.yml`); it must
+end with 0 errors.
 
 ## Layout
 
