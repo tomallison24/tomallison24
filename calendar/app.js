@@ -341,7 +341,7 @@ if (window.top !== window.self) {
     if (ls.json({ note: 'allison-notes-v1', travel: 'allison-travel-v1', fitness: 'allison-fitness-v1' }[k], null)) return LAYER[k].sub;   // this browser has it
     if (st.layersState === 'signin') return 'Sign in to your family account first: open aOS.';
     if (st.layersState === 'off') return 'Family accounts aren’t switched on yet.';
-    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'Open ' + LAYER[k].name + ' once, signed in, and it shows here';
+    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'If you use ' + LAYER[k].name + ', open it once, signed in, and it shows here';
     return LAYER[k].sub;
   };
 
@@ -1348,7 +1348,7 @@ if (window.top !== window.self) {
       : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
     const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
     const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
-    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
+    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'If you use Mail, open it once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
@@ -1358,7 +1358,7 @@ if (window.top !== window.self) {
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div><p class="hint">Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account, so they appear even though every app on an iPhone keeps its own storage. Only you see yours. Each app needs to be signed in to your family account once.</p>'
+      + '</div><p class="hint">Every layer is optional: use the apps you want, and switch off the ones you don’t. Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account (each signed in once), so they appear even though every app on an iPhone keeps its own storage. Only you see yours.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[0, 'Sunday'], [1, 'Monday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'

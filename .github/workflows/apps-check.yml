@@ -36,3 +36,5 @@ jobs:
       - run: node aOS/scripts/apps-smoke-test.mjs
       # Calendar's layers through the family account, each app in its own storage as on an iPhone
       - run: node calendar/scripts/layers-test.mjs
+      # every app works on its own: users may want only some of the core apps
+      - run: node aOS/scripts/standalone-test.mjs
