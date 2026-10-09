@@ -135,7 +135,17 @@ if (window.top !== window.self) {
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ bookings, trips })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Travel: storage is full.' + (syncCfg ? ' Your bookings are safe in the Google Sheet.' : ' Back up soon.')); }
+    shareCal();
   }
+  // Calendar's Travel layer: your bookings, just the fields Calendar shows, kept in your
+  // own family account (home/welcome.js AllisonOS.layer), since Calendar can't read
+  // this app's storage on an iPhone.
+  const CAL_FIELDS = ['type', 'status', 'id', 'conf', 'notes', 'dep', 'depIso', 'arr', 'arrIso', 'airlineCode', 'flightNo', 'airline', 'from', 'to', 'fromName', 'toName', 'checkIn', 'checkOut', 'name', 'address', 'city', 'pickup', 'pickupIso', 'company', 'pickupPlace', 'dropoff', 'dropoffIso', 'dropPlace', 'start', 'end', 'title', 'place'];
+  function shareCal() {
+    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+    L.share('travel', { bookings: bookings.filter(b => b && b.status !== 'cancelled').map(b => Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]]))) });
+  }
+  addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (syncCfg) scheduleSync(); }
   const saveSeen = () => ls.set(K.seen, JSON.stringify([...seen].slice(-4000)));
   const saveLive = () => ls.set(K.live, JSON.stringify(live));

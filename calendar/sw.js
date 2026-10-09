@@ -3,7 +3,7 @@
 // iCloud (through calendar/api/), Gmail and the weather are never cached here:
 // a cached answer would be a stale calendar. The events themselves are kept by
 // the app in localStorage for reading offline.
-const CACHE = 'calendar-v20';
+const CACHE = 'calendar-v21';
 const SHELL = ['./', 'index.html', 'app.js', 'ical.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/slide.js', '../home/welcome.js', '../home/account.js'];
 
 self.addEventListener('install', e => {

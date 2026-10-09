@@ -125,7 +125,7 @@ if (window.top !== window.self) {
     win: null,                    // {from, to} ms loaded from iCloud
     occ: [],                      // occurrences in the window (Family + layers)
     lastRefresh: 0, refreshing: false, offline: false,
-    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle', drinks: null, drinksState: 'idle',
+    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle', drinks: null, drinksState: 'idle', layers: null, layersState: 'idle',
   };
   if (!['day', 'week', 'month', 'year', 'list'].includes(st.view)) st.view = 'month';
   const q = new URLSearchParams(location.search);
@@ -135,7 +135,7 @@ if (window.top !== window.self) {
     holiday: { name: 'US Holidays', color: 'var(--hol)', sub: 'Worked out on this phone: federal holidays and the usual observances' },
     note: { name: 'Notes', color: 'var(--nt)', sub: 'Reminders with a date, and notes with a nudge' },
     travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and car hire from Travel' },
-    mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days, using Mail’s Gmail sign-in' },
+    mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days from Mail' },
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'The workouts logged in Fitness, one a day' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your own standard drinks and alcohol-free days, from your account. Only you see them.' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
@@ -306,9 +306,45 @@ if (window.top !== window.self) {
     return out;
   }
 
+  // ---- Notes, Travel, Fitness and Mail: from your own family account ----
+  // On an iPhone each Home Screen app keeps its own storage, so Calendar can't read
+  // theirs. Each keeps a copy of just what Calendar shows in your family account
+  // (AllisonOS.layer in home/welcome.js; functions/aOS/api, GET layer), read here.
+  // Where this browser does share their storage (a computer), that comes first.
+  async function loadLayers(force) {
+    if (!['notes', 'travel', 'fitness', 'mail'].some(k => settings.layers[k])) return;
+    const acct = window.AllisonOS && AllisonOS.account, tok = acct && acct.token();
+    if (!tok) { st.layersState = 'signin'; mailFromLayer(); return; }
+    if (!force && st.layers && Date.now() - st.layers.at < 5 * MIN) return;
+    try {
+      const r = await fetch('../aOS/api/layer', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+      if (r.status === 401) { st.layersState = 'signin'; return; }
+      if (r.status === 503 || r.status === 404) { st.layersState = 'off'; return; }
+      if (!r.ok) throw new Error('layer-' + r.status);
+      st.layers = Object.assign({ at: Date.now() }, (await r.json()).layers || {}); st.layersState = 'ok';
+      mailFromLayer(); rebuild(); render();
+    } catch { st.layersState = 'error'; }
+  }
+  const layerData = (key, app) => ls.json(key, null) || (st.layers && st.layers[app] && st.layers[app].data) || null;
+  // Mail's Remind Me days: from Gmail itself where this browser has Mail's sign-in, else Mail's copy.
+  function mailFromLayer() {
+    if (mailToken()) return;
+    const L = st.layers && st.layers.mail;
+    if (!L || !L.data || !Array.isArray(L.data.items)) { st.mailState = st.layersState === 'signin' ? 'signin' : st.layersState === 'ok' ? 'no-copy' : st.mailState; return; }
+    st.mail = { at: L.at, items: L.data.items.filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date || '')).map(x => allDayItem('mail', 'mail|' + x.id, 'Remind: ' + (x.subject || '(no subject)'), x.date, null, { sub: x.from ? 'From ' + x.from : 'Mail', link: '../mail/?thread=' + encodeURIComponent(x.id) })) };
+    st.mailState = 'ok';
+  }
+  const layerNote = k => {
+    if (ls.json({ note: 'allison-notes-v1', travel: 'allison-travel-v1', fitness: 'allison-fitness-v1' }[k], null)) return LAYER[k].sub;   // this browser has it
+    if (st.layersState === 'signin') return 'Sign in to your family account first: open aOS.';
+    if (st.layersState === 'off') return 'Family accounts aren’t switched on yet.';
+    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'Open ' + LAYER[k].name + ' once, signed in, and it shows here';
+    return LAYER[k].sub;
+  };
+
   // ---- Notes: reminders with a date, and notes with a nudge ----
   function noteItems(w) {
-    const data = ls.json('allison-notes-v1', null);
+    const data = layerData('allison-notes-v1', 'notes');
     if (!data) return [];
     const out = [], lists = new Map((data.lists || []).map(l => [l.id, l]));
     for (const t of data.todos || []) {
@@ -335,7 +371,7 @@ if (window.top !== window.self) {
 
   // ---- Travel: flights, hotels and car hire ----
   function travelItems(w) {
-    const data = ls.json('allison-travel-v1', null);
+    const data = layerData('allison-travel-v1', 'travel');
     if (!data || !Array.isArray(data.bookings)) return [];
     const out = [];
     const at = (local, iso) => { const t = Date.parse(iso || ''); if (!isNaN(t)) return t; if (!local) return NaN; const p = partsOf(local); const hm = local.length >= 16 ? local.slice(11, 16).split(':').map(Number) : [12, 0]; return I.zonedToUtc({ y: p.y, m: p.m, d: p.d, h: hm[0], mi: hm[1], s: 0 }, TZ); };
@@ -366,7 +402,7 @@ if (window.top !== window.self) {
 
   // ---- Fitness: each day's workout, as one all-day item ----
   function fitnessItems(w) {
-    const data = ls.json('allison-fitness-v1', null);
+    const data = layerData('allison-fitness-v1', 'fitness');
     if (!data || !Array.isArray(data.logs)) return [];
     const GROUPS = { chest: 'Chest', back: 'Back', lowerback: 'Lower back', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', legs: 'Legs', glutes: 'Glutes', cardio: 'Cardio' };
     const days = new Map();
@@ -429,7 +465,7 @@ if (window.top !== window.self) {
   async function loadMail(force) {
     if (!settings.layers.mail) return;
     const tok = mailToken();
-    if (!tok) { st.mailState = 'no-token'; return; }
+    if (!tok) { mailFromLayer(); return; }
     if (!force && st.mail && Date.now() - st.mail.at < 30 * MIN) { st.mailState = 'ok'; return; }
     st.mailState = 'loading';
     try {
@@ -1309,7 +1345,7 @@ if (window.top !== window.self) {
       : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
     const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
     const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
-    const mailNote = !settings.layers.mail ? '' : st.mailState === 'no-token' ? 'Open Mail and connect Gmail; Calendar uses that sign-in.' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
+    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
@@ -1318,8 +1354,8 @@ if (window.top !== window.self) {
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
-      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div><p class="hint">Notes, Travel, Mail and Fitness share this phone’s storage when they are opened from AllisonOS Home; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
+      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
+      + '</div><p class="hint">Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account, so they appear even though every app on an iPhone keeps its own storage. Only you see yours. Each app needs to be signed in to your family account once.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[1, 'Monday'], [0, 'Sunday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'
@@ -1332,7 +1368,7 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="stAlertAD">All-day alert</label><select id="stAlertAD">' + opt(ALERTS_ALLDAY, settings.alertAllDay) + '</select></div>'
       + '</div>'
       + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored or sent anywhere.</p>';
-    $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadMail(true); loadDrinks(true); loadWeather(true); }); };
+    $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); };
     const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
     slideSegs();
     $('stDayStart').onchange = e => { settings.dayStart = +e.target.value; saveSettings(); };
@@ -1344,7 +1380,7 @@ if (window.top !== window.self) {
     const sw = e.target.closest('[data-layer]');
     if (sw && !sw.disabled) {
       const k = sw.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
-      if (k === 'mail' && settings.layers.mail) loadMail(true);
+      if (['notes', 'travel', 'fitness', 'mail'].includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
       if (k === 'drinks') { if (settings.layers.drinks) loadDrinks(true).then(() => renderSettings()); else st.drinks = null; }
       if (k === 'weather' && settings.layers.weather) loadWeather(true);
       rebuild(); render(); renderSettings(); return;
@@ -1365,8 +1401,8 @@ if (window.top !== window.self) {
   rebuild();
   render();
   ping().then(() => { render(); refresh({ loud: st.items.size === 0, force: true }); });
-  loadMail(false); loadDrinks(false); loadWeather(false);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadMail(false); loadDrinks(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
+  loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadWeather(false);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
   setInterval(() => { if (document.visibilityState !== 'visible') return; if (Date.now() - st.lastRefresh > REFRESH_MS) refresh(); if (st.view === 'day' || st.view === 'week') placeNow(); }, MIN);
   window.addEventListener('resize', () => { const tv = $('timeview'); if (tv) afterRender(); });
   // "Updated" pill, once, when a new version arrives (as in Notes and Travel).

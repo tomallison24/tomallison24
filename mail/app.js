@@ -2960,10 +2960,12 @@ async function remindMe(item, date) {
     const inboxMsgs = (snap.messages || []).filter(m => (m.labelIds || []).includes('INBOX')).map(m => m.id);
     const label = await labelNamed('Remind ' + dayStr(date), { create: true });
     await relabelThread(tid, [label.id], ['INBOX']);
+    shareReminders();
     toast('I’ll remind you ' + date.toLocaleDateString(undefined, { weekday: 'long' }), { label: 'Undo', action: async () => {
       try {
         await relabelThread(tid, [], [label.id]);
         await relabel(inboxMsgs, ['INBOX']);
+        shareReminders();
         toast('Put back');
         state.lists = {};
         go({ force: true });
@@ -2990,8 +2992,29 @@ async function dueReminders() {
   await refreshLabels(true);
   return n;
 }
+// Calendar's Mail layer: the days you asked to be reminded of mail, with each
+// thread's subject and sender, kept in your own family account (home/welcome.js
+// AllisonOS.layer): Calendar can't use this app's Gmail sign-in on an iPhone. Sent
+// when the app opens and after Remind Me; only when it changed.
+async function shareReminders() {
+  const L = window.AllisonOS && AllisonOS.layer; if (!L || !getToken()) return;
+  try {
+    const days = (await refreshLabels(true)).map(l => ({ l, m: REMIND.exec(l.name) })).filter(x => x.m).sort((a, b) => a.m[1] < b.m[1] ? -1 : 1).slice(0, 30);
+    const items = [];
+    for (const { l, m } of days) {
+      const th = (await api('/threads', { params: { maxResults: 20, labelIds: l.id }, bg: true })).threads || [];
+      for (const t of th) {
+        if (items.length >= 80) break;
+        const d = await api('/threads/' + encodeURIComponent(t.id), { params: { format: 'metadata', metadataHeaders: ['Subject', 'From'] }, bg: true });
+        const hs = (((d.messages || [])[0] || {}).payload || {}).headers || [], h = n => (hs.find(x => x.name.toLowerCase() === n) || {}).value || '';
+        items.push({ id: t.id, date: m[1], subject: h('subject').slice(0, 200) || '(no subject)', from: h('from').replace(/\s*<.*>$/, '').replace(/^"|"$/g, '').slice(0, 100) });
+      }
+    }
+    L.share('mail', { items });
+  } catch {}
+}
 function bringBackReminders() {
-  return dueReminders().then(n => {
+  return dueReminders().finally(() => { shareReminders(); }).then(n => {
     if (!n) return;
     toast(n === 1 ? 'A reminder is back in your inbox' : 'Your reminders are back in your inbox');
     delete state.lists.inbox; delete state.lists['inbox|unread'];

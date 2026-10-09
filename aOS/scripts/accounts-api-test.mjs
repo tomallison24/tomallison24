@@ -4,7 +4,8 @@
 // OWNER_CODE secret, the lock on Calendar and Travel's routes is closed until the
 // owner exists, removing someone keeps everything of theirs and an invite back
 // returns it, "installed" never rewrites the user record (so it can't bring a removed
-// person back), and a sign-up can't take over a passkey that's already someone's.
+// person back), a sign-up can't take over a passkey that's already someone's, and
+// Calendar's layers are each person's own.
 //   node aOS/scripts/accounts-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest } from '../../functions/aOS/api/[[route]].js';
@@ -128,6 +129,24 @@ await test('a sign-up can\'t take over a passkey that is already someone\'s', as
   const r = await join({ invite: inv }, 'TOMKEY');   // the owner's passkey id
   assert.equal(r.status, 409); assert.equal(r.body.error, 'passkey-exists');
   assert.equal((await getJSON(db, 'cred:' + b64u(new TextEncoder().encode('TOMKEY')))).user, owner);
+});
+
+await test('Calendar layers: each person reads only their own, writes happen only on change, and the input is checked', async () => {
+  const sent = { todos: [{ id: 't1', title: 'Dentist', date: '2026-10-20' }] };
+  assert.equal((await call('layer', { app: 'notes', data: sent })).status, 401);
+  assert.equal((await call('layer', { app: 'drinks', data: sent }, tom)).status, 400);
+  assert.equal((await call('layer', { app: 'notes', data: [1, 2] }, tom)).status, 400);
+  assert.equal((await call('layer', { app: 'notes', data: { big: 'x'.repeat(200 * 1024) } }, tom)).status, 413);
+  assert.equal((await call('layer', { app: 'notes', data: sent }, tom)).body.ok, true);
+  const at = JSON.parse(db.m.get('layer:notes:' + owner)).at;
+  await new Promise(r => setTimeout(r, 5));
+  assert.equal((await call('layer', { app: 'notes', data: sent }, tom)).body.same, true, 'unchanged: no write');
+  assert.equal(JSON.parse(db.m.get('layer:notes:' + owner)).at, at);
+  const mine = (await call('layer', undefined, tom)).body.layers;
+  assert.deepEqual(mine.notes.data, sent);
+  const theirs = (await call('layer', undefined, await issue(db, samId))).body.layers;
+  assert.equal(theirs.notes, undefined, 'Sam can\'t see Tom\'s');
+  assert.equal((await call('layer', undefined)).status, 401);
 });
 
 console.log(`${n} of ${n} passed`);

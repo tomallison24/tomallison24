@@ -10,6 +10,8 @@
 //   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by,
 //                      removed?: when the owner removed them (signed out, data kept) }
 //   apps:<id>        { <app>: when it was last opened from their Home Screen }
+//   layer:<app>:<id> { at, data } - what Notes, Travel, Fitness or Mail shows in that
+//                    person's Calendar (functions/aOS/api); only they can read it
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
 //   invite:<token>   { name, by, user? } - one use, gone after 24 hours; with user,
 //                    it brings that removed person back, with everything they had
