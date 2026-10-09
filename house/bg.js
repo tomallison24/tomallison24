@@ -37,7 +37,15 @@ const BG_TONES = [   // hex in dark mode, lite in light mode; Temperature works 
 const BG = {
   id: null, c: null, x: null, w: 0, h: 0, dpr: 1, t0: 0, last: 0, raf: 0, s: null,
   still: matchMedia('(prefers-reduced-motion: reduce)').matches,
-  get light() { return matchMedia('(prefers-color-scheme: light)').matches; },
+  // Light or dark as chosen in the app (Light, Dark or Automatic, home.settings.theme,
+  // applied as data-theme by welcome.js), else the phone's own setting. Read
+  // from storage too: this runs before the deferred welcome.js sets data-theme.
+  get light() {
+    let t = document.documentElement.dataset.theme;
+    if (t !== 'light' && t !== 'dark') try { t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; } catch { t = null; }
+    if (t === 'light' || t === 'dark') return t === 'light';
+    return matchMedia('(prefers-color-scheme: light)').matches;
+  },
   // a colour for each mode: light-on-dark, or ink on light
   ink(dark, lite) { return this.light ? lite : dark; },
   pick() { const v = store.get('bg'); return BG_IDEAS.some(i => i.id === v) ? v : 'bubbles'; },
@@ -187,7 +195,9 @@ BG.start();
 setInterval(() => BG.paintTone(), 30000);   // the reading moves; the colour follows (eased by the page's .5s transition)
 // The phone switched between light and dark: the colour, and a still drawing redrawn.
 BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its listener lives as long as the page
-BG.scheme.addEventListener('change', () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+BG.repaint = () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); };
+BG.scheme.addEventListener('change', BG.repaint);
+addEventListener('aos:theme', BG.repaint);   // Light, Dark or Automatic chosen in the app
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.
