@@ -82,7 +82,7 @@
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
         'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
-        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
+        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
@@ -94,6 +94,7 @@
         'aOS shows ✓ Installed as soon as a new app has been opened, without reopening aOS',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
+        'Calendar: the Notes, Travel, Fitness and Mail layers come through your own family account, so they show on an iPhone, where every app keeps its own storage',
         'Fitness: your drinks from Drinks in Analysis, beside your training',
         'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
         'Canceling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
@@ -1089,11 +1090,13 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
   //   major (aOS1.3 -> aOS2): the old number lifts away and the 2 rises in; then
   //     "Visit aOS" for what's new.
   function playUpdate(id, from, to = latest()) {
-    const big = major(to) > major(from);
+    // shows the newest release that isn't silent (a silent one is only logged); seen up to `to`
+    const v = (RELEASES.find(r => !r.silent && cmp(r.v, to) <= 0) || { v: to }).v;
+    const big = major(v) > major(from);
     const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only logged here
     const notes = big ? top(fresh) : top(fresh.map(r => (r.apps || {})[id]).filter(Boolean));
     if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
-    const base = big ? '' : String(major(to)), newT = String(to).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
+    const base = big ? '' : String(major(v)), newT = String(v).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
     const ver = `<sup class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup>`;
     const deco = `<i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span>`;
     const head = `<div class="w-stage" style="justify-content:flex-start;padding-top:16vh"><div class="a-head"><img class="a-icon on" src="${icon(id)}" alt="">
@@ -1101,7 +1104,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
     const lit = `aOS<sup>${esc(base)}<span class="h-new">${esc(newT)}</span></sup>`, name = esc(NAMES[id]);
     const first = big
       ? { x: 'notes', noart: true, h: `${name} is on ${lit}`, notes, more: 'Open aOS for everything new' }
-      : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes, more: `Everything in aOS${esc(to)}` };
+      : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes, more: `Everything in aOS${esc(v)}` };
     return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
       const m = o.el.querySelector('.v-mark.minor');
       const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');
@@ -1175,6 +1178,32 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
     const A = await loadAccount().catch(() => null);
     if (A && !token()) await A.prompt(`Sign in once, so aOS knows ${esc(NAMES[APP])} is on this phone.`);
   }
+
+  // ---- Calendar's layers: what this app shows in your Calendar, kept in your account ----
+  // On an iPhone each Home Screen app has its own storage, so Calendar can't read
+  // Notes', Travel's, Fitness's or Mail's. Each of those calls AllisonOS.layer.share(app,
+  // data) with just what Calendar shows, whenever it changes; this sends it to your own
+  // family account (functions/aOS/api, POST layer) once things settle, only if this
+  // app is signed in, and only when it differs from what was last sent (aos.layer.<app>
+  // keeps a fingerprint: KV writes are scarce). Signed in later, it sends then.
+  const LAYER_SENT = 'aos.layer.', layerLast = {}, layerJobs = {};
+  const fingerprint = str => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + str.length; };
+  async function sendLayer(app) {
+    const t = token(), data = layerLast[app]; if (!t || !data) return;
+    const json = JSON.stringify(data), fp = fingerprint(json);
+    try { if (localStorage.getItem(LAYER_SENT + app) === fp) return; } catch {}
+    try {
+      const r = await fetch(api('layer'), { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app, data }) });
+      if (r.ok) localStorage.setItem(LAYER_SENT + app, fp);
+    } catch {}
+  }
+  function shareLayer(app, data) {
+    layerLast[app] = data;
+    clearTimeout(layerJobs[app]); layerJobs[app] = setTimeout(() => sendLayer(app), 3000);
+  }
+  addEventListener('aos:account', e => { if (e.detail) for (const app of Object.keys(layerLast)) sendLayer(app); });
+  addEventListener('pagehide', () => { for (const app of Object.keys(layerJobs)) { clearTimeout(layerJobs[app]); sendLayer(app); } });
+  AOS.layer = { share: shareLayer };
 
   // ---- the family's plan (aOS -> Subscription, just for fun) ----
   // The owner picks it in aOS and it's kept in the family account, since a Home Screen

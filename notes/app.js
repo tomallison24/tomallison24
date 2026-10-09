@@ -168,7 +168,20 @@
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
   function save(){ track(); persist(); if (syncCfg) scheduleSync(); pushDirty = true; }
-  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } }
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } shareCal(); }
+  // Calendar's Notes layer: dated reminders and notes with a nudge, kept in your own
+  // family account (home/welcome.js AllisonOS.layer), since Calendar can't read this
+  // app's storage on an iPhone. Only what Calendar shows; the last 400 days on.
+  function shareCal(){
+    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+    const since = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10), cut = v => String(v || '').slice(0, 500);
+    L.share('notes', {
+      lists: lists.map(l => ({ id: l.id, name: l.name, color: l.color })),
+      todos: todos.filter(t => t && t.date && t.date >= since).map(t => ({ id: t.id, title: t.title, date: t.date, time: t.time || '', done: !!t.done, notes: cut(t.notes), flagged: !!t.flagged, list: t.list })),
+      notes: notes.filter(n => n && n.reminder && !n.deletedAt && !n.archived).map(n => ({ id: n.id, title: n.title, body: cut(n.body), reminder: n.reminder })),
+    });
+  }
+  addEventListener('load', () => { try { if (localStorage.getItem(KEY)) shareCal(); } catch(e){} });   // never the samples shown before your first save
 
   function countTags(items){
     const m = new Map();

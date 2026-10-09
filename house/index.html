@@ -522,7 +522,7 @@
   .lockline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 14px 8px 0; }
   .lockline svg { flex: none; }
   /* Share: the code to read out, and how long it has left */
-  .sharecode { margin: 6px 0 0; text-align: center; font-size: 44px; font-weight: 300; letter-spacing: 6px; font-variant-numeric: tabular-nums; }
+  .sharecode { margin: 6px 0 0; text-align: center; font-size: 32px; font-weight: 400; letter-spacing: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
   .sharecode.gone { opacity: .35; text-decoration: line-through; }
   .sharelft { text-align: center; font-size: 14px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   .sharebtn { width: 100%; margin-top: 14px; }
@@ -739,7 +739,7 @@
         <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
       </div>
 
-      <!-- Share: a one-off link and a 6-digit code, good for 5 minutes. -->
+      <!-- Share: a one-off link and a 10-character code, good for 5 minutes. -->
       <div class="view" id="vShare" hidden>
         <div class="sharecode" id="shCode"></div>
         <div class="sharelft" id="shLeft"></div>
@@ -757,7 +757,7 @@
       <form class="view" id="vJoin" autocomplete="off" hidden>
         <p class="help" id="jnFrom"></p>
         <label class="field"><span>Code</span>
-          <input id="jnCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="6 digits" spellcheck="false"></label>
+          <input id="jnCode" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" maxlength="12" placeholder="10 letters and numbers" spellcheck="false"></label>
         <label class="field"><span>Name this device</span>
           <input id="jnName" maxlength="40" spellcheck="false"></label>
         <div class="status" id="jnStatus"></div>

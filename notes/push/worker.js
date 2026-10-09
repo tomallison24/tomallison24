@@ -152,11 +152,12 @@ async function authorise(env, sheet, fetchImpl) {
   try { items = await pull(sheet, fetchImpl); }                // the Sheet itself must accept it
   catch (e) { return e.message === 'wrong-secret' ? 'wrong-secret' : 'sheet-' + e.message; }
   if (cur) {
-    // A different Sheet replaces the one on file only when that one has stopped
-    // answering (its secret changed, or its link was retired). Can't tell yet
-    // (offline): refuse, and let the phone try again.
+    // A different Sheet replaces the one on file only when that one says its secret
+    // has changed (wrong-secret). Any other trouble with it - offline, Google having a
+    // bad moment, an odd answer - refuses, so no one can slip their own Sheet in then.
+    // (To move to a new Sheet: change the old script's secret first.)
     try { await pull(cur, fetchImpl); return 'other-sheet'; }
-    catch (e) { if (e.message === 'network') return 'other-sheet'; }
+    catch (e) { if (e.message !== 'wrong-secret') return 'other-sheet'; }
   }
   await env.PUSH.put('sheet', JSON.stringify({ url: sheet.url, secret: sheet.secret }));
   await keepItems(env, items);

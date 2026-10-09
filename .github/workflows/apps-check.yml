@@ -20,6 +20,8 @@ jobs:
         with:
           node-version: 22
       - run: node aOS/scripts/check-apps.mjs
+      # the family accounts' safety rules and the plan: plain Node, no network
+      - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node drinks/scripts/api-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).
@@ -32,3 +34,5 @@ jobs:
           node-version: 22
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node aOS/scripts/apps-smoke-test.mjs
+      # Calendar's layers through the family account, each app in its own storage as on an iPhone
+      - run: node calendar/scripts/layers-test.mjs

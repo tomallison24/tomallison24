@@ -8,10 +8,13 @@
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
+//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
+//   GET  layer            (family)             -> your own layers, for Calendar
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
-//   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
-//   POST remove           (owner) { id }       -> signs them out everywhere, and deletes their Drinks log
+//   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
+//                         { id } of someone removed -> an invite that brings them back as they were
+//   POST remove           (owner) { id }       -> signs them out everywhere; their data is kept
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
@@ -19,10 +22,16 @@
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
-const MAX_BODY = 16 * 1024;
+const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
+// Calendar's layers from the other apps. On an iPhone each Home Screen app keeps its
+// own storage, so Calendar can't read theirs: each app keeps a copy of just what
+// Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
+// it's written only when it changed (KV writes are scarce on the free plan).
+const LAYERS = ['notes', 'travel', 'fitness', 'mail'];
+const LAYER_MAX = 192 * 1024;
 
 // The family's subscription, just for fun (aOS -> Subscription): nothing is charged.
 // Kept as config:plan { id, since, ends? }; with none yet, Pro+ since the owner joined.
@@ -56,13 +65,14 @@ async function body(request) {
   try { return JSON.parse(t || '{}'); } catch { throw Object.assign(new Error('bad-json'), { status: 400 }); }
 }
 
-// Everyone with an account, the owner first, then in the order they joined.
+// Everyone with an account, the owner first, then in the order they joined
+// (with removed people, marked, for the owner's list).
 async function everyone(db) {
   const out = [];
   let cursor;
   do {
     const page = await db.list({ prefix: 'user:', cursor });
-    for (const k of page.keys) { const u = await getJSON(db, k.name); if (u) out.push({ ...pub(u), created: u.created }); }
+    for (const k of page.keys) { const u = await getJSON(db, k.name); if (u) out.push({ ...pub(u), created: u.created, removed: u.removed || null }); }
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
   return out.sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0) || a.created - b.created);
@@ -76,7 +86,8 @@ export async function onRequest({ request, params, env }) {
     if (!db) return reply({ storage: false, setup: false });
     const u = await sessionUser(db, request);   // your own record also says which apps you've opened from the Home Screen, and when
     const plan = await planView(db);
-    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps: u.apps || {} } });
+    const apps = u ? { ...(u.apps || {}), ...((await getJSON(db, 'apps:' + u.id)) || {}) } : null;
+    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps } });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -89,7 +100,7 @@ export async function onRequest({ request, params, env }) {
       const owner = await db.get('owner');
       let role = 'member', name = String(b.name || '').trim(), invite = null;
       if (!owner) {
-        if (!(await ownerCodeOk(b.code))) return reply({ error: 'code' }, 403);
+        if (!(await ownerCodeOk(b.code, env))) return reply({ error: 'code' }, 403);
         role = 'owner';
       } else {
         invite = await getJSON(db, 'invite:' + String(b.invite || ''));
@@ -97,8 +108,12 @@ export async function onRequest({ request, params, env }) {
         name = name || invite.name;
       }
       if (!NAME.test(name)) return reply({ error: 'name' }, 400);
-      const id = rand(16), challenge = rand(32), user = rand(16);
-      await putJSON(db, 'chal:' + id, { kind: 'signup', challenge, user, name, role, invite: invite ? String(b.invite) : null, by: invite ? invite.by : null }, 300);
+      // an invite back keeps the person's own id, so everything they had is theirs again
+      const back = invite && invite.user ? await getJSON(db, 'user:' + invite.user) : null;
+      if (invite && invite.user && !(back && back.removed)) return reply({ error: 'invite' }, 403);
+      if (back) name = back.name;
+      const id = rand(16), challenge = rand(32), user = back ? back.id : rand(16);
+      await putJSON(db, 'chal:' + id, { kind: 'signup', challenge, user, name, role, back: !!back, invite: invite ? String(b.invite) : null, by: invite ? invite.by : null }, 300);
       return reply({ id, challenge, rp: { id: P.rpId, name: 'AllisonOS' }, user: { id: user, name } });
     }
 
@@ -110,7 +125,11 @@ export async function onRequest({ request, params, env }) {
       const cred = await verifyRegistration(b, ch.challenge, P);
       if (ch.role === 'owner' && await db.get('owner')) return reply({ error: 'owner-exists' }, 409);
       if (ch.invite && !(await db.get('invite:' + ch.invite))) return reply({ error: 'invite' }, 403);   // used meanwhile
-      const user = { id: ch.user, name: ch.name, role: ch.role, creds: [cred.credId], created: Date.now(), by: ch.by };
+      if (await db.get('cred:' + cred.credId)) return reply({ error: 'passkey-exists' }, 409);   // never repoint someone's passkey
+      const was = ch.back ? await getJSON(db, 'user:' + ch.user) : null;
+      if (ch.back && !(was && was.removed)) return reply({ error: 'invite' }, 403);
+      const user = was ? { ...was, creds: [cred.credId], removed: undefined, back: Date.now() }
+        : { id: ch.user, name: ch.name, role: ch.role, creds: [cred.credId], created: Date.now(), by: ch.by };
       await putJSON(db, 'cred:' + cred.credId, { user: user.id, spki: cred.spki, alg: cred.alg, created: Date.now() });
       await putJSON(db, 'user:' + user.id, user);
       if (ch.invite) await db.delete('invite:' + ch.invite);
@@ -131,7 +150,7 @@ export async function onRequest({ request, params, env }) {
       await db.delete('chal:' + b.id);
       const cred = await getJSON(db, 'cred:' + String(b.credId || ''));
       const user = cred && await getJSON(db, 'user:' + cred.user);
-      if (!user) return reply({ error: 'unknown' }, 403);   // a passkey for someone no longer in the family, or not ours
+      if (!user || user.removed) return reply({ error: 'unknown' }, 403);   // a passkey for someone no longer in the family, or not ours
       await verifyAssertion(b, cred, ch.challenge, P);
       return reply({ token: await issue(db, user.id), user: pub(user) });
     }
@@ -143,15 +162,34 @@ export async function onRequest({ request, params, env }) {
     if (route === 'home' && method === 'GET') return reply({ address: (await db.get('config:home')) || null });
 
     // The family, for aOS's family card: names and roles only (the owner's list has the ids).
-    if (route === 'members' && method === 'GET') return reply({ members: (await everyone(db)).map(u => ({ name: u.name, role: u.role })) });
+    if (route === 'members' && method === 'GET') return reply({ members: (await everyone(db)).filter(u => !u.removed).map(u => ({ name: u.name, role: u.role })) });
 
     // An app opened from your Home Screen says so (at most twice a day, from home/welcome.js).
+    // Kept apart from the user record (apps:<id>), so it can never write a removed person back.
     if (route === 'installed' && method === 'POST') {
       const app = String((await body(request)).app || '');
       if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
-      me.apps = Object.assign({}, me.apps, { [app]: Date.now() });
-      await putJSON(db, 'user:' + me.id, me);
+      const apps = (await getJSON(db, 'apps:' + me.id)) || {};
+      apps[app] = Date.now();
+      await putJSON(db, 'apps:' + me.id, apps);
       return reply({ ok: true });
+    }
+
+    if (route === 'layer' && method === 'POST') {
+      const b = await body(request);
+      if (!LAYERS.includes(b.app)) return reply({ error: 'app' }, 400);
+      if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data)) return reply({ error: 'data' }, 400);
+      const json = JSON.stringify(b.data);
+      if (json.length > LAYER_MAX) return reply({ error: 'too-big' }, 413);
+      const key = 'layer:' + b.app + ':' + me.id, was = await getJSON(db, key);
+      if (was && JSON.stringify(was.data) === json) return reply({ ok: true, same: true });   // nothing new: no write
+      await putJSON(db, key, { at: Date.now(), data: b.data });
+      return reply({ ok: true });
+    }
+    if (route === 'layer' && method === 'GET') {
+      const out = {};
+      for (const a of LAYERS) { const x = await getJSON(db, 'layer:' + a + ':' + me.id); if (x) out[a] = x; }
+      return reply({ layers: out });
     }
 
     // ---- the owner's tools ----
@@ -160,10 +198,13 @@ export async function onRequest({ request, params, env }) {
     if (route === 'family' && method === 'GET') return reply({ family: await everyone(db) });
 
     if (route === 'invite' && method === 'POST') {
-      const name = String((await body(request)).name || '').trim();
+      const b = await body(request);
+      const back = b.id ? await getJSON(db, 'user:' + String(b.id)) : null;   // inviting a removed person back
+      if (b.id && !(back && back.removed)) return reply({ error: 'unknown' }, 404);
+      const name = back ? back.name : String(b.name || '').trim();
       if (!NAME.test(name)) return reply({ error: 'name' }, 400);
       const token = rand(18);
-      await putJSON(db, 'invite:' + token, { name, by: me.id, at: Date.now() }, 86400);
+      await putJSON(db, 'invite:' + token, { name, by: me.id, at: Date.now(), ...(back ? { user: back.id } : {}) }, 86400);
       return reply({ token, name, hours: 24 });
     }
 
@@ -172,9 +213,10 @@ export async function onRequest({ request, params, env }) {
       const u = await getJSON(db, 'user:' + id);
       if (!u) return reply({ error: 'unknown' }, 404);
       if (u.role === 'owner') return reply({ error: 'owner' }, 400);
+      // Signed out everywhere and their passkeys forgotten, but nothing of theirs is
+      // deleted (their record, Drinks log, apps): an invite back brings it all back.
       for (const c of u.creds || []) await db.delete('cred:' + c);
-      await db.delete('user:' + id);
-      await db.delete('drinks:' + id);   // their own Drinks log (functions/drinks/api)
+      await putJSON(db, 'user:' + id, { ...u, creds: [], removed: Date.now() });
       return reply({ ok: true });
     }
 

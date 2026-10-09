@@ -44,9 +44,16 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
     colour, with **Open in Notes**.
   - **Travel**: flights (departure to arrival), hotels (check-in to
     check-out, all-day) and car pick-ups and returns, with **Open in Travel**.
-  - **Mail**: Remind Me days, as all-day items, using Mail's own Gmail
-    sign-in (opened from Home, the apps share it); each opens the
+  - **Mail**: Remind Me days, as all-day items; each opens the
     conversation in Mail.
+
+  On an iPhone every Home Screen app keeps its own storage, so Notes, Travel,
+  Fitness and Mail each keep a copy of just what Calendar shows in your own
+  family account (`AllisonOS.layer` in home/welcome.js, `POST /aOS/api/layer`),
+  sent when their data changes and only if it did. Calendar reads yours with
+  `GET /aOS/api/layer`; only you can read it. Each app has to be signed in to
+  the family account once (it asks after its walkthrough). Where a browser does
+  share the apps' storage (a computer), Calendar uses that first.
   - **Fitness**: each day's workout as one all-day item ("Workout ·
     Shoulders, Core"), with the exercises and their sets, reps and weight
     in its details, and **Open in Fitness**, which opens that day.

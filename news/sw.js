@@ -2,7 +2,7 @@
 // so a new deploy (and fresh headlines) show up on the next open; the cache
 // is only the fallback when offline. Story images come from the publishers
 // and are left to the browser's own cache.
-const CACHE = 'news-v42';
+const CACHE = 'news-v43';
 const SHELL = ['./', 'index.html', 'app.js', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=4', 'icon-180.png?v=4', 'icon-512.png?v=4', '../home/slide.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
@@ -24,7 +24,9 @@ self.addEventListener('fetch', e => {
   // no-cache: always check with the server (GitHub Pages lets browsers reuse
   // files for 10 minutes), so an update shows on the next open, not later.
   e.respondWith(
-    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
+    // A page load goes as itself (fetch(e.request)), so a redirect - Cloudflare Access
+    // asking to sign in again - reaches the browser instead of failing to the old copy.
+    (e.request.mode === 'navigate' ? fetch(e.request) : fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }))
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
         return res;

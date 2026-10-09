@@ -187,7 +187,17 @@ if (window.top !== window.self) {
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (syncCfg ? ' Your log is safe in the Google Sheet.' : '')); }
+    shareCal();
   }
+  // Calendar's Fitness layer: the last 400 days of your log, just what Calendar shows,
+  // kept in your own family account (home/welcome.js AllisonOS.layer), since Calendar
+  // can't read this app's storage on an iPhone.
+  function shareCal() {
+    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+    const since = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
+    L.share('fitness', { logs: data.logs.filter(x => x && x.date >= since).map(x => ({ date: x.date, exercise: String(x.exercise || '').slice(0, 80), group: x.group, cardio: !!x.cardio, sets: x.sets, reps: x.reps, timed: !!x.timed, weight: x.weight, mins: x.mins, dist: x.dist, unit: x.unit })) });
+  }
+  addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (syncCfg) scheduleSync(); }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const logsOn = day => data.logs.filter(x => x.date === day);

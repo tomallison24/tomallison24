@@ -225,7 +225,8 @@
   if (invite) { try { sessionStorage.setItem('aos.later.aos', '1'); } catch {} }   // the account first, then how to add aOS
   const WHY = { code: 'That code isn\'t right.', invite: 'This invite has expired or was already used. Ask for a new one.', name: 'Use letters and spaces for your name.',
     storage: 'Family accounts aren\'t switched on yet.', 'owner-exists': 'The owner\'s account already exists: sign in instead.', unknown: 'That account isn\'t in the family any more.',
-    NotAllowedError: 'Canceled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.' };
+    NotAllowedError: 'Canceled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.',
+    'passkey-exists': 'That passkey already belongs to an account here: sign in instead.' };
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
@@ -316,14 +317,8 @@
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
-      try {
-        const r = await ACC.call('invite', { name: $('iName').value.trim() });
-        const link = new URL('./#invite=' + r.token, location.href).href;
-        $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
-        $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari.', url: link }).catch(() => {}) : $('iCopy').click();
-        $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
-        $('iName').value = '';
-      } catch (e) { $('iErr').textContent = why(e); }
+      try { showInvite(await ACC.call('invite', { name: $('iName').value.trim() })); $('iName').value = ''; }
+      catch (e) { $('iErr').textContent = why(e); }
       busy($('iGo'), false);
     };
     paintFamily();
@@ -336,14 +331,30 @@
     };
   }
 
+  // An invite link, to share or copy: a new person, or someone removed coming back.
+  function showInvite(r) {
+    const link = new URL('./#invite=' + r.token, location.href).href;
+    $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
+    $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari.', url: link }).catch(() => {}) : $('iCopy').click();
+    $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
+  }
+  // Removing someone signs them out and forgets their passkeys; nothing of theirs is
+  // deleted, so Invite back brings them back with their Drinks log and everything else.
   async function paintFamily() {
     let f; try { f = (await ACC.call('family')).family; } catch { return; }
     if (!$('fam')) return;
-    $('fam').innerHTML = f.map(m => `<div><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : 'Family'}</small></span>${m.role === 'owner' ? '' : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
+    $('fam').innerHTML = f.map(m => `<div${m.removed ? ' class="gone"' : ''}><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : m.removed ? 'Removed' : 'Family'}</small></span>${m.role === 'owner' ? ''
+      : m.removed ? `<button type="button" class="again" data-back="${esc(m.id)}">Invite back</button>` : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
     $('fam').onclick = async e => {
+      const k = e.target.closest('[data-back]');
+      if (k) {
+        busy(k, true);
+        try { showInvite(await ACC.call('invite', { id: k.dataset.back })); $('iOut').scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) { $('iErr').textContent = why(x); }
+        busy(k, false); return;
+      }
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(`Remove ${name}? They're signed out of every app straight away.`)) return;
+      if (!confirm(`Remove ${name}? They're signed out of every app straight away. Nothing of theirs is deleted: Invite back brings them back with their Drinks log.`)) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };
