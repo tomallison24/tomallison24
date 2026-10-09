@@ -38,3 +38,5 @@ jobs:
       - run: node calendar/scripts/layers-test.mjs
       # every app works on its own: users may want only some of the core apps
       - run: node aOS/scripts/standalone-test.mjs
+      # each app's live tour finds its way round the app, and tidies up after itself
+      - run: node aOS/scripts/tours-test.mjs
