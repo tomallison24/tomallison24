@@ -94,7 +94,8 @@
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
         'Fitness: your drinks from Drinks in Analysis, beside your training',
         'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
-        'Cancelling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen'],
+        'Cancelling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
+        'The 7-day trial is once per family'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -1177,7 +1178,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   // app can't see aOS's storage. A cancelled plan runs to the end of its month, a trial
   // for 7 days (the server works out when: GET /aOS/api/state's plan.ends). After that
   // every app but aOS is switched off: a screen over the whole app, with the way back
-  // to aOS, until a plan is chosen. The last plan seen is kept (aos.plan) for offline.
+  // to aOS, until a plan is chosen. Nothing is deleted: the app's data stays as it was,
+  // there again when a plan starts. The last plan seen is kept (aos.plan) for offline.
   const PLAN = 'aos.plan', PLAN_NAMES = { proplus: 'Pro+', pro: 'Pro', trial: 'trial' };
   const planLive = p => !p || !p.ends || Date.now() < p.ends;
   let planTimer = 0;
@@ -1196,7 +1198,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `${NAMES[APP]} is off`);
     el.innerHTML = `<div class="o-card"><img src="${icon(APP)}" alt=""><h1>${esc(NAMES[APP])} is off</h1>
       <p>The family's ${esc(PLAN_NAMES[p.id] || 'plan')}${p.id === 'trial' ? '' : ' plan'} ended on ${esc(day)}, so every app but aOS is switched off.</p>
-      <p>Choose a plan in aOS, in your account under Subscription, to turn them back on.</p>
+      <p>Choose ${p.id === 'trial' ? 'Pro or Pro+' : 'a plan'} in aOS, in your account under Subscription, to turn them back on. Nothing is deleted: everything is here when it starts again.</p>
       <a class="o-go" href="${url('../aOS/#subscription')}">Open aOS</a><small>Just for fun: nothing is charged.</small></div>`;
     document.body.appendChild(el);
   }

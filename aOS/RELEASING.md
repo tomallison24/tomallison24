@@ -83,8 +83,10 @@ them, so each person only makes their own token.
 The family's plan (aOS → Your account → **Subscription**, just for fun: nothing
 is charged) is kept there too, as `config:plan`. It's Pro+ from when the owner
 joined until the owner changes it. Cancelling keeps a plan until the end of its
-month, and a trial lasts 7 days; after that every app but aOS shows that it's off,
-with the way back to aOS, until the owner picks a plan. With accounts off there
+month, and a trial lasts 7 days, once per family (`config:trial`); after that
+every app but aOS shows that it's off, with the way back to aOS, until the owner
+picks a plan. Off is only a screen over the app: nothing is deleted, so
+everything is there when a plan starts again. With accounts off there
 is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.mjs`.
 
 ## The log

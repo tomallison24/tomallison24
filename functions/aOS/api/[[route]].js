@@ -13,8 +13,8 @@
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
 //   POST remove           (owner) { id }       -> signs them out everywhere, and deletes their Drinks log
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
-//   POST plan             (owner) { id } switches plan, { cancel: true } stops it at the end of
-//                         its month, { resume: true } keeps a cancelled one   -> the plan
+//   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
+//                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
 
@@ -27,8 +27,10 @@ const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'trave
 // The family's subscription, just for fun (aOS -> Subscription): nothing is charged.
 // Kept as config:plan { id, since, ends? }; with none yet, Pro+ since the owner joined.
 // A paid plan renews each month on the day it started; cancelled, it ends on the
-// next of those days. A trial ends 7 days after it started. Once a plan has ended,
-// every app but aOS is switched off (home/welcome.js) until the owner picks a plan.
+// next of those days. A trial ends 7 days after it started, and the family gets one
+// (config:trial, when it started). Once a plan has ended, every app but aOS is
+// switched off (home/welcome.js) until the owner picks a plan. Switched off is all:
+// nothing anyone has saved is deleted, so it's all there when a plan starts again.
 const PLANS = ['proplus', 'pro', 'trial'];
 const TRIAL_MS = 7 * 864e5;
 // The same day of the month, k months on (the 31st becomes the month's last day).
@@ -43,8 +45,9 @@ export async function planView(db, now = Date.now()) {
   const owner = await db.get('owner'); if (!owner) return null;
   let p = await getJSON(db, 'config:plan');
   if (!p || !PLANS.includes(p.id)) { const o = await getJSON(db, 'user:' + owner); p = { id: 'proplus', since: (o && o.created) || now }; }
-  if (p.id === 'trial') return { id: p.id, since: p.since, ends: p.since + TRIAL_MS, cancelled: false, renews: null };
-  return { id: p.id, since: p.since, ends: p.ends || null, cancelled: !!p.ends, renews: p.ends ? null : nextRenewal(p.since, now) };
+  const trialUsed = p.id === 'trial' || !!(await db.get('config:trial'));
+  if (p.id === 'trial') return { id: p.id, since: p.since, ends: p.since + TRIAL_MS, cancelled: false, renews: null, trialUsed };
+  return { id: p.id, since: p.since, ends: p.ends || null, cancelled: !!p.ends, renews: p.ends ? null : nextRenewal(p.since, now), trialUsed };
 }
 
 async function body(request) {
@@ -188,6 +191,10 @@ export async function onRequest({ request, params, env }) {
       const b = await body(request), now = Date.now(), cur = await planView(db, now);
       if (b.id !== undefined) {
         if (!PLANS.includes(b.id)) return reply({ error: 'plan' }, 400);
+        if (b.id === 'trial') {
+          if (cur.trialUsed) return reply({ error: 'trial-used' }, 400);   // one trial per family
+          await db.put('config:trial', String(now));
+        }
         await putJSON(db, 'config:plan', { id: b.id, since: now });
       } else if (b.cancel) {
         if (cur.id === 'trial') return reply({ error: 'trial' }, 400);   // a trial ends on its own
