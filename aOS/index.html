@@ -24,9 +24,9 @@
   - Search: by name, tagline or what the walkthrough says.
   - An app's page: Get, its facts as chips, What's New (and Version History),
     Preview (drawn from its walkthrough cards), What it needs, About.
-  - Get: the install steps, animated, in a sheet; Install (after one play-
-    through) opens the app's own address with ?via=aos, where it shows how to
-    add it, and the view's ✕ comes back here.
+  - Get: opens the app's own address with ?via=aos (in the in-app Safari view
+    an installed aOS opens links in), which shows only its install steps,
+    animated; the view's ✕ comes back here.
   - The avatar: your account (#acct: the owner's set-up, an invite's Join,
     Sign in; signed in, the owner's tools - the Home Assistant address, invites,
     the family), Appearance, Updates (#whats-new, the release log without silent
@@ -123,6 +123,7 @@
   .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 650; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .get { position: relative; flex: 0 0 auto; min-width: 70px; height: 32px; padding: 0 16px; border-radius: 11px; background: var(--pastel); color: #10181A; font-size: 15px; font-weight: 700;
     box-shadow: 0 4px 14px rgba(111,165,151,.3), inset 0 1px 0 rgba(255,255,255,.5); }
+  a.get { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
   .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px currentColor; font-weight: 650; }
   .get.done::before { content: '✓ '; }
   .story .get.done { color: #fff; }
@@ -205,18 +206,6 @@
   .glbl { display: flex; align-items: center; gap: 8px; margin: 26px 4px 0; font-size: 13px; font-weight: 650; color: var(--muted); }
   .glbl::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
 
-  /* GET: the install steps, in a sheet */
-  .shade { position: fixed; inset: 0; z-index: 40; background: rgba(8,12,13,.4); opacity: 0; transition: opacity .3s; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-  .shade.on { opacity: 1; }
-  .sheet { position: fixed; left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 41; max-width: 520px; margin: 0 auto; padding: 24px 20px 16px; border-radius: 32px; overflow: hidden;
-    background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 24px 60px rgba(0,0,0,.3); transform: translateY(110%); transition: transform .45s cubic-bezier(.2,.8,.2,1); text-align: center; }
-  .sheet::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--pastel); }
-  .sheet.on { transform: none; }
-  .sheet h2 { margin: 4px 0 2px; font-size: 22px; } .sheet p { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
-  .sheet .sdh { margin: 6px 0 0; }
-  .sheet .go { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 12px; border-radius: 17px; background: var(--pastel); color: #10181A; font-weight: 700; transition: opacity .3s; }
-  .sheet .go[aria-disabled="true"] { opacity: .35; pointer-events: none; }
-  .sheet .not { height: 40px; margin-top: 4px; color: var(--muted); font-size: 15px; width: 100%; }
   .ptitle { margin: 0 0 14px; font-size: 30px; letter-spacing: -.5px; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
   .acct > div { display: block; }
@@ -243,7 +232,7 @@
   .signin .avatar { width: 44px; height: 44px; flex-basis: 44px; box-shadow: none; }
   .signin span:nth-child(2) { flex: 1; } .signin b { display: block; } .signin i { display: block; font-style: normal; font-size: 14px; color: var(--muted); }
   .lab { margin: 30px 0 0; padding: 14px 16px; border-radius: 18px; background: var(--dot); color: var(--muted); font-size: 14px; line-height: 1.45; }
-  @media (prefers-reduced-motion: reduce) { .page, .sheet, .story, .tabs .ind { transition: none; } .story .art img { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .page, .story, .tabs .ind { transition: none; } .story .art img { animation: none; } }
 </style>
 </head>
 <body>
@@ -304,7 +293,7 @@
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
   // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone
   let INST = new Set();
-  const getBtn = id => INST.has(id) ? `<button type="button" class="get done" data-get="${id}">Installed</button>` : `<button type="button" class="get" data-get="${id}">Get</button>`;
+  const getBtn = id => `<a class="get${INST.has(id) ? ' done' : ''}" data-get="${id}" href="${appUrl(id)}" target="_blank" rel="noopener">${INST.has(id) ? 'Installed' : 'Get'}</a>`;
   const paintGets = () => document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
   const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); };
   // an app the newest (non-silent) release changed says so under its name
@@ -538,22 +527,10 @@
     };
   }
 
-  // ---- GET: the install steps, here; Install opens the app's own address ----
-  function getSheet(id) {
-    const shade = document.createElement('div'); shade.className = 'shade';
-    const sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Get ' + D.NAMES[id]);
-    sh.innerHTML = `<h2>Get ${esc(D.NAMES[id])}</h2><p>Watch once, then tap Install and do the same.</p><div class="sdh"></div>
-      <a class="go" href="${appUrl(id)}" target="_blank" rel="noopener" aria-disabled="true">Install</a><button type="button" class="not">Not now</button>`;
-    document.body.append(shade, sh);
-    W.safariDemo(sh.querySelector('.sdh'), D.NAMES[id], icon(id), { onDone: () => sh.querySelector('.go').setAttribute('aria-disabled', 'false') });
-    requestAnimationFrame(() => requestAnimationFrame(() => { shade.classList.add('on'); sh.classList.add('on'); }));
-    const done = () => { shade.classList.remove('on'); sh.classList.remove('on'); setTimeout(() => { shade.remove(); sh.remove(); }, 420); };
-    shade.onclick = done; sh.querySelector('.not').onclick = done;
-  }
 
   // ---- taps ----
   document.addEventListener('click', ev => {
-    const g = ev.target.closest('[data-get]'); if (g) { ev.stopPropagation(); getSheet(g.dataset.get); return; }
+    if (ev.target.closest('[data-get]')) return;   // Get: the link opens the app's own address, which shows how to add it
     const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
     const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
     if (ev.target.closest('[data-signin-card]')) return acctPage();
