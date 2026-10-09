@@ -8,6 +8,7 @@
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
+//   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
 //   POST remove           (owner) { id }       -> signs them out everywhere
@@ -25,6 +26,18 @@ async function body(request) {
   const t = await request.text();
   if (t.length > MAX_BODY) throw Object.assign(new Error('too-big'), { status: 413 });
   try { return JSON.parse(t || '{}'); } catch { throw Object.assign(new Error('bad-json'), { status: 400 }); }
+}
+
+// Everyone with an account, the owner first, then in the order they joined.
+async function everyone(db) {
+  const out = [];
+  let cursor;
+  do {
+    const page = await db.list({ prefix: 'user:', cursor });
+    for (const k of page.keys) { const u = await getJSON(db, k.name); if (u) out.push({ ...pub(u), created: u.created }); }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out.sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0) || a.created - b.created);
 }
 
 export async function onRequest({ request, params, env }) {
@@ -100,6 +113,9 @@ export async function onRequest({ request, params, env }) {
     // Home fills this in for a new person, so they only need their own token.
     if (route === 'home' && method === 'GET') return reply({ address: (await db.get('config:home')) || null });
 
+    // The family, for aOS's family card: names and roles only (the owner's list has the ids).
+    if (route === 'members' && method === 'GET') return reply({ members: (await everyone(db)).map(u => ({ name: u.name, role: u.role })) });
+
     // An app opened from your Home Screen says so (at most twice a day, from home/welcome.js).
     if (route === 'installed' && method === 'POST') {
       const app = String((await body(request)).app || '');
@@ -112,17 +128,7 @@ export async function onRequest({ request, params, env }) {
     // ---- the owner's tools ----
     if (me.role !== 'owner') return reply({ error: 'owner-only' }, 403);
 
-    if (route === 'family' && method === 'GET') {
-      const out = [];
-      let cursor;
-      do {
-        const page = await db.list({ prefix: 'user:', cursor });
-        for (const k of page.keys) { const u = await getJSON(db, k.name); if (u) out.push({ ...pub(u), created: u.created }); }
-        cursor = page.list_complete ? null : page.cursor;
-      } while (cursor);
-      out.sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0) || a.created - b.created);
-      return reply({ family: out });
-    }
+    if (route === 'family' && method === 'GET') return reply({ family: await everyone(db) });
 
     if (route === 'invite' && method === 'POST') {
       const name = String((await body(request)).name || '').trim();

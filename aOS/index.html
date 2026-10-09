@@ -16,7 +16,8 @@
 <!--
   aOS - the home of every AllisonOS app, as an app store in Sea glass.
 
-  - Today: postcards, as a bento (one tall, two halves, one wide): setting up
+  - Today: the family card first - the family icon, "The Allison Family", a
+    greeting by name and everyone in the family (signed in) - then postcards, as a bento (one tall, two halves, one wide): setting up
     Home, the app of the day, what's new in aOS (the mark, #mark), meet an app,
     your family account. Signed out, a card at the top asks you to sign in.
   - Apps: every app as a card glowing in its own colour, with its tagline (or
@@ -228,6 +229,18 @@
   .rel h5 { margin: 10px 0 0; font-size: 14px; } .rel li.hi { color: var(--text); }
   .rel li.hi::marker { content: '✦  '; color: var(--accent); }
   #signin { margin-bottom: 12px; }
+  /* the family card: aOS is the Allison family's */
+  .famhero { position: relative; display: grid; grid-template-columns: 72px 1fr; gap: 6px 16px; align-items: center; margin-bottom: 14px; padding: 16px; border-radius: 28px;
+    background: var(--card); box-shadow: inset 0 0 0 1px var(--edge), 0 14px 30px rgba(0,0,0,.06); overflow: hidden; }
+  .famhero::before { content: ''; position: absolute; right: -40px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(var(--blob2), transparent 70%); pointer-events: none; }
+  .famhero .ficon { width: 72px; height: 72px; border-radius: 20px; box-shadow: 0 10px 24px rgba(129,147,188,.35); }
+  .famhero .ftxt { position: relative; min-width: 0; }
+  .famhero small { display: block; font-size: 13px; font-weight: 650; color: var(--muted); }
+  .famhero h2 { margin: 2px 0 0; font-size: 24px; letter-spacing: -.4px; line-height: 1.1; }
+  .famhero p { margin: 5px 0 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
+  .fwho { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .fwho span { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 4px; border-radius: 12px; background: var(--dot); font-size: 14px; font-weight: 600; }
+  .fwho i { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: var(--pastel); color: #10181A; font-style: normal; font-size: 12px; font-weight: 800; }
   .signin { cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
   .signin .avatar { width: 44px; height: 44px; flex-basis: 44px; box-shadow: none; }
   .signin span:nth-child(2) { flex: 1; } .signin b { display: block; } .signin i { display: block; font-style: normal; font-size: 14px; color: var(--muted); }
@@ -239,6 +252,7 @@
 
 <section class="tab" id="today">
   <div class="head"><div><span class="mark ink">aOS</span><h1>Today<small id="date"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div id="famhero"></div>
   <div id="signin" hidden></div>
   <div id="stories"></div>
 </section>
@@ -334,7 +348,7 @@
 
   // ---- Apps, and Search ----
   const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i></span>${getBtn(id)}</span></div>`).join('');
-  $('list').innerHTML = `<div class="sec"><h2>Every AllisonOS app</h2></div>${rows(D.APPS)}`;
+  $('list').innerHTML = `<div class="sec"><h2>Curated for the Allison family</h2></div>${rows(D.APPS)}`;
   const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = D.APPS.filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
   $('q').oninput = find; find();
 
@@ -430,9 +444,30 @@
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
-  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); return state; };
+  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); paintHero(state); return state; };
 
   // Today, signed out: a card that opens the account
+  // The family card: aOS is curated for the Allison family. A greeting by name, and
+  // everyone in the family (names only, for signed-in family).
+  const FAMILY = 'Allison';
+  const FAMILY_ICON = `<svg class="ficon" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fam-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9D3C7"/><stop offset=".35" stop-color="#B9C6E0"/><stop offset=".68" stop-color="#E3C5C3"/><stop offset="1" stop-color="#E9D6B4"/></linearGradient></defs>
+      <rect width="64" height="64" rx="18" fill="url(#fam-g)"/><g fill="#fff">
+      <path d="M32 8.6c-1.3-2.1-4.8-1.7-4.8 1.1 0 2.4 4.8 5.1 4.8 5.1s4.8-2.7 4.8-5.1c0-2.8-3.5-3.2-4.8-1.1z"/>
+      <circle cx="21.5" cy="22" r="6.2" opacity=".9"/><path d="M10 46c0-7.4 5.2-12.6 11.5-12.6S33 38.6 33 46z" opacity=".9"/>
+      <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
+      <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
+      <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
+  let members = null;
+  async function paintHero(st) {
+    const u = st && st.user, h = new Date().getHours();
+    const hello = u ? `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${esc(u.name.split(/\s+/)[0])}` : 'Welcome home';
+    if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
+    if (!u) members = null;
+    $('famhero').innerHTML = `<div class="famhero">${FAMILY_ICON}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
+      <p>Every app here is chosen for our family: ${D.APPS.length} apps, one account, one Face ID.</p></div>
+      ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
+  }
+
   function paintSigninCard() {
     const c = $('signin'), st = state || {};
     const what = st.error || !st.storage || st.user ? null : invite ? ['Join the family', 'You\'ve been invited: make your account with Face ID.'] : !st.setup ? ['Set up your family account', 'Once, by the owner, with the owner code.'] : ['Sign in', 'Face ID signs you in to every app.'];

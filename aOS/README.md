@@ -45,7 +45,10 @@ tab, Install). Rounded squares rather than circles; small pastel squares mark
 headings. A glass dock at the bottom - **Today**, **Apps**, **Search** - with a
 pastel stop that slides between them, and your avatar top right.
 
-- **Today**: postcards laid out as a bento (one tall, two halves, one wide):
+- **Today**: first the family card - aOS is curated for the Allison family:
+  the family icon (two adults, two children and a heart, white on Sea glass),
+  "The Allison Family", a greeting by name, and, signed in, everyone in the
+  family (`GET /aOS/api/members`, names only). Then postcards laid out as a bento (one tall, two halves, one wide):
   setting up Home, the app of the day, what's new (the aOS mark), meet an app,
   your family account. Each opens full screen. Signed out, a card at the top
   asks you to sign in (or set up, or join).
