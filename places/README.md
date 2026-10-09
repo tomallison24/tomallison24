@@ -142,7 +142,7 @@ web app link and secret, so there's nothing new to set up in Google:
 2. In Notes: the download button → **Google Sheet sync** → **Copy setup
    link**.
 3. In Places: the cloud button → **Paste a setup link**. (Where Places and
-   Notes share storage, as in Safari or AllisonOS Home, **Use the same Sheet
+   Notes share storage, as in Safari, **Use the same Sheet
    as Notes** does it in one tap.)
 
 The Sheet gets a hidden `_places` tab the app reads back from, and readable

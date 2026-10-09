@@ -1319,7 +1319,7 @@ if (window.top !== window.self) {
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div><p class="hint">Notes, Travel, Mail and Fitness share this phone’s storage when they are opened from AllisonOS Home; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
+      + '</div><p class="hint">Notes, Travel, Mail and Fitness share this phone’s storage when they are opened in Safari; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[1, 'Monday'], [0, 'Sunday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'

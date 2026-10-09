@@ -26,7 +26,7 @@
   Data: everything stays on this phone, in localStorage (allison-fitness-v1).
   Calendar shows each day's workout as a layer, and Fitness starts its week
   on the day Calendar's setting says; both work because the apps share this
-  phone's storage when they are opened from AllisonOS Home. Code: app.js,
+  phone's storage when they are opened in Safari. Code: app.js,
   and analysis.js for the Analysis view's comparisons.
   The look is Notes' own style block, unchanged, plus Fitness's own pieces
   at the end.
@@ -821,7 +821,6 @@ a.xrow:active{background:var(--fill)}
 <script src="../home/account.js"></script>   <!-- family accounts: reads your own Drinks log for Analysis -->
 <script src="analysis.js"></script>
 <script src="app.js"></script>
-<!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
 <script src="../home/welcome.js" data-app="fitness" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>

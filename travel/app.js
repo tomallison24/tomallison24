@@ -1121,7 +1121,7 @@ if (window.top !== window.self) {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in (opened from AllisonOS Home). Travel only reads.'
+    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
       : 'Travel looks for confirmations from airlines, hotels and car hire firms in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     const n = lookupsThisMonth();

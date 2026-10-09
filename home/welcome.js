@@ -270,7 +270,7 @@
         {
           "i": "play",
           "t": "Up Next",
-          "d": "Home shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
+          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
         },
         {
           "i": "search",
