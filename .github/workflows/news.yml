@@ -183,7 +183,7 @@ jobs:
           # /podcasts/api/*, Travel's flight status, /travel/api/*, and
           # Calendar's iCloud connection, /calendar/api/*, and Weather's forecast
           # radar run time, /weather/api/*) as Pages Functions.
-          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness drinks aOS aos _site/ && if [ -d labs ]; then cp -r labs _site/; fi
+          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness drinks aOS aos _headers _site/ && if [ -d labs ]; then cp -r labs _site/; fi
           npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
           # Family accounts (server/auth.js, functions/aOS/api): a Workers KV
           # namespace, "allisonos-accounts", bound to the Pages project as

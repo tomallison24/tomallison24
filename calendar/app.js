@@ -80,10 +80,13 @@ if (window.top !== window.self) {
   // Settings
   // ---------------------------------------------------------------------
   const settings = Object.assign({
-    weekStart: 1, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
+    weekStart: 0, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
     layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false },
   }, ls.json(K.settings, {}));
   settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false }, settings.layers || {});
+  // Weeks start on Sunday, the US way. Settings saved before that kept Monday only as the
+  // old default; unless the week start was picked here (weekStartPicked), it moves to Sunday.
+  if (!settings.weekStartPicked && settings.weekStart !== 0) { settings.weekStart = 0; try { if (ls.json(K.settings, null)) ls.set(K.settings, JSON.stringify(settings)); } catch {} }
   const saveSettings = () => ls.set(K.settings, JSON.stringify(settings));
 
   // Clock: the phone's own, or forced.
@@ -134,7 +137,7 @@ if (window.top !== window.self) {
     family: { name: 'Family', color: 'var(--cal)' },
     holiday: { name: 'US Holidays', color: 'var(--hol)', sub: 'Worked out on this phone: federal holidays and the usual observances' },
     note: { name: 'Notes', color: 'var(--nt)', sub: 'Reminders with a date, and notes with a nudge' },
-    travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and car hire from Travel' },
+    travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and rental cars from Travel' },
     mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days from Mail' },
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'The workouts logged in Fitness, one a day' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your own standard drinks and alcohol-free days, from your account. Only you see them.' },
@@ -369,7 +372,7 @@ if (window.top !== window.self) {
     return out;
   }
 
-  // ---- Travel: flights, hotels and car hire ----
+  // ---- Travel: flights, hotels and rental cars ----
   function travelItems(w) {
     const data = layerData('allison-travel-v1', 'travel');
     if (!data || !Array.isArray(data.bookings)) return [];
@@ -390,8 +393,8 @@ if (window.top !== window.self) {
         out.push(allDayItem('travel', 'trv|' + b.id, b.name || 'Hotel', b.checkIn, out2, { sub: b.address || b.city || 'Hotel', link: '../travel/', notes: desc, icon: 'hotel' }));
       } else if (b.type === 'car' && b.pickup) {
         const s = at(b.pickup, b.pickupIso);
-        if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id + '|pu', 'Pick up · ' + (b.company || 'Car hire'), s, s + 30 * MIN, { sub: b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' }));
-        if (b.dropoff) { const e = at(b.dropoff, b.dropoffIso); if (inWin(e)) out.push(timedItem('travel', 'trv|' + b.id + '|dr', 'Return · ' + (b.company || 'Car hire'), e, e + 30 * MIN, { sub: b.dropPlace || b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' })); }
+        if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id + '|pu', 'Pick up · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), s, s + 30 * MIN, { sub: b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' }));
+        if (b.dropoff) { const e = at(b.dropoff, b.dropoffIso); if (inWin(e)) out.push(timedItem('travel', 'trv|' + b.id + '|dr', 'Return · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), e, e + 30 * MIN, { sub: b.dropPlace || b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' })); }
       } else if (b.start) {
         const s = at(b.start), e = at(b.end);
         if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id, b.title || 'Booking', s, isNaN(e) || e <= s ? s + H : e, { sub: b.place || '', link: '../travel/', notes: desc }));
@@ -1357,7 +1360,7 @@ if (window.top !== window.self) {
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
       + '</div><p class="hint">Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account, so they appear even though every app on an iPhone keeps its own storage. Only you see yours. Each app needs to be signed in to your family account once.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
-      + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[1, 'Monday'], [0, 'Sunday']], settings.weekStart) + '</div>'
+      + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[0, 'Sunday'], [1, 'Monday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'
       + '<div class="frow"><span class="l">Temperature</span>' + seg('units', [['auto', 'Auto'], ['f', '°F'], ['c', '°C']], settings.units) + '</div>'
       + '<div class="frow"><label for="stDayStart">Day view opens at</label><select id="stDayStart">' + opt(Array.from({ length: 24 }, (_, h) => [h, fmtHour(h)]), settings.dayStart) + '</select></div>'
@@ -1386,7 +1389,7 @@ if (window.top !== window.self) {
       rebuild(); render(); renderSettings(); return;
     }
     const b = e.target.closest('[data-set]');
-    if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; saveSettings(); render(); renderSettings(); }
+    if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; if (k === 'weekStart') settings.weekStartPicked = true; saveSettings(); render(); renderSettings(); }
   });
   const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };

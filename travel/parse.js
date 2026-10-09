@@ -2,7 +2,7 @@
 // Travel: turns a booking email into bookings.
 //
 // Two ways in, best first:
-// 1. Structured data. Many airlines, hotels and car hire firms put a hidden
+// 1. Structured data. Many airlines, hotels and rental car companies put a hidden
 //    schema.org block in their confirmation emails (FlightReservation,
 //    LodgingReservation, RentalCarReservation) - the same data Gmail uses for
 //    its own trip cards. As JSON-LD it is read straight from the HTML; as
@@ -497,7 +497,7 @@
     if (!pu) return [];
     const company = /national/i.test(from + subject) ? 'National' : /enterprise/i.test(from + subject) ? 'Enterprise' : /alamo/i.test(from + subject) ? 'Alamo'
       : /hertz/i.test(from + subject) ? 'Hertz' : /avis/i.test(from + subject) ? 'Avis' : /budget/i.test(from + subject) ? 'Budget' : /sixt/i.test(from + subject) ? 'Sixt'
-      : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Car hire').trim();
+      : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Rental car').trim();
     const place = s => {
       if (!s) return '';
       const l = s.split('\n').map(x => x.replace(/^[\s:–-]+/, '').trim()).filter(x => x && !findDates(x).length && !findTimes(x).length && x.length > 3 && x.length < 120);

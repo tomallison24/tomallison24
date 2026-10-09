@@ -7,6 +7,12 @@ import crypto from 'node:crypto';
 import { b64u } from '../../mail/push/webpush.js';
 import { handle, tick, fireAt, localTime, slim, dueFor, when } from '../push/worker.js';
 
+// The fixtures live on 2 Oct 2026, and the Worker keeps only reminders from the last
+// 2 days of "now": so the test's own clock is pinned there (the Worker's real paths -
+// /subscribe, /refresh - read Date.now()), or it fails once that date is past.
+const PINNED = Date.UTC(2026, 9, 2, 20, 0);
+Date.now = () => PINNED;
+
 let pass = 0, fail = 0;
 const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log((cond ? 'PASS ' : 'FAIL ') + label + (extra ? '  — ' + extra : '')); };
 const MIN = 60e3, DAY = 864e5;

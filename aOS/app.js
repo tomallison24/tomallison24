@@ -309,6 +309,15 @@
     box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small><br><small class="muted">Face ID signs you in to every app</small></span>
       <button type="button" class="soft" id="aOut">Sign out</button></div>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
+    box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3><p>Sign out everywhere else: every other device, and the other apps on this phone, ask for Face ID again. Nothing is deleted.</p>
+      <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div></div>`);
+    $('aOthers').onclick = async () => {
+      if (!confirm('Sign out everywhere else? Every other device, and the other apps on this phone, will ask for Face ID again.')) return;
+      busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
+      try { await ACC.signOutOthers(); m.style.color = 'var(--muted)'; m.textContent = 'Done: everywhere else is signed out.'; }
+      catch (e) { m.textContent = why(e); }
+      busy($('aOthers'), false);
+    };
     if (u.role !== 'owner') return;
     box.insertAdjacentHTML('beforeend', `<div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>

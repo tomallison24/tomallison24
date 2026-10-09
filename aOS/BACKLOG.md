@@ -7,37 +7,25 @@ an item through (or delete it) when it ships, and say which release.
 
 ## Medium (logged for future updates, at the owner's request)
 
-1. **Anyone can use up the daily KV write allowance without signing in.**
-   `POST /aOS/api/signin/begin` writes a challenge to KV for every call (free
-   plan: about 1,000 writes a day across the account). About 1,000 calls a day
-   would stop sign-in, Drinks sync, Calendar's layers and Installed reporting
-   until the next day. Fix: stateless challenges (an HMAC-signed `{nonce,
-   expiry}` checked at finish, no KV write) and a Cloudflare rate-limiting
-   rule on `/aOS/api/*`. `functions/aOS/api/[[route]].js`.
+1. ~~**Anyone can use up the daily KV write allowance without signing in.**~~
+   Done: asking to sign in now hands out a signed challenge and writes nothing;
+   only a real passkey's sign-in writes (once). A Cloudflare rate-limiting rule
+   on `/aOS/api/*` would still be a good extra (dashboard, not code).
 2. **The GitHub Pages copy shares its address with every other GitHub Pages
    site on the account** (`tomallison24.github.io`). Gmail, Home Assistant and
    Notes Sheet tokens saved by the apps there can be read by script on any
    other Pages site of the account. Fix: drop the mirror (the deploy job in
    `.github/workflows/news.yml`), or give it its own domain.
-3. **Offline caches keep family-account replies.** aOS, Mail, News, Weather,
-   Notes, Places and Home cache `/aOS/api/*` answers (the family list, the Home
-   Assistant address, signed-in state) and keep them after signing out; aOS
-   offline can show the owner's tools after sign-out. Fix: each `sw.js` leaves
-   `/api/` alone (as Calendar, Drinks, Travel and Podcasts do), and bump CACHE.
-4. **No security headers.** No `_headers` file: pages can be framed by other
-   sites, and there is no HSTS, `nosniff`, Referrer-Policy or
-   Permissions-Policy. Fix: a `_headers` file at the site root with
-   `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
-   `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
-   `Referrer-Policy: no-referrer` and a `Permissions-Policy` (check each app's
-   needs: location for Weather/Places/Calendar, camera for Travel's scanner).
-5. **Notes reminder notifications can't deploy.** `notes/scripts/push-test.mjs`
-   fails (its fixtures are fixed dates, and `pull()` drops reminders over 2 days
-   old by the real clock), and `.github/workflows/notes-push.yml` runs it before
-   deploying. The only default-branch run (2026-09-30) also failed at "Deploy the
-   Worker", probably the Cloudflare token missing **Workers Scripts · Edit**.
-   Fix: pass `now` through `refresh`/`pull` into `slim`, or date the fixtures
-   from today; then check the token and re-run Notes push.
+3. ~~**Offline caches keep family-account replies.**~~ Done: every app's
+   `sw.js` leaves `/api/` alone.
+4. ~~**No security headers.**~~ Done: `_headers` (no framing by other sites,
+   nosniff, Referrer-Policy, HSTS, a Permissions-Policy), published by news.yml.
+5. **Notes reminder notifications: the test is fixed; the deploy needs a
+   permission.** `notes/scripts/push-test.mjs` passes again (the Worker now uses
+   the clock it's given, and the test pins its own) and runs in CI. The last
+   default-branch deploy failed at "Deploy the Worker", most likely because the
+   Cloudflare token lacks **Account · Workers Scripts · Edit**: add it
+   (`aOS/RELEASING.md`, "Family accounts") and re-run Notes push.
 6. **News headlines refresh every 4 to 6 hours, not every 30 minutes.** GitHub
    throttles the `schedule` in `news.yml`. Fix: trigger the workflow from an
    outside cron (a Cloudflare cron Worker calling `workflow_dispatch`), or
@@ -68,20 +56,17 @@ an item through (or delete it) when it ships, and say which release.
 
 ## Lower priority, not quick
 
-- **Sign-ins last 400 days and can't be cut off one phone at a time.** Only
-  removing the person (or rotating the KV `secret`, which signs everyone out)
-  ends a session. Fix: a per-person session list or epoch, checked in
-  `sessionUser`, with "Sign out everywhere"; shorter sessions that renew.
+(Done since: the API no longer returns error details; weeks start on Sunday
+everywhere, with Monday kept only where it was picked in Calendar; Travel says
+"rental car".)
+
+- **Sign-ins last 400 days.** "Sign out everywhere else" (aOS → Your account)
+  now ends all of a person's other sessions at once; one phone alone still can't
+  be picked out (no per-device list), and sessions don't shorten and renew.
 - **Labs passkeys use the real site.** `labs/two/passkey.js` makes passkeys on
   the production address, which then sit beside the AllisonOS one in the
   passkey picker (picking one gives "unknown"). Labs are the owner's test pages,
   so whether to remove or change that page is the owner's call.
-- **The accounts API returns `detail: e.message` on unexpected errors**
-  (`functions/aOS/api/[[route]].js`, the last catch). Not sensitive today, but
-  better as a fixed message.
-- **Week start.** Drinks and Fitness try to follow Calendar's "Week starts on",
-  read from their own storage, so on an iPhone they keep their own default. Fix:
-  share it through the account like the layers, or give each its own setting.
 - **iOS limits, not code:** "Open in Drinks/Fitness/…" from Calendar, and the
   off screen's **Open aOS**, open a Safari view with its own storage (signed
   out) rather than the Home Screen app; and an app's "off" screen covers the
@@ -92,12 +77,6 @@ an item through (or delete it) when it ships, and say which release.
 - **"Places from Calendar" shows green when it isn't set up.**
   `places/scripts/from-calendar.mjs` exits 0 with "Not set up yet"; emit a
   `::notice::` so it's visible in Actions.
-- **Week starts on Monday by default.** US calendars usually start on Sunday;
-  changing the default changes everyone's week layout in Calendar, Fitness and
-  Drinks, so it's the owner's call (Calendar → Settings → Week starts on).
-- **"Car hire" in Travel** is the British term (US: "rental car"). It's wording,
-  not spelling, and it runs through Travel and Calendar's layer; change it all
-  at once if wanted.
 - **Some apps show dates in the phone's own format** (Mail, Travel, Notes,
   Podcasts, Places, Weather, Home). On a US phone that's US; only the apps that
   forced British dates were moved to US.

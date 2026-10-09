@@ -21,7 +21,7 @@ jobs:
           node-version: 22
       - run: node aOS/scripts/check-apps.mjs
       # the family accounts' safety rules and the plan: plain Node, no network
-      - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node drinks/scripts/api-test.mjs
+      - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).

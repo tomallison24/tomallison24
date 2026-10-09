@@ -47,7 +47,7 @@ const pad = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const day = n => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
 const TODAY = ymd(day(0)), YESTERDAY = ymd(day(-1)), TWO_AGO = ymd(day(-2));
-const weekStart = () => { const d = day(0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); };
+const weekStart = () => { const d = day(0); d.setDate(d.getDate() - d.getDay()); return ymd(d); };
 
 // ---- the family account server: the real route, on Workers KV in memory ----
 const kv = new Map();
@@ -96,7 +96,7 @@ await page.goto(BASE + '/drinks/');
 await page.waitForFunction(() => window.__drinks);
 await page.waitForTimeout(900);
 
-await test('the week: seven days from Monday, today marked, the week’s one number', async () => {
+await test('the week: seven days from Sunday, today marked, the week’s one number', async () => {
   const days = await page.$$eval('.drow', els => els.map(e => e.dataset.day));
   assert.equal(days.length, 7); assert.equal(days[0], weekStart());
   assert.equal(await page.$eval('.drow.today', e => e.dataset.day), TODAY);

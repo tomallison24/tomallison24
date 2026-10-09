@@ -95,10 +95,10 @@ await page.goto(BASE + '/fitness/');
 await page.waitForFunction(() => window.__fitness);
 await page.waitForTimeout(500);
 
-await test('the week shows seven days from Monday, today marked', async () => {
+await test('the week shows seven days from Sunday, today marked', async () => {
   const days = await page.$$eval('.drow', els => els.map(e => e.dataset.day));
   assert.equal(days.length, 7);
-  assert.equal(days[0], weekStart(false));
+  assert.equal(days[0], weekStart(true));
   assert.equal(await page.$eval('.drow.today', e => e.dataset.day), TODAY);
   assert.match(await page.textContent('.navrow .lbl'), /^This week · /);
   assert.equal(await page.textContent('#viewName'), 'Week');
@@ -113,7 +113,7 @@ await test('last week shows the shoulder day, with its groups and totals', async
   assert.equal(await page.$$eval('.stat b', els => els.map(e => e.textContent).join(',')), '1,2,6');
   assert.ok(await page.isVisible('#todayBtn'));
   await page.click('#todayBtn');
-  assert.equal(await page.$eval('.drow', e => e.dataset.day), weekStart(false));
+  assert.equal(await page.$eval('.drow', e => e.dataset.day), weekStart(true));
 });
 
 await test('a day: muscle group, then exercise, then weight, reps and sets; last time fills in', async () => {
@@ -256,16 +256,21 @@ await test('Calendar shows the workouts as a layer, and links back to the day', 
   await page.goto(BASE + '/fitness/?date=' + LAST_WEEK);
   await page.waitForSelector('#daySheet:not([hidden])');
   assert.match(await page.textContent('#fxList'), /Overhead Barbell Press/);
-  const lw = day(-7); lw.setDate(lw.getDate() - (lw.getDay() + 6) % 7);
+  const lw = day(-7); lw.setDate(lw.getDate() - lw.getDay());
   assert.equal(await page.$eval('.drow', e => e.dataset.day), ymd(lw), 'opens on that day’s week');
 });
 
-await test('the week starts on Sunday when Calendar is set to', async () => {
-  const sun = await newPage('light', SEED, { 'allison-calendar-v1-settings': JSON.stringify({ weekStart: 0 }) });
+await test('the week starts on Monday when Monday was picked in Calendar (an old default Monday doesn\'t count)', async () => {
+  const old = await newPage('light', SEED, { 'allison-calendar-v1-settings': JSON.stringify({ weekStart: 1 }) });
+  await old.page.goto(BASE + '/fitness/');
+  await old.page.waitForFunction(() => window.__fitness);
+  assert.equal(await old.page.$eval('.drow', e => e.dataset.day), weekStart(true), 'the old default stays Sunday');
+  await old.ctx.close();
+  const sun = await newPage('light', SEED, { 'allison-calendar-v1-settings': JSON.stringify({ weekStart: 1, weekStartPicked: true }) });
   await sun.page.goto(BASE + '/fitness/');
   await sun.page.waitForFunction(() => window.__fitness);
-  assert.equal(await sun.page.$eval('.drow', e => e.dataset.day), weekStart(true));
-  assert.match(await sun.page.$eval('.drow .dn small', e => e.textContent), /Sun/);
+  assert.equal(await sun.page.$eval('.drow', e => e.dataset.day), weekStart(false));
+  assert.match(await sun.page.$eval('.drow .dn small', e => e.textContent), /Mon/);
   violations.push(...(await sun.page.evaluate(() => window.__csp || [])));
   await sun.ctx.close();
 });

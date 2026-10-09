@@ -1,6 +1,6 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v26';
+const CACHE = 'aos-v27';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/welcome.js', '../home/account.js'];
 
 self.addEventListener('install', e => {
@@ -15,7 +15,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // never /…/api/: account answers (who you are, the family) aren't kept on the phone
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

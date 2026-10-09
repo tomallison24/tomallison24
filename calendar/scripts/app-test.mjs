@@ -44,7 +44,7 @@ const day = n => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.ge
 const TODAY = ymd(day(0)), TOMORROW = ymd(day(1));
 const ics = (uid, lines) => 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Apple Inc.//iOS 26.0//EN\r\nCALSCALE:GREGORIAN\r\nBEGIN:VEVENT\r\nUID:' + uid + '\r\nDTSTAMP:20260901T120000Z\r\n' + lines.join('\r\n') + '\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n';
 const compact = s => s.replace(/-/g, '');
-const weekStartMon = (() => { const d = day(0); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return ymd(d); })();
+const weekStartSun = (() => { const d = day(0); d.setDate(d.getDate() - d.getDay()); return ymd(d); })();
 const files = new Map([
   ['dentist.ics', { etag: '"d1"', ics: ics('DENTIST-1', ['DTSTART;TZID=' + TZ + ':' + compact(TODAY) + 'T140000', 'DTEND;TZID=' + TZ + ':' + compact(TODAY) + 'T150000', 'SUMMARY:Dentist', 'LOCATION:12 High Street', 'BEGIN:VALARM', 'TRIGGER:-PT30M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM']) }],
   ['away.ics', { etag: '"a1"', ics: ics('AWAY-1', ['DTSTART;VALUE=DATE:' + compact(TOMORROW), 'DTEND;VALUE=DATE:' + compact(ymd(day(3))), 'SUMMARY:Grandma visiting']) }],
@@ -144,7 +144,7 @@ await test('the week view lays events out and Travel’s flight is on tomorrow',
   await page.waitForSelector('#timeview');
   assert.equal((await page.$$('.col')).length, 7);
   const first = await page.$eval('.dh[data-day]', e => e.dataset.day);
-  assert.equal(first, weekStartMon, 'the week starts on Monday');
+  assert.equal(first, weekStartSun, 'the week starts on Sunday');
   const titles = await page.$$eval('.tev b', els => els.map(e => e.textContent));
   assert.ok(titles.some(t => t.startsWith('UA 1234')), 'Travel flight: ' + titles.join());
   assert.ok((await page.textContent('.allday')).includes('Courtyard Boston'), 'Travel hotel as all-day');
@@ -284,20 +284,21 @@ await test('switches: a glass thumb slides under the chosen view, day and settin
   await page.click('.tab[data-view="list"]');
 });
 
-await test('settings: the layers switch off and on, and the week can start on Sunday', async () => {
+await test('settings: the layers switch off and on, and the week can start on Monday', async () => {
   await page.click('#setBtn');
   await page.waitForSelector('#setSheet:not([hidden])');
   const t = await page.textContent('#stBody');
   assert.ok(t.includes('Connected') && t.includes('Family') && t.includes('US Holidays') && t.includes('Sign in to your family account first'), t);
   await shot(page, '09-settings');
   await page.click('[data-layer="notes"]');
-  await page.click('[data-set="weekStart"][data-val="0"]');
+  await page.click('[data-set="weekStart"][data-val="1"]');
   await page.click('#setSheet .sheethead [data-close]');
   await page.click('.tab[data-view="month"]');
   await page.waitForTimeout(150);
   assert.ok(!(await page.textContent('#main')).includes('Call the plumber'), 'Notes layer off');
-  assert.equal(await page.$eval('.wkhead span', e => e.textContent), 'S', 'Sunday first');
-  await page.click('#setBtn'); await page.click('[data-layer="notes"]'); await page.click('[data-set="weekStart"][data-val="1"]'); await page.click('#setSheet .sheethead [data-close]');
+  assert.equal(await page.$eval('.wkhead span', e => e.textContent), 'M', 'Monday first, once picked');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-calendar-v1-settings')).weekStartPicked), true);
+  await page.click('#setBtn'); await page.click('[data-layer="notes"]'); await page.click('[data-set="weekStart"][data-val="0"]'); await page.click('#setSheet .sheethead [data-close]');
 });
 
 await test('dark mode renders', async () => {

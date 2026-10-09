@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Travel</title>
-<meta name="description" content="Every flight, hotel and car hire in one place, read from your Gmail, in the same frosted glass as Mail, Notes and News.">
+<meta name="description" content="Every flight, hotel and rental car in one place, read from your Gmail, in the same frosted glass as Mail, Notes and News.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,9 +17,9 @@
 <link rel="icon" type="image/png" href="icon-512.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  Travel - a hub for every trip: flights, hotels and car hire, read from the
+  Travel - a hub for every trip: flights, hotels and rental cars, read from the
   booking emails in Gmail, with live flight status and links to search for
-  more on Google Flights, Google Hotels, Marriott and car hire sites.
+  more on Google Flights, Google Hotels, Marriott and rental car sites.
 
   Data: bookings live in this browser's localStorage and, once connected, in
   a Google Sheet both phones share (the same set-up as Notes). Emails are read
@@ -850,7 +850,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
       <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="psLbl">Paste a confirmation</h2><div class="acts"><button class="iconbtn okbtn" id="psAdd" type="button" aria-label="Read it"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste the booking email here" style="min-height:200px;color:var(--text)"></textarea></div>
-        <p class="hint" id="psHint">The text of a flight, hotel or car hire confirmation. Nothing is sent anywhere; it is read on this phone.</p>
+        <p class="hint" id="psHint">The text of a flight, hotel or rental car confirmation. Nothing is sent anywhere; it is read on this phone.</p>
       </div>
     </div>
   </div>

@@ -1,9 +1,9 @@
 # Travel
 
-Every flight, hotel and car hire in one place, as a home-screen web app in
+Every flight, hotel and rental car in one place, as a home-screen web app in
 the same frosted glass as Mail, Notes and News. It fills itself from the
 booking emails in Gmail, shows live status for flights about to leave, and
-links out to Google Flights, Google Hotels, Marriott and car hire searches
+links out to Google Flights, Google Hotels, Marriott and rental car searches
 with the details filled in.
 
 - **Trips**: bookings close together in time become a trip, named after
@@ -17,15 +17,15 @@ with the details filled in.
   is on Cloudflare; elsewhere it saves a calendar file), so the calendar does
   the reminding. At the bottom,
   **Find more for this trip** opens Google Flights, Google Hotels, Marriott,
-  Kayak car hire and National with the trip's places and dates filled in.
+  Kayak rental cars and National with the trip's places and dates filled in.
 - **A booking**: every detail can be edited. A flight shows **live status**
   (on time or delayed, gates, terminals, baggage belt) from 36 hours before
   take-off until it lands. Links to the email (in Mail, or Gmail on the web),
   a map, the calendar, **Mark as cancelled** and **Delete**.
 - **Explore**: from, to and dates, then one tap to search Google Flights,
-  Google Hotels, Marriott, Kayak car hire or National. Book there; the
+  Google Hotels, Marriott, Kayak rental cars or National. Book there; the
   confirmation email then shows up in Trips by itself.
-- **Add by hand** (the + button): a flight, hotel or car hire. The clipboard
+- **Add by hand** (the + button): a flight, hotel or rental car. The clipboard
   button reads a **pasted confirmation** (from any inbox, e.g. one forwarded
   by someone else) the same way Gmail's are read.
 - **Two phones**: a shared Google Sheet, set up like Notes' (below).
@@ -37,7 +37,7 @@ send, change or delete anything). The first time, it looks back a year; after
 that, every time it opens (at most every 30 minutes) for anything new. It
 only opens emails whose subject looks like a booking (confirmation,
 itinerary, reservation, e-ticket, cancelled, …), that come from the
-airlines, Marriott, National and the other big car hire firms, or that carry
+airlines, Marriott, National and the other big rental car companies, or that carry
 Gmail's **Travel** label. Promotions are skipped. Each email is read once;
 **Read the last year again** in Settings starts over,
 replacing everything read from email except bookings you edited, checked or
@@ -52,8 +52,8 @@ next open looked back a year once more; mail already read isn't opened again.
 
 Two ways of reading, best first:
 
-1. **The booking data in the email.** Many airlines, hotels and car hire
-   firms hide a small block of structured data (schema.org
+1. **The booking data in the email.** Many airlines, hotels and rental car
+   companies hide a small block of structured data (schema.org
    `FlightReservation`, `LodgingReservation`, `RentalCarReservation`) in
    their confirmations; it's what Gmail itself uses for its trip cards.
    When it's there, Travel uses it and the details are exact, time zones
@@ -61,7 +61,7 @@ Two ways of reading, best first:
 2. **The words.** Otherwise Travel reads the text: flight numbers of the
    airlines below, the airport codes, dates and times around them; the
    check-in / check-out lines of hotel emails; the pick-up / return lines of
-   car hire emails. This works for the common layouts but can't be perfect,
+   rental car emails. This works for the common layouts but can't be perfect,
    so these bookings are marked **Check details**. Open one, fix anything
    that's off, and tap **Looks right**.
 
@@ -69,7 +69,7 @@ Airlines it knows by flight number: the major US ones (United, Delta,
 American, Southwest, Alaska, JetBlue, Hawaiian, Spirit, Allegiant, Sun
 Country), **Frontier (F9)** and **Breeze (MX)**, plus Air Canada, WestJet and
 the big European, Middle East and Asian carriers (`AIRLINES` in `parse.js`).
-Hotels: any, with Marriott's brands recognised by name. Car hire: National,
+Hotels: any, with Marriott's brands recognised by name. Rental cars: National,
 Enterprise, Alamo, Hertz, Avis, Budget, Sixt. Parking (e.g. ParkRDU) shows as
 its own entry in the trip.
 
@@ -200,7 +200,7 @@ their prices inside the app; it opens them with the search filled in:
 - Google Flights: `google.com/travel/flights?q=Flights from DEN to BOS on …`
 - Google Hotels: `google.com/travel/search?q=Hotels in Boston …`
 - Marriott: `marriott.com/search/findHotels.mi?destinationAddress.destination=…&fromDate=MM/DD/YYYY&toDate=…`
-- Kayak car hire: `kayak.com/cars/<place>/<pick-up date>/<return date>`
+- Kayak rental cars: `kayak.com/cars/<place>/<pick-up date>/<return date>`
 - National: its home page (no search address found that could be checked).
 
 None of these formats is published by the sites; they are the addresses the

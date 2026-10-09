@@ -1,6 +1,6 @@
 "use strict";
 
-// Travel: every flight, hotel and car hire in one place.
+// Travel: every flight, hotel and rental car in one place.
 //
 // - Bookings come from Gmail (read on the phone, read-only), from a pasted
 //   confirmation, or typed in. parse.js does the reading.
@@ -9,7 +9,7 @@
 //   Cloudflare Pages Function holding the flight data key).
 // - A Google Sheet keeps both phones in step, as in Notes.
 // - Explore and each trip link out to Google Flights, Google Hotels,
-//   Marriott and car hire searches, filled in.
+//   Marriott and rental car searches, filled in.
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -77,7 +77,9 @@ if (window.top !== window.self) {
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>',
     out: '<svg viewBox="0 0 24 24"><path d="M9.6 20H6.8A2.8 2.8 0 0 1 4 17.2V6.8A2.8 2.8 0 0 1 6.8 4h2.8"/><path d="M15.4 16.6l4.1-4.1a.7.7 0 0 0 0-1l-4.1-4.1M19.6 12H9.4"/></svg>',
   };
-  const TYPE_NAME = { flight: 'Flight', hotel: 'Hotel', car: 'Car hire', other: 'Other' };
+  const TYPE_NAME = { flight: 'Flight', hotel: 'Hotel', car: 'Rental car', other: 'Other' };
+  // a rental car's company, or "Rental car" (older bookings were saved as "Car hire")
+  const carCo = b => b.company && b.company !== 'Car hire' ? b.company : 'Rental car';
 
   // ---------------------------------------------------------------------
   // Data: bookings (and trip names), kept like Notes keeps notes
@@ -195,7 +197,7 @@ if (window.top !== window.self) {
   function titleOf(b) {
     if (b.type === 'flight') return flightName(b) + ' · ' + (b.from || '?') + ' → ' + (b.to || '?');
     if (b.type === 'hotel') return b.name || 'Hotel';
-    if (b.type === 'car') return (b.company || 'Car hire') + (b.carClass ? ' · ' + b.carClass : '');
+    if (b.type === 'car') return carCo(b) + (b.carClass ? ' · ' + b.carClass : '');
     return b.title || 'Booking';
   }
   // Where people usually fly from: the most common first departure of a trip.
@@ -417,7 +419,7 @@ if (window.top !== window.self) {
       h += '<div class="sub">' + esc([next.address, next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
     } else if (next.type === 'car') {
       const out = next.pickup && moment(next.pickup, next.pickupIso) <= now;
-      h += '<h3>' + esc(next.company || 'Car hire') + '</h3><div class="when">' + (out ? 'Return ' + esc(fmtDay(next.dropoff)) + ' · ' + esc(fmtTime(next.dropoff)) : 'Pick up ' + esc(fmtDay(next.pickup)) + (fmtTime(next.pickup) ? ' · ' + esc(fmtTime(next.pickup)) : '')) + '</div>';
+      h += '<h3>' + esc(carCo(next)) + '</h3><div class="when">' + (out ? 'Return ' + esc(fmtDay(next.dropoff)) + ' · ' + esc(fmtTime(next.dropoff)) : 'Pick up ' + esc(fmtDay(next.pickup)) + (fmtTime(next.pickup) ? ' · ' + esc(fmtTime(next.pickup)) : '')) + '</div>';
       h += '<div class="sub">' + esc([out ? next.dropPlace : next.pickupPlace, next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
     } else {
       h += '<h3>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
@@ -456,7 +458,7 @@ if (window.top !== window.self) {
     let h = '';
     if (!bookings.length) {
       h = '<div class="empty glass"><strong>No trips yet</strong>'
-        + (hasGmail() ? 'Tap the envelope to look through Gmail for flight, hotel and car hire confirmations.' : 'Connect Gmail and Travel finds your flight, hotel and car hire confirmations by itself.')
+        + (hasGmail() ? 'Tap the envelope to look through Gmail for flight, hotel and rental car confirmations.' : 'Connect Gmail and Travel finds your flight, hotel and rental car confirmations by itself.')
         + '</div><button class="btn" type="button" id="emptyGo">' + (hasGmail() ? 'Look in Gmail now' : 'Connect Gmail') + '</button>'
         + '<button class="btn quiet" type="button" id="emptyAdd">Add a booking by hand</button>';
     } else if (st.when === 'check') {
@@ -501,7 +503,7 @@ if (window.top !== window.self) {
       if (!fmtTime(at)) time = side === 'start' ? 'In' : 'Out';
       s = side === 'start' ? [b.address, b.checkOut ? plural(Math.max(1, Math.round((dOf(b.checkOut) - dOf(b.checkIn)) / D)), 'night') : ''].filter(Boolean).join(' · ') : '';
     } else if (b.type === 'car') {
-      t = (side === 'start' ? 'Pick up · ' : 'Return · ') + (b.company || 'Car hire');
+      t = (side === 'start' ? 'Pick up · ' : 'Return · ') + carCo(b);
       s = [side === 'start' ? b.pickupPlace : (b.dropPlace || b.pickupPlace), side === 'start' ? b.carClass : ''].filter(Boolean).join(' · ');
     } else { t = b.title || 'Booking'; s = b.place || ''; }
     const meta = [statusPill(b), b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
@@ -546,7 +548,7 @@ if (window.top !== window.self) {
       + linkRow(LINKS.googleFlights(from, dest, d0, d1 > d0 ? d1 : ''), 'Google Flights', (from ? from + ' → ' : '') + dest + ' · ' + fmtRange(d0, d1), I.flight)
       + linkRow(LINKS.googleHotels(where, d0, d1), 'Google Hotels', where + ' · ' + fmtRange(d0, d1), I.hotel)
       + linkRow(LINKS.marriott(where, d0, d1), 'Marriott', where + ' · ' + fmtRange(d0, d1), I.hotel)
-      + linkRow(LINKS.kayakCars(/^[A-Z]{3}$/.test(dest) ? dest : where, d0, d1), 'Car hire (Kayak)', 'Compares National, Enterprise, Hertz and others', I.car)
+      + linkRow(LINKS.kayakCars(/^[A-Z]{3}$/.test(dest) ? dest : where, d0, d1), 'Rental cars (Kayak)', 'Compares National, Enterprise, Hertz and others', I.car)
       + linkRow(LINKS.national(), 'National Car Rental', 'Opens nationalcar.com', I.car)
       + '</div>';
     $('tpBody').innerHTML = h;
@@ -1067,8 +1069,8 @@ if (window.top !== window.self) {
         ev(b.id, '🏨 ' + (b.name || 'Hotel'), 'DTSTART;VALUE=DATE:' + b.checkIn.replace(/-/g, ''), 'DTEND;VALUE=DATE:' + out.replace(/-/g, ''), [b.name, b.address].filter(Boolean).join(', '), desc, null);
       } else if (b.type === 'car' && b.pickup) {
         const pu = b.pickup.length >= 16 ? b.pickup : b.pickup + 'T10:00';
-        ev(b.id + '-pu', '🚗 Pick up · ' + (b.company || 'Car hire'), timed(pu, b.pickupIso).s, endFor(pu, b.pickupIso, '', '', 30), b.pickupPlace, desc, 60);
-        if (b.dropoff) { const dr = b.dropoff.length >= 16 ? b.dropoff : b.dropoff + 'T10:00'; ev(b.id + '-dr', '🚗 Return · ' + (b.company || 'Car hire'), timed(dr, b.dropoffIso).s, endFor(dr, b.dropoffIso, '', '', 30), b.dropPlace || b.pickupPlace, desc, 60); }
+        ev(b.id + '-pu', '🚗 Pick up · ' + carCo(b), timed(pu, b.pickupIso).s, endFor(pu, b.pickupIso, '', '', 30), b.pickupPlace, desc, 60);
+        if (b.dropoff) { const dr = b.dropoff.length >= 16 ? b.dropoff : b.dropoff + 'T10:00'; ev(b.id + '-dr', '🚗 Return · ' + carCo(b), timed(dr, b.dropoffIso).s, endFor(dr, b.dropoffIso, '', '', 30), b.dropPlace || b.pickupPlace, desc, 60); }
       } else if (b.start) {
         const s = b.start.length >= 16 ? b.start : b.start + 'T09:00';
         ev(b.id, b.title || 'Booking', 'DTSTART:' + floating(s), endFor(s, '', b.end, '', 60), b.place, desc, 60);
@@ -1093,7 +1095,7 @@ if (window.top !== window.self) {
     $('exLinks').innerHTML = linkRow(LINKS.googleFlights(from, to, out, back), 'Google Flights', (from || 'From anywhere') + ' → ' + (to || 'anywhere') + ' · ' + when, I.flight)
       + linkRow(LINKS.googleHotels(placeWords(to), out, back), 'Google Hotels', where + ' · ' + when, I.hotel)
       + linkRow(LINKS.marriott(placeWords(to), out, back), 'Marriott', where + ' · ' + when, I.hotel)
-      + linkRow(LINKS.kayakCars(to || '', out, back), 'Car hire (Kayak)', where + ' · ' + when, I.car)
+      + linkRow(LINKS.kayakCars(to || '', out, back), 'Rental cars (Kayak)', where + ' · ' + when, I.car)
       + linkRow(LINKS.national(), 'National Car Rental', 'Opens nationalcar.com', I.car);
   }
   ['exFrom', 'exTo', 'exOut', 'exBack'].forEach(id => $(id).addEventListener('input', drawLinks));
@@ -1132,7 +1134,7 @@ if (window.top !== window.self) {
     }
     $('stGmail').innerHTML = rows;
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
-      : 'Travel looks for confirmations from airlines, hotels and car hire firms in the last year of email, then for new ones each time it opens. Promotions are skipped.';
+      : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'

@@ -2,7 +2,7 @@
 // new deploy shows up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v30';
+const CACHE = 'mail-v31';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=2', 'icon-512.png?v=2', '../home/slide.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
@@ -23,7 +23,8 @@ self.addEventListener('activate', e => {
 // sent on to the new address, so the page's relative links resolve from there.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // never /…/api/: account answers (who you are, the family) aren't kept on the phone
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   e.respondWith(
     fetch(new Request(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }))
       .then(res => res.redirected && e.request.mode === 'navigate' ? Response.redirect(res.url, 302) : res)

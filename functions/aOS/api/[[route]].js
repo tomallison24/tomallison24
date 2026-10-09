@@ -4,10 +4,11 @@
 //   GET  state            accounts on? owner set up? the family's plan? and, signed in, who you are
 //   POST signup/begin     { name, code } (the owner, once) or { name, invite }
 //   POST signup/finish    the new passkey      -> { token, user }
-//   POST signin/begin                          -> a challenge
+//   POST signin/begin                          -> a challenge (signed, not stored: no KV write)
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
+//   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
 //   GET  layer            (family)             -> your own layers, for Calendar
 //   GET  members          (family) everyone's first name and role, for aOS's family card
@@ -19,7 +20,7 @@
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
-import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
+import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
@@ -134,25 +135,28 @@ export async function onRequest({ request, params, env }) {
       await putJSON(db, 'user:' + user.id, user);
       if (ch.invite) await db.delete('invite:' + ch.invite);
       if (ch.role === 'owner') await db.put('owner', user.id);
-      return reply({ token: await issue(db, user.id), user: pub(user) });
+      return reply({ token: await issue(db, user.id, Date.now(), await signOuts(db, user.id)), user: pub(user) });
     }
 
+    // Anyone can ask to sign in, so handing out a challenge writes nothing (KV writes are
+    // scarce: a stored one would let anyone use them all up). It's signed instead, good for
+    // 5 minutes, and used once: only a real passkey's sign-in writes (used:<challenge>).
     if (route === 'signin/begin' && method === 'POST') {
-      const id = rand(16), challenge = rand(32);
-      await putJSON(db, 'chal:' + id, { kind: 'signin', challenge }, 300);
-      return reply({ id, challenge, rpId: P.rpId });
+      const challenge = rand(32);
+      return reply({ id: await sealChallenge(db, 'signin', challenge, 300), challenge, rpId: P.rpId });
     }
 
     if (route === 'signin/finish' && method === 'POST') {
       const b = await body(request);
-      const ch = await getJSON(db, 'chal:' + String(b.id || ''));
-      if (!ch || ch.kind !== 'signin') return reply({ error: 'expired' }, 400);
-      await db.delete('chal:' + b.id);
+      const challenge = await openChallenge(db, 'signin', b.id);
+      if (!challenge) return reply({ error: 'expired' }, 400);
       const cred = await getJSON(db, 'cred:' + String(b.credId || ''));
       const user = cred && await getJSON(db, 'user:' + cred.user);
       if (!user || user.removed) return reply({ error: 'unknown' }, 403);   // a passkey for someone no longer in the family, or not ours
-      await verifyAssertion(b, cred, ch.challenge, P);
-      return reply({ token: await issue(db, user.id), user: pub(user) });
+      await verifyAssertion(b, cred, challenge, P);
+      if (await db.get('used:' + challenge)) return reply({ error: 'expired' }, 400);   // each challenge signs in once
+      await db.put('used:' + challenge, '1', { expirationTtl: 300 });
+      return reply({ token: await issue(db, user.id, Date.now(), await signOuts(db, user.id)), user: pub(user) });
     }
 
     // ---- for the family ----
@@ -190,6 +194,12 @@ export async function onRequest({ request, params, env }) {
       const out = {};
       for (const a of LAYERS) { const x = await getJSON(db, 'layer:' + a + ':' + me.id); if (x) out[a] = x; }
       return reply({ layers: out });
+    }
+
+    // Lost a phone? Every other session of yours ends; this device gets a fresh one.
+    if (route === 'signout-others' && method === 'POST') {
+      const sv = await signOutOthers(db, me.id);
+      return reply({ token: await issue(db, me.id, Date.now(), sv), user: pub(me) });
     }
 
     // ---- the owner's tools ----
@@ -251,6 +261,7 @@ export async function onRequest({ request, params, env }) {
 
     return reply({ error: 'not-found' }, 404);
   } catch (e) {
-    return reply({ error: e.status ? e.message : 'verify', detail: e.status ? undefined : e.message }, e.status || 400);
+    if (!e.status) console.error('aOS api', route, e && e.message);   // in Cloudflare's logs, not the reply
+    return reply({ error: e.status ? e.message : 'verify' }, e.status || 400);
   }
 }
