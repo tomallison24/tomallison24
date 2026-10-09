@@ -25,7 +25,7 @@ const BG_IDEAS = [
   { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
   { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
-  { id: 'none', name: 'None', note: 'Just the colour, nothing moving.' },
+  { id: 'none', name: 'None', note: 'Just the color, nothing moving.' },
 ];
 const BG_TONES = [   // hex in dark mode, lite in light mode; Temperature works its own out
   { id: 'temp', name: 'Temperature', temp: true },
@@ -37,7 +37,15 @@ const BG_TONES = [   // hex in dark mode, lite in light mode; Temperature works 
 const BG = {
   id: null, c: null, x: null, w: 0, h: 0, dpr: 1, t0: 0, last: 0, raf: 0, s: null,
   still: matchMedia('(prefers-reduced-motion: reduce)').matches,
-  get light() { return matchMedia('(prefers-color-scheme: light)').matches; },
+  // Light or dark as chosen in the app (Light, Dark or Automatic, home.settings.theme,
+  // applied as data-theme by welcome.js), else the phone's own setting. Read
+  // from storage too: this runs before the deferred welcome.js sets data-theme.
+  get light() {
+    let t = document.documentElement.dataset.theme;
+    if (t !== 'light' && t !== 'dark') try { t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; } catch { t = null; }
+    if (t === 'light' || t === 'dark') return t === 'light';
+    return matchMedia('(prefers-color-scheme: light)').matches;
+  },
   // a colour for each mode: light-on-dark, or ink on light
   ink(dark, lite) { return this.light ? lite : dark; },
   pick() { const v = store.get('bg'); return BG_IDEAS.some(i => i.id === v) ? v : 'bubbles'; },
@@ -187,7 +195,9 @@ BG.start();
 setInterval(() => BG.paintTone(), 30000);   // the reading moves; the colour follows (eased by the page's .5s transition)
 // The phone switched between light and dark: the colour, and a still drawing redrawn.
 BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its listener lives as long as the page
-BG.scheme.addEventListener('change', () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); });
+BG.repaint = () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); };
+BG.scheme.addEventListener('change', BG.repaint);
+addEventListener('aos:theme', BG.repaint);   // Light, Dark or Automatic chosen in the app
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.
@@ -201,7 +211,7 @@ const BG_FAM = family({
       title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
       fx: '',
       parts: [
-        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
+        ['tone', lbl('COLOR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
             <i></i><span>${t.name}</span></button>`).join('')}</div>`],
         ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
             <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],

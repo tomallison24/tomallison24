@@ -107,7 +107,7 @@ if (window.top !== window.self) {
   const monthStart = s => s.slice(0, 8) + '01';
   const addMonths = (s, n) => { const p = partsOf(s); const t = p.y * 12 + p.m - 1 + n; return Math.floor(t / 12) + '-' + pad((t % 12 + 12) % 12 + 1) + '-01'; };
   const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const fmt = (d, o) => d.toLocaleDateString(undefined, o);
+  const fmt = (d, o) => d.toLocaleDateString('en-US', o);
   const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: is12h(), timeZone: TZ }).replace(/\s?(AM|PM)/i, m => m.trim().toLowerCase() === 'am' ? ' AM' : ' PM');
   const fmtHour = h => is12h() ? (h % 12 || 12) + (h < 12 ? ' AM' : ' PM') : pad(h) + ':00';
   const MONTHS = I.MONTHS, DAYNAMES = I.DAYNAMES;
@@ -1015,7 +1015,7 @@ if (window.top !== window.self) {
       if (o.alarms.length) rows.push(kv('bell', o.alarms.map(a => esc(alarmWords(a, x.allDay))).join('<br>')));
       if (o.transp === 'TRANSPARENT') rows.push(kv('busy', 'Shown as free'));
       if (o.url) rows.push('<a class="kvrow" href="' + esc(/^https?:/i.test(o.url) ? o.url : '#') + '" target="_blank" rel="noopener"><span class="ic">' + ICON.link + '</span><span class="v">' + esc(o.url) + '</span><span class="go">' + ICON.ext + '</span></a>');
-      if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organiser</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
+      if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', esc(o.description)));
     } else {
       if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : 'flag', esc(x.sub)));

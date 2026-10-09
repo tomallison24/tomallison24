@@ -1,7 +1,6 @@
-// Draws drinks/icon-512.png and drinks/icon-180.png from drinks/icon.svg
-// ("Cellar": a white wine glass on a rosé-to-plum sky) by rendering
-// the SVG in headless Chromium, as Travel's script does, so icon.svg stays the
-// single source of the picture.
+// Draws drinks/icon-512.png and drinks/icon-180.png from drinks/icon.svg (a white wine glass on
+// dusty plum, one of the Sea glass tints), by rendering the SVG in headless
+// Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node drinks/scripts/make-icons.mjs

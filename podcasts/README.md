@@ -46,7 +46,7 @@ they need a connection.
 - **Data**: what you follow, where you got to, Up Next, Saved and History
   are in the browser's `localStorage`; each show's episode list (the newest
   250) is in IndexedDB, so the app opens with it. Nothing leaves the phone.
-  Each place the app opens (its own Home Screen icon, AllisonOS Home,
+  Each place the app opens (its own Home Screen icon, aOS,
   Safari) keeps its own copy on an iPhone; Export and Import move your shows
   between them.
 - **Feeds**: podcast feeds, and Apple's search, don't let a page on another

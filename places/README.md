@@ -142,7 +142,7 @@ web app link and secret, so there's nothing new to set up in Google:
 2. In Notes: the download button → **Google Sheet sync** → **Copy setup
    link**.
 3. In Places: the cloud button → **Paste a setup link**. (Where Places and
-   Notes share storage, as in Safari or AllisonOS Home, **Use the same Sheet
+   Notes share storage, as in Safari, **Use the same Sheet
    as Notes** does it in one tap.)
 
 The Sheet gets a hidden `_places` tab the app reads back from, and readable
@@ -155,9 +155,9 @@ and deleted places are remembered so the other phone deletes them too.
 - **No build step.** `index.html` (the page and its styles), `app.js`
   (everything it does), `parse.js` (map links, search results and
   OpenStreetMap tags into places, no network), `sw.js` (offline shell),
-  `manifest.webmanifest` and the icons (`scripts/make-icons.mjs`: a folded
-  paper map with a dashed route and a coral pin holding a star, on lime to
-  deep teal).
+  `manifest.webmanifest` and the icons (`icon.svg`, rendered by
+  `scripts/make-icons.mjs`: a white map pin on sage, one of the Sea glass
+  tints).
 - **Data** lives in localStorage (`allison-places-v1`) and, once connected,
   the Sheet.
 - Published with the other apps by `.github/workflows/news.yml`, and listed

@@ -232,7 +232,7 @@ if (window.top !== window.self) {
   // Monday, unless Calendar has been set to start its weeks on Sunday.
   const weekStartsSunday = () => ls.json('allison-calendar-v1-settings', {}).weekStart === 0;
   const weekStartOf = s => { const wd = noon(s).getDay(); return addDays(s, -(weekStartsSunday() ? wd : (wd + 6) % 7)); };
-  const fmt = (s, o) => noon(s).toLocaleDateString(undefined, o);
+  const fmt = (s, o) => noon(s).toLocaleDateString('en-US', o);
   const sameYear = s => s.slice(0, 4) === today().slice(0, 4);
 
   // ---------------------------------------------------------------------

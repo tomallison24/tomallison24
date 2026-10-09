@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- "Newsprint": a white front page on warm newsprint taupe, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
+  <!-- "Sky": a white cloud over a white sun on sea glass sky blue, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
   <defs>
     <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#D2C3B3"/>
-      <stop offset="0.55" stop-color="#A08D7B"/>
-      <stop offset="1" stop-color="#6F5F52"/>
+      <stop offset="0" stop-color="#A8D0DC"/>
+      <stop offset="0.55" stop-color="#6EA2B7"/>
+      <stop offset="1" stop-color="#4A7890"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.18" cy="0.12" r="0.6">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
@@ -14,12 +14,9 @@
       <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.18"/>
     </filter>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <rect x="108" y="108" width="296" height="296" rx="46" fill="#fff"/>
-      <g fill="#000">
-        <rect x="148" y="150" width="216" height="40" rx="20"/>
-        <rect x="148" y="222" width="96" height="78" rx="14"/>
-        <rect x="264" y="222" width="100" height="18" rx="9"/><rect x="264" y="252" width="100" height="18" rx="9"/><rect x="264" y="282" width="70" height="18" rx="9"/>
-        <rect x="148" y="324" width="216" height="18" rx="9"/><rect x="148" y="354" width="150" height="18" rx="9"/>
+      <circle cx="206" cy="196" r="84" fill="#fff"/>
+      <g fill="#000" stroke="#000" stroke-width="32" stroke-linejoin="round">
+        <rect x="112" y="282" width="304" height="112" rx="56"/><circle cx="214" cy="290" r="64"/><circle cx="306" cy="268" r="86"/>
       </g>
     </mask>
   </defs>
@@ -27,5 +24,6 @@
   <rect width="512" height="512" fill="url(#glow)"/>
   <g filter="url(#shadow)">
     <rect width="512" height="512" fill="#FFFFFF" mask="url(#cut)"/>
+    <g fill="#FFFFFF"><rect x="112" y="282" width="304" height="112" rx="56"/><circle cx="214" cy="290" r="64"/><circle cx="306" cy="268" r="86"/></g>
   </g>
 </svg>

@@ -1,18 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https://mesonet.agron.iastate.edu https://*.basemaps.cartocdn.com https://radar.weather.gov; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://api.weather.gov https://api.bigdatacloud.net https://mesonet.agron.iastate.edu">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Weather</title>
 <meta name="description" content="Signal-style weather for the home screen: the W3 Vivid card from the Home Assistant dashboard, fed by Open-Meteo.">
-<meta name="theme-color" content="#0A0A0C">
+<meta name="theme-color" content="#0D1213">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Weather">
-<link rel="apple-touch-icon" href="icon-180.png?v=3">
-<link rel="icon" type="image/png" href="icon-512.png?v=3">
+<link rel="apple-touch-icon" href="icon-180.png?v=4">
+<link rel="icon" type="image/png" href="icon-512.png?v=4">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   Weather - the Signal dashboard's W3 "Vivid" card as a standalone app.
@@ -36,18 +36,20 @@
 -->
 <style>
   :root {
-    --bg: #0A0A0C;
-    --surface: #131316;
-    --border: #2A2A2E;
+    --bg: #0D1213;
+    --surface: #141B1C;
+    --border: #283133;
     --text: #FFFFFF;
     --muted: rgba(235, 235, 245, 0.6);
-    --accent: #0A84FF;
+    --accent: #A9D3C7;
+    --cta: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --cta-ink: #10181A;
     /* Cards: very faint tiles, the same in every AllisonOS app (a whisper of fill, a hairline edge, no shadow) */
     --tile: rgba(255, 255, 255, 0.05);
     --tile-edge: rgba(255, 255, 255, 0.10);
     /* Liquid Glass for the sheets: clear glass, a lit rim, lighter glass fields */
-    --lgs-top: rgba(44, 44, 52, 0.60);
-    --lgs-bottom: rgba(22, 22, 28, 0.52);
+    --lgs-top: rgba(40, 50, 51, 0.60);
+    --lgs-bottom: rgba(20, 27, 28, 0.52);
     --lgs-rim: rgba(255, 255, 255, 0.20);
     --lgs-edge: rgba(255, 255, 255, 0.12);
     --lgs-field: rgba(255, 255, 255, 0.10);
@@ -56,7 +58,7 @@
     --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
     --lgs-lift: rgba(0, 0, 0, 0.38);
     --lgs-lift-strong: rgba(0, 0, 0, 0.5);
-    --lgs-solid: rgba(20, 20, 24, 0.96);
+    --lgs-solid: rgba(18, 24, 25, 0.96);
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -332,14 +334,14 @@
   .msg { background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); border-radius: 22px; padding: 20px 18px; font-size: 17px; line-height: 1.4; }
   .msg b { display: block; font-size: 20px; margin-bottom: 4px; }
   .msg .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  /* Buttons on the welcome, error and locating screens: clear glass (the view switcher's), and a blue-tinted one for the main action */
+  /* Buttons on the welcome, error and locating screens: clear glass (the view switcher's), and the Sea glass pastel for the main action */
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 18px; border-radius: 999px; border: 1px solid transparent; font-size: 17px; font-weight: 600;
     background: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.20);
     backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
   .pill:active { background: rgba(255,255,255,0.22); }
-  .pill.primary { color: #fff; background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), color-mix(in srgb, var(--accent) 88%, transparent);
+  .pill.primary { color: var(--cta-ink); background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
-  .pill.primary:active { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), var(--accent); }
+  .pill.primary:active { background: var(--cta); filter: brightness(.94); }
 
   .skeleton { height: 290px; border-radius: 26px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); animation: w3-pulse 1.4s ease-in-out infinite alternate; }
 
@@ -394,7 +396,7 @@
     display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 0 16px; color: var(--muted); background: var(--lgs-field);
     box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--lgs-lift); transition: box-shadow .2s;
   }
-  .search:focus-within { box-shadow: inset 0 0 0 1.5px rgba(10,132,255,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(10,132,255,0.18); }
+  .search:focus-within { box-shadow: inset 0 0 0 1.5px rgba(169,211,199,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(169,211,199,0.18); }
   .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 12px 0; }
   .list {
     margin-top: 10px; border-radius: 26px; overflow: hidden; background: var(--tile);
@@ -473,7 +475,6 @@
 <script src="../home/slide.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
-<!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
 <script src="../home/welcome.js" data-app="weather" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>

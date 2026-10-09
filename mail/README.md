@@ -718,8 +718,8 @@ npx http-server . -p 8080    # then open http://localhost:8080/mail/
 Add `http://localhost:8080` as an origin and `http://localhost:8080/mail/` as
 a redirect URI on the OAuth client first; the app's setup screen prints both.
 
-`node mail/scripts/make-icons.mjs` redraws the icons ("Sunrise": a white
-envelope on a peach-to-purple gradient). iOS keeps the icon it saved when the
+`node mail/scripts/make-icons.mjs` redraws the icons from `icon.svg` ("Mist":
+a white envelope on mist blue, one of the Sea glass tints). iOS keeps the icon it saved when the
 app was added, so after an icon change remove the app from the Home Screen and
 add it again from Safari.
 

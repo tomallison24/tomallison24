@@ -85,7 +85,7 @@ for (const scheme of ['light', 'dark']) {
   await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   const problems = [];
-  page.on('console', m => { if (m.type() === 'error') problems.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
   page.on('pageerror', e => problems.push(String(e)));
   const listed = [];
   await ctx.route('https://gmail.googleapis.com/**', route => {

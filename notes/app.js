@@ -1476,7 +1476,7 @@
     const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
       : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
     $('bkSheetSub').textContent = line;
-    $('syStatus').textContent = on ? line : 'Not connected in ' + place() + '. Notes opened from its own icon, from AllisonOS Home and in Safari each keep their own copy, so each needs connecting once.';
+    $('syStatus').textContent = on ? line : 'Not connected in ' + place() + '. Notes opened from its own icon, from aOS and in Safari each keep their own copy, so each needs connecting once.';
     $('syForm').hidden = on; $('syOn').hidden = !on;
     if (st.tab === 'notes' && !st.coll && !tokensOf(st.q).length) $('notesSub').textContent = plural(shelf().length, 'note') + syncLabel();
     syncPill();
@@ -1730,7 +1730,7 @@
     const r = await shareOut({title:'Notes backup', file});
     if (r === 'shared' || r === 'downloaded') { try { localStorage.setItem(LAST, String(Date.now())); } catch(e){} }
     closeSheet('backupSheet'); render();
-    toast({shared:'Backup saved', downloaded:'Backup saved to Downloads', cancelled:'Backup cancelled'}[r] || 'Couldn\u2019t save the backup');
+    toast({shared:'Backup saved', downloaded:'Backup saved to Downloads', cancelled:'Backup canceled'}[r] || 'Couldn\u2019t save the backup');
   };
   $('bkImport').onclick = () => $('bkFile').click();
   $('bkFile').addEventListener('change', async e => {
@@ -1828,9 +1828,14 @@
   });
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
-  // first open only records the fingerprint.
-  (function(){
-    const src = [...document.querySelectorAll('style, script:not([src])')].map(e => e.textContent).join('');
+  // first open only records the fingerprint. The code is in app.js now, so the
+  // fingerprint is the page's styles and sw.js's CACHE name, which every
+  // release of this app bumps; offline, it waits for the next open.
+  (async function(){
+    let cache = '';
+    try { const r = await fetch('sw.js', {cache:'no-store'}); if (!r.ok) return; cache = (/const CACHE = '([^']+)'/.exec(await r.text()) || [])[1] || ''; } catch(e) { return; }
+    if (!cache) return;
+    const src = [...document.querySelectorAll('style')].map(e => e.textContent).join('') + cache;
     let h = 2166136261;
     for (let i = 0; i < src.length; i++) { h ^= src.charCodeAt(i); h = Math.imul(h, 16777619); }
     const ver = (h >>> 0).toString(36), VK = KEY + '-version';

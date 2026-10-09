@@ -153,7 +153,7 @@ family({
         r.onoff ? null : ['bri', sliderHTML('bri', r.bri, 1, 100, 1, { label: 'BRIGHTNESS', shown: r.on ? Math.round(r.bri) + '%' : 'Off', unit: '%', tint: r.pc, dis: r.offline })
           + this.presets(r)],
         ['power', grp(swRow('toggle', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
-        L.kind === 'strip' ? ['colour', lbl('COLOUR') + this.swatches(r)] : null,
+        L.kind === 'strip' ? ['colour', lbl('COLOR') + this.swatches(r)] : null,
         ms.length ? ['members', lbl('LIGHTS IN THIS GROUP') + `<div class="group">${memberRows}</div>`] : null,
         lightW(id) != null ? energyPart(withToday([['NOW', fmtW(lightW(id))]], id), true, (id === EST_STRIP ? '12 W' : '10 W a bulb') + ' at full brightness, less when dimmed.') : null,
       ],
@@ -175,7 +175,7 @@ family({
     const now = this.stripNow(r), c = this.custom();
     const one = (k, name, rgb, dashed) => `<button class="swatch${now === k ? ' on' : now ? ' dim' : ''}${dashed ? ' dashed' : ''}" data-a="swatch" data-v="${k}" aria-pressed="${now === k}" aria-label="${name}" style="${rgb ? `--c:${rgb}` : ''}"${r.offline || (k === 'custom' && !c) ? ' disabled' : ''}><i></i><span>${name}</span></button>`;
     return `<div class="swatches nodrag">${L_SWATCH.map(([k, n, rgb]) => one(k, n, rgb)).join('')}${one('custom', 'Custom', c ? hsToRgb(c[0], c[1]).join(',') : '', !c)}</div>
-      <p class="tnote">${now === 'other' ? 'Showing a colour set elsewhere. ' : ''}Custom is the last colour you held for 3 seconds that is not one of these.</p>`;
+      <p class="tnote">${now === 'other' ? 'Showing a color set elsewhere. ' : ''}Custom is the last color you held for 3 seconds that is not one of these.</p>`;
   },
 
   setPower(id, on, data = {}) {

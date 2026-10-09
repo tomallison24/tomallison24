@@ -1,8 +1,8 @@
 // Offline shell for the Notes app. Same-origin files load network-first so a
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Notes themselves live in localStorage, never in this cache.
-const CACHE = 'notes-v46';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=4', 'icon.svg', 'icon-180.png?v=4', 'icon-512.png?v=4', '../home/slide.js', '../home/welcome.js', 'aisles.js', '../home/account.js'];
+const CACHE = 'notes-v47';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=4', 'icon.svg?v=2', 'icon-180.png?v=5', 'icon-512.png?v=5', '../home/slide.js', '../home/welcome.js', 'aisles.js', '../home/account.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -34,7 +34,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch {}
   e.waitUntil(self.registration.showNotification(d.title || 'Notes', {
-    body: d.body || '', tag: d.tag || 'notes', icon: 'icon-180.png?v=4', data: { open: d.open || null },
+    body: d.body || '', tag: d.tag || 'notes', icon: 'icon-180.png?v=5', data: { open: d.open || null },
   }).catch(() => {}));
 });
 

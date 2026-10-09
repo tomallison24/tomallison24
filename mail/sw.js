@@ -2,8 +2,8 @@
 // new deploy shows up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v29';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/slide.js', '../home/welcome.js'];
+const CACHE = 'mail-v30';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=2', 'icon-512.png?v=2', '../home/slide.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -43,7 +43,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch {}
   const jobs = [self.registration.showNotification(d.title || 'Mail', {
-    body: d.body || 'New mail', tag: d.tag || 'mail', icon: 'icon-180.png', data: { thread: d.thread || null },
+    body: d.body || 'New mail', tag: d.tag || 'mail', icon: 'icon-180.png?v=2', data: { thread: d.thread || null },
   })];
   const nav = self.navigator;
   if (typeof d.badge === 'number' && nav?.setAppBadge) jobs.push(d.badge ? nav.setAppBadge(d.badge) : nav.clearAppBadge());

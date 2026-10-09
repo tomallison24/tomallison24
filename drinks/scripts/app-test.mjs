@@ -70,7 +70,7 @@ const stored = () => JSON.parse(kv.get('drinks:OWNER1') || 'null');
 const browser = await chromium.launch();
 const errors = [];
 async function newPage(scheme, extra = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-GB' });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US' });
   await ctx.route('**/drinks/api/**', api);
   // The walkthroughs (home/welcome.js) as already seen, as on a phone that has been using the apps.
   extra = Object.assign({ 'aos.seen': JSON.stringify({ drinks: '1', calendar: '1' }) }, extra);
@@ -273,7 +273,7 @@ await test('bringing in the ABV Tracker’s Log tab, once', async () => {
 await test('Calendar’s link: ?date= opens that day', async () => {
   await page.goto(BASE + '/drinks/?date=2025-02-26');
   await page.waitForSelector('#daySheet:not([hidden])');
-  assert.match(await page.textContent('#dayLbl'), /26 February/);
+  assert.match(await page.textContent('#dayLbl'), /February 26/);
   assert.match(await page.textContent('#dList'), /Wine large/);
 });
 

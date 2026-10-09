@@ -1836,8 +1836,8 @@ function viewSetup() {
       '<li>APIs &amp; Services → Library → enable <strong>Gmail API</strong>.</li>' +
       '<li>OAuth consent screen: External, add yourself as a test user.</li>' +
       '<li>Credentials → Create credentials → <strong>OAuth client ID</strong> → Web application.</li>' +
-      '<li>Add this exact <strong>Authorised JavaScript origin</strong>:<br><code class="url">' + esc(location.origin) + '</code></li>' +
-      '<li>Add this exact <strong>Authorised redirect URI</strong>:<br><code class="url">' + esc(redirectUri()) + '</code></li>' +
+      '<li>Add this exact <strong>Authorized JavaScript origin</strong>:<br><code class="url">' + esc(location.origin) + '</code></li>' +
+      '<li>Add this exact <strong>Authorized redirect URI</strong>:<br><code class="url">' + esc(redirectUri()) + '</code></li>' +
       '<li>Copy the client ID and paste it here.</li>' +
     '</ol>' +
     '<input type="text" id="cid" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com" value="' + esc(ls.get(K.clientId, '')) + '">' +
