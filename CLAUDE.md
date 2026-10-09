@@ -36,6 +36,13 @@ notice, add a line for it:
   (not in aOS's What's new); the apps keep showing the last version that wasn't
   silent, with no update screens.
 
+## Adding or changing an app
+
+Follow `.claude/skills/new-aos-app/SKILL.md`: every place an app must be wired
+into aOS, and the ground rules every app shares. Then run
+`node aOS/scripts/check-apps.mjs` (CI runs it too, `apps-check.yml`); it must
+end with 0 errors.
+
 ## Layout
 
 - `aOS/` (capital O and S, `/aOS/`) is the app store and home of every app;
