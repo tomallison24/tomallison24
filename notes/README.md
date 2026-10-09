@@ -131,7 +131,7 @@ on with the new one takes over.
    sync) now includes the server address. Set up her phone with it as before,
    then on her phone go to **Reminders → bell → Turn on notifications**.
 
-Each place Notes opens (its own icon, AllisonOS Home, Safari) is separate on
+Each place Notes opens (its own icon, aOS, Safari) is separate on
 an iPhone, so notifications are turned on in each one you want them in.
 
 ### Keep in mind
@@ -230,7 +230,7 @@ tag and list tabs are rebuilt on every change, so make edits in the app.
    **clipboard** button next to the pencil, then **Connect and sync**.
 
 Each place Notes opens keeps its own copy on an iPhone: its own Home Screen
-icon, AllisonOS Home, and Safari. Connect each one you use once; after that
+icon, aOS, and Safari. Connect each one you use once; after that
 the connection stays (it's kept twice on the phone, in localStorage and
 IndexedDB). Removing and re-adding the Home Screen icon starts it fresh, so
 connect again with the setup link or the saved password.

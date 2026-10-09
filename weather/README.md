@@ -140,12 +140,10 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 ## Icon
 
 `node weather/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
-in the style of the other AllisonOS icons: a diagonal gradient from cyan
-through azure to indigo, a warm amber-to-coral sun behind one white cloud
-with a soft shadow, and a smaller, faint cloud drifting behind. Pass `night`
-(and an output folder) for a moon version on the Home colours; it is not
-shipped. An installed Home Screen icon is a fixed picture, so it cannot change
-with the time of day. The links carry `?v=3` so phones fetch the new picture;
+from `icon.svg`, in the style of the other AllisonOS icons: a white cloud in
+front of a white sun on a sea glass sky blue (one of the Sea glass tints).
+An installed Home Screen icon is a fixed picture, so it cannot change
+with the time of day. The links carry `?v=4` so phones fetch the new picture;
 a Home Screen app added before it keeps the old one until it is removed and
 added again.
 

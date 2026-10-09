@@ -1,15 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Home-screen icon: a plane climbing out of a sunset, on its own colour like News and Notes. Full-bleed square: iOS rounds the corners itself. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- "Apricot": a white plane climbing away on apricot sand, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
   <defs>
     <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#FFD166"/>
-      <stop offset="0.5" stop-color="#FF9F43"/>
-      <stop offset="1" stop-color="#F0603A"/>
+      <stop offset="0" stop-color="#EFCBA6"/>
+      <stop offset="0.55" stop-color="#C9976E"/>
+      <stop offset="1" stop-color="#9A6A48"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.12" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.18"/>
+    </filter>
+    
   </defs>
-  <rect width="1024" height="1024" fill="url(#sky)"/>
-  <path d="M150 850c100-40 180-100 250-190" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="40" stroke-linecap="round" stroke-dasharray="1 84"/>
-  <g transform="translate(585 435) rotate(45) scale(23)">
-    <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="translate(-11.5 -12.5)" fill="#FFFFFF"/>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g filter="url(#shadow)">
+    <g transform="scale(.5)">
+    <path d="M150 850c100-40 180-100 250-190" fill="none" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="40" stroke-linecap="round" stroke-dasharray="1 84"/>
+    <g transform="translate(585 435) rotate(45) scale(23)">
+      <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="translate(-11.5 -12.5)" fill="#FFFFFF"/>
+    </g></g>
   </g>
 </svg>

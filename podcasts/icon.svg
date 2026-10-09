@@ -1,17 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Home-screen icon: a signal on its own colour, laid out like News and Notes. Full-bleed square: iOS rounds the corners itself. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- "Lavender": a white signal on lavender mist, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
   <defs>
     <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#FF7AAE"/>
-      <stop offset="0.5" stop-color="#C04BF2"/>
-      <stop offset="1" stop-color="#6A35E8"/>
+      <stop offset="0" stop-color="#C3BDE3"/>
+      <stop offset="0.55" stop-color="#8D84BE"/>
+      <stop offset="1" stop-color="#625995"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.12" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.18"/>
+    </filter>
+    
   </defs>
-  <rect width="1024" height="1024" fill="url(#sky)"/>
-  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-width="56">
-    <path d="M358 648a220 220 0 1 1 308 0"/>
-    <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g filter="url(#shadow)">
+    <g transform="scale(.5)"><g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-width="56">
+      <path d="M358 648a220 220 0 1 1 308 0"/>
+      <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+    </g>
+    <circle cx="512" cy="492" r="86" fill="#FFFFFF"/>
+    <rect x="478" y="600" width="68" height="236" rx="34" fill="#FFFFFF"/></g>
   </g>
-  <circle cx="512" cy="492" r="86" fill="#FFFFFF"/>
-  <rect x="478" y="600" width="68" height="236" rx="34" fill="#FFFFFF"/>
 </svg>

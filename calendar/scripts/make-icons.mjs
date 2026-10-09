@@ -1,7 +1,6 @@
-// Draws calendar/icon-512.png and calendar/icon-180.png from calendar/icon.svg
-// ("Page": a white calendar page on a coral-to-raspberry sky) by rendering
-// the SVG in headless Chromium, as Travel's script does, so icon.svg stays the
-// single source of the picture.
+// Draws calendar/icon-512.png and calendar/icon-180.png from calendar/icon.svg (a white calendar page on
+// shell rose, one of the Sea glass tints), by rendering the SVG in headless
+// Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node calendar/scripts/make-icons.mjs

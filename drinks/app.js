@@ -38,8 +38,8 @@ if (window.top !== window.self) {
   const KEY = 'allison-drinks-v1';
   const K = { graves: KEY + '-graves', sync: KEY + '-sync', period: KEY + '-period' };
   // One decimal, as people say it: 3.2, 1, 0.5.
-  const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-GB', { maximumFractionDigits: 1 });
-  const sizeOf = x => (+x.vol).toLocaleString('en-GB', { maximumFractionDigits: 1 }) + ' ' + x.unit;
+  const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
+  const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
   const catName = c => (C.CAT[c] || C.CAT.other).name;
 
   const ICON = {
@@ -117,7 +117,7 @@ if (window.top !== window.self) {
   // Monday, unless Calendar has been set to start its weeks on Sunday (as Fitness).
   const weekStartsSunday = () => ls.json('allison-calendar-v1-settings', {}).weekStart === 0;
   const weekStartOf = s => { const wd = noon(s).getDay(); return addDays(s, -(weekStartsSunday() ? wd : (wd + 6) % 7)); };
-  const fmt = (s, o) => noon(s).toLocaleDateString('en-GB', o);
+  const fmt = (s, o) => noon(s).toLocaleDateString('en-US', o);
   const sameYear = s => s.slice(0, 4) === today().slice(0, 4);
   const short = s => fmt(s, { day: 'numeric', month: 'short' });
 
@@ -299,7 +299,7 @@ if (window.top !== window.self) {
       + '<div class="opts" role="radiogroup" aria-label="Kind of drink">' + C.CATS.map(c => '<button class="opt" type="button" role="radio" data-c="' + c.id + '" data-cat="' + c.id + '" aria-checked="' + (f.cat === c.id) + '"><i class="cdot"></i>' + esc(c.name) + '</button>').join('') + '</div>'
       + '<div class="rgroup">'
       + '<div class="frow"><input class="txt" id="fName" type="text" maxlength="60" autocomplete="off" placeholder="' + esc(catName(f.cat)) + ' (or its name)" aria-label="Name" value="' + esc(f.name) + '"></div>'
-      + '<div class="frow"><label for="fVol">Size</label><select id="fVol">' + opts(sizes, f.vol, v => (+v).toLocaleString('en-GB', { maximumFractionDigits: 1 }) + ' ' + f.unit) + '</select>'
+      + '<div class="frow"><label for="fVol">Size</label><select id="fVol">' + opts(sizes, f.vol, v => (+v).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + f.unit) + '</select>'
       + '<span class="unit" role="group" aria-label="Unit">' + ['oz', 'ml'].map(u => '<button type="button" data-unit="' + u + '" aria-pressed="' + (f.unit === u) + '">' + u + '</button>').join('') + '</span></div>'
       + '<div class="frow"><label for="fAbv">Strength</label><select id="fAbv">' + opts(abvs, f.abv, v => v + '%') + '</select></div>'
       + '<div class="frow"><label for="fQty">How many</label><select id="fQty">' + opts(withVal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12], f.qty), f.qty) + '</select></div>'
@@ -435,7 +435,7 @@ if (window.top !== window.self) {
   more.addEventListener('click', async e => {
     if (e.target.closest('#signIn')) {
       try { await A().signIn(); toast('Signed in. Saving your log to your account.'); sync(true); }
-      catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or cancelled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
+      catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }

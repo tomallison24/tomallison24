@@ -171,7 +171,7 @@ function mediaFamily(cfg) {
           p.kind !== 'sonos' ? ['power', grp(p.kind === 'nest'
             ? actRow('turnoff', 'Turn off', 'power', { dis: dis || r.state === 'off' })
             : swRow('tvpower', 'Power', 'power', r.on, '48,209,88', { dis, wait: tWaiting(r.d, 'state') }), true)] : null,
-          sonos && favs.length ? ['favs', lbl('FAVOURITES') + `<div class="tiles nodrag">${favs.map(([fid, t]) => `<button class="tile${[A.media_title, A.media_album_name, A.media_playlist, A.media_channel].includes(t) ? ' on' : ''}" data-a="fav" data-v="${esc(fid)}"${dis ? ' disabled' : ''}>${esc(t)}</button>`).join('')}</div>`] : null,
+          sonos && favs.length ? ['favs', lbl('FAVORITES') + `<div class="tiles nodrag">${favs.map(([fid, t]) => `<button class="tile${[A.media_title, A.media_album_name, A.media_playlist, A.media_channel].includes(t) ? ' on' : ''}" data-a="fav" data-v="${esc(fid)}"${dis ? ' disabled' : ''}>${esc(t)}</button>`).join('')}</div>`] : null,
           sonos ? ['play', lbl('PLAYBACK') + grp(
             (r.can('shuffle') ? swRow('shuffle', 'Shuffle', 'shuffle', r.shuffle, a, { dis, wait: tWaiting(r.d, 'shuffle') }) : '')
             + sw('crossfade', 'Crossfade', 'crossfade') + sw('loudness', 'Loudness', 'loud'))
@@ -186,7 +186,7 @@ function mediaFamily(cfg) {
               return `<button class="chip2${arm ? ' armed' : ''}" data-a="handoff" data-v="${x.ent}"${gone(x.ent) ? ' disabled' : ''}>${arm ? 'Tap to move to ' : ''}${esc(x.name)}</button>`;
             }).join('')}</div><p class="tnote">Moves what is playing to that speaker and stops it here.</p>`] : null,
           sonos ? ['tone', lbl('TONE') + `<div class="group tsl">${numSl('bass', 'Bass')}${numSl('treble', 'Treble')}${numSl('balance', 'Balance')}</div>`] : null,
-          p.ht ? ['ht', lbl('HOME THEATRE') + grp(sw('night_sound', 'Night sound', 'night') + sw('speech_enhancement', 'Speech enhancement', 'speech')
+          p.ht ? ['ht', lbl('HOME THEATER') + grp(sw('night_sound', 'Night sound', 'night') + sw('speech_enhancement', 'Speech enhancement', 'speech')
             + sw('subwoofer_enabled', 'Subwoofer', 'sub') + sw('surround_enabled', 'Surround', 'surround')
             + sw('surround_music_full_volume', 'Surround music at full volume', 'music', { sub: held(r.d, 'surround_music_full_volume', val('switch.' + p.pre + '_surround_music_full_volume')) === 'on' ? 'Full' : 'Ambient' }))
             + `<div class="group tsl">${numSl('sub_gain', 'Sub level')}${numSl('surround_level', 'Surround level')}${numSl('music_surround_level', 'Music surround level')}${numSl('audio_delay', 'Audio delay')}</div>`

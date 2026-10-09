@@ -9,7 +9,7 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { mail: '240,120,200', calendar: '255,84,112', news: '110,140,255', weather: '70,150,255', notes: '40,200,170', podcasts: '190,90,240', travel: '255,150,60', places: '70,200,120', fitness: '140,155,180', drinks: '176,72,120', house: '125,105,245' };
+  const HUE = { mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', house: '188,156,104' };   // each icon's Sea glass tint
   const CAT = { mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', drinks: 'Health & Fitness', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places'];
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
@@ -44,7 +44,7 @@
   paintAvatars(); addEventListener('aos:account', paintAvatars);
 
   // ---- Today ----
-  $('date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   const day = Math.floor(Date.now() / 864e5), aotd = D.APPS[day % D.APPS.length];
   const STORIES = [
     { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
@@ -145,14 +145,14 @@
   // the owner picks a plan here. Only the owner changes it; everyone sees it. The
   // trial is once per family. Switched off deletes nothing: it's all there again.
   const PLANS = [
-    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customisable, plus new app building: apps you make for your own needs' },
-    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customisable. No new app building' },
+    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customizable, plus new app building: apps you make for your own needs' },
+    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customizable. No new app building' },
     { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days, once' },
   ];
   const DAY = 864e5;
   const price = p => p.p ? `$${p.p}<small> a month</small>` : 'Free';
-  const onDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const shortDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const onDay = t => new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+  const shortDay = t => new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   const planLive = p => !p || !p.ends || Date.now() < p.ends;
   const OFF = 'every app but aOS switches off';
   const KEPT = ' Nothing is deleted: it\'s all there when a plan starts again.';
@@ -162,7 +162,7 @@
     const who = owner ? '' : ' The owner manages the family\'s plan.';
     if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ` Choose ${cur.id === 'trial' ? 'Pro or Pro+' : 'a plan'} to turn them back on.` : ''}${KEPT}${who}${fun}`;
     if (cur.id === 'trial') { const left = Math.ceil((cur.ends - Date.now()) / DAY); return `${left} ${left === 1 ? 'day' : 'days'} left in the trial: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`; }
-    if (cur.cancelled) return `${me.n} is cancelled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`;
+    if (cur.cancelled) return `${me.n} is canceled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`;
     return `${me.n}, $${me.p} a month, since ${onDay(cur.since)}. Renews ${onDay(cur.renews)}.${who}${fun}`;
   }
   // ui: { pick: plan id } to confirm a switch, { cancel: true } to confirm cancelling, { err }
@@ -225,7 +225,7 @@
   if (invite) { try { sessionStorage.setItem('aos.later.aos', '1'); } catch {} }   // the account first, then how to add aOS
   const WHY = { code: 'That code isn\'t right.', invite: 'This invite has expired or was already used. Ask for a new one.', name: 'Use letters and spaces for your name.',
     storage: 'Family accounts aren\'t switched on yet.', 'owner-exists': 'The owner\'s account already exists: sign in instead.', unknown: 'That account isn\'t in the family any more.',
-    NotAllowedError: 'Cancelled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.',
+    NotAllowedError: 'Canceled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.',
     'passkey-exists': 'That passkey already belongs to an account here: sign in instead.' };
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };

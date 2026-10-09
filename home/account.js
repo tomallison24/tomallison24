@@ -100,7 +100,7 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
       el.querySelector('.s-go').onclick = async () => {
         const err = el.querySelector('.s-err'); err.textContent = '';
         try { await signIn(); done(true); }
-        catch (e) { err.textContent = e.name === 'NotAllowedError' ? 'No passkey found, or cancelled. Set up your account in aOS first.' : e.message === 'unknown' ? 'That account isn\'t in the family any more.' : 'Couldn\'t sign in (' + (e.message || e.name) + ').'; }
+        catch (e) { err.textContent = e.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : e.message === 'unknown' ? 'That account isn\'t in the family any more.' : 'Couldn\'t sign in (' + (e.message || e.name) + ').'; }
       };
     });
     return asking;

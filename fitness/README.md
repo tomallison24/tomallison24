@@ -236,8 +236,8 @@ iPhone didn't fill in another app's saved code.
 ## Icons
 
 `node fitness/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
-from `icon.svg`: "Iron", a white dumbbell on a sky that runs from steel blue
-through slate to ink.
+from `icon.svg`: "Slate", a white dumbbell on slate, one of the Sea glass
+tints.
 
 ## Tests
 

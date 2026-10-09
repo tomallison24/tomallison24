@@ -106,9 +106,9 @@
 .hg-finger.on { opacity: 1; } .hg-finger.press { width: 22px; height: 22px; margin: -11px 0 0 -11px; background: rgba(255,255,255,.8); }
 .hg-cap { display: flex; align-items: center; gap: 10px; min-height: 40px; max-width: 320px; font-size: 15px; line-height: 1.3; text-align: left; transition: opacity .25s; }
 .hg-cap.fade { opacity: 0; }
-.hg-n { flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #0A84FF; color: #fff; font-size: 13px; font-weight: 700; }
+.hg-n { flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #3B7366; color: #fff; font-size: 13px; font-weight: 700; }
 .hg-dots { display: flex; gap: 5px; } .hg-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(128,128,128,.35); transition: width .3s, background .3s; }
-.hg-dots i.on { width: 16px; background: #0A84FF; }
+.hg-dots i.on { width: 16px; background: #6FA597; }
 @media (prefers-reduced-motion: reduce) { .hg * { transition-duration: .01s !important; animation: none !important; } }`;
 
   const I = {

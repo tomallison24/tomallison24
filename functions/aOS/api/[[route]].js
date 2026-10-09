@@ -8,6 +8,8 @@
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
+//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
+//   GET  layer            (family)             -> your own layers, for Calendar
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
@@ -20,10 +22,16 @@
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
-const MAX_BODY = 16 * 1024;
+const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
+// Calendar's layers from the other apps. On an iPhone each Home Screen app keeps its
+// own storage, so Calendar can't read theirs: each app keeps a copy of just what
+// Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
+// it's written only when it changed (KV writes are scarce on the free plan).
+const LAYERS = ['notes', 'travel', 'fitness', 'mail'];
+const LAYER_MAX = 192 * 1024;
 
 // The family's subscription, just for fun (aOS -> Subscription): nothing is charged.
 // Kept as config:plan { id, since, ends? }; with none yet, Pro+ since the owner joined.
@@ -165,6 +173,23 @@ export async function onRequest({ request, params, env }) {
       apps[app] = Date.now();
       await putJSON(db, 'apps:' + me.id, apps);
       return reply({ ok: true });
+    }
+
+    if (route === 'layer' && method === 'POST') {
+      const b = await body(request);
+      if (!LAYERS.includes(b.app)) return reply({ error: 'app' }, 400);
+      if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data)) return reply({ error: 'data' }, 400);
+      const json = JSON.stringify(b.data);
+      if (json.length > LAYER_MAX) return reply({ error: 'too-big' }, 413);
+      const key = 'layer:' + b.app + ':' + me.id, was = await getJSON(db, key);
+      if (was && JSON.stringify(was.data) === json) return reply({ ok: true, same: true });   // nothing new: no write
+      await putJSON(db, key, { at: Date.now(), data: b.data });
+      return reply({ ok: true });
+    }
+    if (route === 'layer' && method === 'GET') {
+      const out = {};
+      for (const a of LAYERS) { const x = await getJSON(db, 'layer:' + a + ':' + me.id); if (x) out[a] = x; }
+      return reply({ layers: out });
     }
 
     // ---- the owner's tools ----

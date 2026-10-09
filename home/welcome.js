@@ -79,7 +79,8 @@
   const RELEASES = [
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
       highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
-      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours',
+      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
+        'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
@@ -87,15 +88,16 @@
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
         'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
         'The aOS icon is just aOS, without a version number',
-        'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name',
+        'Home: tone and home theater sliders sit one to a row, full width, with the level beside the name',
         'Home: the Dysons\' Heat to stepper is back to its normal size, like the heaters\' Target',
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'aOS shows ✓ Installed as soon as a new app has been opened, without reopening aOS',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
+        'Calendar: the Notes, Travel, Fitness and Mail layers come through your own family account, so they show on an iPhone, where every app keeps its own storage',
         'Fitness: your drinks from Drinks in Analysis, beside your training',
         'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
-        'Cancelling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
+        'Canceling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
         'The 7-day trial is once per family'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
@@ -239,7 +241,7 @@
         {
           "i": "note",
           "t": "Notes with #tags",
-          "d": "Type a #tag anywhere to file a note into a collection. Pin, colour and search your notes too."
+          "d": "Type a #tag anywhere to file a note into a collection. Pin, color and search your notes too."
         },
         {
           "i": "check",
@@ -269,7 +271,7 @@
         {
           "i": "play",
           "t": "Up Next",
-          "d": "Home shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
+          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
         },
         {
           "i": "search",
@@ -700,17 +702,17 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   const CSS = `
 #aos-welcome { position: fixed; inset: 0; z-index: 2147483000; overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
-  --w-bg: #0F1116; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
+  --w-bg: #0D1213; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
   --w-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --w-glow: rgba(185,198,224,.5);
   --w-hot: linear-gradient(120deg, #86CBB8 0%, #A3B4E4 55%, #E2B0AB 100%); --w-hot-glow: rgba(163,180,228,.75); --w-hot-glow2: rgba(226,176,171,.8);
   background: var(--w-bg); color: var(--w-text); opacity: 0; transition: opacity .5s; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-welcome { --w-bg: #F2F4F8; --w-text: #0B0B0F; --w-muted: rgba(60,60,67,.62); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-welcome { --w-bg: #EEF2F0; --w-text: #0B0B0F; --w-muted: rgba(16,24,26,.64); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
   --w-pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); --w-glow: rgba(129,147,188,.32);
   --w-hot: linear-gradient(120deg, #4F9583 0%, #6A80BC 55%, #B17C78 100%); --w-hot-glow: rgba(106,128,188,.5); --w-hot-glow2: rgba(177,124,120,.55); } }
-html[data-theme="light"] #aos-welcome { --w-bg: #F2F4F8; --w-text: #0B0B0F; --w-muted: rgba(60,60,67,.62); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
+html[data-theme="light"] #aos-welcome { --w-bg: #EEF2F0; --w-text: #0B0B0F; --w-muted: rgba(16,24,26,.64); --w-glass: rgba(255,255,255,.62); --w-edge: rgba(255,255,255,.9); --w-dot: rgba(0,0,0,.16);
   --w-pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); --w-glow: rgba(129,147,188,.32);
   --w-hot: linear-gradient(120deg, #4F9583 0%, #6A80BC 55%, #B17C78 100%); --w-hot-glow: rgba(106,128,188,.5); --w-hot-glow2: rgba(177,124,120,.55); }
-html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
+html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-muted: rgba(235,235,245,.62); --w-glass: rgba(255,255,255,.08); --w-edge: rgba(255,255,255,.18); --w-dot: rgba(255,255,255,.28);
   --w-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); --w-glow: rgba(185,198,224,.5);
   --w-hot: linear-gradient(120deg, #86CBB8 0%, #A3B4E4 55%, #E2B0AB 100%); --w-hot-glow: rgba(163,180,228,.75); --w-hot-glow2: rgba(226,176,171,.8); }
 #aos-welcome.in { opacity: 1; }
@@ -881,8 +883,9 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
 #aos-welcome .w-dots i.on { background: var(--w-text); width: 18px; border-radius: 4px; }
 #aos-welcome .w-dots:empty { display: none; }
 #aos-welcome .c-btns { display: flex; gap: 10px; }
-#aos-welcome .w-btn { flex: 1; height: 52px; border-radius: 999px; font-size: 17px; font-weight: 600; color: #fff !important; background: #0A84FF !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), inset 0 1px 1px rgba(255,255,255,.5); }
-#aos-welcome .c-back { flex: 0 0 52px; height: 52px; border-radius: 50%; background: var(--w-dot) !important; font-size: 22px; }
+#aos-welcome .w-btn { flex: 1; height: 52px; border-radius: 17px; font-size: 17px; font-weight: 700; color: #10181A !important; background: var(--w-pastel) !important; box-shadow: inset 0 1px 1px rgba(255,255,255,.45); }
+#aos-welcome .w-btn:active { filter: brightness(.94); }
+#aos-welcome .c-back { flex: 0 0 52px; height: 52px; border-radius: 17px; background: var(--w-dot) !important; font-size: 22px; }
 #aos-welcome .c-back[hidden], #aos-welcome .w-btn[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #aos-welcome *, #aos-welcome *::before, #aos-welcome *::after { animation: none !important; transition-duration: .2s !important; transition-delay: 0s !important; }
@@ -1176,6 +1179,32 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     if (A && !token()) await A.prompt(`Sign in once, so aOS knows ${esc(NAMES[APP])} is on this phone.`);
   }
 
+  // ---- Calendar's layers: what this app shows in your Calendar, kept in your account ----
+  // On an iPhone each Home Screen app has its own storage, so Calendar can't read
+  // Notes', Travel's, Fitness's or Mail's. Each of those calls AllisonOS.layer.share(app,
+  // data) with just what Calendar shows, whenever it changes; this sends it to your own
+  // family account (functions/aOS/api, POST layer) once things settle, only if this
+  // app is signed in, and only when it differs from what was last sent (aos.layer.<app>
+  // keeps a fingerprint: KV writes are scarce). Signed in later, it sends then.
+  const LAYER_SENT = 'aos.layer.', layerLast = {}, layerJobs = {};
+  const fingerprint = str => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + str.length; };
+  async function sendLayer(app) {
+    const t = token(), data = layerLast[app]; if (!t || !data) return;
+    const json = JSON.stringify(data), fp = fingerprint(json);
+    try { if (localStorage.getItem(LAYER_SENT + app) === fp) return; } catch {}
+    try {
+      const r = await fetch(api('layer'), { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app, data }) });
+      if (r.ok) localStorage.setItem(LAYER_SENT + app, fp);
+    } catch {}
+  }
+  function shareLayer(app, data) {
+    layerLast[app] = data;
+    clearTimeout(layerJobs[app]); layerJobs[app] = setTimeout(() => sendLayer(app), 3000);
+  }
+  addEventListener('aos:account', e => { if (e.detail) for (const app of Object.keys(layerLast)) sendLayer(app); });
+  addEventListener('pagehide', () => { for (const app of Object.keys(layerJobs)) { clearTimeout(layerJobs[app]); sendLayer(app); } });
+  AOS.layer = { share: shareLayer };
+
   // ---- the family's plan (aOS -> Subscription, just for fun) ----
   // The owner picks it in aOS and it's kept in the family account, since a Home Screen
   // app can't see aOS's storage. A cancelled plan runs to the end of its month, a trial
@@ -1196,7 +1225,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     }
     if (was) return;
     if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
-    const day = new Date(p.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const day = new Date(p.ends).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
     const el = document.createElement('div');
     el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `${NAMES[APP]} is off`);
     el.innerHTML = `<div class="o-card"><img src="${icon(APP)}" alt=""><h1>${esc(NAMES[APP])} is off</h1>
@@ -1222,8 +1251,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
   --o-bg: #0D1213; --o-text: #EEF4F2; --o-muted: rgba(238,244,242,.6); --o-card: rgba(255,255,255,.06); --o-edge: rgba(255,255,255,.1);
   --o-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
   background: var(--o-bg); color: var(--o-text); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.58); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); } }
-html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.58); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.64); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); } }
+html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.64); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); }
 #aos-off * { box-sizing: border-box; }
 #aos-off .o-card { width: 100%; max-width: 380px; padding: 28px 22px 22px; border-radius: 28px; background: var(--o-card); box-shadow: inset 0 0 0 1px var(--o-edge); }
 #aos-off img { width: 76px; height: 76px; border-radius: 20px; filter: grayscale(1); opacity: .55; }

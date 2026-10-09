@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- "Mist": a white envelope on mist blue, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
+  <defs>
+    <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#B4C3E3"/>
+      <stop offset="0.55" stop-color="#7F93C2"/>
+      <stop offset="1" stop-color="#56689A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.12" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.18"/>
+    </filter>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect x="92" y="146" width="328" height="220" rx="44" fill="#fff"/>
+      <path d="M134 194l122 88 122-88" fill="none" stroke="#000" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g filter="url(#shadow)">
+    <rect width="512" height="512" fill="#FFFFFF" mask="url(#cut)"/>
+  </g>
+</svg>

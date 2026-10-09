@@ -34,3 +34,5 @@ jobs:
           node-version: 22
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node aOS/scripts/apps-smoke-test.mjs
+      # Calendar's layers through the family account, each app in its own storage as on an iPhone
+      - run: node calendar/scripts/layers-test.mjs

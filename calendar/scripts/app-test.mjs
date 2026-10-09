@@ -288,7 +288,7 @@ await test('settings: the layers switch off and on, and the week can start on Su
   await page.click('#setBtn');
   await page.waitForSelector('#setSheet:not([hidden])');
   const t = await page.textContent('#stBody');
-  assert.ok(t.includes('Connected') && t.includes('Family') && t.includes('US Holidays') && t.includes('Open Mail and connect Gmail'), t);
+  assert.ok(t.includes('Connected') && t.includes('Family') && t.includes('US Holidays') && t.includes('Sign in to your family account first'), t);
   await shot(page, '09-settings');
   await page.click('[data-layer="notes"]');
   await page.click('[data-set="weekStart"][data-val="0"]');

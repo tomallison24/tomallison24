@@ -19,8 +19,7 @@
 //   - Weather: a glass pill over the automations - the condition and the
 //     temperature outside (with today's high and low, small, beneath the
 //     condition), the Weather app's own reading (WXNOW below) - that
-//     opens the AllisonOS Weather app (../weather/, a plain link, as the
-//     launcher's own)
+//     opens the AllisonOS Weather app (../weather/, a plain link)
 //   - Activity: a glass pill under the weather with the latest event; it
 //     opens the last 10 from the dashboard's own log, sensor.signal_activity_log
 //     (ha-config configuration.yaml: `events`, newest first, each t epoch,

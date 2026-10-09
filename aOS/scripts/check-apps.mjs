@@ -29,11 +29,13 @@
 //   - the system font: no web fonts or stylesheets from other sites
 //   - the faint cards every app shares (--tile), except aOS's own store
 //   - "aOS" is written with a lowercase a: never "AOS" in the page's text
+//   - US English: <html lang="en-US">
 //   - a Content-Security-Policy meta starting from default-src 'none', with
 //     base-uri 'none' and script-src 'self' only (no inline, eval or outside
 //     scripts), and no inline <script> in the page
 // Worth doing (warnings):
 //   - its sw.js CACHE named after the app ('<id>-vN')
+//   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
 import fs from 'fs';
 import path from 'path';
 
@@ -164,6 +166,8 @@ for (const id of ids) {
   // Visible text only: strip scripts, styles and tags, then look for an uppercase AOS.
   const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ');
   rule(!/\bAOS\b/.test(text), 'writes "AOS": it is always "aOS", with a lowercase a');
+  rule(/<html[^>]*\slang="en-US"/.test(html), 'should be <html lang="en-US">: AllisonOS is written in US English, with US dates');
+  if (/--bg:\s*#(F2F2F7|08080B)\b|--accent:\s*#(007AFF|0A84FF)\b/i.test(html)) warn(id, 'still has the old iOS colours (--bg #F2F2F7 / #08080B or a blue --accent): use the Sea glass tokens (the new-aos-app skill, "Look")');
   const csp = (/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html) || [])[1] || '';
   rule(csp, 'no Content-Security-Policy meta (every app has one: only its own scripts may run)');
   if (csp) {

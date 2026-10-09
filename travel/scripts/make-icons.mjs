@@ -1,8 +1,6 @@
-// Draws travel/icon-512.png and travel/icon-180.png from travel/icon.svg
-// ("Sunset": a white plane climbing out of an amber-to-coral sky), by
-// rendering the SVG in headless Chromium. The other apps' scripts draw their
-// icons pixel by pixel in plain Node; this one leans on the browser instead,
-// so icon.svg stays the single source of the picture.
+// Draws travel/icon-512.png and travel/icon-180.png from travel/icon.svg (a white plane climbing away on
+// apricot sand, one of the Sea glass tints), by rendering the SVG in headless
+// Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node travel/scripts/make-icons.mjs

@@ -120,8 +120,8 @@ write to the Sheet any more.
   Glass sheets, with only the pieces Drinks uses).
 - `app.js`: the app. `calc.js`: the sums and the ABV Tracker import.
 - `sw.js`: the offline shell (network-first; `api/` is left alone).
-- `icon.svg` → `icon-180.png`, `icon-512.png` ("Cellar": a white wine glass on
-  a rosé-to-plum sky), drawn by `scripts/make-icons.mjs`.
+- `icon.svg` → `icon-180.png`, `icon-512.png` ("Plum": a white wine glass on
+  dusty plum, one of the Sea glass tints), drawn by `scripts/make-icons.mjs`.
 - `../functions/drinks/api/[[route]].js`: your log in your account.
 
 ## Tests

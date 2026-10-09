@@ -454,6 +454,6 @@ sample states and preview are the family's own.
 
 ## Icons
 
-`node house/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`:
-a white house with one window lit warm, on a dusk sky (lavender to indigo),
-in the style of the other AllisonOS icons.
+`node house/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
+from `icon.svg`: a white house with its window cut out, on sand (one of the
+Sea glass tints), in the style of the other AllisonOS icons.

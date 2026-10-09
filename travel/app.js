@@ -135,7 +135,17 @@ if (window.top !== window.self) {
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ bookings, trips })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Travel: storage is full.' + (syncCfg ? ' Your bookings are safe in the Google Sheet.' : ' Back up soon.')); }
+    shareCal();
   }
+  // Calendar's Travel layer: your bookings, just the fields Calendar shows, kept in your
+  // own family account (home/welcome.js AllisonOS.layer), since Calendar can't read
+  // this app's storage on an iPhone.
+  const CAL_FIELDS = ['type', 'status', 'id', 'conf', 'notes', 'dep', 'depIso', 'arr', 'arrIso', 'airlineCode', 'flightNo', 'airline', 'from', 'to', 'fromName', 'toName', 'checkIn', 'checkOut', 'name', 'address', 'city', 'pickup', 'pickupIso', 'company', 'pickupPlace', 'dropoff', 'dropoffIso', 'dropPlace', 'start', 'end', 'title', 'place'];
+  function shareCal() {
+    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+    L.share('travel', { bookings: bookings.filter(b => b && b.status !== 'cancelled').map(b => Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]]))) });
+  }
+  addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (syncCfg) scheduleSync(); }
   const saveSeen = () => ls.set(K.seen, JSON.stringify([...seen].slice(-4000)));
   const saveLive = () => ls.set(K.live, JSON.stringify(live));
@@ -371,7 +381,7 @@ if (window.top !== window.self) {
   // Render: the trips list
   // ---------------------------------------------------------------------
   function statusPill(b) {
-    if (b.status === 'cancelled') return '<span class="st bad">Cancelled</span>';
+    if (b.status === 'cancelled') return '<span class="st bad">Canceled</span>';
     const l = b.type === 'flight' && liveView(b);
     if (l) return '<span class="st ' + l.cls + '">' + esc(l.text) + '</span>';
     if (b.guess) return '<span class="st warn">Check details</span>';
@@ -425,7 +435,7 @@ if (window.top !== window.self) {
       + '<div class="tt"><h3>' + esc(g.name) + '</h3>' + (soon ? '<span class="soon">' + esc(soon) + '</span>' : '') + '</div>'
       + '<div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div>'
       + '<div class="icons">' + counts + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
-      + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' cancelled') + '</span>' : '') + '</div></button>';
+      + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' canceled') + '</span>' : '') + '</div></button>';
   }
   function render() {
     const groups = groupTrips();
@@ -567,7 +577,7 @@ if (window.top !== window.self) {
   const FIELDS = {
     flight: [['airlineCode', 'Airline code', 'UA'], ['flightNo', 'Flight number', '1234'], ['from', 'From (airport)', 'DEN'], ['to', 'To (airport)', 'BOS'],
       ['dep', 'Departs', '', 'datetime-local'], ['arr', 'Lands', '', 'datetime-local'], ['terminal', 'Terminal', ''], ['gate', 'Gate', ''],
-      ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveller', '', '', 'w']],
+      ['conf', 'Confirmation', ''], ['seat', 'Seat', ''], ['traveller', 'Traveler', '', '', 'w']],
     hotel: [['name', 'Hotel', 'Courtyard Boston', '', 'w'], ['address', 'Address', '', '', 'w'], ['city', 'City', ''], ['conf', 'Confirmation', ''],
       ['checkIn', 'Check in', '', 'date'], ['checkInTime', 'From', '', 'time'], ['checkOut', 'Check out', '', 'date'], ['checkOutTime', 'By', '', 'time'], ['phone', 'Phone', '', 'tel', 'w']],
     car: [['company', 'Company', 'National'], ['conf', 'Confirmation', ''], ['pickupPlace', 'Pick up at', '', '', 'w'], ['pickup', 'Pick up', '', 'datetime-local'],
@@ -605,7 +615,7 @@ if (window.top !== window.self) {
     if (rows.length) h += '<div class="rgroup glass">' + rows.join('') + '</div>';
     if (b.source && b.source.from) h += '<p class="hint">From ' + esc(b.source.from.replace(/<[^>]*>/g, '').trim() || b.source.from) + (b.source.date ? ', ' + esc(new Date(b.source.date).toLocaleDateString()) : '') + '.</p>';
     if (!st.isNew) {
-      h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Cancelled' : 'Mark as cancelled') + '</button></div>';
+      h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button></div>';
       h += '<button class="btn quiet danger" type="button" id="bkDel">Delete booking</button>';
     }
     $('bkBody').innerHTML = h;
@@ -967,7 +977,7 @@ if (window.top !== window.self) {
     const late = sched && best ? Math.round((best - sched) / 6e4) : 0;
     const s = String(l.status || '').toLowerCase();
     let text = 'Scheduled', cls = 'info';
-    if (/cancel/.test(s)) { text = 'Cancelled'; cls = 'bad'; }
+    if (/cancel/.test(s)) { text = 'Canceled'; cls = 'bad'; }
     else if (/divert/.test(s)) { text = 'Diverted'; cls = 'bad'; }
     else if (/arrived/.test(s)) { text = 'Landed'; cls = 'ok'; }
     else if (/departed|enroute|approaching/.test(s)) { text = 'In the air'; cls = 'ok'; }
@@ -1121,7 +1131,7 @@ if (window.top !== window.self) {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in (opened from AllisonOS Home). Travel only reads.'
+    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
       : 'Travel looks for confirmations from airlines, hotels and car hire firms in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     const n = lookupsThisMonth();
@@ -1160,7 +1170,7 @@ if (window.top !== window.self) {
   $('stExport').onclick = async () => {
     const file = new File([JSON.stringify({ app: 'allison-travel', v: 1, kind: 'backup', saved: new Date().toISOString(), bookings, trips }, null, 2)], 'travel-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Travel backup');
-    toast({ shared: 'Backup saved', downloaded: 'Backup saved to Downloads', cancelled: 'Backup cancelled' }[r] || 'Couldn’t save the backup');
+    toast({ shared: 'Backup saved', downloaded: 'Backup saved to Downloads', cancelled: 'Backup canceled' }[r] || 'Couldn’t save the backup');
   };
   $('stImport').onclick = () => $('stFile').click();
   $('stFile').addEventListener('change', async e => {

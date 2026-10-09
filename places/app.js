@@ -229,12 +229,23 @@
   }
 
   // ---------- the map ----------
-  let map = null, pins = null, me = null, fitted = false;
-  const dark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+  let map = null, pins = null, me = null, fitted = false, tiles = null;
+  // Light or dark as chosen in the app (home.settings.theme, applied as data-theme by
+  // welcome.js; read from storage too, in case welcome.js hasn't run yet), else the phone's.
+  const dark = () => {
+    let t = document.documentElement.dataset.theme;
+    if (t !== 'light' && t !== 'dark') try { t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; } catch { t = null; }
+    return t === 'light' || t === 'dark' ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  };
+  const tileURL = () => 'https://{s}.basemaps.cartocdn.com/' + (dark() ? 'dark_all' : 'rastertiles/voyager') + '/{z}/{x}/{y}{r}.png?key=' + CARTO_KEY;
+  // the map's tiles follow a change of Light or Dark, in the app or on the phone
+  const retile = () => { if (tiles) tiles.setUrl(tileURL()); };
+  addEventListener('aos:theme', retile);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retile);
   function ensureMap() {
     if (map || !window.L) return map;
     map = L.map('map', { zoomControl: false, tapHold: true, worldCopyJump: true }).setView(st.here ? [st.here.lat, st.here.lon] : [39.5, -98.35], st.here ? 12 : 4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/' + (dark() ? 'dark_all' : 'rastertiles/voyager') + '/{z}/{x}/{y}{r}.png?key=' + CARTO_KEY,
+    tiles = L.tileLayer(tileURL(),
       { subdomains: 'abcd', maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     biz = L.layerGroup().addTo(map);

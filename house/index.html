@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:">
@@ -11,8 +11,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Home">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<link rel="icon" type="image/png" href="icon-512.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="devices.css">
 <!--
@@ -21,7 +21,7 @@
   further down) are in this file; every other family of devices is a file of
   its own (devices.js has the parts they share, then heaters.js, dysons.js,
   lights.js, media.js, security.js, around.js), loaded after this script.
-  (The folder is house/ because home/ is the AllisonOS launcher; its
+  (The folder is house/ because home/ was the AllisonOS launcher, now retired; its
   localStorage keys are house.* for the same reason.)
 
   The look is the DG1 dehumidifier card in ha-config
@@ -52,7 +52,9 @@
     --bg: #1A212B;   /* Slate, a dark blue-grey; bg.js sets the one picked in Labs */
     --text: #FFFFFF;
     --muted: rgba(235, 235, 245, 0.6);
-    --accent: #0A84FF;
+    --accent: #A9D3C7;   /* Sea glass, the AllisonOS accent */
+    --cta: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);   /* the one thing to tap */
+    --cta-ink: #10181A;
     --good: #30D158;
     --warn: #FFD60A;
     --bad: #FF453A;
@@ -60,8 +62,8 @@
     --tile: rgba(255, 255, 255, 0.05);
     --tile-edge: rgba(255, 255, 255, 0.10);
     /* Liquid Glass for the settings sheet, as in Weather */
-    --lgs-top: rgba(44, 44, 52, 0.60);
-    --lgs-bottom: rgba(22, 22, 28, 0.52);
+    --lgs-top: rgba(40, 50, 51, 0.60);
+    --lgs-bottom: rgba(20, 27, 28, 0.52);
     --lgs-rim: rgba(255, 255, 255, 0.20);
     --lgs-edge: rgba(255, 255, 255, 0.12);
     --lgs-row: rgba(255, 255, 255, 0.07);
@@ -70,7 +72,7 @@
     --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
     --lgs-lift: rgba(0, 0, 0, 0.38);
     --lgs-lift-strong: rgba(0, 0, 0, 0.5);
-    --lgs-solid: rgba(20, 20, 24, 0.96);
+    --lgs-solid: rgba(18, 24, 25, 0.96);
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -152,19 +154,19 @@
 
   .banner {
     display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 18px;
-    background: rgba(10,132,255,0.14); box-shadow: inset 0 0 0 1px rgba(10,132,255,0.30); font-size: 14px; line-height: 1.35;
+    background: rgba(111,165,151,0.16); box-shadow: inset 0 0 0 1px rgba(111,165,151,0.34); font-size: 14px; line-height: 1.35;
   }
   .banner[hidden] { display: none; }
   .banner b { display: block; font-size: 15px; }
   .banner span { flex: 1; min-width: 0; color: rgba(235,235,245,0.8); }
-  /* Connect: tinted glass, the accent with a lit rim (as Calendar's OK) */
+  /* Connect: the Sea glass pastel with a lit rim (as Calendar's OK) */
   .banner button {
-    flex: none; padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: #fff;
-    background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), color-mix(in srgb, var(--accent) 88%, transparent);
+    flex: none; padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--cta-ink);
+    background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
     transition: transform .18s cubic-bezier(.22,1,.36,1);
   }
-  .banner button:active { transform: scale(0.95); background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), var(--accent); }
+  .banner button:active { transform: scale(0.95); filter: brightness(.94); }
 
   .sec { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 6px 10px; }
   .sec h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
@@ -492,7 +494,7 @@
     display: block; border-radius: 18px; padding: 10px 16px; margin-top: 8px; background: var(--lgs-field);
     box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--lgs-lift); transition: box-shadow .2s;
   }
-  .field:focus-within { box-shadow: inset 0 0 0 1.5px rgba(10,132,255,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(10,132,255,0.18); }
+  .field:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
   .field span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
   .field input { width: 100%; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 4px 0 2px; }
   .help { font-size: 13px; line-height: 1.45; color: var(--muted); margin: 10px 8px 0; }
@@ -502,12 +504,12 @@
   .status.good { color: #7BE495; }
   .btns { display: flex; gap: 8px; margin-top: 14px; }
   .btn { flex: 1; padding: 14px 0; border-radius: 999px; font-size: 16px; font-weight: 600; background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim); }
-  /* Save / Connect: tinted glass in the accent */
+  /* Save / Connect: the Sea glass pastel, with dark ink */
   .btn.primary {
-    color: #fff; background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), color-mix(in srgb, var(--accent) 88%, transparent);
+    color: var(--cta-ink); background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
-  .btn.primary:not(:disabled):active { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), var(--accent); }
+  .btn.primary:not(:disabled):active { filter: brightness(.94); }
   .btn:disabled { opacity: 0.5; }
   .btn[hidden] { display: none; }
 
@@ -557,7 +559,7 @@
   .linkbtn { margin-top: 16px; font-size: 14px; color: var(--muted); padding: 8px 12px; }
   .haguide { margin: 2px 0 16px; }
   .haguide .hg-cap { color: var(--text); }
-  #haHow { margin: 0; padding: 0 0 0 4px; font-size: 13px; color: var(--accent, #0A84FF); }
+  #haHow { margin: 0; padding: 0 0 0 4px; font-size: 13px; color: var(--accent); }
   .linkbtn.warn { color: #FF8A80; font-weight: 600; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet, .toast { background: var(--lgs-solid); } }
   @media (prefers-reduced-transparency: reduce) { .sheet, .toast { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
@@ -622,11 +624,13 @@
     :root {
       --bg: #E8EDF3;
       --text: #1C1C1E;
-      --muted: rgba(60, 60, 67, 0.62);
+      --muted: rgba(60, 60, 67, 0.80);
+      --accent: #3B7366;
+      --cta: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%);
       --tile: rgba(255, 255, 255, 0.55);
       --tile-edge: rgba(0, 0, 0, 0.07);
       --lgs-top: rgba(255, 255, 255, 0.72);
-      --lgs-bottom: rgba(245, 245, 248, 0.66);
+      --lgs-bottom: rgba(244, 247, 246, 0.66);
       --lgs-rim: rgba(255, 255, 255, 0.9);
       --lgs-edge: rgba(0, 0, 0, 0.08);
       --lgs-row: rgba(28, 32, 40, 0.05);
@@ -635,7 +639,7 @@
       --lgs-filter: blur(28px) saturate(180%) brightness(1.04);
       --lgs-lift: rgba(30, 40, 60, 0.14);
       --lgs-lift-strong: rgba(30, 40, 60, 0.2);
-      --lgs-solid: rgba(250, 250, 252, 0.97);
+      --lgs-solid: rgba(249, 251, 250, 0.97);
       color-scheme: light;
     }
     .bgfx::after { background: linear-gradient(180deg, rgba(240,243,247,0.78) 0%, rgba(240,243,247,0.64) 38%, rgba(240,243,247,0.56) 62%, rgba(240,243,247,0.64) 100%); }

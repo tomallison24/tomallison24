@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
 <meta charset="utf-8">
 <!-- What this page may run and load. Only the app's own script file runs:
@@ -15,8 +15,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mail</title>
 <meta name="description" content="Gmail triage for the home screen: one tap buckets a sender's whole domain into Marketing, and Marketing empties itself.">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#08080B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- default, not black-translucent: that one always draws the clock white,
@@ -25,8 +25,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mail">
 <meta name="referrer" content="origin">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<link rel="icon" type="image/png" href="icon-512.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   Mail - Gmail triage as a home-screen app. No build step, no server, no
@@ -73,13 +73,13 @@
 -->
 <style>
   :root {
-    --bg: #08080B;
+    --bg: #0D1213;
     --text: #FFFFFF;
     --muted: rgba(235, 235, 245, 0.62);
-    --faint: rgba(235, 235, 245, 0.38);
-    --accent: #0A84FF;
-    --icon: #4A9BA6;                          /* the icons and switches: a calm slate-teal (text and dots keep the blue) */
-    --icon-text: #4FA2AD;                     /* the teal as a word (Edit / Done): a hair lighter, 4.8:1 on glass (#4A9BA6 is 4.4) */
+    --faint: rgba(235,235,245,.55);
+    --accent: #A9D3C7; --on-accent: #10181A; --cta: linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%);
+    --icon: #A9D3C7;                          /* the icons and switches: a calm slate-teal (text and dots keep the blue) */
+    --icon-text: #A9D3C7;                     /* the teal as a word (Edit / Done): a hair lighter, 4.8:1 on glass (#4A9BA6 is 4.4) */
     --tag: #FF9F0A;
     --danger: #FF453A;
     /* glass buttons, as on iOS: a translucent fill, lit along the top edge;
@@ -110,19 +110,19 @@
     --bin-ink: #F0A9A3;
     --armed-mix-l: 50%;                       /* a full swipe's Trash capsule */
     /* glass */
-    --glass: rgba(18, 18, 22, 0.46);
-    --glass-2: rgba(38, 38, 44, 0.72);
+    --glass: rgba(16,22,23, 0.46);
+    --glass-2: rgba(34,42,43, 0.72);
     --pill-rim: rgba(255, 255, 255, 0.15);    /* the outline of one conversation in the list */
     --seg-thumb: rgba(255, 255, 255, 0.14);   /* the chosen half of All | Unread */
     /* the pinned header: Liquid Glass - a thin tint, clearer towards the bottom, and a lit rim */
-    --bar-top: rgba(34, 34, 40, 0.14);
-    --bar-bottom: rgba(34, 34, 40, 0.05);
+    --bar-top: rgba(30,38,39, 0.14);
+    --bar-bottom: rgba(30,38,39, 0.05);
     --bar-rim: rgba(255, 255, 255, 0.16);
     /* one clear Liquid Glass for every neutral button, bar and toolbar */
     --lg-bg: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
     --lg-filter: blur(14px) saturate(190%) brightness(1.04);
     --lg-rim: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi);
-    --bar-solid: rgba(20, 20, 24, 0.96);
+    --bar-solid: rgba(18,24,25, 0.96);
     --hair: rgba(255, 255, 255, 0.11);
     --hair-2: rgba(255, 255, 255, 0.07);
     --blur: blur(30px) saturate(180%);
@@ -136,9 +136,9 @@
     --tile: rgba(255, 255, 255, 0.05);
     --tile-edge: rgba(255, 255, 255, 0.10);
     --lift-strong: rgba(0, 0, 0, 0.5);        /* sheets, toast, bars */
-    --toast: rgba(30, 30, 34, 0.62);
-    --page: rgb(10, 10, 13);                  /* the message page: solid, as a pushed page in Mail is */
-    --sheet: rgba(28, 28, 32, 0.80);          /* tag sheet and select bar */
+    --toast: rgba(26,33,34, 0.62);
+    --page: rgb(13,18,19);                  /* the message page: solid, as a pushed page in Mail is */
+    --sheet: rgba(24,31,32, 0.80);          /* tag sheet and select bar */
     --scrim: rgba(0, 0, 0, 0.45);
     --grab: rgba(255, 255, 255, 0.25);
     --ring: rgba(255, 255, 255, 0.32);        /* an empty select circle */
@@ -154,13 +154,13 @@
      the iOS light-mode system ones, deepened where they carry text. */
   @media (prefers-color-scheme: light) {
     :root {
-      --bg: #F2F2F7;
+      --bg: #EEF2F0;
       --text: #111114;
       --muted: rgba(60, 60, 67, 0.80);
-      --faint: rgba(60, 60, 67, 0.64);          /* 0.55 measured 2.9:1 on the page - below the 3:1 floor */
-      --accent: #007AFF;
-      --icon: #0E7C8C;
-      --icon-text: #0B6F7D;                   /* a shade deeper: 5.3:1 on the page (#0E7C8C is 4.4, under 4.5 for text) */
+      --faint: rgba(60,60,67,.76);          /* 0.55 measured 2.9:1 on the page - below the 3:1 floor */
+      --accent: #3B7366; --on-accent: #FFFFFF; --cta: linear-gradient(100deg,#6FA597 0%,#8193BC 34%,#BE918F 67%,#BC9C68 100%); --cta-ink: #10181A;
+      --icon: #3B7366;
+      --icon-text: #3B7366;                   /* a shade deeper: 5.3:1 on the page (#0E7C8C is 4.4, under 4.5 for text) */
       --tag: #D97706;
       --danger: #E5281D;
       --gb: rgba(255, 255, 255, 0.55);
@@ -168,8 +168,8 @@
       --gb-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%);
       --gb-shadow: 0 4px 14px rgba(40, 40, 80, 0.10);
       --tint-mix: 16%;
-      --accent-ink: #0059C8;
-      --sel-ink: #00479E;                     /* #0059C8 measured 4.0:1 over the aurora - below 4.5 */
+      --accent-ink: #2B5A4F;
+      --sel-ink: #24493F;                     /* #0059C8 measured 4.0:1 over the aurora - below 4.5 */
       --danger-ink: #AE2117;
       --accent-text: var(--accent-ink);         /* the plain blue and red are under 4.5:1 on near-white */
       --danger-text: var(--danger-ink);
@@ -191,7 +191,7 @@
       --bar-rim: rgba(255, 255, 255, 0.85);
       --lg-bg: linear-gradient(180deg, var(--bar-top), var(--bar-bottom));
       --lg-rim: inset 0 0 0 1px var(--bar-rim), inset 0 1px 1px var(--hi);
-      --bar-solid: rgba(248, 248, 251, 0.97);
+      --bar-solid: rgba(247,249,248, 0.97);
       --hair: rgba(60, 60, 67, 0.14);
       --hair-2: rgba(60, 60, 67, 0.09);
       --fill: rgba(118, 118, 128, 0.11);
@@ -203,7 +203,7 @@
       --lift-strong: rgba(40, 40, 80, 0.16);
       --toast: rgba(255, 255, 255, 0.84);
       --page: rgb(242, 242, 247);
-      --sheet: rgba(249, 249, 252, 0.90);
+      --sheet: rgba(248,250,249, 0.90);
       --scrim: rgba(0, 0, 0, 0.22);
       --grab: rgba(60, 60, 67, 0.30);
       --ring: rgba(60, 60, 67, 0.32);
@@ -232,10 +232,10 @@
     position: absolute; display: block; border-radius: 50%;
     filter: blur(58px); opacity: var(--aurora); will-change: transform;
   }
-  .aurora b:nth-child(1) { width: 78vw; height: 78vw; left: -12vw;  top: 6vh;   background: radial-gradient(circle, #2E6BFF 0%, rgba(46,107,255,0) 68%); animation: drift1 34s ease-in-out infinite alternate; }
-  .aurora b:nth-child(2) { width: 66vw; height: 66vw; right: -14vw; top: 14vh;  background: radial-gradient(circle, #FF7A3D 0%, rgba(255,122,61,0) 68%); animation: drift2 41s ease-in-out infinite alternate; }
-  .aurora b:nth-child(3) { width: 86vw; height: 86vw; right: -16vw; bottom: 2vh; background: radial-gradient(circle, #9A5BFF 0%, rgba(154,91,255,0) 68%); animation: drift3 47s ease-in-out infinite alternate; }
-  .aurora b:nth-child(4) { width: 62vw; height: 62vw; left: -14vw;  bottom: 16vh; background: radial-gradient(circle, #18C3A5 0%, rgba(24,195,165,0) 68%); animation: drift4 38s ease-in-out infinite alternate; }
+  .aurora b:nth-child(1) { width: 78vw; height: 78vw; left: -12vw;  top: 6vh;   background: radial-gradient(circle, #6FA597 0%, rgba(111,165,151,0) 68%); animation: drift1 34s ease-in-out infinite alternate; }
+  .aurora b:nth-child(2) { width: 66vw; height: 66vw; right: -14vw; top: 14vh;  background: radial-gradient(circle, #BE918F 0%, rgba(190,145,143,0) 68%); animation: drift2 41s ease-in-out infinite alternate; }
+  .aurora b:nth-child(3) { width: 86vw; height: 86vw; right: -16vw; bottom: 2vh; background: radial-gradient(circle, #8193BC 0%, rgba(129,147,188,0) 68%); animation: drift3 47s ease-in-out infinite alternate; }
+  .aurora b:nth-child(4) { width: 62vw; height: 62vw; left: -14vw;  bottom: 16vh; background: radial-gradient(circle, #BC9C68 0%, rgba(188,156,104,0) 68%); animation: drift4 38s ease-in-out infinite alternate; }
   @keyframes drift1 { to { transform: translate3d(14vw, 10vh, 0) scale(1.18); } }
   @keyframes drift2 { to { transform: translate3d(-12vw, 16vh, 0) scale(1.12); } }
   @keyframes drift3 { to { transform: translate3d(-16vw, -12vh, 0) scale(1.22); } }
@@ -394,7 +394,7 @@
     background: linear-gradient(105deg, transparent 20%, rgba(255,159,10,0.22) 45%, rgba(255,255,255,0.30) 52%, transparent 78%);
     transform: translateX(-100%); animation: sheen .75s var(--ease);
   }
-  ul.list > li.confirm.blue::after { background: linear-gradient(105deg, transparent 20%, rgba(10,132,255,0.22) 45%, rgba(255,255,255,0.30) 52%, transparent 78%); }
+  ul.list > li.confirm.blue::after { background: linear-gradient(105deg, transparent 20%, rgba(111,165,151,0.22) 45%, rgba(255,255,255,0.30) 52%, transparent 78%); }
 
   .open { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 2px 0; transition: transform .2s var(--ease), opacity .2s; }
   button.open:active { transform: scale(0.985); opacity: 0.75; }
@@ -426,7 +426,7 @@
   }
   .act:active { transform: scale(0.88); background: rgba(255,159,10,0.16); }
   .act.undo { color: var(--accent); }
-  .act.undo:active { background: rgba(10,132,255,0.16); }
+  .act.undo:active { background: rgba(111,165,151,0.16); }
   .act.warn { color: var(--danger); }
   .act.warn:active { background: rgba(255,69,58,0.16); }
   .act[disabled] { opacity: 0.55; }
@@ -466,7 +466,7 @@
     width: 100%; padding: 12px 13px; border-radius: 13px; background: var(--fill);
     border: 1px solid var(--hair); outline: none; font-size: 16px;   /* under 16px, iOS zooms the page on focus */ transition: border-color .25s, box-shadow .25s;
   }
-  .panel input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
+  .panel input[type=text]:focus { border-color: rgba(111,165,151,0.7); box-shadow: 0 0 0 4px rgba(111,165,151,0.16); }
   .hero {
     align-self: center; width: 76px; height: 76px; border-radius: 26px; display: flex; align-items: center; justify-content: center;
     background: rgba(255,159,10,0.14); border: 1px solid rgba(255,159,10,0.28); color: var(--tag);
@@ -479,7 +479,7 @@
     --tint: var(--accent);
     min-height: 50px; padding: 13px 18px; border-radius: 999px; font-weight: 600; font-size: 15px; color: var(--accent-ink);
     display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-    background: rgba(10, 132, 255, 0.35);                          /* where color-mix isn't known */
+    background: rgba(111,165,151, 0.35);                          /* where color-mix isn't known */
     background: var(--gb-shine), color-mix(in srgb, var(--tint) var(--tint-mix), transparent);
     border: 1px solid color-mix(in srgb, var(--tint) 40%, var(--gb-edge));
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -534,7 +534,7 @@
     transition: box-shadow .25s;
     animation: fadeDown .5s .02s var(--ease) both;
   }
-  .search:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, var(--bar-rim)), inset 0 1px 1px var(--hi), 0 0 0 4px rgba(10,132,255,0.14), 0 6px 20px var(--lift); }
+  .search:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, var(--bar-rim)), inset 0 1px 1px var(--hi), 0 0 0 4px rgba(111,165,151,0.14), 0 6px 20px var(--lift); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .search { background: var(--bar-solid); }
   }
@@ -641,7 +641,7 @@
   .imgnote svg { color: var(--faint); }
   .imgnote button {
     margin-left: auto; flex: none; padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
-    color: var(--accent); background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.28);
+    color: var(--accent); background: rgba(111,165,151,0.12); border: 1px solid rgba(111,165,151,0.28);
   }
   .rcount { font-size: 13px; color: var(--faint); margin-top: -6px; }
   .msg { overflow: hidden; }
@@ -699,7 +699,7 @@
     border: 1px solid var(--hair); outline: none; font-size: 16px; color: var(--text);
     transition: border-color .25s, box-shadow .25s;
   }
-  .sheet input[type=text]:focus { border-color: rgba(10,132,255,0.7); box-shadow: 0 0 0 4px rgba(10,132,255,0.16); }
+  .sheet input[type=text]:focus { border-color: rgba(111,165,151,0.7); box-shadow: 0 0 0 4px rgba(111,165,151,0.16); }
 
   @keyframes pageIn { from { transform: translateX(100%); opacity: 0.4; } to { transform: none; opacity: 1; } }
   @keyframes pageOut { to { transform: translateX(100%); opacity: 0.4; } }
@@ -733,8 +733,8 @@
   #screen.selecting .check::before { content: ''; position: absolute; inset: -16px -14px -16px -14px; }
   #screen.selecting .act { opacity: 0; transform: scale(0.5); width: 0; margin-left: -10px; pointer-events: none; }
   .act { transition: transform .2s var(--ease), background .2s, box-shadow .3s, opacity .25s, width .3s var(--ease), margin .3s var(--ease); }
-  ul.list > li.sel { background: rgba(10,132,255,0.10); }
-  li.sel .check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px rgba(10,132,255,0.55); animation: pop .35s var(--ease); }
+  ul.list > li.sel { background: rgba(111,165,151,0.10); }
+  li.sel .check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px rgba(111,165,151,0.55); animation: pop .35s var(--ease); }
   li.sel .check::after {
     content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px;
     border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
@@ -751,8 +751,8 @@
   }
   #selbar button {
     display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 999px;
-    font-size: 15px; font-weight: 600; color: var(--accent); background: rgba(10,132,255,0.12);
-    border: 1px solid rgba(10,132,255,0.26); transition: transform .18s var(--ease), opacity .2s;
+    font-size: 15px; font-weight: 600; color: var(--accent); background: rgba(111,165,151,0.12);
+    border: 1px solid rgba(111,165,151,0.26); transition: transform .18s var(--ease), opacity .2s;
   }
   #selbar button.danger { color: var(--danger); background: rgba(255,69,58,0.12); border-color: rgba(255,69,58,0.32); }
   #selbar button:active { transform: scale(0.93); }
@@ -831,7 +831,7 @@
   .ctitle { flex: 1; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
   .send {
     width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-    color: #fff; background: var(--accent);
+    color: var(--on-accent); background: var(--accent);
     background: var(--gb-shine), color-mix(in srgb, var(--accent) 82%, transparent);
     border: 1px solid rgba(255, 255, 255, 0.28);
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -1005,7 +1005,7 @@
     font-size: 12px; font-weight: 600; color: var(--faint); background: var(--fill); border: 1px solid var(--hair);
     transition: color .2s, background .2s, border-color .2s, transform .18s var(--ease);
   }
-  .mini.on { color: var(--accent); background: rgba(10,132,255,0.12); border-color: rgba(10,132,255,0.3); }
+  .mini.on { color: var(--accent); background: rgba(111,165,151,0.12); border-color: rgba(111,165,151,0.3); }
   .mini:active { transform: scale(0.93); }
   .kept { align-self: center; flex: none; font-size: 11px; font-weight: 600; color: var(--faint); padding: 4px 9px; border-radius: 999px; border: 1px solid var(--hair); }
   .cnote { margin: -2px 16px 8px; font-size: 12px; line-height: 1.5; color: var(--faint); }
@@ -1166,8 +1166,8 @@
      menu is the same glass; the message page and New Message stay full pages,
      with the same glass buttons, rows, fields and switches. */
   :root {
-    --lgs-top: rgba(44, 44, 52, 0.60);
-    --lgs-bottom: rgba(22, 22, 28, 0.52);
+    --lgs-top: rgba(40,50,51, 0.60);
+    --lgs-bottom: rgba(20,27,28, 0.52);
     --lgs-rim: rgba(255, 255, 255, 0.20);     /* the lit top edge */
     --lgs-edge: rgba(255, 255, 255, 0.12);    /* the rim all round */
     --lgs-row: rgba(255, 255, 255, 0.07);     /* a button on the sheet (its lists and rows are tiles) */
@@ -1211,7 +1211,7 @@
   .sheet .btn.warn, .sheet .btn.danger { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 30%, var(--lgs-edge)), inset 0 1px 1px var(--lgs-rim), 0 4px 16px var(--lift); }
   /* the sheet's one main action (Tag, Unsubscribe, Share, Tidy): filled blue, as iOS 26's is */
   .sheet .btn:not(.ghost):not(.warn):not(.danger) {
-    color: #fff; background: var(--gb-shine), color-mix(in srgb, var(--accent) 88%, transparent);
+    color: var(--cta-ink); background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
   .sheet .btn[disabled] { opacity: .6; }
@@ -1263,7 +1263,7 @@
   }
   /* a little more body than the sheets, so a list behind it never reads through the rows */
   .menu { --lgs-top: rgba(46, 46, 54, 0.74); --lgs-bottom: rgba(24, 24, 30, 0.68); }
-  @media (prefers-color-scheme: light) { .menu { --lgs-top: rgba(255, 255, 255, 0.82); --lgs-bottom: rgba(250, 250, 253, 0.70); } }
+  @media (prefers-color-scheme: light) { .menu { --lgs-top: rgba(255, 255, 255, 0.82); --lgs-bottom: rgba(249,251,250, 0.70); } }
   #boxmenu .catch { backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); }
   .menu button {
     --itile: hsl(var(--h) 85% 58% / 0.17); --ink: hsl(var(--h) 90% var(--tl));
@@ -1362,10 +1362,10 @@
   .rtop .pillbtn { height: 44px; padding: 0 16px; }
   .ctop .iconbtn { color: var(--text); }
   .send {
-    width: 44px; height: 44px; color: #fff; background: var(--gb-shine), color-mix(in srgb, var(--accent) 88%, transparent);
+    width: 44px; height: 44px; color: var(--cta-ink); background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
-  .send:active { background: var(--gb-shine), var(--accent); }
+  .send:active { background: var(--cta); filter: brightness(.94); }
   /* iOS 26's switch (the icon's count, Tidy, auto-tags): Mail's teal when on, and a
      pill-shaped knob that swells into a clear lens while pressed */
   .switch {
@@ -1447,7 +1447,6 @@
 <div id="toast" class="hide" role="status" aria-live="polite"></div>
 <script src="../home/slide.js"></script>
 <script src="app.js"></script>
-<!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->
 <script src="../home/welcome.js" data-app="mail" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>

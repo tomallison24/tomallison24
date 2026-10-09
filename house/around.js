@@ -295,7 +295,7 @@ family({
         ['favs', `<div class="tiles two nodrag"><button class="tile${bedOn ? ' on' : ''}" data-a="bedtime"${dis || !st(HATCH.bed) ? ' disabled' : ''}>${svg('night', 20)}Bedtime</button>
           <button class="tile${morningOn ? ' on' : ''}" data-a="morning"${dis ? ' disabled' : ''}>${svg('sun', 20)}Morning</button></div>`],
         ['bri', lbl('BRIGHTNESS') + segHTML('bseg', Array.from({ length: 10 }, (_, i) => [i + 1, i + 1]), r.lit ? Math.max(1, Math.min(10, Math.round(r.bri / 10))) : null, { cls: 'rail', dis })],
-        ['colour', lbl('COLOUR') + `<div class="swatches nodrag">${H_COLOURS.map((x, i) => `<button class="swatch${near(x) && r.lit ? ' on' : r.lit ? ' dim' : ''}" data-a="colour" data-v="${i}" style="--c:${x.join(',')}" aria-label="Colour ${i + 1}"${dis ? ' disabled' : ''}><i></i></button>`).join('')}</div>`],
+        ['colour', lbl('COLOR') + `<div class="swatches nodrag">${H_COLOURS.map((x, i) => `<button class="swatch${near(x) && r.lit ? ' on' : r.lit ? ' dim' : ''}" data-a="colour" data-v="${i}" style="--c:${x.join(',')}" aria-label="Color ${i + 1}"${dis ? ' disabled' : ''}><i></i></button>`).join('')}</div>`],
         ['clock', lbl('CLOCK') + segHTML('clock', [[0, 'Off'], [10, 'Dim'], [40, 'Mid'], [100, 'Bright']], r.ck === 0 ? 0 : r.ck < 25 ? 10 : r.ck < 70 ? 40 : 100, { dis: dis || gone(HATCH.clock) })],
         ['more', grp(swRow('lock', 'Toddler lock', lock ? 'lock' : 'lockOpen', lock, a, { dis: gone(HATCH.lock), wait: tWaiting(r.d, 'lock') })
           + readRow('wifi', 'Wi-Fi', val(HATCH.wifi) === 'on' ? 'Connected' : val(HATCH.wifi) === 'off' ? 'Offline' : '—'), true)],

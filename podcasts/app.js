@@ -1303,9 +1303,14 @@
 
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
-  // first open only records the fingerprint.
-  (function(){
-    const src = [...document.querySelectorAll('style, script:not([src])')].map(e => e.textContent).join('');
+  // first open only records the fingerprint. The code is in app.js now, so the
+  // fingerprint is the page's styles and sw.js's CACHE name, which every
+  // release of this app bumps; offline, it waits for the next open.
+  (async function(){
+    let cache = '';
+    try { const r = await fetch('sw.js', {cache:'no-store'}); if (!r.ok) return; cache = (/const CACHE = '([^']+)'/.exec(await r.text()) || [])[1] || ''; } catch(e) { return; }
+    if (!cache) return;
+    const src = [...document.querySelectorAll('style')].map(e => e.textContent).join('') + cache;
     const ver = hash(src), VK = KEY + '-version';
     let prev = null;
     try { prev = localStorage.getItem(VK); localStorage.setItem(VK, ver); } catch(e) { return; }

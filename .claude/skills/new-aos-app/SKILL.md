@@ -24,7 +24,8 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
   - `viewport-fit=cover`, `apple-mobile-web-app-capable`,
     `apple-mobile-web-app-status-bar-style` `black-translucent`,
     `apple-mobile-web-app-title`, `apple-touch-icon` (`icon-180.png`), two
-    `theme-color` metas (light `#F2F2F7`, dark `#08080B`), the manifest link.
+    `theme-color` metas (light `#EEF2F0`, dark `#0D1213`: the Sea glass
+    grounds), the manifest link, and `<html lang="en-US">`.
   - A strict Content-Security-Policy meta: `default-src 'none'`,
     `script-src 'self'` (no inline, eval or outside scripts), `base-uri 'none'`,
     `form-action 'none'`, and `connect-src` / `img-src` / `media-src` only for
@@ -41,11 +42,14 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
   every file exists (a missing one breaks the install). Network-first; leave
   `/api/` alone. Bump the version when the shell changes.
 - `manifest.webmanifest`: name, short_name, description, `start_url` and
-  `scope` `"./"`, `display` `standalone`, colours `#08080B`, a 180 and a
+  `scope` `"./"`, `display` `standalone`, colors `#0D1213`, a 180 and a
   512 (`any maskable`) icon.
 - `icon.svg`, rendered to `icon-180.png` and `icon-512.png` by
   `scripts/make-icons.mjs` (copy Fitness's). The look: a full-bleed diagonal
-  gradient in a hue no other app uses, a soft glow top left, one white glyph.
+  gradient in a Sea glass tint no other app uses (muted, light top left to
+  deep bottom right: see the other apps' `icon.svg`), a soft glow top left,
+  one white glyph. Any detail in the glyph is cut out of it (an SVG mask), not
+  drawn in another color. Its middle tint is its `HUE` in `aOS/app.js`.
 - `README.md`: what it does, the data and where it lives, how it syncs, tests.
 - `scripts/`: tests (`*-test.mjs`): Node for the logic, and a Playwright
   `app-test.mjs` at iPhone size (390 × 844) that seeds
@@ -61,7 +65,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `home/welcome.js` `OS_TOUR` | the sentence listing every app by name |
 | `home/welcome.js` `DARK_ONLY` | only if it is drawn for dark only |
 | `home/welcome.js` `RELEASES` | a line in the top entry (see `CLAUDE.md`, "The release log") |
-| `aOS/app.js` | `HUE` (its glow, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
+| `aOS/app.js` | `HUE` (its glow: its icon's middle tint, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
@@ -74,22 +78,37 @@ per person is deleted in `functions/aOS/api` `remove`.
 
 ## 3. The ground rules
 
-- **Look**: Fitness's tokens, the faint tiles every app shares (`--tile`,
-  `--tile-edge`, no shadow), Liquid Glass sheets and buttons, the system font
-  (`-apple-system…`), no web fonts or anything loaded from another site. Sea
-  glass (`--w-pastel` / `--pastel`) for AllisonOS's own highlights only: no new
-  pastel gradients.
+- **Look: Sea glass**, the AllisonOS colors, in Fitness's tokens: grounds
+  `--bg` `#EEF2F0` / `#0D1213`; the accent `#3B7366` light / `#A9D3C7` dark
+  for `--accent`, `--accent-text`, `--icon` and the like (4.5:1 or more on
+  the ground); `--on-accent` (white light, `#10181A` dark) for text on a solid
+  accent fill; the pastel `--cta` with `#10181A` ink (`--cta-ink`) for the one
+  main button (OK, Save, Send); the aurora (`.ambient`) in the four Sea glass
+  hues (sea glass `#6FA597`, mist `#8193BC`, shell `#BE918F`, sand `#BC9C68`).
+  No iOS blue and no new colors or gradients beyond these; functional colors
+  (danger red, note colors, maps, weather) are fine. Text and muted text at
+  4.5:1 or more on the ground in both modes (`--faint` .76 light / .55 dark).
+  The faint tiles every app shares (`--tile`, `--tile-edge`, no shadow),
+  Liquid Glass sheets and buttons, the system font (`-apple-system…`), no web
+  fonts or anything loaded from another site.
 - **Light and dark**: tokens under `@media (prefers-color-scheme: dark)`;
   welcome.js applies the person's Light/Dark choice by switching those media
   queries, so no `data-theme` copies are needed. Don't build your own theme
-  switch.
+  switch. Script that picks colors itself (a canvas, map tiles) reads
+  `document.documentElement.dataset.theme` (or `home.settings`.theme before
+  welcome.js has run), falls back to `matchMedia` for Automatic, and redraws
+  on the window's `aos:theme` event (as `house/bg.js` and Places do).
 - **Motion**: honour `prefers-reduced-motion` (and
   `prefers-reduced-transparency` for glass).
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
-  labels; colour never the only signal.
-- **Words**: plain, second person, British spelling (`lang="en-GB"`), short
-  sentences. "aOS" always with a lowercase a, never uppercased by CSS.
+  labels; color never the only signal.
+- **Words**: plain, second person, US English (`lang="en-US"`: color,
+  favorite, canceled, center), short sentences. Dates the US way, with
+  `'en-US'` passed to `toLocaleDateString` and friends ("Oct 9, 2026",
+  "Friday, October 9"). Keep storage keys and stored values as they are
+  even if they're spelled the old way. "aOS" always with a lowercase a, never
+  uppercased by CSS.
 - **Safe**: escape everything put into `innerHTML`; refuse to run in a frame.
 - **Free plan** (Cloudflare): KV writes are 1,000 a day for the whole account
   and a request gets 10 ms of CPU. Write only when something changed, send
