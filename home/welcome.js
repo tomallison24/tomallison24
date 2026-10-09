@@ -90,6 +90,7 @@
         'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name',
         'Home: the Dysons\' Heat to stepper is back to its normal size, like the heaters\' Target',
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
+        'aOS shows ✓ Installed as soon as a new app has been opened, without reopening aOS',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
         'Fitness: your drinks from Drinks in Analysis, beside your training',
