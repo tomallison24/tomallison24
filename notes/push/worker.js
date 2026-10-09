@@ -84,7 +84,7 @@ export function fireAt(t, sub) {
 // ---------------------------------------------------------------------------
 class SheetError extends Error {}
 
-async function pull(sheet, fetchImpl) {
+async function pull(sheet, fetchImpl, now = Date.now()) {
   let r, res;
   try {
     r = await fetchImpl(sheet.url, {
@@ -95,7 +95,7 @@ async function pull(sheet, fetchImpl) {
   } catch { throw new SheetError('network'); }
   try { res = await r.json(); } catch { throw new SheetError('not-json'); }
   if (!res || !res.ok) throw new SheetError((res && typeof res.error === 'string' && res.error) || 'not-json');
-  return slim(res);
+  return slim(res, now);   // the clock tick() was given, not the real one (so a test can set it)
 }
 
 // Just what alerting needs. Done and deleted reminders, archived and deleted
@@ -126,10 +126,10 @@ async function keepItems(env, items) {
   return true;
 }
 
-async function refresh(env, fetchImpl) {
+async function refresh(env, fetchImpl, now = Date.now()) {
   const sheet = await env.PUSH.get('sheet', 'json');
   if (!sheet) throw new SheetError('no-sheet');
-  const items = await pull(sheet, fetchImpl);
+  const items = await pull(sheet, fetchImpl, now);
   const changed = await keepItems(env, items);
   return { items, changed };
 }
@@ -312,7 +312,7 @@ export async function tick(env, fetchImpl = fetch, now = Date.now()) {
 
   let items = await env.PUSH.get('items', 'json'), pulled = null;
   if (!items || Math.floor(now / MIN) % PULL_EVERY === 0) {
-    try { items = (await refresh(env, fetchImpl)).items; pulled = true; }
+    try { items = (await refresh(env, fetchImpl, now)).items; pulled = true; }
     catch (e) { pulled = e.message; if (!items) return { error: 'sheet-' + e.message }; }
   }
 

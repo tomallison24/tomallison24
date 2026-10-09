@@ -83,6 +83,9 @@
         'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
+        'Lost a phone? Sign out everywhere else, in your aOS account, ends every other sign-in at once',
+        'Every app works on its own: add only the ones you want; what they share with each other is extra',
+        'Weeks start on Sunday in Calendar, Fitness and Drinks (Calendar → Settings to pick Monday); Travel says rental car',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
@@ -296,7 +299,7 @@
         {
           "i": "inbox",
           "t": "Fills itself from Gmail",
-          "d": "Connect Gmail and your flight, hotel and car hire confirmations become trips on their own."
+          "d": "Connect Gmail and your flight, hotel and rental car confirmations become trips on their own."
         },
         {
           "i": "plane",

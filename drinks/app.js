@@ -115,7 +115,7 @@ if (window.top !== window.self) {
   const nowTime = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const addDays = (s, n) => { const d = noon(s); d.setDate(d.getDate() + n); return ymd(d); };
   // Monday, unless Calendar has been set to start its weeks on Sunday (as Fitness).
-  const weekStartsSunday = () => ls.json('allison-calendar-v1-settings', {}).weekStart === 0;
+  const weekStartsSunday = () => { const c = ls.json('allison-calendar-v1-settings', {}); return !(c.weekStart === 1 && c.weekStartPicked); };   // Sunday, unless Monday was picked in Calendar
   const weekStartOf = s => { const wd = noon(s).getDay(); return addDays(s, -(weekStartsSunday() ? wd : (wd + 6) % 7)); };
   const fmt = (s, o) => noon(s).toLocaleDateString('en-US', o);
   const sameYear = s => s.slice(0, 4) === today().slice(0, 4);

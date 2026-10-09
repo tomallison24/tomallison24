@@ -2,7 +2,7 @@
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Your places live in localStorage, never in this cache, and search,
 // place details and map tiles (other sites) are never cached here.
-const CACHE = 'places-v26';
+const CACHE = 'places-v27';
 // slide.js is shared by every app, from home/.
 const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=3', 'icon-512.png?v=3', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/welcome.js'];
 
@@ -18,7 +18,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // never /…/api/: account answers (who you are, the family) aren't kept on the phone
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

@@ -2,7 +2,7 @@
 // a new deploy shows up on the next open and the cache is only the fallback.
 // The log itself never passes through here: it lives in this phone's storage,
 // and the calls to your account (api/) are left alone.
-const CACHE = 'drinks-v4';
+const CACHE = 'drinks-v5';
 const SHELL = ['./', 'index.html', 'app.js', 'calc.js', 'manifest.webmanifest', 'icon.svg?v=2', 'icon-180.png?v=2', 'icon-512.png?v=2', '../home/slide.js', '../home/account.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {

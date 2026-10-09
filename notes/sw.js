@@ -1,7 +1,7 @@
 // Offline shell for the Notes app. Same-origin files load network-first so a
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Notes themselves live in localStorage, never in this cache.
-const CACHE = 'notes-v47';
+const CACHE = 'notes-v48';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=4', 'icon.svg?v=2', 'icon-180.png?v=5', 'icon-512.png?v=5', '../home/slide.js', '../home/welcome.js', 'aisles.js', '../home/account.js'];
 
 self.addEventListener('install', e => {
@@ -16,7 +16,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // never /…/api/: account answers (who you are, the family) aren't kept on the phone
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

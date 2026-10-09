@@ -10,6 +10,8 @@
 //   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by,
 //                      removed?: when the owner removed them (signed out, data kept) }
 //   apps:<id>        { <app>: when it was last opened from their Home Screen }
+//   sv:<id>          how many times they've used "Sign out other devices"
+//   used:<challenge> a sign-in challenge already used, gone after 5 minutes
 //   layer:<app>:<id> { at, data } - what Notes, Travel, Fitness or Mail shows in that
 //                    person's Calendar (functions/aOS/api); only they can read it
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
@@ -22,9 +24,13 @@
 //   drinks:<id>      that person's Drinks log (functions/drinks/api); only they can
 //                    read it, and it stays when they are removed (for an invite back)
 //   config:plan, config:trial   the family's plan (functions/aOS/api, planView)
-// A session is "<payload>.<HMAC>", payload { u: user id, e: expiry }; it holds
-// only while the user is still in the family, so removing someone signs them out
-// everywhere (within KV's ~60 seconds).
+// A session is "<payload>.<HMAC>", payload { u: user id, e: expiry, s: sign-out
+// count }; it holds only while the user is still in the family and their sign-out
+// count (sv:<id>, kept apart from the user record so it never rewrites it) still
+// matches, so removing someone, or "Sign out other devices",
+// signs those sessions out everywhere (within KV's ~60 seconds).
+// A sign-in challenge is signed the same way ({ k, c, e }, with a "c." prefix so it
+// can never pass for a session) rather than stored: asking for one writes nothing.
 //
 // The very first account, the owner's, needs the owner code: a Cloudflare Pages
 // secret, OWNER_CODE (never in this repository; aOS/RELEASING.md). Without it no
@@ -59,10 +65,26 @@ async function hmacKey(db) {
 }
 
 // ---- sessions ----
-export async function issue(db, userId, now = Date.now()) {
-  const payload = b64u(enc.encode(JSON.stringify({ u: userId, e: Math.floor(now / 1000) + SESSION_DAYS * 86400 })));
+export async function issue(db, userId, now = Date.now(), sv = 0) {
+  const payload = b64u(enc.encode(JSON.stringify({ u: userId, e: Math.floor(now / 1000) + SESSION_DAYS * 86400, s: sv || 0 })));
   const sig = await crypto.subtle.sign('HMAC', await hmacKey(db), enc.encode(payload));
   return payload + '.' + b64u(sig);
+}
+
+// ---- signed sign-in challenges (no KV write to hand one out) ----
+export async function sealChallenge(db, kind, challenge, secs, now = Date.now()) {
+  const payload = b64u(enc.encode(JSON.stringify({ k: kind, c: challenge, e: Math.floor(now / 1000) + secs })));
+  const sig = await crypto.subtle.sign('HMAC', await hmacKey(db), enc.encode('c.' + payload));
+  return payload + '.' + b64u(sig);
+}
+export async function openChallenge(db, kind, id, now = Date.now()) {
+  const m = /^([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(String(id || ''));
+  if (!m) return null;
+  let ok = false;
+  try { ok = await crypto.subtle.verify('HMAC', await hmacKey(db), unb64u(m[2]), enc.encode('c.' + m[1])); } catch { return null; }
+  if (!ok) return null;
+  let p; try { p = JSON.parse(new TextDecoder().decode(unb64u(m[1]))); } catch { return null; }
+  return p && p.k === kind && typeof p.c === 'string' && typeof p.e === 'number' && p.e * 1000 >= now ? p.c : null;
 }
 
 // The signed-in user, or null: the session must be signed by us, unexpired, and its user still in the family.
@@ -75,7 +97,13 @@ export async function sessionUser(db, request, now = Date.now()) {
   let p; try { p = JSON.parse(new TextDecoder().decode(unb64u(m[1]))); } catch { return null; }
   if (!p || typeof p.u !== 'string' || typeof p.e !== 'number' || p.e * 1000 < now) return null;
   const u = await getJSON(db, 'user:' + p.u);
-  return u && !u.removed ? u : null;
+  return u && !u.removed && (p.s || 0) === await signOuts(db, u.id) ? u : null;
+}
+export const signOuts = async (db, id) => +(await db.get('sv:' + id)) || 0;
+export async function signOutOthers(db, id) {
+  const sv = (await signOuts(db, id)) + 1;
+  await db.put('sv:' + id, String(sv));
+  return sv;
 }
 
 // ---- passkeys (WebAuthn) ----

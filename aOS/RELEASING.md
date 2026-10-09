@@ -90,6 +90,10 @@ every app and forgets their passkeys, but deletes nothing of theirs: their
 Drinks log and the rest stay. **Invite back** next to their name makes an invite
 link that brings them back as they were.
 
+**Lost a phone?** Anyone signed in can use Your account → **Sign out everywhere
+else**: every other sign-in of theirs ends at once (other devices, and the other
+apps on that phone, which ask for Face ID again). Nothing is deleted.
+
 The owner can then save the family's Home Assistant address (aOS → Your account
 → **Home Assistant address**, the Nabu Casa one). It's kept in that storage, not
 in the repository, and only signed-in family can read it: Home fills it in for

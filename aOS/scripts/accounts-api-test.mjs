@@ -5,7 +5,8 @@
 // owner exists, removing someone keeps everything of theirs and an invite back
 // returns it, "installed" never rewrites the user record (so it can't bring a removed
 // person back), a sign-up can't take over a passkey that's already someone's, and
-// Calendar's layers are each person's own.
+// Calendar's layers are each person's own; signing in writes nothing until a real
+// passkey signs, once per challenge; and "Sign out other devices" ends the others.
 //   node aOS/scripts/accounts-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest } from '../../functions/aOS/api/[[route]].js';
@@ -33,14 +34,27 @@ let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 
 // A software passkey: what a phone sends for a new passkey ("none" attestation).
+const KEYS = new Map();   // credName -> the software passkey's key pair, for signing in later
 async function makePasskey(begin, credName) {
   const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  if (!KEYS.has(credName)) KEYS.set(credName, kp);   // a refused take-over attempt mustn't replace the real one
   const spki = b64u(await crypto.subtle.exportKey('spki', kp.publicKey));
   const credId = new TextEncoder().encode(credName);
   const rpHash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('site.example')));
   const ad = new Uint8Array(55 + credId.length); ad.set(rpHash); ad[32] = 0x45; ad[53] = 0; ad[54] = credId.length; ad.set(credId, 55);
   const cd = new TextEncoder().encode(JSON.stringify({ type: 'webauthn.create', challenge: begin.challenge, origin: 'https://site.example' }));
   return { id: begin.id, credId: b64u(credId), clientDataJSON: b64u(cd), authenticatorData: b64u(ad), spki, alg: -7 };
+}
+// What a phone sends to sign in with a passkey: authenticatorData + the signature (DER, as phones send it).
+const der = raw => { const int = b => { let i = 0; while (i < b.length - 1 && b[i] === 0) i++; b = b.slice(i); return b[0] & 0x80 ? [0, ...b] : [...b]; };
+  const r = int(raw.slice(0, 32)), q = int(raw.slice(32)); return new Uint8Array([0x30, r.length + q.length + 4, 2, r.length, ...r, 2, q.length, ...q]); };
+async function signIn(begin, credName) {
+  const rpHash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('site.example')));
+  const ad = new Uint8Array(37); ad.set(rpHash); ad[32] = 0x05;
+  const cd = new TextEncoder().encode(JSON.stringify({ type: 'webauthn.get', challenge: begin.challenge, origin: 'https://site.example' }));
+  const signed = new Uint8Array(ad.length + 32); signed.set(ad); signed.set(new Uint8Array(await crypto.subtle.digest('SHA-256', cd)), ad.length);
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, KEYS.get(credName).privateKey, signed));
+  return { id: begin.id, credId: b64u(new TextEncoder().encode(credName)), clientDataJSON: b64u(cd), authenticatorData: b64u(ad), signature: b64u(der(sig)) };
 }
 const join = async (beginBody, credName) => {
   const b = await call('signup/begin', beginBody); if (b.status !== 200) return b;
@@ -147,6 +161,49 @@ await test('Calendar layers: each person reads only their own, writes happen onl
   const theirs = (await call('layer', undefined, await issue(db, samId))).body.layers;
   assert.equal(theirs.notes, undefined, 'Sam can\'t see Tom\'s');
   assert.equal((await call('layer', undefined)).status, 401);
+});
+
+await test('asking to sign in writes nothing to KV, so no one can use up the writes', async () => {
+  const before = db.m.size;
+  for (let i = 0; i < 50; i++) assert.equal((await call('signin/begin', {})).status, 200);
+  assert.equal(db.m.size, before);
+});
+
+await test('signing in: a real passkey works once per challenge; replays, forgeries and expired challenges don\'t', async () => {
+  const b = (await call('signin/begin', {})).body;
+  const proof = await signIn(b, 'TOMKEY');
+  const r = await call('signin/finish', proof);
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.user.id, owner);
+  assert.equal(await lockReq(r.body.token), 'through');
+  assert.equal((await call('signin/finish', proof)).body.error, 'expired', 'the same proof again is refused');
+  const forged = b.id.split('.')[0] + '.' + b64u(new Uint8Array(32));
+  assert.equal((await call('signin/finish', { ...proof, id: forged })).body.error, 'expired', 'a challenge we didn\'t sign');
+  const old = (await call('signin/begin', {})).body;
+  const { sealChallenge } = await import('../../server/auth.js');
+  const stale = await sealChallenge(db, 'signin', old.challenge, 300, Date.now() - 301e3);
+  assert.equal((await call('signin/finish', { ...(await signIn(old, 'TOMKEY')), id: stale })).body.error, 'expired', 'over 5 minutes old');
+  assert.equal(await lockReq(b.id), 'signin', 'a challenge is no session');
+});
+
+await test('Sign out other devices: every other session ends, this one gets a fresh token, the user record is untouched', async () => {
+  const phone = (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;
+  const laptop = (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;
+  const rec = db.m.get('user:' + owner);
+  const r = await call('signout-others', {}, laptop);
+  assert.equal(r.status, 200);
+  assert.equal(await lockReq(phone), 'signin', 'the other phone is signed out');
+  assert.equal(await lockReq(laptop), 'signin', 'the old token on this device too');
+  assert.equal(await lockReq(r.body.token), 'through', 'its fresh token works');
+  assert.equal(db.m.get('user:' + owner), rec, 'kept apart from the user record');
+  const again = (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;
+  assert.equal(await lockReq(again), 'through', 'signing in again afterwards works');
+  assert.equal((await call('signout-others', {})).status, 401);
+});
+
+await test('unexpected errors say only "verify", not the inner message', async () => {
+  const b = (await call('signin/begin', {})).body;
+  const r = await call('signin/finish', { ...(await signIn(b, 'TOMKEY')), signature: 'AAAA' });
+  assert.equal(r.body.detail, undefined);
 });
 
 console.log(`${n} of ${n} passed`);

@@ -1,0 +1,16 @@
+# Security headers for every page and file Cloudflare Pages serves (not the
+# /…/api/ functions, which set their own). Copied into the published site by
+# .github/workflows/news.yml. GitHub Pages ignores this file.
+#   frame-ancestors / X-Frame-Options: no other site can show these pages in a frame
+#   nosniff: files are only ever read as the type they're served as
+#   Referrer-Policy: other sites see only this site's address, never a page's
+#   HSTS: always https
+#   Permissions-Policy: location for Weather, Places and Calendar; nothing else
+#   powerful (no camera, microphone, payments or USB), and only for this site
+/*
+  Content-Security-Policy: frame-ancestors 'self'
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=(), fullscreen=(self), picture-in-picture=(self), screen-wake-lock=(self), publickey-credentials-get=(self)

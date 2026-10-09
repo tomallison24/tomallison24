@@ -78,6 +78,12 @@ per person is deleted in `functions/aOS/api` `remove`.
 
 ## 3. The ground rules
 
+- **It works on its own.** People add only the apps they want, so an app may
+  never need another app installed or used: its own storage, its own sign-in
+  (`../home/account.js`), and anything shared through the family account (as
+  Calendar's layers are) or a shared file, never another app's storage. What
+  another app adds is extra, and says so ("If you use Notes, …"), never an
+  error. `aOS/scripts/standalone-test.mjs` checks every app alone.
 - **Look: Sea glass**, the AllisonOS colors, in Fitness's tokens: grounds
   `--bg` `#EEF2F0` / `#0D1213`; the accent `#3B7366` light / `#A9D3C7` dark
   for `--accent`, `--accent-text`, `--icon` and the like (4.5:1 or more on
@@ -121,6 +127,7 @@ per person is deleted in `functions/aOS/api` `remove`.
 ```
 node aOS/scripts/check-apps.mjs        # wired in, and the ground rules; must end with 0 errors
 node aOS/scripts/apps-smoke-test.mjs   # every app opens, light and dark, with no script errors and nothing its policy blocks
+node aOS/scripts/standalone-test.mjs   # every app on its own, signed out and in, needing no other app
 node <id>/scripts/<tests>.mjs          # the app's own tests
 ```
 
