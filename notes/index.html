@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Notes</title>
 <meta name="description" content="Notes and reminders with tags, search and share-a-copy, in the same frosted glass as Mail and News.">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#08080B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,9 +28,9 @@
 <style>
 /* Allison OS family look, shared with Mail and News: frosted glass over a slow aurora. */
 :root{
-  --bg:#F2F2F7; --text:#111114; --muted:rgba(60,60,67,.80); --faint:rgba(60,60,67,.64);
-  --accent:#007AFF; --accent-ink:#0059C8; --sel-ink:#00479E; --danger:#E5281D; --danger-ink:#AE2117; --flag:#D97706;
-  --glass:rgba(255,255,255,.58); --glass-2:rgba(255,255,255,.86); --sheet:rgba(249,249,252,.90); --toast:rgba(255,255,255,.84);
+  --bg:#EEF2F0; --text:#111114; --muted:rgba(60,60,67,.80); --faint:rgba(60,60,67,.76);
+  --accent:#3B7366; --on-accent:#FFFFFF; --cta:linear-gradient(100deg,#6FA597 0%,#8193BC 34%,#BE918F 67%,#BC9C68 100%); --cta-ink:#10181A; --accent-ink:#2B5A4F; --sel-ink:#24493F; --danger:#E5281D; --danger-ink:#AE2117; --flag:#D97706;
+  --glass:rgba(255,255,255,.58); --glass-2:rgba(255,255,255,.86); --sheet:rgba(248,250,249,.90); --toast:rgba(255,255,255,.84);
   --gb-edge:rgba(255,255,255,.95); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 60%);
   --hair:rgba(60,60,67,.14); --hair-2:rgba(60,60,67,.09); --fill:rgba(118,118,128,.11); --pill:rgba(255,255,255,.96);
   --hi:rgba(255,255,255,.8); --lift:rgba(40,40,80,.08); --lift-strong:rgba(40,40,80,.16);
@@ -40,8 +40,8 @@
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
   --flag-tint:#C8913F; --arch-tint:#8C79CF; --bin-tint:#C9625B; --tag-tint:#7B6CF6;
   --flag-ink:#855412; --arch-ink:#5A45B0; --bin-ink:#9E3A32; --tag-ink:#4A3FC4; --gi-mix:18%;
-  --icon:#0E7C8C; --accent-text:#0059C8; --danger-text:#AE2117;
-  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(248,248,251,.97);
+  --icon:#3B7366; --accent-text:#3B7366; --danger-text:#AE2117;
+  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(247,249,248,.97);
   --seg-thumb:rgba(255,255,255,.92); --gb-shadow:0 4px 14px rgba(40,40,80,.10);
   /* Cards: very faint tiles, the same in every AllisonOS app */
   --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
@@ -51,33 +51,33 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;
-  --bg:#08080B; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.38);
-  --accent:#0A84FF; --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF; --flag:#FF9F0A;
-  --glass:rgba(18,18,22,.46); --glass-2:rgba(38,38,44,.72); --sheet:rgba(28,28,32,.80); --toast:rgba(30,30,34,.62);
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80); --toast:rgba(26,33,34,.62);
   --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
   --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07); --pill:rgba(255,255,255,.13);
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
   --flag-ink:#EBC68F; --arch-ink:#CDBEF3; --bin-ink:#F0A9A3; --tag-ink:#D9D3FF; --gi-mix:30%;
-  --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
-  --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
+  --icon:#A9D3C7; --accent-text:#A9D3C7; --danger-text:#FF453A;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
   --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#08080B; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.38);
-  --accent:#0A84FF; --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF; --flag:#FF9F0A;
-  --glass:rgba(18,18,22,.46); --glass-2:rgba(38,38,44,.72); --sheet:rgba(28,28,32,.80); --toast:rgba(30,30,34,.62);
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80); --toast:rgba(26,33,34,.62);
   --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
   --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07); --pill:rgba(255,255,255,.13);
   --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
   --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
   --tint-mix:42%; --note-mix:24%; --tl:80%; --aurora:.72; --mark:rgba(255,204,0,.35);
   --flag-ink:#EBC68F; --arch-ink:#CDBEF3; --bin-ink:#F0A9A3; --tag-ink:#D9D3FF; --gi-mix:30%;
-  --icon:#4A9BA6; --accent-text:#0A84FF; --danger-text:#FF453A;
-  --bar-top:rgba(34,34,40,.14); --bar-bottom:rgba(34,34,40,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(20,20,24,.96);
+  --icon:#A9D3C7; --accent-text:#A9D3C7; --danger-text:#FF453A;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
   --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
   --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
 }
@@ -112,10 +112,10 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .app{position:relative;width:100%;max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;overflow-x:clip;background:var(--bg);isolation:isolate}
 .ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 .ambient i{position:absolute;display:block;border-radius:50%;filter:blur(58px);opacity:var(--aurora);will-change:transform}
-.ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#2E6BFF 0%,rgba(46,107,255,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
-.ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#FF7A3D 0%,rgba(255,122,61,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
-.ambient i:nth-child(3){width:120.4%;aspect-ratio:1;right:-20%;bottom:-6%;background:radial-gradient(circle,#9A5BFF 0%,rgba(154,91,255,0) 68%);animation:drift3 47s ease-in-out infinite alternate}
-.ambient i:nth-child(4){width:86.8%;aspect-ratio:1;left:-17.2%;bottom:13.6%;background:radial-gradient(circle,#18C3A5 0%,rgba(24,195,165,0) 68%);animation:drift4 38s ease-in-out infinite alternate}
+.ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#6FA597 0%,rgba(111,165,151,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
+.ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#BE918F 0%,rgba(190,145,143,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
+.ambient i:nth-child(3){width:120.4%;aspect-ratio:1;right:-20%;bottom:-6%;background:radial-gradient(circle,#8193BC 0%,rgba(129,147,188,0) 68%);animation:drift3 47s ease-in-out infinite alternate}
+.ambient i:nth-child(4){width:86.8%;aspect-ratio:1;left:-17.2%;bottom:13.6%;background:radial-gradient(circle,#BC9C68 0%,rgba(188,156,104,0) 68%);animation:drift4 38s ease-in-out infinite alternate}
 @keyframes drift1{to{transform:translate3d(14%,10%,0) scale(1.18)}}
 @keyframes drift2{to{transform:translate3d(-12%,16%,0) scale(1.12)}}
 @keyframes drift3{to{transform:translate3d(-16%,-12%,0) scale(1.22)}}
@@ -198,8 +198,8 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .quickadd{display:flex;align-items:center;gap:10px;border-radius:999px;padding:5px 5px 5px 16px}
 .quickadd input{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:8px 0}
 .quickadd input::placeholder{color:var(--faint)}
-.send{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;
-  background:var(--gb-shine),color-mix(in srgb,var(--accent) 82%,transparent);border:1px solid rgba(255,255,255,.28);
+.send{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--cta-ink);
+  background:var(--cta);border:1px solid rgba(255,255,255,.28);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px color-mix(in srgb,var(--accent) 22%,transparent);transition:transform .18s var(--ease)}
 .send:active{transform:scale(.88)}
 .send svg{width:20px;height:20px;stroke-width:2.3}
@@ -284,8 +284,8 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 /* The note editor is a full page that slides in, like a message in Mail;
    the whole note scrolls as one page instead of inside a small box. */
 .sheet.page{height:100%;max-height:none;max-width:none;border-radius:0;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px);
-  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#2E6BFF calc(var(--aurora) * 32%),transparent),transparent 70%),
-    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#9A5BFF calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
+  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#6FA597 calc(var(--aurora) * 32%),transparent),transparent 70%),
+    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#8193BC calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
   animation:pageIn .42s var(--ease) both}
 .sheet.page .sheetbody{max-width:680px;width:100%;margin:0 auto}
 #editor .scrim{display:none}
@@ -358,12 +358,12 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .pillbtn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border-radius:999px;font-weight:600;font-size:15px;color:var(--text);transition:transform .18s var(--ease)}
 .pillbtn:active{transform:scale(.95)}
 .pillbtn svg{width:18px;height:18px}
-.pillbtn.primary{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 85%,transparent);border:1px solid rgba(255,255,255,.28);
+.pillbtn.primary{color:var(--cta-ink);background:var(--cta);border:1px solid rgba(255,255,255,.28);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px color-mix(in srgb,var(--accent) 22%,transparent)}
 #cook{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
   padding:calc(env(safe-area-inset-top,0px) + 8px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(16px,env(safe-area-inset-left,0px));
-  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#FF7A3D calc(var(--aurora) * 30%),transparent),transparent 70%),
-    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#18C3A5 calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
+  background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,#BE918F calc(var(--aurora) * 30%),transparent),transparent 70%),
+    radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,#BC9C68 calc(var(--aurora) * 30%),transparent),transparent 70%),var(--bg);
   animation:fadeIn .25s ease both}
 #cook > *{width:100%;max-width:640px;margin-left:auto;margin-right:auto}
 .cooktop{display:flex;align-items:center;gap:10px}
@@ -420,7 +420,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .nrow .nd{grid-area:d;font-size:12px;color:var(--faint);align-self:center}
 .cdate{display:block;margin-top:8px;font-size:11px;color:var(--faint)}
 .morechips{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
-.chip .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-grid;place-items:center;background:var(--accent);color:#fff;font-size:11px;font-weight:700}
+.chip .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-grid;place-items:center;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:700}
 .trow{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 16px}
 .trow .tt,.tidyrow .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .trow .nt,.tidyrow .nt{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -521,7 +521,7 @@ svg.fs{fill:currentColor}
 .fab.small{width:46px;height:46px}
 .fab.small svg{width:24px;height:24px}
 .search{height:44px;padding:0 7px 0 15px;gap:9px;box-shadow:var(--lg-rim),0 6px 20px var(--lift);transition:box-shadow .25s}
-.search:focus-within{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 65%,var(--bar-rim)),inset 0 1px 1px var(--hi),0 0 0 4px rgba(10,132,255,.14),0 6px 20px var(--lift)}
+.search:focus-within{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 65%,var(--bar-rim)),inset 0 1px 1px var(--hi),0 0 0 4px rgba(111,165,151,.14),0 6px 20px var(--lift)}
 .search > svg{width:21px;height:21px;color:var(--icon)}
 .search .clear{width:28px;height:28px;color:var(--muted);background:var(--fill)}
 .search .clear svg{width:14px;height:14px}
@@ -578,9 +578,9 @@ svg.fs{fill:currentColor}
    editor stays a full page, with the same tiles, fields and buttons. */
 :root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
   --lgs-row:rgba(255,255,255,.44);--lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
   --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
-:root[data-theme="dark"]{--lgs-top:rgba(44,44,52,.60);--lgs-bottom:rgba(22,22,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+:root[data-theme="dark"]{--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
   --lgs-row:rgba(255,255,255,.07);--lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
 .lg .scrim{background:var(--lgs-scrim)}
 .lg .sheet:not(.page){width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
@@ -594,9 +594,9 @@ svg.fs{fill:currentColor}
 .lg .sheethead > .iconbtn + h2{flex:1;text-align:center}
 .lg .sheethead .iconbtn{width:44px;height:44px}
 .lg .sheethead .iconbtn svg{width:22px;height:22px}
-.lg .okbtn{color:#fff;background:var(--gb-shine),color-mix(in srgb,var(--accent) 88%,transparent);
+.lg .okbtn{color:var(--cta-ink);background:var(--cta);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
-.lg .okbtn:active{color:#fff;background:var(--gb-shine),var(--accent)}
+.lg .okbtn:active{color:var(--cta-ink);background:var(--cta);filter:brightness(.94)}
 .lg .sheetbody{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
 .lg .sheet:not(.page) .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px))}
 .lg .sheetbody > *{flex-shrink:0}

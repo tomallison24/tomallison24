@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>News</title>
 <meta name="description" content="Latest headlines for UK, World, US, Business, Tech, Science and Sport in one clean, frosted-glass home-screen app.">
-<meta name="theme-color" content="#EEF0F4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#07080B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,9 +32,9 @@
 -->
 <style>
   :root {
-    --bg: #EEF0F4;
+    --bg: #EEF2F0;
     --text: #0B0B0F;
-    --muted: rgba(60, 60, 67, 0.62);
+    --muted: rgba(60, 60, 67, 0.80);
     --hairline: rgba(60, 60, 67, 0.14);
     --glass: rgba(255, 255, 255, 0.46);
     --glass-strong: rgba(255, 255, 255, 0.62);
@@ -42,8 +42,8 @@
     --glass-shadow: 0 8px 32px rgba(31, 38, 64, 0.10);
     /* the pinned bar: a rounded panel, as in the Mail app, but solid, so
        headlines scrolling behind it never ghost through */
-    --bar-top: #F7F8FB;
-    --bar-bottom: #F1F2F6;
+    --bar-top: #F7F9F8;
+    --bar-bottom: #F1F4F2;
     --bar-rim: rgba(255, 255, 255, 0.85);
     --bar-hi: rgba(255, 255, 255, 0.8);
     --bar-lift: rgba(40, 40, 80, 0.08);
@@ -52,7 +52,7 @@
     --lg-bottom: rgba(255, 255, 255, 0.20);
     --lg-rim: rgba(255, 255, 255, 0.75);
     --lg-sel: rgba(255, 255, 255, 0.72);
-    --lg-solid: rgba(248, 248, 251, 0.97);
+    --lg-solid: rgba(247, 249, 248, 0.97);
     /* control glass on the page: the topic tabs, team chips, News | Scores and
        small buttons, each frosted with a lit rim; the chosen one sits on a
        brighter glass thumb (as the bottom tab bar's) */
@@ -66,19 +66,20 @@
     --chip-on-bg: #0B0B0F;
     --chip-on-text: #FFFFFF;
     --skeleton: rgba(60, 60, 67, 0.10);
-    /* the Mail app's slate-teal, for icons and highlights alike */
-    --accent: #0E7C8C;
-    --accent-soft: rgba(14, 124, 140, 0.13);
-    --accent-edge: rgba(14, 124, 140, 0.35);
-    --icon: #0E7C8C;
+    /* Sea glass, the AllisonOS accent, for icons and highlights alike */
+    --accent: #3B7366;
+    --on-accent: #FFFFFF;
+    --accent-soft: rgba(59, 115, 102, 0.13);
+    --accent-edge: rgba(59, 115, 102, 0.35);
+    --icon: #3B7366;
     --scrim: rgba(15, 18, 30, 0.28);
-    --sheet: rgba(246, 247, 251, 0.94);
+    --sheet: rgba(245, 248, 247, 0.94);
     --field: rgba(118, 118, 128, 0.12);
     --live: #E5242B;
-    --blob-1: rgba(96, 150, 255, 0.60);
-    --blob-2: rgba(255, 158, 118, 0.55);
-    --blob-3: rgba(168, 138, 255, 0.55);
-    --blob-4: rgba(96, 208, 178, 0.50);
+    --blob-1: rgba(111, 165, 151, 0.55);
+    --blob-2: rgba(190, 145, 143, 0.50);
+    --blob-3: rgba(129, 147, 188, 0.50);
+    --blob-4: rgba(188, 156, 104, 0.45);
     /* Cards: very faint tiles, the same in every AllisonOS app */
     --tile: rgba(255, 255, 255, 0.40);
     --tile-edge: rgba(60, 60, 67, 0.10);
@@ -86,44 +87,45 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #07080B;
+      --bg: #0D1213;
       --text: #F5F5F7;
       --muted: rgba(235, 235, 245, 0.58);
       --hairline: rgba(255, 255, 255, 0.08);
-      --glass: rgba(30, 31, 38, 0.46);
-      --glass-strong: rgba(40, 41, 50, 0.62);
+      --glass: rgba(26, 33, 34, 0.46);
+      --glass-strong: rgba(34, 42, 43, 0.62);
       --glass-edge: rgba(255, 255, 255, 0.10);
-      --bar-top: #1A1A20;
-      --bar-bottom: #141419;
+      --bar-top: #182021;
+      --bar-bottom: #121819;
       --bar-rim: rgba(255, 255, 255, 0.16);
       --bar-hi: rgba(255, 255, 255, 0.10);
       --bar-lift: rgba(0, 0, 0, 0.38);
-      --lg-top: rgba(40, 40, 48, 0.40);
-      --lg-bottom: rgba(28, 28, 34, 0.30);
+      --lg-top: rgba(34, 42, 43, 0.40);
+      --lg-bottom: rgba(24, 31, 32, 0.30);
       --lg-rim: rgba(255, 255, 255, 0.16);
       --lg-sel: rgba(255, 255, 255, 0.16);
-      --lg-solid: rgba(20, 20, 24, 0.96);
+      --lg-solid: rgba(18, 24, 25, 0.96);
       --seg-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
-      --ctl-bg: rgba(40, 41, 50, 0.50);
+      --ctl-bg: rgba(34, 42, 43, 0.50);
       --seg-thumb: rgba(255, 255, 255, 0.22);
       --seg-lift: rgba(0, 0, 0, 0.45);
-      --sel-ink: #74C6D1;         /* a lighter teal, to read on grey glass */
+      --sel-ink: #A9D3C7;         /* the light sea glass, to read on grey glass */
       --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
       --chip-on-bg: #F5F5F7;
       --chip-on-text: #0B0B0F;
       --skeleton: rgba(255, 255, 255, 0.07);
-      --accent: #4A9BA6;
-      --accent-soft: rgba(74, 155, 166, 0.18);
-      --accent-edge: rgba(74, 155, 166, 0.42);
-      --icon: #4A9BA6;
+      --accent: #A9D3C7;
+      --on-accent: #10181A;
+      --accent-soft: rgba(169, 211, 199, 0.18);
+      --accent-edge: rgba(169, 211, 199, 0.42);
+      --icon: #A9D3C7;
       --scrim: rgba(0, 0, 0, 0.45);
-      --sheet: rgba(22, 23, 30, 0.94);
+      --sheet: rgba(20, 27, 28, 0.94);
       --field: rgba(118, 118, 128, 0.24);
       --live: #FF5A52;
-      --blob-1: rgba(40, 100, 230, 0.50);
-      --blob-2: rgba(200, 80, 40, 0.40);
-      --blob-3: rgba(110, 60, 210, 0.45);
-      --blob-4: rgba(20, 150, 120, 0.38);
+      --blob-1: rgba(111, 165, 151, 0.40);
+      --blob-2: rgba(190, 145, 143, 0.32);
+      --blob-3: rgba(129, 147, 188, 0.36);
+      --blob-4: rgba(188, 156, 104, 0.30);
       --tile: rgba(255, 255, 255, 0.05);
       --tile-edge: rgba(255, 255, 255, 0.10);
       color-scheme: dark;
@@ -290,7 +292,7 @@
   .chip .n {
     min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
     display: inline-grid; place-items: center;
-    background: var(--accent); color: #FFFFFF; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+    background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
   }
   .chip.icon { width: 30px; padding: 0; justify-content: center; }
   .modes.four { grid-template-columns: repeat(4, 1fr); }
@@ -440,14 +442,14 @@
   .notice { border-radius: 24px; padding: 28px 20px; text-align: center; }
   .notice h2 { margin: 0; font-size: 17px; font-weight: 600; }
   .notice p { margin: 6px 0 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
-  /* Try again / Show all sport: tinted glass in the sheets' slate-teal (as their Show button) */
+  /* Try again / Show all sport: the Sea glass pastel, as the sheets' Show button */
   .notice button {
-    margin-top: 14px; height: 36px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 15px; color: #FFFFFF;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), color-mix(in srgb, var(--lgs-ok) 88%, transparent);
+    margin-top: 14px; height: 36px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 15px; color: var(--cta-ink);
+    background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--lgs-ok) 34%, transparent);
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .notice button:active { transform: scale(0.96); background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), var(--lgs-ok); }
+  .notice button:active { transform: scale(0.96); filter: brightness(.94); }
 
   .status { text-align: center; font-size: 12px; line-height: 1.5; color: var(--muted); padding: 4px 8px 0; }
 
@@ -511,9 +513,11 @@
     --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
     --lgs-scrim: rgba(0, 0, 0, 0.10);
     --lgs-lift: rgba(40, 40, 80, 0.16);
-    /* the slate-teal fill of the Show button: the light one in both modes,
-       so its white label stays easy to read */
-    --lgs-ok: rgba(14, 124, 140, 0.90);
+    /* the glow under the Show button; the button itself is the Sea glass
+       pastel (the one thing to tap), with dark ink in both modes */
+    --lgs-ok: rgba(59, 115, 102, 0.90);
+    --cta: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%);
+    --cta-ink: #10181A;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -525,6 +529,7 @@
       --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
       --lgs-scrim: rgba(0, 0, 0, 0.30);
       --lgs-lift: rgba(0, 0, 0, 0.50);
+      --cta: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
     }
   }
   .lg .scrim { background: var(--lgs-scrim); }
@@ -584,10 +589,10 @@
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .lg .text-btn:disabled { color: var(--muted); }
-  /* Show N stories: the sheet's Done, filled with the accent colour. */
+  /* Show N stories: the sheet's Done, in the Sea glass pastel. */
   .lg .okbtn {
-    color: #FFFFFF;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), var(--lgs-ok);
+    color: var(--cta-ink);
+    background: var(--cta);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--lgs-ok) 34%, transparent);
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
