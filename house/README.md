@@ -361,7 +361,7 @@ itself never leaves the phone:
 
 1. Home Assistant makes a **new long-lived token just for this share**
    (`Home share <time>`, good for one day at most).
-2. The app shows a random **6-digit code** with a 5-minute countdown, and
+2. The app shows a random **10-character code** (letters and digits) with a 5-minute countdown, and
    makes a link (`…/house/#join=…`) holding the address, that token and the
    time it runs out, encrypted with the code (AES-GCM, key by PBKDF2-SHA-256,
    310,000 rounds). **Send link** opens the share sheet; **Copy link** copies

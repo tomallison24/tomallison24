@@ -6,26 +6,28 @@
 // tied to this site's address, so every app on the site - each with its own
 // storage on an iPhone - can sign in with one tap. The server keeps, in a Workers
 // KV namespace bound as ACCOUNTS (made and bound by .github/workflows/news.yml):
-//   owner            the owner's id; until it exists, nothing is locked
+//   owner            the owner's id; until it exists, the locked routes refuse everyone
 //   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by,
-//                      apps: { <app>: when it was last opened from their Home Screen } }
+//                      removed?: when the owner removed them (signed out, data kept) }
+//   apps:<id>        { <app>: when it was last opened from their Home Screen }
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
-//   invite:<token>   { name, by } - one use, gone after 24 hours
+//   invite:<token>   { name, by, user? } - one use, gone after 24 hours; with user,
+//                    it brings that removed person back, with everything they had
 //   chal:<id>        a sign-in or sign-up challenge, gone after 5 minutes
 //   secret           the key sessions are signed with, made on first use
 //   config:home      the family's Home Assistant address (an https origin), set by
 //                    the owner in aOS; only signed-in family can read it
 //   drinks:<id>      that person's Drinks log (functions/drinks/api); only they can
-//                    read it, and it goes when they are removed from the family
+//                    read it, and it stays when they are removed (for an invite back)
+//   config:plan, config:trial   the family's plan (functions/aOS/api, planView)
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry }; it holds
 // only while the user is still in the family, so removing someone signs them out
 // everywhere (within KV's ~60 seconds).
 //
-// The very first account, the owner's, needs the one-time owner code: its SHA-256
-// is below (the code itself was given to the owner, never stored). After that,
-// only an invite from the owner makes a new account.
+// The very first account, the owner's, needs the owner code: a Cloudflare Pages
+// secret, OWNER_CODE (never in this repository; aOS/RELEASING.md). Without it no
+// owner can be made. After that, only an invite from the owner makes an account.
 
-export const OWNER_CODE_SHA256 = '5ade36922c62396e826de278737418bd6b5c0b0cd172df9b7d9f99af3ab6065c';
 export const SESSION_DAYS = 400;
 const enc = new TextEncoder();
 
@@ -70,7 +72,8 @@ export async function sessionUser(db, request, now = Date.now()) {
   if (!ok) return null;
   let p; try { p = JSON.parse(new TextDecoder().decode(unb64u(m[1]))); } catch { return null; }
   if (!p || typeof p.u !== 'string' || typeof p.e !== 'number' || p.e * 1000 < now) return null;
-  return getJSON(db, 'user:' + p.u);
+  const u = await getJSON(db, 'user:' + p.u);
+  return u && !u.removed ? u : null;
 }
 
 // ---- passkeys (WebAuthn) ----
@@ -142,14 +145,23 @@ export async function verifyAssertion({ clientDataJSON, authenticatorData, signa
   if (!(await crypto.subtle.verify(A.sig, key, sig, signed))) throw new Error('signature');
 }
 
-export const ownerCodeOk = async code => hex(await sha256(String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''))) === OWNER_CODE_SHA256;
+// The owner code, checked against the OWNER_CODE secret (letters and digits count,
+// case and spaces don't). Unset, or shorter than 16, nothing matches.
+const plainCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+export async function ownerCodeOk(code, env) {
+  const want = plainCode(env && env.OWNER_CODE);
+  if (want.length < 16) return false;
+  const [a, b] = await Promise.all([sha256(plainCode(code)), sha256(want)]);
+  return hex(a) === hex(b);
+}
 
 // ---- the lock, for the server routes that hold the family's secrets ----
-// Until accounts are switched on (storage bound and the owner signed up) it lets
-// requests through as before, so nothing breaks before the owner is set up.
+// Only signed-in family get through. Until accounts are switched on (storage bound
+// and the owner signed up) it refuses everyone: closed, never open by default.
 export async function lock({ request, env, next }) {
   const db = kv(env);
-  if (!db || !(await db.get('owner'))) return next();
+  if (!db) return reply({ error: 'accounts-off' }, 503);
+  if (!(await db.get('owner'))) return reply({ error: 'setup' }, 503);
   if (await sessionUser(db, request)) return next();
   return reply({ error: 'signin' }, 401);
 }
