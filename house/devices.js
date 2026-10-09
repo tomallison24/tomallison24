@@ -290,7 +290,7 @@ PREVIEW.push((domain, service, d) => {
     else if (service === 'shuffle_set') patchEnt(id, null, { shuffle: d.shuffle });
     else if (service === 'repeat_set') patchEnt(id, null, { repeat: d.repeat });
     else if (service === 'select_sound_mode') patchEnt(id, 'playing', { sound_mode: d.sound_mode });
-    else if (service === 'play_media') patchEnt(id, 'playing', { media_title: A._favs && A._favs[d.media_content_id] || 'Favourite', media_artist: '' });
+    else if (service === 'play_media') patchEnt(id, 'playing', { media_title: A._favs && A._favs[d.media_content_id] || 'Favorite', media_artist: '' });
     else if (service === 'join') {
       const lead = id, all = [lead, ...(d.group_members || []).filter(m => m !== lead)];
       const now = [...new Set([...(A.group_members || [lead]), ...all])];

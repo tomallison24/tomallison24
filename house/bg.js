@@ -25,7 +25,7 @@ const BG_IDEAS = [
   { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
   { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
-  { id: 'none', name: 'None', note: 'Just the colour, nothing moving.' },
+  { id: 'none', name: 'None', note: 'Just the color, nothing moving.' },
 ];
 const BG_TONES = [   // hex in dark mode, lite in light mode; Temperature works its own out
   { id: 'temp', name: 'Temperature', temp: true },
@@ -211,7 +211,7 @@ const BG_FAM = family({
       title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
       fx: '',
       parts: [
-        ['tone', lbl('COLOUR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
+        ['tone', lbl('COLOR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
             <i></i><span>${t.name}</span></button>`).join('')}</div>`],
         ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
             <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],

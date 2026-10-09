@@ -86,7 +86,7 @@
       const day = iso.slice(0, 10);
       if (day === dayKey(today)) return 'Today';
       if (day === dayKey(y)) return 'Yesterday';
-      return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+      return new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
     }
     const m = Math.max(0, Math.round((now - t) / 60000));
     if (m < 1) return 'Just now';
@@ -96,7 +96,7 @@
     const d = new Date(t);
     const y = new Date(now); y.setDate(y.getDate() - 1);
     if (d.toDateString() === y.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   }
 
   // BBC thumbnails are 240px wide; ask for a sharper one and fall back if refused.
@@ -115,7 +115,7 @@
   // Tabs run A to Z after Latest, whatever order the data lists them in.
   function topics() {
     const list = (data && Array.isArray(data.topics) && data.topics.length) ? data.topics : DEFAULT_TOPICS;
-    return [...list].sort((a, b) => a.label.localeCompare(b.label, 'en-GB'));
+    return [...list].sort((a, b) => a.label.localeCompare(b.label, 'en-US'));
   }
   function topicLabel(id) { return (topics().find(t => t.id === id) || {}).label || id; }
   // Newest first on every tab, whatever order the data lists them in.
@@ -448,7 +448,7 @@
     const caps = n => (n.match(/[A-Z]/g) || []).length;
     return [...all.values()]
       .map(e => ({ key: e.key, n: e.n, label: e.names.sort((a, b) => caps(b) - caps(a))[0] }))
-      .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'en-GB'));
+      .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'en-US'));
   }
 
   function renderListFilters() {
@@ -799,10 +799,10 @@
   function kickoff(iso) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
-    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     if (d.toDateString() === new Date().toDateString()) return time;
     const soon = d.getTime() - Date.now() < 6 * 864e5;
-    return `${d.toLocaleDateString('en-GB', soon ? { weekday: 'short' } : { day: 'numeric', month: 'short' })}<br>${time}`;
+    return `${d.toLocaleDateString('en-US', soon ? { weekday: 'short' } : { day: 'numeric', month: 'short' })}<br>${time}`;
   }
 
   function gameRow(g, l) {
@@ -1046,7 +1046,7 @@
   function redrawIfNewDay() {
     if (dayKey(new Date()) === shownDay) return;
     shownDay = dayKey(new Date());
-    $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('today').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     render();
   }
   (function atMidnight() {
@@ -1061,7 +1061,7 @@
     else clearTimeout(scoresTimer);
   });
 
-  $('today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('today').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
 
   // Last copy of the sport list first, so picks apply from the first frame.
   try { const raw = store.get('news.sport.catalog'); if (raw) catalog = buildCatalog(raw); } catch {}

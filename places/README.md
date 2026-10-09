@@ -155,9 +155,9 @@ and deleted places are remembered so the other phone deletes them too.
 - **No build step.** `index.html` (the page and its styles), `app.js`
   (everything it does), `parse.js` (map links, search results and
   OpenStreetMap tags into places, no network), `sw.js` (offline shell),
-  `manifest.webmanifest` and the icons (`scripts/make-icons.mjs`: a folded
-  paper map with a dashed route and a coral pin holding a star, on lime to
-  deep teal).
+  `manifest.webmanifest` and the icons (`icon.svg`, rendered by
+  `scripts/make-icons.mjs`: a white map pin on sage, one of the Sea glass
+  tints).
 - **Data** lives in localStorage (`allison-places-v1`) and, once connected,
   the Sheet.
 - Published with the other apps by `.github/workflows/news.yml`, and listed

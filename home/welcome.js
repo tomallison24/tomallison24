@@ -79,7 +79,8 @@
   const RELEASES = [
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
       highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
-      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colours',
+      notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
+        'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
         'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
@@ -87,7 +88,7 @@
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
         'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
         'The aOS icon is just aOS, without a version number',
-        'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name',
+        'Home: tone and home theater sliders sit one to a row, full width, with the level beside the name',
         'Home: the Dysons\' Heat to stepper is back to its normal size, like the heaters\' Target',
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'aOS shows ✓ Installed as soon as a new app has been opened, without reopening aOS',
@@ -95,7 +96,7 @@
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
         'Fitness: your drinks from Drinks in Analysis, beside your training',
         'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
-        'Cancelling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
+        'Canceling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
         'The 7-day trial is once per family'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
@@ -239,7 +240,7 @@
         {
           "i": "note",
           "t": "Notes with #tags",
-          "d": "Type a #tag anywhere to file a note into a collection. Pin, colour and search your notes too."
+          "d": "Type a #tag anywhere to file a note into a collection. Pin, color and search your notes too."
         },
         {
           "i": "check",
@@ -1195,7 +1196,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
     }
     if (was) return;
     if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
-    const day = new Date(p.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const day = new Date(p.ends).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
     const el = document.createElement('div');
     el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `${NAMES[APP]} is off`);
     el.innerHTML = `<div class="o-card"><img src="${icon(APP)}" alt=""><h1>${esc(NAMES[APP])} is off</h1>

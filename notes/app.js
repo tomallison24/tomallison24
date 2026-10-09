@@ -1717,7 +1717,7 @@
     const r = await shareOut({title:'Notes backup', file});
     if (r === 'shared' || r === 'downloaded') { try { localStorage.setItem(LAST, String(Date.now())); } catch(e){} }
     closeSheet('backupSheet'); render();
-    toast({shared:'Backup saved', downloaded:'Backup saved to Downloads', cancelled:'Backup cancelled'}[r] || 'Couldn\u2019t save the backup');
+    toast({shared:'Backup saved', downloaded:'Backup saved to Downloads', cancelled:'Backup canceled'}[r] || 'Couldn\u2019t save the backup');
   };
   $('bkImport').onclick = () => $('bkFile').click();
   $('bkFile').addEventListener('change', async e => {

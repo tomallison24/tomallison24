@@ -486,6 +486,8 @@ const dampWord = h => h < 30 ? 'Dry' : h < 60 ? 'Comfy' : h < 75 ? 'Humid' : 'Mu
 // Time labels for a place's own clock (its time zone, not the phone's).
 const hrFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', timeZone: tz }).replace(/\s/g, '');   // \s also catches the narrow no-break space newer browsers put before AM/PM
 const minFmt = (t, tz) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: tz }).replace(/\s/g, '');
+// hrOf and hourFrac read the hour back as a number, so they ask for a fixed 24-hour
+// clock (en-GB's '18', '18:30'); nothing they make is shown.
 const hrOf = (t, tz) => +new Date(t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).slice(0, 2) % 24;
 const dayFmt = (t, tz) => new Date(t * 1000).toLocaleDateString([], { weekday: 'short', timeZone: tz });
 const dayLong = (t, tz) => new Date(t * 1000).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz });
