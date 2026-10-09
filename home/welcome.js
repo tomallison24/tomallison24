@@ -1155,82 +1155,100 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       <span class="subj">Field trip forms due Friday</span><span class="snip">Please return the signed permission slip by Friday so…</span>
       <span class="meta"><span class="tchip rem" style="--h:280">Reminder</span><span class="tchip" style="--h:150">School</span></span></button></div></li></ul></div>` };
   const mailRow = () => document.querySelector('[data-aos-demo="mail-row"] li');
+  // Each tour says everything its walkthrough cards said (TOURS): the cards' words, at the controls.
   SPOTS.mail = { stops: [
-    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Swipe to sort', d: 'Swipe an email right to tag it or move it to Marketing. Promotions move there on their own.', g: 'swipe-right',
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Swipe to sort', d: 'Swipe right to tag an email or move it to Marketing.', g: 'swipe-right',
       pre: () => { const li = mailRow(); if (li) { li.classList.remove('peek'); void li.offsetWidth; li.classList.add('peek'); } } },
     { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Flag, archive, trash', d: 'Swipe left to flag, archive or trash it. Every swipe has Undo.', g: 'swipe-left' },
-    { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future.' },
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Marketing empties itself', d: 'Promotions move out of your inbox into Marketing, and anything there over 30 days old goes to the Trash.' },
+    { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future, even with the app closed.' },
     { sel: '[data-aos-demo="mail-row"] .tchip.rem', demo: MAIL_ROW, pad: 6, t: 'Remind Me', d: 'Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top.' },
-    { sel: '#screen .signin [data-act="signin"]', t: 'Connect Gmail', d: 'Connect your Gmail to start. Mail is a calmer view of your own inbox.', g: 'tap' },
-  ] };
+    // the compose button only shows once Gmail is connected: shown for this stop, hidden again after
+    { sel: '#fab', t: 'Send with Undo', d: 'Reply, Reply All or Forward with attachments. Every send waits 5 seconds so you can take it back.', g: 'tap',
+      pre: () => { const f = document.getElementById('fab'); if (f && f.classList.contains('hide')) { f.classList.remove('hide'); f.dataset.aosShown = '1'; } } },
+    { sel: '#screen .signin [data-act="signin"]', t: 'Connect Gmail', d: 'Connect your Gmail to start. Mail is a calmer view of your own inbox.', g: 'tap',
+      pre: () => mailFab() },
+  ], done: () => mailFab() };
+  function mailFab() { const f = document.getElementById('fab'); if (f && f.dataset.aosShown) { f.classList.add('hide'); delete f.dataset.aosShown; } }
   SPOTS.calendar = { stops: [
     { sel: ['#mgrid', '#main .mgrid'], t: 'One shared calendar', d: 'This is your iCloud Family calendar, so changes here show up in everyone’s iPhone Calendar too.' },
-    { sel: '.dock .tabs', t: 'Day to Year', d: 'Pick Day, Week, Month, Year or List. Swipe to move through time, and tap Today to come back.', g: 'tap' },
-    { sel: '#fab', t: 'Add events fast', d: 'Tap + to add an event, with repeats, alerts, travel time and notes. In Day or Week, hold an event to drag it.', g: 'tap' },
-    { sel: '#setBtn', t: 'Everything in one place', d: 'Turn on layers for holidays, Notes reminders, trips, Mail reminders, workouts and the weather.', g: 'tap' },
+    { sel: '.dock .tabs', t: 'Day to Year views', d: 'Pick Day, Week, Month, Year or List from the bottom bar, swipe to move through time, and tap Today to come back.', g: 'tap' },
+    { sel: '#fab', t: 'Add events fast', d: 'Tap + or an empty time to add an event, with repeats, alerts, travel time and notes.', g: 'tap' },
+    { sel: '.dock .tabs .tab[data-view="week"]', t: 'Drag to reschedule', d: 'In Day or Week, press and hold an event to drag it to a new time, or drag its bottom edge to change its length.', g: 'hold' },
+    { sel: '#setBtn', t: 'Everything in one place', d: 'Turn on layers for holidays, Notes reminders, trips, Mail reminders, workouts and the weather forecast.', g: 'tap' },
   ] };
   SPOTS.news = { stops: [
-    { sel: '#tabs', t: 'News by topic', d: 'The latest headlines from free sources: World, UK, US, Business, Tech, AI, Science and more. Swipe to change topic.', g: 'swipe-left' },
-    { sel: ['#feed > .lead', '#feed .list > .row'], t: 'Tap to read', d: 'Stories are newest first and each shows only once. Tap one to read it on the publisher’s site.', g: 'tap' },
-    { sel: '#tabs [data-topic="sport"]', t: 'Follow your teams', d: 'On Sport, pick the teams you follow, and switch to Scores for live results and where to watch.', g: 'tap' },
+    { sel: '#tabs', t: 'News by topic', d: 'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more.', g: 'swipe-left' },
+    { sel: ['#feed > .lead', '#feed .list > .row'], t: 'Tap to read', d: 'Stories are newest first and each shows only once. Tap one to read the full article on the publisher’s site.', g: 'tap' },
+    { sel: '#tabs [data-topic="sport"]', t: 'Follow your teams', d: 'On Sport, pick the sports, competitions and teams you follow, or tap a team button to see just their news.', g: 'tap' },
+    { sel: '#tabs [data-topic="sport"]', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV.' },
     { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
   ] };
   SPOTS.weather = { ready: '#card', wait: 6000, stops: [
-    { sel: '#hero .w3-place', t: 'Your places', d: 'It opens to where you are. Tap the name to save up to 12 cities, then swipe the forecast sideways to move between them.', g: 'tap' },
-    { sel: ['#hero .w3-in > div:nth-child(2) > div:last-child', '#hero .w3-in > div:nth-child(2)'], t: 'Know when rain starts', d: 'This says when rain is due to start or stop, like "Rain at 3:45 PM" (in the continental US).' },
+    { sel: '#hero .w3-place', t: 'Your places', d: 'It opens to where you are. Save up to 12 cities and swipe the forecast sideways to move between them. Tap the name to add one.', g: 'tap' },
+    { sel: ['#hero .w3-in > div:nth-child(2) > div:last-child', '#hero .w3-in > div:nth-child(2)'], t: 'Know when rain starts', d: 'A chip under the temperature says when rain is due to start or stop, like "Rain at 3:45PM" (continental US).' },
+    { sel: '#alerts [data-aos-demo]', t: 'Weather alerts', d: 'Active National Weather Service alerts show at the top, most severe first. Tap one to read it.', g: 'tap', pad: 4,
+      demo: { into: '#alerts', html: `<div class="alert"><button type="button" tabindex="-1"><span class="dot" style="background:#FF9F0A22;color:#FF9F0A;font-weight:700">!</span>
+        <span class="t"><b>Wind Advisory</b><small>An example: real alerts show here</small></span></button></div>` } },
     { sel: ['#hxTray .hx-col.hx-now', '#days .dc[data-day="0"]'], t: 'Every hour and day', d: 'Tap an hour or a day for the details: feels like, wind, humidity, chance of rain, sunrise and sunset.', g: 'tap' },
-    { sel: ['#vsw [data-view="radar"]', '#vsw'], t: 'Radar that looks ahead', d: 'Watch the latest radar, then up to four hours of forecast rain, looping on a map (continental US).', g: 'tap' },
+    { sel: ['#vsw [data-view="radar"]', '#vsw'], t: 'Radar that looks ahead', d: 'Watch the latest radar, then up to four hours of forecast rain, looping on a map. Continental US only.', g: 'tap' },
   ] };
   SPOTS.notes = { stops: [
-    { sel: ['#list .ctile', '#list .ctiles'], t: 'Notes with #tags', d: 'Type a #tag anywhere in a note to file it into a collection. Pin, color and search your notes too.', g: 'tap' },
+    { sel: ['#list .ctile', '#list .ctiles'], t: 'Notes with #tags', d: 'Type a #tag anywhere to file a note into a collection. Pin, color and search your notes too.', g: 'tap' },
     { sel: ['#list .grid .card', '#list .card', '#list .nrow'], t: 'Swipe to tidy', d: 'Swipe a note left to archive or delete it, or right to pin or tag it. Deleted notes wait 30 days in Trash.', g: 'swipe-left' },
-    { sel: '#pasteBtn', t: 'Paste from anywhere', d: 'Copy a reply from Claude or anywhere, tap here, and it becomes a note or a list of reminders.', g: 'tap' },
-    { sel: '.tabs .tab[data-tab="rem"]', t: 'Quick reminders', d: 'Type "Call Mom tomorrow #family" and it’s set. Groceries sort themselves into aisles.', g: 'tap' },
+    { sel: '#pasteBtn', t: 'Paste from anywhere', d: 'Copy a reply from Claude or anywhere, tap the clipboard button, and it becomes a note or a list of reminders.', g: 'tap' },
+    { sel: '.tabs .tab[data-tab="rem"]', t: 'Quick reminders', d: 'Type "Call mom tomorrow #family" and it’s set. See Today, Upcoming and Flagged at a glance.', g: 'tap' },
+    { sel: '.tabs .tab[data-tab="rem"]', t: 'Smart grocery lists', d: 'Grocery items sort into store sections in aisle order, and it learns where you like things to go.' },
     { sel: '#fab', t: 'Write it down', d: 'Tap the pencil for a new note. Notes and lists can be shared with the family.', g: 'tap' },
   ] };
-  SPOTS.podcasts = { stops: [
-    { sel: '#homeBody [data-aos-demo]', t: 'Up Next', d: 'Listen Now keeps your queue, what you’re part way through and new episodes from your shows. Play at 0.5× to 3×, with a sleep timer and AirPlay.', g: 'tap', pad: 4,
-      demo: { into: '#homeBody', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
+  const UP_NEXT = { key: 'pod-up', into: '#homeBody', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
         <button class="uptop" type="button" tabindex="-1"><span class="art" style="--s:64px"></span><span class="uptx"><span class="upm">Your favorite show</span><span class="upt">The newest episode</span></span></button>
-        <div class="upbar"><button class="playpill" type="button" tabindex="-1"><span class="pbar"><i style="width:40%"></i></span><span>18 min left</span></button><span class="upd">Today</span></div></article></div></section>` } },
-    { sel: '#searchTab', t: 'Find new shows', d: 'Browse Apple’s top shows, search by name, or paste a show’s feed link. Private and premium feeds work too.', g: 'tap' },
+        <div class="upbar"><button class="playpill" type="button" tabindex="-1"><span class="pbar"><i style="width:40%"></i></span><span>18 min left</span></button><span class="upd">Today</span></div></article></div></section>` };
+  SPOTS.podcasts = { stops: [
+    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Up Next', d: 'Listen Now shows what’s playing, your queue, episodes you’re part way through, and new episodes from your shows.' },
+    { sel: '#homeBody [data-aos-demo="pod-up"] .playpill', demo: UP_NEXT, pad: 6, t: 'Resume where you left off', d: 'Each episode resumes right where you stopped, and the next one in Up Next plays when it ends.', g: 'tap' },
+    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Listen your way', d: 'Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV.', g: 'tap' },
+    { sel: '#searchTab', t: 'Find new shows', d: 'Browse Apple’s Top shows, search by name, or paste a show’s feed link. Private and premium feeds work too.', g: 'tap' },
     { sel: '.tabs .tab[data-tab="lib"]', t: 'Your library', d: 'Every show you follow, with new episodes downloaded and ready.', g: 'tap' },
   ] };
   SPOTS.travel = { stops: [
     { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your flight, hotel and rental car confirmations become trips on their own.', g: 'tap' },
-    { sel: '#list [data-aos-demo].hero', t: 'What’s next', d: 'Your next flight, check-in or pick-up sits at the top, with live flight status and gates as take-off nears.', pad: 4,
+    { sel: '#list [data-aos-demo].hero', t: 'What’s next', d: 'See your next flight, check-in or pick-up at the top, with live flight status and gates as take-off nears.', pad: 4,
       demo: { into: '#list', hide: '#list .empty', html: () => `<button class="hero glass" type="button" tabindex="-1" style="--tint:var(--fl)"><p class="k">Next · in 6 days</p>
         <div class="route"><div class="ap"><b>RDU</b><span>Raleigh-Durham</span></div><div class="line"></div><div class="ap r"><b>BOS</b><span>Boston</span></div></div>
         <div class="when">B6 1234 · ${usDay(inDays(6))} · 7:05 AM</div><div class="sub">Terminal 2 · Gate C7 · Seat 14A</div><div class="meta"><span class="st ok">On time</span></div></button>` } },
-    { sel: '#list [data-aos-demo].trip', t: 'Trips, day by day', d: 'Each trip is a day-by-day timeline. Add the whole trip to the Family calendar in one tap.', g: 'tap', pad: 4,
+    { sel: '#list [data-aos-demo].trip', t: 'Trips day by day', d: 'Each trip is a day-by-day timeline. Add the whole trip to the Family calendar in one tap.', g: 'tap', pad: 4,
       demo: { into: '#list', where: 'beforeend', hide: '#list .empty', html: () => `<button class="trip glass" type="button" tabindex="-1" style="--i:0"><div class="tt"><h3>Boston</h3><span class="soon">in 6 days</span></div>
         <div class="dates">${usDay(inDays(6), { month: 'short', day: 'numeric' })} – ${usDay(inDays(9), { month: 'short', day: 'numeric' })}</div><div class="icons"><span class="count">2 flights</span><span class="count">1 hotel</span><span class="count">1 car</span></div></button>` } },
     { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox.', g: 'tap' },
     { sel: '.tabs .tab[data-tab="explore"]', t: 'Plan the next one', d: 'Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in.', g: 'tap' },
   ] };
   SPOTS.places = { stops: [
-    { sel: '#seg', t: 'Want to go and Been', d: 'Two lists: places you want to try and places you’ve been. A place moves across once you’ve been.', g: 'tap' },
-    { sel: '#map', focus: [.5, .58, 190, 190], r: 95, t: 'Your places on a map', d: 'Pins show what you want to try and where you’ve been. Touch and hold anywhere on the map to add a spot.', g: 'hold' },
+    { sel: '#seg', t: 'Want to go and Been', d: 'Keep two lists: places you want to try and places you’ve been. Tap Been to move a place across.', g: 'tap' },
+    { sel: '#map', focus: [.5, .58, 190, 190], r: 95, t: 'Your places on a map', d: 'Pins show blue for Want to go and gold for Been. Touch and hold anywhere on the map to add a spot.', g: 'hold' },
     { sel: '#filterWrap', t: 'Find somewhere new', d: 'Search "tacos" or a name to find nearby businesses, or zoom in to see food, things to do and shops.', g: 'tap' },
-    { sel: '#fab', t: 'Rate and remember', d: 'Add a place with stars, price and notes with #tags, and Places keeps count of every visit.', g: 'tap' },
+    { sel: '#fab', t: 'Rate and remember', d: 'Add stars, price and notes with #tags, and Places keeps track of every visit.', g: 'tap' },
   ] };
   SPOTS.fitness = { stops: [
     { sel: ['#main .week', '#main .navrow'], t: 'Your week at a glance', d: 'Each day shows the muscle groups you worked and how many sets. Swipe sideways to move a week at a time.', g: 'swipe-left' },
-    { sel: '#fab', t: 'Log in seconds', d: 'Search an exercise, like "db curl", and last time’s weight, reps and sets fill in for you. Cardio counts too.', g: 'tap' },
-    { sel: ['#viewBtn', '#vbar'], t: 'See your progress', d: 'Analysis compares this week or month with the one before: what’s improving and what needs work.', g: 'tap' },
+    { sel: '#fab', t: 'Log in seconds', d: 'Search an exercise, like "db curl", and last time’s weight, reps and sets fill in for you.', g: 'tap' },
+    { sel: ['#main .drow.today', '#fab'], t: 'Cardio counts too', d: 'Log time and distance on the treadmill, bikes, rower, track or pool alongside your lifting.', g: 'tap' },
+    { sel: ['#viewBtn', '#vbar'], t: 'See your progress', d: 'Analysis compares this week or month with the one before, showing what’s improving and what needs work.', g: 'tap' },
   ] };
   SPOTS.drinks = { stops: [
-    { sel: ['#main .rgroup.week', '#main .week'], t: 'Your week', d: 'Each day shows its standard drinks, or alcohol-free. Swipe sideways to move a week at a time.', g: 'swipe-left' },
-    { sel: '#sumBtn', t: 'Your week in one number', d: 'Your week adds up here against the limit you set. Tap it to compare with the week before.', g: 'tap' },
-    { sel: '#fab', t: 'One tap to log', d: 'Tap + to open today. Your usual drinks sit there as tiles, or tap Something else for anything new.', g: 'tap' },
-    { sel: '#moreBtn', t: 'Private to you', d: 'Sign in here to keep your log in your family account, where only you can see it. Your goals are here too.', g: 'tap' },
+    { sel: ['#main .rgroup.week', '#main .week'], t: 'Your week', d: 'Each day shows its standard drinks or alcohol-free. Swipe sideways to move a week at a time.', g: 'swipe-left' },
+    { sel: '#sumBtn', t: 'Your week in one number', d: 'The week adds up here against the limit you set.' },
+    { sel: '#fab', t: 'One tap to log', d: 'Your usual drinks sit in each day as tiles. Tap one to log it, or Something else for anything new.', g: 'tap' },
+    { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number to compare this week or month with the one before, with your alcohol-free streak.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in your family account where only you can see it, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
   SPOTS.house = { stops: [
-    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'Home opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
+    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'It opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
     { sel: ['#v-fav .autos', '#v-fav .ag'], t: 'Routines in one tap', d: 'Run Goodnight, Evening Lights and your other routines straight from Favorites.', g: 'tap' },
     { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
-    { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights', d: 'Dim each light with its slider, or use All on and All off. Lights in the menu has every room.', g: 'tap' },
-    { sel: '#viewBtn', t: 'Cameras and more', d: 'Tap here for Climate, Lights, Media and Security, where you can arm Blink and see each camera’s latest still.', g: 'tap' },
+    { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights by room', d: 'Switch a whole room on or off, dim each light with a slider, or use All on and All off.', g: 'tap' },
+    { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
+    { sel: '#viewBtn', t: 'Every room and system', d: 'Tap here for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
   let spotEnd = null;

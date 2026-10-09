@@ -3,7 +3,8 @@
 // (home/welcome.js SPOTS): the spotlight must find at least two of the app's stops,
 // end on Light or dark, take its demo rows out again and mark the walkthrough seen,
 // with no script errors. Weather needs a forecast for its stops, so offline it must
-// fall back to its cards instead. Run after changing an app's screen: a control
+// fall back to its cards instead. First, each tour must say everything its
+// walkthrough cards (TOURS) say: a stop for every card, and every word of it. Run after changing an app's screen: a control
 // that moves or is renamed can leave its tour with nothing to show.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -35,8 +36,25 @@ await new Promise(r => server.listen(0, r));
 const BASE = 'http://localhost:' + server.address().port;
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
-const browser = await chromium.launch();
 let failed = 0;
+// every card's point is in the tour: a stop with its title, and its words in the tour
+{
+  const T = JSON.parse(W.slice(W.indexOf('const TOURS = ') + 14, W.indexOf('\n  };', W.indexOf('const TOURS = ')) + 4).replace(/;\s*$/, ''));
+  const a = W.indexOf('  const SPOTS = {};'), b = W.indexOf('  let spotEnd = null;');
+  const SPOTS = Function('document', 'DARK_ONLY', W.slice(a, b) + '; return SPOTS;')({ querySelector: () => null, getElementById: () => null }, []);
+  const norm = s => s.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const id of APPS) {
+    const gaps = [];
+    for (const c of (T[id] || { cards: [] }).cards) {
+      const st = SPOTS[id] && SPOTS[id].stops.find(s => norm(s.t) === norm(c.t));
+      if (!st) { gaps.push(`no stop for "${c.t}"`); continue; }
+      const said = norm(SPOTS[id].stops.map(s => s.d).join(' ')), lost = norm(c.d).split(' ').filter(w => w.length > 3 && !said.includes(w));
+      if (lost.length) gaps.push(`"${c.t}" is missing: ${lost.join(', ')}`);
+    }
+    if (gaps.length) { failed++; console.log('not ok - ' + id + ' says less than its cards\n  ' + gaps.join('\n  ')); }
+  }
+}
+const browser = await chromium.launch();
 for (const id of APPS) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.route('**/*', route => {
@@ -83,5 +101,5 @@ for (const id of APPS) {
 }
 await browser.close();
 server.close();
-console.log(APPS.length - failed + ' of ' + APPS.length + ' passed');
+console.log(failed ? failed + ' failed' : APPS.length + ' of ' + APPS.length + ' passed');
 process.exit(failed ? 1 : 0);
