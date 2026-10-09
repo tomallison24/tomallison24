@@ -519,6 +519,11 @@ html.locked .dock{opacity:0;pointer-events:none}
 .dline{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .rest{font-size:14px;color:var(--faint)}
 .drow > svg{width:16px;height:16px;color:var(--faint)}
+/* a day you drank on, from Drinks: a small glass in Drinks' colour, and its standard drinks */
+.drk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.drk svg{width:15px;height:15px;color:#B0457A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .drk svg{color:#E08AB2}}
+:root[data-theme="dark"] .drk svg{color:#E08AB2}
 
 /* the week's totals */
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:22px;overflow:hidden}

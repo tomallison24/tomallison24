@@ -5,7 +5,9 @@ Calendar, Notes and Travel. It is kept deliberately small: the week, and for
 each day what you did.
 
 - **The week**: seven rows, one a day, each with coloured chips for the
-  muscle groups worked and how many exercises and sets. Today is marked. The
+  muscle groups worked and how many exercises and sets. Today is marked. A day you
+  drank on (from Drinks, signed in) also shows a small glass and its
+  standard drinks. The
   arrows (or a sideways swipe) move a week at a time, and the calendar button
   comes back to this week. Under it, the week's totals: days trained,
   exercises and sets.

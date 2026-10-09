@@ -413,7 +413,7 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   await dk.ctx.close();
 });
 
-await test('Analysis: your drinks from Drinks beside your training, signed in; nothing without a session', async () => {
+await test('Drinks beside your training, signed in: a glass on the week, and Analysis; nothing without a session', async () => {
   const D = n => ymd(day(n));
   const seed = { v: 2, exercises: [], logs: [
     { id: 'd1', date: D(-2), group: 'chest', exercise: 'Barbell Bench Press', weight: 110, reps: 6, sets: 3, updated: 1 },
@@ -431,11 +431,22 @@ await test('Analysis: your drinks from Drinks beside your training, signed in; n
   await dr.page.goto(BASE + '/fitness/');
   await dr.page.waitForSelector('#anDrinks');
   assert.deepEqual(calls[0], { x: '1', auth: 'Bearer tok.sig', from: D(-13), to: D(0) }, 'both windows, signed in, with the app header');
-  const rows = await dr.page.$$eval('#anDrinks .xrow', rs => rs.map(r => r.textContent));
+  const rows0 = await dr.page.$$eval('#anDrinks .xrow', rs => rs.map(r => r.textContent));
+  const rows = rows0;
   assert.deepEqual(rows, ['Standard drinks4 in the 7 before2.5', 'Alcohol-free days0 in the 7 before2', 'Open Drinks']);
   assert.equal(await dr.page.getAttribute('#anDrinks a', 'href'), '../drinks/');
   await dr.page.waitForTimeout(1000);
   if (SHOTS) await dr.page.screenshot({ path: path.join(SHOTS, '15-analysis-drinks.png'), fullPage: true });
+  // The week: a small glass and the standard drinks on a day you drank on.
+  await dr.page.evaluate(() => window.__fitness.setView('week'));
+  const yday = dr.page.locator('.drow[data-day="' + D(-1) + '"]');
+  await yday.locator('.drk').waitFor();
+  assert.equal(await yday.locator('.drk').textContent(), '2.5');
+  assert.ok(await yday.locator('.drk svg').count(), 'the glass');
+  assert.match(await yday.getAttribute('aria-label'), /, 2\.5 standard drinks$/);
+  assert.equal(await dr.page.$$eval('.drow[data-day="' + D(-3) + '"] .drk', e => e.length), 0, 'an alcohol-free day shows nothing');
+  if (D(-9) < (await dr.page.$eval('.drow', e => e.dataset.day))) assert.equal(await dr.page.$$eval('.drk', e => e.length) >= 1, true);
+  await shot(dr.page, '16-week-drinks');
   violations.push(...(await dr.page.evaluate(() => window.__csp || [])));
   await dr.ctx.close();
   // Signed out: Fitness doesn't ask, and shows nothing of it.

@@ -101,7 +101,7 @@
         drinks: { highlights: ['New: a simple log of what you drink', 'Your usual drinks are one tap', 'Private to you, in your family account'],
           notes: ['Bring in your ABV Tracker history from its backup or its Google Sheet', 'Tap the week\'s number for Analysis: this week or month against the one before, and your alcohol-free streak'] },
         calendar: ['A Drinks layer, off until you turn it on: your own standard drinks and alcohol-free days'],
-        fitness: ['Analysis shows your drinks from Drinks beside your training: standard drinks and alcohol-free days, this window and the one before'],
+        fitness: ['A small glass and the day\'s standard drinks on the week, from Drinks', 'Analysis shows your drinks from Drinks beside your training: standard drinks and alcohol-free days, this window and the one before'],
       } },
   ];
   // A release's (or an app's) highlights and notes; a plain list is all notes.
