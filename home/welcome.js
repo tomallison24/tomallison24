@@ -21,8 +21,10 @@
 //                     that release's cards
 //     minor update    nothing (the apps announce their own)
 //   any other app (data-app "weather", "fitness", ...), from the Home Screen
-//     first time      its walkthrough: its icon and name with aOS1 under it,
-//                     what it does card by card, then Light or dark
+//     first time      its walkthrough: its icon and name with aOS1 under it, then
+//                     the live tour (SPOTS): the welcome clears to the app and a
+//                     spotlight goes from control to control, then Light or dark.
+//                     An app whose controls aren't on screen gets its cards instead.
 //     minor update    (aOS1 -> aOS1.1) aOS with the new .1 rising in under its
 //                     icon, then what's new in it; nothing, if nothing is
 //     major update    (aOS1 -> aOS2) the new number rising in, then "Visit aOS"
@@ -43,6 +45,9 @@
 //
 // iPhone: an app on the Home Screen keeps its own storage, apart from Safari and
 // the other apps, so "first time" and Light or dark count per install.
+// Android: an installed app shares Chrome's storage, so installing it again
+// (Chrome's appinstalled) forgets that its walkthrough was seen. In Chrome an app
+// shows how to install it; its walkthrough waits until it's opened installed.
 (() => {
   'use strict';
   const AOS = window.AllisonOS = window.AllisonOS || {};
@@ -78,7 +83,7 @@
   // ===========================================================================
   const RELEASES = [
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
-      highlights: ['aOS: one place to get every AllisonOS app', 'A walkthrough in every app', 'Family accounts: Face ID signs you in to every app'],
+      highlights: ['aOS: one place to get every AllisonOS app', 'A live tour in every app: the first time you open it, a spotlight shows you around the app itself', 'Family accounts: Face ID signs you in to every app'],
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
         'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
@@ -103,7 +108,9 @@
         'Fitness: your drinks from Drinks in Analysis, beside your training',
         'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
         'Canceling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
-        'The 7-day trial is once per family'],
+        'The 7-day trial is once per family',
+        'Each app\'s tour plays once per install, and again if you remove the app and add it back (on Android too)',
+        'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -481,11 +488,23 @@
   } catch {}
   const viaAOS = () => { try { return !!sessionStorage.getItem('aos.via'); } catch { return false; } };
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(navigator.userAgent);
   let installEvt = null;   // Chrome and Edge's own prompt, kept for the Install button
-  addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+  // Chrome may offer it after the card is up: then the card swaps its menu steps for the button.
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; document.querySelectorAll('#aos-welcome .c-inst').forEach(fillInstall); });
+  function fillInstall(box) {
+    const name = box.dataset.name;
+    box.innerHTML = installEvt ? `<p>Add ${esc(name)} to this device, so it opens on its own like any other app.</p><button class="w-btn c-install" type="button">Install</button>`
+      : `<p>Use your browser's <b>Install</b> or <b>Add to Home Screen</b> option, in its menu (⋮), to keep ${esc(name)} on this device like an app.</p>`;
+    const b = box.querySelector('.c-install');
+    if (b) b.onclick = async () => { const e = installEvt; installEvt = null; try { await e.prompt(); await e.userChoice; } catch {} fillInstall(box); };
+  }
+  // Installed (Chrome tells the page it was installed from): a new install, so its walkthrough
+  // plays again the first time it's opened. On Android the app shares the browser's storage, and
+  // removing it keeps what it had seen; on iPhone a new install starts with empty storage anyway.
+  addEventListener('appinstalled', () => { const s = seenAll(); if (!APP || !s || !(APP in s)) return; delete s[APP]; try { localStorage.setItem(SEEN, JSON.stringify(s)); } catch {} });
   function steps(name) {
-    if (installEvt) return `<p>Add ${esc(name)} to this device, so it opens on its own like any other app.</p><button class="w-btn c-install" type="button">Install</button>`;
-    if (!ios) return `<p>Use your browser's <b>Install</b> or <b>Add to Home Screen</b> option, in its menu, to keep ${esc(name)} on this device like an app.</p>`;
+    if (installEvt || !ios) return `<div class="c-inst" data-name="${esc(name)}"></div>`;   // filled by fillInstall() once drawn
     return `<div class="c-sd"></div>${viaAOS() ? `<p class="c-via">Use the <b>Share</b> button in this view, then <b>Add to Home Screen</b>. Then tap <b>✕</b> at the top to go back to aOS.</p>` : ''}`;   // filled by safariDemo() once drawn
   }
 
@@ -892,7 +911,41 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .w-btn:active { filter: brightness(.94); }
 #aos-welcome .c-back { flex: 0 0 52px; height: 52px; border-radius: 17px; background: var(--w-dot) !important; font-size: 22px; }
 #aos-welcome .c-back[hidden], #aos-welcome .w-btn[hidden] { display: none; }
+/* the live tour: the welcome clears to the app itself, and a spotlight moves from control to control */
+#aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(24,30,32,.86); --s-ease: cubic-bezier(.2,.8,.2,1); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-welcome { --s-dim: rgba(14,22,24,.56); --s-card: rgba(255,255,255,.9); } }
+html[data-theme="light"] #aos-welcome { --s-dim: rgba(14,22,24,.56); --s-card: rgba(255,255,255,.9); }
+html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(24,30,32,.86); }
+#aos-welcome.spot { background: transparent; transition: opacity .5s, background-color .8s; }
+#aos-welcome.spot .w-skip { color: var(--w-text); padding: 9px 15px; border-radius: 999px; background: var(--s-card); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0 0 .5px var(--w-edge), 0 6px 18px -6px rgba(0,0,0,.35); }
+#aos-welcome.spot .w-stage, #aos-welcome.spot .c-panel, #aos-welcome.spot .c-fly { opacity: 0 !important; pointer-events: none; transition: opacity .5s; }
+#aos-welcome .s-hole { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 0; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 0 200vmax var(--s-dim); transition: left .6s var(--s-ease), top .6s var(--s-ease), width .6s var(--s-ease), height .6s var(--s-ease), border-radius .6s var(--s-ease), opacity .5s, box-shadow .6s; }
+#aos-welcome .s-hole.on { opacity: 1; }
+#aos-welcome .s-hole.calm { box-shadow: 0 0 0 200vmax rgba(0,0,0,.18); }
+#aos-welcome .s-hole::before { content: ''; position: absolute; inset: -3px; border-radius: inherit; padding: 2.5px; background: var(--w-pastel); opacity: 0; transition: opacity .4s;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+#aos-welcome .s-hole::after { content: ''; position: absolute; inset: -3px; border-radius: inherit; opacity: 0; box-shadow: 0 0 0 0 var(--w-glow); }
+#aos-welcome .s-hole.ring::before { opacity: 1; }
+#aos-welcome .s-hole.ring::after { opacity: 1; animation: s-pulse 2.2s ease-out infinite; }
+@keyframes s-pulse { 0% { box-shadow: 0 0 0 0 var(--w-glow); } 70%, 100% { box-shadow: 0 0 0 16px transparent; } }
+#aos-welcome .s-card { position: absolute; left: 16px; right: 16px; top: 50%; max-width: 420px; margin: 0 auto; padding: 18px 20px 14px; border-radius: 26px; z-index: 3;
+  background: var(--s-card); -webkit-backdrop-filter: blur(24px) saturate(170%); backdrop-filter: blur(24px) saturate(170%); box-shadow: inset 0 0 0 .5px var(--w-edge), 0 22px 50px -14px rgba(0,0,0,.45);
+  opacity: 0; transform: translateY(10px) scale(.98); transition: top .6s var(--s-ease), opacity .3s, transform .5s var(--s-ease); }
+#aos-welcome .s-card.on { opacity: 1; transform: none; }
+#aos-welcome .s-card h3 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+#aos-welcome .s-card p { margin: 6px 0 0; font-size: 15px; line-height: 1.4; }
+#aos-welcome .s-card .c-seg { margin-top: 14px; }
+#aos-welcome .s-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+#aos-welcome .s-row .w-dots { flex: 1; justify-content: flex-start; margin: 0; }
+#aos-welcome .s-back { flex: 0 0 44px; height: 44px; border-radius: 14px; background: var(--w-dot) !important; font-size: 20px; }
+#aos-welcome .s-back[hidden] { display: none; }
+#aos-welcome .s-next { height: 44px; min-width: 96px; padding: 0 20px; border-radius: 14px; font-size: 16px; font-weight: 700; color: #10181A !important; background: var(--w-pastel) !important; box-shadow: inset 0 1px 1px rgba(255,255,255,.45); }
+#aos-welcome .s-hand, #aos-welcome .s-ripple { position: absolute; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 2; }
+#aos-welcome .s-hand { background: rgba(255,255,255,.88); box-shadow: 0 6px 18px rgba(0,0,0,.32), inset 0 0 0 1px rgba(0,0,0,.08); }
+#aos-welcome .s-ripple { border: 2px solid rgba(255,255,255,.95); }
 @media (prefers-reduced-motion: reduce) {
+  #aos-welcome .s-hole.ring::after { animation: none !important; }
   #aos-welcome *, #aos-welcome *::before, #aos-welcome *::after { animation: none !important; transition-duration: .2s !important; transition-delay: 0s !important; }
   #aos-welcome .c-art path, #aos-welcome .c-art rect, #aos-welcome .c-art circle { stroke-dashoffset: 0; }
   #aos-welcome .v-new i { opacity: 1; transform: none; filter: none; }
@@ -1044,8 +1097,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
       for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
       const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('aos'));
-      const ib = body.querySelector('.c-install');
-      if (ib) ib.onclick = async () => { const e = installEvt; installEvt = null; try { await e.prompt(); await e.userChoice; } catch {} draw(); };
+      body.querySelectorAll('.c-inst').forEach(fillInstall);
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
       q('.c-back').hidden = i === 0;
       q('.c-btns .w-btn').textContent = i === cards.length - 1 ? last : 'Continue';
@@ -1073,6 +1125,256 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
     q('.c-btns .w-btn').onclick = () => go(1);
     q('.c-back').onclick = () => go(-1);
     swiper(q('.c-panel'), go);
+  }
+
+  // ===========================================================================
+  // THE LIVE TOUR: after an app's opening, the welcome clears to the app itself and a
+  // spotlight moves from one of its real controls to the next, a glass card beside it
+  // saying what it does and a fingertip showing the gesture. It ends on Light or dark,
+  // with the app behind it changing as you pick. A control that isn't on screen is
+  // passed over; with fewer than two to show, the app gets its cards instead.
+  //   SPOTS[app] = { stops: [stop, ...], done(): put the app back as the tour found it }
+  //   a stop: { sel: selector (or a list, the first one shown wins), t: title, d: what it does,
+  //     g: 'tap' | 'swipe-left' | 'swipe-right' | 'swipe-up' | 'hold', pad, r: corner radius,
+  //     focus: [x, y, w, h] - only part of a big control (a map): its middle as fractions, its size in px,
+  //     pre(): get the app ready first (open a tab), demo: { into, html, where, hide } }
+  // A demo stands in where a new install has nothing yet (an email to swipe): its html is
+  // put into the app (marked data-aos-demo, hidden from screen readers) and taken out
+  // again when the tour ends, however it ends.
+  // ===========================================================================
+  const SPOTS = {};
+  const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
+  const usDay = (d, o) => d.toLocaleDateString('en-US', o || { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // ---- the stops, app by app (written from each app's own screen on a new install) ----
+  const MAIL_ROW = { key: 'mail-row', into: '#screen', html: `<div class="stack"><ul class="list pills"><li class="unread" style="--i:0;pointer-events:none" data-id="aos-demo">
+    <span class="check"></span>
+    <span class="swipe"><button class="sa tagx" type="button" tabindex="-1">Tag</button><button class="sa mktx" type="button" tabindex="-1">Marketing</button></span>
+    <span class="swipe-r"><button class="sa flag" type="button" tabindex="-1">Flag</button><button class="sa arch" type="button" tabindex="-1">Archive</button><button class="sa bin" type="button" tabindex="-1">Trash</button></span>
+    <div class="rowtop"><button class="open" type="button" tabindex="-1"><span class="who"><span class="dot"></span><span class="name">Lincoln Elementary</span><span class="when">9m</span></span>
+      <span class="subj">Field trip forms due Friday</span><span class="snip">Please return the signed permission slip by Friday so…</span>
+      <span class="meta"><span class="tchip rem" style="--h:280">Reminder</span><span class="tchip" style="--h:150">School</span></span></button></div></li></ul></div>` };
+  const mailRow = () => document.querySelector('[data-aos-demo="mail-row"] li');
+  SPOTS.mail = { stops: [
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Swipe to sort', d: 'Swipe an email right to tag it or move it to Marketing. Promotions move there on their own.', g: 'swipe-right',
+      pre: () => { const li = mailRow(); if (li) { li.classList.remove('peek'); void li.offsetWidth; li.classList.add('peek'); } } },
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Flag, archive, trash', d: 'Swipe left to flag, archive or trash it. Every swipe has Undo.', g: 'swipe-left' },
+    { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future.' },
+    { sel: '[data-aos-demo="mail-row"] .tchip.rem', demo: MAIL_ROW, pad: 6, t: 'Remind Me', d: 'Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top.' },
+    { sel: '#screen .signin [data-act="signin"]', t: 'Connect Gmail', d: 'Connect your Gmail to start. Mail is a calmer view of your own inbox.', g: 'tap' },
+  ] };
+  SPOTS.calendar = { stops: [
+    { sel: ['#mgrid', '#main .mgrid'], t: 'One shared calendar', d: 'This is your iCloud Family calendar, so changes here show up in everyone’s iPhone Calendar too.' },
+    { sel: '.dock .tabs', t: 'Day to Year', d: 'Pick Day, Week, Month, Year or List. Swipe to move through time, and tap Today to come back.', g: 'tap' },
+    { sel: '#fab', t: 'Add events fast', d: 'Tap + to add an event, with repeats, alerts, travel time and notes. In Day or Week, hold an event to drag it.', g: 'tap' },
+    { sel: '#setBtn', t: 'Everything in one place', d: 'Turn on layers for holidays, Notes reminders, trips, Mail reminders, workouts and the weather.', g: 'tap' },
+  ] };
+  SPOTS.news = { stops: [
+    { sel: '#tabs', t: 'News by topic', d: 'The latest headlines from free sources: World, UK, US, Business, Tech, AI, Science and more. Swipe to change topic.', g: 'swipe-left' },
+    { sel: ['#feed > .lead', '#feed .list > .row'], t: 'Tap to read', d: 'Stories are newest first and each shows only once. Tap one to read it on the publisher’s site.', g: 'tap' },
+    { sel: '#tabs [data-topic="sport"]', t: 'Follow your teams', d: 'On Sport, pick the teams you follow, and switch to Scores for live results and where to watch.', g: 'tap' },
+    { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
+  ] };
+  SPOTS.weather = { ready: '#card', wait: 6000, stops: [
+    { sel: '#hero .w3-place', t: 'Your places', d: 'It opens to where you are. Tap the name to save up to 12 cities, then swipe the forecast sideways to move between them.', g: 'tap' },
+    { sel: ['#hero .w3-in > div:nth-child(2) > div:last-child', '#hero .w3-in > div:nth-child(2)'], t: 'Know when rain starts', d: 'This says when rain is due to start or stop, like "Rain at 3:45 PM" (in the continental US).' },
+    { sel: ['#hxTray .hx-col.hx-now', '#days .dc[data-day="0"]'], t: 'Every hour and day', d: 'Tap an hour or a day for the details: feels like, wind, humidity, chance of rain, sunrise and sunset.', g: 'tap' },
+    { sel: ['#vsw [data-view="radar"]', '#vsw'], t: 'Radar that looks ahead', d: 'Watch the latest radar, then up to four hours of forecast rain, looping on a map (continental US).', g: 'tap' },
+  ] };
+  SPOTS.notes = { stops: [
+    { sel: ['#list .ctile', '#list .ctiles'], t: 'Notes with #tags', d: 'Type a #tag anywhere in a note to file it into a collection. Pin, color and search your notes too.', g: 'tap' },
+    { sel: ['#list .grid .card', '#list .card', '#list .nrow'], t: 'Swipe to tidy', d: 'Swipe a note left to archive or delete it, or right to pin or tag it. Deleted notes wait 30 days in Trash.', g: 'swipe-left' },
+    { sel: '#pasteBtn', t: 'Paste from anywhere', d: 'Copy a reply from Claude or anywhere, tap here, and it becomes a note or a list of reminders.', g: 'tap' },
+    { sel: '.tabs .tab[data-tab="rem"]', t: 'Quick reminders', d: 'Type "Call Mom tomorrow #family" and it’s set. Groceries sort themselves into aisles.', g: 'tap' },
+    { sel: '#fab', t: 'Write it down', d: 'Tap the pencil for a new note. Notes and lists can be shared with the family.', g: 'tap' },
+  ] };
+  SPOTS.podcasts = { stops: [
+    { sel: '#homeBody [data-aos-demo]', t: 'Up Next', d: 'Listen Now keeps your queue, what you’re part way through and new episodes from your shows. Play at 0.5× to 3×, with a sleep timer and AirPlay.', g: 'tap', pad: 4,
+      demo: { into: '#homeBody', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
+        <button class="uptop" type="button" tabindex="-1"><span class="art" style="--s:64px"></span><span class="uptx"><span class="upm">Your favorite show</span><span class="upt">The newest episode</span></span></button>
+        <div class="upbar"><button class="playpill" type="button" tabindex="-1"><span class="pbar"><i style="width:40%"></i></span><span>18 min left</span></button><span class="upd">Today</span></div></article></div></section>` } },
+    { sel: '#searchTab', t: 'Find new shows', d: 'Browse Apple’s top shows, search by name, or paste a show’s feed link. Private and premium feeds work too.', g: 'tap' },
+    { sel: '.tabs .tab[data-tab="lib"]', t: 'Your library', d: 'Every show you follow, with new episodes downloaded and ready.', g: 'tap' },
+  ] };
+  SPOTS.travel = { stops: [
+    { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your flight, hotel and rental car confirmations become trips on their own.', g: 'tap' },
+    { sel: '#list [data-aos-demo].hero', t: 'What’s next', d: 'Your next flight, check-in or pick-up sits at the top, with live flight status and gates as take-off nears.', pad: 4,
+      demo: { into: '#list', hide: '#list .empty', html: () => `<button class="hero glass" type="button" tabindex="-1" style="--tint:var(--fl)"><p class="k">Next · in 6 days</p>
+        <div class="route"><div class="ap"><b>RDU</b><span>Raleigh-Durham</span></div><div class="line"></div><div class="ap r"><b>BOS</b><span>Boston</span></div></div>
+        <div class="when">B6 1234 · ${usDay(inDays(6))} · 7:05 AM</div><div class="sub">Terminal 2 · Gate C7 · Seat 14A</div><div class="meta"><span class="st ok">On time</span></div></button>` } },
+    { sel: '#list [data-aos-demo].trip', t: 'Trips, day by day', d: 'Each trip is a day-by-day timeline. Add the whole trip to the Family calendar in one tap.', g: 'tap', pad: 4,
+      demo: { into: '#list', where: 'beforeend', hide: '#list .empty', html: () => `<button class="trip glass" type="button" tabindex="-1" style="--i:0"><div class="tt"><h3>Boston</h3><span class="soon">in 6 days</span></div>
+        <div class="dates">${usDay(inDays(6), { month: 'short', day: 'numeric' })} – ${usDay(inDays(9), { month: 'short', day: 'numeric' })}</div><div class="icons"><span class="count">2 flights</span><span class="count">1 hotel</span><span class="count">1 car</span></div></button>` } },
+    { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox.', g: 'tap' },
+    { sel: '.tabs .tab[data-tab="explore"]', t: 'Plan the next one', d: 'Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in.', g: 'tap' },
+  ] };
+  SPOTS.places = { stops: [
+    { sel: '#seg', t: 'Want to go and Been', d: 'Two lists: places you want to try and places you’ve been. A place moves across once you’ve been.', g: 'tap' },
+    { sel: '#map', focus: [.5, .58, 190, 190], r: 95, t: 'Your places on a map', d: 'Pins show what you want to try and where you’ve been. Touch and hold anywhere on the map to add a spot.', g: 'hold' },
+    { sel: '#filterWrap', t: 'Find somewhere new', d: 'Search "tacos" or a name to find nearby businesses, or zoom in to see food, things to do and shops.', g: 'tap' },
+    { sel: '#fab', t: 'Rate and remember', d: 'Add a place with stars, price and notes with #tags, and Places keeps count of every visit.', g: 'tap' },
+  ] };
+  SPOTS.fitness = { stops: [
+    { sel: ['#main .week', '#main .navrow'], t: 'Your week at a glance', d: 'Each day shows the muscle groups you worked and how many sets. Swipe sideways to move a week at a time.', g: 'swipe-left' },
+    { sel: '#fab', t: 'Log in seconds', d: 'Search an exercise, like "db curl", and last time’s weight, reps and sets fill in for you. Cardio counts too.', g: 'tap' },
+    { sel: ['#viewBtn', '#vbar'], t: 'See your progress', d: 'Analysis compares this week or month with the one before: what’s improving and what needs work.', g: 'tap' },
+  ] };
+  SPOTS.drinks = { stops: [
+    { sel: ['#main .rgroup.week', '#main .week'], t: 'Your week', d: 'Each day shows its standard drinks, or alcohol-free. Swipe sideways to move a week at a time.', g: 'swipe-left' },
+    { sel: '#sumBtn', t: 'Your week in one number', d: 'Your week adds up here against the limit you set. Tap it to compare with the week before.', g: 'tap' },
+    { sel: '#fab', t: 'One tap to log', d: 'Tap + to open today. Your usual drinks sit there as tiles, or tap Something else for anything new.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Private to you', d: 'Sign in here to keep your log in your family account, where only you can see it. Your goals are here too.', g: 'tap' },
+  ] };
+  SPOTS.house = { stops: [
+    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'Home opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
+    { sel: ['#v-fav .autos', '#v-fav .ag'], t: 'Routines in one tap', d: 'Run Goodnight, Evening Lights and your other routines straight from Favorites.', g: 'tap' },
+    { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
+    { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights', d: 'Dim each light with its slider, or use All on and All off. Lights in the menu has every room.', g: 'tap' },
+    { sel: '#viewBtn', t: 'Cameras and more', d: 'Tap here for Climate, Lights, Media and Security, where you can arm Blink and see each camera’s latest still.', g: 'tap' },
+    { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
+  ] };
+  let spotEnd = null;
+  const onScreen = e => {
+    if (!e || !e.isConnected || e.closest('#aos-welcome')) return false;
+    const r = e.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return false;   // scrolled away is fine: each stop scrolls to it
+    const st = getComputedStyle(e); return st.visibility !== 'hidden' && +st.opacity > .05;
+  };
+  const spotFind = sel => { for (const s of [].concat(sel || [])) { try { for (const e of document.querySelectorAll(s)) if (onScreen(e)) return e; } catch {} } return null; };
+  const spotWait = async (sel, ms) => { const t0 = Date.now(); let e; while (!(e = spotFind(sel)) && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 90)); return e; };
+  function addDemo(d, hidden) {
+    if (document.querySelector(`[data-aos-demo="${d.key}"]`)) return;
+    const host = document.querySelector(d.into); if (!host) return;
+    const t = document.createElement('template'); t.innerHTML = (typeof d.html === 'function' ? d.html() : d.html).trim();
+    for (const n of t.content.children) { n.setAttribute('data-aos-demo', d.key); n.setAttribute('aria-hidden', 'true'); }
+    host.insertAdjacentElement(d.where || 'afterbegin', t.content.firstElementChild);
+    for (const h of document.querySelectorAll(d.hide || 'x-none')) { if (hidden.some(([x]) => x === h)) continue; hidden.push([h, h.style.display]); h.style.display = 'none'; }   // each once, so it comes back as it was
+  }
+  // Enough of the tour on screen to be worth it? (S.ready: wait a little for the app's main screen.)
+  async function spotsReady(id) {
+    const S = SPOTS[id]; if (!S) return false;
+    if (S.ready && !(await spotWait(S.ready, S.wait || 4000))) return false;
+    if (document.getElementById('aos-off')) return false;   // switched off: nothing to show around
+    return S.stops.filter(s => s.pre || s.demo || spotFind(s.sel)).length >= 2;
+  }
+
+  function spotTour(o, id) {
+    const { el, q, close } = o, S = SPOTS[id], name = NAMES[id];
+    const list = [...S.stops, ...(DARK_ONLY.includes(id) ? [] : [{ theme: true, t: 'Light or dark', d: `Follow your ${ios ? 'iPhone' : 'device'}, or keep ${name} always light or always dark. Try it: ${name} changes behind this.` }])];
+    el.insertAdjacentHTML('beforeend', `<div class="s-hole"></div><div class="s-ripple"></div><div class="s-hand"></div>
+      <div class="s-card" role="group" aria-live="polite"><h3></h3><p></p><div class="s-x"></div>
+        <div class="s-row"><div class="w-dots"></div><button class="s-back" type="button" aria-label="Back" hidden>‹</button><button class="s-next" type="button">Next</button></div></div>`);
+    const hole = q('.s-hole'), card = q('.s-card'), hand = q('.s-hand'), rip = q('.s-ripple'), hidden = [], sx = scrollX, sy = scrollY;
+    let i = -1, busy = false, anims = [], cur = null, last = '', ticker = 0;
+    const stopHand = () => { anims.forEach(a => a.cancel()); anims = []; };
+    spotEnd = () => {
+      spotEnd = null; clearInterval(ticker); stopHand(); removeEventListener('resize', relayout);
+      document.querySelectorAll('[data-aos-demo]').forEach(x => x.remove());
+      hidden.forEach(([h, v]) => { h.style.display = v; });
+      try { if (S.done) S.done(); } catch {}
+      try { scrollTo(sx, sy); } catch {}
+    };
+    const box = () => el.getBoundingClientRect();
+    // where the spotlight goes: the control, a little roomier, kept on screen
+    const rectOf = s => {
+      let r = s.el.getBoundingClientRect(); const B = box(), p = s.pad == null ? 8 : s.pad;
+      if (s.focus) { const [fx, fy, fw, fh] = s.focus, x = r.left + r.width * fx, y = r.top + r.height * fy; r = { left: x - fw / 2, top: y - fh / 2, right: x + fw / 2, bottom: y + fh / 2 }; }
+      const l = Math.max(6, r.left - B.left - p), t = Math.max(6, r.top - B.top - p);
+      const w = Math.min(B.width - 6, r.right - B.left + p) - l, h = Math.min(B.height - 6, r.bottom - B.top + p) - t;
+      return { left: l, top: t, width: Math.max(0, w), height: Math.max(0, h) };
+    };
+    const setHole = (r, s) => {
+      if (!r) { const B = box(); Object.assign(hole.style, { left: B.width / 2 + 'px', top: B.height / 2 + 'px', width: '0px', height: '0px', borderRadius: '0px' }); hole.classList.remove('ring'); hole.classList.add('calm'); return; }
+      Object.assign(hole.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: (s.r == null ? Math.min(22, r.height / 2) : s.r) + 'px' });
+      hole.classList.add('ring'); hole.classList.remove('calm');
+    };
+    // the card goes below the spotlight if it fits, else above, else at the bottom
+    const placeCard = r => {
+      const B = box(), ch = card.offsetHeight, topMin = 64, botMax = B.height - 24;
+      let top;
+      if (!r) top = (B.height - ch) / 2;
+      else if (r.top + r.height + 18 + ch <= botMax) top = r.top + r.height + 18;
+      else if (r.top - 18 - ch >= topMin) top = r.top - 18 - ch;
+      else top = botMax - ch;
+      card.style.top = Math.max(topMin, top) + 'px';
+    };
+    const P = (x, y, k = 1) => `translate(${x}px, ${y}px) scale(${k})`;
+    function gesture(g, r) {
+      stopHand();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (still()) { anims.push(hand.animate([{ opacity: .9, transform: P(cx, cy) }, { opacity: .9, transform: P(cx, cy) }], { duration: 1000, fill: 'forwards' })); return; }
+      const loop = { duration: g === 'tap' ? 2000 : 2600, iterations: Infinity, easing: 'ease-in-out' };
+      if (g === 'tap') {
+        anims.push(hand.animate([{ opacity: 0, transform: P(cx + 18, cy + 34, 1.1) }, { opacity: 1, transform: P(cx, cy, 1), offset: .3 }, { opacity: 1, transform: P(cx, cy, .8), offset: .42 },
+          { opacity: 1, transform: P(cx, cy, 1), offset: .52 }, { opacity: 0, transform: P(cx, cy, 1), offset: .78 }, { opacity: 0, transform: P(cx, cy, 1) }], loop));
+        anims.push(rip.animate([{ opacity: 0, transform: P(cx, cy, .5) }, { opacity: 0, transform: P(cx, cy, .5), offset: .42 }, { opacity: .9, transform: P(cx, cy, .6), offset: .44 },
+          { opacity: 0, transform: P(cx, cy, 2.3), offset: .8 }, { opacity: 0, transform: P(cx, cy, 2.3) }], loop));
+      } else if (g === 'hold') {
+        anims.push(hand.animate([{ opacity: 0, transform: P(cx, cy + 30, 1.1) }, { opacity: 1, transform: P(cx, cy, 1), offset: .22 }, { opacity: 1, transform: P(cx, cy, .82), offset: .3 },
+          { opacity: 1, transform: P(cx, cy, .82), offset: .72 }, { opacity: 0, transform: P(cx, cy, 1), offset: .86 }, { opacity: 0, transform: P(cx, cy, 1) }], loop));
+        anims.push(rip.animate([{ opacity: 0, transform: P(cx, cy, .6) }, { opacity: 0, transform: P(cx, cy, .6), offset: .3 }, { opacity: .9, transform: P(cx, cy, .7), offset: .32 },
+          { opacity: .5, transform: P(cx, cy, 1.9), offset: .72 }, { opacity: 0, transform: P(cx, cy, 2.1), offset: .8 }, { opacity: 0, transform: P(cx, cy, 2.1) }], loop));
+      } else {
+        const up = g === 'swipe-up', left = g === 'swipe-left', span = up ? Math.max(70, r.height * .5) : Math.max(90, r.width * .5);
+        const [x0, y0, x1, y1] = up ? [cx, cy + span / 2, cx, cy - span / 2] : left ? [cx + span / 2, cy, cx - span / 2, cy] : [cx - span / 2, cy, cx + span / 2, cy];
+        anims.push(hand.animate([{ opacity: 0, transform: P(x0, y0, 1.1) }, { opacity: 1, transform: P(x0, y0, 1), offset: .18 }, { opacity: 1, transform: P(x0, y0, .86), offset: .26 },
+          { opacity: 1, transform: P(x1, y1, .86), offset: .68, easing: 'cubic-bezier(.4,0,.2,1)' }, { opacity: 0, transform: P(x1, y1, 1), offset: .82 }, { opacity: 0, transform: P(x1, y1, 1) }], loop));
+      }
+    }
+    const fill = s => {
+      card.querySelector('h3').textContent = s.t;
+      card.querySelector('p').textContent = s.d;
+      card.querySelector('.s-x').innerHTML = s.theme ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>` : '';
+      for (const b of card.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); card.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+      card.querySelector('.w-dots').innerHTML = list.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('');
+      q('.s-back').hidden = i === 0;
+      q('.s-next').textContent = i === list.length - 1 ? 'Get started' : 'Next';
+    };
+    async function show(s) {
+      cur = null; card.classList.remove('on'); stopHand();
+      await wait(240);
+      let r = null;
+      if (!s.theme) {
+        s.el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: still() ? 'auto' : 'smooth' });
+        await wait(420); r = rectOf(s);
+      }
+      fill(s); setHole(r, s);
+      await wait(r ? 450 : 250);
+      placeCard(r); card.classList.add('on'); cur = s; last = r ? JSON.stringify(r) : '';
+      if (r && s.g) gesture(s.g, r);
+    }
+    // the app may still be settling (a list arriving, a font): keep the spotlight on its control
+    function relayout() {
+      if (!cur || cur.theme || !el.isConnected) return;
+      if (cur.demo) addDemo(cur.demo, hidden);   // the app redrew its list: the demo goes back in
+      if (!onScreen(cur.el)) { const e = spotFind(cur.sel); if (!e) return; cur.el = e; }
+      const r = rectOf(cur), k = JSON.stringify(r); if (k === last) return;
+      last = k; setHole(r, cur); placeCard(r); if (cur.g) gesture(cur.g, r);
+    }
+    const go = async d => {
+      if (busy) return; busy = true;
+      try {
+        let k = i + d;
+        while (k >= 0 && k < list.length && !list[k].theme) {
+          const s = list[k];
+          if (s.demo) { s.demo.key = s.demo.key || id + k; addDemo(s.demo, hidden); }
+          try { if (s.pre) await s.pre(); } catch {}
+          const e = await spotWait(s.sel, s.pre || s.demo ? 1500 : 700);
+          if (e) { s.el = e; break; }
+          list.splice(k, 1); if (d < 0) k--;   // not on screen: passed over
+        }
+        if (k >= list.length) return close();
+        if (k < 0) return;
+        i = k; await show(list[i]);
+      } finally { busy = false; }
+    };
+    q('.s-next').onclick = () => go(1);
+    q('.s-back').onclick = () => go(-1);
+    swiper(card, go);
+    addEventListener('resize', relayout);
+    ticker = setInterval(relayout, 300);
+    // the welcome clears to the app, the spotlight starts as the whole screen and closes in
+    el.classList.add('spot'); hole.classList.add('on');
+    return wait(700).then(() => go(1));
   }
 
   // ===========================================================================
@@ -1127,7 +1429,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
   // no Not now: the only way out is the view's ✕, back to aOS's tiles. So that view
   // never shows the app itself, and coming back to aOS later lands on aOS.
   function playInstall(id = APP) {
-    const k = 'aos.later.' + id, stay = viaAOS() && id !== 'aos';
+    const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now
     try { if (!stay && sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
     const name = NAMES[id] || 'aOS';
     return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
@@ -1145,7 +1447,10 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
     // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
     // last: each app on the Home Screen keeps its own settings, so each one asks.
     const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
-    return run(`Welcome to ${name}`, head, () => markSeen(id, latest()), async o => { await sceneApp(o, id); await tour(o, cards); });
+    return run(`Welcome to ${name}`, head, () => { markSeen(id, latest()); if (spotEnd) spotEnd(); }, async o => {
+      await sceneApp(o, id);
+      if (await spotsReady(id)) await spotTour(o, id); else await tour(o, cards);   // the live tour, or its cards if it can't find its way
+    });
   }
 
   AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
@@ -1273,6 +1578,8 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     // On iPhone, Safari or the Home Screen? (display-mode: standalone, or navigator.standalone)
     // In Safari: how to add it. From the Home Screen: the welcome, walkthrough or update.
     if (ios && (!standalone() || viaAOS())) return playInstall(APP);
+    // On Android too, an app's walkthrough waits until it's installed; in Chrome, how to install it.
+    if (android && APP !== 'aos' && !standalone()) return playInstall(APP);
     const v = latest(), s = seen[APP];
     // only silent releases since: note them as seen and say nothing
     if (s && cmp(v, s) > 0 && RELEASES.filter(r => cmp(r.v, s) > 0 && cmp(r.v, v) <= 0).every(r => r.silent)) { markSeen(APP, v); return; }
