@@ -2,7 +2,8 @@
 // just for fun) in plain Node, on an in-memory stand-in for Workers KV with real
 // sessions from server/auth.js: Pro+ since the owner joined until changed, only the
 // owner changes it, a cancelled plan ends on its next monthly date, keeping it,
-// a trial's 7 days, and the dates months land on.
+// a trial's 7 days and only once, the dates months land on, and that nothing anyone
+// saved is deleted while the apps are off.
 //   node aOS/scripts/plan-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest, nextRenewal, planView } from '../../functions/aOS/api/[[route]].js';
@@ -49,6 +50,11 @@ await db.put('owner', 'OWNER1');
 await putJSON(db, 'user:OWNER1', { id: 'OWNER1', name: 'Tom', role: 'owner', creds: [], created: joined });
 await putJSON(db, 'user:KID1', { id: 'KID1', name: 'Sam', role: 'member', creds: [] });
 const tom = await issue(db, 'OWNER1'), sam = await issue(db, 'KID1');
+// what the family has saved: none of it may go when a plan ends or changes
+await putJSON(db, 'drinks:KID1', { entries: [{ id: 'd1', name: 'Beer' }], graves: {} });
+await putJSON(db, 'cred:c1', { user: 'KID1', spki: 'x', alg: -7 });
+await db.put('config:home', 'https://abc.ui.nabu.casa');
+const saved = new Map([...db.m].filter(([k]) => !k.startsWith('config:plan') && k !== 'config:trial'));
 
 await test('until it is changed: Pro+ since the owner joined, renewing monthly, for anyone (signed in or not)', async () => {
   const p = (await call('state')).body.plan;
@@ -95,11 +101,42 @@ await test('a trial: ends 7 days after it starts, and is not cancelled (it ends 
   assert.ok((await planView(db)).ends < Date.now());
 });
 
+await test('the trial is once per family: started, ended or switched away from, it can\'t start again', async () => {
+  assert.equal((await call('state')).body.plan.trialUsed, true);
+  await call('plan', { body: { id: 'pro' }, token: tom });
+  const p = (await call('state')).body.plan; assert.equal(p.id, 'pro'); assert.equal(p.trialUsed, true);
+  const r = await call('plan', { body: { id: 'trial' }, token: tom });
+  assert.equal(r.status, 400); assert.equal(r.body.error, 'trial-used');
+  assert.equal((await call('state')).body.plan.id, 'pro');   // unchanged
+});
+
+await test('a family that never had the trial can start it once; a trial from before config:trial counts', async () => {
+  const d2 = fakeKV(), e2 = { ACCOUNTS: d2 };
+  await d2.put('owner', 'O2'); await putJSON(d2, 'user:O2', { id: 'O2', name: 'Ann', role: 'owner', creds: [], created: joined });
+  const ann = await issue(d2, 'O2');
+  assert.equal((await call('state', { e: e2 })).body.plan.trialUsed, false);
+  assert.equal((await call('plan', { body: { id: 'trial' }, token: ann, e: e2 })).status, 200);
+  assert.ok(d2.m.get('config:trial'));
+  await call('plan', { body: { id: 'proplus' }, token: ann, e: e2 });
+  assert.equal((await call('plan', { body: { id: 'trial' }, token: ann, e: e2 })).body.error, 'trial-used');
+  const d3 = fakeKV();
+  await d3.put('owner', 'O3'); await putJSON(d3, 'config:plan', { id: 'trial', since: Date.now() - 9 * DAY });
+  assert.equal((await planView(d3)).trialUsed, true);
+});
+
 await test('switching plans clears a cancellation', async () => {
   await call('plan', { body: { id: 'proplus' }, token: tom });
   await call('plan', { body: { cancel: true }, token: tom });
   const r = await call('plan', { body: { id: 'pro' }, token: tom });
   assert.equal(r.body.plan.id, 'pro'); assert.equal(r.body.plan.cancelled, false); assert.equal(r.body.plan.ends, null);
+});
+
+await test('nothing anyone saved is deleted while the apps are off, or when a plan starts again', async () => {
+  await putJSON(db, 'config:plan', { id: 'pro', since: joined - 40 * DAY, ends: Date.now() - DAY });   // ended: apps off
+  assert.ok((await call('state')).body.plan.ends < Date.now());
+  await call('plan', { body: { id: 'proplus' }, token: tom });   // back on
+  for (const [k, v] of saved) assert.equal(db.m.get(k), v, k + ' changed or went');
+  assert.equal((await call('home', { token: sam })).body.address, 'https://abc.ui.nabu.casa');   // and still readable
 });
 
 console.log(`${n} of ${n} passed`);

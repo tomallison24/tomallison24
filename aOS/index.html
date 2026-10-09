@@ -224,6 +224,8 @@
   .plans .pact { justify-content: center; font-size: 16px; font-weight: 650; color: var(--accent); } .plans .pact.stop { color: #D9534F; }
   .plan:disabled { cursor: default; }
   .plan em.off { background: color-mix(in srgb, #D9534F 16%, transparent); color: #D9534F; }
+  .plan em.used { background: var(--dot); color: var(--muted); }
+  .plan:disabled .pn b, .plan:disabled .pp { opacity: .55; } .plan[aria-pressed="true"]:disabled .pn b, .plan[aria-pressed="true"]:disabled .pp { opacity: 1; }
   .perr { color: #D9534F; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
   .acct > div { display: block; }

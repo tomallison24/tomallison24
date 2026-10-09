@@ -142,11 +142,12 @@
   // family account (functions/aOS/api, POST plan) so every app on every phone sees it:
   // Pro+ until the owner changes it. A cancelled plan runs to the end of its month, a
   // trial for 7 days; then every app but aOS is switched off (home/welcome.js) until
-  // the owner picks a plan here. Only the owner changes it; everyone sees it.
+  // the owner picks a plan here. Only the owner changes it; everyone sees it. The
+  // trial is once per family. Switched off deletes nothing: it's all there again.
   const PLANS = [
     { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customisable, plus new app building: apps you make for your own needs' },
     { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customisable. No new app building' },
-    { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days' },
+    { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days, once' },
   ];
   const DAY = 864e5;
   const price = p => p.p ? `$${p.p}<small> a month</small>` : 'Free';
@@ -154,11 +155,12 @@
   const shortDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const planLive = p => !p || !p.ends || Date.now() < p.ends;
   const OFF = 'every app but aOS switches off';
+  const KEPT = ' Nothing is deleted: it\'s all there when a plan starts again.';
   function planNote(cur, me, owner) {
     const fun = ' Just for fun: nothing is charged.';
     if (!cur) return (state ? 'The family\'s plan is kept in the family account: it shows here once that\'s set up and reachable.' : 'Checking…') + fun;
     const who = owner ? '' : ' The owner manages the family\'s plan.';
-    if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ' Choose a plan to turn them back on.' : ''}${who}${fun}`;
+    if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ` Choose ${cur.id === 'trial' ? 'Pro or Pro+' : 'a plan'} to turn them back on.` : ''}${KEPT}${who}${fun}`;
     if (cur.id === 'trial') { const left = Math.ceil((cur.ends - Date.now()) / DAY); return `${left} ${left === 1 ? 'day' : 'days'} left in the trial: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`; }
     if (cur.cancelled) return `${me.n} is cancelled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`;
     return `${me.n}, $${me.p} a month, since ${onDay(cur.since)}. Renews ${onDay(cur.renews)}.${who}${fun}`;
@@ -168,16 +170,17 @@
     const box = $('plans'); if (!box) return;
     const cur = (state && state.plan) || null, me = cur && PLANS.find(p => p.id === cur.id);
     const owner = !!(cur && state.user && state.user.role === 'owner'), live = planLive(cur), to = PLANS.find(p => p.id === ui.pick);
-    const badge = p => !cur || p.id !== cur.id ? '' : ` <em class="${live ? '' : 'off'}">${!live ? 'Ended' : cur.ends ? 'Ends ' + esc(shortDay(cur.ends)) : 'Your plan'}</em>`;
-    let rows = PLANS.map(p => `<button type="button" class="plan" data-plan="${p.id}" aria-pressed="${!!cur && live && p.id === cur.id}"${owner ? '' : ' disabled'}>
+    const usedUp = p => p.id === 'trial' && !!cur && cur.trialUsed && !(cur.id === 'trial' && live);   // the trial is once
+    const badge = p => !cur ? '' : p.id !== cur.id ? (usedUp(p) ? ' <em class="used">Used</em>' : '') : ` <em class="${live ? '' : 'off'}">${!live ? 'Ended' : cur.ends ? 'Ends ' + esc(shortDay(cur.ends)) : 'Your plan'}</em>`;
+    let rows = PLANS.map(p => `<button type="button" class="plan" data-plan="${p.id}" aria-pressed="${!!cur && live && p.id === cur.id}"${owner && !usedUp(p) ? '' : ' disabled'}>
         <span class="pn"><b>${esc(p.n)}${badge(p)}</b><i>${esc(p.d)}</i></span><span class="pp">${price(p)}</span></button>`).join('');
     if (owner && to) rows += `<div class="pick"><div class="row2"><button type="button" data-plan-no>Not now</button><button type="button" class="go" data-plan-ok="${to.id}">${to.id === 'trial' ? 'Start the 7-day trial' : `Switch to ${esc(to.n)}`}</button></div></div>`;
-    else if (owner && ui.cancel) rows += `<div class="pick"><p>${esc(me.n)} stays on until ${esc(onDay(cur.renews))}. Then ${OFF}, until a plan is chosen again.</p><div class="row2"><button type="button" data-plan-no>Keep ${esc(me.n)}</button><button type="button" class="go stop" data-plan-stop>Cancel ${esc(me.n)}</button></div></div>`;
+    else if (owner && ui.cancel) rows += `<div class="pick"><p>${esc(me.n)} stays on until ${esc(onDay(cur.renews))}. Then ${OFF}, until a plan is chosen again. Nothing is deleted.</p><div class="row2"><button type="button" data-plan-no>Keep ${esc(me.n)}</button><button type="button" class="go stop" data-plan-stop>Cancel ${esc(me.n)}</button></div></div>`;
     else if (owner && live && cur.id !== 'trial') rows += cur.cancelled ? `<button type="button" class="pact" data-plan-resume>Keep ${esc(me.n)}</button>` : `<button type="button" class="pact stop" data-plan-cancel>Cancel ${esc(me.n)}</button>`;
     box.innerHTML = rows;
     $('planNote').innerHTML = (ui.err ? `<span class="perr">${esc(ui.err)}</span> ` : '') + esc(planNote(cur, me, owner));
   }
-  const PLAN_WHY = { ended: 'That plan has already ended: choose a plan.', 'owner-only': 'Only the owner can change the plan.', signin: 'Sign in to change the plan.' };
+  const PLAN_WHY = { 'trial-used': 'The trial is once per family: choose Pro or Pro+.', ended: 'That plan has already ended: choose a plan.', 'owner-only': 'Only the owner can change the plan.', signin: 'Sign in to change the plan.' };
   async function setPlan(btn, body) {
     busy(btn, true);
     try { const r = await ACC.call('plan', body); state.plan = r.plan; paintPlans(); paintSigninCard(); }
