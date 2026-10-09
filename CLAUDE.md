@@ -1,27 +1,26 @@
 # AllisonOS - notes for every Claude session in this repo
 
-## Updates go out only when the owner releases them
+## Every merge releases
 
-- Merging to the default branch publishes **nothing**. The site (Cloudflare
-  Pages and GitHub Pages) only serves the newest released version: a git tag
-  `aOS<version>` (`aOS1`, `aOS1.1`, `aOS2`). See `aOS/RELEASING.md`.
-- **Never release on your own.** Releasing is running the News workflow by
-  hand with a version (`.github/workflows/news.yml`, input `release`); do it
-  only when the owner asks for that release.
-- After merging, tell the owner the change is merged and waits for the next
-  release - not that it is live.
-- The one exception: `labs/` holds test pages for the owner (not apps). It
-  publishes from the latest merged code on the next scheduled or hand-run
-  publish (a hand run with **release** blank republishes the live release
-  and refreshes labs - that is not a release).
+- The site (Cloudflare Pages and GitHub Pages) only serves the newest released
+  version: a git tag `aOS<version>` (`aOS1`, `aOS1.1`, `aOS2`). See
+  `aOS/RELEASING.md`.
+- The owner asked for releases to be automatic: **every merge to the default
+  branch releases** the newest version in the release log (below) and
+  publishes it (`.github/workflows/news.yml`, the push to the default branch).
+  So merging is publishing: only merge what's ready for the family's phones.
+- After merging, check the News run finished, then tell the owner it is live
+  (phones pick it up the next time they open the app).
+- `labs/` holds test pages for the owner (not apps); it publishes with every
+  release and every scheduled run.
 
 ## Merging
 
 The owner has asked that Claude's pull requests merge without asking, once
 they're ready: every check on the latest commit passed (the News build and the
 Apps check), no merge conflict, and no review left unanswered. Merge then (or
-turn on GitHub's auto-merge for the PR), with a merge commit. Merging still
-publishes nothing: releasing waits for the owner to ask (above).
+turn on GitHub's auto-merge for the PR), with a merge commit. The merge
+releases it (above).
 
 ## The release log
 
@@ -29,12 +28,11 @@ publishes nothing: releasing waits for the owner to ask (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- If the top entry isn't released yet (no `aOS<v>` tag: `git ls-remote --tags
-  origin 'aOS*'`), add to it. Otherwise add a new entry above it with the next
-  minor version (`1.1` after `1`); the owner picks the final number when
-  releasing. The owner may fold changes into the released top version instead
-  (everything is going into aOS1 for now): then add to that entry; releasing
-  it again moves its tag (`aOS/RELEASING.md`).
+- By default, add to the top entry (everything is going into aOS1 for now):
+  each merge releases it again, moving its tag; phones get the change with no
+  update screen. A change worth announcing with update screens gets a new entry
+  above it with the next minor version (`1.1` after `1`), when the owner wants
+  one; the merge that adds it releases it.
 - `highlights` are the most important changes - the update screens in the
   apps show these; `notes` are everything else, shown in aOS's full log.
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
