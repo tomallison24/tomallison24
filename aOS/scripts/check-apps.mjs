@@ -33,8 +33,6 @@
 //     base-uri 'none' and script-src 'self' only (no inline, eval or outside
 //     scripts), and no inline <script> in the page
 // Worth doing (warnings):
-//   - :root[data-theme="dark"] rules, so the app's own CSS follows a chosen
-//     Light or Dark without relying on welcome.js rewriting the media queries
 //   - its sw.js CACHE named after the app ('<id>-vN')
 import fs from 'fs';
 import path from 'path';
@@ -174,7 +172,6 @@ for (const id of ids) {
     rule(/default-src 'none'/.test(csp) && /base-uri 'none'/.test(csp), "its policy should start from default-src 'none' and set base-uri 'none'");
   }
   rule(!/<script>[\s\S]*?<\/script>|<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(html), 'has an inline <script>: put it in a file (app.js), so the policy can allow only this site\'s scripts');
-  if (!DARK_ONLY.includes(id) && !/data-theme="dark"\]/.test(html)) warn(id, 'no :root[data-theme="dark"] rules: a chosen Dark relies on welcome.js rewriting the media queries');
 }
 
 for (const w of warnings) console.log('warning - ' + w);

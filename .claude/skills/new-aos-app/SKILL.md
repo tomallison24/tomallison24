@@ -79,9 +79,10 @@ per person is deleted in `functions/aOS/api` `remove`.
   (`-apple-system…`), no web fonts or anything loaded from another site. Sea
   glass (`--w-pastel` / `--pastel`) for AllisonOS's own highlights only: no new
   pastel gradients.
-- **Light and dark**: tokens under `@media (prefers-color-scheme: dark)` with
-  `:root:not([data-theme="light"])`, repeated for `:root[data-theme="dark"]`;
-  welcome.js applies the person's choice. Don't build your own theme switch.
+- **Light and dark**: tokens under `@media (prefers-color-scheme: dark)`;
+  welcome.js applies the person's Light/Dark choice by switching those media
+  queries, so no `data-theme` copies are needed. Don't build your own theme
+  switch.
 - **Motion**: honour `prefers-reduced-motion` (and
   `prefers-reduced-transparency` for glass).
 - **Simple**: one main screen where possible; a sheet for each thing you open;
