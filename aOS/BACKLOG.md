@@ -53,9 +53,9 @@ an item through (or delete it) when it ships, and say which release.
    row in Fitness Analysis when accounts are on and it isn't signed in. (The
    same applies to Calendar's layers: an app that was never signed in can't
    send its copy; Calendar says so.)
-9. **Text contrast.** Faint labels, aOS's light grey and green text, and the
-   walkthrough button were under 4.5:1. The Sea glass change addresses the
-   tokens; re-measure after it ships.
+9. ~~**Text contrast.**~~ Done with the Sea glass change (#243): every app's
+   text, muted, faint and accent colors now measure 4.57:1 or more in both
+   themes. Kept here as a reminder to measure any new tokens.
 10. **Buttons under 44 points.** Header icon buttons are 36 (Fitness, Calendar,
     Notes, Travel, Podcasts; 38 in Places and News), the week arrows 32, chips
     and News's topic tabs 34-36, aOS's Get 32 tall. Fix: 44-point hit areas
