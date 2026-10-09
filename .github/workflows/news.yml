@@ -1,22 +1,25 @@
 # Releases aOS, refreshes the News app's headlines and publishes the site.
 #
-# Only released versions go live (aOS/RELEASING.md). Merging to the default
-# branch publishes nothing; a release is a tag, aOS<version> (aOS1, aOS1.1),
-# made by running this workflow by hand with that version. The one exception is
-# labs/ - test pages for the owner, not apps - which always publishes from the
-# latest merged code, on the next scheduled or hand-run publish.
+# Only released versions go live (aOS/RELEASING.md): a release is a tag,
+# aOS<version> (aOS1, aOS1.1). Every merge to the default branch releases on
+# its own: the newest version in home/welcome.js's release log is tagged on the
+# merged code and published (the owner asked for this). It can also be run by
+# hand with a version. labs/ - test pages for the owner, not apps - always
+# publishes from the latest merged code.
 #
-# release: (run by hand, with a version) checks that the newest entry in
-#          home/welcome.js's release log is that version and tags the default
-#          branch as aOS<version>. Released already (more added to aOS1, say):
-#          the tag moves to the latest code, and tags for versions no longer in
-#          the log (aOS1.1, folded into aOS1) are removed, so it's the live one.
+# release: (a push to the default branch, or by hand with a version) checks
+#          that the newest entry in home/welcome.js's release log is that
+#          version (on a push, it is that version) and tags the default branch
+#          as aOS<version>. Released already (more added to aOS1, say): the tag
+#          moves to the latest code, and tags for versions no longer in the log
+#          (aOS1.1, folded into aOS1) are removed, so it's the live one.
 # build:   fetches every feed in news/feeds.json into news/data/news.json and
 #          packages the site (News, Weather, Mail, Notes, Podcasts, Travel,
 #          Calendar, Places, Fitness, Drinks, Home Assistant in house/, aOS, and home/'s
-#          shared scripts). On a push it only checks the branch builds. Run by
-#          hand or on the schedule, it packages the live release - the newest
-#          aOS tag - with fresh headlines, and publishes it to Cloudflare Pages,
+#          shared scripts). On a push to another branch it only checks the
+#          branch builds. After a release, by hand or on the schedule, it
+#          packages the live release - the newest aOS tag - with fresh
+#          headlines, and publishes it to Cloudflare Pages,
 #          once the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository
 #          secrets exist (the site sits behind Cloudflare Access, so only
 #          signed-in people can open it).
@@ -60,9 +63,15 @@ permissions:
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' && inputs.release != ''
+    # By hand with a version, or every merge to the default branch.
+    if: (github.event_name == 'workflow_dispatch' && inputs.release != '') || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    # One release at a time; a newer merge's release replaces one still waiting,
+    # so the tag never moves back to older code.
+    concurrency:
+      group: release
+      cancel-in-progress: false
     permissions:
       contents: write   # to push the release tag
     steps:
@@ -75,8 +84,10 @@ jobs:
           DEFAULT: ${{ github.event.repository.default_branch }}
         run: |
           [ "$GITHUB_REF_NAME" = "$DEFAULT" ] || { echo "::error::Release from $DEFAULT, not $GITHUB_REF_NAME"; exit 1; }
-          printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$' || { echo "::error::A version is numbers and dots, like 1.1"; exit 1; }
           top=$(node -e "const m = require('fs').readFileSync('home/welcome.js', 'utf8').match(/const RELEASES = \[\s*\{\s*v:\s*'([^']+)'/); console.log(m ? m[1] : '')")
+          # a merge releases the newest version in the log
+          V=${V:-$top}
+          printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$' || { echo "::error::A version is numbers and dots, like 1.1"; exit 1; }
           [ "$top" = "$V" ] || { echo "::error::The newest entry in home/welcome.js's release log is aOS$top, not aOS$V: add aOS$V's entry first"; exit 1; }
           # a release tag whose version isn't in the log any more (folded into another) goes
           logged=$(node -e "const s = require('fs').readFileSync('home/welcome.js', 'utf8'); const i = s.indexOf('const RELEASES = ['); const b = s.slice(i, s.indexOf('];', i)); console.log([...b.matchAll(/\{\s*v:\s*'([^']+)'/g)].map(m => m[1]).join(' '))")
@@ -100,10 +111,10 @@ jobs:
     # One publish at a time, in order, so an older package can't land after a newer one.
     # (Not the release job: a queued publish never stands in for a release.)
     concurrency:
-      group: ${{ github.event_name == 'push' && format('check-{0}', github.ref) || 'publish' }}
+      group: ${{ github.event_name == 'push' && github.ref_name != github.event.repository.default_branch && format('check-{0}', github.ref) || 'publish' }}
       cancel-in-progress: false
     env:
-      PUBLISH: ${{ github.event_name != 'push' }}   # by hand or on the schedule; a push only checks
+      PUBLISH: ${{ github.event_name != 'push' || github.ref_name == github.event.repository.default_branch }}   # a merge (released above), by hand or on the schedule; a push to another branch only checks
       HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
       # Actions are pinned to exact commits (version in the comment), not tags:
@@ -219,7 +230,7 @@ jobs:
 
   deploy:
     needs: build
-    if: always() && needs.build.result == 'success' && github.event_name != 'push'
+    if: always() && needs.build.result == 'success' && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

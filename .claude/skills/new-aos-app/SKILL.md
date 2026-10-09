@@ -107,5 +107,6 @@ node <id>/scripts/<tests>.mjs          # the app's own tests
 `.github/workflows/apps-check.yml` runs the check and the smoke test on every
 push and pull request too. Fix every error; say in the PR which warnings remain and why.
 
-Then open a PR. Merging publishes nothing: the owner releases (`CLAUDE.md`,
-`aOS/RELEASING.md`). Never release unless the owner asks.
+Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),
+and the merge releases it to everyone's phones (`aOS/RELEASING.md`), so only
+merge what's ready.

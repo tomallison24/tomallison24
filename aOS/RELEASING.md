@@ -1,9 +1,10 @@
 # Releasing aOS
 
-Nothing reaches anyone's phone until you release it. Changes merged to the
-default branch wait there; the site only ever publishes the newest released
-version, `aOS<version>` (a git tag: `aOS1`, `aOS1.1`, `aOS2`). The News
-headlines still refresh every 30 minutes, on the live release.
+The site only ever publishes the newest released version, `aOS<version>` (a
+git tag: `aOS1`, `aOS1.1`, `aOS2`), and **every merge to the default branch
+releases on its own**: the newest version in the release log is tagged on the
+merged code and published within a few minutes. The News headlines still
+refresh every 30 minutes, on the live release.
 
 ## 1. Write the release's entry
 
@@ -30,28 +31,29 @@ At the top of `RELEASES` in `home/welcome.js` (newest first):
   in aOS's **What's new**, and the apps keep showing the last version that
   wasn't silent (aOS1.1 silent: they still say aOS1), with no update screen.
 
-Merge it with the changes it describes.
+Merge it with the changes it describes: the merge releases it.
 
-## 2. Release it
+## 2. How it's released
 
-On GitHub: **Actions → News → Run workflow**, branch = the default branch,
-**release** = the version (`1.1`), **Run**. Or ask Claude to release it.
+Merging to the default branch runs **Actions → News**, which tags the merged
+code as the newest version in the log (`aOS1.1`) and publishes it to
+Cloudflare Pages and GitHub Pages. To release by hand anyway (to re-release
+without a merge): **Actions → News → Run workflow**, branch = the default
+branch, **release** = the version, **Run**.
 
 The run checks that the version is the newest entry in the log, tags the
-default branch as `aOS1.1`, and publishes it to Cloudflare Pages and GitHub
-Pages.
+default branch, and publishes it.
 
 **Adding to a released version** (everything going out as aOS1 again): keep
-adding to its entry at the top of the log and release that version again. Its
+adding to its entry at the top of the log; each merge releases it again. Its
 tag moves to the latest code, and the tag of any version that's no longer in
 the log (an aOS1.1 folded into aOS1) is removed, so it's the live one. Phones
 see the changes but no new version number and no update screen. Each phone sees the update the next time it
 opens an app (the service workers load network-first).
 
 Run it with **release** blank to republish the live release with fresh
-headlines; it never publishes unreleased app changes. The one exception is
-`labs/` (test pages for you, not apps), which always comes from the latest
-merged code.
+headlines. `labs/` (test pages for you, not apps) always comes from the
+latest merged code.
 
 ## Family accounts
 
