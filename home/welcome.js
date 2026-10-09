@@ -91,7 +91,9 @@
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
         'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
-        'Fitness: your drinks from Drinks in Analysis, beside your training'],
+        'Fitness: your drinks from Drinks in Analysis, beside your training',
+        'aOS: a Subscription section in your account, just for fun: Pro+, Pro or a 7-day Trial, for the whole family, changed by the owner',
+        'Cancelling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -1169,6 +1171,61 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     if (A && !token()) await A.prompt(`Sign in once, so aOS knows ${esc(NAMES[APP])} is on this phone.`);
   }
 
+  // ---- the family's plan (aOS -> Subscription, just for fun) ----
+  // The owner picks it in aOS and it's kept in the family account, since a Home Screen
+  // app can't see aOS's storage. A cancelled plan runs to the end of its month, a trial
+  // for 7 days (the server works out when: GET /aOS/api/state's plan.ends). After that
+  // every app but aOS is switched off: a screen over the whole app, with the way back
+  // to aOS, until a plan is chosen. The last plan seen is kept (aos.plan) for offline.
+  const PLAN = 'aos.plan', PLAN_NAMES = { proplus: 'Pro+', pro: 'Pro', trial: 'trial' };
+  const planLive = p => !p || !p.ends || Date.now() < p.ends;
+  let planTimer = 0;
+  function showPlan(p) {
+    clearTimeout(planTimer);
+    const live = planLive(p), was = document.getElementById('aos-off');
+    if (live) {
+      if (was) was.remove();
+      if (p && p.ends && p.ends - Date.now() < 864e5) planTimer = setTimeout(() => showPlan(p), p.ends - Date.now() + 500);   // ends while open
+      return;
+    }
+    if (was) return;
+    if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
+    const day = new Date(p.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const el = document.createElement('div');
+    el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `${NAMES[APP]} is off`);
+    el.innerHTML = `<div class="o-card"><img src="${icon(APP)}" alt=""><h1>${esc(NAMES[APP])} is off</h1>
+      <p>The family's ${esc(PLAN_NAMES[p.id] || 'plan')}${p.id === 'trial' ? '' : ' plan'} ended on ${esc(day)}, so every app but aOS is switched off.</p>
+      <p>Choose a plan in aOS, in your account under Subscription, to turn them back on.</p>
+      <a class="o-go" href="${url('../aOS/#subscription')}">Open aOS</a><small>Just for fun: nothing is charged.</small></div>`;
+    document.body.appendChild(el);
+  }
+  async function checkPlan() {
+    if (!APP || !APPS.includes(APP)) return;
+    let p = null; try { p = JSON.parse(localStorage.getItem(PLAN) || 'null'); } catch {}
+    showPlan(p);
+    try {
+      const r = await fetch(api('state'), { cache: 'no-store' }); if (!r.ok) return;
+      p = (await r.json()).plan || null;
+      try { p ? localStorage.setItem(PLAN, JSON.stringify(p)) : localStorage.removeItem(PLAN); } catch {}
+      showPlan(p);
+    } catch {}   // offline: the last plan seen stands
+  }
+  const OFF_CSS = `
+#aos-off { position: fixed; inset: 0; z-index: 2147483600; display: grid; place-items: center; padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-align: center;
+  --o-bg: #0D1213; --o-text: #EEF4F2; --o-muted: rgba(238,244,242,.6); --o-card: rgba(255,255,255,.06); --o-edge: rgba(255,255,255,.1);
+  --o-pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+  background: var(--o-bg); color: var(--o-text); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.58); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); } }
+html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-muted: rgba(16,24,26,.58); --o-card: rgba(255,255,255,.78); --o-edge: rgba(16,24,26,.08); }
+#aos-off * { box-sizing: border-box; }
+#aos-off .o-card { width: 100%; max-width: 380px; padding: 28px 22px 22px; border-radius: 28px; background: var(--o-card); box-shadow: inset 0 0 0 1px var(--o-edge); }
+#aos-off img { width: 76px; height: 76px; border-radius: 20px; filter: grayscale(1); opacity: .55; }
+#aos-off h1 { margin: 14px 0 8px; font-size: 26px; letter-spacing: -.4px; }
+#aos-off p { margin: 0 0 10px; font-size: 16px; line-height: 1.4; color: var(--o-muted); }
+#aos-off .o-go { display: block; margin: 18px 0 12px; height: 50px; line-height: 50px; border-radius: 16px; background: var(--o-pastel); color: #10181A; font-size: 17px; font-weight: 700; text-decoration: none; }
+#aos-off small { font-size: 13px; color: var(--o-muted); }`;
+
   // ---- deciding what to show, once ----
   function auto() {
     const seen = seenAll(); if (!seen || !APP || APP === 'home') return;   // home: the retired launcher
@@ -1189,7 +1246,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0F1116; --w-text: #fff; --w-mute
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
   }
   if (me && me.hasAttribute('data-auto')) {
-    const go = () => Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {});
+    const go = () => { checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkPlan(); });   // back from aOS, or a day later
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
   }
 })();

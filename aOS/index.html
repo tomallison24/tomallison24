@@ -209,6 +209,22 @@
   .glbl::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pastel); }
 
   .ptitle { margin: 0 0 14px; font-size: 30px; letter-spacing: -.5px; }
+  /* Subscription (just for fun): Pro+, Pro or Trial, changed from the account page */
+  .plans .plan { align-items: flex-start; }
+  .plan .pn { flex: 1; min-width: 0; } .plan .pn b { display: flex; align-items: center; gap: 8px; font-size: 17px; }
+  .plan .pn i { display: block; margin-top: 3px; font-style: normal; font-size: 14px; line-height: 1.35; color: var(--muted); }
+  .plan .pp { flex: 0 0 auto; font-size: 17px; font-weight: 700; } .plan .pp small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .plan em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .plan[aria-pressed="true"] { box-shadow: inset 4px 0 0 var(--accent); }
+  .plans .pick { display: block; } .plans .pick .row2 { display: flex; gap: 10px; }
+  .plans .pick button { flex: 1; height: 46px; border-radius: 15px; font-size: 16px; font-weight: 700; background: var(--dot); }
+  .plans .pick .go { flex: 2; background: var(--pastel); color: #10181A; }
+  .plans .pick p { margin: 0 0 12px; font-size: 15px; line-height: 1.4; color: var(--muted); }
+  .plans .pick .go.stop { background: #D9534F; color: #fff; }
+  .plans .pact { justify-content: center; font-size: 16px; font-weight: 650; color: var(--accent); } .plans .pact.stop { color: #D9534F; }
+  .plan:disabled { cursor: default; }
+  .plan em.off { background: color-mix(in srgb, #D9534F 16%, transparent); color: #D9534F; }
+  .perr { color: #D9534F; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
   .acct > div { display: block; }
   .acct > .me { display: flex; }

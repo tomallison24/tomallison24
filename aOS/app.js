@@ -138,11 +138,69 @@
   // aOS shows how to add it to the Home Screen. Every app signs in with Face ID.
   const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
   const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
+  // ---- Subscription: just for fun, nothing is charged. The family's plan, kept in the
+  // family account (functions/aOS/api, POST plan) so every app on every phone sees it:
+  // Pro+ until the owner changes it. A cancelled plan runs to the end of its month, a
+  // trial for 7 days; then every app but aOS is switched off (home/welcome.js) until
+  // the owner picks a plan here. Only the owner changes it; everyone sees it.
+  const PLANS = [
+    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customisable, plus new app building: apps you make for your own needs' },
+    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customisable. No new app building' },
+    { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days' },
+  ];
+  const DAY = 864e5;
+  const price = p => p.p ? `$${p.p}<small> a month</small>` : 'Free';
+  const onDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const shortDay = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const planLive = p => !p || !p.ends || Date.now() < p.ends;
+  const OFF = 'every app but aOS switches off';
+  function planNote(cur, me, owner) {
+    const fun = ' Just for fun: nothing is charged.';
+    if (!cur) return (state ? 'The family\'s plan is kept in the family account: it shows here once that\'s set up and reachable.' : 'Checking…') + fun;
+    const who = owner ? '' : ' The owner manages the family\'s plan.';
+    if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ' Choose a plan to turn them back on.' : ''}${who}${fun}`;
+    if (cur.id === 'trial') { const left = Math.ceil((cur.ends - Date.now()) / DAY); return `${left} ${left === 1 ? 'day' : 'days'} left in the trial: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`; }
+    if (cur.cancelled) return `${me.n} is cancelled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`;
+    return `${me.n}, $${me.p} a month, since ${onDay(cur.since)}. Renews ${onDay(cur.renews)}.${who}${fun}`;
+  }
+  // ui: { pick: plan id } to confirm a switch, { cancel: true } to confirm cancelling, { err }
+  function paintPlans(ui = {}) {
+    const box = $('plans'); if (!box) return;
+    const cur = (state && state.plan) || null, me = cur && PLANS.find(p => p.id === cur.id);
+    const owner = !!(cur && state.user && state.user.role === 'owner'), live = planLive(cur), to = PLANS.find(p => p.id === ui.pick);
+    const badge = p => !cur || p.id !== cur.id ? '' : ` <em class="${live ? '' : 'off'}">${!live ? 'Ended' : cur.ends ? 'Ends ' + esc(shortDay(cur.ends)) : 'Your plan'}</em>`;
+    let rows = PLANS.map(p => `<button type="button" class="plan" data-plan="${p.id}" aria-pressed="${!!cur && live && p.id === cur.id}"${owner ? '' : ' disabled'}>
+        <span class="pn"><b>${esc(p.n)}${badge(p)}</b><i>${esc(p.d)}</i></span><span class="pp">${price(p)}</span></button>`).join('');
+    if (owner && to) rows += `<div class="pick"><div class="row2"><button type="button" data-plan-no>Not now</button><button type="button" class="go" data-plan-ok="${to.id}">${to.id === 'trial' ? 'Start the 7-day trial' : `Switch to ${esc(to.n)}`}</button></div></div>`;
+    else if (owner && ui.cancel) rows += `<div class="pick"><p>${esc(me.n)} stays on until ${esc(onDay(cur.renews))}. Then ${OFF}, until a plan is chosen again.</p><div class="row2"><button type="button" data-plan-no>Keep ${esc(me.n)}</button><button type="button" class="go stop" data-plan-stop>Cancel ${esc(me.n)}</button></div></div>`;
+    else if (owner && live && cur.id !== 'trial') rows += cur.cancelled ? `<button type="button" class="pact" data-plan-resume>Keep ${esc(me.n)}</button>` : `<button type="button" class="pact stop" data-plan-cancel>Cancel ${esc(me.n)}</button>`;
+    box.innerHTML = rows;
+    $('planNote').innerHTML = (ui.err ? `<span class="perr">${esc(ui.err)}</span> ` : '') + esc(planNote(cur, me, owner));
+  }
+  const PLAN_WHY = { ended: 'That plan has already ended: choose a plan.', 'owner-only': 'Only the owner can change the plan.', signin: 'Sign in to change the plan.' };
+  async function setPlan(btn, body) {
+    busy(btn, true);
+    try { const r = await ACC.call('plan', body); state.plan = r.plan; paintPlans(); paintSigninCard(); }
+    catch (e) { paintPlans({ err: PLAN_WHY[e && e.message] || why(e) }); }
+  }
+  function onPlanTap(ev) {
+    const cur = state && state.plan;
+    const pl = ev.target.closest('[data-plan]'); if (pl) return paintPlans(cur && pl.dataset.plan === cur.id && planLive(cur) ? {} : { pick: pl.dataset.plan });
+    if (ev.target.closest('[data-plan-no]')) return paintPlans();
+    if (ev.target.closest('[data-plan-cancel]')) return paintPlans({ cancel: true });
+    let b;
+    if ((b = ev.target.closest('[data-plan-ok]'))) return setPlan(b, { id: b.dataset.planOk });
+    if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
+    if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
+  }
   function acctPage(at) {
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="glbl">Appearance</div>
       <div class="group"><div><div class="seg" id="theme" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
+      <div class="glbl" id="subscription">Subscription</div>
+      <div class="group plans" id="plans"></div>
+      <p class="note" id="planNote"></p>
       <div class="glbl" id="whats-new">Updates</div>
       <div class="group" id="rels">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
         ${block(r) ? `<ul>${block(r)}</ul>` : ''}${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h5>${esc(D.NAMES[id] || id)}</h5><ul>${block(x)}</ul>` : '').join('')}</div>`).join('')}</div>
@@ -150,9 +208,11 @@
     el.addEventListener('click', ev => {
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
       if (ev.target.closest('[data-replay]')) W.play();
+      onPlanTap(ev);
     });
+    paintPlans();
     paintAccount(el.querySelector('#acct'));
-    if (at === 'updates') setTimeout(() => el.querySelector('#whats-new').scrollIntoView({ block: 'start' }), 450);
+    if (at === 'updates' || at === 'plan') setTimeout(() => el.querySelector(at === 'plan' ? '#subscription' : '#whats-new').scrollIntoView({ block: 'start' }), 450);
     return el;
   }
 
@@ -166,7 +226,7 @@
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
-  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); paintHero(state); return state; };
+  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); paintHero(state); paintPlans(); return state; };
 
   // Today, signed out: a card that opens the account
   // The family card: aOS is curated for the Allison family. A greeting by name, and
@@ -193,8 +253,10 @@
   function paintSigninCard() {
     const c = $('signin'), st = state || {};
     const what = st.error || !st.storage || st.user ? null : invite ? ['Join the family', 'You\'ve been invited: make your account with Face ID.'] : !st.setup ? ['Set up your family account', 'Once, by the owner, with the owner code.'] : ['Sign in', 'Face ID signs you in to every app.'];
-    c.hidden = !what;
-    c.innerHTML = what ? `<div class="signin" role="button" tabindex="0" data-signin-card><span class="avatar">${STAR}</span><span><b>${what[0]}</b><i>${what[1]}</i></span><span class="chev">›</span></div>` : '';
+    const off = !what && st.plan && !planLive(st.plan) ? ['Your apps are off', `The family's ${st.plan.id === 'trial' ? 'trial' : 'plan'} ended on ${onDay(st.plan.ends)}. ${st.user && st.user.role === 'owner' ? 'Choose a plan to turn them back on.' : 'The owner can choose a plan.'}`] : null;
+    c.hidden = !what && !off;
+    c.innerHTML = what ? `<div class="signin" role="button" tabindex="0" data-signin-card><span class="avatar">${STAR}</span><span><b>${what[0]}</b><i>${what[1]}</i></span><span class="chev">›</span></div>`
+      : off ? `<div class="signin" role="button" tabindex="0" data-plan-card><span class="avatar">${STAR}</span><span><b>${off[0]}</b><i>${esc(off[1])}</i></span><span class="chev">›</span></div>` : '';
   }
   const STAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z"/></svg>';
 
@@ -291,14 +353,15 @@
     const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
     const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
     if (ev.target.closest('[data-signin-card]')) return acctPage();
+    if (ev.target.closest('[data-plan-card]')) return acctPage('plan');
     if (ev.target.closest('[data-acct]')) return acctPage();
   });
 
   getState().then(st => {
     paintSigninCard(); paintAvatars();
-    if (location.hash === '#whats-new') { history.replaceState(null, '', location.pathname); acctPage('updates'); }
+    if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
   });
-  addEventListener('hashchange', () => { if (location.hash === '#whats-new') { history.replaceState(null, '', location.pathname); acctPage('updates'); } });
+  addEventListener('hashchange', () => { if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); } });
 })();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -80,6 +80,13 @@ The owner can then save the family's Home Assistant address (aOS → Your accoun
 in the repository, and only signed-in family can read it: Home fills it in for
 them, so each person only makes their own token.
 
+The family's plan (aOS → Your account → **Subscription**, just for fun: nothing
+is charged) is kept there too, as `config:plan`. It's Pro+ from when the owner
+joined until the owner changes it. Cancelling keeps a plan until the end of its
+month, and a trial lasts 7 days; after that every app but aOS shows that it's off,
+with the way back to aOS, until the owner picks a plan. With accounts off there
+is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.mjs`.
+
 ## The log
 
 `home/welcome.js`'s `RELEASES` is the log, by aOS version. aOS shows all of it
