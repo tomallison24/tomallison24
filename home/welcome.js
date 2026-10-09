@@ -89,6 +89,7 @@
         'Weeks start on Sunday in Calendar, Fitness and Drinks (Calendar → Settings to pick Monday); Travel says rental car',
         'Home fills in your family\'s Home Assistant address, and shows how to make your token',
         'An app opened from aOS shows only how to add it: tap ✕ to go back to aOS',
+        'Removed an app from your Home Screen? Tell aOS on the app\'s page and it shows Get again',
         'aOS is an app store: Today, Apps, Search, a page for every app, and your account',
         'aOS shows ✓ Installed for the apps on your phone: each app, signed in once, tells it',
         'The aOS icon is just aOS, without a version number',
@@ -1153,15 +1154,16 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
   // aOS shows ✓ Installed for it. The report needs this app's own session (each
   // Home Screen app keeps its own storage), so an app that has never signed in -
   // most don't need to - asks once, after its walkthrough or update, with the
-  // family sign-in sheet (../home/account.js, loaded when needed). At most every
-  // 12 hours; "Not now" isn't asked again.
+  // family sign-in sheet (../home/account.js, loaded when needed). At most hourly (the
+  // server writes it at most twice a day, or at once if aOS was told it was removed);
+  // "Not now" isn't asked again.
   const SESSION = 'aos.session', ASKED = 'aos.signin.asked', REPORTED = 'aos.reported';
   const token = () => { try { return (JSON.parse(localStorage.getItem(SESSION) || 'null') || {}).token || null; } catch { return null; } };
   const api = p => url('../aOS/api/' + p);
   async function report() {
     const t = token(); if (!t) return false;
     let last = 0; try { last = +localStorage.getItem(REPORTED) || 0; } catch {}
-    if (Date.now() - last < 12 * 3600e3) return true;
+    if (Date.now() - last < 3600e3) return true;
     try {
       const r = await fetch(api('installed'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app: APP }) });
       if (r.ok) localStorage.setItem(REPORTED, String(Date.now()));

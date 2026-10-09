@@ -27,10 +27,22 @@
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
   };
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
-  // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone
+  // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone.
+  // iOS never tells a page it was removed, so the app's page asks "Removed it?": that
+  // shows Get at once, until the app is next opened from the Home Screen.
   let INST = new Set();
   const getBtn = id => `<a class="get${INST.has(id) ? ' done' : ''}" data-get="${id}" href="${appUrl(id)}" target="_blank" rel="noopener">${INST.has(id) ? 'Installed' : 'Get'}</a>`;
-  const paintGets = () => document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
+  const paintGets = () => {
+    document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
+    document.querySelectorAll('[data-gone]').forEach(b => { b.hidden = !INST.has(b.dataset.gone); });
+  };
+  const goneBtn = id => `<button type="button" class="gone" data-gone="${id}"${INST.has(id) ? '' : ' hidden'}>Removed it from your Home Screen?</button>`;
+  async function markGone(b) {
+    const id = b.dataset.gone; b.disabled = true;
+    try { await ACC.call('installed', { app: id, removed: true }); } catch (e) { b.disabled = false; b.textContent = 'Couldn’t reach aOS. Try again?'; return; }
+    INST.delete(id); paintGets(); b.disabled = false;
+    b.insertAdjacentHTML('afterend', `<p class="gone-note">Shows Get now. Open ${esc(D.NAMES[id])} from your Home Screen and it’s back to Installed.</p>`);
+  }
   const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); };
   // an app the newest (non-silent) release changed says so under its name
   const now = live[0];
@@ -103,7 +115,7 @@
     const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
     const e = r ? D.entry(r.apps[id]) : null;
     const hist = live.filter(x => { const y = D.entry((x.apps || {})[id]); return y.highlights.length + y.notes.length; });
-    page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}</div></div>
+    page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}${goneBtn(id)}</div></div>
       <div class="strip">
         <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
         <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
@@ -120,7 +132,7 @@
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
       <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
-      .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); });
+      .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
   }
   function histPage(id, hist) {
     page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => { const y = D.entry(x.apps[id]); return `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${[...y.highlights, ...y.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`; }).join('')}`);
