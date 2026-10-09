@@ -8,6 +8,7 @@
 //   POST signin/finish    the passkey's proof  -> { token, user }
 //   GET  home             (family) the family's Home Assistant address, for the Home app
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
+//                         { app, removed: true } -> you took it off your Home Screen (aOS shows Get)
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
 //   GET  layer            (family)             -> your own layers, for Calendar
@@ -87,7 +88,8 @@ export async function onRequest({ request, params, env }) {
     if (!db) return reply({ storage: false, setup: false });
     const u = await sessionUser(db, request);   // your own record also says which apps you've opened from the Home Screen, and when
     const plan = await planView(db);
-    const apps = u ? { ...(u.apps || {}), ...((await getJSON(db, 'apps:' + u.id)) || {}) } : null;
+    // (0: you said it's gone from your Home Screen; kept as 0 so an older u.apps can't show it again)
+    const apps = u ? Object.fromEntries(Object.entries({ ...(u.apps || {}), ...((await getJSON(db, 'apps:' + u.id)) || {}) }).filter(([, t]) => t > 0)) : null;
     return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps } });
   }
   if (!db) return reply({ error: 'storage' }, 503);
@@ -168,13 +170,16 @@ export async function onRequest({ request, params, env }) {
     // The family, for aOS's family card: names and roles only (the owner's list has the ids).
     if (route === 'members' && method === 'GET') return reply({ members: (await everyone(db)).filter(u => !u.removed).map(u => ({ name: u.name, role: u.role })) });
 
-    // An app opened from your Home Screen says so (at most twice a day, from home/welcome.js).
-    // Kept apart from the user record (apps:<id>), so it can never write a removed person back.
+    // An app opened from your Home Screen says so (home/welcome.js); written at most twice a
+    // day, but at once after you said in aOS that it was gone (iOS never tells a page it was
+    // removed, so that's yours to say). Kept apart from the user record (apps:<id>), so it can
+    // never write a removed person back.
     if (route === 'installed' && method === 'POST') {
-      const app = String((await body(request)).app || '');
+      const b = await body(request), app = String(b.app || '');
       if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
       const apps = (await getJSON(db, 'apps:' + me.id)) || {};
-      apps[app] = Date.now();
+      if (b.removed === true) { if (apps[app] === 0) return reply({ ok: true }); apps[app] = 0; }
+      else { if (apps[app] > 0 && Date.now() - apps[app] < 12 * 3600e3) return reply({ ok: true }); apps[app] = Date.now(); }
       await putJSON(db, 'apps:' + me.id, apps);
       return reply({ ok: true });
     }

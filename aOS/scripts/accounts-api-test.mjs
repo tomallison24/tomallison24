@@ -103,6 +103,18 @@ await test('"installed" is kept apart (apps:<id>) and never rewrites the user re
   assert.deepEqual(Object.keys((await call('state', undefined, sam)).body.user.apps).sort(), ['news', 'weather']);
 });
 
+await test('"Removed it?" in aOS shows Get at once; the next report from the Home Screen shows Installed again', async () => {
+  const at = JSON.parse(db.m.get('apps:' + samId)).weather;
+  await call('installed', { app: 'weather' }, sam);
+  assert.equal(JSON.parse(db.m.get('apps:' + samId)).weather, at, 'a report within 12 hours writes nothing');
+  assert.equal((await call('installed', { app: 'weather', removed: true }, sam)).status, 200);
+  assert.deepEqual(Object.keys((await call('state', undefined, sam)).body.user.apps), ['news'], 'weather shows Get');
+  await call('installed', { app: 'weather' }, sam);
+  assert.ok(JSON.parse(db.m.get('apps:' + samId)).weather > 0, 'opened again: written at once');
+  assert.deepEqual(Object.keys((await call('state', undefined, sam)).body.user.apps).sort(), ['news', 'weather']);
+  assert.equal((await call('installed', { app: 'nope', removed: true }, sam)).status, 400);
+});
+
 await test('removing someone signs them out and forgets their passkey, but deletes nothing of theirs', async () => {
   const drinks = db.m.get('drinks:' + samId), apps = db.m.get('apps:' + samId);
   assert.equal((await call('remove', { id: samId }, tom)).status, 200);
