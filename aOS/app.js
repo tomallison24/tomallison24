@@ -144,8 +144,8 @@
   // trial for 7 days; then every app but aOS is switched off (home/welcome.js) until
   // the owner picks a plan here. Only the owner changes it; everyone sees it.
   const PLANS = [
-    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully custom, plus custom app designs: apps you make for your own needs' },
-    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app' },
+    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customisable, plus new app building: apps you make for your own needs' },
+    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customisable. No new app building' },
     { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days' },
   ];
   const DAY = 864e5;
