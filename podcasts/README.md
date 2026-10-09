@@ -41,7 +41,7 @@ they need a connection.
 
 ## How it's built
 
-- **No build step.** `index.html` is the whole app; `sw.js` keeps it working
+- **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts); `sw.js` keeps it working
   offline; `manifest.webmanifest` and the icons make it installable.
 - **Data**: what you follow, where you got to, Up Next, Saved and History
   are in the browser's `localStorage`; each show's episode list (the newest

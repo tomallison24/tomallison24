@@ -49,7 +49,7 @@ const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
 await page.goto(BASE + '/notes/');
-await page.evaluate(seed => { localStorage.setItem('allison-notes-v1', JSON.stringify(seed)); localStorage.setItem('allison-notes-v1-tab', 'rem'); }, seed);
+await page.evaluate(seed => { localStorage.setItem('allison-notes-v1', JSON.stringify(seed)); localStorage.setItem('allison-notes-v1-tab', 'rem'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '1', places: '1', calendar: '1' })); }, seed);   // the walkthrough as seen, as on a phone in use
 await page.reload();
 await page.waitForTimeout(800);
 const sections = () => page.evaluate(() => [...document.querySelectorAll('#remBody .rgroup')].map(g => g.querySelector('.sechead span').textContent + ': ' + [...g.querySelectorAll('.tbody .t')].map(x => x.textContent).join(', ')));

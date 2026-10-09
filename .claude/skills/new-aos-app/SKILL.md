@@ -25,8 +25,11 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
     `apple-mobile-web-app-status-bar-style` `black-translucent`,
     `apple-mobile-web-app-title`, `apple-touch-icon` (`icon-180.png`), two
     `theme-color` metas (light `#F2F2F7`, dark `#08080B`), the manifest link.
-  - A strict Content-Security-Policy meta (`script-src 'self'`, `connect-src`
-    only what it calls).
+  - A strict Content-Security-Policy meta: `default-src 'none'`,
+    `script-src 'self'` (no inline, eval or outside scripts), `base-uri 'none'`,
+    `form-action 'none'`, and `connect-src` / `img-src` / `media-src` only for
+    what it really uses. So no inline `<script>` or `onclick=`: the script
+    lives in `app.js`.
   - Last before `</body>`:
     `<script src="../home/welcome.js" data-app="<id>" data-auto defer></script>`.
     Before it, `../home/slide.js` if it has switches, and `../home/account.js`
@@ -58,7 +61,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `home/welcome.js` `OS_TOUR` | the sentence listing every app by name |
 | `home/welcome.js` `DARK_ONLY` | only if it is drawn for dark only |
 | `home/welcome.js` `RELEASES` | a line in the top entry (see `CLAUDE.md`, "The release log") |
-| `aOS/index.html` | `HUE` (its glow, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
+| `aOS/app.js` | `HUE` (its glow, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
@@ -97,11 +100,12 @@ per person is deleted in `functions/aOS/api` `remove`.
 
 ```
 node aOS/scripts/check-apps.mjs        # wired in, and the ground rules; must end with 0 errors
+node aOS/scripts/apps-smoke-test.mjs   # every app opens, light and dark, with no script errors and nothing its policy blocks
 node <id>/scripts/<tests>.mjs          # the app's own tests
 ```
 
-`.github/workflows/apps-check.yml` runs the check on every push and pull
-request too. Fix every error; say in the PR which warnings remain and why.
+`.github/workflows/apps-check.yml` runs the check and the smoke test on every
+push and pull request too. Fix every error; say in the PR which warnings remain and why.
 
 Then open a PR. Merging publishes nothing: the owner releases (`CLAUDE.md`,
 `aOS/RELEASING.md`). Never release unless the owner asks.
