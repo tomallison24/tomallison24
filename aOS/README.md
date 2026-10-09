@@ -62,9 +62,9 @@ pastel stop that slides between them, and your avatar top right.
   (version, category, shared or yours, maker); What's New and Version History;
   Preview (drawn from its walkthrough cards, not screenshots); What it needs;
   About; Information. Swipe from the left edge to go back.
-- **Get**: the install steps, animated, in a sheet; **Install** (once they've
-  played through) opens the app's own address with `?via=aos`, which shows how
-  to add it, and the view's ✕ comes back here.
+- **Get**: opens the app's own address with `?via=aos` straight away (in the
+  in-app Safari view an installed aOS opens links in); there the app shows only
+  its install steps, animated, and the view's ✕ comes back here.
 - **The avatar**: your account (the owner's set-up, an invite's Join, Sign in;
   signed in, the owner's tools: the Home Assistant address, invites, the
   family), Appearance (`home.settings.theme`; each app on the Home Screen keeps
