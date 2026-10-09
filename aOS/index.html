@@ -464,7 +464,7 @@
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
     $('famhero').innerHTML = `<div class="famhero">${FAMILY_ICON}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
-      <p>Every app here is chosen for our family: ${D.APPS.length} apps, one account, one Face ID.</p></div>
+      <p>Every app here is chosen for our family: ${D.APPS.length} apps, one account.</p></div>
       ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
 
