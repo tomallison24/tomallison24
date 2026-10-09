@@ -92,5 +92,17 @@ an item through (or delete it) when it ships, and say which release.
 - **"Places from Calendar" shows green when it isn't set up.**
   `places/scripts/from-calendar.mjs` exits 0 with "Not set up yet"; emit a
   `::notice::` so it's visible in Actions.
+- **Week starts on Monday by default.** US calendars usually start on Sunday;
+  changing the default changes everyone's week layout in Calendar, Fitness and
+  Drinks, so it's the owner's call (Calendar → Settings → Week starts on).
+- **"Car hire" in Travel** is the British term (US: "rental car"). It's wording,
+  not spelling, and it runs through Travel and Calendar's layer; change it all
+  at once if wanted.
+- **Some apps show dates in the phone's own format** (Mail, Travel, Notes,
+  Podcasts, Places, Weather, Home). On a US phone that's US; only the apps that
+  forced British dates were moved to US.
+- **Labs pages** got `lang="en-US"` but not the Sea glass colors (test pages).
+- **New icons on phones** appear only after an app is removed from the Home
+  Screen and added again (iOS keeps the icon it was added with).
 - **Brute-force limits on sign-up and sign-in.** No per-address rate limit on
   `/aOS/api/*` (see Medium 1).
