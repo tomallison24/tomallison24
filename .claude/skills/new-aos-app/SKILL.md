@@ -79,9 +79,10 @@ per person is deleted in `functions/aOS/api` `remove`.
   (`-apple-system…`), no web fonts or anything loaded from another site. Sea
   glass (`--w-pastel` / `--pastel`) for AllisonOS's own highlights only: no new
   pastel gradients.
-- **Light and dark**: tokens under `@media (prefers-color-scheme: dark)` with
-  `:root:not([data-theme="light"])`, repeated for `:root[data-theme="dark"]`;
-  welcome.js applies the person's choice. Don't build your own theme switch.
+- **Light and dark**: tokens under `@media (prefers-color-scheme: dark)`;
+  welcome.js applies the person's Light/Dark choice by switching those media
+  queries, so no `data-theme` copies are needed. Don't build your own theme
+  switch.
 - **Motion**: honour `prefers-reduced-motion` (and
   `prefers-reduced-transparency` for glass).
 - **Simple**: one main screen where possible; a sheet for each thing you open;
@@ -107,5 +108,6 @@ node <id>/scripts/<tests>.mjs          # the app's own tests
 `.github/workflows/apps-check.yml` runs the check and the smoke test on every
 push and pull request too. Fix every error; say in the PR which warnings remain and why.
 
-Then open a PR. Merging publishes nothing: the owner releases (`CLAUDE.md`,
-`aOS/RELEASING.md`). Never release unless the owner asks.
+Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),
+and the merge releases it to everyone's phones (`aOS/RELEASING.md`), so only
+merge what's ready.
