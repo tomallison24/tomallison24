@@ -50,12 +50,17 @@ and Google Calendar, and the other AllisonOS apps' dates alongside.
   - **Fitness**: each day's workout as one all-day item ("Workout ·
     Shoulders, Core"), with the exercises and their sets, reps and weight
     in its details, and **Open in Fitness**, which opens that day.
+  - **Drinks** (off until you turn it on): your own standard drinks each day,
+    and alcohol-free days, read from your family account
+    (functions/drinks/api), so it works from Calendar's own icon too. Only
+    you see it: it is kept in memory, not in Calendar's storage, and has no
+    **Add to the Family calendar**. **Open in Drinks** opens that day.
   - **Weather**: a forecast line on each day for the next 16 days, from
     Open-Meteo (as the Weather app uses), with the phone's location. °F or
     °C follows the phone's language, or set it.
 
-  Any layer item has **Add to the Family calendar**, which opens the editor
-  with it filled in.
+  Any layer item but Drinks has **Add to the Family calendar**, which opens
+  the editor with it filled in.
 - **Settings**: the iCloud connection and a **Check for changes now** button,
   the layers, week starts on Monday or Sunday (Monday by default), 12- or
   24-hour time, temperature units, when the Day view opens, and the length

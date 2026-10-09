@@ -11,7 +11,7 @@
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
-//   POST remove           (owner) { id }       -> signs them out everywhere
+//   POST remove           (owner) { id }       -> signs them out everywhere, and deletes their Drinks log
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
 
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
@@ -20,7 +20,7 @@ const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 16 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
-const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'house'];
+const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
 
 async function body(request) {
   const t = await request.text();
@@ -145,6 +145,7 @@ export async function onRequest({ request, params, env }) {
       if (u.role === 'owner') return reply({ error: 'owner' }, 400);
       for (const c of u.creds || []) await db.delete('cred:' + c);
       await db.delete('user:' + id);
+      await db.delete('drinks:' + id);   // their own Drinks log (functions/drinks/api)
       return reply({ ok: true });
     }
 
