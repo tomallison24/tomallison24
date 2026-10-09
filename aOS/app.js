@@ -352,7 +352,7 @@
 
   // ---- taps ----
   document.addEventListener('click', ev => {
-    if (ev.target.closest('[data-get]')) return;   // Get: the link opens the app's own address, which shows how to add it
+    if (ev.target.closest('[data-get]')) { watch(); return; }   // Get: the link opens the app's own address, which shows how to add it
     const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
     const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
     if (ev.target.closest('[data-signin-card]')) return acctPage();
@@ -360,7 +360,22 @@
     if (ev.target.closest('[data-acct]')) return acctPage();
   });
 
+  // ✓ Installed as soon as it's true: iOS doesn't tell a page it was added to the Home
+  // Screen, but the new app reports itself the first time it's opened from there
+  // (home/welcome.js). So check again whenever aOS comes back to the front, and every
+  // few seconds for three minutes after a Get, without needing aOS closed and reopened.
+  let lastCheck = 0, watchUntil = 0, watcher = null;
+  const recheck = () => { if (document.visibilityState !== 'visible' || Date.now() - lastCheck < 2000) return; lastCheck = Date.now(); getState().then(() => paintSigninCard()); };
+  function watch() {
+    watchUntil = Date.now() + 180e3;
+    if (!watcher) watcher = setInterval(() => { if (Date.now() > watchUntil) { clearInterval(watcher); watcher = null; return; } recheck(); }, 6000);
+  }
+  document.addEventListener('visibilitychange', recheck);
+  addEventListener('focus', recheck);
+  addEventListener('pageshow', e => { if (e.persisted) recheck(); });
+
   getState().then(st => {
+    lastCheck = Date.now();
     paintSigninCard(); paintAvatars();
     if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
