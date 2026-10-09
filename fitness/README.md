@@ -5,7 +5,9 @@ Calendar, Notes and Travel. It is kept deliberately small: the week, and for
 each day what you did.
 
 - **The week**: seven rows, one a day, each with coloured chips for the
-  muscle groups worked and how many exercises and sets. Today is marked. The
+  muscle groups worked and how many exercises and sets. Today is marked. A day you
+  drank on (from Drinks, signed in) also shows a small glass and its
+  standard drinks. The
   arrows (or a sideways swipe) move a week at a time, and the calendar button
   comes back to this week. Under it, the week's totals: days trained,
   exercises and sets.
@@ -65,6 +67,12 @@ The dates of both windows are shown under the switch. The page shows:
   **Holding steady** lists the exercises within 1% of before.
 - **Sets by muscle group**: a bar per group, with the change against the
   window before.
+- **Drinks**: if you log in Drinks and are signed in to your family account,
+  your standard drinks and alcohol-free days in this window, with the window
+  before under each, and **Open Drinks**. They come from your own Drinks log
+  (`drinks/api/summary`, which only you can read), using the session already
+  on the phone: Fitness never asks you to sign in for it, and shows nothing of
+  it until there is something to show.
 
 **How an exercise is judged.** Its best entry in this window is compared
 with its best in the window before. If you didn't do it in the window

@@ -519,6 +519,11 @@ html.locked .dock{opacity:0;pointer-events:none}
 .dline{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .rest{font-size:14px;color:var(--faint)}
 .drow > svg{width:16px;height:16px;color:var(--faint)}
+/* a day you drank on, from Drinks: a small glass in Drinks' colour, and its standard drinks */
+.drk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.drk svg{width:15px;height:15px;color:#B0457A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .drk svg{color:#E08AB2}}
+:root[data-theme="dark"] .drk svg{color:#E08AB2}
 
 /* the week's totals */
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:22px;overflow:hidden}
@@ -680,6 +685,11 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
 .chg{flex:none;display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .chg svg{width:14px;height:14px;stroke-width:2.6}
 .xrow.quiet .xt{font-weight:500;color:var(--muted)}
+/* Drinks' row in Analysis: a link back to Drinks */
+a.xrow{color:var(--text);text-decoration:none}
+a.xrow .xt{color:var(--accent-text);font-weight:600}
+a.xrow > svg{width:16px;height:16px;color:var(--faint)}
+a.xrow:active{background:var(--fill)}
 .gbar{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px;padding:8px 14px 8px 16px}
 .gbar .gn{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;min-width:0;white-space:nowrap}
 .gbar .gn i{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 90% 58%);flex:none}
@@ -808,6 +818,7 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/account.js"></script>   <!-- family accounts: reads your own Drinks log for Analysis -->
 <script src="analysis.js"></script>
 <script src="app.js"></script>
 <!-- Opened from AllisonOS Home: swipe up from the bottom to go back to it. -->

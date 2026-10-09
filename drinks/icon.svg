@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- "Cellar": a white glass on a sky from rosé through berry to deep plum, a colour no other AllisonOS icon uses. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#E9A9BE"/>
+      <stop offset="0.55" stop-color="#9C3F6B"/>
+      <stop offset="1" stop-color="#3A1530"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="120" cy="90" r="220" fill="url(#glow)"/>
+  <!-- a wine glass: the bowl, the drink in it, the stem and the foot -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M176 112h160c6 64 6 104-10 132-14 26-40 42-70 42s-56-16-70-42c-16-28-16-68-10-132z"/>
+    <path d="M256 290v104M196 400h120"/>
+  </g>
+  <path d="M182 186h148c-2 28-8 46-16 58-12 20-34 32-58 32s-46-12-58-32c-8-12-14-30-16-58z" fill="#FFFFFF"/>
+</svg>

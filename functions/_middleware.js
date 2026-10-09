@@ -1,4 +1,4 @@
-// Runs in front of every Pages Function (calendar, travel, podcasts, weather).
+// Runs in front of every Pages Function (calendar, travel, podcasts, weather, drinks).
 //
 // The functions use the owner's secrets (the iCloud password, the flight-status
 // key) and until now relied only on Cloudflare Access standing in front of the

@@ -65,6 +65,7 @@ if (window.top !== window.self) {
     hotel: '<svg viewBox="0 0 24 24"><path d="M3.2 19.6V6.4"/><path d="M3.2 15.2h17.6v4.4"/><path d="M20.8 15.2v-3.4a3 3 0 0 0-3-3h-6.6v6.4"/><circle cx="7.4" cy="11.4" r="2"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     dumbbell: '<svg viewBox="0 0 24 24"><path d="M8.4 12h7.2"/><rect x="5" y="7.4" width="3.4" height="9.2" rx="1.2"/><rect x="15.6" y="7.4" width="3.4" height="9.2" rx="1.2"/><path d="M5 10H3.6a.6.6 0 0 0-.6.6v2.8a.6.6 0 0 0 .6.6H5M19 10h1.4a.6.6 0 0 1 .6.6v2.8a.6.6 0 0 1-.6.6H19"/></svg>',
+    glass: '<svg viewBox="0 0 24 24"><path d="M7.2 3.6h9.6c.4 3.8.3 6.2-.6 7.8-.9 1.6-2.4 2.6-4.2 2.6s-3.3-1-4.2-2.6c-.9-1.6-1-4-.6-7.8z"/><path d="M12 14v6.2M8.6 20.4h6.8"/></svg>',
     flag: '<svg viewBox="0 0 24 24"><path d="M5.5 21V4.2"/><path d="M5.5 4.6c3.6-1.8 6.2 1.6 9.8-.2v9.2c-3.6 1.8-6.2-1.6-9.8.2"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
     cloudSun: '<svg viewBox="0 0 24 24"><path d="M7 18.5h9.5a3.5 3.5 0 0 0 .5-7 5 5 0 0 0-9.6-1.3A4.2 4.2 0 0 0 7 18.5z"/><path d="M15.5 6.2a3 3 0 0 1 3.6 3.9M17 3v1.4M21 7.2h1.4M19.9 4.3l1-1"/></svg>',
@@ -80,9 +81,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 1, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true },
+    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true }, settings.layers || {});
+  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false }, settings.layers || {});
   const saveSettings = () => ls.set(K.settings, JSON.stringify(settings));
 
   // Clock: the phone's own, or forced.
@@ -124,7 +125,7 @@ if (window.top !== window.self) {
     win: null,                    // {from, to} ms loaded from iCloud
     occ: [],                      // occurrences in the window (Family + layers)
     lastRefresh: 0, refreshing: false, offline: false,
-    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle',
+    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle', drinks: null, drinksState: 'idle',
   };
   if (!['day', 'week', 'month', 'year', 'list'].includes(st.view)) st.view = 'month';
   const q = new URLSearchParams(location.search);
@@ -136,6 +137,7 @@ if (window.top !== window.self) {
     travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and car hire from Travel' },
     mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days, using Mail’s Gmail sign-in' },
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'The workouts logged in Fitness, one a day' },
+    drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your own standard drinks and alcohol-free days, from your account. Only you see them.' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
   };
   const calColor = () => st.calendar && /^#[0-9a-f]{6}$/i.test(st.calendar.color || '') ? st.calendar.color : 'var(--cal)';
@@ -263,6 +265,7 @@ if (window.top !== window.self) {
     if (settings.layers.notes) out.push(...noteItems(w));
     if (settings.layers.travel) out.push(...travelItems(w));
     if (settings.layers.fitness) out.push(...fitnessItems(w));
+    if (settings.layers.drinks) out.push(...drinksItems(w));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
     out.sort((a, b) => (b.allDay - a.allDay) || a.start - b.start || (b.end - b.start) - (a.end - a.start));
     st.occ = out;
@@ -384,6 +387,39 @@ if (window.top !== window.self) {
       const notes = logs.map(x => x.exercise + ': ' + line(x)).join('\n');
       const sub = [lift.length ? plural(lift.length, 'exercise') + ' · ' + plural(sets, 'set') : '', mins ? mins + ' min cardio' : ''].filter(Boolean).join(' · ');
       out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub, link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
+    }
+    return out;
+  }
+
+  // ---- Drinks: each day's standard drinks, or alcohol-free ----
+  // Read from your own family account (functions/drinks/api), so it works even
+  // though Drinks keeps its own storage on an iPhone. Health data: kept in
+  // memory only, never in this app's storage, and never copied to the Family
+  // calendar (the event sheet offers no copy for it). Off until you turn it on.
+  async function loadDrinks(force) {
+    if (!settings.layers.drinks) return;
+    const acct = window.AllisonOS && AllisonOS.account, tok = acct && acct.token();
+    if (!tok) { st.drinksState = 'signin'; return; }
+    if (!force && st.drinks && Date.now() - st.drinks.at < 10 * MIN) return;
+    const today = ymd(Date.now());
+    st.drinksState = 'loading';
+    try {
+      const r = await fetch('../drinks/api/summary?from=' + addDays(today, -365) + '&to=' + today, { headers: { 'X-Drinks': '1', Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+      if (r.status === 401) { st.drinksState = 'signin'; return; }
+      if (r.status === 503 || r.status === 404) { st.drinksState = 'off'; return; }
+      if (!r.ok) throw new Error('drinks-' + r.status);
+      const j = await r.json();
+      st.drinks = { at: Date.now(), days: j.days || {} }; st.drinksState = 'ok';
+      rebuild(); render();
+    } catch { st.drinksState = 'error'; }
+  }
+  function drinksItems(w) {
+    if (!st.drinks) return [];
+    const out = [], f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-GB', { maximumFractionDigits: 1 });
+    for (const [date, d] of Object.entries(st.drinks.days)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || dayMs(date) < w.from - D || dayMs(date) >= w.to) continue;
+      if (typeof d.sd === 'number') out.push(allDayItem('drinks', 'drk|' + date, 'Drinks · ' + f1(d.sd) + ' standard', date, null, { sub: plural(+d.n || 0, 'drink'), link: '../drinks/?date=' + date }));
+      else if (d.status === 'af') out.push(allDayItem('drinks', 'drk|' + date, 'Alcohol-free', date, null, { link: '../drinks/?date=' + date }));
     }
     return out;
   }
@@ -544,7 +580,7 @@ if (window.top !== window.self) {
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
       : esc(fmtTime(x.start)) + '<small>' + esc(x.end > x.start ? fmtTime(x.end) : '') + '</small>';
-    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : ICON.flag) + '<span>' + esc(x.sub) + '</span></span>' : '';
+    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : ICON.flag) + '<span>' + esc(x.sub) + '</span></span>' : '';
     return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t">' + esc(x.title) + '</span>' + sub + '</span></button>';
   }
 
@@ -946,14 +982,14 @@ if (window.top !== window.self) {
       if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organiser</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', esc(o.description)));
     } else {
-      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : 'flag', esc(x.sub)));
+      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : 'flag', esc(x.sub)));
       if (x.notes) rows.push(kv('notes', esc(x.notes)));
     }
     const cn = fam ? (st.calendar && st.calendar.name || 'Family') : LAYER[x.kind].name;
     $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
-        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '<span class="sub">' + esc(x.kind === 'holiday' ? '' : 'Where it comes from') + '</span></span></a>' : '') + (x.kind !== 'family' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar<span class="sub">A copy, as an event of its own</span></span></button>' : '') + '</div>');
+        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '<span class="sub">' + esc(x.kind === 'holiday' ? '' : 'Where it comes from') + '</span></span></a>' : '') + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar<span class="sub">A copy, as an event of its own</span></span></button>' : '') + '</div>');
     $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="iconbtn" type="button" data-close aria-label="Done">' + ICON.close + '</button>';
     openSheet('evSheet');
     const del = $('evDelete'); if (del) del.onclick = () => deleteEvent(x);
@@ -1274,6 +1310,7 @@ if (window.top !== window.self) {
     const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
     const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
     const mailNote = !settings.layers.mail ? '' : st.mailState === 'no-token' ? 'Open Mail and connect Gmail; Calendar uses that sign-in.' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
+    const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
       + '<p class="label">iCloud</p><div class="rgroup glass"><div class="status ' + status.cls + '"><i></i><span>' + status.text + '</span></div>'
@@ -1281,7 +1318,7 @@ if (window.top !== window.self) {
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
-      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
+      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : LAYER[k].sub; return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
       + '</div><p class="hint">Notes, Travel, Mail and Fitness share this phone’s storage when they are opened from AllisonOS Home; opened from their own icons on an iPhone, they keep separate storage and their layers stay empty here.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[1, 'Monday'], [0, 'Sunday']], settings.weekStart) + '</div>'
@@ -1295,7 +1332,7 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="stAlertAD">All-day alert</label><select id="stAlertAD">' + opt(ALERTS_ALLDAY, settings.alertAllDay) + '</select></div>'
       + '</div>'
       + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored or sent anywhere.</p>';
-    $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadMail(true); loadWeather(true); }); };
+    $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadMail(true); loadDrinks(true); loadWeather(true); }); };
     const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
     slideSegs();
     $('stDayStart').onchange = e => { settings.dayStart = +e.target.value; saveSettings(); };
@@ -1308,6 +1345,7 @@ if (window.top !== window.self) {
     if (sw && !sw.disabled) {
       const k = sw.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
       if (k === 'mail' && settings.layers.mail) loadMail(true);
+      if (k === 'drinks') { if (settings.layers.drinks) loadDrinks(true).then(() => renderSettings()); else st.drinks = null; }
       if (k === 'weather' && settings.layers.weather) loadWeather(true);
       rebuild(); render(); renderSettings(); return;
     }
@@ -1327,8 +1365,8 @@ if (window.top !== window.self) {
   rebuild();
   render();
   ping().then(() => { render(); refresh({ loud: st.items.size === 0, force: true }); });
-  loadMail(false); loadWeather(false);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadMail(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
+  loadMail(false); loadDrinks(false); loadWeather(false);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadMail(false); loadDrinks(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
   setInterval(() => { if (document.visibilityState !== 'visible') return; if (Date.now() - st.lastRefresh > REFRESH_MS) refresh(); if (st.view === 'day' || st.view === 'week') placeNow(); }, MIN);
   window.addEventListener('resize', () => { const tv = $('timeview'); if (tv) afterRender(); });
   // "Updated" pill, once, when a new version arrives (as in Notes and Travel).

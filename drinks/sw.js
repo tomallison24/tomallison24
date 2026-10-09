@@ -1,8 +1,9 @@
-// Offline shell for the Fitness app. Same-origin files load network-first, so
+// Offline shell for the Drinks app. Same-origin files load network-first, so
 // a new deploy shows up on the next open and the cache is only the fallback.
-// The log itself never passes through here: it lives in this phone's storage.
-const CACHE = 'fitness-v19';
-const SHELL = ['./', 'index.html', 'app.js', 'analysis.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/slide.js', '../home/account.js', '../home/welcome.js'];
+// The log itself never passes through here: it lives in this phone's storage,
+// and the calls to your account (api/) are left alone.
+const CACHE = 'drinks-v1';
+const SHELL = ['./', 'index.html', 'app.js', 'calc.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png', '../home/slide.js', '../home/account.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -10,7 +11,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('fitness-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('drinks-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

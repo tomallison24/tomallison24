@@ -24,6 +24,9 @@
 // - Optionally it syncs with a Google Sheet of your own through a small
 //   Apps Script (google-sheet-sync.gs), the same design as Travel's: a
 //   backup, a readable Workouts tab, and a second phone kept in step.
+// - Signed in to the family account and logging in Drinks, Analysis also shows
+//   your standard drinks and alcohol-free days over the same two windows,
+//   read from your own Drinks log (drinks/api/summary; only you can read it).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -51,6 +54,7 @@ if (window.top !== window.self) {
     close: '<svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg>',
     week: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
     chart: '<svg viewBox="0 0 24 24"><path d="M4 19.6h16"/><path d="M4.6 15.4l4.6-4.8 3.6 3.2 6.6-7.2"/><path d="M15.4 6.6h4v4"/></svg>',
+    glass: '<svg viewBox="0 0 24 24"><path d="M7.2 3.6h9.6c.4 3.8.3 6.2-.6 7.8-.9 1.6-2.4 2.6-4.2 2.6s-3.3-1-4.2-2.6c-.9-1.6-1-4-.6-7.8z"/><path d="M12 14v6.2M8.6 20.4h6.8"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     up: '<svg viewBox="0 0 24 24" class="b"><path d="M12 19V5.6M6.4 11.2L12 5.6l5.6 5.6"/></svg>',
     down: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5v13.4M6.4 12.8l5.6 5.6 5.6-5.6"/></svg>',
@@ -252,10 +256,11 @@ if (window.top !== window.self) {
       const sum = logs.length
         ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(groupName(g)) + '</span>').join('') + '</span><span class="dline">' + dayLine(logs) + '</span>'
         : '<span class="rest">' + (d < tod ? 'Rest day' : d === tod ? 'Nothing logged yet' : '') + '</span>';
-      rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '')) + '">'
-        + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span>' + ICON.chevR + '</button>';
+      rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '') + (drinks.days[d] && typeof drinks.days[d].sd === 'number' ? ', ' + f1(drinks.days[d].sd) + ' standard drinks' : '')) + '">'
+        + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span>' + drinkTag(d) + ICON.chevR + '</button>';
     }
     $('todayBtn').hidden = thisWeek;
+    loadDrinks(ws, we);
     main.innerHTML = '<div class="navrow" style="--i:0"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(label) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
       + '<div class="rgroup week" style="--i:1">' + rows + '</div>'
       + '<p class="sechead">' + (thisWeek ? 'This week' : 'That week') + '</p>'
@@ -266,6 +271,12 @@ if (window.top !== window.self) {
     const lift = logs.filter(x => !x.cardio), mins = logs.reduce((a, x) => a + (x.cardio ? +x.mins || 0 : 0), 0);
     const sets = lift.reduce((a, x) => a + (+x.sets || 0), 0);
     return [lift.length ? plural(lift.length, 'exercise') + ' · ' + plural(sets, 'set') : '', mins ? fmtMins(mins) + ' cardio' : ''].filter(Boolean).join(' · ');
+  }
+  // A day you drank on (from Drinks): a small glass and its standard drinks.
+  const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
+  function drinkTag(d) {
+    const x = drinks.days[d];
+    return x && typeof x.sd === 'number' ? '<span class="drk" title="Standard drinks, from Drinks">' + ICON.glass + f1(x.sd) + '</span>' : '';
   }
   function goWeek(n) { st.week = addDays(st.week, 7 * n); render(); animateIn(main); }
   main.addEventListener('click', e => {
@@ -352,12 +363,45 @@ if (window.top !== window.self) {
       const d = x.now - x.before;
       return '<div class="gbar" data-g="' + x.id + '" aria-label="' + esc(groupName(x.id) + ': ' + plural(x.now, 'set') + ', ' + x.before + ' before') + '"><span class="gn"><i></i>' + esc(groupName(x.id)) + '</span><span class="track"><span class="bar' + (x.now ? '' : ' zero') + '" style="width:' + (x.now / max * 72).toFixed(1) + '%"></span><span class="gv">' + x.now + (a.hasBefore && d ? ' <small>' + (d > 0 ? '+' : '−') + Math.abs(d) + '</small>' : '') + '</span></span></div>';
     }).join('');
+    loadDrinks(r.beforeFrom, r.to);
     main.innerHTML = seg + note + kpis
       + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
       + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
       + '<p class="sechead" style="--i:4">Sets by muscle group<span>' + (a.hasBefore ? 'change vs before' : '') + '</span></p><div class="rgroup bars" id="anGroups" style="--i:4">' + bars + '</div>'
+      + drinksHtml(r, P)
       + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time, and cardio by speed (distance ÷ time) when you log a distance, otherwise by minutes. Volume counts weighted sets only.</p>';
     slideSeg();
+  }
+  // Drinks, beside your training: your own standard drinks and alcohol-free
+  // days in the same two windows, from your Drinks log in your family account
+  // (functions/drinks/api). Only with a session already on this phone: it
+  // never asks you to sign in, and shows nothing until there is something to show.
+  // Each range asked for is kept for 5 minutes; the days merge into one map.
+  const drinks = { days: {}, got: new Map() };
+  const drinksFor = (from, to) => drinks.got.has(from + '|' + to);
+  async function loadDrinks(from, to) {
+    const acct = window.AllisonOS && window.AllisonOS.account, tok = acct && acct.token();
+    const key = from + '|' + to, got = drinks.got.get(key);
+    if (!tok || (got !== undefined && Date.now() - got < 5 * 60e3)) return;
+    drinks.got.set(key, Date.now());
+    try {
+      const r = await fetch('../drinks/api/summary?from=' + from + '&to=' + to, { headers: { 'X-Drinks': '1', Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+      if (!r.ok) { drinks.got.delete(key); return; }
+      const days = (await r.json()).days || {};
+      for (const d of Object.keys(drinks.days)) if (d >= from && d <= to) delete drinks.days[d];
+      Object.assign(drinks.days, days);
+    } catch { drinks.got.delete(key); return; }
+    if (!st.day) render();
+  }
+  function drinksHtml(r, P) {
+    if (!drinksFor(r.beforeFrom, r.to)) return '';
+    const sum = (from, to) => { let sd = 0, af = 0; for (const [d, x] of Object.entries(drinks.days)) if (d >= from && d <= to) { if (typeof x.sd === 'number') sd += x.sd; else if (x.status === 'af') af++; } return { sd: Math.round(sd * 10) / 10, af }; };
+    const now = sum(r.from, r.to), before = sum(r.beforeFrom, r.beforeTo);
+    if (!now.sd && !now.af && !before.sd && !before.af) return '';
+    return '<p class="sechead" style="--i:5">Drinks<span>from Drinks</span></p><div class="rgroup" id="anDrinks" style="--i:5">'
+      + '<div class="xrow"><span class="xt">Standard drinks<small>' + f1(before.sd) + ' in ' + P.before + '</small></span><span class="chg">' + f1(now.sd) + '</span></div>'
+      + '<div class="xrow"><span class="xt">Alcohol-free days<small>' + before.af + ' in ' + P.before + '</small></span><span class="chg">' + now.af + '</span></div>'
+      + '<a class="xrow" href="../drinks/"><span class="xt">Open Drinks</span>' + ICON.chevR + '</a></div>';
   }
   const slideSeg = () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
   main.addEventListener('click', e => {
