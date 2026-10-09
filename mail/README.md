@@ -118,9 +118,8 @@ posts to the sender's own server). Narrowing those wouldn't add much: with
 scripts locked to `app.js`, nothing untrusted can make requests in the first
 place.
 
-The frame guard is done in script because the proper tool, a
-`frame-ancestors` response header, is something GitHub Pages can't send.
-Cloudflare Pages can, through a `_headers` file.
+The frame guard is done in script, and the site's `_headers` file now also
+sends `frame-ancestors 'self'` from Cloudflare Pages.
 
 The GitHub workflows pin every action to an exact commit, and `wrangler` to an
 exact release, since those jobs can read the repository's secrets (the Gmail
@@ -153,7 +152,7 @@ and add it again — iOS reads the status bar style when the app is added.
 ## Put it on your iPhone
 
 1. **Google Cloud, once** (about three minutes) — see *Setup* below.
-2. Open `https://tomallison24.github.io/tomallison24/mail/` in Safari.
+2. Open `https://tomallison24-news.pages.dev/mail/` in Safari.
 3. Share → **Add to Home Screen**.
 
 ## Setup
@@ -164,8 +163,8 @@ and add it again — iOS reads the status bar style when the app is added.
 2. **APIs & Services → Library** → enable **Gmail API**.
 3. **OAuth consent screen** → External → add your own address as a test user.
 4. **Credentials → Create credentials → OAuth client ID → Web application.**
-5. **Authorised JavaScript origins:** `https://tomallison24.github.io`
-6. **Authorised redirect URIs:** `https://tomallison24.github.io/tomallison24/mail/`
+5. **Authorised JavaScript origins:** `https://tomallison24-news.pages.dev`
+6. **Authorised redirect URIs:** `https://tomallison24-news.pages.dev/mail/`
    — exactly that, trailing slash included. The app's setup screen prints the
    two values for whatever address you actually opened it on; copy from there
    if you serve it somewhere else as well (each origin needs its own entry).

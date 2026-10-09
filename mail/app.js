@@ -2443,7 +2443,7 @@ function buildMime(job) {
   if (job.cc.length) h.push('Cc: ' + formatAddresses(job.cc));
   h.push('Subject: ' + encWord(oneLine(job.subject)));
   h.push('Date: ' + new Date().toUTCString());
-  h.push('Message-ID: <' + crypto.randomUUID() + '@mail.tomallison24.github.io>');
+  h.push('Message-ID: <' + crypto.randomUUID() + '@mail.tomallison24-news.pages.dev>');
   if (job.inReplyTo) h.push('In-Reply-To: ' + oneLine(job.inReplyTo));
   if (job.references) h.push('References: ' + oneLine(job.references));
   h.push('MIME-Version: 1.0');

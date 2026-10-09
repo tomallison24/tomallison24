@@ -419,10 +419,9 @@ someone who got a link and its code.
 - **Every app on the same site shares that storage**, so a bug in one
   AllisonOS app that ran someone else's script could read it. Keep that in
   mind when an app shows outside content.
-- **Prefer the Cloudflare copy** of the site: it sits behind Cloudflare
-  Access, so only signed-in people can load it at all. The GitHub Pages copy
-  is public and shares `tomallison24.github.io` with any other Pages site on
-  the account.
+- **The site is the Cloudflare one** (`tomallison24-news.pages.dev`), behind
+  Cloudflare Access. The old GitHub Pages copy is retired: it only sends people
+  on, and forgets what AllisonOS kept there (`.github/pages-moved.html`).
 
 On iPhone, the app on the Home Screen keeps its own storage, apart from Safari,
 so the token entered in Safari isn't there: enter it (or use a share code) once

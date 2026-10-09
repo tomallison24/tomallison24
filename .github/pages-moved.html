@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>AllisonOS has moved</title>
+<!--
+  The GitHub Pages copy of AllisonOS (tomallison24.github.io/tomallison24/) is
+  retired: the family uses https://tomallison24-news.pages.dev. .github/workflows/news.yml
+  publishes this page at every old address (each app's folder, and 404.html for the
+  rest), so an old link or Home Screen icon lands on the same page there.
+
+  On the way it forgets what AllisonOS kept at this old address: tomallison24.github.io
+  is shared with every other GitHub Pages site of the account, so only AllisonOS's own
+  keys, caches, databases and offline workers (under /tomallison24/) are removed,
+  never another site's.
+-->
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; text-align: center;
+    font: 17px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; background: #EEF2F0; color: #10181A; }
+  @media (prefers-color-scheme: dark) { body { background: #0D1213; color: #EEF4F2; } }
+  a { display: inline-block; margin-top: 14px; padding: 14px 22px; border-radius: 16px; font-weight: 700; color: #10181A; text-decoration: none;
+    background: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); }
+  p { max-width: 340px; margin: 8px auto; opacity: .78; }
+</style>
+<script>
+(function () {
+  var NEW = 'https://tomallison24-news.pages.dev';
+  var path = location.pathname.replace(/^\/tomallison24(?=\/|$)/, '') || '/';
+  if (path === '/' || path === '/index.html' || path === '/404.html') path = '/aOS/';
+  var to = NEW + path + location.search + location.hash;
+  var ours = /^(allison-|aos[.-]|mail[.-]|news[.-]|travel[.-]|weather[.-]|wx[.-]|home[.-]|house[.-]|lab[.-]|notes[.-]|calendar[.-]|drinks[.-]|fitness[.-]|places[.-]|podcasts[.-])/;
+  var jobs = [];
+  [window.localStorage, window.sessionStorage].forEach(function (store) {
+    try { Object.keys(store).forEach(function (k) { if (ours.test(k)) store.removeItem(k); }); } catch (e) {}
+  });
+  try { if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+    return Promise.all(rs.filter(function (r) { return r.scope.indexOf('/tomallison24/') > -1; }).map(function (r) { return r.unregister(); }));
+  })); } catch (e) {}
+  try { if (window.caches) jobs.push(caches.keys().then(function (ks) {
+    return Promise.all(ks.filter(function (k) { return /^(aos|calendar|drinks|fitness|home|house|mail|news|notes|places|podcasts|travel|weather)-v\d+$/.test(k); }).map(function (k) { return caches.delete(k); }));
+  })); } catch (e) {}
+  try { if (window.indexedDB && indexedDB.databases) jobs.push(indexedDB.databases().then(function (ds) {
+    ds.forEach(function (d) { if (/^allison-/.test(d.name || '')) indexedDB.deleteDatabase(d.name); });
+  })); } catch (e) {}
+  var gone = false, go = function () { if (!gone) { gone = true; location.replace(to); } };
+  Promise.all(jobs).then(go, go);
+  setTimeout(go, 1500);   // never wait long
+  document.addEventListener('DOMContentLoaded', function () { var a = document.getElementById('to'); if (a) a.href = to; });
+})();
+</script>
+</head>
+<body>
+<main>
+  <h1>AllisonOS has moved</h1>
+  <p>It now lives at tomallison24-news.pages.dev. Taking you there…</p>
+  <p>If you added an app to your Home Screen from this old address, remove it and add it again from the new one.</p>
+  <a id="to" href="https://tomallison24-news.pages.dev/aOS/">Open aOS</a>
+</main>
+</body>
+</html>

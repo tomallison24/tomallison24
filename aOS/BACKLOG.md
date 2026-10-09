@@ -11,11 +11,10 @@ an item through (or delete it) when it ships, and say which release.
    Done: asking to sign in now hands out a signed challenge and writes nothing;
    only a real passkey's sign-in writes (once). A Cloudflare rate-limiting rule
    on `/aOS/api/*` would still be a good extra (dashboard, not code).
-2. **The GitHub Pages copy shares its address with every other GitHub Pages
-   site on the account** (`tomallison24.github.io`). Gmail, Home Assistant and
-   Notes Sheet tokens saved by the apps there can be read by script on any
-   other Pages site of the account. Fix: drop the mirror (the deploy job in
-   `.github/workflows/news.yml`), or give it its own domain.
+2. ~~**The GitHub Pages copy shares its address with other Pages sites.**~~
+   Done: GitHub Pages is retired (the family uses tomallison24-news.pages.dev).
+   It now serves only "AllisonOS has moved" pages that send every old address on,
+   and forget AllisonOS's saved data there (`.github/pages-moved.html`).
 3. ~~**Offline caches keep family-account replies.**~~ Done: every app's
    `sw.js` leaves `/api/` alone.
 4. ~~**No security headers.**~~ Done: `_headers` (no framing by other sites,
@@ -56,17 +55,13 @@ an item through (or delete it) when it ships, and say which release.
 
 ## Lower priority, not quick
 
-(Done since: the API no longer returns error details; weeks start on Sunday
+(Done since: the labs passkey test page is gone; the API no longer returns error details; weeks start on Sunday
 everywhere, with Monday kept only where it was picked in Calendar; Travel says
 "rental car".)
 
 - **Sign-ins last 400 days.** "Sign out everywhere else" (aOS → Your account)
   now ends all of a person's other sessions at once; one phone alone still can't
   be picked out (no per-device list), and sessions don't shorten and renew.
-- **Labs passkeys use the real site.** `labs/two/passkey.js` makes passkeys on
-  the production address, which then sit beside the AllisonOS one in the
-  passkey picker (picking one gives "unknown"). Labs are the owner's test pages,
-  so whether to remove or change that page is the owner's call.
 - **iOS limits, not code:** "Open in Drinks/Fitness/…" from Calendar, and the
   off screen's **Open aOS**, open a Safari view with its own storage (signed
   out) rather than the Home Screen app; and an app's "off" screen covers the
