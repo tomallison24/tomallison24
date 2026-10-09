@@ -90,7 +90,8 @@
         'Home: tone and home theatre sliders sit one to a row, full width, with the level beside the name',
         'aOS is the Allison family\'s: a family card on Today, and every app curated for the family',
         'Drinks: a new app, a simple log of what you drink, private to you in your family account',
-        'Calendar: a Drinks layer, off until you turn it on, showing only your own log'],
+        'Calendar: a Drinks layer, off until you turn it on, showing only your own log',
+        'Fitness: your drinks from Drinks in Analysis, beside your training'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -98,8 +99,9 @@
       ],
       apps: {
         drinks: { highlights: ['New: a simple log of what you drink', 'Your usual drinks are one tap', 'Private to you, in your family account'],
-          notes: ['Bring in your ABV Tracker history from its backup or its Google Sheet', 'Analysis: this week or month against the one before, and your alcohol-free streak'] },
+          notes: ['Bring in your ABV Tracker history from its backup or its Google Sheet', 'Tap the week\'s number for Analysis: this week or month against the one before, and your alcohol-free streak'] },
         calendar: ['A Drinks layer, off until you turn it on: your own standard drinks and alcohol-free days'],
+        fitness: ['Analysis shows your drinks from Drinks beside your training: standard drinks and alcohol-free days, this window and the one before'],
       } },
   ];
   // A release's (or an app's) highlights and notes; a plain list is all notes.
@@ -377,7 +379,7 @@
         {
           "i": "chart",
           "t": "How it's going",
-          "d": "Analysis compares this week or month with the one before, with your alcohol-free streak."
+          "d": "Tap the week's number to compare this week or month with the one before, with your alcohol-free streak."
         },
         {
           "i": "lock",

@@ -2,14 +2,14 @@
 
 // Drinks: a log of what you drink, kept small.
 //
-// - The week as seven rows, one a day: its standard drinks, or alcohol-free.
-//   Above them, the week's one number against your weekly limit. Arrows (or a
-//   swipe) move a week at a time.
+// - One screen: the week as seven rows, one a day, each its standard drinks or
+//   alcohol-free; above them the week's one number against your weekly limit.
+//   Arrows (or a swipe) move a week at a time.
 // - Tapping a day opens its sheet: what you had, your usual drinks as tiles
 //   (one tap logs one, with Undo), "Something else…" for anything new, and,
-//   on a day with nothing logged, Alcohol-free day or Don't remember.
-// - Analysis: the last 7 days against the 7 before, or the last 4 weeks
-//   against the 4 before. The sums are calc.js's.
+//   on a day with nothing logged, Alcohol-free day.
+// - Tapping the week's number opens Analysis: the last 7 days against the 7
+//   before, or the last 4 weeks against the 4 before. The sums are calc.js's.
 // - The log lives on this phone (allison-drinks-v1) and, signed in to your
 //   family account, in that account too, private to you
 //   (functions/drinks/api): it follows you to another phone, and Calendar can
@@ -36,7 +36,7 @@ if (window.top !== window.self) {
   const pad = n => String(n).padStart(2, '0');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-drinks-v1';
-  const K = { graves: KEY + '-graves', sync: KEY + '-sync', view: KEY + '-view', period: KEY + '-period' };
+  const K = { graves: KEY + '-graves', sync: KEY + '-sync', period: KEY + '-period' };
   // One decimal, as people say it: 3.2, 1, 0.5.
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-GB', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-GB', { maximumFractionDigits: 1 }) + ' ' + x.unit;
@@ -46,8 +46,6 @@ if (window.top !== window.self) {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
     chevR: '<svg viewBox="0 0 24 24" class="b"><path d="M9.4 5.4l6.2 5.9a1 1 0 0 1 0 1.4l-6.2 5.9"/></svg>',
     close: '<svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg>',
-    week: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
-    chart: '<svg viewBox="0 0 24 24"><path d="M4 19.6h16"/><path d="M4.6 15.4l4.6-4.8 3.6 3.2 6.6-7.2"/><path d="M15.4 6.6h4v4"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 6v12M6 12h12"/></svg>',
     import: '<svg viewBox="0 0 24 24"><path d="M12 3.6v11M7.6 10.6l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-2.6"/></svg>',
@@ -57,7 +55,7 @@ if (window.top !== window.self) {
 
   // ---------------------------------------------------------------------
   // Data: { v: 1, entries: [{id, date, time, name, cat, vol, unit, abv, qty,
-  // note, updated}], days: [{id: date, status: 'af'|'unknown', updated}],
+  // note, updated}], days: [{id: date, status: 'af', updated}] (alcohol-free),
   // prefs: [{id: 'goals', week, day, af, updated}] }. 'updated' is stamped on
   // any change, and anything deleted leaves a grave (kind:id -> when), so a
   // sync can tell newer from older and gone from not yet seen (as Fitness).
@@ -65,7 +63,7 @@ if (window.top !== window.self) {
   const data = { entries: [], days: [], prefs: [] };
   let graves = {};
   const KINDS = ['entries', 'days', 'prefs'];
-  const okDay = x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.id || '') && (x.status === 'af' || x.status === 'unknown');
+  const okDay = x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.id || '') && x.status === 'af';
   const okPref = x => x && x.id === 'goals';
   function load() {
     const d = ls.json(KEY, null) || {};
@@ -126,18 +124,15 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  const st = { week: weekStartOf(today()), day: null, form: null, view: ls.get(K.view, 'week') === 'analysis' ? 'analysis' : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
+  const st = { week: weekStartOf(today()), day: null, form: null, period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
 
   // ---------------------------------------------------------------------
-  // The week
+  // The week: its one number (tap it for Analysis), and seven days
   // ---------------------------------------------------------------------
   const main = $('main');
   function render() {
-    const v = VIEWS.find(x => x.id === st.view);
-    $('viewName').textContent = v.name;
-    if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = ICON[v.icon]; }
-    if (!$('viewMenu').hidden) drawViewMenu();
-    if (st.view === 'analysis') renderAnalysis(); else renderWeek();
+    renderWeek();
+    if (!$('anSheet').hidden) renderAnalysis();
   }
   // What a day was, in words: "Wine ×2, Beer".
   function said(list) {
@@ -157,14 +152,13 @@ if (window.top !== window.self) {
       let text = '', cls = 'quiet', val = '';
       if (s === 'drinks') { text = said(entriesOn(d)); cls = ''; val = '<span class="dval' + (C.round(x.sd, 2) > g.day ? ' over' : '') + '">' + f1(x.sd) + '</span>'; }
       else if (s === 'af') { text = 'Alcohol-free'; cls = 'af'; }
-      else if (s === 'unknown') text = 'Don’t remember';
       else text = d < tod ? 'Not logged' : d === tod ? 'Nothing yet' : '';
       const aria = fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + ', ' + (s === 'drinks' ? f1(x.sd) + ' standard drinks' : text || 'not yet');
       rows += '<button class="drow' + (d === tod ? ' today' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(aria) + '">'
         + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span>'
         + '<span class="dsum ' + cls + '">' + esc(text) + '</span>' + val + '</button>';
     }
-    // The week's one number, against your weekly limit.
+    // The week's one number, against your weekly limit. Tapping it opens Analysis.
     const s = C.stats(data.entries, data.days, ws, we, tod);
     const over = g.week > 0 && C.round(s.sd, 1) > g.week;
     const pct = g.week > 0 ? Math.min(100, s.sd / g.week * 100) : 0;
@@ -172,16 +166,17 @@ if (window.top !== window.self) {
     if (thisWeek) { const k = C.streaks(data.entries, data.days, tod).current; if (k > 1) bits.push(k + ' in a row'); }
     $('todayBtn').hidden = thisWeek;
     main.innerHTML = '<div class="navrow" style="--i:0"><button class="iconbtn" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(label) + '</span><button class="iconbtn" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
-      + '<div class="sum' + (over ? ' over' : '') + '" style="--i:1" aria-label="' + esc(f1(s.sd) + ' standard drinks' + (g.week ? ' of your ' + g.week + ' a week' : '') + '. ' + bits.join(', ')) + '">'
-      + '<div class="big"><b>' + f1(s.sd) + '</b><span>' + (g.week ? 'of ' + g.week + ' standard drinks' : 'standard drinks') + (over ? ', over your limit' : '') + '</span></div>'
-      + (g.week ? '<div class="track" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : '')
-      + '<div class="line">' + esc(bits.join(' · ')) + '</div></div>'
+      + '<button class="sum' + (over ? ' over' : '') + '" type="button" id="sumBtn" style="--i:1" aria-label="' + esc(f1(s.sd) + ' standard drinks' + (g.week ? ' of your ' + g.week + ' a week' : '') + '. ' + bits.join(', ') + '. Show Analysis') + '">'
+      + '<span class="big"><b>' + f1(s.sd) + '</b><span>' + (g.week ? 'of ' + g.week + ' standard drinks' : 'standard drinks') + (over ? ', over your limit' : '') + '</span>' + ICON.chevR + '</span>'
+      + (g.week ? '<span class="track" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></span>' : '')
+      + '<span class="line">' + esc(bits.join(' · ')) + '</span></button>'
       + '<div class="rgroup week" style="--i:2">' + rows + '</div>';
   }
   function goWeek(n) { st.week = addDays(st.week, 7 * n); render(); animateIn(main); }
   main.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');
     if (a) { goWeek(a.dataset.act === 'prev' ? -1 : 1); return; }
+    if (e.target.closest('#sumBtn')) { openAnalysis(); return; }
     const d = e.target.closest('[data-day]');
     if (d) openDay(d.dataset.day);
   });
@@ -194,53 +189,32 @@ if (window.top !== window.self) {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goWeek(dx < 0 ? 1 : -1);
   });
   $('todayBtn').onclick = () => { st.week = weekStartOf(today()); render(); animateIn(main); };
-  $('fab').onclick = () => { st.week = weekStartOf(today()); if (st.view === 'week') render(); openDay(today()); };
+  $('fab').onclick = () => { st.week = weekStartOf(today()); render(); openDay(today()); };
 
   // ---------------------------------------------------------------------
-  // The view picker: a glass pill at the bottom; Week or Analysis
+  // Analysis, in a sheet from the week's number: this window against the
+  // one before (calc.js does the sums)
   // ---------------------------------------------------------------------
-  const VIEWS = [
-    { id: 'week', name: 'Week', icon: 'week', sum: () => { const s = C.stats(data.entries, data.days, weekStartOf(today()), today(), today()); return f1(s.sd) + ' standard drinks this week'; } },
-    { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => 'This week or month against the one before' },
-  ];
-  function drawViewMenu() {
-    $('viewMenu').innerHTML = VIEWS.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === st.view) + '"><span class="ic">' + ICON[v.icon] + '</span><span class="k">' + esc(v.name) + '<small>' + esc(v.sum()) + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
-  }
-  function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
-  $('viewBtn').addEventListener('click', e => {
-    e.stopPropagation();
-    if (!$('viewMenu').hidden) return closeViewMenu();
-    drawViewMenu(); $('viewMenu').hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true');
-  });
-  $('viewMenu').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
-  document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
-  function setView(v) {
-    st.view = v === 'analysis' ? 'analysis' : 'week'; ls.set(K.view, st.view);
-    closeViewMenu(); render(); animateIn(main); window.scrollTo({ top: 0 });
-  }
-
-  // ---------------------------------------------------------------------
-  // Analysis: this window against the one before (calc.js does the sums)
-  // ---------------------------------------------------------------------
+  const an = $('anBody');
   const PERIODS = { week: { days: 7, name: 'Week', before: 'the 7 days before' }, month: { days: 28, name: 'Month', before: 'the 4 weeks before' } };
+  function openAnalysis() { renderAnalysis(); openSheet('anSheet'); slideSeg(); }
   function renderAnalysis() {
-    $('todayBtn').hidden = true;
     const P = PERIODS[st.period], a = C.compare(data.entries, data.days, today(), P.days), r = a.range, n = a.now, b = a.before;
-    const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare" style="--i:0">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
+    const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
     const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
     if (!a.hasNow && !a.hasBefore) {
-      main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>';
+      an.innerHTML = seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>';
       slideSeg(); return;
     }
     // Four numbers, each against the window before. Fewer drinks is better; more alcohol-free days is better.
-    const kpi = (label, now, before, lowerIsBetter, unit) => {
+    const kpi = (label, now, before, lowerIsBetter) => {
       const has = now !== null, d = has && before !== null ? C.round(now - before, 1) : null;
       const dir = !a.hasBefore || d === null || d === 0 ? '' : (d < 0) === lowerIsBetter ? 'good' : 'bad';
       const delta = !a.hasBefore || d === null ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '↑ +' : '↓ −') + f1(Math.abs(d));
       const words = !a.hasBefore || d === null || !d ? delta : (d > 0 ? 'up ' : 'down ') + f1(Math.abs(d)) + ' on ' + P.before + (dir === 'good' ? ', better' : ', worse');
-      return '<div class="kpi" aria-label="' + esc(label + ': ' + (has ? f1(now) : 'not known') + (unit || '') + ', ' + words) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + (has ? f1(now) : '—') + '</span><span class="kd ' + dir + '">' + esc(delta) + '</span></div>';
+      return '<div class="kpi" aria-label="' + esc(label + ': ' + (has ? f1(now) : 'not known') + ', ' + words) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + (has ? f1(now) : '—') + '</span><span class="kd ' + dir + '">' + esc(delta) + '</span></div>';
     };
-    const kpis = '<div class="kpis" style="--i:1">'
+    const kpis = '<div class="kpis">'
       + kpi('Standard drinks', n.sd, b.sd, true)
       + kpi('Days you drank', n.drinkingDays, b.drinkingDays, true)
       + kpi('Alcohol-free days', n.afDays, b.afDays, false)
@@ -248,23 +222,23 @@ if (window.top !== window.self) {
     const k = C.streaks(data.entries, data.days, today());
     const rows = '<div class="xrow"><span class="xt">Alcohol-free in a row<small>Your best: ' + plural(k.best, 'day') + '</small></span><span class="xv">' + plural(k.current, 'day') + '</span></div>'
       + (n.heaviest ? '<div class="xrow"><span class="xt">Most in one day<small>' + esc(fmt(n.heaviest.date, { weekday: 'long', day: 'numeric', month: 'short' })) + '</small></span><span class="xv">' + f1(n.heaviest.sd) + '</span></div>' : '')
-      + (n.notRecorded + n.unknownDays ? '<div class="xrow"><span class="xt">Days not logged<small>Left out of the average. Tap a day in Week to fill it in.</small></span><span class="xv">' + (n.notRecorded + n.unknownDays) + '</span></div>' : '');
+      + (n.notRecorded ? '<div class="xrow"><span class="xt">Days not logged<small>Left out of the average. Tap a day in the week to fill it in.</small></span><span class="xv">' + n.notRecorded + '</span></div>' : '');
     const cats = Object.entries(n.cats).sort((p, q) => q[1] - p[1]);
     const max = Math.max(0.1, ...cats.map(c => c[1]));
     const bars = cats.map(([c, v]) => '<div class="gbar" data-c="' + esc(c) + '" aria-label="' + esc(catName(c) + ': ' + f1(v) + ' standard drinks') + '"><span class="gn"><i class="cdot"></i>' + esc(catName(c)) + '</span><span class="gt"><span class="bar" style="width:' + (v / max * 72).toFixed(1) + '%"></span><span class="gv">' + f1(v) + '</span></span></div>').join('');
-    main.innerHTML = seg + note + kpis
-      + '<div class="rgroup" style="--i:2">' + rows + '</div>'
-      + (bars ? '<p class="sechead">By drink</p><div class="rgroup bars" style="--i:3">' + bars + '</div>' : '')
+    an.innerHTML = seg + note + kpis
+      + '<div class="rgroup">' + rows + '</div>'
+      + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '')
       + '<p class="hint">In standard drinks: 14 g of alcohol each (the US measure), such as 12 oz of 5% beer or 1.5 oz of 40% spirits. The average counts the days you logged, drinks or alcohol-free.</p>';
     slideSeg();
   }
-  const slideSeg = () => { const box = main.querySelector('.seg'); if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
-  main.addEventListener('click', e => {
+  const slideSeg = () => { const box = an.querySelector('.seg'); if (box && !$('anSheet').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
+  an.addEventListener('click', e => {
     const b = e.target.closest('[data-period]'); if (!b) return;
     st.period = b.dataset.period === 'month' ? 'month' : 'week'; ls.set(K.period, st.period);
-    render();
+    renderAnalysis();
   });
-  window.addEventListener('resize', () => { const box = main.querySelector('.seg'); if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); });
+  window.addEventListener('resize', () => { const box = an.querySelector('.seg'); if (box && !$('anSheet').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); });
 
   // ---------------------------------------------------------------------
   // A day: what you had, your usual drinks, the form
@@ -304,10 +278,8 @@ if (window.top !== window.self) {
         + '<button class="del" type="button" data-del="' + esc(x.id) + '" aria-label="Delete ' + esc(x.name || catName(x.cat)) + '">' + ICON.close + '</button></div>').join('')
         + '<div class="dtotal' + (over ? ' over' : '') + '"><span>' + (over ? 'Over your ' + g.day + ' a day' : 'Total') + '</span><span><b>' + f1(total) + '</b> standard drinks</span></div></div>';
     } else {
-      // Nothing logged: say what the day was, in one tap.
-      html += '<div class="pair" role="group" aria-label="This day">'
-        + '<button class="btn quiet afbtn" type="button" data-mark="af" aria-pressed="' + (mark === 'af') + '">Alcohol-free day</button>'
-        + '<button class="btn quiet" type="button" data-mark="unknown" aria-pressed="' + (mark === 'unknown') + '">Don’t remember</button></div>';
+      // Nothing logged: an alcohol-free day is one tap.
+      html += '<button class="btn quiet afbtn" type="button" data-mark="af" aria-pressed="' + (mark === 'af') + '">' + (mark === 'af' ? ICON.tick + 'Alcohol-free day' : 'Alcohol-free day') + '</button>';
     }
     if (f) html += formHtml();
     else {
@@ -498,7 +470,7 @@ if (window.top !== window.self) {
     const rows = [['Date', 'Time', 'Drink', 'Kind', 'Size', 'Unit', 'ABV %', 'How many', 'Standard drinks', 'Note']];
     for (const x of [...data.entries].sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || '')))
       rows.push([x.date, x.time || '', x.name || '', catName(x.cat), x.vol, x.unit, x.abv, x.qty, C.round(C.std(x), 2), x.note || '']);
-    for (const d of [...data.days].sort((a, b) => a.id.localeCompare(b.id))) rows.push([d.id, '', d.status === 'af' ? 'Alcohol-free day' : 'Don’t remember', '', '', '', '', '', 0, '']);
+    for (const d of [...data.days].sort((a, b) => a.id.localeCompare(b.id))) rows.push([d.id, '', 'Alcohol-free day', '', '', '', '', '', 0, '']);
     const file = new File([rows.map(r => r.map(q).join(',')).join('\r\n')], 'drinks-' + today() + '.csv', { type: 'text/csv' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file] }).catch(() => {}); return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
@@ -629,7 +601,6 @@ if (window.top !== window.self) {
   });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!$('viewMenu').hidden) { closeViewMenu(); return; }
     const open = [...document.querySelectorAll('.sheetwrap')].reverse().find(w => !w.hidden);
     if (open) closeWrap(open);
   });
@@ -652,7 +623,7 @@ if (window.top !== window.self) {
   animateIn(main);
   // Opened from Calendar's Drinks layer: ?date=YYYY-MM-DD opens that day.
   const q = new URLSearchParams(location.search).get('date');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.week = weekStartOf(q); render(); openDay(q); }
   window.addEventListener('storage', e => {
     if (e.key !== KEY) return;
     load(); render();
@@ -672,5 +643,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (drinks/scripts/app-test.mjs) only.
-  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, setView };
+  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis };
 })();

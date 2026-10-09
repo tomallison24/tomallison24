@@ -7,7 +7,7 @@
 //                  another phone changed something since 'since', the whole log
 //                  too ({ at, full: true, entries, days, prefs, graves })
 //   GET  summary   ?from=YYYY-MM-DD&to=YYYY-MM-DD   -> { days: { date: { sd, n } | { status } } }
-//                  each day's standard drinks, or its mark (af / unknown), for
+//                  each day's standard drinks, or { status: 'af' } (alcohol-free), for
 //                  Calendar's Drinks layer; at most 400 days at a time
 // Deleting is a sync too: Drinks' "Delete all data" deletes every item on the
 // phone, which leaves graves, so your other phones delete them as well. When
@@ -53,7 +53,7 @@ const CLEAN = {
       cat: CATS.includes(x.cat) ? x.cat : 'other', vol, unit: x.unit === 'ml' ? 'ml' : 'oz', abv, qty: Math.round(qty), note: str(x.note, 200), updated: when(x.updated) };
   },
   days(x) {
-    if (!x || !ISO.test(x.id) || (x.status !== 'af' && x.status !== 'unknown')) return null;
+    if (!x || !ISO.test(x.id) || x.status !== 'af') return null;
     return { id: x.id, status: x.status, updated: when(x.updated) };
   },
   prefs(x) {

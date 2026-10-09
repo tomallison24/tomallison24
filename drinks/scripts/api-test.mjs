@@ -117,7 +117,7 @@ await test('only Drinks’ own fields are kept, checked and trimmed', async () =
   assert.deepEqual(c.entries.map(x => x.id), ['ok']);
   const x = c.entries[0];
   assert.equal(x.note.length, 200); assert.equal(x.extra, undefined); assert.equal(x.cat, 'other'); assert.equal(x.unit, 'oz'); assert.equal(x.time, '');
-  assert.deepEqual(c.days, [{ id: '2026-10-02', status: 'unknown', updated: 1 }]);
+  assert.deepEqual(c.days, []);
   assert.deepEqual(c.prefs, []); assert.deepEqual(c.graves, { 'entries:ok2': 5 });
   assert.equal((await call('sync', { body: '{not json', token: tom })).status, 400);
   assert.equal((await call('sync', { body: 'x'.repeat(2 * 1024 * 1024 + 1), token: tom })).status, 413);

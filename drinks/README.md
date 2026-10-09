@@ -5,11 +5,11 @@ glass as Fitness. It replaces the ABV Tracker (a single HTML file kept in
 Google Drive) and is kept deliberately small: the week, and for each day its
 standard drinks or "alcohol-free".
 
-- **The week**: one number at the top, the week's standard drinks against the
+- **One screen, the week**: one number at the top, the week's standard drinks against the
   weekly limit you set (amber once you're over), with how many alcohol-free
   days you've had against your goal. Under it, seven rows, one a day: what you
   had ("Beer ×2, Wine") and its standard drinks (amber over your daily limit),
-  or Alcohol-free, Don't remember, or Not logged. Arrows (or a sideways swipe)
+  or Alcohol-free, or Not logged. Arrows (or a sideways swipe)
   move a week at a time; the calendar button comes back to this week.
 - **A day**: tap it (or **+** for today) and its sheet opens.
   - **Your usual drinks** sit there as six tiles: the ones you've had most in
@@ -21,9 +21,9 @@ standard drinks or "alcohol-free".
     many, and optionally a time, a name and a note. It shows the standard
     drinks as you go. A cocktail is logged as the spirit in it.
   - Tap a drink to change it, or its ✕ to delete it (with **Undo**).
-  - A day with nothing logged has **Alcohol-free day** and **Don't remember**,
-    one tap each. Logging a drink on an alcohol-free day makes it a drinks day.
-- **Analysis** (from the pill at the bottom): the last 7 days against the 7
+  - A day with nothing logged has **Alcohol-free day**, one tap (tap again to
+    take it back). Logging a drink on an alcohol-free day makes it a drinks day.
+- **Analysis** (tap the week's number): the last 7 days against the 7
   before, or the last 4 weeks against the 4 before. Standard drinks, days you
   drank, alcohol-free days and a day's average, each with its change (an
   arrow and the number, never colour alone); your alcohol-free streak and
@@ -42,7 +42,7 @@ one. These are the ABV Tracker's own figures, so a drink brought in from it
 counts the same here.
 
 Averages count the days you logged, drinks or alcohol-free: a day you didn't
-log, or marked Don't remember, is left out rather than counted as zero. The
+log is left out rather than counted as zero. The
 alcohol-free streak counts days marked alcohol-free in a row; today doesn't
 break it until the day is over (the ABV Tracker's streak read 0 every morning).
 
@@ -103,8 +103,9 @@ Family calendar**. **Open in Drinks** opens that day (`?date=YYYY-MM-DD`).
   tab, **File → Download → Comma-separated values**).
 
 Drinks come in with their own ids, so bringing the same file in twice adds
-nothing. Alcohol-free and unknown days become marked days (unless the day has
-drinks), the connection-test row is skipped, and from the backup its goals come
+nothing. Alcohol-free days come in as alcohol-free (unless the day has drinks);
+"Unknown day" rows are days not logged, so they bring nothing; the
+connection-test row is skipped; and from the backup its goals come
 too if you haven't set any. Names lose the size and strength the tracker put in
 them ("Wine large 8oz 14%" becomes "Wine large"; the size and strength are on
 their own line). Its Google Sheet sync link and secret are never read.
@@ -115,8 +116,8 @@ write to the Sheet any more.
 
 ## Files
 
-- `index.html`: the page and its look (Fitness's tokens, tiles, Liquid Glass
-  sheets and view pill, with only the pieces Drinks uses).
+- `index.html`: the page and its look (Fitness's tokens, tiles and Liquid
+  Glass sheets, with only the pieces Drinks uses).
 - `app.js`: the app. `calc.js`: the sums and the ABV Tracker import.
 - `sw.js`: the offline shell (network-first; `api/` is left alone).
 - `icon.svg` → `icon-180.png`, `icon-512.png` ("Cellar": a white wine glass on

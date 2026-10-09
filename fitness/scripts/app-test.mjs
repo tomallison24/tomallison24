@@ -5,7 +5,7 @@
 // "Other…", cardio by time and distance, editing and deleting (with Undo), moving between weeks,
 // Calendar's week start and ?date= link, Calendar showing the workouts as a
 // layer, the Analysis view (the drop-down under the title, Week and Month,
-// stronger / weaker / new, muscle groups missed), Google Sheet sync end to end (the real google-sheet-sync.gs,
+// stronger / weaker / new, muscle groups missed, your drinks from Drinks), Google Sheet sync end to end (the real google-sheet-sync.gs,
 // running on fake-sheet.mjs) including a second phone set up from the
 // setup link, dark mode, and that nothing trips the page's Content
 // Security Policy. Screenshots go to the folder given as the second argument.
@@ -75,6 +75,8 @@ async function newPage(scheme, seed = SEED, extra = null) {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
+    // The walkthrough (home/welcome.js) as already seen, as on a phone that has been using the app.
+    localStorage.setItem('aos.seen', JSON.stringify({ fitness: '1', calendar: '1' }));
     if (extra) for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
   }, { seed, extra });
   const page = await ctx.newPage();
@@ -409,6 +411,41 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   if (SHOTS) await dk.page.screenshot({ path: path.join(SHOTS, '11-analysis-dark-full.png'), fullPage: true });
   violations.push(...(await dk.page.evaluate(() => window.__csp || [])));
   await dk.ctx.close();
+});
+
+await test('Analysis: your drinks from Drinks beside your training, signed in; nothing without a session', async () => {
+  const D = n => ymd(day(n));
+  const seed = { v: 2, exercises: [], logs: [
+    { id: 'd1', date: D(-2), group: 'chest', exercise: 'Barbell Bench Press', weight: 110, reps: 6, sets: 3, updated: 1 },
+    { id: 'd2', date: D(-9), group: 'chest', exercise: 'Barbell Bench Press', weight: 100, reps: 8, sets: 3, updated: 2 },
+  ] };
+  const calls = [];
+  const summary = route => {
+    const req = route.request(), u = new URL(req.url());
+    calls.push({ x: req.headers()['x-drinks'], auth: req.headers()['authorization'], from: u.searchParams.get('from'), to: u.searchParams.get('to') });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ days: { [D(-1)]: { sd: 2.5, n: 2 }, [D(-3)]: { status: 'af' }, [D(-4)]: { status: 'af' }, [D(-9)]: { sd: 4, n: 3 } } }) });
+  };
+  const session = JSON.stringify({ token: 'tok.sig', user: { id: 'u1', name: 'Tom', role: 'owner' }, at: Date.now() });
+  const dr = await newPage('light', seed, { 'allison-fitness-v1-view': 'analysis', 'aos.session': session });
+  await dr.ctx.route('**/drinks/api/**', summary);
+  await dr.page.goto(BASE + '/fitness/');
+  await dr.page.waitForSelector('#anDrinks');
+  assert.deepEqual(calls[0], { x: '1', auth: 'Bearer tok.sig', from: D(-13), to: D(0) }, 'both windows, signed in, with the app header');
+  const rows = await dr.page.$$eval('#anDrinks .xrow', rs => rs.map(r => r.textContent));
+  assert.deepEqual(rows, ['Standard drinks4 in the 7 before2.5', 'Alcohol-free days0 in the 7 before2', 'Open Drinks']);
+  assert.equal(await dr.page.getAttribute('#anDrinks a', 'href'), '../drinks/');
+  await dr.page.waitForTimeout(1000);
+  if (SHOTS) await dr.page.screenshot({ path: path.join(SHOTS, '15-analysis-drinks.png'), fullPage: true });
+  violations.push(...(await dr.page.evaluate(() => window.__csp || [])));
+  await dr.ctx.close();
+  // Signed out: Fitness doesn't ask, and shows nothing of it.
+  calls.length = 0;
+  const so = await newPage('light', seed, { 'allison-fitness-v1-view': 'analysis' });
+  await so.ctx.route('**/drinks/api/**', summary);
+  await so.page.goto(BASE + '/fitness/'); await so.page.waitForFunction(() => window.__fitness); await so.page.waitForTimeout(500);
+  assert.equal(calls.length, 0); assert.equal(await so.page.$$eval('#anDrinks', e => e.length), 0);
+  assert.ok(await so.page.isHidden('#aos-signin') || !(await so.page.$('#aos-signin')), 'no sign-in sheet');
+  await so.ctx.close();
 });
 
 await test('Search: every exercise from one bar; picking one fills in the group, the exercise and last time', async () => {

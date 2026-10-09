@@ -173,14 +173,15 @@ await test('change a drink, delete one with Undo; the week row and total follow'
   await shot(page, '04-week');
 });
 
-await test('a day with nothing logged: alcohol-free or don’t remember, in one tap; the streak counts', async () => {
+await test('a day with nothing logged: alcohol-free in one tap (tap again to undo); the streak counts', async () => {
   for (const d of [YESTERDAY, TWO_AGO]) {
     await page.evaluate(d => window.__drinks.openDay(d), d);
+    assert.equal(await page.$$eval('#dayBody .btn[data-mark]', e => e.length), 1, 'just the one choice');
     await page.click('[data-mark="af"]');
     assert.equal(await page.getAttribute('[data-mark="af"]', 'aria-pressed'), 'true');
   }
-  await page.click('[data-mark="unknown"]');
-  assert.equal(await page.getAttribute('[data-mark="af"]', 'aria-pressed'), 'false', 'one or the other');
+  await page.click('[data-mark="af"]');
+  assert.equal(await page.getAttribute('[data-mark="af"]', 'aria-pressed'), 'false', 'tapped again: not marked');
   await page.click('[data-mark="af"]');
   await page.click('#daySheet .okbtn');
   const d = await local(page);
@@ -205,19 +206,20 @@ await test('goals: a lower weekly limit shows the week as over', async () => {
   assert.equal((await local(page)).prefs[0].week, 3);
 });
 
-await test('Analysis: four numbers against the window before, the streak, by drink', async () => {
-  await page.click('#viewBtn');
-  await page.click('[data-view="analysis"]');
+await test('Analysis, from a tap on the week’s number: four numbers against the window before, the streak, by drink', async () => {
+  assert.equal(await page.$$eval('#viewBtn, .vbar', e => e.length), 0, 'no view picker: one screen');
+  await page.click('#sumBtn');
+  await page.waitForSelector('#anSheet:not([hidden])');
   const kl = await page.$$eval('.kpi .kl', e => e.map(x => x.textContent));
   assert.deepEqual(kl, ['Standard drinks', 'Days you drank', 'Alcohol-free days', 'A day, on average']);
   assert.equal(await page.textContent('.kpi .kv'), '4.3');
-  assert.match(await page.textContent('main'), /Alcohol-free in a row.*Your best: 2 days/);
-  assert.match(await page.textContent('main'), /By drink/);
+  assert.match(await page.textContent('#anBody'), /Alcohol-free in a row.*Your best: 2 days/);
+  assert.match(await page.textContent('#anBody'), /By drink/);
   await page.waitForTimeout(1000);
   await shot(page, '05-analysis');
   await page.click('[data-period="month"]');
   assert.match(await page.textContent('.anote'), / against /);
-  await page.click('#viewBtn'); await page.click('[data-view="week"]');
+  await page.click('#anSheet [data-close].iconbtn');
 });
 
 await test('the account gets your changes, a few at a time', async () => {

@@ -17,7 +17,6 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, (msg || '') + ' ' 
 let id = 0;
 const E = (date, vol, unit, abv, qty = 1, cat = 'beer') => ({ id: 'e' + id++, date, time: '19:00', name: 'x', cat, vol, unit, abv, qty, updated: id });
 const AF = date => ({ id: date, status: 'af', updated: 1 });
-const UNK = date => ({ id: date, status: 'unknown', updated: 1 });
 const TODAY = '2026-10-09';   // a Friday
 
 test('standard drinks: the US 14 g one', () => {
@@ -30,12 +29,12 @@ test('standard drinks: the US 14 g one', () => {
   assert.equal(C.std(E(TODAY, 12, 'oz', 0)), 0);
 });
 
-test('a day is drinks, alcohol-free, unknown or not recorded; drinks win over a mark', () => {
+test('a day is drinks, alcohol-free or not logged; drinks win over a mark', () => {
   const map = C.byDay([E('2026-10-01', 12, 'oz', 5), E('2026-10-01', 5, 'oz', 13, 1, 'wine')]);
-  const mk = C.marks([AF('2026-10-01'), AF('2026-10-02'), UNK('2026-10-03'), { id: 'bad', status: 'af' }]);
+  const mk = C.marks([AF('2026-10-01'), AF('2026-10-02'), { id: '2026-10-03', status: 'unknown' }, { id: 'bad', status: 'af' }]);
   assert.equal(C.statusOf('2026-10-01', map, mk), 'drinks');
   assert.equal(C.statusOf('2026-10-02', map, mk), 'af');
-  assert.equal(C.statusOf('2026-10-03', map, mk), 'unknown');
+  assert.equal(C.statusOf('2026-10-03', map, mk), 'none', 'only alcohol-free is a mark');
   assert.equal(C.statusOf('2026-10-04', map, mk), 'none');
   near(map.get('2026-10-01').sd, 2.0834); assert.equal(map.get('2026-10-01').n, 2);
   assert.deepEqual(Object.keys(map.get('2026-10-01').cats).sort(), ['beer', 'wine']);
@@ -56,11 +55,11 @@ test('the windows: 7 days and the 7 before, 28 and the 28 before', () => {
 
 test('window totals: drinks, days, heaviest, and averages over recorded days only', () => {
   const entries = [E('2026-10-09', 12, 'oz', 5, 2), E('2026-10-07', 1.5, 'oz', 40, 3, 'spirits'), E('2026-10-01', 12, 'oz', 5)];
-  const days = [AF('2026-10-08'), AF('2026-10-06'), UNK('2026-10-05')];
+  const days = [AF('2026-10-08'), AF('2026-10-06')];
   const a = C.compare(entries, days, TODAY, 7);
   near(a.now.sd, 5); assert.equal(a.now.drinks, 5); assert.equal(a.now.drinkingDays, 2);
-  assert.equal(a.now.afDays, 2); assert.equal(a.now.unknownDays, 1); assert.equal(a.now.notRecorded, 2); assert.equal(a.now.recorded, 4);
-  near(a.now.avg, 1.25, 'average leaves out the unknown and unrecorded days');
+  assert.equal(a.now.afDays, 2); assert.equal(a.now.notRecorded, 3); assert.equal(a.now.recorded, 4);
+  near(a.now.avg, 1.25, 'average leaves out the days not logged');
   assert.equal(a.now.heaviest.date, '2026-10-07'); near(a.now.heaviest.sd, 3);
   near(a.now.cats.spirits, 3); near(a.now.cats.beer, 2);
   near(a.before.sd, 1); assert.equal(a.before.drinkingDays, 1); assert.equal(a.hasBefore, true);
@@ -76,12 +75,13 @@ test('days over the daily limit', () => {
   assert.equal(C.overDays(entries, '2026-10-05', '2026-10-11', 4), 1, 'exactly 4 is not over');
 });
 
-test('streaks: today unmarked doesn’t break it; drinks or unknown do', () => {
+test('streaks: today unmarked doesn’t break it; drinks or a day not logged do', () => {
   const days = ['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08'].map(AF);
   assert.deepEqual(C.streaks([], days, TODAY), { current: 5, best: 5 }, 'today not marked yet');
   assert.deepEqual(C.streaks([], days.concat(AF(TODAY)), TODAY), { current: 6, best: 6 });
   assert.deepEqual(C.streaks([E(TODAY, 12, 'oz', 5)], days, TODAY), { current: 0, best: 5 }, 'a drink today ends it');
-  assert.deepEqual(C.streaks([], days.concat(UNK(TODAY)), TODAY), { current: 0, best: 5 }, '“don’t remember” ends it');
+  assert.deepEqual(C.streaks([], days.slice(1), TODAY), { current: 4, best: 4 });
+  assert.deepEqual(C.streaks([], days.filter(d => d.id !== '2026-10-06'), TODAY), { current: 2, best: 2 }, 'a day not logged ends it');
   const gap = [AF('2026-09-20'), AF('2026-09-21'), AF('2026-09-22'), AF('2026-10-07'), AF('2026-10-08')];
   assert.deepEqual(C.streaks([], gap, TODAY), { current: 2, best: 3 });
   assert.deepEqual(C.streaks([E('2026-09-21', 12, 'oz', 5)], gap, TODAY), { current: 2, best: 2 }, 'a mark under a drink doesn’t count');
@@ -112,7 +112,7 @@ test('the Sheet’s Log tab: drinks, marked days, the test row skipped, no doubl
   assert.equal(shot.name, 'Shot'); assert.equal(r.entries.find(x => x.unit === 'ml').name, 'Other');
   assert.equal(shot.date, '2025-03-05', 'a US-style date'); assert.equal(shot.qty, 2); assert.equal(shot.cat, 'spirits');
   assert.equal(r.entries.find(x => x.unit === 'ml').note, 'with friends, at the lake');
-  assert.deepEqual(r.days.sort((a, b) => a.id.localeCompare(b.id)), [{ id: '2025-02-24', status: 'unknown' }, { id: '2025-02-27', status: 'af' }],
+  assert.deepEqual(r.days.sort((a, b) => a.id.localeCompare(b.id)), [{ id: '2025-02-27', status: 'af' }],
     '8/28 had drinks, so its alcohol-free mark is dropped');
 });
 
@@ -120,7 +120,7 @@ test('a CSV that isn’t the Log tab is refused', () => {
   assert.throws(() => C.fromAbvTracker('Total standard drinks,75\nThis week,2.8'), /not-a-log/);
 });
 
-test('the ABV Tracker’s JSON backup: drinks, dry and unknown days, goals; never its sync secret', () => {
+test('the ABV Tracker’s JSON backup: drinks, alcohol-free days, goals; unknown days bring nothing; never its sync secret', () => {
   const backup = JSON.stringify({ entries: [
       { id: 'k7q2beer0004', ts: '2025-02-20T23:00:00.000Z', date: '2025-02-20', time: '19:00', name: 'Beer 12oz 5%', cat: 'Beer', vol: 12, unit: 'oz', abv: 5, qty: 1, g: 14, sd: 1, note: '' },
       { id: 'x2', date: '2025-02-20', time: '20:00', name: 'Gin & tonic', cat: 'Cocktail', vol: 2, unit: 'oz', abv: 40, qty: 1, note: 'at home <b>' }],
@@ -129,7 +129,7 @@ test('the ABV Tracker’s JSON backup: drinks, dry and unknown days, goals; neve
   const r = C.fromAbvTracker(backup);
   assert.equal(r.entries.length, 2);
   assert.equal(r.entries[1].cat, 'cocktail'); assert.equal(r.entries[0].name, 'Beer'); assert.equal(r.entries[1].note, 'at home <b>', 'kept as text; the page escapes it');
-  assert.deepEqual(r.days.map(d => d.id + ':' + d.status).sort(), ['2025-02-17:unknown', '2025-02-19:af']);
+  assert.deepEqual(r.days.map(d => d.id + ':' + d.status).sort(), ['2025-02-19:af']);
   assert.deepEqual(r.goals, { week: 10, day: 3, af: 4 });
   assert.ok(!JSON.stringify(r).includes('SECRET') && !JSON.stringify(r).includes('script.google'));
   assert.throws(() => C.fromAbvTracker('{"hello":1}'), /not-a-backup/);

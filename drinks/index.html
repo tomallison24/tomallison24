@@ -17,16 +17,16 @@
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  Drinks - a log of what you drink, kept deliberately small: the week as
-  seven days, each with its standard drinks or "alcohol-free", and a sheet
-  for each day where your usual drinks are one tap. Analysis compares this
-  week or month with the one before.
+  Drinks - a log of what you drink, kept deliberately small: one screen, the
+  week as seven days, each with its standard drinks or "alcohol-free", and a
+  sheet for each day where your usual drinks are one tap. Tapping the week's
+  number opens Analysis, this week or month against the one before.
 
   Data: on this phone (localStorage allison-drinks-v1) and, signed in, in
   your family account, private to you (functions/drinks/api), so it follows
   you to another phone and Calendar can show it. Code: app.js, and calc.js
-  for the sums. The look is Fitness's: the same tokens, tiles, Liquid Glass
-  sheets and view pill, with only the pieces Drinks uses.
+  for the sums. The look is Fitness's: the same tokens, tiles and Liquid Glass
+  sheets, with only the pieces Drinks uses.
 -->
 <style>
 :root{
@@ -124,7 +124,8 @@ svg.b{stroke-width:2.2}
 .btn.danger{--tint:var(--danger);color:var(--danger-text);font-weight:500;width:100%}
 .btn[disabled]{opacity:.45;pointer-events:none}
 .btn[aria-pressed="true"]{color:var(--text);background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--tint-mix),transparent)}
-.btn.afbtn{--tint:var(--af)}
+.btn.afbtn{--tint:var(--af);width:100%}
+.btn.afbtn svg{width:18px;height:18px}
 .fab{width:56px;height:56px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);
   box-shadow:var(--lg-rim),0 8px 26px var(--lift);transition:transform .2s var(--ease);animation:popIn .45s var(--ease) both}
 .fab:active{transform:scale(.9)}
@@ -144,9 +145,12 @@ svg.b{stroke-width:2.2}
 .navrow{display:flex;align-items:center;gap:6px;padding:0 2px}
 .navrow .lbl{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* the week's one number, against your weekly limit */
-.sum{padding:14px 16px 13px;display:flex;flex-direction:column;gap:8px}
+/* the week's one number, against your weekly limit; tap it for Analysis */
+.sum{width:100%;padding:14px 14px 13px 16px;display:flex;flex-direction:column;gap:8px;text-align:left;color:var(--text);transition:transform .18s var(--ease)}
+.sum:active{transform:scale(.985)}
 .sum .big{display:flex;align-items:baseline;gap:8px}
+.sum .big svg{margin-left:auto;align-self:center;width:18px;height:18px;color:var(--faint)}
+.sum > span{display:block}
 .sum .big b{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
 .sum .big span{font-size:15px;color:var(--muted)}
 .track{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
@@ -197,7 +201,6 @@ svg.b{stroke-width:2.2}
 .utile .ut{flex:1;min-width:0;font-size:15px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .utile .ut small{display:block;font-size:12px;font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
 .utile svg{width:18px;height:18px;color:var(--icon)}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:4px 8px -6px}
 .opts{display:flex;flex-wrap:wrap;gap:8px;padding:0 4px}
 .opt{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);
@@ -272,40 +275,6 @@ svg.b{stroke-width:2.2}
 .dock > *{pointer-events:auto}
 html.locked .dock{opacity:0;pointer-events:none}
 
-/* ---- the view picker: a Liquid Glass pill at the bottom, as in Fitness and Home ---- */
-.vbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 15px);z-index:6;translate:-50% 0;
-  display:flex;align-items:center;padding:4px;border-radius:999px;transition:opacity .25s,transform .3s cubic-bezier(.2,.8,.2,1)}
-.vbar::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.56),rgba(255,255,255,.24));
-  -webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);
-  box-shadow:inset 0 0 0 .5px rgba(28,32,40,.12),inset 0 1px .5px rgba(255,255,255,.9),0 10px 26px -8px rgba(30,40,60,.28)}
-html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
-.vbar > button{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 14px 0 8px;border-radius:999px;white-space:nowrap;font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
-.vbar > button:active{background:rgba(28,32,40,.09)}
-.vbar .vb-ic{display:flex;width:30px;height:30px;border-radius:50%;align-items:center;justify-content:center;background:rgba(28,32,40,.09);color:var(--icon)}
-.vbar .vb-ic svg{width:18px;height:18px}
-.vbar .vb-chev{display:flex;opacity:.7;margin-left:-2px;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-.vbar .vb-chev svg{width:20px;height:20px;transform:rotate(180deg)}
-.vbar button[aria-expanded="true"] .vb-chev{transform:rotate(180deg)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vbar::before{background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
-    box-shadow:inset 0 0 0 .5px rgba(255,255,255,.32),inset 0 1px .5px rgba(255,255,255,.5),inset 0 -1px 1px rgba(255,255,255,.08),0 12px 30px -6px rgba(0,0,0,.6)}
-  :root:not([data-theme="light"]) .vbar > button:active,:root:not([data-theme="light"]) .vbar .vb-ic{background:rgba(255,255,255,.12)}}
-:root[data-theme="dark"] .vbar::before{background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
-  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.32),inset 0 1px .5px rgba(255,255,255,.5),inset 0 -1px 1px rgba(255,255,255,.08),0 12px 30px -6px rgba(0,0,0,.6)}
-:root[data-theme="dark"] .vbar > button:active,:root[data-theme="dark"] .vbar .vb-ic{background:rgba(255,255,255,.12)}
-@media (prefers-reduced-transparency:reduce){.vbar::before{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
-.viewmenu{position:absolute;left:50%;bottom:calc(100% + 10px);translate:-50% 0;z-index:6;width:max-content;min-width:260px;padding:6px;border-radius:22px;
-  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
-  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong);transform-origin:50% 100%;animation:menuUp .22s var(--ease) both}
-@keyframes menuUp{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}
-.viewmenu button{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:16px;text-align:left;font-size:16px;font-weight:600;color:var(--text)}
-.viewmenu button:active,.viewmenu button[aria-selected="true"]{background:var(--lgs-field)}
-.viewmenu .ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;color:var(--icon);background:var(--fill)}
-.viewmenu .k{flex:1;min-width:0}
-.viewmenu small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:1px}
-.viewmenu .tick{opacity:0;color:var(--accent-text)}
-.viewmenu button[aria-selected="true"] .tick{opacity:1}
-
 /* ---- sheets: Liquid Glass, as in Fitness and Calendar ---- */
 :root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
   --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
@@ -332,8 +301,8 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
 .sheetbody > *{flex-shrink:0}
 .sheet .rgroup{border-radius:26px}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet,.viewmenu{background:var(--bar-solid)}}
-@media (prefers-reduced-transparency:reduce){.sheet,.viewmenu{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
 /* toast: the same clear glass as the sheets */
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
@@ -371,12 +340,6 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
     <main class="list" id="main"></main>
   </section>
 
-  <!-- The view picker, at the bottom in reach of a thumb; the menu opens upwards -->
-  <nav class="vbar" id="vbar">
-    <button id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Show a view"><span class="vb-ic" id="vbIcon"></span><span id="viewName">Week</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M6 9.4l5.3 5.2a1 1 0 0 0 1.4 0L18 9.4"/></svg></span></button>
-    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
-  </nav>
-
   <div class="dock">
     <button class="fab" id="fab" type="button" aria-label="Log a drink today"><svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg></button>
   </div>
@@ -388,6 +351,16 @@ html.locked .vbar{opacity:0;transform:translateY(12px);pointer-events:none}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="dayLbl">Today</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
       <div class="sheetbody" id="dayBody"></div>
+    </div>
+  </div>
+
+  <!-- Analysis: from the week's number -->
+  <div class="sheetwrap" id="anSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="anLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="anLbl">Analysis</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody" id="anBody"></div>
     </div>
   </div>
 

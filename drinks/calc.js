@@ -14,8 +14,7 @@
 // A day is one of:
 //   drinks    something was logged that day
 //   af        marked alcohol-free
-//   unknown   marked "don't remember": left out of averages
-//   none      nothing logged and not marked (also left out of averages)
+//   none      nothing logged and not marked: left out of averages
 // Logging a drink on a day marked alcohol-free makes it a drinks day.
 (function (root) {
   const OZ_ML = 29.5735, ETHANOL = 0.789, STD_G = 14;
@@ -77,10 +76,10 @@
     }
     return m;
   }
-  // The days you marked: { date: 'af' | 'unknown' }.
+  // The days you marked alcohol-free: { date: 'af' }.
   function marks(days) {
     const out = {};
-    for (const x of days || []) if (x && ISO.test(x.id || '') && (x.status === 'af' || x.status === 'unknown')) out[x.id] = x.status;
+    for (const x of days || []) if (x && ISO.test(x.id || '') && x.status === 'af') out[x.id] = 'af';
     return out;
   }
   const statusOf = (date, map, mk) => map.has(date) ? 'drinks' : mk[date] || 'none';
@@ -88,7 +87,7 @@
   // A window of days, [from, to], up to today (later days are not counted yet).
   function stats(entries, days, from, to, today, cache) {
     const map = cache ? cache.map : byDay(entries), mk = cache ? cache.mk : marks(days);
-    const out = { from, to, sd: 0, drinks: 0, drinkingDays: 0, afDays: 0, unknownDays: 0, notRecorded: 0, recorded: 0, heaviest: null, cats: {}, overDay: 0 };
+    const out = { from, to, sd: 0, drinks: 0, drinkingDays: 0, afDays: 0, notRecorded: 0, recorded: 0, heaviest: null, cats: {} };
     const last = to < today ? to : today;
     for (let d = from; d <= last; d = add(d, 1)) {
       const s = statusOf(d, map, mk);
@@ -98,7 +97,6 @@
         if (!out.heaviest || x.sd > out.heaviest.sd) out.heaviest = { date: d, sd: x.sd };
         for (const c in x.cats) out.cats[c] = (out.cats[c] || 0) + x.cats[c];
       } else if (s === 'af') { out.afDays++; out.recorded++; }
-      else if (s === 'unknown') out.unknownDays++;
       else out.notRecorded++;
     }
     // A day's average over the days you recorded (drinks or alcohol-free).
@@ -119,7 +117,7 @@
 
   // Alcohol-free streaks: days in a row marked alcohol-free. Today counts once
   // it is marked; until then it doesn't break the streak (so it isn't 0 every
-  // morning). Drinks, "don't remember" and unrecorded days end a streak.
+  // morning). A day with drinks, or not logged, ends a streak.
   function streaks(entries, days, today) {
     const map = byDay(entries), mk = marks(days);
     const af = d => statusOf(d, map, mk) === 'af';
@@ -136,8 +134,9 @@
   // ---------------------------------------------------------------------
   // Bringing in the ABV Tracker: its JSON backup (Export JSON backup), or
   // its Google Sheet's Log tab downloaded as CSV (File → Download → .csv).
-  // Its "Alcohol-free day" and "Unknown day" rows become marked days; its
-  // connection test row is skipped. Each drink keeps the tracker's entry id
+  // Its "Alcohol-free day" rows become alcohol-free days; its "Unknown day"
+  // rows are days not logged, so they bring nothing; its connection test row
+  // is skipped. Each drink keeps the tracker's entry id
   // (as abv-<id>), so bringing the same file in twice adds nothing.
   // ---------------------------------------------------------------------
   function parseCSV(text) {
@@ -176,7 +175,8 @@
   function oneRow(r, out) {
     const date = isoDate(r.date), cat = String(r.category || '').trim().toLowerCase(), id = cleanId(r.id);
     if (!date || id === 'test' || /^__connection test__$/i.test(String(r.name || '').trim())) { out.skipped++; return; }
-    if (cat === 'alcohol-free' || cat === 'unknown') { out.days.set(date, cat === 'unknown' ? 'unknown' : 'af'); return; }
+    if (cat === 'unknown') return;
+    if (cat === 'alcohol-free') { out.days.set(date, 'af'); return; }
     const x = { id: 'abv-' + (id || date + '-' + out.entries.size), date, time: hhmm(r.time), name: shortName(r.name),
       cat: catOf(r.category), vol: num(r.volume), unit: String(r.unit).trim().toLowerCase() === 'ml' ? 'ml' : 'oz',
       abv: num(r.abv), qty: Math.round(num(r.qty)) || 1, note: String(r.note || '').trim().slice(0, 200) };
@@ -191,7 +191,6 @@
       let s; try { s = JSON.parse(text); } catch { throw new Error('not-a-backup'); }
       if (!s || !Array.isArray(s.entries)) throw new Error('not-a-backup');
       for (const e of s.entries) oneRow({ date: e.date, time: e.time, name: e.name, category: e.cat, volume: e.vol, unit: e.unit, abv: e.abv, qty: e.qty, note: e.note, id: e.id }, out);
-      for (const d of s.unknown || []) { const k = isoDate(d); if (k) out.days.set(k, 'unknown'); }
       for (const d of s.dry || []) { const k = isoDate(d); if (k) out.days.set(k, 'af'); }
       const c = s.cfg || {};
       if (c.week || c.day || c.af != null) out.goals = { week: num(c.week) || GOALS.week, day: num(c.day) || GOALS.day, af: c.af == null ? GOALS.af : Math.max(0, Math.min(7, Math.round(num(c.af)))) };
