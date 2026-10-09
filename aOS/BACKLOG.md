@@ -19,12 +19,14 @@ an item through (or delete it) when it ships, and say which release.
    `sw.js` leaves `/api/` alone.
 4. ~~**No security headers.**~~ Done: `_headers` (no framing by other sites,
    nosniff, Referrer-Policy, HSTS, a Permissions-Policy), published by news.yml.
-5. **Notes reminder notifications: the test is fixed; the deploy needs a
-   permission.** `notes/scripts/push-test.mjs` passes again (the Worker now uses
-   the clock it's given, and the test pins its own) and runs in CI. The last
-   default-branch deploy failed at "Deploy the Worker", most likely because the
-   Cloudflare token lacks **Account · Workers Scripts · Edit**: add it
-   (`aOS/RELEASING.md`, "Family accounts") and re-run Notes push.
+5. ~~**Notes reminder notifications can't deploy.**~~ Done: the test passes
+   again, and Notes push deployed on 2026-10-09 (so the Cloudflare token already
+   has Workers Scripts · Edit). **Mail's notifications were never set up**: its
+   deploy (Actions → Mail push) stops because the repository has no
+   `PUSH_KV_ID` and `PUSH_ALLOWED_EMAIL` variables and no `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET`, `PUSH_GOOGLE_REFRESH_TOKEN`, `VAPID_PUBLIC_KEY` and
+   `VAPID_PRIVATE_KEY` secrets. Set them up (mail/README.md, "Notifications")
+   only if Mail notifications are wanted; Mail works without them.
 6. **News headlines refresh every 4 to 6 hours, not every 30 minutes.** GitHub
    throttles the `schedule` in `news.yml`. Fix: trigger the workflow from an
    outside cron (a Cloudflare cron Worker calling `workflow_dispatch`), or
