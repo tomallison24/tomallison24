@@ -11,7 +11,9 @@
 .rowi .k small { display: block; font-size: 12px; font-weight: 500; opacity: .6; margin-top: 1px; }
 .rowi.warnrow .k { color: #FF9F8F; font-weight: 600; }
 .rowi > svg:last-child { opacity: .45; flex: none; }
-.dg-tgt.pad { margin-top: 14px; }
+/* Not .pad: that is the PIN keypad's 3 x 72px grid (index.html), which blew the
+   Dyson's HEAT TO stepper up into three fixed cells. */
+.dg-tgt.tgt-gap { margin-top: 14px; }
 .dg-ctl .srcline { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .disc.sm { width: 36px; height: 36px; }
 .disc.lit { background: rgba(255,255,255,0.32); }
