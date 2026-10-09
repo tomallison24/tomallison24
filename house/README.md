@@ -445,7 +445,7 @@ because the redirect away and back is unreliable in an iPhone home-screen app.
 
 ## Adding devices
 
-The dehumidifiers are `UNITS` and the thermostats `THERMOS` in `index.html`.
+The dehumidifiers are `UNITS` and the thermostats `THERMOS` in `app.js`.
 Every other family is its own file - `heaters.js`, `dysons.js`, `lights.js`,
 `media.js`, `security.js`, `around.js`, `favorites.js` - with its devices in
 a list at the top (entity ids, colours). `devices.js` has what they share:
