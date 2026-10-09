@@ -15,6 +15,14 @@
   publish (a hand run with **release** blank republishes the live release
   and refreshes labs - that is not a release).
 
+## Merging
+
+The owner has asked that Claude's pull requests merge without asking, once
+they're ready: every check on the latest commit passed (the News build and the
+Apps check), no merge conflict, and no review left unanswered. Merge then (or
+turn on GitHub's auto-merge for the PR), with a merge commit. Merging still
+publishes nothing: releasing waits for the owner to ask (above).
+
 ## The release log
 
 `RELEASES` at the top of `home/welcome.js`, newest first, one version number
