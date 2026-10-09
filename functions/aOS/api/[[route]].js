@@ -1,7 +1,7 @@
 // /aOS/api/* - AllisonOS family accounts (passkeys). The rules and the storage
 // are in server/auth.js; the apps' side is home/account.js.
 //
-//   GET  state            accounts on? owner set up? and, signed in, who you are
+//   GET  state            accounts on? owner set up? the family's plan? and, signed in, who you are
 //   POST signup/begin     { name, code } (the owner, once) or { name, invite }
 //   POST signup/finish    the new passkey      -> { token, user }
 //   POST signin/begin                          -> a challenge
@@ -13,6 +13,8 @@
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
 //   POST remove           (owner) { id }       -> signs them out everywhere, and deletes their Drinks log
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
+//   POST plan             (owner) { id } switches plan, { cancel: true } stops it at the end of
+//                         its month, { resume: true } keeps a cancelled one   -> the plan
 
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk } from '../../../server/auth.js';
 
@@ -21,6 +23,29 @@ const MAX_BODY = 16 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
+
+// The family's subscription, just for fun (aOS -> Subscription): nothing is charged.
+// Kept as config:plan { id, since, ends? }; with none yet, Pro+ since the owner joined.
+// A paid plan renews each month on the day it started; cancelled, it ends on the
+// next of those days. A trial ends 7 days after it started. Once a plan has ended,
+// every app but aOS is switched off (home/welcome.js) until the owner picks a plan.
+const PLANS = ['proplus', 'pro', 'trial'];
+const TRIAL_MS = 7 * 864e5;
+// The same day of the month, k months on (the 31st becomes the month's last day).
+const addMonths = (t, k) => {
+  const d = new Date(t), day = d.getUTCDate();
+  d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + k);
+  d.setUTCDate(Math.min(day, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()));
+  return d.getTime();
+};
+export const nextRenewal = (since, now = Date.now()) => { let k = 1; while (addMonths(since, k) <= now) k++; return addMonths(since, k); };
+export async function planView(db, now = Date.now()) {
+  const owner = await db.get('owner'); if (!owner) return null;
+  let p = await getJSON(db, 'config:plan');
+  if (!p || !PLANS.includes(p.id)) { const o = await getJSON(db, 'user:' + owner); p = { id: 'proplus', since: (o && o.created) || now }; }
+  if (p.id === 'trial') return { id: p.id, since: p.since, ends: p.since + TRIAL_MS, cancelled: false, renews: null };
+  return { id: p.id, since: p.since, ends: p.ends || null, cancelled: !!p.ends, renews: p.ends ? null : nextRenewal(p.since, now) };
+}
 
 async function body(request) {
   const t = await request.text();
@@ -47,7 +72,8 @@ export async function onRequest({ request, params, env }) {
   if (route === 'state' && method === 'GET') {
     if (!db) return reply({ storage: false, setup: false });
     const u = await sessionUser(db, request);   // your own record also says which apps you've opened from the Home Screen, and when
-    return reply({ storage: true, setup: !!(await db.get('owner')), user: u && { ...pub(u), apps: u.apps || {} } });
+    const plan = await planView(db);
+    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps: u.apps || {} } });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -156,6 +182,22 @@ export async function onRequest({ request, params, env }) {
       if (u.protocol !== 'https:' || u.username || u.password) return reply({ error: 'address' }, 400);
       await db.put('config:home', u.origin);
       return reply({ address: u.origin });
+    }
+
+    if (route === 'plan' && method === 'POST') {
+      const b = await body(request), now = Date.now(), cur = await planView(db, now);
+      if (b.id !== undefined) {
+        if (!PLANS.includes(b.id)) return reply({ error: 'plan' }, 400);
+        await putJSON(db, 'config:plan', { id: b.id, since: now });
+      } else if (b.cancel) {
+        if (cur.id === 'trial') return reply({ error: 'trial' }, 400);   // a trial ends on its own
+        if (!cur.ends) await putJSON(db, 'config:plan', { id: cur.id, since: cur.since, ends: nextRenewal(cur.since, now) });
+      } else if (b.resume) {
+        if (cur.id === 'trial' || !cur.ends) return reply({ plan: cur });
+        if (cur.ends <= now) return reply({ error: 'ended' }, 400);   // over: pick a plan again
+        await putJSON(db, 'config:plan', { id: cur.id, since: cur.since });
+      } else return reply({ error: 'plan' }, 400);
+      return reply({ plan: await planView(db, now) });
     }
 
     return reply({ error: 'not-found' }, 404);
