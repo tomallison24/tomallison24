@@ -4,7 +4,7 @@
 // signed-in family by _middleware.js.
 //
 //   GET  state      -> { ai, model, week, settings, deals, plan }
-//                      ai: 'perplexity' | 'anthropic' | null (no key yet)
+//                      ai: 'anthropic', or null with no key yet
 //   POST deals      { text? } -> { deals }
 //                      without text: the model searches the web for this week's
 //                      sales at the store; with text (copied from the store's
@@ -15,11 +15,11 @@
 //   POST settings   { store, prime, avoid } -> { settings }
 //
 // The model: Claude Haiku 5.5 (the cheapest Claude, and plenty for this: the
-// allergy check below doesn't rely on the model), through whichever key the
-// owner adds as a Pages secret (news.yml puts it): PERPLEXITY_API_KEY
-// (Perplexity's Agent API, which resells Claude), else ANTHROPIC_API_KEY
-// (Anthropic's own API). MEALS_MODEL names another (claude-sonnet-5-5 for
-// richer recipes). Neither key: everything answers { error: 'no-ai' }.
+// allergy check below doesn't rely on the model), through Anthropic's API with
+// the key the owner adds as a Pages secret, ANTHROPIC_API_KEY (news.yml puts
+// it); the deals search is Anthropic's web search tool. MEALS_MODEL names
+// another model (claude-sonnet-5-5 for richer recipes). No key: everything
+// that needs the model answers { error: 'no-ai' }.
 //
 // Safety for the family's allergies: every plan is checked here, word by word,
 // against what the family avoids (settings.avoid: tree nuts and coconut to
@@ -38,7 +38,6 @@
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
 
 export const MODEL = 'claude-haiku-5-5';
-export const PERPLEXITY_URL = 'https://api.perplexity.ai/v1/agent';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const TIMEOUT_MS = 120e3;
 const MAX_BODY = 64 * 1024;
@@ -84,7 +83,7 @@ const planText = meals => meals.flatMap(m => [m.title, m.why, ...m.ingredients.m
 
 // ---- the model ----
 export const modelOf = env => str(env && env.MEALS_MODEL, 60) || MODEL;
-export const aiOf = env => env && env.PERPLEXITY_API_KEY ? 'perplexity' : env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
+export const aiOf = env => env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
 
 export async function ask(env, { system, prompt, search = false, maxTokens = 4000 }, f = fetch) {
   const ai = aiOf(env), model = modelOf(env);
@@ -98,15 +97,7 @@ export async function ask(env, { system, prompt, search = false, maxTokens = 400
     return r.json();
   };
   try {
-    if (ai === 'perplexity') {
-      const j = await post(PERPLEXITY_URL, { Authorization: 'Bearer ' + env.PERPLEXITY_API_KEY }, {
-        model: model.includes('/') ? model : 'anthropic/' + model, instructions: system, input: prompt, max_output_tokens: maxTokens,
-        ...(search ? { tools: [{ type: 'web_search' }] } : {}),
-      });
-      if (typeof j.output_text === 'string') return j.output_text;
-      return (j.output || []).filter(o => o && o.type === 'message').flatMap(o => o.content || []).filter(c => c && typeof c.text === 'string').map(c => c.text).join('');
-    }
-    // Anthropic: a long search turn can pause; send it back as it is to carry on.
+    // A long search turn can pause; send it back as it is to carry on.
     const messages = [{ role: 'user', content: prompt }];
     // 3 searches keep the prompt (search results count as input) well under 100,000
     // tokens, past which Haiku 5.5 costs five times as much.

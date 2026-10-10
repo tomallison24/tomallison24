@@ -189,7 +189,6 @@ jobs:
           ICLOUD_CALENDAR: ${{ secrets.ICLOUD_CALENDAR }}
           ACCESS_TEAM_DOMAIN: ${{ secrets.ACCESS_TEAM_DOMAIN }}
           ACCESS_AUD: ${{ secrets.ACCESS_AUD }}
-          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MEALS_MODEL: ${{ secrets.MEALS_MODEL }}
         run: |
@@ -238,10 +237,10 @@ jobs:
           # functions/_middleware.js: with both of these, every /api/ request
           # must carry a valid Cloudflare Access sign-in (calendar/README.md,
           # "Locking the server functions"). Skipped until they exist.
-          # Meals' AI key (meals/README.md, "The AI key"): Perplexity's or
-          # Anthropic's; either is enough. MEALS_MODEL, optional, names another model
+          # Meals' Anthropic API key (meals/README.md, "The AI key"). MEALS_MODEL,
+          # optional, names another model
           # than Claude Haiku 5.5. Each is skipped until its repository secret exists.
-          for v in ICLOUD_APPLE_ID ICLOUD_APP_PASSWORD ICLOUD_CALENDAR ACCESS_TEAM_DOMAIN ACCESS_AUD PERPLEXITY_API_KEY ANTHROPIC_API_KEY MEALS_MODEL; do
+          for v in ICLOUD_APPLE_ID ICLOUD_APP_PASSWORD ICLOUD_CALENDAR ACCESS_TEAM_DOMAIN ACCESS_AUD ANTHROPIC_API_KEY MEALS_MODEL; do
             if [ -n "${!v}" ]; then
               printf '%s' "${!v}" | npx --yes wrangler@4.131.1 pages secret put "$v" --project-name=tomallison24-news
             fi

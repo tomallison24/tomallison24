@@ -32,37 +32,31 @@ signal. Needs family accounts switched on.
 
 ## The AI
 
-Plans and deals are made by Claude Haiku 5.5, Anthropic's cheapest model, on
-the server, through either:
-
-- **Perplexity's Agent API** (`PERPLEXITY_API_KEY`), which offers Claude at
-  Anthropic's prices, with its own web search; or
-- **Anthropic's API** (`ANTHROPIC_API_KEY`), with Anthropic's web search tool.
-
-If both are set, Perplexity is used. Until one is set, Meals opens and shows
-the last plan, but its buttons are off and it says so. A repository secret
-`MEALS_MODEL` (optional) names another model, `claude-sonnet-5-5` for richer
-recipes; the gear shows which is in use.
+Plans and deals are made by Claude Haiku 5.5, Anthropic's cheapest model,
+through Anthropic's API (`ANTHROPIC_API_KEY`, a Pages secret), on the server;
+the deals search is Anthropic's web search tool, set near Cary. Until the key
+is set, Meals opens and shows the last plan, but its buttons are off and it
+says so. A repository secret `MEALS_MODEL` (optional) names another model,
+`claude-sonnet-5-5` for richer recipes; the gear shows which is in use.
 
 Roughly what it costs (Anthropic's October 2026 prices; my estimate, not a
 quote): Haiku 5.5 is $0.10 per million tokens in and $0.50 out, so a 4-night
-plan (a few thousand tokens) is well under 1¢. Finding the week's deals adds a
-few web searches (Perplexity $0.0025 each, Anthropic 1¢ each) and the pages
-they read. A month of weekly deals and a few plans a week is about 10¢ (about
-$1 on Sonnet 5.5). A week's deals are kept, so asking again costs nothing;
-Look again waits 10 minutes. Haiku 5.5 costs five times as much on a prompt of
-over 100,000 tokens, so Anthropic's search is held to 3 searches a time.
+plan (a few thousand tokens) is well under 1¢. Finding the week's deals is up
+to 3 web searches at 1¢ each, plus the pages they read: about 3 to 4¢. A month
+of weekly deals and a few plans a week is about 25¢. A week's deals are kept,
+so asking again costs nothing; Look again waits 10 minutes. Haiku 5.5 costs
+five times as much on a prompt of over 100,000 tokens, which is why the search
+is held to 3 searches a time.
 
 ### The AI key
 
-1. Make an API key just for aOS, so it can be turned off on its own:
-   Perplexity (your account's API page) or Anthropic (the Claude Console's
-   API keys).
-   Setting a monthly spend limit there is a good idea.
+1. In the Claude Console (platform.claude.com), add some prepaid credit
+   (Billing) and make an API key just for aOS (API keys), so it can be turned
+   off on its own. Setting a monthly spend limit there is a good idea.
 2. This repository → Settings → Secrets and variables → Actions → New
-   repository secret: `PERPLEXITY_API_KEY` (or `ANTHROPIC_API_KEY`), the key.
+   repository secret: `ANTHROPIC_API_KEY`, the key.
 3. The next release or News run hands it to the site (`news.yml` puts it as a
-   Pages secret); Meals' gear then shows which AI it uses.
+   Pages secret); Meals' gear then shows the model it uses.
 
 ## Safety
 

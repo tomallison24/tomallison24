@@ -262,7 +262,7 @@ if (window.top !== window.self) {
   function renderSettings() {
     const s = data.settings, user = A() && A().user();
     const model = String(data.model || '').replace(/^.*\//, '').replace(/^claude-(\w+)-(\d+)-(\d+)$/, (_, n, a, b) => 'Claude ' + cap(n) + ' ' + a + '.' + b);
-    const ai = data.ai === 'perplexity' ? 'Perplexity (' + model + ')' : data.ai === 'anthropic' ? 'Anthropic (' + model + ')' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
+    const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
     $('setBody').innerHTML = '<div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'

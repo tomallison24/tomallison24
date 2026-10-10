@@ -34,7 +34,7 @@ const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { 
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
 const tok = await issue(db, 'O1');
 
-// The stand-in AI (Perplexity's shape): deals, or a plan, by what it's asked.
+// The stand-in AI (Anthropic's Messages API shape): deals, or a plan, by what it's asked.
 const DEALS = { validFrom: '', validTo: '', items: [
   { name: 'Organic boneless skinless chicken thighs', price: '$3.99/lb', regular: '$5.99/lb', prime: true },
   { name: 'Grass-fed ground beef', price: '$5.99/lb', regular: '$7.49/lb', prime: true },
@@ -46,10 +46,10 @@ let coconut = false, asked = 0;
 const ai = async (url, init) => {
   asked++;
   const b = JSON.parse(init.body);
-  const out = /grocery store sales/.test(b.instructions) ? DEALS
+  const out = /grocery store sales/.test(b.system) ? DEALS
     : coconut ? { meals: PLAN.meals.map(x => ({ ...x, ingredients: [...x.ingredients, { item: 'coconut milk', qty: '1 can' }] })) } : PLAN;
   await new Promise(r => setTimeout(r, 300));
-  return new Response(JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(out) }] }] }));
+  return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(out) }], stop_reason: 'end_turn' }));
 };
 let env = { ACCOUNTS: db }, down = false;
 
@@ -95,7 +95,7 @@ const wide = page => page.evaluate(() => document.documentElement.scrollWidth > 
   ok('no script errors', !errs.length, errs.join(' | '));
   await ctx.close();
 }
-env = { ACCOUNTS: db, PERPLEXITY_API_KEY: 'test' };
+env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
 { // deals, a plan, the list
   const { ctx, page, errs } = await phone();
   await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(200);
