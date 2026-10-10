@@ -39,6 +39,6 @@ export default {
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(tick(env).then(r => console.log(JSON.stringify(r))));
   },
-  // Nothing to see at its address.
+  // Its workers.dev address has nothing to show; it only runs on the cron.
   async fetch() { return new Response('Not found', { status: 404 }); },
 };
