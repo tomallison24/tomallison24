@@ -8,8 +8,11 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   app loads. News sites don't allow browsers on other sites to read
   their feeds (CORS), so the feeds are fetched ahead of time instead. No API
   keys needed.
-- **Updates:** `.github/workflows/news.yml` re-fetches every 30 minutes and
-  publishes the site to Cloudflare Pages. `data/` is generated, not committed.
+- **Updates:** `.github/workflows/news.yml` re-fetches the feeds and
+  publishes the site to Cloudflare Pages: on every merge, and every 30 minutes
+  once the News tick is set up (below; GitHub's own schedule manages only every
+  few hours). `data/` is generated, not committed. If every feed fails, the
+  last run's headlines are published unchanged.
 - **No build step** for the app itself: `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts);
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
@@ -23,6 +26,28 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   glass as the sheets, and Try again is tinted slate-teal glass.
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
+
+## Refreshing every 30 minutes
+
+`news.yml` has a schedule (:15 and :45 past each hour), but GitHub runs
+scheduled workflows when it has room: in practice every few hours. The News
+tick, a small Cloudflare Worker (`tick/worker.js`), fires on time at :15 and
+:45 and starts the News workflow itself (as Run workflow in the Actions tab
+would), unless a News run already started in the last 20 minutes.
+`.github/workflows/news-tick.yml` deploys it; it needs a GitHub token:
+
+1. GitHub → Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token. Repository access: only
+   `tomallison24/tomallison24`. Permissions: **Actions: Read and write**
+   (Metadata: Read-only comes with it). Pick the longest expiry offered, and
+   note the date: News falls back to GitHub's schedule when it runs out.
+2. This repository → Settings → Secrets and variables → Actions → New
+   repository secret: `NEWS_TICK_TOKEN`, the token.
+3. Actions → News tick → Run workflow. It uses the Cloudflare token the site
+   already has (allowed to edit Workers, as for Notes' reminders).
+
+To renew the token, update the secret and run News tick again. Test the
+Worker with `node news/scripts/tick-test.mjs`.
 
 ## Sources
 

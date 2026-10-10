@@ -1,0 +1,59 @@
+# Deploys the News tick (news/tick) to Cloudflare Workers: a Worker that runs
+# the News workflow every 30 minutes, since GitHub's own schedule only manages
+# every few hours (news/README.md, "Refreshing every 30 minutes").
+#
+# Needs the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets the site
+# already uses (the token allowed to edit Workers, as for Notes' reminders),
+# and NEWS_TICK_TOKEN: a GitHub fine-grained token for this repository with
+# Actions: Read and write, handed to the Worker as its secret. Does nothing
+# until all three are set, so it is safe to leave on. Runs by hand from the
+# Actions tab (News tick -> Run workflow) - after adding or renewing the token -
+# and when news/tick changes on the default branch.
+name: News tick
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'news/tick/**'
+      - '.github/workflows/news-tick.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: news-tick
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to exact commits (version in the comment), as in the other
+      # workflows: a tag can be moved to new code, and this job can read the
+      # repo's secrets.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+
+      - name: Test the Worker
+        run: node news/scripts/tick-test.mjs
+
+      - name: Deploy the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEWS_TICK_TOKEN: ${{ secrets.NEWS_TICK_TOKEN }}
+        working-directory: news/tick
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$NEWS_TICK_TOKEN" ]; then
+            echo "::notice::News tick not deployed: it needs the CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and NEWS_TICK_TOKEN secrets. See news/README.md, Refreshing every 30 minutes."
+            exit 0
+          fi
+          # wrangler pinned to an exact release, as in notes-push.yml; it runs with the token.
+          npx --yes wrangler@4.142.0 deploy
+          printf '%s' "$NEWS_TICK_TOKEN" | npx --yes wrangler@4.142.0 secret put NEWS_TICK_TOKEN
+          echo "Deployed: News now refreshes every 30 minutes (at :15 and :45)." >> "$GITHUB_STEP_SUMMARY"

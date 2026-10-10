@@ -729,6 +729,12 @@ a.xrow:active{background:var(--fill)}
 .iconbtn.warn{color:var(--danger-text)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(.iconbtn){position:relative}
+:where(.iconbtn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 </head>
 <body>

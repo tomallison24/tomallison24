@@ -4,7 +4,9 @@ The site only ever publishes the newest released version, `aOS<version>` (a
 git tag: `aOS1`, `aOS1.1`, `aOS2`), and **every merge to the default branch
 releases on its own**: the newest version in the release log is tagged on the
 merged code and published within a few minutes. The News headlines still
-refresh every 30 minutes, on the live release.
+refresh on the live release: every 30 minutes once the News tick is set up
+(`news/README.md`, "Refreshing every 30 minutes"), otherwise when GitHub's
+schedule gets to it (every few hours).
 
 ## 1. Write the release's entry
 

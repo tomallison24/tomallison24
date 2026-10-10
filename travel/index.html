@@ -654,6 +654,12 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .lg .btn.danger{border-radius:26px}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet:not(.page){background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.lg .sheet:not(.page){background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(.iconbtn, .chip, .btn){position:relative}
+:where(.iconbtn, .chip, .btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 </head>
 <body>

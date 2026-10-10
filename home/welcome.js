@@ -112,7 +112,9 @@
         'Each app\'s tour plays once per install, and again if you remove the app and add it back (on Android too)',
         'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed',
         'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)',
-        'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps'],
+        'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps',
+        'Small buttons are easier to tap: header buttons, arrows, chips and Get take a tap a little way round them, looking just as before',
+        'News keeps its last headlines up if the news sources can\'t be reached for a while'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
