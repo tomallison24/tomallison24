@@ -131,7 +131,7 @@ export function cleanDeals(j) {
   return { validFrom: ISO.test(j && j.validFrom) ? j.validFrom : '', validTo: ISO.test(j && j.validTo) ? j.validTo : '', items, sources };
 }
 const DEALS_SHAPE = '{"validFrom":"YYYY-MM-DD","validTo":"YYYY-MM-DD","items":[{"name":"Organic boneless skinless chicken thighs","price":"$3.99/lb","regular":"$5.99/lb","prime":true,"note":"Prime members"}],"sources":["https://..."]}';
-function dealsAsk(settings, wk, text) {
+export function dealsAsk(settings, wk, text) {
   const system = 'You read grocery store sales for a family. Answer with one JSON object only, no other words, shaped like: ' + DEALS_SHAPE
     + '. "price" is the sale price' + (settings.prime ? ' a Prime member pays (use the Prime price when one is shown)' : ' for everyone (not Prime-only prices)')
     + ', "regular" the usual price if shown, "prime" true when the price is for Prime members only. Food only: leave out alcohol, flowers, household and beauty items. Never make up a deal: if you can\'t find this week\'s sales, return "items": [].';
