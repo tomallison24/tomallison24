@@ -86,6 +86,7 @@
       highlights: ['Meals: a few nights of different dinners around one meat, this week\'s Whole Foods deals, and one shopping list', 'Easier to tap: small buttons, arrows and chips take a tap a little way round them'],
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
+        'Mail\'s new tagline in aOS: Mail.Controlled.',
         'The welcome link for new family shows Meals with the other Allison family apps',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
         'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
@@ -160,7 +161,7 @@
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mail": {
-      "tag": "A calmer Gmail inbox",
+      "tag": "Mail.Controlled.",
       "cards": [
         {
           "i": "swipe",
