@@ -36,7 +36,7 @@ for (const dev of ['android', 'iphone']) {
   await p.goto(BASE + '/aOS/#invite=AbCdEf123456_-XyZ');
   await p.waitForSelector('#aName', { timeout: 15000 });
   const atLoad = await p.evaluate(() => document.getElementById('aos-welcome') ? (document.querySelector('#aos-welcome h2') || {}).textContent || 'overlay' : null);
-  await p.fill('#aName', 'Sarah'); await p.click('#aGo', { force: true }).catch(e => errs.push('click: ' + e.message.split('\n')[0]));
+  await p.fill('#aName', 'Sarah'); await p.locator('#aGo').scrollIntoViewIfNeeded(); await p.click('#aGo').catch(e => errs.push('click: ' + e.message.split('\n')[0]));   // a person scrolls to it too
   await p.waitForTimeout(3500);
   const after = await p.evaluate(() => ({ h2: (document.querySelector('#aos-welcome h2') || {}).textContent || null, inst: (document.querySelector('#aos-welcome .c-inst') || {}).textContent || null, sd: !!document.querySelector('#aos-welcome .c-sd'), err: (document.getElementById('aErr') || {}).textContent || '' }));
   const problems = [...errs];
