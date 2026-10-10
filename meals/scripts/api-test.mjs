@@ -90,7 +90,7 @@ await test('deals by search: Anthropic\'s API with its web search near Cary, Cla
   const q = asked[0];
   assert.equal(q.url, ANTHROPIC_URL); assert.equal(q.headers['x-api-key'], 'ak'); assert.equal(q.headers['anthropic-version'], '2023-06-01');
   assert.equal(q.body.model, 'claude-haiku-5-5');
-  assert.equal(q.body.tools[0].type, 'web_search_20250305'); assert.equal(q.body.tools[0].max_uses, 3); assert.equal(q.body.tools[0].user_location.city, 'Cary');
+  assert.equal(q.body.tools[0].type, 'web_search_20250305'); assert.equal(q.body.tools[0].max_uses, 5); assert.equal(q.body.tools[0].user_location.city, 'Cary');
   assert.match(q.body.messages[0].content, /Waverly Place, Cary/); assert.match(q.body.system, /Prime/);
   assert.equal(r.body.deals.items.length, 2);
   assert.deepEqual(r.body.deals.sources, ['https://example.com/sales']);
@@ -176,7 +176,7 @@ await test('Anthropic\'s API: the key and version headers, web search near Cary,
   assert.equal(asked.length, 2); assert.equal(asked[0].url, ANTHROPIC_URL);
   assert.equal(asked[0].headers['x-api-key'], 'ak'); assert.equal(asked[0].headers['anthropic-version'], '2023-06-01');
   assert.equal(asked[0].body.model, 'claude-haiku-5-5');
-  assert.equal(asked[0].body.tools[0].max_uses, 3);
+  assert.equal(asked[0].body.tools[0].max_uses, 5);
   assert.equal(asked[0].body.tools[0].type, 'web_search_20250305'); assert.equal(asked[0].body.tools[0].user_location.city, 'Cary');
   assert.equal(asked[1].body.messages[1].role, 'assistant');
 });

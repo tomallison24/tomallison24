@@ -99,9 +99,9 @@ export async function ask(env, { system, prompt, search = false, maxTokens = 400
   try {
     // A long search turn can pause; send it back as it is to carry on.
     const messages = [{ role: 'user', content: prompt }];
-    // 3 searches keep the prompt (search results count as input) well under 100,000
+    // 5 searches keep the prompt (search results count as input) well under 100,000
     // tokens, past which Haiku 5.5 costs five times as much.
-    const tools = search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
+    const tools = search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5,
       user_location: { type: 'approximate', city: 'Cary', region: 'North Carolina', country: 'US', timezone: 'America/New_York' } }] : undefined;
     let text = '';
     for (let turn = 0; turn < 4; turn++) {
@@ -137,7 +137,7 @@ export function dealsAsk(settings, wk, text) {
     + ', "regular" the usual price if shown, "prime" true when the price is for Prime members only. Food only: leave out alcohol, flowers, household and beauty items. Never make up a deal: if you can\'t find this week\'s sales, return "items": [].';
   const prompt = text
     ? 'These are this week\'s sales at ' + settings.store + ', copied from the store\'s sales page or app. List every food deal in them.\n\n' + text
-    : 'Find this week\'s sales at ' + settings.store + ' (the week starting Wednesday ' + wk + '). Look for that store\'s weekly sales page and list every food deal you find, with the dates they run. Put the pages you used in "sources".';
+    : 'Find this week\'s sales at ' + settings.store + ' (the week starting Wednesday ' + wk + '). Stores\' own weekly-ad pages usually load their items in a way search can\'t read, so look for pages that write this week\'s ad out item by item with prices: deal and coupon blogs that break the weekly ad down, weekly-ad preview and match-up pages, and local news "this week\'s deals" posts. Check they are for this week and this chain (prices are usually the same across a chain\'s stores in the area). List every food deal you find, with the dates they run. Put the pages you used in "sources".';
   return { system, prompt, search: !text, maxTokens: 6000 };
 }
 
