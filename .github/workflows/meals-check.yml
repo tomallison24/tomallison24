@@ -1,0 +1,39 @@
+# Runs one real Meals deals search (meals/scripts/deals-live.mjs) with the
+# ANTHROPIC_API_KEY secret, and shows what it found in the run's summary: to
+# see how well the web search finds a store's weekly sales. Saves nothing; each
+# run is one search, a few cents. By hand only: Actions -> Meals check -> Run
+# workflow, with the store as Meals' settings name it.
+name: Meals check
+
+on:
+  workflow_dispatch:
+    inputs:
+      store:
+        description: 'The store, as Meals names it'
+        required: true
+        default: 'Whole Foods Market, Waverly Place, Cary, NC'
+      prime:
+        description: 'Member prices (Prime, VIC): yes or no'
+        required: false
+        default: 'yes'
+
+permissions:
+  contents: read
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Pinned to exact commits (version in the comment), as in the other workflows.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - name: Search for this week's deals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MEALS_MODEL: ${{ secrets.MEALS_MODEL }}
+          STORE: ${{ inputs.store }}
+          PRIME: ${{ inputs.prime }}
+        run: node meals/scripts/deals-live.mjs "$STORE" "$PRIME"
