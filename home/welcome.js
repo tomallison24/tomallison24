@@ -111,7 +111,8 @@
         'The 7-day trial is once per family',
         'Each app\'s tour plays once per install, and again if you remove the app and add it back (on Android too)',
         'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed',
-        'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)'],
+        'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)',
+        'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -130,6 +131,11 @@
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
   const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
+  // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
+  // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
+  const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
+  const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
+  const BY_GROUP = [...CORE, ...FAMILY_APPS];
   const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
@@ -664,7 +670,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'Mail, Calendar, News, Weather, Notes, Podcasts, Travel, Places, Fitness, Drinks and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1046,14 +1052,17 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   // between them and the panel.
   async function sceneBurst(o) {
     const { el, q } = o, fly = q('.c-fly'), box = el.getBoundingClientRect(), m = o.mark.word.getBoundingClientRect();
-    const imgs = APPS.map(id => { const im = new Image(); im.src = icon(id); im.alt = ''; fly.appendChild(im); return im; });
+    const imgs = BY_GROUP.map(id => { const im = new Image(); im.src = icon(id); im.alt = ''; fly.appendChild(im); return im; });
     const at = (im, x, y, size) => { im.style.width = im.style.height = size + 'px'; im.style.left = (x - size / 2 - box.left) + 'px'; im.style.top = (y - size / 2 - box.top) + 'px'; };
     imgs.forEach(im => at(im, m.left + m.width / 2, m.top + m.height / 2, 20));
     const S = Math.min(56, (box.width - 32 - 4 * 14) / 5), G = 14, gy = box.top + Math.max(110, box.height * 0.2) + 20;
     await slow(60);
+    // the core apps in the first row, the family's own in the second (a touch smaller, to fit six)
+    const n = FAMILY_APPS.length, S2 = Math.min(S, (box.width - 32 - (n - 1) * G) / n);
     imgs.forEach((im, k) => setTimeout(() => {
       im.classList.add('on');
-      at(im, box.left + box.width / 2 + (k % 5 - 2) * (S + G), gy + (Math.floor(k / 5) - 0.5) * (S + G), S);
+      const core = k < CORE.length, col = core ? k - (CORE.length - 1) / 2 : (k - CORE.length) - (n - 1) / 2, sz = core ? S : S2;
+      at(im, box.left + box.width / 2 + col * (sz + G), gy + (core ? -0.5 : 0.5) * (S + G), sz);
     }, still() ? 0 : k * 70 * PACE));
     // the mark settles below the grid, smaller, its line under it
     const gridBottom = gy + S + G, panelTop = box.height - 400, my = Math.max(gridBottom + 50, (gridBottom + panelTop) / 2), M = o.mark, k = 0.56;
@@ -1472,7 +1481,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, CORE, FAMILY: FAMILY_APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
 
   // ---- on this phone: an app on the Home Screen tells the family account ----
   // aOS shows ✓ Installed for it. The report needs this app's own session (each
