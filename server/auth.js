@@ -24,7 +24,8 @@
 //   drinks:<id>      that person's Drinks log (functions/drinks/api); only they can
 //                    read it, and it stays when they are removed (for an invite back)
 //   config:plan, config:trial   the family's plan (functions/aOS/api, planView)
-//   meals:settings, meals:deals:<store>, meals:plan, meals:history   the family's Meals
+//   meals:settings, meals:deals:<store>, meals:draft, meals:plan, meals:log,
+//   meals:log:<id>, meals:history   the family's Meals
 //                    (functions/meals/api): shared by the whole family, not per person
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry, s: sign-out
 // count }; it holds only while the user is still in the family and their sign-out

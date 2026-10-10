@@ -92,7 +92,7 @@ if (window.top !== window.self) {
     st.state = 'loading';
     try {
       const j = await api('state');
-      data = { ai: j.ai, model: j.model, week: j.week, stores: j.stores || STORES, settings: j.settings, deals: j.deals || {}, plan: j.plan };
+      data = { ai: j.ai, model: j.model, week: j.week, stores: j.stores || STORES, settings: j.settings, deals: j.deals || {}, draft: j.draft || null, plan: j.plan, log: j.log || [] };
       ls.set(KEY, data); st.state = 'ok'; st.error = '';
     } catch (e) { st.state = e.code; st.error = e.code; }
     render();
@@ -116,26 +116,52 @@ if (window.top !== window.self) {
   function render() {
     document.querySelectorAll('#tabs [data-tab]').forEach(b => { const on = b.dataset.tab === st.tab; b.setAttribute('aria-pressed', on); b.setAttribute('aria-selected', on); });
     slideTabs(true);
-    $('fab').hidden = st.tab !== 'dinners';
+    $('fab').hidden = st.tab !== 'dinners' || !!(data.draft && data.draft.meals);   // a new plan waiting: accept, try again or discard it first
     main.innerHTML = notice() + (st.tab === 'dinners' ? dinners() : st.tab === 'deals' ? deals() : list());
   }
 
+  // dates: 'YYYY-MM-DD' on this phone's calendar
+  const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dayLabel = (iso, o) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', o || { weekday: 'short', month: 'short', day: 'numeric' });
+  const span = e => dayLabel(e.start, { month: 'short', day: 'numeric' }) + ' – ' + dayLabel(e.end, { month: 'short', day: 'numeric' });
+  const where = p => p.shop && p.shop !== 'all' && storeById(p.shop) ? storeById(p.shop).name : p.shop === 'all' ? 'Best deals' : '';
+  // a plan's nights as cards; src says which plan a tap opens ('draft', 'plan' or 'past')
+  const nights = (p, src, from) => p.meals.map((m, i) => '<button class="card rgroup" type="button" data-meal="' + i + '" data-src="' + src + '" style="--i:' + (from + i) + '">'
+    + '<span class="night">Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + esc(dayLabel(p.dates[i])) : '') + '</span><span class="ct">' + esc(m.title) + '</span>'
+    + '<span class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</span>'
+    + (m.uses && m.uses.length ? '<span class="saletag">On sale: ' + esc(m.uses.join(', ')) + '</span>' : '') + '</button>').join('');
+  function startOptions() {
+    const now = new Date();
+    return Array.from({ length: 8 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i), iso = isoDay(d);
+      return '<option value="' + iso + '">' + esc((i === 0 ? 'Today, ' : i === 1 ? 'Tomorrow, ' : '') + dayLabel(iso)) + '</option>'; }).join('');
+  }
   function dinners() {
-    const p = data.plan;
+    const p = data.plan, d = data.draft;
     if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.days, 'dinner') + '…', 'Different every night, and nothing the family avoids. This takes about half a minute.');
-    if (!p || !p.meals || !p.meals.length) {
-      return '<div class="card" style="--i:1"><strong>No dinners planned yet</strong><p>Pick a meat, and Meals plans a few nights of different dinners for the family: a different cuisine and way of cooking each night, using this week’s deals.</p>'
+    let h = '';
+    if (d && d.meals && d.meals.length) {
+      // a new plan to look over: nothing is saved until someone accepts it
+      // the choice first, where it's seen; the dinners under it
+      h += '<div class="card accept" style="--i:1"><strong>New plan · not saved yet</strong>'
+        + '<p>' + esc([cap(d.meat), 'for ' + d.people, where(d)].filter(Boolean).join(' · ')) + '. Accept it to save these dinners, with their dates, and their shopping list for the family.</p>'
+        + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions() + '</select></div>'
+        + '<div class="btns"><button class="btn okbtn" type="button" data-act="accept">Accept plan</button><button class="btn" type="button" data-act="again"' + (noAI() ? ' disabled' : '') + '>Try again</button></div>'
+        + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
+        + nights(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> ' + esc(d.tip) + '</p></div>' : '');
+    } else if (p && p.meals && p.meals.length) {
+      const when = p.dates && p.dates.length ? span({ start: p.dates[0], end: p.dates[p.dates.length - 1] }) : dayLabel(isoDay(new Date(p.at)));
+      h += '<p class="sechead"><span>' + esc([cap(p.meat), 'for ' + p.people, where(p)].filter(Boolean).join(' · ')) + '</span><span>' + esc(when) + '</span></p>' + nights(p, 'plan', 1);
+      if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 1) + '"><p><b>Tip:</b> ' + esc(p.tip) + '</p></div>';
+      if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '. Everyone in the family sees this plan.</p>';
+    } else {
+      h += '<div class="card" style="--i:1"><strong>No dinners planned yet</strong><p>Pick a meat, and Meals plans a few nights of different dinners for the family: a different cuisine and way of cooking each night, using this week’s deals. Accept the plan you like, and it’s saved with its shopping list.</p>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="plan"' + (noAI() ? ' disabled' : '') + '>Plan dinners</button></div></div>';
     }
-    const when = new Date(p.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const at = p.shop && p.shop !== 'all' && storeById(p.shop) ? ' · ' + storeById(p.shop).name : '';
-    let h = '<p class="sechead"><span>' + (thisWeek(p) ? 'This week' : 'Last planned') + ' · ' + esc(cap(p.meat)) + ' · for ' + p.people + esc(at) + '</span><span>' + esc(when) + '</span></p>';
-    h += p.meals.map((m, i) => '<button class="card rgroup" type="button" data-meal="' + i + '" style="--i:' + (i + 1) + '">'
-      + '<span class="night">Night ' + m.day + '</span><span class="ct">' + esc(m.title) + '</span>'
-      + '<span class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</span>'
-      + (m.uses && m.uses.length ? '<span class="saletag">On sale: ' + esc(m.uses.join(', ')) + '</span>' : '') + '</button>').join('');
-    if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 1) + '"><p><b>Tip:</b> ' + esc(p.tip) + '</p></div>';
-    if (p.by) h += '<p class="hint">Planned by ' + esc(p.by) + '. Everyone in the family sees this plan.</p>';
+    // every accepted plan, as Fitness keeps every workout
+    const log = data.log || [];
+    if (log.length) h += '<p class="sechead"><span>Past plans</span><span>' + log.length + '</span></p><div class="rgroup">'
+      + log.map(e => '<button class="rowbtn" type="button" data-past="' + esc(e.id) + '"><span>' + esc(span(e) + ' · ' + cap(e.meat) + (e.shop && e.shop !== 'all' && storeById(e.shop) ? ' · ' + storeById(e.shop).name : ''))
+        + (p && p.id === e.id ? ' <span class="prime">Current</span>' : '') + '<span class="sub">' + esc(e.titles.join(' · ')) + '</span></span></button>').join('') + '</div>';
     return h;
   }
 
@@ -172,17 +198,19 @@ if (window.top !== window.self) {
   }
 
   // the plan's sale items: its store's this week, or every store's for a plan across stores
-  const planDeals = () => data.plan ? weekItems(shopIds(data.plan.shop || 'all')) : null;
-  const saleTag = x => x.deal ? '<span class="saletag">On sale' + (data.plan && data.plan.shop !== 'all' ? ' ' : ' at ' + esc(x.deal.at.name) + ' ') + esc(x.deal.price || '') + '</span>' : '';
-  function shop() { return L.shopping((data.plan && data.plan.meals) || [], planDeals()); }
+  // a plan's sale items: the ones it was planned with (an older plan: its store's this week)
+  const dealsOf = p => !p ? null : p.sales ? { items: p.sales.map(x => ({ ...x, at: storeById(x.store) || { name: x.store } })) } : weekItems(shopIds(p.shop || 'all'));
+  const saleTag = (x, p) => x.deal ? '<span class="saletag">On sale' + (p && p.shop && p.shop !== 'all' ? ' ' : ' at ' + esc(x.deal.at.name) + ' ') + esc(x.deal.price || '') + '</span>' : '';
+  const shopOf = p => L.shopping((p && p.meals) || [], dealsOf(p));
+  function shop() { return shopOf(data.plan); }
   function list() {
     const p = data.plan;
-    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>Plan dinners, and everything they need shows here, sorted like a grocery list.</div>';
+    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan on Dinners, and everything it needs shows here, sorted like a grocery list.' : 'Plan dinners and accept the plan, and everything they need shows here, sorted like a grocery list.') + '</div>';
     if (ticks.at !== p.at) ticks = { at: p.at, keys: [] };
     const s = shop(), done = new Set(ticks.keys);
     const row = x => '<button class="irow" type="button" role="checkbox" aria-checked="' + done.has(x.key) + '" data-key="' + esc(x.key) + '"><span class="box">' + ICON.tick + '</span>'
       + '<span class="it">' + esc(cap(x.item)) + '<small>' + esc([L.total(x.amounts), 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ')].filter(Boolean).join(' · ')) + '</small>'
-      + saleTag(x) + '</span></button>';
+      + saleTag(x, p) + '</span></button>';
     const groups = L.sections(s.buy, x => x.item);
     let h = groups.map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.filter(x => !done.has(x.key)).length + '</span></p><div class="rgroup" style="--i:' + (i + 1) + '">' + g.items.map(row).join('') + '</div>').join('');
     if (s.pantry.length) h += '<p class="sechead"><span>You probably have</span><span>' + s.pantry.length + '</span></p><div class="rgroup">' + s.pantry.map(row).join('') + '</div>';
@@ -196,8 +224,9 @@ if (window.top !== window.self) {
   // Doing things
   // ---------------------------------------------------------------------
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-act], [data-meal], [data-key]'); if (!b) return;
-    if (b.dataset.meal) return openRecipe(+b.dataset.meal);
+    const b = e.target.closest('[data-act], [data-meal], [data-key], [data-past]'); if (!b) return;
+    if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : data.plan);
+    if (b.dataset.past) return openPast(b.dataset.past);
     if (b.dataset.key) {
       const k = b.dataset.key, i = ticks.keys.indexOf(k);
       if (i < 0) ticks.keys.push(k); else ticks.keys.splice(i, 1);
@@ -209,6 +238,9 @@ if (window.top !== window.self) {
     if (act === 'plan-deals') return openPlan(true);
     if (act === 'find') return findDeals();
     if (act === 'find-all') return findAll();
+    if (act === 'accept') return accept();
+    if (act === 'again') return again();
+    if (act === 'discard') return discard();
     if (act === 'paste') { $('pasteText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('pasteText').focus(), 300); return; }
     if (act === 'signin') return signIn();
     if (act === 'untick') { ticks.keys = []; ls.set(K.ticks, ticks); render(); return; }
@@ -297,25 +329,58 @@ if (window.top !== window.self) {
     if (e.target.id === 'pDeals') form.useDeals = e.target.value === '1';
   });
   $('planBody').addEventListener('input', e => { if (e.target.id === 'pNote') form.note = e.target.value; });
-  async function makePlan() {
+  async function makePlan(more) {
     closeSheet('planSheet');
-    st.busy = 'plan'; st.planning = { ...form }; st.tab = 'dinners'; render();
+    const ask = more ? { ...more, again: true } : { ...form };
+    st.busy = 'plan'; st.planning = ask; st.tab = 'dinners'; render(); scrollTo(0, 0);
     try {
-      const j = await api('plan', form);
-      data.plan = j.plan; ls.set(KEY, data);
-      st.busy = null; toast(plural(j.plan.meals.length, 'dinner') + ' planned. The shopping list is ready.');
+      const j = await api('plan', ask);
+      data.draft = j.draft; ls.set(KEY, data);
+      st.busy = null; toast('Here’s a plan. Accept it to save it and its shopping list, or try again.', null, 6000);
     } catch (e) { st.busy = null; toast(say(e.code), null, 8000); }
     render();
   }
+  // another go at the draft, with the same choices
+  const again = () => { const d = data.draft; if (d) makePlan({ meat: d.meat, days: d.days, people: d.people, useDeals: d.useDeals, shop: d.shop, note: d.note || '' }); };
+  async function accept() {
+    const start = ($('aStart') || {}).value;
+    try {
+      const j = await api('accept', { start });
+      data.plan = j.plan; data.log = j.log; data.draft = null; ls.set(KEY, data);
+      ticks = { at: j.plan.at, keys: [] }; ls.set(K.ticks, ticks);
+      toast('Saved for the family, from ' + dayLabel(j.plan.start) + '. The shopping list is ready.', null, 5000);
+    } catch (e) { toast(say(e.code), null, 6000); }
+    render(); scrollTo(0, 0);
+  }
+  async function discard() {
+    try { await api('discard', {}); data.draft = null; ls.set(KEY, data); toast('New plan discarded.'); }
+    catch (e) { toast(say(e.code), null, 6000); }
+    render();
+  }
+  // a past plan: its dinners and shopping list, as it was
+  const pastCache = {};
+  async function openPast(id) {
+    let p = id === (data.plan || {}).id ? data.plan : pastCache[id];
+    if (!p) { try { p = pastCache[id] = (await api('log/' + id)).plan; } catch (e) { toast(say(e.code), null, 6000); return; } }
+    st.past = p;
+    const s = shopOf(p);
+    $('pastLbl').textContent = span({ start: p.start, end: p.dates[p.dates.length - 1] });
+    $('pastBody').innerHTML = '<p class="hint" style="margin:0 2px">' + esc([cap(p.meat), 'for ' + p.people, where(p), p.acceptedBy ? 'accepted by ' + p.acceptedBy : ''].filter(Boolean).join(' · ')) + '</p>'
+      + nights(p, 'past', 0)
+      + '<p class="label">Shopping list</p>' + L.sections(s.buy, x => x.item).map(g => '<div class="rgroup"><p class="sechead" style="margin:10px 14px 2px"><span>' + esc(g.name) + '</span></p><ul class="plain">'
+        + g.items.map(x => '<li>' + esc(cap(x.item)) + ' <small>' + esc(L.total(x.amounts)) + '</small> ' + saleTag(x, p) + '</li>').join('') + '</ul></div>').join('');
+    openSheet('pastSheet');
+  }
+  $('pastBody').addEventListener('click', e => { const b = e.target.closest('[data-meal]'); if (b) openRecipe(+b.dataset.meal, st.past); });
   $('fab').onclick = () => openPlan(false);
 
-  function openRecipe(i) {
-    const m = data.plan && data.plan.meals[i]; if (!m) return;
-    $('recipeLbl').textContent = 'Night ' + m.day;
-    const d = planDeals();
-    $('recipeBody').innerHTML = '<div><h3>' + esc(m.title) + '</h3><p class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : '', 'serves ' + data.plan.people].filter(Boolean).join(' · ')) + '</p></div>'
+  function openRecipe(i, p) {
+    const m = p && p.meals[i]; if (!m) return;
+    $('recipeLbl').textContent = 'Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + dayLabel(p.dates[i]) : '');
+    const d = dealsOf(p);
+    $('recipeBody').innerHTML = '<div><h3>' + esc(m.title) + '</h3><p class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : '', 'serves ' + p.people].filter(Boolean).join(' · ')) + '</p></div>'
       + (m.why ? '<p class="hint" style="margin:0 2px">' + esc(m.why) + '</p>' : '')
-      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li>' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + (deal ? ' ' + saleTag({ deal }) : '') + '</li>'; }).join('') + '</ul></div>'
+      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li>' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + (deal ? ' ' + saleTag({ deal }, p) : '') + '</li>'; }).join('') + '</ul></div>'
       + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li>' + esc(s) + '</li>').join('') + '</ol></div>'
       + '<p class="hint">Made by AI: check times and temperatures, and labels on anything packaged for what the family avoids.</p>';
     openSheet('recipeSheet');
@@ -445,5 +510,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (meals/scripts/app-test.mjs) only.
-  window.__meals = { st, data: () => data, render, load, openPlan, openRecipe };
+  window.__meals = { st, data: () => data, render, load, openPlan, openRecipe, openPast };
 })();

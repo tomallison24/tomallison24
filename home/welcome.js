@@ -88,10 +88,11 @@
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
         'The welcome link for new family shows Meals with the other Allison family apps',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
-        'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is'],
+        'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
+        'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans'],
       apps: {
         meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'],
-          notes: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Prime and VIC member prices'] },
+          notes: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Prime and VIC member prices', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'] },
         news: { highlights: ['Your headlines stay up, even when the news sources can\'t be reached', 'Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
         notes: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same', 'Meals\' shopping list sorts into the same grocery sections as your lists here: copy it into one', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
         calendar: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the month arrows, Today, Search and Settings', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
