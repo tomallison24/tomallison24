@@ -73,7 +73,7 @@ async function newPage(scheme, extra = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US' });
   await ctx.route('**/drinks/api/**', api);
   // The walkthroughs (home/welcome.js) as already seen, as on a phone that has been using the apps.
-  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinks: '1', calendar: '1' }) }, extra);
+  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinks: '999', calendar: '999' }) }, extra);
   await ctx.addInitScript(extra => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');

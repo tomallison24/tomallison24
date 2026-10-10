@@ -24,6 +24,10 @@ jobs:
       - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
       # Meals: the server (the allergy check above all) and its sums
       - run: node meals/scripts/api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs
+      # each app's own server and logic tests: plain Node, no network
+      - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
+      - run: node drinks/scripts/calc-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
+      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).
@@ -48,3 +52,26 @@ jobs:
       - run: node aOS/scripts/release-test.mjs
       # Meals at iPhone size, against its real server code and a stand-in AI
       - run: node meals/scripts/app-test.mjs
+
+  # Each app at iPhone size in Chromium, driven through what a person does:
+  # its own app test, and the security tests that run in a page. A job of its
+  # own so it runs alongside the smoke test. A test seeds aos.seen at '999'
+  # so no walkthrough or update screen covers the page.
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      - run: node house/scripts/app-test.mjs
+      - run: node calendar/scripts/app-test.mjs
+      - run: node drinks/scripts/app-test.mjs
+      - run: node fitness/scripts/app-test.mjs
+      - run: node notes/scripts/aisles-app-test.mjs
+      - run: node notes/scripts/push-app-test.mjs
+      - run: node notes/scripts/security-test.mjs
+      - run: node places/scripts/app-test.mjs
+      - run: node travel/scripts/app-test.mjs
+      - run: node mail/scripts/security-test.mjs

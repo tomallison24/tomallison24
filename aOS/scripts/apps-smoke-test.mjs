@@ -45,7 +45,7 @@ for (const id of ids) {
       return route.continue();
     });
     // The walkthroughs as seen, as on a phone in use.
-    await ctx.addInitScript(ids => localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(ids.map(i => [i, '1'])))), ids);
+    await ctx.addInitScript(ids => localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(ids.map(i => [i, '999'])))), ids);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push('script error: ' + e.message));

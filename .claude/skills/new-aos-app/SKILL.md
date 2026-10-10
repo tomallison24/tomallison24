@@ -53,7 +53,9 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 - `README.md`: what it does, the data and where it lives, how it syncs, tests.
 - `scripts/`: tests (`*-test.mjs`): Node for the logic, and a Playwright
   `app-test.mjs` at iPhone size (390 × 844) that seeds
-  `localStorage['aos.seen']` so the walkthrough doesn't cover the page.
+  `localStorage['aos.seen']` with `'999'` for the app (and any app it opens),
+  so neither the walkthrough nor a later release's update screen covers the
+  page. Seeding the current version ('1') breaks the test at the next release.
 
 ## 2. Wire it into aOS
 
@@ -131,8 +133,10 @@ node aOS/scripts/standalone-test.mjs   # every app on its own, signed out and in
 node <id>/scripts/<tests>.mjs          # the app's own tests
 ```
 
-`.github/workflows/apps-check.yml` runs the check and the smoke test on every
-push and pull request too. Fix every error; say in the PR which warnings remain and why.
+`.github/workflows/apps-check.yml` runs all of this on every push and pull
+request: add each new test to it (plain Node tests to the `check` job, browser
+tests to the `apps` job). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
+that no workflow runs. Fix every error; say in the PR which warnings remain and why.
 
 Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),
 and the merge releases it to everyone's phones (`aOS/RELEASING.md`), so only

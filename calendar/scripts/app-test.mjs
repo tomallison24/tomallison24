@@ -84,7 +84,7 @@ async function newPage(scheme) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ daily: { time, weather_code: code, temperature_2m_max: hi, temperature_2m_min: lo } }) });
   });
   await ctx.route('**/gmail.googleapis.com/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
-  await ctx.addInitScript(({ TODAY, TOMORROW }) => {
+  await ctx.addInitScript(({ TODAY, TOMORROW, CHECKOUT }) => {
     localStorage.setItem('allison-notes-v1', JSON.stringify({
       notes: [{ id: 'n9', title: 'Renew passports', body: 'Both of ours', tags: [], color: 'none', pinned: false, reminder: TOMORROW + 'T09:30', created: 1, updated: 1, archived: false, deletedAt: null }],
       lists: [{ id: 'l1', name: 'Home', color: '#F59E0B' }],
@@ -92,9 +92,9 @@ async function newPage(scheme) {
     }));
     localStorage.setItem('allison-travel-v1', JSON.stringify({ bookings: [
       { id: 'bk1', type: 'flight', airlineCode: 'UA', flightNo: '1234', from: 'DEN', to: 'BOS', fromName: 'Denver', toName: 'Boston', dep: TOMORROW + 'T07:05', depIso: '', arr: TOMORROW + 'T13:50', arrIso: '', conf: 'KQ7T2M' },
-      { id: 'bk2', type: 'hotel', name: 'Courtyard Boston', checkIn: TOMORROW, checkOut: TOMORROW.slice(0, 8) + String(Math.min(28, +TOMORROW.slice(8) + 2)).padStart(2, '0'), address: '275 Tremont St', city: 'Boston' },
+      { id: 'bk2', type: 'hotel', name: 'Courtyard Boston', checkIn: TOMORROW, checkOut: CHECKOUT, address: '275 Tremont St', city: 'Boston' },
     ], trips: [] }));
-  }, { TODAY, TOMORROW });
+  }, { TODAY, TOMORROW, CHECKOUT: ymd(day(3)) });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource|404/.test(m.text())) errors.push(m.text()); });
@@ -145,11 +145,18 @@ await test('the week view lays events out and Travel’s flight is on tomorrow',
   assert.equal((await page.$$('.col')).length, 7);
   const first = await page.$eval('.dh[data-day]', e => e.dataset.day);
   assert.equal(first, weekStartSun, 'the week starts on Sunday');
-  const titles = await page.$$eval('.tev b', els => els.map(e => e.textContent));
+  let titles = await page.$$eval('.tev b', els => els.map(e => e.textContent));
+  assert.ok(titles.includes('Swimming') || titles.includes('Swimming (late)'), 'the weekly swim: ' + titles.join());
+  // On a Saturday, tomorrow is in next week's view
+  if (new Date(TOMORROW + 'T12:00').getDay() === 0) {
+    await page.click('[data-act="next"]');
+    await page.waitForFunction(d => document.querySelector('.dh[data-day]')?.dataset.day === d, TOMORROW);
+    titles = await page.$$eval('.tev b', els => els.map(e => e.textContent));
+  }
   assert.ok(titles.some(t => t.startsWith('UA 1234')), 'Travel flight: ' + titles.join());
   assert.ok((await page.textContent('.allday')).includes('Courtyard Boston'), 'Travel hotel as all-day');
-  assert.ok(titles.includes('Swimming') || titles.includes('Swimming (late)'), 'the weekly swim: ' + titles.join());
   await shot(page, '03-week');
+  if (new Date(TOMORROW + 'T12:00').getDay() === 0) await page.click('[data-act="prev"]');   // back to this week, for the steps after
 });
 
 await test('opening an event shows its details; editing writes back with the etag', async () => {

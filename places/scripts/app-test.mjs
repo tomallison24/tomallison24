@@ -83,7 +83,7 @@ await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
   return route.fulfill({ status: 404, body: '' });
 });
 await ctx.addInitScript(() => {
-  localStorage.setItem('aos.seen', JSON.stringify({ notes: '1', places: '1', calendar: '1' }));   // the walkthrough as seen, as on a phone in use
+  localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
   window.__clip = '';
   Object.defineProperty(navigator, 'clipboard', { value: { readText: async () => window.__clip, writeText: async () => {} }, configurable: true });
 });

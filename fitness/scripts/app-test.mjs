@@ -76,7 +76,7 @@ async function newPage(scheme, seed = SEED, extra = null) {
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
     // The walkthrough (home/welcome.js) as already seen, as on a phone that has been using the app.
-    localStorage.setItem('aos.seen', JSON.stringify({ fitness: '1', calendar: '1' }));
+    localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999', calendar: '999' }));
     if (extra) for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
   }, { seed, extra });
   const page = await ctx.newPage();
