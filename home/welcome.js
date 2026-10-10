@@ -110,7 +110,8 @@
         'Canceling a plan keeps it until the end of its month; then, or when a trial ends, every app but aOS is off until a plan is chosen. Nothing is deleted meanwhile',
         'The 7-day trial is once per family',
         'Each app\'s tour plays once per install, and again if you remove the app and add it back (on Android too)',
-        'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed'],
+        'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed',
+        'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
@@ -1602,6 +1603,8 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     // only silent releases since: note them as seen and say nothing
     if (s && cmp(v, s) > 0 && RELEASES.filter(r => cmp(r.v, s) > 0 && cmp(r.v, v) <= 0).every(r => r.silent)) { markSeen(APP, v); return; }
     if (APP === 'aos') {
+      // an invite opened in the browser: the account first (aOS's own page), then how to add aOS
+      if (!standalone() && /[#&]invite=/.test(location.hash)) return;
       if (!s) return play();
       if (major(v) > major(s)) return playMajor();
       if (cmp(v, s) > 0) markSeen('aos', v);   // a minor one: aOS says nothing, the apps do

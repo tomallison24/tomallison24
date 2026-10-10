@@ -233,6 +233,7 @@
 
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(navigator.userAgent);
   const invite = (/[#&]invite=([A-Za-z0-9_-]+)/.exec(location.hash) || [])[1] || null;
   if (invite) { try { sessionStorage.setItem('aos.later.aos', '1'); } catch {} }   // the account first, then how to add aOS
   const WHY = { code: 'That code isn\'t right.', invite: 'This invite has expired or was already used. Ask for a new one.', name: 'Use letters and spaces for your name.',
@@ -293,7 +294,7 @@
           history.replaceState(null, '', location.pathname);
           try { sessionStorage.removeItem('aos.later.aos'); } catch {}
           await paintAccount(box);
-          if (iphone && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen
+          if ((iphone || android) && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen (Android: Chrome's Install)
         } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
       };
       return;
@@ -333,7 +334,7 @@
     if (u.role !== 'owner') return;
     box.insertAdjacentHTML('beforeend', `<div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
+      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
@@ -356,7 +357,7 @@
   function showInvite(r) {
     const link = new URL('./#invite=' + r.token, location.href).href;
     $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
-    $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari.', url: link }).catch(() => {}) : $('iCopy').click();
+    $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari on iPhone, or Chrome on Android.', url: link }).catch(() => {}) : $('iCopy').click();
     $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
   }
   // Removing someone signs them out and forgets their passkeys; nothing of theirs is
