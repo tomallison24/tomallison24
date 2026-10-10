@@ -1,0 +1,14 @@
+{
+  "name": "Meals",
+  "short_name": "Meals",
+  "description": "Dinner for the family: this week's deals at your Whole Foods, sorted like a grocery list, and a few nights of different dinners built around one meat, with the shopping list.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0D1213",
+  "theme_color": "#0D1213",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

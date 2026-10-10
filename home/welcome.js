@@ -114,13 +114,15 @@
         'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)',
         'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps',
         'Small buttons are easier to tap: header buttons, arrows, chips and Get take a tap a little way round them, looking just as before',
-        'News keeps its last headlines up if the news sources can\'t be reached for a while'],
+        'News keeps its last headlines up if the news sources can\'t be reached for a while',
+        'Meals: a new app for the family\'s dinners: this week\'s Whole Foods deals sorted like a grocery list, a few nights of different dinners around one meat, and the shopping list'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
         { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark.' },
       ],
       apps: {
+        meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'] },
         drinks: { highlights: ['New: a simple log of what you drink', 'Your usual drinks are one tap', 'Private to you, in your family account'],
           notes: ['Bring in your ABV Tracker history from its backup or its Google Sheet', 'Tap the week\'s number for Analysis: this week or month against the one before, and your alcohol-free streak'] },
         calendar: ['A Drinks layer, off until you turn it on: your own standard drinks and alcohol-free days'],
@@ -132,13 +134,13 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mail": {
@@ -416,6 +418,36 @@
         }
       ]
     },
+    "meals": {
+      "tag": "Dinner for the family, for less",
+      "cards": [
+        {
+          "i": "calendar",
+          "t": "A week of dinners",
+          "d": "Pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine."
+        },
+        {
+          "i": "tag",
+          "t": "This week's deals",
+          "d": "Your Whole Foods' sales, found for you or pasted from its app, sorted like a grocery list."
+        },
+        {
+          "i": "list",
+          "t": "One shopping list",
+          "d": "Everything the dinners need in one list, sorted by aisle, with what's on sale. Tick it off in the store."
+        },
+        {
+          "i": "shield",
+          "t": "Safe for the family",
+          "d": "Every plan is checked against your family's allergies before it's kept."
+        },
+        {
+          "i": "people",
+          "t": "Shared with the family",
+          "d": "Everyone signed in sees the same plan and deals."
+        }
+      ]
+    },
     "house": {
       "tag": "Your whole house in one place",
       "cards": [
@@ -672,7 +704,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1253,6 +1285,13 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#fab', t: 'One tap to log', d: 'Your usual drinks sit in each day as tiles. Tap one to log it, or Something else for anything new.', g: 'tap' },
     { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number to compare this week or month with the one before, with your alcohol-free streak.', g: 'tap' },
     { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in your family account where only you can see it, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
+  ] };
+  SPOTS.meals = { stops: [
+    { sel: ['#main .card', '#tabs'], t: 'Shared with the family', d: 'Your family’s dinners: everyone signed in sees the same plan and deals.' },
+    { sel: '#fab', t: 'A week of dinners', d: 'Tap + and pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine. Tap a night for its recipe.', g: 'tap' },
+    { sel: '#tabs [data-tab="deals"]', t: 'This week’s deals', d: 'Your Whole Foods’ sales, found for you or pasted from its app, sorted like a grocery list.', g: 'tap' },
+    { sel: '#tabs [data-tab="list"]', t: 'One shopping list', d: 'Everything the dinners need in one list, sorted by aisle, with what’s on sale. Tick it off in the store.', g: 'tap' },
+    { sel: '#setBtn', t: 'Safe for the family', d: 'Every plan is checked against your family’s allergies before it’s kept. Set them, and your store, here.', g: 'tap' },
   ] };
   SPOTS.house = { stops: [
     { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'It opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
