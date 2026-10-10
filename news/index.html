@@ -603,6 +603,12 @@
   @media (prefers-reduced-transparency: reduce) {
     .lg .sheet, .toast { background: var(--lg-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(#refresh, .tab, [data-action^="retry"]){position:relative}
+:where(#refresh, .tab, [data-action^="retry"])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 </head>
 <body>

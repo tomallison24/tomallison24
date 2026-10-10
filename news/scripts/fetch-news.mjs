@@ -395,9 +395,19 @@ for (const { id, keep, fuzzyDedupe } of config.topics) {
 
 const failed = results.filter(r => !r.ok).length;
 if (failed === results.length) {
-  // Nothing fetched: fail the run so the previous deploy stays live.
-  console.error('Every feed failed; not writing news.json.');
-  process.exit(1);
+  // Nothing fetched (the runner's network, say). Publish the last run's
+  // headlines unchanged, so a merge still releases; with none, fail the run
+  // and the previous deploy stays live.
+  let last = null;
+  try { last = JSON.parse(await readFile(CACHE_COPY, 'utf8')); } catch {}
+  if (!last?.stories?.length) {
+    console.error('Every feed failed and there are no earlier headlines; not writing news.json.');
+    process.exit(1);
+  }
+  await mkdir(dirname(OUT), { recursive: true });
+  await writeFile(OUT, JSON.stringify(last));
+  console.log(`::warning::Every feed failed: publishing the last run's ${last.stories.length} headlines (from ${last.generatedAt}) unchanged.`);
+  process.exit(0);
 }
 
 await mkdir(dirname(OUT), { recursive: true });

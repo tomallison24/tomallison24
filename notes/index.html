@@ -637,6 +637,12 @@ svg.fs{fill:currentColor}
   .lg .sheet:not(.page),.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
   .chips > .slthumb{background:color-mix(in srgb,var(--accent) var(--tint-mix),var(--bar-solid));-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(.iconbtn, .chip, #viewBtn, #tagsBtn, #tidyBtn){position:relative}
+:where(.iconbtn, .chip, #viewBtn, #tagsBtn, #tidyBtn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 </head>
 <body>

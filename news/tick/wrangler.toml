@@ -1,0 +1,13 @@
+# Cloudflare Worker that runs the News workflow every 30 minutes (worker.js).
+# Deployed by .github/workflows/news-tick.yml, which also puts its one secret,
+# NEWS_TICK_TOKEN. See news/README.md, "Refreshing every 30 minutes".
+name = "news-tick"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = false            # no address of its own: it only runs on the cron
+
+[triggers]
+crons = ["15,45 * * * *"]      # every 30 minutes, as news.yml's schedule
+
+[vars]
+REPO = "tomallison24/tomallison24"
