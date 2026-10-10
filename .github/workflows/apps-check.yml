@@ -44,5 +44,7 @@ jobs:
       - run: node aOS/scripts/tours-test.mjs
       # an invite on a phone: the account, then how to add aOS (iPhone and Android)
       - run: node aOS/scripts/join-test.mjs
+      # the newest release in the log: the right update screen in aOS and every app, or none
+      - run: node aOS/scripts/release-test.mjs
       # Meals at iPhone size, against its real server code and a stand-in AI
       - run: node meals/scripts/app-test.mjs

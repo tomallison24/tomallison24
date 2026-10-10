@@ -31,11 +31,16 @@ releases it (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (everything is going into aOS1 for now):
-  each merge releases it again, moving its tag; phones get the change with no
-  update screen. A change worth announcing with update screens gets a new entry
-  above it with the next minor version (`1.1` after `1`), when the owner wants
-  one; the merge that adds it releases it.
+- By default, add to the top entry (aOS1.1 now): each merge releases it again,
+  moving its tag; phones get the change with no update screen. A change worth
+  announcing with update screens gets a new entry above it, when the owner
+  wants one; the merge that adds it releases it:
+  - the next minor version (`1.2` after `1.1`): follow
+    `.claude/skills/aos-minor-release/SKILL.md`;
+  - the next major version (`2`): follow
+    `.claude/skills/aos-major-release/SKILL.md`.
+  Either way `node aOS/scripts/release-test.mjs` (CI runs it) plays the new
+  entry in aOS and every app, as a phone on the version before would see it.
 - `highlights` are the most important changes - the update screens in the
   apps show these; `notes` are everything else, shown in aOS's full log.
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
