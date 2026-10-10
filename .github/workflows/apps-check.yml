@@ -40,3 +40,5 @@ jobs:
       - run: node aOS/scripts/standalone-test.mjs
       # each app's live tour finds its way round the app, and tidies up after itself
       - run: node aOS/scripts/tours-test.mjs
+      # an invite on a phone: the account, then how to add aOS (iPhone and Android)
+      - run: node aOS/scripts/join-test.mjs

@@ -12,6 +12,7 @@
   const HUE = { mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', house: '188,156,104' };   // each icon's Sea glass tint
   const CAT = { mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', drinks: 'Health & Fitness', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places'];
+  const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
     mail: [['once', 'Sign in with your own Google account']],
@@ -82,8 +83,9 @@
 
   // ---- Apps, and Search ----
   const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i></span>${getBtn(id)}</span></div>`).join('');
-  $('list').innerHTML = `<div class="sec"><h2>Curated for the Allison family</h2></div>${rows(D.APPS)}`;
-  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = D.APPS.filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
+  // two collections: the core apps, then the Allison family's own
+  $('list').innerHTML = `<div class="sec"><h2>Core apps</h2></div>${rows(D.CORE)}<div class="sec"><h2>Allison family apps</h2></div>${rows(D.FAMILY)}`;
+  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], group(id), ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = [...D.CORE, ...D.FAMILY].filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
   $('q').oninput = find; find();
 
   // ---- tabs ----
@@ -131,7 +133,7 @@
       <div class="sec"><h2>About</h2></div>
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
-      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
       .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
   }
   function histPage(id, hist) {
@@ -233,6 +235,7 @@
 
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(navigator.userAgent);
   const invite = (/[#&]invite=([A-Za-z0-9_-]+)/.exec(location.hash) || [])[1] || null;
   if (invite) { try { sessionStorage.setItem('aos.later.aos', '1'); } catch {} }   // the account first, then how to add aOS
   const WHY = { code: 'That code isn\'t right.', invite: 'This invite has expired or was already used. Ask for a new one.', name: 'Use letters and spaces for your name.',
@@ -262,7 +265,7 @@
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
     $('famhero').innerHTML = `<div class="famhero">${FAMILY_ICON}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
-      <p>Every app here is chosen for our family: ${D.APPS.length} apps, one account.</p></div>
+      <p>Every app here is chosen for our family: ${D.CORE.length} core apps and ${D.FAMILY.length} made just for us, with one account.</p></div>
       ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
 
@@ -293,7 +296,7 @@
           history.replaceState(null, '', location.pathname);
           try { sessionStorage.removeItem('aos.later.aos'); } catch {}
           await paintAccount(box);
-          if (iphone && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen
+          if ((iphone || android) && !standalone) W.playInstall('aos');   // next: aOS on the Home Screen (Android: Chrome's Install)
         } catch (e) { $('aErr').textContent = why(e); busy($('aGo'), false); }
       };
       return;
@@ -333,7 +336,7 @@
     if (u.role !== 'owner') return;
     box.insertAdjacentHTML('beforeend', `<div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on their iPhone.</p>
+      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
@@ -356,7 +359,7 @@
   function showInvite(r) {
     const link = new URL('./#invite=' + r.token, location.href).href;
     $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
-    $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari.', url: link }).catch(() => {}) : $('iCopy').click();
+    $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari on iPhone, or Chrome on Android.', url: link }).catch(() => {}) : $('iCopy').click();
     $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
   }
   // Removing someone signs them out and forgets their passkeys; nothing of theirs is
