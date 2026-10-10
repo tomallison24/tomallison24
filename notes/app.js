@@ -769,7 +769,7 @@
     return (b.prio - a.prio) || (a.created - b.created);
   }
 
-  // ---------- grocery sections (aisles.js) ----------
+  // ---------- grocery sections (../home/aisles.js) ----------
   // A grocery list shows its items under store sections in supermarket order.
   // An item's section is the one chosen for it, else what the list has learned
   // for that name, else worked out from the words.

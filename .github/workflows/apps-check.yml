@@ -22,6 +22,8 @@ jobs:
       - run: node aOS/scripts/check-apps.mjs
       # the family accounts' safety rules and the plan: plain Node, no network
       - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
+      # Meals: the server (the allergy check above all) and its sums
+      - run: node meals/scripts/api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).
@@ -42,3 +44,5 @@ jobs:
       - run: node aOS/scripts/tours-test.mjs
       # an invite on a phone: the account, then how to add aOS (iPhone and Android)
       - run: node aOS/scripts/join-test.mjs
+      # Meals at iPhone size, against its real server code and a stand-in AI
+      - run: node meals/scripts/app-test.mjs

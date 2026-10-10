@@ -27,7 +27,7 @@ Mail and News. Free, no accounts, no server.
   list can turn it on or off with **Sort into store sections** (tap the
   list's chip again to edit it). Choosing the list shows all of it, not just
   today's.
-  - Worked out on the phone from a word list (`aisles.js`): the last word
+  - Worked out on the phone from a word list (`../home/aisles.js`, shared with Meals): the last word
     usually names the thing (`chocolate milk` is milk, `chicken soup` is
     soup), with two-word names such as `peanut butter` and `ice cream` known
     as phrases. Quantities and notes are ignored (`2 lbs carrots (organic)`).
@@ -149,7 +149,7 @@ an iPhone, so notifications are turned on in each one you want them in.
 
 ## How it's built
 
-- **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, for the page's Content-Security-Policy; with `aisles.js`, the
+- **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, for the page's Content-Security-Policy; with `../home/aisles.js`, the
   grocery sections' word list); `sw.js` keeps it working
   offline and shows notifications; `manifest.webmanifest` and the icons make
   it installable. `push/` is the notification server (a Cloudflare Worker),

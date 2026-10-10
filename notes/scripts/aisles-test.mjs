@@ -1,7 +1,7 @@
-// Tests the grocery sections (notes/aisles.js) on everyday shopping-list
+// Tests the grocery sections (home/aisles.js) on everyday shopping-list
 // items, written the way people type them.
 //   node notes/scripts/aisles-test.mjs
-import '../aisles.js';
+import '../../home/aisles.js';
 const { sectionOf, key, groceryName, SECTIONS } = globalThis.NotesAisles;
 
 let pass = 0, fail = 0;

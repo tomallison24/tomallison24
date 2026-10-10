@@ -1,4 +1,4 @@
-// Grocery sections for Notes' Reminders: "Milk" goes under Dairy & Eggs,
+// Grocery sections for Notes' Reminders (and Meals' deals and shopping list): "Milk" goes under Dairy & Eggs,
 // "Chicken thighs" under Meat, in the order you'd walk a supermarket.
 //
 // Worked out on the phone from the words alone; nothing is sent anywhere.

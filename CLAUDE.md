@@ -58,7 +58,8 @@ end with 0 errors.
   its `data-app` id is `aos`. Each app is added to the Home Screen on its own.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme) and `slide.js` - plus the Welcome Lab. Its
+  steps, release log, theme), `slide.js` and `aisles.js` (grocery sections, for
+  Notes and Meals) - plus the Welcome Lab. Its
   `index.html` is a "moved to aOS" notice.
 - `home/back.js` (swipe up to the launcher) is **gone**: don't add
   `../home/back.js` back to a page or to a `sw.js` SHELL list (a missing file

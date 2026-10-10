@@ -34,7 +34,7 @@ const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { 
   list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
 const tok = await issue(db, 'O1');
-const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'house', 'aOS'];
+const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house', 'aOS'];
 const b = await chromium.launch();
 const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const out = [];

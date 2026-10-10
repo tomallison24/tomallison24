@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meals</title>
+<meta name="description" content="Dinner for the family: this week's deals at your Whole Foods, sorted like a grocery list, and a few nights of different dinners built around one meat, with the shopping list.">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meals">
+<meta name="referrer" content="no-referrer">
+<link rel="apple-touch-icon" href="icon-180.png?v=1">
+<link rel="icon" type="image/png" href="icon-512.png?v=1">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  Meals - dinner for the family, on one screen with three tabs:
+    Dinners  this week's plan: a few nights of different dinners built around
+             one meat, each opening to its recipe
+    Deals    this week's sales at your Whole Foods, sorted into the same
+             grocery sections as Notes' grocery lists
+    List     what to buy for the plan, in those sections, with the sale price
+             where it's on sale
+  The plan and the deals are the family's (functions/meals/api), made by an AI
+  model; the last ones are kept on the phone too, so the list works in the
+  store with no signal. Code: app.js, and logic.js for the sums. The look is
+  Drinks': the same tokens, tiles and Liquid Glass sheets.
+-->
+<style>
+:root{
+  --bg:#EEF2F0; --text:#111114; --muted:rgba(60,60,67,.80); --faint:rgba(60,60,67,.76);
+  --accent:#3B7366; --on-accent:#FFFFFF; --cta:linear-gradient(100deg,#6FA597 0%,#8193BC 34%,#BE918F 67%,#BC9C68 100%); --cta-ink:#10181A; --accent-text:#3B7366; --danger:#E5281D; --danger-text:#AE2117; --flag:#B45309;
+  --glass:rgba(255,255,255,.58); --glass-2:rgba(255,255,255,.86); --sheet:rgba(248,250,249,.90);
+  --gb-edge:rgba(255,255,255,.95); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 60%);
+  --hair:rgba(60,60,67,.14); --hair-2:rgba(60,60,67,.09); --fill:rgba(118,118,128,.11);
+  --hi:rgba(255,255,255,.8); --lift:rgba(40,40,80,.08); --lift-strong:rgba(40,40,80,.16);
+  --scrim:rgba(0,0,0,.22); --grab:rgba(60,60,67,.30); --aurora:.40; --tint-mix:16%;
+  --blur:blur(30px) saturate(180%); --ease:cubic-bezier(.22,1,.36,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --icon:#3B7366; --tl:32%;
+  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(247,249,248,.97);
+  --seg-thumb:rgba(255,255,255,.92);
+  --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
+  --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
+  /* Cards: very faint tiles, the same in every AllisonOS app */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
+  --sale:#1A7F45;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-text:#A9D3C7; --danger:#FF453A; --danger-text:#FF453A; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --aurora:.72; --tint-mix:42%;
+  --icon:#A9D3C7; --tl:80%;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+  --sale:#30D158;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-text:#A9D3C7; --danger:#FF453A; --danger-text:#FF453A; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --aurora:.72; --tint-mix:42%;
+  --icon:#A9D3C7; --tl:80%;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+  --sale:#30D158;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+/* Nothing may make the page wider than the phone: clip sideways, as Home does
+   (clip, not hidden: hidden would make the body its own scroller). */
+html,body{overflow-x:clip;max-width:100%}
+@supports not (overflow:clip){html{overflow-x:hidden}}
+html.locked,html.locked body{overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:100%;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.b{stroke-width:2.2}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- app shell, and the light behind the glass ---- */
+.app{position:relative;width:100%;max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;overflow-x:clip;background:var(--bg);isolation:isolate}
+.ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.ambient i{position:absolute;display:block;border-radius:50%;filter:blur(58px);opacity:var(--aurora);will-change:transform}
+.ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#6FA597 0%,rgba(111,165,151,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
+.ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#BE918F 0%,rgba(190,145,143,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
+.ambient i:nth-child(3){width:120.4%;aspect-ratio:1;right:-20%;bottom:-6%;background:radial-gradient(circle,#8193BC 0%,rgba(129,147,188,0) 68%);animation:drift3 47s ease-in-out infinite alternate}
+.ambient i:nth-child(4){width:86.8%;aspect-ratio:1;left:-17.2%;bottom:13.6%;background:radial-gradient(circle,#BC9C68 0%,rgba(188,156,104,0) 68%);animation:drift4 38s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate3d(14%,10%,0) scale(1.18)}}
+@keyframes drift2{to{transform:translate3d(-12%,16%,0) scale(1.12)}}
+@keyframes drift3{to{transform:translate3d(-16%,-12%,0) scale(1.22)}}
+@keyframes drift4{to{transform:translate3d(18%,-14%,0) scale(1.15)}}
+
+.top{padding:calc(env(safe-area-inset-top,0px) + 12px) max(14px,env(safe-area-inset-right,0px)) 4px max(14px,env(safe-area-inset-left,0px));animation:fadeDown .5s var(--ease) both}
+.titlerow{display:flex;align-items:center;gap:10px;padding:2px 4px 0}
+.title{margin:0;flex:1;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.acts{display:flex;gap:8px;align-items:center}
+
+/* ---- buttons: clear Liquid Glass, as in every AllisonOS app ---- */
+.iconbtn,.btn,.fab,.seg{background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter)}
+.iconbtn{position:relative;width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s,color .2s}
+.iconbtn svg{width:22px;height:22px}
+.iconbtn:active{transform:scale(.9);background:var(--glass-2);color:var(--text)}
+.iconbtn.warn::after{content:'';position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.btn{--tint:var(--accent);position:relative;min-height:50px;padding:8px 18px;border-radius:26px;font-weight:600;font-size:16px;color:var(--accent-text);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 42%,transparent),inset 0 1px 1px var(--hi);transition:transform .18s var(--ease),filter .2s}
+.btn:active{transform:scale(.975);filter:brightness(.9)}
+.btn.quiet{color:var(--text);font-weight:500;box-shadow:var(--lg-rim)}
+.btn.danger{--tint:var(--danger);color:var(--danger-text);font-weight:500;width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn[aria-pressed="true"]{color:var(--text);background:var(--gb-shine),color-mix(in srgb,var(--tint) var(--tint-mix),transparent)}
+.fab{width:56px;height:56px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);
+  box-shadow:var(--lg-rim),0 8px 26px var(--lift);transition:transform .2s var(--ease);animation:popIn .45s var(--ease) both}
+.fab:active{transform:scale(.9)}
+.fab svg{width:31px;height:31px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.iconbtn,.btn,.fab,.seg{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.iconbtn,.btn,.fab,.seg{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* ---- content ---- */
+.list{padding:10px 14px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:8px 6px 0;display:flex;justify-content:space-between}
+.rgroup,.empty,.card{border-radius:22px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.rgroup{overflow:hidden}
+.empty{text-align:center;color:var(--muted);padding:26px 20px;font-size:14px}
+.empty strong{display:block;color:var(--text);font-size:17px;font-weight:600;margin-bottom:4px}
+.hint{font-size:12px;line-height:1.55;color:var(--faint);margin:0 8px}
+.enter .rgroup,.enter .card,.enter .seg{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+.navrow{display:flex;align-items:center;gap:6px;padding:0 2px}
+.navrow .lbl{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:4px 8px -6px}
+.opts{display:flex;flex-wrap:wrap;gap:8px;padding:0 4px}
+.opt{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);
+  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
+.opt:active{transform:scale(.93)}
+.opt[aria-checked="true"]{color:var(--text);font-weight:600;background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 50%,transparent),inset 0 1px 1px var(--lgs-rim)}
+.frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
+.frow:first-child{border-top:0}
+.frow > label{flex:1 0 auto;white-space:nowrap}
+.frow > label small{font-size:12px;color:var(--faint);margin-left:4px}
+.frow select,.frow input[type="time"]{border:0;border-radius:999px;padding:8px 30px 8px 13px;font-size:15px;min-width:0;max-width:62%;color:var(--text);font-variant-numeric:tabular-nums;
+  appearance:none;-webkit-appearance:none;background-color:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 11px center;background-size:14px}
+.frow input[type="time"]{padding-right:13px;background-image:none}
+.frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
+.frow input.txt::placeholder{color:var(--faint)}
+.frow .unit{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill)}
+.frow .unit button{min-width:44px;height:34px;padding:0 10px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted)}
+.frow .unit button[aria-pressed="true"]{background:var(--seg-thumb);color:var(--text);box-shadow:inset 0 0 0 1px var(--gb-edge)}
+.formbtns{display:flex;gap:8px}
+.formbtns .btn{flex:1}
+.calc{font-size:14px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.calc b{color:var(--text)}
+.linkbtn{align-self:center;min-height:44px;padding:0 14px;color:var(--accent-text);font-weight:600;font-size:15px}
+
+/* ---- Analysis ---- */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:20px;box-shadow:var(--lg-rim),0 6px 20px var(--lift)}
+.seg button{border-radius:17px;min-height:38px;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{color:var(--text)}
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:17px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease)}
+.slthumb.off{opacity:0;scale:.7}
+/* ---- More: your account, goals, your data ---- */
+.rowbtn{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;padding:10px 14px;font-size:15px;font-weight:600;border-top:1px solid var(--hair-2);color:var(--text)}
+.rowbtn:first-child{border-top:0}
+.rowbtn:active{background:var(--fill)}
+.rowbtn .ic{width:26px;display:grid;place-items:center;flex:none;color:var(--icon)}
+.rowbtn .ic svg{width:22px;height:22px}
+.rowbtn .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.rowbtn.danger,.rowbtn.danger .ic{color:var(--danger-text)}
+.acct{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.acct p{margin:0;font-size:14px;color:var(--muted)}
+.acct strong{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
+
+/* ---- the dock: + logs today ---- */
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end;padding:0 14px;z-index:5;pointer-events:none;transition:opacity .2s}
+.dock > *{pointer-events:auto}
+html.locked .dock{opacity:0;pointer-events:none}
+
+/* ---- sheets: Liquid Glass, as in Fitness and Calendar ---- */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.sheetwrap{position:fixed;inset:auto 0 auto 0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
+.scrim{position:absolute;inset:0;background:var(--lgs-scrim);animation:fadeIn .3s ease both}
+.sheet{position:relative;width:auto;margin:0 8px 8px;border-radius:34px;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift);animation:sheetUp .46s var(--ease) both}
+@media (min-width:576px){.sheet{margin:0 auto 8px;width:544px}}
+.grab{width:38px;height:5px;border-radius:99px;background:var(--grab);margin:0 auto;padding:10px 60px 8px;background-clip:content-box;box-sizing:content-box;flex:none;cursor:grab}
+.grab,.sheethead{touch-action:none;-webkit-user-select:none;user-select:none}
+.sheet.dragging{animation:none;transition:none}
+.sheet.settling{transition:transform .28s var(--ease)}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px 10px}
+.sheethead h2{margin:0;font-size:17px;font-weight:600;padding-left:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.okbtn{color:var(--cta-ink);background:var(--cta);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.okbtn:active{color:var(--cta-ink);background:var(--cta);filter:brightness(.94)}
+.sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.sheetbody > *{flex-shrink:0}
+.sheet .rgroup{border-radius:26px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* toast: the same clear glass as the sheets */
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
+  display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+.toast span{min-width:0}
+.toast button{color:var(--accent-text);font-weight:600;flex:none;min-height:36px;padding:0 6px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.toast{background:var(--bar-solid)}}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes rowIn{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+
+/* ---- Meals ---- */
+.tabs{padding:10px 2px 2px}
+.card{width:100%;display:flex;flex-direction:column;gap:3px;padding:14px 16px;text-align:left;color:var(--text);transition:transform .18s var(--ease)}
+button.card:active{transform:scale(.985)}
+.card .night{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-text)}
+.card .ct{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.card .cm{font-size:13px;color:var(--muted)}
+.card .why{font-size:14px;color:var(--muted)}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.card strong{font-size:17px;color:var(--text)}
+.card .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.card .btns .btn{flex:1 1 140px}
+.saletag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--sale)}
+.saletag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.prime{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--accent-text);padding:1px 6px;border-radius:6px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+.drow{display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-top:1px solid var(--hair-2)}
+.drow:first-child{border-top:0}
+.drow .dn{flex:1;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.drow .dn small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.drow .dp{flex:none;text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.drow .dp small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.irow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 16px 8px 12px;text-align:left;border-top:1px solid var(--hair-2);color:var(--text)}
+.irow:first-child{border-top:0}
+.irow .box{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;box-shadow:inset 0 0 0 1.5px var(--faint);color:var(--on-accent)}
+.irow .box svg{width:15px;height:15px;opacity:0}
+.irow[aria-checked="true"] .box{background:var(--accent);box-shadow:none}
+.irow[aria-checked="true"] .box svg{opacity:1}
+.irow .it{flex:1;min-width:0;font-size:15px;overflow-wrap:anywhere}
+.irow .it small{display:block;font-size:12px;color:var(--muted)}
+.irow[aria-checked="true"] .it{color:var(--faint);text-decoration:line-through}
+.recipe h3{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.01em}
+.recipe .cm{font-size:13px;color:var(--muted);margin-top:2px}
+.recipe ul,.recipe ol{margin:0;padding:12px 16px 12px 34px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.recipe li small{color:var(--muted)}
+.busy{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 20px;text-align:center;color:var(--muted);font-size:14px}
+.busy strong{color:var(--text);font-size:17px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--fill);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+textarea.paste{width:100%;min-height:180px;border:0;border-radius:22px;padding:14px 16px;font:15px/1.45 var(--font);color:var(--text);resize:vertical;
+  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);outline:none}
+textarea.paste::placeholder{color:var(--faint)}
+.frow input.txt.wide{text-align:right}
+.src{font-size:12px;color:var(--faint);margin:0 8px;overflow-wrap:anywhere}
+.src a{color:var(--accent-text)}
+.err{color:var(--danger-text)}
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(.opt, .seg button){position:relative}
+:where(.opt, .seg button)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <section aria-label="Meals">
+    <header class="top">
+      <div class="titlerow">
+        <h1 class="title">Meals</h1>
+        <div class="acts">
+          <button class="iconbtn" id="setBtn" type="button" aria-label="Store, allergies and your account"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.4 7.4 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 2.6-1.5l2.4 1 2-3.4z"/></svg></button>
+        </div>
+      </div>
+      <div class="tabs"><div class="seg slides" id="tabs" role="tablist" aria-label="Dinners, deals or shopping list">
+        <button type="button" role="tab" data-tab="dinners" aria-pressed="true" aria-selected="true">Dinners</button>
+        <button type="button" role="tab" data-tab="deals" aria-pressed="false" aria-selected="false">Deals</button>
+        <button type="button" role="tab" data-tab="list" aria-pressed="false" aria-selected="false">List</button>
+      </div></div>
+    </header>
+    <main class="list" id="main" role="tabpanel"></main>
+  </section>
+
+  <div class="dock">
+    <button class="fab" id="fab" type="button" aria-label="Plan dinners"><svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg></button>
+  </div>
+
+  <!-- A new plan: the meat, how many nights and people, this week's deals -->
+  <div class="sheetwrap" id="planSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="planLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="planLbl">Plan dinners</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody" id="planBody"></div>
+    </div>
+  </div>
+
+  <!-- One dinner: its recipe -->
+  <div class="sheetwrap" id="recipeSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="recipeLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="recipeLbl">Night 1</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+      <div class="sheetbody recipe" id="recipeBody"></div>
+    </div>
+  </div>
+
+  <!-- Paste this week's deals -->
+  <div class="sheetwrap" id="pasteSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pasteLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="pasteLbl">Paste this week’s deals</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody" id="pasteBody">
+        <p class="hint">Open your store’s weekly sales in the Whole Foods app or website, select the text, copy it, and paste it here. Meals picks out the food deals and sorts them.</p>
+        <label class="vh" for="pasteText">This week’s deals</label>
+        <textarea class="paste" id="pasteText" placeholder="Paste the sales here"></textarea>
+        <button class="btn okbtn" type="button" id="pasteGo">Read the deals</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings: the store, Prime, what the family avoids, your account -->
+  <div class="sheetwrap" id="setSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="setLbl">Meals</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody" id="setBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
+</div>
+
+<script src="../home/slide.js"></script>
+<script src="../home/account.js"></script>   <!-- family accounts: the family's plan and deals -->
+<script src="../home/aisles.js"></script>   <!-- the grocery sections, as in Notes' grocery lists -->
+<script src="logic.js"></script>
+<script src="app.js"></script>
+<script src="../home/welcome.js" data-app="meals" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
+</body>
+</html>
