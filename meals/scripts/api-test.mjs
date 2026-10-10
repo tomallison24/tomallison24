@@ -50,19 +50,21 @@ const token = await issue(db, 'u1');
 await test('needs a signed-in family member', async () => {
   const r = await call('state'); assert.equal(r.status, 401); assert.equal(r.body.error, 'signin');
 });
-await test('state: the store, Prime and allergies start as the family set them; which AI is set up', async () => {
+await test('state: the stores, member cards and allergies start as the family set them; which AI is set up', async () => {
   const r = await call('state', { token });
   assert.equal(r.status, 200);
   assert.equal(r.body.ai, 'anthropic'); assert.equal(r.body.model, 'claude-haiku-5-5');
   assert.equal((await call('state', { token, env: { ACCOUNTS: db, ...A, MEALS_MODEL: 'claude-sonnet-5-5' } })).body.model, 'claude-sonnet-5-5');
-  assert.match(r.body.settings.store, /Waverly Place, Cary/);
-  assert.equal(r.body.settings.prime, true);
+  assert.deepEqual(r.body.settings.stores, ['wholefoods', 'harristeeter', 'publix', 'lidl', 'lowesfoods', 'aldi', 'walmart', 'target']);
+  assert.deepEqual(r.body.settings.cards, ['prime', 'vic']);
+  assert.match(r.body.stores.find(x => x.id === 'wholefoods').where, /New Waverly Pl, Cary/);
+  assert.equal(r.body.stores.find(x => x.id === 'harristeeter').cardName, 'VIC');
   assert.deepEqual(r.body.settings.avoid, ['tree nuts', 'coconut']);
   assert.equal((await call('state', { token, env: { ACCOUNTS: db } })).body.ai, null);
 });
 await test('no key yet: deals and plans say so, without calling anything', async () => {
   asked.length = 0;
-  assert.equal((await call('deals', { token, body: {}, env: { ACCOUNTS: db } })).body.error, 'no-ai');
+  assert.equal((await call('deals', { token, body: { store: 'wholefoods' }, env: { ACCOUNTS: db } })).body.error, 'no-ai');
   assert.equal((await call('plan', { token, body: { meat: 'chicken' }, env: { ACCOUNTS: db } })).body.error, 'no-ai');
   assert.equal(asked.length, 0);
 });
@@ -81,38 +83,50 @@ await test('the allergy check: tree nuts and coconut in any form, but not peanut
   assert.deepEqual(avoidHits(['2 tbsp peanut butter', 'pinch of nutmeg', 'butternut squash', 'crushed peanuts', 'doughnut'], avoid), []);
   assert.deepEqual(avoidHits(['shrimp'], ['shrimp']), ['shrimp']);
 });
-await test('deals by search: Anthropic\'s API with its web search near Cary, Claude Haiku 5.5, for the family\'s store, Prime prices', async () => {
+await test('deals by search: Anthropic\'s API with its web search near Cary, Claude Haiku 5.5, for that store, member prices with the family\'s card', async () => {
   asked.length = 0;
-  answers = ['Here you go: ' + JSON.stringify({ validFrom: '2026-10-07', validTo: '2026-10-13', items: [{ name: 'Boneless chicken thighs', price: '$3.99/lb', regular: '$5.99/lb', prime: true }, { name: '' }, { name: 'Organic strawberries', price: '$3.99' }], sources: ['https://example.com/sales', 'javascript:alert(1)'] })];
-  const r = await call('deals', { token, body: {} });
+  answers = ['Here you go: ' + JSON.stringify({ validFrom: '2026-10-07', validTo: '2026-10-13', items: [{ name: 'Boneless chicken thighs', price: '$3.99/lb', regular: '$5.99/lb', member: true }, { name: '' }, { name: 'Organic strawberries', price: '$3.99' }], sources: ['https://example.com/sales', 'javascript:alert(1)'] })];
+  assert.equal((await call('deals', { token, body: { store: 'nowhere' } })).body.error, 'store');
+  const r = await call('deals', { token, body: { store: 'wholefoods' } });
   assert.equal(r.status, 200);
   assert.equal(asked.length, 1);
   const q = asked[0];
   assert.equal(q.url, ANTHROPIC_URL); assert.equal(q.headers['x-api-key'], 'ak'); assert.equal(q.headers['anthropic-version'], '2023-06-01');
   assert.equal(q.body.model, 'claude-haiku-5-5');
   assert.equal(q.body.tools[0].type, 'web_search_20250305'); assert.equal(q.body.tools[0].max_uses, 5); assert.equal(q.body.tools[0].user_location.city, 'Cary');
-  assert.match(q.body.messages[0].content, /Waverly Place, Cary/); assert.match(q.body.system, /Prime/);
+  assert.match(q.body.messages[0].content, /New Waverly Pl, Cary/); assert.match(q.body.system, /with a Prime card/);
+  assert.equal(r.body.deals.items[0].member, true); assert.equal(r.body.deals.store, 'wholefoods');
   assert.equal(r.body.deals.items.length, 2);
   assert.deepEqual(r.body.deals.sources, ['https://example.com/sales']);
   assert.equal(r.body.deals.how, 'search');
 });
 await test('this week\'s search is kept: asking again costs nothing; refresh waits 10 minutes', async () => {
   asked.length = 0;
-  assert.equal((await call('deals', { token, body: {} })).body.deals.items.length, 2);
-  assert.equal((await call('deals', { token, body: { refresh: true } })).body.deals.items.length, 2);
+  assert.equal((await call('deals', { token, body: { store: 'wholefoods' } })).body.deals.items.length, 2);
+  assert.equal((await call('deals', { token, body: { store: 'wholefoods', refresh: true } })).body.deals.items.length, 2);
   assert.equal(asked.length, 0);
 });
 await test('deals by paste: read out of the text, no search', async () => {
   asked.length = 0;
   answers = [JSON.stringify({ items: [{ name: 'Wild sockeye salmon', price: '$9.99/lb' }] })];
-  const r = await call('deals', { token, body: { text: 'Sockeye salmon fillets $9.99/lb Prime' } });
+  const r = await call('deals', { token, body: { store: 'wholefoods', text: 'Sockeye salmon fillets $9.99/lb Prime' } });
   assert.equal(r.body.deals.how, 'paste'); assert.equal(r.body.deals.items[0].name, 'Wild sockeye salmon');
   assert.equal(asked[0].body.tools, undefined); assert.match(asked[0].body.messages[0].content, /Sockeye salmon fillets/);
 });
 await test('a search that finds nothing keeps the last list', async () => {
   answers = [JSON.stringify({ items: [] })];
-  await call('deals', { token, body: { refresh: true, text: 'nothing useful' } });
-  assert.equal(JSON.parse(db.m.get('meals:deals')).items[0].name, 'Wild sockeye salmon');
+  await call('deals', { token, body: { store: 'wholefoods', refresh: true, text: 'nothing useful' } });
+  assert.equal(JSON.parse(db.m.get('meals:deals:wholefoods')).items[0].name, 'Wild sockeye salmon');
+});
+await test('each store keeps its own deals; a store without a card the family has gets everyone\'s prices', async () => {
+  asked.length = 0;
+  answers = [JSON.stringify({ items: [{ name: 'Publix ground chuck', price: '$4.99/lb', regular: '$8.99/lb' }] })];
+  const r = await call('deals', { token, body: { store: 'publix' } });
+  assert.equal(r.body.deals.store, 'publix'); assert.match(asked[0].body.messages[0].content, /Publix, 1441 Kelly Rd, Apex/);
+  assert.match(asked[0].body.system, /everyone pays/);
+  assert.equal(JSON.parse(db.m.get('meals:deals:wholefoods')).items[0].name, 'Wild sockeye salmon');
+  const st = await call('state', { token });
+  assert.deepEqual(Object.keys(st.body.deals).sort(), ['publix', 'wholefoods']);
 });
 await test('a plan: 4 different dinners for 4, variety asked for, this week\'s deals passed on, saved for the family', async () => {
   asked.length = 0;
@@ -124,10 +138,21 @@ await test('a plan: 4 different dinners for 4, variety asked for, this week\'s d
   const q = asked[0].body;
   assert.match(q.messages[0].content, /4 different dinners for 4 people/); assert.match(q.messages[0].content, /different cuisine/);
   assert.match(q.messages[0].content, /Wild sockeye salmon \$9\.99\/lb/);
+  assert.match(q.messages[0].content, /Publix ground chuck \$4\.99\/lb/);   // every store's: shop defaults to all
+  assert.match(q.messages[0].content, /store in brackets/);
+  assert.equal(p.shop, 'all');
   assert.match(q.system, /never eat: tree nuts, coconut/);
   assert.equal(q.tools, undefined);
   assert.equal(JSON.parse(db.m.get('meals:plan')).meals[0].title, 'Chicken tacos');
   assert.equal(JSON.parse(db.m.get('meals:history')).length, 4);
+});
+await test('a plan for one store uses only that store\'s deals', async () => {
+  asked.length = 0;
+  answers = [planJSON(four())];
+  const r = await call('plan', { token, body: { meat: 'pork', useDeals: true, shop: 'publix' } });
+  assert.equal(r.body.plan.shop, 'publix');
+  assert.match(asked[0].body.messages[0].content, /sales at Publix/);
+  assert.doesNotMatch(asked[0].body.messages[0].content, /sockeye/);
 });
 await test('the next plan is told what the family just had', async () => {
   asked.length = 0;
@@ -153,9 +178,9 @@ await test('a plan that slips twice is never saved', async () => {
   assert.equal(r.status, 422); assert.equal(r.body.error, 'avoid');
   assert.equal(db.m.get('meals:plan'), before);
 });
-await test('settings: the family can change the store, Prime and what they avoid', async () => {
-  const r = await call('settings', { token, body: { store: 'Whole Foods Market, West Cary', prime: false, avoid: ['Tree nuts', 'coconut', 'shellfish', ''] } });
-  assert.deepEqual(r.body.settings, { store: 'Whole Foods Market, West Cary', prime: false, avoid: ['tree nuts', 'coconut', 'shellfish'] });
+await test('settings: the family can change their stores, cards and what they avoid; unknown ones are dropped', async () => {
+  const r = await call('settings', { token, body: { stores: ['publix', 'harristeeter', 'kroger'], cards: ['vic', 'mvp'], avoid: ['Tree nuts', 'coconut', 'shellfish', ''] } });
+  assert.deepEqual(r.body.settings, { stores: ['harristeeter', 'publix'], cards: ['vic'], avoid: ['tree nuts', 'coconut', 'shellfish'] });
   assert.deepEqual((await call('state', { token })).body.settings.avoid, ['tree nuts', 'coconut', 'shellfish']);
 });
 await test('a model that answers in words, or an AI service that refuses the key, gives a plain error', async () => {

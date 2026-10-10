@@ -2,18 +2,19 @@
 # ANTHROPIC_API_KEY secret, and shows what it found in the run's summary: to
 # see how well the web search finds a store's weekly sales. Saves nothing; each
 # run is one search, a few cents. By hand only: Actions -> Meals check -> Run
-# workflow, with the store as Meals' settings name it.
+# workflow, with a store id (wholefoods, harristeeter, publix, lidl, lowesfoods,
+# aldi, walmart, target) or any store and its address.
 name: Meals check
 
 on:
   workflow_dispatch:
     inputs:
       store:
-        description: 'The store, as Meals names it'
+        description: 'A store id (wholefoods, harristeeter, publix, lidl, lowesfoods, aldi, walmart, target), or a store and its address'
         required: true
-        default: 'Whole Foods Market, Waverly Place, Cary, NC'
+        default: 'wholefoods'
       prime:
-        description: 'Member prices (Prime, VIC): yes or no'
+        description: 'Member card prices (Prime at Whole Foods, VIC at Harris Teeter): yes or no'
         required: false
         default: 'yes'
 

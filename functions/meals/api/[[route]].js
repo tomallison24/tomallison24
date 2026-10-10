@@ -1,18 +1,20 @@
-// /meals/api/* - the family's Meals: this week's deals at their Whole Foods, and
-// dinner plans built around a meat, made by an AI model. One plan and one deals
-// list for the whole family (so everyone sees what's for dinner), locked to
-// signed-in family by _middleware.js.
+// /meals/api/* - the family's Meals: this week's deals at the stores they shop
+// at, and dinner plans built around a meat, made by an AI model. One plan and
+// one deals list a store for the whole family (so everyone sees what's for
+// dinner), locked to signed-in family by _middleware.js.
 //
-//   GET  state      -> { ai, model, week, settings, deals, plan }
-//                      ai: 'anthropic', or null with no key yet
-//   POST deals      { text? } -> { deals }
+//   GET  state      -> { ai, model, week, stores, settings, deals: { <store id>: deals }, plan }
+//                      ai: 'anthropic', or null with no key yet; stores: STORES
+//   POST deals      { store, text? } -> { deals }
 //                      without text: the model searches the web for this week's
-//                      sales at the store; with text (copied from the store's
+//                      sales at that store; with text (copied from the store's
 //                      sales page or app): the model reads the deals out of it.
 //                      This week's are kept, so a second ask is free unless
 //                      { refresh: true } (at most every 10 minutes).
-//   POST plan       { meat, days, people, useDeals, note } -> { plan }
-//   POST settings   { store, prime, avoid } -> { settings }
+//   POST plan       { meat, days, people, useDeals, shop, note } -> { plan }
+//                      shop: a store id, or 'all' for the best deals across the
+//                      family's stores (each sale item says where it is)
+//   POST settings   { stores, cards, avoid } -> { settings }
 //
 // The model: Claude Haiku 5.5 (the cheapest Claude, and plenty for this: the
 // allergy check below doesn't rely on the model), through Anthropic's API with
@@ -27,9 +29,9 @@
 // model once with what it got wrong; if it slips again, no plan is saved.
 //
 // Stored in the accounts' Workers KV (ACCOUNTS, server/auth.js):
-//   meals:settings  { store, prime, avoid, at }
-//   meals:deals     { week, at, how, store, validFrom, validTo, items, sources }
-//   meals:plan      { at, by, week, meat, days, people, useDeals, meals, tip }
+//   meals:settings  { stores, cards, avoid, at }
+//   meals:deals:<store id>  { week, at, how, store, validFrom, validTo, items, sources }
+//   meals:plan      { at, by, week, meat, days, people, useDeals, shop, meals, tip }
 //   meals:history   [{ title, cuisine, at }] the last 40 dinners, so new plans differ
 // Writes happen only when a deals list or a plan is made, or settings change.
 //
@@ -43,7 +45,22 @@ const TIMEOUT_MS = 120e3;
 const MAX_BODY = 64 * 1024;
 const MAX_TEXT = 30000;
 const REFRESH_MS = 10 * 60e3;
-export const DEFAULTS = { store: 'Whole Foods Market, Waverly Place, Cary, NC', prime: true, avoid: ['tree nuts', 'coconut'] };
+// The stores near the family (Apex, 27502) Meals knows: where each is (the
+// search asks for that store's chain and area), and the member card whose
+// prices it shows when the family has the card (settings.cards).
+export const STORES = [
+  { id: 'wholefoods', name: 'Whole Foods', where: 'Whole Foods Market, 102 New Waverly Pl, Cary, NC', card: 'prime', cardName: 'Prime' },
+  { id: 'harristeeter', name: 'Harris Teeter', where: 'Harris Teeter, 750 W Williams St, Apex, NC', card: 'vic', cardName: 'VIC' },
+  { id: 'publix', name: 'Publix', where: 'Publix, 1441 Kelly Rd, Apex, NC' },
+  { id: 'lidl', name: 'Lidl', where: 'Lidl, 670 Grand Central Station, Apex, NC' },
+  { id: 'lowesfoods', name: 'Lowes Foods', where: 'Lowes Foods, 5400 Apex Peakway, Apex, NC' },
+  { id: 'aldi', name: 'Aldi', where: 'Aldi, 1770 W Williams St, Apex, NC' },
+  { id: 'walmart', name: 'Walmart', where: 'Walmart Supercenter, 3151 Apex Peakway, Apex, NC' },
+  { id: 'target', name: 'Target', where: 'Target, 1201 Beaver Creek Commons Dr, Apex, NC' },
+];
+export const CARDS = ['prime', 'vic'];
+export const DEFAULTS = { stores: STORES.map(x => x.id), cards: ['prime', 'vic'], avoid: ['tree nuts', 'coconut'] };
+const storeOf = id => STORES.find(x => x.id === id) || null;
 export const MEATS = ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'salmon', 'white fish', 'shrimp', 'on sale'];
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -125,19 +142,21 @@ export function json(text) {
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 export function cleanDeals(j) {
   const items = (Array.isArray(j && j.items) ? j.items : []).slice(0, 120).map(x => x && {
-    name: str(x.name, 80), price: str(x.price, 30), regular: str(x.regular, 30), prime: !!x.prime, note: str(x.note, 80),
+    name: str(x.name, 80), price: str(x.price, 30), regular: str(x.regular, 30), member: !!(x.member || x.prime), note: str(x.note, 80),
   }).filter(x => x && x.name);
   const sources = (Array.isArray(j && j.sources) ? j.sources : []).map(u => str(u, 300)).filter(u => /^https:\/\//.test(u)).slice(0, 6);
   return { validFrom: ISO.test(j && j.validFrom) ? j.validFrom : '', validTo: ISO.test(j && j.validTo) ? j.validTo : '', items, sources };
 }
-const DEALS_SHAPE = '{"validFrom":"YYYY-MM-DD","validTo":"YYYY-MM-DD","items":[{"name":"Organic boneless skinless chicken thighs","price":"$3.99/lb","regular":"$5.99/lb","prime":true,"note":"Prime members"}],"sources":["https://..."]}';
-export function dealsAsk(settings, wk, text) {
+const DEALS_SHAPE = '{"validFrom":"YYYY-MM-DD","validTo":"YYYY-MM-DD","items":[{"name":"Organic boneless skinless chicken thighs","price":"$3.99/lb","regular":"$5.99/lb","member":true,"note":"Buy one get one"}],"sources":["https://..."]}';
+// store: an entry of STORES; member: whether the family has its card
+export function dealsAsk(store, wk, text, member) {
+  const card = store.cardName && member ? store.cardName : '';
   const system = 'You read grocery store sales for a family. Answer with one JSON object only, no other words, shaped like: ' + DEALS_SHAPE
-    + '. "price" is the sale price' + (settings.prime ? ' a Prime member pays (use the Prime price when one is shown)' : ' for everyone (not Prime-only prices)')
-    + ', "regular" the usual price if shown, "prime" true when the price is for Prime members only. Food only: leave out alcohol, flowers, household and beauty items. Never make up a deal: if you can\'t find this week\'s sales, return "items": [].';
+    + '. "price" is the sale price' + (card ? ' with a ' + card + ' card (use the ' + card + ' price when one is shown)' : ' everyone pays (not member-card-only prices)')
+    + ', "regular" the usual price if shown, "member" true when the price needs the ' + (store.cardName || 'store\'s member') + ' card. Put deal terms (buy one get one, limits, which days) in "note". Food only: leave out alcohol, flowers, household and beauty items. List this week\'s sale items; leave out standing offers that run for months. Never make up a deal: if you can\'t find this week\'s sales, return "items": [].';
   const prompt = text
-    ? 'These are this week\'s sales at ' + settings.store + ', copied from the store\'s sales page or app. List every food deal in them.\n\n' + text
-    : 'Find this week\'s sales at ' + settings.store + ' (the week starting Wednesday ' + wk + '). Stores\' own weekly-ad pages usually load their items in a way search can\'t read, so look for pages that write this week\'s ad out item by item with prices: deal and coupon blogs that break the weekly ad down, weekly-ad preview and match-up pages, and local news "this week\'s deals" posts. Check they are for this week and this chain (prices are usually the same across a chain\'s stores in the area). List every food deal you find, with the dates they run. Put the pages you used in "sources".';
+    ? 'These are this week\'s sales at ' + store.where + ', copied from the store\'s sales page or app. List every food deal in them.\n\n' + text
+    : 'Find this week\'s sales at ' + store.where + ' (the week starting Wednesday ' + wk + '). Stores\' own weekly-ad pages usually load their items in a way search can\'t read, so look for pages that write this week\'s ad out item by item with prices: deal and coupon blogs that break the weekly ad down, weekly-ad preview and match-up pages, and local news "this week\'s deals" posts. Check they are for this week and this chain (prices are usually the same across a chain\'s stores in the area). List every food deal you find, with the dates they run. Put the pages you used in "sources".';
   return { system, prompt, search: !text, maxTokens: 6000 };
 }
 
@@ -163,8 +182,12 @@ function planAsk(settings, o, deals, history) {
     'Variety matters most: every night a different cuisine and a different way of cooking (for example grilled, braised, stir-fried, roasted, slow cooker, tacos, soup, pasta, salad bowl), so no two feel alike.',
     'Where it saves money, buy the ' + (o.meat === 'on sale' ? 'meat' : o.meat) + ' once in bulk for the week and use it across the nights.',
   ];
-  if (o.useDeals && deals && deals.items.length) lines.push('This week\'s sales at ' + settings.store + ' (use them to save money, and list the ones each dinner uses in "uses"):\n'
-    + deals.items.map(d => '- ' + d.name + (d.price ? ' ' + d.price : '') + (d.regular ? ' (usually ' + d.regular + ')' : '')).join('\n'));
+  // deals: [{ store, items }] - one store, or every store the family shops at
+  const sales = (deals || []).filter(d => d.items.length);
+  if (o.useDeals && sales.length) lines.push((sales.length > 1
+    ? 'This week\'s sales at the family\'s stores. Use the best of them to save money, and list the ones each dinner uses in "uses" with the store in brackets, like "Ground chuck (Publix)":'
+    : 'This week\'s sales at ' + sales[0].store.name + ' (use them to save money, and list the ones each dinner uses in "uses"):')
+    + sales.map(d => (sales.length > 1 ? '\n' + d.store.name + ':' : '') + '\n' + d.items.map(x => '- ' + x.name + (x.price ? ' ' + x.price : '') + (x.regular ? ' (usually ' + x.regular + ')' : '') + (x.note ? ' [' + x.note + ']' : '')).join('\n')).join(''));
   if (history.length) lines.push('The family had these recently; make different dishes: ' + history.map(h => h.title).join('; ') + '.');
   if (o.note) lines.push('Also: ' + o.note);
   return { system, prompt: lines.join('\n\n'), search: false, maxTokens: 1500 * o.days + 1000 };
@@ -190,8 +213,18 @@ async function body(request) {
   if (t.length > MAX_BODY) throw fail('too-big', 413);
   try { return JSON.parse(t || '{}'); } catch { throw fail('bad-json', 400); }
 }
-const settingsOf = s => ({ store: str(s && s.store, 100) || DEFAULTS.store, prime: s && typeof s.prime === 'boolean' ? s.prime : DEFAULTS.prime,
+// (Settings from before the stores, { store, prime }, start with every store and both cards.)
+const settingsOf = s => ({
+  stores: Array.isArray(s && s.stores) ? STORES.map(x => x.id).filter(id => s.stores.includes(id)) : DEFAULTS.stores,
+  cards: Array.isArray(s && s.cards) ? CARDS.filter(c => s.cards.includes(c)) : DEFAULTS.cards,
   avoid: Array.isArray(s && s.avoid) ? [...new Set(s.avoid.map(a => str(a, 40).toLowerCase()).filter(Boolean))].slice(0, 12) : DEFAULTS.avoid });
+const dealsKey = id => 'meals:deals:' + id;
+// this week's deals at each of the family's stores that has some
+async function weekDeals(db, settings, wk, ids) {
+  const out = [];
+  for (const id of ids) { const d = await getJSON(db, dealsKey(id)); if (d && d.week === wk && d.items.length) out.push({ store: storeOf(id), items: d.items }); }
+  return out;
+}
 
 export async function onRequest({ request, params, env }, f = fetch) {
   if (request.headers.get('X-Meals') !== '1') return reply({ error: 'not-found' }, 404);
@@ -204,8 +237,10 @@ export async function onRequest({ request, params, env }, f = fetch) {
   try {
     const settings = settingsOf(await getJSON(db, 'meals:settings')), wk = week();
     if (route === 'state' && method === 'GET') {
-      const deals = await getJSON(db, 'meals:deals'), plan = await getJSON(db, 'meals:plan');
-      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, settings, deals, plan });
+      const deals = {};
+      for (const id of settings.stores) { const d = await getJSON(db, dealsKey(id)); if (d) deals[id] = d; }
+      const plan = await getJSON(db, 'meals:plan');
+      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, stores: STORES, settings, deals, plan });
     }
     if (route === 'settings' && method === 'POST') {
       const s = settingsOf(await body(request));
@@ -213,22 +248,24 @@ export async function onRequest({ request, params, env }, f = fetch) {
       return reply({ settings: s });
     }
     if (route === 'deals' && method === 'POST') {
-      const b = await body(request), text = str(b.text, MAX_TEXT);
-      const old = await getJSON(db, 'meals:deals');
+      const b = await body(request), text = str(b.text, MAX_TEXT), store = storeOf(b.store);
+      if (!store) return reply({ error: 'store' }, 400);
+      const old = await getJSON(db, dealsKey(store.id));
       // This week's search already done: hand it back (searches cost money).
-      if (!text && old && old.week === wk && old.store === settings.store && old.items.length && (!b.refresh || Date.now() - old.at < REFRESH_MS)) return reply({ deals: old });
+      if (!text && old && old.week === wk && old.items.length && (!b.refresh || Date.now() - old.at < REFRESH_MS)) return reply({ deals: old });
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
-      const d = cleanDeals(json(await ask(env, dealsAsk(settings, wk, text), f)));
-      const deals = { week: wk, at: Date.now(), how: text ? 'paste' : 'search', store: settings.store, ...d };
-      if (d.items.length) await putJSON(db, 'meals:deals', deals);
+      const d = cleanDeals(json(await ask(env, dealsAsk(store, wk, text, settings.cards.includes(store.card)), f)));
+      const deals = { week: wk, at: Date.now(), how: text ? 'paste' : 'search', store: store.id, ...d };
+      if (d.items.length) await putJSON(db, dealsKey(store.id), deals);
       return reply({ deals });
     }
     if (route === 'plan' && method === 'POST') {
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
       const b = await body(request);
-      const o = { meat: MEATS.includes(b.meat) ? b.meat : 'chicken', days: int(b.days, 1, 7, 4), people: int(b.people, 1, 10, 4), useDeals: !!b.useDeals, note: str(b.note, 200) };
-      const deals = await getJSON(db, 'meals:deals'), history = (await getJSON(db, 'meals:history')) || [];
-      const p = await makePlan(env, settings, o, deals && deals.week === wk ? deals : null, history.slice(-20), f);
+      const shop = b.shop === 'all' || storeOf(b.shop) ? b.shop : 'all';
+      const o = { meat: MEATS.includes(b.meat) ? b.meat : 'chicken', days: int(b.days, 1, 7, 4), people: int(b.people, 1, 10, 4), useDeals: !!b.useDeals, shop, note: str(b.note, 200) };
+      const deals = o.useDeals ? await weekDeals(db, settings, wk, shop === 'all' ? settings.stores : [shop]) : [], history = (await getJSON(db, 'meals:history')) || [];
+      const p = await makePlan(env, settings, o, deals, history.slice(-20), f);
       const plan = { at: Date.now(), by: me.name, week: wk, ...o, ...p };
       await putJSON(db, 'meals:plan', plan);
       await putJSON(db, 'meals:history', [...history, ...p.meals.map(m => ({ title: m.title, cuisine: m.cuisine, at: plan.at }))].slice(-40));

@@ -28,7 +28,7 @@
       'deli lunchable ham salami prosciutto pepperoni pastrami bologna hummus pate pâté guacamole',
       ['rotisserie chicken', 'lunch meat', 'sliced turkey', 'turkey slice', 'deli meat', 'cold cut', 'ham slice', 'sliced ham', 'roast beef', 'chicken salad', 'potato salad', 'pasta salad', 'egg salad']],
     ['meat', 'Meat',
-      'chicken beef steak pork bacon sausage lamb turkey mince veal brisket rib ribeye sirloin chop tenderloin meatball burger patty wing thigh drumstick breast chorizo venison duck goose meat bratwurst brat kielbasa',
+      'chicken beef steak pork bacon sausage lamb turkey mince veal brisket rib ribeye sirloin chop tenderloin loin chuck meatball burger patty wing thigh drumstick breast chorizo venison duck goose meat bratwurst brat kielbasa',
       ['ground beef', 'ground turkey', 'ground pork', 'ground chicken', 'hot dog', 'chicken breast', 'chicken thigh', 'pork chop', 'short rib', 'flank steak']],
     ['seafood', 'Seafood',
       'fish salmon cod tilapia halibut trout haddock mahi snapper bass shrimp prawn crab lobster scallop mussel clam oyster calamari squid octopus anchovy sardine seafood sushi',
