@@ -35,6 +35,7 @@
 //     scripts), and no inline <script> in the page
 // Worth doing (warnings):
 //   - its sw.js CACHE named after the app ('<id>-vN')
+// And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow.
 //   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
 import fs from 'fs';
 import path from 'path';
@@ -176,6 +177,21 @@ for (const id of ids) {
     rule(/default-src 'none'/.test(csp) && /base-uri 'none'/.test(csp), "its policy should start from default-src 'none' and set base-uri 'none'");
   }
   rule(!/<script>[\s\S]*?<\/script>|<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(html), 'has an inline <script>: put it in a file (app.js), so the policy can allow only this site\'s scripts');
+}
+
+// Every test runs in CI: a test nothing runs breaks unnoticed (six had, by
+// aOS1.1). Any <folder>/scripts/*test*.mjs must be named in a workflow.
+{
+  const wf = fs.readdirSync(path.join(ROOT, '.github/workflows')).filter(f => /\.ya?ml$/.test(f)).map(f => read('.github/workflows/' + f)).join('\n');
+  for (const dir of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (!dir.isDirectory() || dir.name.startsWith('.') || dir.name === 'node_modules') continue;
+    const sd = path.join(ROOT, dir.name, 'scripts');
+    if (!fs.existsSync(sd)) continue;
+    for (const f of fs.readdirSync(sd).filter(f => /test.*\.mjs$/.test(f))) {
+      const rel = dir.name + '/scripts/' + f;
+      if (!wf.includes(rel)) err('', rel + ' is not run by CI: add it to .github/workflows/apps-check.yml');
+    }
+  }
 }
 
 for (const w of warnings) console.log('warning - ' + w);

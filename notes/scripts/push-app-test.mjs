@@ -94,7 +94,7 @@ await page.evaluate(({ seed, SHEET }) => {
   localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
   localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
   localStorage.setItem('allison-notes-v1-tab', 'rem');
-  localStorage.setItem('aos.seen', JSON.stringify({ notes: '1', places: '1', calendar: '1' }));   // the walkthrough as seen, as on a phone in use
+  localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
 }, { seed, SHEET });
 await page.reload();
 await page.waitForTimeout(1500);

@@ -57,6 +57,27 @@ into aOS, and the ground rules every app shares. Then run
 `node aOS/scripts/check-apps.mjs` (CI runs it too, `apps-check.yml`); it must
 end with 0 errors.
 
+## Tests
+
+Every test runs in CI (`.github/workflows/apps-check.yml`): plain Node tests
+in the `check` job, browser tests in `apps`. `check-apps.mjs` fails on any
+`<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
+the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
+with `'999'` for every app they open, so no walkthrough or update screen
+covers the page after the next release. A test that depends on the date must
+work on every day of the week and at the end of a month.
+
+## Home and the Signal dashboard: change both
+
+The Home app (`house/`) is the Signal dashboard (ha-config, `views_signal/`)
+rebuilt as an aOS app: it reads the same devices from Home Assistant but draws
+its own controls, so a change to one does not reach the other. When the owner
+asks to change how a device looks or works (a light's presets, a thermostat,
+a card), make it in both: here, and in the `tomallison24/ha-config` repository
+(its own PR; its `CLAUDE.md` says how it reaches Home Assistant). If only one
+can change, say so. `house/README.md` names the Signal card each part comes
+from.
+
 ## Layout
 
 - `aOS/` (capital O and S, `/aOS/`) is the app store and home of every app;

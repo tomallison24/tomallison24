@@ -456,3 +456,10 @@ sample states and preview are the family's own.
 `node house/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
 from `icon.svg`: a white house with its window cut out, on sand (one of the
 Sea glass tints), in the style of the other AllisonOS icons.
+
+## Tests
+
+`node house/scripts/app-test.mjs` (CI runs it, `apps-check.yml`) opens Home in
+its preview at iPhone size, light and dark: it opens on Favorites, the lamps'
+night moon (1%) and sun (100%) chips work, every view in the drop-down opens
+with something in it, and nothing errors or trips the page's policy.
