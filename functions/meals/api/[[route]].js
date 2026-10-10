@@ -3,7 +3,7 @@
 // list for the whole family (so everyone sees what's for dinner), locked to
 // signed-in family by _middleware.js.
 //
-//   GET  state      -> { ai, week, settings, deals, plan }
+//   GET  state      -> { ai, model, week, settings, deals, plan }
 //                      ai: 'perplexity' | 'anthropic' | null (no key yet)
 //   POST deals      { text? } -> { deals }
 //                      without text: the model searches the web for this week's
@@ -14,10 +14,12 @@
 //   POST plan       { meat, days, people, useDeals, note } -> { plan }
 //   POST settings   { store, prime, avoid } -> { settings }
 //
-// The model: Claude Sonnet 5.5, through whichever key the owner adds as a Pages
-// secret (news.yml puts it): PERPLEXITY_API_KEY (Perplexity's Agent API, which
-// resells Claude), else ANTHROPIC_API_KEY (Anthropic's own API). MEALS_MODEL
-// overrides the model's name. Neither: everything answers { error: 'no-ai' }.
+// The model: Claude Haiku 5.5 (the cheapest Claude, and plenty for this: the
+// allergy check below doesn't rely on the model), through whichever key the
+// owner adds as a Pages secret (news.yml puts it): PERPLEXITY_API_KEY
+// (Perplexity's Agent API, which resells Claude), else ANTHROPIC_API_KEY
+// (Anthropic's own API). MEALS_MODEL names another (claude-sonnet-5-5 for
+// richer recipes). Neither key: everything answers { error: 'no-ai' }.
 //
 // Safety for the family's allergies: every plan is checked here, word by word,
 // against what the family avoids (settings.avoid: tree nuts and coconut to
@@ -35,7 +37,7 @@
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
 
-export const MODEL = 'claude-sonnet-5-5';
+export const MODEL = 'claude-haiku-5-5';
 export const PERPLEXITY_URL = 'https://api.perplexity.ai/v1/agent';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const TIMEOUT_MS = 120e3;
@@ -81,10 +83,11 @@ export function avoidHits(texts, avoid) {
 const planText = meals => meals.flatMap(m => [m.title, m.why, ...m.ingredients.map(i => i.item + ' ' + i.qty), ...m.steps]);
 
 // ---- the model ----
+export const modelOf = env => str(env && env.MEALS_MODEL, 60) || MODEL;
 export const aiOf = env => env && env.PERPLEXITY_API_KEY ? 'perplexity' : env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
 
 export async function ask(env, { system, prompt, search = false, maxTokens = 4000 }, f = fetch) {
-  const ai = aiOf(env), model = str(env.MEALS_MODEL, 60) || MODEL;
+  const ai = aiOf(env), model = modelOf(env);
   if (!ai) throw fail('no-ai', 503);
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
   const post = async (url, headers, body) => {
@@ -105,7 +108,9 @@ export async function ask(env, { system, prompt, search = false, maxTokens = 400
     }
     // Anthropic: a long search turn can pause; send it back as it is to carry on.
     const messages = [{ role: 'user', content: prompt }];
-    const tools = search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5,
+    // 3 searches keep the prompt (search results count as input) well under 100,000
+    // tokens, past which Haiku 5.5 costs five times as much.
+    const tools = search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
       user_location: { type: 'approximate', city: 'Cary', region: 'North Carolina', country: 'US', timezone: 'America/New_York' } }] : undefined;
     let text = '';
     for (let turn = 0; turn < 4; turn++) {
@@ -209,7 +214,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
     const settings = settingsOf(await getJSON(db, 'meals:settings')), wk = week();
     if (route === 'state' && method === 'GET') {
       const deals = await getJSON(db, 'meals:deals'), plan = await getJSON(db, 'meals:plan');
-      return reply({ ai: aiOf(env), week: wk, settings, deals, plan });
+      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, settings, deals, plan });
     }
     if (route === 'settings' && method === 'POST') {
       const s = settingsOf(await body(request));

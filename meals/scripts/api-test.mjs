@@ -54,7 +54,8 @@ await test('needs a signed-in family member', async () => {
 await test('state: the store, Prime and allergies start as the family set them; which AI is set up', async () => {
   const r = await call('state', { token });
   assert.equal(r.status, 200);
-  assert.equal(r.body.ai, 'perplexity');
+  assert.equal(r.body.ai, 'perplexity'); assert.equal(r.body.model, 'claude-haiku-5-5');
+  assert.equal((await call('state', { token, env: { ACCOUNTS: db, ...P, MEALS_MODEL: 'claude-sonnet-5-5' } })).body.model, 'claude-sonnet-5-5');
   assert.match(r.body.settings.store, /Waverly Place, Cary/);
   assert.equal(r.body.settings.prime, true);
   assert.deepEqual(r.body.settings.avoid, ['tree nuts', 'coconut']);
@@ -90,7 +91,7 @@ await test('deals by search: Perplexity\'s Agent API with web search, for the fa
   assert.equal(asked.length, 1);
   const q = asked[0];
   assert.equal(q.url, PERPLEXITY_URL); assert.equal(q.headers.Authorization, 'Bearer pk');
-  assert.equal(q.body.model, 'anthropic/claude-sonnet-5-5');
+  assert.equal(q.body.model, 'anthropic/claude-haiku-5-5');
   assert.deepEqual(q.body.tools, [{ type: 'web_search' }]);
   assert.match(q.body.input, /Waverly Place, Cary/); assert.match(q.body.instructions, /Prime/);
   assert.equal(r.body.deals.items.length, 2);
@@ -176,7 +177,8 @@ await test('Anthropic\'s API: the key and version headers, web search near Cary,
   assert.equal(json(text).items[0].name, 'Ground beef');
   assert.equal(asked.length, 2); assert.equal(asked[0].url, ANTHROPIC_URL);
   assert.equal(asked[0].headers['x-api-key'], 'ak'); assert.equal(asked[0].headers['anthropic-version'], '2023-06-01');
-  assert.equal(asked[0].body.model, 'claude-sonnet-5-5');
+  assert.equal(asked[0].body.model, 'claude-haiku-5-5');
+  assert.equal(asked[0].body.tools[0].max_uses, 3);
   assert.equal(asked[0].body.tools[0].type, 'web_search_20250305'); assert.equal(asked[0].body.tools[0].user_location.city, 'Cary');
   assert.equal(asked[1].body.messages[1].role, 'assistant');
 });

@@ -44,7 +44,7 @@ if (window.top !== window.self) {
   // The family's Meals: { ai, week, settings, deals, plan } from the server,
   // the last copy kept here for when there's no signal.
   // ---------------------------------------------------------------------
-  let data = ls.json(KEY, null) || { ai: null, week: '', settings: { store: 'Whole Foods Market, Waverly Place, Cary, NC', prime: true, avoid: ['tree nuts', 'coconut'] }, deals: null, plan: null };
+  let data = ls.json(KEY, null) || { ai: null, model: null, week: '', settings: { store: 'Whole Foods Market, Waverly Place, Cary, NC', prime: true, avoid: ['tree nuts', 'coconut'] }, deals: null, plan: null };
   const st = { tab: ['dinners', 'deals', 'list'].includes(ls.json(K.tab, '')) ? ls.json(K.tab, '') : 'dinners', state: 'idle', busy: null, error: '' };
   let ticks = ls.json(K.ticks, { at: 0, keys: [] });
 
@@ -78,7 +78,7 @@ if (window.top !== window.self) {
     st.state = 'loading';
     try {
       const j = await api('state');
-      data = { ai: j.ai, week: j.week, settings: j.settings, deals: j.deals, plan: j.plan };
+      data = { ai: j.ai, model: j.model, week: j.week, settings: j.settings, deals: j.deals, plan: j.plan };
       ls.set(KEY, data); st.state = 'ok'; st.error = '';
     } catch (e) { st.state = e.code; st.error = e.code; }
     render();
@@ -261,7 +261,8 @@ if (window.top !== window.self) {
   // Settings: the store, Prime, what the family avoids, your account
   function renderSettings() {
     const s = data.settings, user = A() && A().user();
-    const ai = data.ai === 'perplexity' ? 'Perplexity (Claude Sonnet 5.5)' : data.ai === 'anthropic' ? 'Anthropic (Claude Sonnet 5.5)' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
+    const model = String(data.model || '').replace(/^.*\//, '').replace(/^claude-(\w+)-(\d+)-(\d+)$/, (_, n, a, b) => 'Claude ' + cap(n) + ' ' + a + '.' + b);
+    const ai = data.ai === 'perplexity' ? 'Perplexity (' + model + ')' : data.ai === 'anthropic' ? 'Anthropic (' + model + ')' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
     $('setBody').innerHTML = '<div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'

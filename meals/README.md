@@ -32,21 +32,26 @@ signal. Needs family accounts switched on.
 
 ## The AI
 
-Plans and deals are made by Claude Sonnet 5.5, on the server, through either:
+Plans and deals are made by Claude Haiku 5.5, Anthropic's cheapest model, on
+the server, through either:
 
 - **Perplexity's Agent API** (`PERPLEXITY_API_KEY`), which offers Claude at
   Anthropic's prices, with its own web search; or
 - **Anthropic's API** (`ANTHROPIC_API_KEY`), with Anthropic's web search tool.
 
-If both are set, Perplexity is used. `MEALS_MODEL` (optional) names another
-model. Until one is set, Meals opens and shows the last plan, but its buttons
-are off and it says so.
+If both are set, Perplexity is used. Until one is set, Meals opens and shows
+the last plan, but its buttons are off and it says so. A repository secret
+`MEALS_MODEL` (optional) names another model, `claude-sonnet-5-5` for richer
+recipes; the gear shows which is in use.
 
-Roughly what it costs (October 2026 prices, my estimate, not a quote): a
-4-night plan is a few thousand tokens, about $0.04 on Sonnet 5.5; finding the
-week's deals adds a few web searches (Perplexity $0.0025 each, Anthropic 1¢
-each). A month of weekly deals and a few plans a week is under $1. A week's
-deals are kept, so asking again costs nothing; Look again waits 10 minutes.
+Roughly what it costs (Anthropic's October 2026 prices; my estimate, not a
+quote): Haiku 5.5 is $0.10 per million tokens in and $0.50 out, so a 4-night
+plan (a few thousand tokens) is well under 1¢. Finding the week's deals adds a
+few web searches (Perplexity $0.0025 each, Anthropic 1¢ each) and the pages
+they read. A month of weekly deals and a few plans a week is about 10¢ (about
+$1 on Sonnet 5.5). A week's deals are kept, so asking again costs nothing;
+Look again waits 10 minutes. Haiku 5.5 costs five times as much on a prompt of
+over 100,000 tokens, so Anthropic's search is held to 3 searches a time.
 
 ### The AI key
 
