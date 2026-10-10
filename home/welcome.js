@@ -82,6 +82,22 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.1', date: '2026-10-10', title: 'Dinner is served',
+      highlights: ['Meals: a few nights of different dinners around one meat, this week\'s Whole Foods deals, and one shopping list', 'Easier to tap: small buttons, arrows and chips take a tap a little way round them'],
+      notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
+        'News keeps its last headlines up if the news sources can\'t be reached for a while',
+        'The welcome link for new family shows Meals with the other Allison family apps'],
+      apps: {
+        meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'] },
+        news: { highlights: ['Your headlines stay up, even when the news sources can\'t be reached', 'Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        notes: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same', 'Meals\' shopping list sorts into the same grocery sections as your lists here: copy it into one', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        calendar: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the month arrows, Today, Search and Settings', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        podcasts: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        travel: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the header buttons and the Upcoming and Past chips', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        places: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the header and map buttons, the tabs and the chips', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        fitness: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the week arrows and the sync button', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        house: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: Settings, Connect and the player\'s small buttons', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+      } },
     { v: '1', date: '2026-10-07', title: 'The Power of aOS1',
       highlights: ['aOS: one place to get every AllisonOS app', 'A live tour in every app: the first time you open it, a spotlight shows you around the app itself', 'Family accounts: Face ID signs you in to every app'],
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
@@ -112,17 +128,13 @@
         'Each app\'s tour plays once per install, and again if you remove the app and add it back (on Android too)',
         'Android: an app opened in Chrome shows how to install it, and its tour waits until it\'s installed',
         'An invite opened on Android works like on iPhone: your account first, then how to add aOS (in Chrome)',
-        'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps',
-        'Small buttons are easier to tap: header buttons, arrows, chips and Get take a tap a little way round them, looking just as before',
-        'News keeps its last headlines up if the news sources can\'t be reached for a while',
-        'Meals: a new app for the family\'s dinners: this week\'s Whole Foods deals sorted like a grocery list, a few nights of different dinners around one meat, and the shopping list'],
+        'aOS shows two collections: the core apps (Weather, Notes, News, Mail and Calendar) and the Allison family apps'],
       cards: [
         { i: 'grid', t: 'Meet aOS', d: 'aOS is the home for every app: open it to add the ones you want, and to see what\'s new.' },
         { i: 'sparkle', t: 'A tour in every app', d: 'The first time you open an app, it shows you around. When it gets something new, it tells you.' },
         { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark.' },
       ],
       apps: {
-        meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'] },
         drinks: { highlights: ['New: a simple log of what you drink', 'Your usual drinks are one tap', 'Private to you, in your family account'],
           notes: ['Bring in your ABV Tracker history from its backup or its Google Sheet', 'Tap the week\'s number for Analysis: this week or month against the one before, and your alcohol-free streak'] },
         calendar: ['A Drinks layer, off until you turn it on: your own standard drinks and alcohol-free days'],
