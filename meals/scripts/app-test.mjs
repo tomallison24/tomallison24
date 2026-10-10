@@ -91,7 +91,8 @@ const wide = page => page.evaluate(() => document.documentElement.scrollWidth > 
   ok('no AI key: Plan dinners is off', await page.locator('[data-act="plan"]').isDisabled());
   await page.click('#setBtn'); await page.waitForTimeout(300);
   ok('no AI key: the gear says so', (await page.textContent('#setBody')).includes('Not set up yet'));
-  ok('the family\'s store and allergies show in settings', (await page.inputValue('#sStore')).includes('Waverly Place') && (await text(page, '#avoid [data-avoid]')).join('|') === 'Tree nuts ✕|Coconut ✕');
+  ok('the family\'s stores, cards and allergies show in settings', (await page.locator('#sStores [aria-checked="true"]').count()) === 8 && (await page.locator('#sCards [aria-checked="true"]').count()) === 2
+    && (await text(page, '#avoid [data-avoid]')).join('|') === 'Tree nuts ✕|Coconut ✕');
   ok('no script errors', !errs.length, errs.join(' | '));
   await ctx.close();
 }
@@ -104,14 +105,31 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.waitForSelector('#main .drow', { timeout: 5000 });
   const heads = await text(page, '#main .sechead span:first-child');
   ok('deals sorted into grocery sections, in store order', heads.join('|') === 'Produce|Meat|Dairy & Eggs', heads.join('|'));
-  ok('Prime prices are marked', (await text(page, '#main .prime')).length === 2);
+  ok('the first store is Whole Foods, and its Prime prices are marked', (await page.inputValue('#dStore')) === 'wholefoods' && (await text(page, '#main .prime')).join('|') === 'Prime|Prime');
   await shot(page, 'deals');
   ok('the page where they were found is linked', (await page.getAttribute('.src a', 'href')) === 'https://example.com/sales');
   const before = asked; await page.click('[data-act="find"]'); await page.waitForSelector('#main .drow');
   ok('looking again this week doesn\'t ask the AI again (within 10 minutes)', asked === before);
 
+  // another store: its own deals, no card of the family's there
+  await page.selectOption('#dStore', 'publix'); await page.waitForTimeout(200);
+  ok('switching store: Publix has no deals yet', (await page.textContent('#main')).includes('No deals yet'));
+  await page.click('[data-act="find"]'); await page.waitForSelector('#main .drow', { timeout: 5000 });
+  ok('Publix\'s deals, with no member prices', (await page.locator('#main .drow').count()) === 5 && (await page.locator('#main .prime').count()) === 0);
+  ok('each store\'s deals kept apart', !!m.get('meals:deals:publix') && !!m.get('meals:deals:wholefoods'));
+  // all of them together
+  await page.selectOption('#dStore', 'all'); await page.waitForTimeout(200);
+  ok('all my stores: how many have deals', (await page.textContent('#main')).includes('2 of 8 stores'));
+  ok('all my stores: each deal says where', (await text(page, '#main .drow .dn small')).some(t => t.startsWith('Publix')) && (await text(page, '#main .drow .dn small')).some(t => t.startsWith('Whole Foods')));
+  const was = asked;
+  await page.click('[data-act="find-all"]');
+  ok('finding the rest says which store it\'s on', (await page.textContent('#main .busy')).includes('of 6'));
+  await page.waitForFunction(() => document.querySelector('#main').textContent.includes('8 of 8 stores'), null, { timeout: 15000 });
+  ok('finding the rest searched the other 6 stores', asked - was === 6);
+  await shot(page, 'deals-all');
+
   await page.click('[data-act="plan-deals"]'); await page.waitForTimeout(400);
-  ok('planning from the deals: use this week\'s deals is on', (await page.inputValue('#pDeals')) === '1');
+  ok('planning from all the deals: best deals at any store, using them', (await page.inputValue('#pShop')) === 'all' && (await page.inputValue('#pDeals')) === '1');
   await page.click('[data-meat="beef"]');
   ok('picking a meat', (await page.getAttribute('[data-meat="beef"]', 'aria-checked')) === 'true');
   await shot(page, 'plan-sheet');
@@ -136,7 +154,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('the shopping list is in grocery sections, staples apart', lh.join('|') === 'Produce|Meat|You probably have', lh.join('|'));
   const beef = page.locator('.irow', { hasText: 'Ground beef' });
   ok('the same ingredient once, with every night\'s amount', (await beef.textContent()).includes('6 lb'));
-  ok('and its sale price', (await beef.textContent()).includes('On sale $5.99/lb'));
+  ok('and where it\'s on sale, at what price', /On sale at [A-Za-z ]+ \$5\.99\/lb/.test(await beef.textContent()));
   await beef.click();
   ok('ticking an item', (await beef.getAttribute('aria-checked')) === 'true');
   ok('nothing wider than the phone', !(await wide(page)));
@@ -165,10 +183,14 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.click('#setBtn'); await page.waitForTimeout(300);
   await page.fill('#sAdd', 'Shellfish'); await page.click('#sAddGo');
   await page.click('[data-avoid="coconut"]');
+  await page.click('[data-store="target"]'); await page.click('[data-store="lidl"]'); await page.click('[data-card="prime"]');
   await shot(page, 'settings-dark');
   await page.click('#sSave'); await page.waitForTimeout(400);
   await shot(page, 'dinners-dark');
-  ok('settings saved for the family', JSON.parse(m.get('meals:settings')).avoid.join('|') === 'tree nuts|shellfish');
+  const saved = JSON.parse(m.get('meals:settings'));
+  ok('settings saved for the family', saved.avoid.join('|') === 'tree nuts|shellfish' && saved.stores.join('|') === 'wholefoods|harristeeter|publix|lowesfoods|aldi|walmart' && saved.cards.join('|') === 'vic', JSON.stringify(saved));
+  await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(200);
+  ok('the store picker shows only the family\'s stores', (await page.locator('#dStore option').count()) === 7);
   ok('dark: nothing wider than the phone', !(await wide(page)));
   await ctx.close();
 }

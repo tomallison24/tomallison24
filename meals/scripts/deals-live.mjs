@@ -3,14 +3,17 @@
 // secret - to see how well the web search finds a store's weekly sales before
 // the family relies on it. Prints what it found, sorted into grocery sections,
 // where it found it, and what the search cost. Saves nothing.
-//   ANTHROPIC_API_KEY=… node meals/scripts/deals-live.mjs "Whole Foods Market, Waverly Place, Cary, NC" [prime]
+//   ANTHROPIC_API_KEY=… node meals/scripts/deals-live.mjs <store id, or a store and its address> [member: yes|no]
+//   (store ids: functions/meals/api STORES - wholefoods, harristeeter, publix, …)
 import fs from 'fs';
 import '../../home/aisles.js';
 import '../logic.js';
-import { ask, json, cleanDeals, dealsAsk, week, modelOf } from '../../functions/meals/api/[[route]].js';
+import { ask, json, cleanDeals, dealsAsk, week, modelOf, STORES } from '../../functions/meals/api/[[route]].js';
 
-const store = process.argv[2] || 'Whole Foods Market, Waverly Place, Cary, NC';
-const prime = process.argv[3] !== 'no';
+const arg = process.argv[2] || 'wholefoods';
+const known = STORES.find(x => x.id === arg.trim().toLowerCase());
+const store = known || { id: 'other', name: arg, where: arg };
+const member = process.argv[3] !== 'no';
 const env = { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY, MEALS_MODEL: process.env.MEALS_MODEL };
 if (!env.ANTHROPIC_API_KEY) { console.error('No ANTHROPIC_API_KEY.'); process.exit(1); }
 
@@ -30,19 +33,19 @@ const counting = async (url, init) => {
 
 const wk = week(), t0 = Date.now();
 let d, raw = '';
-try { raw = await ask(env, dealsAsk({ store, prime }, wk), counting); d = cleanDeals(json(raw)); }
+try { raw = await ask(env, dealsAsk(store, wk, '', member), counting); d = cleanDeals(json(raw)); }
 catch (e) { console.log('Failed: ' + e.message + (raw ? '\nIts answer began: ' + raw.slice(0, 600) : '')); process.exit(1); }
 const secs = Math.round((Date.now() - t0) / 1000);
 // Haiku 5.5: $0.10 in / $0.50 out per million tokens (under 100,000 a prompt); web search $10 per 1,000
 const cost = use.input / 1e6 * 0.10 + use.output / 1e6 * 0.50 + use.searches * 0.01;
 
 const L = globalThis.MealsLogic;
-const lines = [`## ${store}`, '',
-  `Sales week from Wednesday ${wk}; the deals say ${d.validFrom || '?'} to ${d.validTo || '?'}. ${prime ? 'Member (Prime, VIC)' : 'Regular'} prices. Model ${modelOf(env)}.`, '',
+const lines = [`## ${store.where}`, '',
+  `Sales week from Wednesday ${wk}; the deals say ${d.validFrom || '?'} to ${d.validTo || '?'}. ${store.cardName && member ? store.cardName + ' card' : 'Everyone\'s'} prices. Model ${modelOf(env)}.`, '',
   `**${d.items.length} food deals**, in ${secs} s: ${use.searches} web searches, ${use.input.toLocaleString('en-US')} tokens in, ${use.output.toLocaleString('en-US')} out, about ${(cost * 100).toFixed(1)}¢.`, ''];
 for (const g of L.sections(d.items, x => x.name)) {
   lines.push(`**${g.name}**`);
-  for (const x of g.items) lines.push(`- ${x.name}: ${x.price || '?'}${x.regular ? ' (usually ' + x.regular + ')' : ''}${x.prime ? ' · Prime' : ''}${x.note ? ' · ' + x.note : ''}`);
+  for (const x of g.items) lines.push(`- ${x.name}: ${x.price || '?'}${x.regular ? ' (usually ' + x.regular + ')' : ''}${x.member ? ' · ' + (store.cardName || 'member') : ''}${x.note ? ' · ' + x.note : ''}`);
   lines.push('');
 }
 lines.push('**Found on:** ' + (d.sources.length ? d.sources.join(', ') : 'no sources given'));
