@@ -3,17 +3,28 @@
 // one deals list a store for the whole family (so everyone sees what's for
 // dinner), locked to signed-in family by _middleware.js.
 //
-//   GET  state      -> { ai, model, week, stores, settings, deals: { <store id>: deals }, plan }
-//                      ai: 'anthropic', or null with no key yet; stores: STORES
+//   GET  state      -> { ai, model, week, stores, settings, deals: { <store id>: deals }, draft, plan, log }
+//                      ai: 'anthropic', or null with no key yet; stores: STORES;
+//                      log: the accepted plans, newest first, in short (id, dates, titles)
+//   GET  log/<id>   -> { plan } one accepted plan, whole
 //   POST deals      { store, text? } -> { deals }
 //                      without text: the model searches the web for this week's
 //                      sales at that store; with text (copied from the store's
 //                      sales page or app): the model reads the deals out of it.
 //                      This week's are kept, so a second ask is free unless
 //                      { refresh: true } (at most every 10 minutes).
-//   POST plan       { meat, days, people, useDeals, shop, note } -> { plan }
-//                      shop: a store id, or 'all' for the best deals across the
-//                      family's stores (each sale item says where it is)
+//   POST plan       { meat, days, people, useDeals, shop, note, again } -> { draft }
+//                      a new plan to look over: kept as the family's draft until
+//                      someone accepts it. shop: a store id, or 'all' for the
+//                      best deals across the family's stores (each sale item
+//                      says where it is). again: true for another go, unlike
+//                      the draft before it.
+//   POST accept     { start: 'YYYY-MM-DD' } -> { plan, log }
+//                      the draft becomes the family's plan, night 1 on start:
+//                      saved with its dates and the sale prices it was planned
+//                      with (so its shopping list stays as it was), and added
+//                      to the log, as Fitness keeps each workout
+//   POST discard    -> {} the draft goes
 //   POST settings   { stores, cards, avoid } -> { settings }
 //
 // The model: Claude Haiku 5.5 (the cheapest Claude, and plenty for this: the
@@ -31,7 +42,10 @@
 // Stored in the accounts' Workers KV (ACCOUNTS, server/auth.js):
 //   meals:settings  { stores, cards, avoid, at }
 //   meals:deals:<store id>  { week, at, how, store, validFrom, validTo, items, sources }
-//   meals:plan      { at, by, week, meat, days, people, useDeals, shop, meals, tip }
+//   meals:draft     { at, by, week, meat, days, people, useDeals, shop, note, meals, tip, sales }
+//   meals:plan      the accepted plan: the draft, with id, start, dates, acceptedAt, acceptedBy
+//   meals:log       [{ id, start, end, meat, shop, people, titles }] accepted plans, newest
+//                   first, the last 52; meals:log:<id> each one whole
 //   meals:history   [{ title, cuisine, at }] the last 40 dinners, so new plans differ
 // Writes happen only when a deals list or a plan is made, or settings change.
 //
@@ -74,6 +88,10 @@ export function week(now = Date.now()) {
   const back = (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) + 4) % 7;   // days since Wednesday
   return new Date(Date.UTC(+p.year, +p.month - 1, +p.day - back)).toISOString().slice(0, 10);
 }
+
+// dates in Cary's time, as YYYY-MM-DD
+export const today = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
+export const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 // ---- what the family avoids ----
 // A named group is matched by everything in it; anything else by its own word.
@@ -239,8 +257,8 @@ export async function onRequest({ request, params, env }, f = fetch) {
     if (route === 'state' && method === 'GET') {
       const deals = {};
       for (const id of settings.stores) { const d = await getJSON(db, dealsKey(id)); if (d) deals[id] = d; }
-      const plan = await getJSON(db, 'meals:plan');
-      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, stores: STORES, settings, deals, plan });
+      const plan = await getJSON(db, 'meals:plan'), draft = await getJSON(db, 'meals:draft'), log = (await getJSON(db, 'meals:log')) || [];
+      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, stores: STORES, settings, deals, draft, plan, log });
     }
     if (route === 'settings' && method === 'POST') {
       const s = settingsOf(await body(request));
@@ -265,11 +283,41 @@ export async function onRequest({ request, params, env }, f = fetch) {
       const shop = b.shop === 'all' || storeOf(b.shop) ? b.shop : 'all';
       const o = { meat: MEATS.includes(b.meat) ? b.meat : 'chicken', days: int(b.days, 1, 7, 4), people: int(b.people, 1, 10, 4), useDeals: !!b.useDeals, shop, note: str(b.note, 200) };
       const deals = o.useDeals ? await weekDeals(db, settings, wk, shop === 'all' ? settings.stores : [shop]) : [], history = (await getJSON(db, 'meals:history')) || [];
-      const p = await makePlan(env, settings, o, deals, history.slice(-20), f);
-      const plan = { at: Date.now(), by: me.name, week: wk, ...o, ...p };
+      // another go: different from the draft it replaces, as well as from what the family had
+      const before = b.again ? ((await getJSON(db, 'meals:draft')) || {}).meals || [] : [];
+      const p = await makePlan(env, settings, o, deals, [...history.slice(-20), ...before.map(m => ({ title: m.title }))], f);
+      // the sale items it was planned with go with it, so its shopping list keeps them
+      const sales = deals.flatMap(d => d.items.map(x => ({ ...x, store: d.store.id })));
+      const draft = { at: Date.now(), by: me.name, week: wk, ...o, ...p, sales };
+      await putJSON(db, 'meals:draft', draft);
+      return reply({ draft });
+    }
+    if (route === 'accept' && method === 'POST') {
+      const b = await body(request), draft = await getJSON(db, 'meals:draft');
+      if (!draft) return reply({ error: 'no-draft' }, 409);
+      const start = ISO.test(b.start) && !isNaN(Date.parse(b.start)) ? b.start : today();
+      const dates = draft.meals.map((_, i) => addDays(start, i));
+      const plan = { ...draft, id: 'p' + Date.now().toString(36), start, dates, acceptedAt: Date.now(), acceptedBy: me.name };
+      const history = (await getJSON(db, 'meals:history')) || [];
+      const log = (await getJSON(db, 'meals:log')) || [];
+      const entry = { id: plan.id, start, end: dates[dates.length - 1], meat: plan.meat, shop: plan.shop, people: plan.people, titles: plan.meals.map(m => m.title) };
+      const kept = [entry, ...log].slice(0, 52);
+      await putJSON(db, 'meals:log:' + plan.id, plan);
+      for (const old of log.slice(51)) await db.delete('meals:log:' + old.id);
+      await putJSON(db, 'meals:log', kept);
       await putJSON(db, 'meals:plan', plan);
-      await putJSON(db, 'meals:history', [...history, ...p.meals.map(m => ({ title: m.title, cuisine: m.cuisine, at: plan.at }))].slice(-40));
-      return reply({ plan });
+      await putJSON(db, 'meals:history', [...history, ...plan.meals.map(m => ({ title: m.title, cuisine: m.cuisine, at: plan.acceptedAt }))].slice(-40));
+      await db.delete('meals:draft');
+      return reply({ plan, log: kept });
+    }
+    if (route === 'discard' && method === 'POST') {
+      await db.delete('meals:draft');
+      return reply({});
+    }
+    const lm = /^log\/(p[a-z0-9]{1,16})$/.exec(route);
+    if (lm && method === 'GET') {
+      const plan = await getJSON(db, 'meals:log:' + lm[1]);
+      return plan ? reply({ plan }) : reply({ error: 'not-found' }, 404);
     }
     return reply({ error: 'not-found' }, 404);
   } catch (e) {

@@ -128,12 +128,12 @@ await test('each store keeps its own deals; a store without a card the family ha
   const st = await call('state', { token });
   assert.deepEqual(Object.keys(st.body.deals).sort(), ['publix', 'wholefoods']);
 });
-await test('a plan: 4 different dinners for 4, variety asked for, this week\'s deals passed on, saved for the family', async () => {
+await test('a plan: 4 different dinners for 4, variety asked for, this week\'s deals passed on, kept as the family\'s draft', async () => {
   asked.length = 0;
   answers = ['```json\n' + planJSON(four()) + '\n```'];
   const r = await call('plan', { token, body: { meat: 'chicken', useDeals: true } });
   assert.equal(r.status, 200);
-  const p = r.body.plan;
+  const p = r.body.draft;
   assert.equal(p.meals.length, 4); assert.equal(p.people, 4); assert.equal(p.days, 4); assert.equal(p.by, 'Sam');
   const q = asked[0].body;
   assert.match(q.messages[0].content, /4 different dinners for 4 people/); assert.match(q.messages[0].content, /different cuisine/);
@@ -143,14 +143,44 @@ await test('a plan: 4 different dinners for 4, variety asked for, this week\'s d
   assert.equal(p.shop, 'all');
   assert.match(q.system, /never eat: tree nuts, coconut/);
   assert.equal(q.tools, undefined);
-  assert.equal(JSON.parse(db.m.get('meals:plan')).meals[0].title, 'Chicken tacos');
+  assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, 'Chicken tacos');
+  assert.ok(p.sales.some(x => x.store === 'publix' && /ground chuck/.test(x.name)), 'the sale items it was planned with go with it');
+  assert.equal(db.m.get('meals:plan'), undefined, 'nothing is the family\'s plan until it\'s accepted');
+  assert.equal(db.m.get('meals:history'), undefined);
+});
+await test('accepting: the draft becomes the family\'s plan, with dates from the start, in the log', async () => {
+  const r = await call('accept', { token, body: { start: '2026-10-31' } });
+  assert.equal(r.status, 200);
+  const p = r.body.plan;
+  assert.deepEqual(p.dates, ['2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03']);
+  assert.equal(p.acceptedBy, 'Sam'); assert.match(p.id, /^p[a-z0-9]+$/);
+  assert.equal(JSON.parse(db.m.get('meals:plan')).id, p.id);
+  assert.equal(db.m.get('meals:draft'), undefined);
+  assert.equal(r.body.log[0].start, '2026-10-31'); assert.equal(r.body.log[0].end, '2026-11-03'); assert.deepEqual(r.body.log[0].titles.slice(0, 1), ['Chicken tacos']);
   assert.equal(JSON.parse(db.m.get('meals:history')).length, 4);
+  assert.equal((await call('log/' + p.id, { token })).body.plan.meals[0].title, 'Chicken tacos');
+  assert.equal((await call('log/pnothere', { token })).status, 404);
+  const st = await call('state', { token });
+  assert.equal(st.body.plan.id, p.id); assert.equal(st.body.draft, null); assert.equal(st.body.log.length, 1);
+  assert.equal((await call('accept', { token, body: {} })).body.error, 'no-draft');
+});
+await test('another go is told to differ from the draft it replaces; discarding drops it', async () => {
+  answers = [planJSON(four())];
+  await call('plan', { token, body: { meat: 'chicken' } });
+  asked.length = 0;
+  answers = [planJSON(['Chicken shawarma', 'Chicken pho', 'Chicken parm', 'Chicken fajitas'].map(t => meal(t)))];
+  await call('plan', { token, body: { meat: 'chicken', again: true } });
+  assert.match(asked[0].body.messages[0].content, /make different dishes: .*Chicken tacos/);
+  assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, 'Chicken shawarma');
+  await call('discard', { token, body: {} });
+  assert.equal(db.m.get('meals:draft'), undefined);
+  assert.equal(JSON.parse(db.m.get('meals:plan')).meals[0].title, 'Chicken tacos', 'the accepted plan stays');
 });
 await test('a plan for one store uses only that store\'s deals', async () => {
   asked.length = 0;
   answers = [planJSON(four())];
   const r = await call('plan', { token, body: { meat: 'pork', useDeals: true, shop: 'publix' } });
-  assert.equal(r.body.plan.shop, 'publix');
+  assert.equal(r.body.draft.shop, 'publix');
   assert.match(asked[0].body.messages[0].content, /sales at Publix/);
   assert.doesNotMatch(asked[0].body.messages[0].content, /sockeye/);
 });
@@ -168,15 +198,15 @@ await test('a plan with coconut milk goes back once with what was wrong, and the
   const r = await call('plan', { token, body: { meat: 'chicken' } });
   assert.equal(r.status, 200); assert.equal(asked.length, 2);
   assert.match(asked[1].body.messages[0].content, /used coconut, which this family must never eat/);
-  assert.ok(!r.body.plan.meals.some(m => /curry/i.test(m.title)));
+  assert.ok(!r.body.draft.meals.some(m => /curry/i.test(m.title)));
 });
 await test('a plan that slips twice is never saved', async () => {
-  const before = db.m.get('meals:plan');
+  const before = db.m.get('meals:draft');
   const bad = four({ steps: ['Top with toasted almonds.'] });
   answers = [planJSON(bad), planJSON(bad)];
   const r = await call('plan', { token, body: { meat: 'beef' } });
   assert.equal(r.status, 422); assert.equal(r.body.error, 'avoid');
-  assert.equal(db.m.get('meals:plan'), before);
+  assert.equal(db.m.get('meals:draft'), before);
 });
 await test('settings: the family can change their stores, cards and what they avoid; unknown ones are dropped', async () => {
   const r = await call('settings', { token, body: { stores: ['publix', 'harristeeter', 'kroger'], cards: ['vic', 'mvp'], avoid: ['Tree nuts', 'coconut', 'shellfish', ''] } });

@@ -141,6 +141,22 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await shot(page, 'dinners');
   ok('4 different dinners', cards.length === 4 && new Set(cards).size === 4, cards.join(' | '));
   ok('each says what\'s on sale in it', (await text(page, '#main [data-meal] .saletag')).length === 4);
+  ok('a new plan is a draft: nothing saved, and the list waits for it', (await page.textContent('#main')).includes('not saved yet') && !m.get('meals:plan'));
+  // try again: another plan, told to differ from this one
+  const beforeAgain = asked;
+  await page.click('[data-act="again"]');
+  await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 4, null, { timeout: 5000 });
+  ok('try again asks for another plan', asked === beforeAgain + 1);
+  // accept it, starting tomorrow
+  const tomorrow = await page.evaluate(() => document.querySelectorAll('#aStart option')[1].value);
+  await page.selectOption('#aStart', tomorrow);
+  await page.click('[data-act="accept"]'); await page.waitForTimeout(500);
+  const saved = JSON.parse(m.get('meals:plan') || '{}');
+  ok('accepting saves the plan for the family, from the day picked', saved.start === tomorrow && saved.dates.length === 4 && !m.get('meals:draft'), JSON.stringify(saved.dates));
+  ok('its nights show their dates', (await text(page, '#main [data-meal] .night'))[0].startsWith('Night 1 · '));
+  ok('it\'s in Past plans, as the current one', (await page.locator('[data-past] .prime', { hasText: 'Current' }).count()) === 1);
+  ok('the sale prices it was planned with are kept with it', Array.isArray(saved.sales) && saved.sales.length > 0);
+  await shot(page, 'accepted');
   await page.click('#main [data-meal="2"]'); await page.waitForTimeout(400);
   const recipe = await page.textContent('#recipeBody');
   await shot(page, 'recipe');
@@ -165,6 +181,24 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('offline: the list is still there, with its tick', (await page.locator('.irow[aria-checked="true"]', { hasText: 'Ground beef' }).count()) === 1);
   ok('offline: it says so', (await page.textContent('#main')).includes('offline'));
   down = false;
+  await ctx.close();
+}
+{ // a past plan opens with its dinners and shopping list
+  const { ctx, page } = await phone();
+  await page.click('[data-past]'); await page.waitForTimeout(400);
+  const t = await page.textContent('#pastBody');
+  ok('a past plan opens with its dinners and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 4 && t.includes('Shopping list') && t.includes('Ground beef'));
+  await page.click('#pastBody [data-meal="0"]'); await page.waitForTimeout(400);
+  ok('and its recipes', (await page.textContent('#recipeBody')).includes('Beef bulgogi bowls'));
+  await shot(page, 'past');
+  await ctx.close();
+}
+{ // a new plan can be discarded, and the accepted one stays
+  const { ctx, page } = await phone();
+  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
+  await page.waitForSelector('[data-act="discard"]', { timeout: 5000 });
+  await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
+  ok('discarding drops the new plan; the accepted one shows again', !m.get('meals:draft') && (await page.locator('[data-src="plan"]').count()) === 4);
   await ctx.close();
 }
 { // a plan that keeps using coconut is never kept

@@ -5,7 +5,12 @@ Dinner for the family, for less. One screen, three tabs:
 - **Dinners**: this week's plan. Tap **+**, pick a meat (or "Whatever's on
   sale"), how many nights and people, where to shop (one store, or **Best
   deals, any store**: each sale item then says where it is), and whether to use
-  this week's deals.
+  this week's deals. The plan comes back **not saved yet**: **Accept plan**
+  (from today, or a day you pick) saves it for the family with each night's
+  date and the sale prices it was planned with, so its shopping list stays as
+  it was; **Try again** makes different dinners; **Discard** drops it. Every
+  accepted plan is kept under **Past plans** (the last 52), each opening to its
+  dinners, recipes and shopping list - as Fitness keeps every workout.
   Meals plans that many different dinners: every night a different cuisine
   and way of cooking, and different from what the family had lately. Tap a
   night for its recipe: ingredients (with what's on sale) and steps.
@@ -32,7 +37,8 @@ your account.
 
 The family's, not one person's: one plan, one deals list a store and one set
 of settings, in the accounts' Workers KV (`meals:settings`,
-`meals:deals:<store>`, `meals:plan`, `meals:history`; see `server/auth.js`), through
+`meals:deals:<store>`, `meals:draft`, `meals:plan`, `meals:log`, `meals:log:<id>`,
+`meals:history`; see `server/auth.js`), through
 `functions/meals/api`, which only signed-in family can call
 (`functions/meals/api/_middleware.js`). The last plan and deals are kept on
 the phone too (`allison-meals-v2`), so the list opens in the store with no
