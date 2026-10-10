@@ -100,7 +100,8 @@ function sliderHTML(a, v, min, max, step, o = {}) {
     <input type="range" data-a="${a}"${o.v != null ? ` data-v="${esc(o.v)}"` : ''} min="${min}" max="${max}" step="${step}" value="${x}" aria-label="${esc(o.aria || o.label || a)}"${o.unit ? ` data-unit="${esc(o.unit)}"` : ''}${o.dis ? ' disabled' : ''}></label>`;
 }
 function chipsHTML(a, list, cur, o = {}) {
-  return `<div class="chips${o.cls ? ' ' + o.cls : ''}">${list.map(([v, l]) => `<button class="chip2" data-a="${a}" data-v="${esc(v)}" aria-pressed="${cur != null && (o.near ? Math.abs(Number(cur) - Number(v)) <= o.near : String(cur) === String(v))}"${o.dis ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
+  // A chip can carry its own class and spoken name ([v, label, { cls, aria }]), as the lights' night chip does.
+  return `<div class="chips${o.cls ? ' ' + o.cls : ''}">${list.map(([v, l, x = {}]) => `<button class="chip2${x.cls ? ' ' + x.cls : ''}" data-a="${a}" data-v="${esc(v)}"${x.aria ? ` aria-label="${esc(x.aria)}"` : ''} aria-pressed="${cur != null && (o.near ? Math.abs(Number(cur) - Number(v)) <= o.near : String(cur) === String(v))}"${o.dis ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
 }
 function infoHTML2(name, title, sub, extra = '') {
   return `<button class="dg-name" data-a="open" aria-label="All of the ${esc(name)}'s controls">${esc(name)}${svg('chevR', 16)}</button>

@@ -87,6 +87,7 @@
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
+        'Home: the 1% light button is a moon on midnight blue, the night setting',
         'The welcome link for new family shows Meals with the other Allison family apps',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
         'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
