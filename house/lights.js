@@ -5,7 +5,8 @@
 //     the dashboard tinted each by its rgb_color; this keeps the view as one
 //   - the warm wash behind the badge grows with the brightness (k = .35 + .65 x it)
 //   - preset chips 1 / 25 / 50 / 75 / 100, lit within 2% (25 reads back 25.1); 1% is the
-//     night chip, a moon in midnight blue (the evening/night level), as on the Signal dashboard
+//     night chip, a moon in midnight blue (the evening/night level), and 100% the full chip,
+//     a sun in gold (the brightest), as on the Signal dashboard
 //   - the Fireplace socket is on / off only
 //   - the room's disc turns the whole room off if anything in it is on, else on
 //   - All lights leaves out the outdoor lights, the garage and the heaters'
@@ -42,8 +43,9 @@ const L_ROOMS = [
 const L_HOUSE = ['light.side_lamps', 'light.floor_lamps', 'light.morocco', 'light.spotlight', 'light.living_room_fireplace_lights_socket', 'light.cocktail_main',
   'light.tv_lamps', 'light.bar_main_light_1', 'light.kitchen', 'light.kitchen_fan', 'light.master_bedroom', 'light.sofias_lamp', 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi'];
 const L_PRESETS = [[1, '1%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']];   // brightness, one tap
-// 1% is the night level: a moon, not a number.
-const L_CHIPS = () => L_PRESETS.map(([v, l]) => v === 1 ? [v, svg('night', 16), { cls: 'night', aria: 'Night, 1%' }] : [v, l]);
+// 1% is the night level: a moon, not a number; 100% the brightest: a sun.
+const L_CHIPS = () => L_PRESETS.map(([v, l]) => v === 1 ? [v, svg('night', 16), { cls: 'night', aria: 'Night, 1%' }]
+  : v === 100 ? [v, svg('sun', 16), { cls: 'full', aria: 'Full brightness, 100%' }] : [v, l]);
 const L_NAMES = { 'light.tom_lamp': "Tom's Lamp", 'light.elena_lamp': "Elena's Lamp" };
 const L_ALL = {};
 for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL[id] = { id, name, members, kind, room: r.id };
