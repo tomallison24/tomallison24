@@ -87,6 +87,8 @@
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s',
+        'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',
+        'News: in the Scores league pills, the Premier League and Premiership Rugby are pinned to the top',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Home: the 1% light button is a moon on midnight blue, the night setting',
         'Home: the 100% light button is a sun, glowing gold at full brightness',
@@ -98,7 +100,7 @@
       apps: {
         meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'],
           notes: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Prime and VIC member prices', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'] },
-        news: { highlights: ['Your headlines stay up, even when the news sources can\'t be reached', 'Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
+        news: { highlights: ['Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill', 'Your headlines stay up, even when the news sources can\'t be reached', 'Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
         notes: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same', 'Meals\' shopping list sorts into the same grocery sections as your lists here: copy it into one', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
         calendar: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same: the month arrows, Today, Search and Settings', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
         podcasts: { highlights: ['Buttons, arrows and chips are easier to tap, and look just the same', 'New in aOS: Meals, the family\'s dinners. Get it in aOS'] },
@@ -240,12 +242,12 @@
         {
           "i": "star",
           "t": "Follow your teams",
-          "d": "On Sport, pick the sports, competitions and teams you follow, or tap a team button to see just their news."
+          "d": "On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams."
         },
         {
           "i": "bolt",
           "t": "Live scores",
-          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV."
+          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league."
         }
       ]
     },
@@ -1245,8 +1247,8 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   SPOTS.news = { stops: [
     { sel: '#viewBtn', t: 'News by topic', d: 'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.', g: 'tap' },
     { sel: ['#feed > .lead', '#feed .list > .row'], t: 'Tap to read', d: 'Stories are newest first and each shows only once. Tap one to read the full article on the publisher’s site.', g: 'tap' },
-    { sel: '#viewBtn', t: 'Follow your teams', d: 'On Sport, pick the sports, competitions and teams you follow, or tap a team button to see just their news.', g: 'tap' },
-    { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV.' },
+    { sel: '#viewBtn', t: 'Follow your teams', d: 'On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams.', g: 'tap' },
+    { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league.' },
     { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
   ] };
   SPOTS.weather = { ready: '#card', wait: 6000, stops: [

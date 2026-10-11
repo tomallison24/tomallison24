@@ -18,9 +18,9 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
 - **Liquid Glass**, as in iOS 26 and the Calendar app: the Sport filters and
-  Sources panels float as clear glass sheets, the team buttons and
+  Sources panels float as clear glass sheets, the My teams and league pills and
   News | Scores are frosted glass with a lit rim, and every switch (News | Scores,
-  the time range, the team buttons) has a bright
+  the time range) has a bright
   glass thumb that slides to what you pick, its label in the accent colour
   (`../home/slide.js`, shared by the apps). The Undo toast is the same clear
   glass as the sheets, and Try again is tinted slate-teal glass.
@@ -149,14 +149,22 @@ The bar at the top shows how many filters are on and what they are.
 
 ## Sport: my teams
 
-The Sport tab has one-tap buttons for Liverpool, England ⚽ (football),
-England 🏉 (rugby union) and Northampton (Saints), on the same line as the
-Filter button. Tap one to see only that team's news and games, and tap it again to
-go back to your filters. The buttons are the `quick` list in
-`sport-catalog.json`: a label and the team ids it covers. All four are men's
-teams only (`menOnly`): women's leagues are left out, and so is any story
-mentioning a word in `womenTerms` (women's, Lionesses, Red Roses, WSL...). They only change
-the Sport tab.
+The Sport tab's bar is one line: the News | Scores switch and a **My teams**
+pill. Tap the pill for a menu:
+
+- **All sport** (or **My filters**, with how many, once you've picked some in
+  the filter panel),
+- the one-tap teams: Liverpool, England ⚽ (football), England 🏉 (rugby union)
+  and Northampton (Saints). Pick one to see only that team's news and games;
+  pick **All sport** (or the team again) to go back to your filters. The pill
+  then shows the team's name,
+- **Choose sports and teams…**, which opens the filter panel above, and
+  **Reset filters** while any are on.
+
+The one-tap teams are the `quick` list in `sport-catalog.json`: a label and the
+team ids it covers. All four are men's teams only (`menOnly`): women's leagues
+are left out, and so is any story mentioning a word in `womenTerms` (women's,
+Lionesses, Red Roses, WSL...). They only change the Sport tab.
 
 ## Sport: live scores and fixtures
 
@@ -174,18 +182,40 @@ Games show where to watch in the US (TV or streaming, e.g. FOX, FS2,
 Paramount+) when ESPN lists it; many games get their listing only a few
 days before.
 
+Scores has two blocks, **Scores** (live, finished and today's games) and
+**Coming up** (the next fixtures), and each has its own **league pill** on
+its right:
+
+- Each shows the **Premier League** to start with. The pill's menu lists the
+  leagues that have games in that block, with how many (live ones have a red
+  dot), and **All leagues**, which gives every league its own heading as
+  before. The **Premier League and Premiership Rugby** are pinned: they come
+  first under All leagues, above a line, whenever they have games (`"pin": true`
+  in `leagues.json`); the other leagues follow, ones in play first. If there's only one league with games, it's named without a menu.
+- Your pick is kept on this device (`news.scores.league` and
+  `news.scores.next` in `localStorage`) for as long as that league has games.
+  If it has none, the pill falls back to the Premier League.
+- With a team filter on (a one-tap team or your own picks) it starts on **All
+  leagues** instead, since a team plays in several (Liverpool: the Premier
+  League and the Champions League). If the Premier League is quiet, it also
+  starts on All leagues.
+- Coming up shows 5 games of one league, with **Show N more** for the rest the
+  saved copy holds (up to 10), or 3 a league (5 when filtered) under All
+  leagues.
+
 - Each refresh also saves a copy (`data/scores.json`), shown when ESPN
   can't be reached.
-- **Coming up**: under each league's games, the next fixtures (3 a league,
-  or 5 when you've set filters, so your team's next games show). Each
-  refresh looks up to 14 days ahead, a day at a time (ESPN refuses date
-  ranges), and saves up to 10 per league in the same copy, plus every
-  fixture for the one-tap teams, however busy the league (looking 21 days
+- **Coming up**: each refresh looks up to 14 days ahead, a day at a time (ESPN
+  refuses date ranges), and saves up to 10 per league in the same copy, plus
+  every fixture for the one-tap teams, however busy the league (looking 21 days
   ahead in their leagues, to get past international breaks). Fixtures are
   only as fresh as the last refresh; games that have already started drop
   off.
 - ESPN's feed is public but undocumented, so it may change or stop
   without notice.
+
+Test: `node news/scripts/app-test.mjs` drives Scores in Chromium at iPhone size
+on made-up ESPN data (`scripts/scores-fixture.mjs`).
 
 ## Add or change sources
 

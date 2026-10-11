@@ -444,8 +444,8 @@ await test('Drinks beside your training, signed in: a glass on the week, and Ana
   if (SHOTS) await dr.page.screenshot({ path: path.join(SHOTS, '15-analysis-drinks.png'), fullPage: true });
   // The week: a small glass and the standard drinks on a day you drank on.
   await dr.page.evaluate(() => window.__fitness.setView('week'));
-  // Yesterday is last week on the first day of a week: show the week it is in.
-  await dr.page.evaluate(d => { const f = window.__fitness; f.st.week = f.weekStartOf(d); f.render(); }, D(-1));
+  // On a Sunday the week starts today, so yesterday is in the week before.
+  if ((await dr.page.$eval('.drow', e => e.dataset.day)) > D(-1)) await dr.page.click('[data-act="prev"]');
   const yday = dr.page.locator('.drow[data-day="' + D(-1) + '"]');
   await yday.locator('.drk').waitFor();
   assert.equal(await yday.locator('.drk').textContent(), '2.5');
