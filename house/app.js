@@ -243,9 +243,19 @@ function sampleStates() {
 // Assistant's own client (home-assistant-js-websocket): auth with the token,
 // subscribe_entities for the states and their compressed changes, and
 // call_service for every control.
+// Getting connected is a race. A socket that has not been answered in RACE_AT
+// seconds is not given up on: another opens beside it (up to three at once),
+// and whichever Home Assistant answers first is kept and the rest closed. A
+// phone on a poor network, or Home Assistant's remote link waking up, can stall
+// one attempt for a long time while the next goes straight through; giving each
+// attempt only a few seconds, then starting again from nothing, once made a
+// slow handshake take most of a minute. Only when none has got through in
+// GIVE_UP seconds does it wait and start a new round.
+const RACE_AT = [4000, 9000], GIVE_UP = 25000;
 const HA = {
   ws: null, nextId: 1, calls: new Map(), subs: new Map(), subId: null, replace: true,
   url: '', token: '', status: 'off', version: '', tries: 0, timer: null, pingTimer: null, stopped: true,
+  round: 0, racing: [], raceTimers: [], toJoin: 0, joinNext: null,
 
   start(url, token) {
     this.stop();
@@ -254,10 +264,18 @@ const HA = {
   },
   stop() {
     this.stopped = true;
-    clearTimeout(this.timer); clearInterval(this.pingTimer); clearTimeout(this.authTimer);
+    clearTimeout(this.timer); clearInterval(this.pingTimer);
+    this.endRound();
     if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch {} }
     this.ws = null;
     this.failCalls('Disconnected');
+  },
+  // The sockets still racing are closed and their timers gone; late word from them is ignored.
+  endRound() {
+    this.round++;
+    clearTimeout(this.authTimer); this.raceTimers.forEach(clearTimeout); this.raceTimers = []; this.toJoin = 0; this.joinNext = null;
+    for (const w of this.racing) { w.onclose = null; try { w.close(); } catch {} }
+    this.racing = [];
   },
   failCalls(msg) { for (const c of this.calls.values()) c.reject(new Error(msg)); this.calls.clear(); this.subs.clear(); },
   // The page is drawn after the status changes; a fault in drawing it must
@@ -266,53 +284,93 @@ const HA = {
   setStatus(s, detail) { this.status = s; try { onStatus(s, detail); } catch (e) { drawError('the page', e); } },
 
   open() {
-    let ws;
-    try { ws = new WebSocket(this.url.replace(/^http/, 'ws') + '/api/websocket'); }
-    catch (e) { this.stopped = true; this.setStatus('error', 'That address is not one the browser can open.'); return; }
-    this.ws = ws; this.slow = false;
-    // No answer from Home Assistant in 12 s (a network that never connects
-    // or never replies): give up on this socket and try again, saying so.
-    clearTimeout(this.authTimer);
-    this.authTimer = setTimeout(() => { if (this.ws === ws && this.status !== 'live') { this.slow = true; ws.close(); } }, 12000);
+    this.endRound();
+    const round = this.round;
+    this.slow = false;
     this.setStatus(this.tries ? 'reconnecting' : 'connecting');
-    ws.onmessage = ev => {
-      let data; try { data = JSON.parse(ev.data); } catch { return; }
-      for (const m of Array.isArray(data) ? data : [data]) this.onMessage(m);
+    const target = this.url.replace(/^http/, 'ws') + '/api/websocket';
+    // Opens one more socket into this round; false when the address cannot be opened at all.
+    const join = () => {
+      if (this.stopped || round !== this.round || this.ws) return true;
+      let ws;
+      try { ws = new WebSocket(target); } catch (e) { return false; }
+      this.racing.push(ws);
+      ws.onmessage = ev => {
+        if (round !== this.round) return;
+        let data; try { data = JSON.parse(ev.data); } catch { return; }
+        for (const m of Array.isArray(data) ? data : [data]) this.onMessage(m, ws);
+      };
+      ws.onclose = () => this.closed(ws, round);
+      return true;
     };
-    ws.onclose = () => {
+    this.toJoin = RACE_AT.length;
+    // A failed socket brings the next one in at once, rather than waiting its turn.
+    this.joinNext = () => { if (this.toJoin > 0) { this.toJoin--; join(); return true; } return false; };
+    if (!join()) { this.stopped = true; this.round++; this.setStatus('error', 'That address is not one the browser can open.'); return; }
+    for (const ms of RACE_AT) this.raceTimers.push(setTimeout(() => { if (this.toJoin > 0) { this.toJoin--; join(); } }, ms));
+    this.authTimer = setTimeout(() => {
+      if (round !== this.round || this.status === 'live') return;
+      this.slow = true;
+      this.retry();
+    }, GIVE_UP);
+  },
+
+  // A socket closed. The live one dropping starts a new round; a racing one failing
+  // brings in the next, and only when none is left does the round give up.
+  closed(ws, round) {
+    const i = this.racing.indexOf(ws); if (i >= 0) this.racing.splice(i, 1);
+    if (round !== this.round || this.stopped) return;
+    if (ws === this.ws) {
       clearInterval(this.pingTimer);
       this.failCalls('Connection lost');
       this.ws = null;
-      if (this.stopped) return;
-      // Never got as far as auth on the first go: say so rather than spin.
-      clearTimeout(this.authTimer);
-      const wait = [1, 2, 5, 10, 30][Math.min(this.tries, 4)] * 1000;
-      this.tries++;
-      if (this.slow) this.setStatus('error', 'Home Assistant did not answer at ' + this.url.replace(/^https?:\/\//, '') + ' within 12 seconds. Trying again…');
-      else if (this.tries === 1 && this.status === 'connecting') this.setStatus('error', 'Could not reach Home Assistant at that address. Trying again…');
-      else this.setStatus('reconnecting');
-      this.timer = setTimeout(() => this.open(), wait);
-    };
+      return this.retry();
+    }
+    if (this.ws || this.racing.length) return;
+    if (this.joinNext && this.joinNext()) return;
+    this.retry();
   },
 
-  onMessage(m) {
-    if (m.type === 'auth_required') { this.ws.send(JSON.stringify({ type: 'auth', access_token: this.token })); return; }
+  // Wait a little, then a new round: 1, 2, 5, 10, then 30 seconds.
+  retry() {
+    this.endRound();
+    const wait = [1, 2, 5, 10, 30][Math.min(this.tries, 4)] * 1000;
+    this.tries++;
+    if (this.slow) this.setStatus('error', 'Home Assistant did not answer at ' + this.url.replace(/^https?:\/\//, '') + ' within ' + GIVE_UP / 1000 + ' seconds. Trying again…');
+    else if (this.tries === 1 && this.status === 'connecting') this.setStatus('error', 'Could not reach Home Assistant at that address. Trying again…');
+    else this.setStatus('reconnecting');
+    this.timer = setTimeout(() => this.open(), wait);
+  },
+
+  onMessage(m, ws) {
+    if (m.type === 'auth_required') { ws.send(JSON.stringify({ type: 'auth', access_token: this.token })); return; }
     if (m.type === 'auth_invalid') {
-      this.stopped = true; this.ws.onclose = null; this.ws.close(); this.ws = null;
+      this.stopped = true; this.endRound(); this.ws = null;
       this.setStatus('error', 'Home Assistant turned the token down: ' + (m.message || 'invalid token') + '.');
       return;
     }
     if (m.type === 'auth_ok') {
-      clearTimeout(this.authTimer);
+      if (this.ws) return;                       // another socket got there first
+      // This one wins: the others are closed, and it is the connection from here on.
+      this.racing = this.racing.filter(w => w !== ws);
+      this.endRound();
+      this.ws = ws;
+      ws.onmessage = ev => {
+        let data; try { data = JSON.parse(ev.data); } catch { return; }
+        for (const x of Array.isArray(data) ? data : [data]) this.onMessage(x, ws);
+      };
+      const round = this.round;
+      ws.onclose = () => this.closed(ws, round);
       this.version = m.ha_version || '';
       this.tries = 0; this.nextId = 1; this.replace = true;
       this.subId = this.nextId++;
-      this.ws.send(JSON.stringify({ id: this.subId, type: 'subscribe_entities' }));
+      ws.send(JSON.stringify({ id: this.subId, type: 'subscribe_entities' }));
       clearInterval(this.pingTimer);
       this.pingTimer = setInterval(() => this.ping(), 30000);
       this.setStatus('live');
       return;
     }
+    if (ws !== this.ws) return;
     if (m.type === 'event' && m.id === this.subId) { applyEntities(m.event, this.replace); this.replace = false; return; }
     if (m.type === 'event' && this.subs.has(m.id)) { this.subs.get(m.id)(m.event); return; }
     if ((m.type === 'result' || m.type === 'pong') && this.calls.has(m.id)) {

@@ -27,6 +27,9 @@
 //   meals:settings, meals:deals:<store>, meals:draft, meals:plan, meals:log,
 //   meals:log:<id>, meals:history   the family's Meals
 //                    (functions/meals/api): shared by the whole family, not per person
+//   news:sum:<hash>  one story's summary and takeaways, kept a week for the whole family;
+//   news:ai:<id>:<day>   how many summaries and questions that person has asked today
+//                    (functions/news/api)
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry, s: sign-out
 // count }; it holds only while the user is still in the family and their sign-out
 // count (sv:<id>, kept apart from the user record so it never rewrites it) still

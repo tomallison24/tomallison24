@@ -271,7 +271,9 @@
     if (when) parts.push(`<span>${esc(when)}</span>`);
     // No dot between the tag and what follows.
     const html = parts[0]?.startsWith('<span class="new">') ? parts[0] + ' ' + parts.slice(1).join('<span class="sep">·</span>') : parts.join('<span class="sep">·</span>');
-    return `<div class="meta">${html}</div>`;
+    // The sparkle summarises the story (see "Summaries"); it sits inside the story's link, so a tap on it is caught before the link opens.
+    const sum = safeUrl(s.url) ? `<span class="sum-btn" role="button" tabindex="0" data-sum="${esc(safeUrl(s.url))}" aria-label="Summarize: ${esc(s.title)}">${TOPIC_ICONS.ai}</span>` : '';
+    return `<div class="meta">${html}${sum}</div>`;
   }
 
   // ---- switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js) ----
@@ -544,6 +546,147 @@
     const back = filterEl.querySelector('[data-action="edit-sources"]');
     if (back) back.focus({ preventScroll: true });
   }
+
+  // ---- summaries: Claude's two-sentence summary, key takeaways and questions about one story ----
+  // The server (functions/news/api) reads the story's page and asks Claude; the app only
+  // sends the story's address, which must be one of the published headlines.
+  const aiWrap = $('ai-sheet'), aiSheetEl = aiWrap.querySelector('.sheet'), aiBody = $('ai-body');
+  const aiAsk = $('ai-ask'), aiInput = $('ai-input'), aiSend = $('ai-send');
+  let aiOpen = false, aiRun = 0, ai = null;     // ai: { url, title, source, phase: 'loading' | 'done' | 'error', sum, error, qa: [{ q, a, wait, error }] }
+  const AI_SAY = {
+    'no-ai': 'Summaries need the owner to add Anthropic’s key first (see News’ README).',
+    'accounts-off': 'Family accounts aren’t switched on yet, so summaries aren’t available.',
+    'setup': 'Family accounts aren’t switched on yet, so summaries aren’t available.',
+    'signin': 'Sign in with your family account to summarize stories.',
+    'off': 'Summaries aren’t set up on this site yet.',
+    'offline': 'You’re offline. Summaries need a connection.',
+    'unknown-story': 'That story has dropped off the headlines. Refresh and try another.',
+    'limit': 'That’s a lot of summaries for one day. Try again tomorrow.',
+    'ai-key': 'Anthropic didn’t accept the key. The owner can check it.',
+    'ai-busy': 'Claude is busy. Try again in a minute.',
+    'ai-unreachable': 'Couldn’t reach Claude. Try again in a minute.',
+    'ai-refused': 'Claude wouldn’t read this one.',
+    'ai-format': 'That didn’t come back right. Try again.',
+  };
+  const aiSay = code => AI_SAY[code] || 'Something went wrong. Try again in a minute.';
+  const accountApi = () => window.AllisonOS && window.AllisonOS.account;
+  async function aiCall(route, body) {
+    const opts = { method: 'POST', cache: 'no-store', headers: { 'X-News': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    let r;
+    try { r = accountApi() ? await accountApi().fetch('api/' + route, opts) : await fetch('api/' + route, opts); }
+    catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
+    let j = {}; try { j = await r.json(); } catch {}
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server') });
+    return j;
+  }
+  const QUESTIONS = ['Why does this matter?', 'What happens next?', 'Who is affected?'];
+
+  function renderAi(scrollToEnd) {
+    if (!ai) return;
+    let h = `<div class="ai-story"><h3>${esc(ai.title)}</h3><p class="src">${esc(ai.source)}</p></div>`;
+    if (ai.phase === 'loading') {
+      h += `<div class="ai-card" aria-busy="true"><div class="sk" style="width:94%;height:14px"></div><div class="sk" style="width:80%;height:14px;margin-top:8px"></div>
+        <div class="sk" style="width:55%;height:14px;margin-top:8px"></div></div>
+        <div class="ai-card"><div class="sk" style="width:90%;height:12px"></div><div class="sk" style="width:84%;height:12px;margin-top:10px"></div><div class="sk" style="width:70%;height:12px;margin-top:10px"></div></div>`;
+    } else if (ai.phase === 'error') {
+      h += `<div class="ai-card ai-err"><p>${esc(aiSay(ai.error))}</p><div class="actions">${ai.error === 'signin' ? '<button class="text-btn" data-action="ai-signin">Sign in with Face ID</button>' : '<button class="text-btn" data-action="ai-retry">Try again</button>'}</div></div>`;
+    } else {
+      const x = ai.sum;
+      h += `<div class="ai-card"><h4>Summary</h4><p>${esc(x.summary)}</p></div>
+        <div class="ai-card"><h4>Key takeaways</h4><ul>${x.takeaways.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
+      if (x.basis === 'snippet') h += '<p class="ai-note">The publisher’s page wouldn’t load for Claude (a paywall, perhaps), so this is from the headline and short description only.</p>';
+      else if (x.truncated) h += '<p class="ai-note">A very long article: Claude read the first part.</p>';
+      if (safeUrl(ai.url)) h += `<a class="ai-open" href="${esc(safeUrl(ai.url))}" target="_blank" rel="noopener">Read the full article</a>`;
+      if (!ai.qa.length) h += `<div class="ai-chips">${QUESTIONS.map(q => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
+      h += ai.qa.map(t => `<div class="ai-q">${esc(t.q)}</div><div class="ai-a${t.wait ? ' wait' : ''}${t.error ? ' err' : ''}">${t.wait ? 'Thinking…' : esc(t.error ? aiSay(t.error) : t.a)}</div>`).join('');
+    }
+    aiBody.innerHTML = h;
+    aiAsk.hidden = ai.phase !== 'done';
+    aiSend.disabled = !aiInput.value.trim() || ai.qa.some(t => t.wait);
+    if (scrollToEnd) aiBody.scrollTop = aiBody.scrollHeight;
+  }
+
+  async function loadSummary() {
+    const run = ++aiRun;
+    ai.phase = 'loading'; ai.error = null; renderAi();
+    try {
+      const j = await aiCall('summarize', { url: ai.url });
+      if (run !== aiRun || !aiOpen) return;
+      ai.sum = { summary: j.summary, takeaways: j.takeaways, basis: j.basis, truncated: j.truncated };
+      if (j.title) ai.title = j.title;
+      ai.phase = 'done';
+    } catch (e) {
+      if (run !== aiRun || !aiOpen) return;
+      ai.phase = 'error'; ai.error = e.code || 'server';
+    }
+    renderAi();
+  }
+
+  function openAi(url) {
+    const s = (data && data.stories || []).find(x => x.url === url);
+    ai = { url, title: s ? s.title : '', source: s ? s.source : '', phase: 'loading', sum: null, error: null, qa: [] };
+    aiInput.value = '';
+    if (!aiOpen) {
+      aiOpen = true;
+      aiWrap.hidden = false;
+      document.documentElement.classList.add('locked');
+      requestAnimationFrame(() => requestAnimationFrame(() => aiWrap.classList.add('open')));
+      aiSheetEl.focus({ preventScroll: true });
+    }
+    loadSummary();
+  }
+
+  function closeAi() {
+    if (!aiOpen) return;
+    aiOpen = false; aiRun++;
+    aiWrap.classList.remove('open');
+    document.documentElement.classList.remove('locked');
+    const hide = () => { if (!aiOpen) aiWrap.hidden = true; };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
+  }
+
+  async function askAi(question) {
+    const q = String(question || '').trim();
+    if (!ai || ai.phase !== 'done' || !q || ai.qa.some(t => t.wait)) return;
+    const history = ai.qa.filter(t => t.a && !t.error).map(t => ({ q: t.q, a: t.a }));
+    const turn = { q, a: '', wait: true, error: null };
+    ai.qa.push(turn);
+    aiInput.value = '';
+    const mine = ai, run = aiRun;
+    renderAi(true);
+    try {
+      const j = await aiCall('ask', { url: mine.url, question: q, history });
+      turn.a = j.answer;
+    } catch (e) { turn.error = e.code || 'server'; }
+    turn.wait = false;
+    if (ai === mine && run === aiRun && aiOpen) renderAi(true);
+  }
+
+  feedEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-sum]');
+    if (!b) return;
+    e.preventDefault();                 // it sits inside the story's link
+    openAi(b.dataset.sum);
+  });
+  feedEl.addEventListener('keydown', e => {
+    const b = e.target.closest && e.target.closest('[data-sum]');
+    if (!b || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    openAi(b.dataset.sum);
+  });
+  aiWrap.addEventListener('click', e => {
+    if (e.target.closest('[data-action="close-ai"]')) return closeAi();
+    if (e.target.closest('[data-action="ai-retry"]')) return loadSummary();
+    if (e.target.closest('[data-action="ai-signin"]')) {
+      const a = accountApi();
+      return a && a.signIn ? a.signIn().then(loadSummary, () => {}) : loadSummary();
+    }
+    const c = e.target.closest('[data-ask]');
+    if (c) return askAi(c.dataset.ask);
+  });
+  aiInput.addEventListener('input', () => { aiSend.disabled = !aiInput.value.trim() || !!(ai && ai.qa.some(t => t.wait)); });
+  aiInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAi(aiInput.value); } });
+  aiSend.addEventListener('click', () => askAi(aiInput.value));
 
   // ---- filter sheet ----
   const SEGMENTS = [['sports', 'Sports'], ['competitions', 'Competitions'], ['teams', 'Teams']];
@@ -1101,6 +1244,7 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && sheetOpen) closeSheet();
     if (e.key === 'Escape' && srcOpen) closeSrcSheet();
+    if (e.key === 'Escape' && aiOpen) closeAi();
   });
 
   // Broken or refused images: try the original, then drop the frame.

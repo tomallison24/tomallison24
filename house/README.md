@@ -437,6 +437,17 @@ subject to the browser's CORS rules, so nothing needs adding to
 `configuration.yaml`. It pings every 30 s and on waking, and reconnects on
 its own (1, 2, 5, 10, then every 30 s).
 
+**Getting connected is a race.** A phone on a poor network, or Home Assistant's
+remote link waking up, can stall one connection attempt for a long time while
+the next goes straight through. So a socket that has not been answered in 4 s
+is not given up on: a second opens beside it, a third at 9 s, and the first
+Home Assistant answers is kept and the rest closed. Only when none has got
+through in 25 s does it say so ("did not answer ... within 25 seconds") and
+wait before a new round. (Each attempt used to get 12 s and then start again
+from nothing: three stalled tries in a row took 44 s, and an answer that
+needed more than 12 s never connected.) `scripts/connect-test.mjs` plays it
+with a stand-in Home Assistant: stalled, slow, silent, token refused, hung up.
+
 Signing in with your Home Assistant password (its OAuth flow) instead of a
 token is possible later. It was left out of this first round because it makes
 cross-origin `fetch` calls to `/auth/token` that may need CORS set up, and

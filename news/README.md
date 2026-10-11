@@ -31,6 +31,35 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
 
+## Summaries
+
+Tap the sparkle at the end of a story's source line for **Claude's summary of
+that story**: two sentences, three to five bullet points of key takeaways, a
+link to the full article, and a box to **ask questions about it** (three
+one-tap questions to start: why it matters, what happens next, who is
+affected). Follow-ups remember what was asked before.
+
+- **How:** `functions/news/api` (`/news/api/summarize` and `/news/api/ask`)
+  reads the story's own page, finds its text among the menus and scripts, and
+  asks Claude to summarise it or answer from it, through Anthropic's API. The
+  app sends only the story's address, and the server only reads an address that
+  is in the published headlines, so it can't be pointed anywhere else.
+- **Paywalls and pages that need scripts:** if the page won't load, the summary
+  is made from the headline and the feed's short description, and says so. A very
+  long article is read up to about 60,000 characters, and says so.
+- **Who:** signed-in family only (Face ID, like Meals), as every call costs a little.
+  Each person gets at most 60 summaries and questions a day, and a story's summary is kept
+  for a week for the whole family, so a second reader of the same story is free.
+- **The key:** the same `ANTHROPIC_API_KEY` repository secret as Meals (`meals/README.md`,
+  "The AI key"); until it is there the sheet says so. The model is Claude Opus 5.5 at low
+  effort. To use another (`claude-haiku-5-5` is the cheapest), add a repository secret
+  `NEWS_AI_MODEL`. Science stories (Stem cells) can set off Claude's safety classifiers, so
+  the request asks Anthropic for its server-side fallbacks, and a story Claude still
+  won't read says so.
+- **Tested** with stand-ins for Anthropic's API and the publisher's page
+  (`scripts/ai-test.mjs`), not against the live API: the first real summary is the
+  real check.
+
 ## Refreshing every 30 minutes
 
 `news.yml` has a schedule (:15 and :45 past each hour), but GitHub runs
