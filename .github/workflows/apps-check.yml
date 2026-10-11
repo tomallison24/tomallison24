@@ -66,6 +66,7 @@ jobs:
           node-version: 22
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node house/scripts/app-test.mjs
+      - run: node house/scripts/connect-test.mjs
       - run: node calendar/scripts/app-test.mjs
       - run: node drinks/scripts/app-test.mjs
       - run: node fitness/scripts/app-test.mjs
