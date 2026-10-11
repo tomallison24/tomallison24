@@ -88,6 +88,7 @@
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s',
         'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',
+        'News: in the Scores league pills, the Premier League and Premiership Rugby are pinned to the top',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Home: the 1% light button is a moon on midnight blue, the night setting',
         'Home: the 100% light button is a sun, glowing gold at full brightness',

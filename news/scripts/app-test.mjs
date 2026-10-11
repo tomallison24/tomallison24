@@ -89,6 +89,10 @@ await test('the Scores pill lists only leagues with games, with counts, and pick
   const menu = visibleMenu(page);
   assert.equal(await menu.count(), 1);
   const rows = (await menu.locator('button').allInnerTexts()).map(t => t.replace(/\s+/g, ' ').trim());
+  // Pinned: the Premier League and Premiership Rugby come first, under All leagues, ahead of the leagues in play.
+  assert.deepEqual(rows.slice(0, 3), ['All leagues 8', 'Premier League 3', 'Premiership Rugby 1']);
+  assert.equal(await menu.locator('hr').count(), 1, 'a line between the pinned leagues and the rest');
+  assert.deepEqual(rows.slice(3).sort(), ['Champions League 2', 'Championship 1', 'NFL 1']);
   assert.deepEqual(rows.sort(), ['All leagues 8', 'Champions League 2', 'Championship 1', 'NFL 1', 'Premier League 3', 'Premiership Rugby 1'].sort());
   assert.equal(await menu.locator('[aria-selected="true"]').count(), 1);
   assert.match(await menu.locator('[aria-selected="true"]').innerText(), /Premier League/);

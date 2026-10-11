@@ -189,7 +189,9 @@ its right:
 - Each shows the **Premier League** to start with. The pill's menu lists the
   leagues that have games in that block, with how many (live ones have a red
   dot), and **All leagues**, which gives every league its own heading as
-  before. If there's only one league with games, it's named without a menu.
+  before. The **Premier League and Premiership Rugby** are pinned: they come
+  first under All leagues, above a line, whenever they have games (`"pin": true`
+  in `leagues.json`); the other leagues follow, ones in play first. If there's only one league with games, it's named without a menu.
 - Your pick is kept on this device (`news.scores.league` and
   `news.scores.next` in `localStorage`) for as long as that league has games.
   If it has none, the pill falls back to the Premier League.
