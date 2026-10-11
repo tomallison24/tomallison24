@@ -8,7 +8,19 @@
   const LEAGUES_URL = 'leagues.json';
   const SCORES_URL = 'data/scores.json';                  // copy saved on each refresh
   const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
-  const ESPN_TABLE = 'https://site.api.espn.com/apis/v2/sports';   // the standings live under apis/v2, not apis/site/v2
+  // ESPN answers on two hosts with the same data; the standings and the match details are asked of
+  // site.web.api.espn.com first (the one checked against ESPN's live answers, with CORS open to any
+  // page) and, if that fails, of site.api.espn.com. The standings live under apis/v2, not apis/site/v2.
+  const ESPN_WEB = 'https://site.web.api.espn.com/apis';
+  const ESPN_API = 'https://site.api.espn.com/apis';
+  const espnGet = async paths => {
+    let last;
+    for (const base of [ESPN_WEB, ESPN_API]) {
+      try { const r = await fetch(base + paths, { cache: 'no-store' }); if (r.ok) return await r.json(); last = new Error(`HTTP ${r.status}`); }
+      catch (err) { last = err; }
+    }
+    throw last;
+  };
   const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
   const LATEST = { id: 'latest', label: 'Latest' };
   const SPORT = 'sport';
@@ -1022,7 +1034,7 @@
           name: t.displayName || t.name || '', short: t.shortDisplayName || t.displayName || t.name || '',
           logo: t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null,
           vals: cols.map(c => shown(stat(e, c.name))),
-          zone: note && /^#[0-9a-f]{6}$/i.test(note.color || '') ? { color: note.color, label: String(note.description || '') } : null,
+          zone: note && /^#+[0-9a-f]{6}$/i.test(note.color || '') ? { color: note.color.replace(/^#+/, '#'), label: String(note.description || '') } : null,   // ESPN has sent '##B5E7CE'
         };
       }).sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.order - b.order);
       rows.forEach((r, i) => { if (r.rank == null) r.rank = i + 1; });
@@ -1044,7 +1056,7 @@
     tableBusy = true;
     if (topic === SPORT && sportMode === 'table') renderFeed();
     const get = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)));
-    const [st, sb] = await Promise.allSettled([get(`${ESPN_TABLE}/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
+    const [st, sb] = await Promise.allSettled([espnGet(`/v2/sports/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
     if (run !== tableRun) return;                 // another league was picked meanwhile
     tableBusy = false;
     const cur = tables[l.id];
@@ -1110,6 +1122,337 @@
     return `<section class="sect">${head}${body}${key}</section>${foot}`;
   }
 
+  // ---- match: a game's own page, from ESPN's match details ----
+  // Tapping a football or rugby game opens this instead of ESPN's site: the score and clock, what
+  // happened (football: goals, cards, substitutions; rugby: tries, kicks, cards), the teams side
+  // by side, the line-ups, and for football the shots on a pitch and each player's numbers, then the
+  // ground and where to watch. ESPN's own page stays one tap away at the bottom. While the game is
+  // on it refreshes every 45 seconds. Every part of the answer is read defensively: a part ESPN
+  // doesn't have (rugby team stats, line-ups before kick-off) is left out or says so.
+  const matchKind = l => !l ? null : l.sport === 'football' ? 'football' : (l.sport === 'rugby-union' || l.sport === 'rugby-league') ? 'rugby' : null;
+  const matchWrap = $('match-sheet'), matchSheetEl = matchWrap.querySelector('.sheet'), matchBody = $('match-body'), matchTitle = $('match-title');
+  let matchOpen = false, matchRun = 0, matchTimer = 0, match = null;   // match: { l, kind, game, phase, data, tab, shot, error }
+
+  // The stats shown, in order, by ESPN's name for them; pass accuracy is worked out (ESPN rounds it to a tenth).
+  const MATCH_STATS = [['possessionPct', 'Possession', 'pct'], ['totalShots', 'Shots'], ['shotsOnTarget', 'Shots on target'], ['wonCorners', 'Corners'],
+    ['foulsCommitted', 'Fouls'], ['offsides', 'Offsides'], ['yellowCards', 'Yellow cards'], ['redCards', 'Red cards'], ['saves', 'Saves'],
+    ['totalPasses', 'Passes'], ['passAccuracy', 'Pass accuracy', 'pct']];
+  // Rugby: ESPN gives no team stats for most games, so these are counted from the scoring list.
+  const RUGBY_STATS = [['tries', 'Tries'], ['conversions', 'Conversions'], ['penaltyGoals', 'Penalty goals'], ['dropGoals', 'Drop goals'], ['yellowCards', 'Yellow cards'], ['redCards', 'Red cards']];
+  const PHASES = { 'Kickoff': 'Kick-off', 'Halftime': 'Half time', 'Start 2nd Half': 'Second half', 'End Regular Time': 'Full time', 'End 2nd Half': 'Full time',
+    'Start Extra Time': 'Extra time', 'Penalty Shootout': 'Penalties', 'Full Time': 'Full time' };
+  const EVENT_ICONS = {
+    goal: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.2l3.2 2.3-1.2 3.7h-4l-1.2-3.7z" fill="currentColor"/></svg>',
+    yellow: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#F5C518"/></svg>',
+    red: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#E5242B"/></svg>',
+    sub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v12M4.8 8.2L8 5l3.2 3.2" fill="none" stroke="#3FB07F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19V7M12.8 15.8L16 19l3.2-3.2" fill="none" stroke="#E5575A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    miss: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="3 2.4"/></svg>',
+    try: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="8.6" ry="5.4" transform="rotate(-35 12 12)" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.6 15.4l6.8-6.8M10.6 10.2l3.2 3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  };
+  // A rugby kick is a small tag rather than an icon: what it was, and the points it was worth.
+  const RUGBY_TAGS = { conv: ['CON', '+2'], pen: ['PEN', '+3'], drop: ['DG', '+3'] };
+
+  // What kind of event ESPN's football key event is, or null for the ones not worth a row (delays and the like).
+  function eventKind(e) {
+    const t = String((e.type && e.type.text) || '').toLowerCase();
+    if (/penalty/.test(t) && !/scored|goal/.test(t)) return e.scoringPlay ? 'goal' : 'miss';
+    if (/goal|penalty/.test(t) || e.scoringPlay) return 'goal';
+    if (/red card|yellow.?red|second yellow/.test(t)) return 'red';
+    if (/yellow/.test(t)) return 'yellow';
+    if (/substitution/.test(t)) return 'sub';
+    if (PHASES[(e.type && e.type.text) || '']) return 'phase';
+    return null;
+  }
+
+  // The parts every game has: the header's score and clock, the two sides, the ground, where to watch.
+  function matchBase(json) {
+    const comp = ((((json || {}).header || {}).competitions || [])[0]) || {};
+    const type = (comp.status || {}).type || {};
+    const crest = t => t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null;
+    const side = where => {
+      const c = (comp.competitors || []).find(x => x.homeAway === where) || {}, t = c.team || {};
+      return { id: String(t.id ?? ''), name: t.displayName || t.name || '', short: t.shortDisplayName || t.displayName || t.name || '', logo: crest(t), score: c.score == null ? '' : String(c.score), winner: !!c.winner };
+    };
+    const venue = (json && json.gameInfo && json.gameInfo.venue) || {}, links = (json && json.header && json.header.links) || [];
+    return { comp, state: type.state || 'pre', detail: type.shortDetail || type.detail || '', home: side('home'), away: side('away'),
+      venue: venue.fullName || '', city: (venue.address && venue.address.city) || '', attendance: +(json && json.gameInfo && json.gameInfo.attendance) || 0,
+      tv: [...new Set(((json && json.broadcasts) || []).map(b => b && b.media && b.media.shortName).filter(Boolean))].slice(0, 3),
+      link: (links.find(l => (l.rel || []).includes('summary')) || links[0] || {}).href || null, start: comp.date || null };
+  }
+
+  // ESPN's football match details: the events, team stats, shots, line-ups with each player's numbers.
+  // Keep in step with scripts/match-test.mjs.
+  function normalizeFootball(json) {
+    const b = matchBase(json), { home, away } = b;
+    const events = (Array.isArray(json && json.keyEvents) ? json.keyEvents : []).map(e => {
+      const kind = eventKind(e || {});
+      if (!kind) return null;
+      const teamId = String((e.team && e.team.id) ?? '');
+      return { kind, label: (e.type && e.type.text) || '', clock: (e.clock && e.clock.displayValue) || '', text: String(e.text || ''),
+        who: (e.participants || []).map(p => p && p.athlete && p.athlete.displayName).filter(Boolean),
+        side: teamId && teamId === home.id ? 'home' : teamId && teamId === away.id ? 'away' : '', team: e.team ? e.team.displayName || '' : '' };
+    }).filter(Boolean);
+    const stats = {};
+    for (const t of (json && json.boxscore && json.boxscore.teams) || []) {
+      const m = {};
+      for (const x of t.statistics || []) if (x && x.name) m[x.name] = parseFloat(x.displayValue);
+      if (Number.isFinite(m.accuratePasses) && m.totalPasses > 0) m.passAccuracy = 100 * m.accuratePasses / m.totalPasses;
+      stats[t.homeAway] = m;
+    }
+    // Shots, from ESPN's play-by-play: where each was taken from (0 to 100 along the pitch, towards the goal it attacked, and across).
+    const shots = [];
+    for (const c of (json && json.commentary) || []) {
+      const p = c && c.play; if (!p || p.fieldPositionX == null || p.fieldPositionY == null) continue;
+      const t = String((p.type && p.type.text) || '');
+      const kind = /^goal/i.test(t) ? 'goal' : /woodwork/i.test(t) ? 'post' : /on target/i.test(t) ? 'on' : /off target/i.test(t) ? 'off' : /block/i.test(t) ? 'block' : null;
+      const x = +p.fieldPositionX, y = +p.fieldPositionY, name = p.team && p.team.displayName;
+      const side = name && name === home.name ? 'home' : name && name === away.name ? 'away' : '';
+      if (!kind || !side || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+      shots.push({ kind, side, x, y, clock: (p.clock && p.clock.displayValue) || '', label: t, who: ((p.participants || [])[0] || {}).athlete ? p.participants[0].athlete.displayName : '', text: String(p.text || '') });
+    }
+    const lineups = ((json && json.rosters) || []).map(r => {
+      const player = p => {
+        const s = {}; for (const x of p.stats || []) if (x && x.name) s[x.name] = parseFloat(x.displayValue) || 0;
+        return { name: (p.athlete && (p.athlete.displayName || p.athlete.shortName)) || '', jersey: p.jersey || '', pos: (p.position && p.position.abbreviation) || '', on: !!p.subbedIn, off: !!p.subbedOut,
+          place: +p.formationPlace || 0, app: s.appearances || 0, g: s.totalGoals || 0, a: s.goalAssists || 0, sh: s.totalShots || 0, sot: s.shotsOnTarget || 0,
+          yc: s.yellowCards || 0, rc: s.redCards || 0, sv: s.saves || 0, ga: s.goalsConceded || 0, fc: s.foulsCommitted || 0, fs: s.foulsSuffered || 0, stats: !!(p.stats && p.stats.length) };
+      };
+      const all = (r.roster || []).map(p => ({ ...player(p), starter: !!p.starter }));
+      return { side: r.homeAway, team: (r.team && (r.team.displayName || r.team.name)) || '', formation: r.formation || '',
+        starters: all.filter(p => p.starter).sort((a, b) => a.place - b.place),
+        subs: all.filter(p => !p.starter).sort((a, b) => (+a.jersey || 99) - (+b.jersey || 99)) };
+    }).filter(r => r.starters.length || r.subs.length);
+    return { kind: 'football', ...b, events, stats, shots, lineups };
+  }
+
+  // ESPN's rugby match details: the scoring list (tries, kicks, cards), line-ups, and what they add up to.
+  function normalizeRugby(json, l) {
+    const b = matchBase(json), { home, away } = b;
+    const details = Array.isArray(b.comp.details) ? b.comp.details : [];
+    const sideOf = d => { const id = String((d.team && d.team.id) ?? ''); return id && id === home.id ? 'home' : id && id === away.id ? 'away' : ''; };
+    const name = d => ((d.participants || [])[0] || {}).athlete ? d.participants[0].athlete.displayName : '';
+    const KIND = { 'try': 'try', 'penalty try': 'try', 'conversion': 'conv', 'penalty goal': 'pen', 'drop goal': 'drop', 'yellow card': 'yellow', 'red card': 'red' };
+    const events = [], on = new Set(), off = new Set();
+    const counts = { home: {}, away: {} };
+    let period = null;
+    for (const d of details) {
+      const t = String((d.type && d.type.text) || '').toLowerCase(), s = sideOf(d);
+      if (t === 'substitute on') { on.add(name(d)); continue; }
+      if (t === 'player substituted') { off.add(name(d)); continue; }
+      const kind = KIND[t]; if (!kind) continue;
+      const pn = d.period && d.period.number;
+      if (period != null && pn != null && pn !== period) events.push({ kind: 'phase', label: 'Halftime', clock: '', who: [], text: '' });
+      if (pn != null) period = pn;
+      const key = { try: 'tries', conv: 'conversions', pen: 'penaltyGoals', drop: 'dropGoals', yellow: 'yellowCards', red: 'redCards' }[kind];
+      if (s) counts[s][key] = (counts[s][key] || 0) + 1;
+      events.push({ kind, label: d.type.text, clock: (d.clock && d.clock.displayValue) || '', who: [name(d)].filter(Boolean), side: s, team: (d.team && d.team.displayName) || '',
+        score: Number.isFinite(+d.homeScore) && Number.isFinite(+d.awayScore) && d.homeScore != null && d.awayScore != null ? `${d.homeScore} – ${d.awayScore}` : '' });
+    }
+    if (b.state === 'post' && events.length) events.push({ kind: 'phase', label: 'Full Time', clock: '', who: [], text: '' });
+    const league = l && l.sport === 'rugby-league', startersTo = league ? 13 : 15;
+    const lineups = ((json && json.rosters) || []).map(r => {
+      const all = (r.roster || []).map(p => {
+        const n = (p.athlete && p.athlete.displayName) || '', j = +p.jersey || 0;
+        return { name: n, jersey: p.jersey || '', pos: (p.position && p.position.abbreviation) || '', captain: !!p.captain, on: on.has(n), off: off.has(n), starter: j >= 1 && j <= startersTo, order: j };
+      });
+      return { side: r.homeAway, team: (r.team && (r.team.displayName || r.team.name)) || '', formation: '',
+        starters: all.filter(p => p.starter).sort((a, c) => a.order - c.order), subs: all.filter(p => !p.starter).sort((a, c) => a.order - c.order) };
+    }).filter(r => r.starters.length || r.subs.length);
+    return { kind: 'rugby', ...b, events, stats: counts, shots: [], lineups, league };
+  }
+
+  const normalizeMatch = (json, l) => matchKind(l) === 'rugby' ? normalizeRugby(json, l) : normalizeFootball(json);
+
+  const kickoffText = iso => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`; };
+
+  function matchHead(m, g) {
+    // The page's own header once the details are in; the game row's until then.
+    const home = m ? m.home : g.home, away = m ? m.away : g.away;
+    const state = m ? m.state : g.state, detail = m ? m.detail : g.detail, start = m ? m.start : g.start;
+    const crest = t => safeUrl(t.logo) ? `<img class="mlogo" src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer">` : '<span class="mlogo"></span>';
+    const score = state === 'pre' ? '<span class="msc pre">v</span>' : `<span class="msc">${esc(home.score)} – ${esc(away.score)}</span>`;
+    const status = state === 'in' ? `<span class="mst live"><span class="live-dot" aria-hidden="true"></span>${esc(detail || 'Live')}</span>`
+      : state === 'post' ? `<span class="mst">${esc(detail || 'FT')}</span>` : `<span class="mst">${esc(start ? kickoffText(start) : '')}</span>`;
+    return `<div class="mh"><div class="mt">${crest(home)}<span class="mn">${esc(home.short || home.name)}</span></div>
+      <div class="mm">${score}${status}</div>
+      <div class="mt">${crest(away)}<span class="mn">${esc(away.short || away.name)}</span></div></div>`;
+  }
+
+  function matchEvents(m) {
+    if (!m.events.length) return `<p class="gnone">${m.kind === 'rugby' ? 'No scoring yet.' : 'Nothing to show yet.'}</p>`;
+    const rows = m.state === 'in' ? [...m.events].reverse() : m.events;      // latest first while the game is on
+    return `<div class="card mev">${rows.map(e => {
+      if (e.kind === 'phase') return `<div class="mphase">${esc(PHASES[e.label] || e.label)}${e.clock ? `<span>${esc(e.clock)}</span>` : ''}</div>`;
+      if (m.kind === 'rugby') {
+        const tag = RUGBY_TAGS[e.kind];
+        const icon = tag ? `<span class="mtag">${tag[0]}</span>` : EVENT_ICONS[e.kind];
+        const what = { try: 'Try', conv: 'Conversion', pen: 'Penalty goal', drop: 'Drop goal', yellow: 'Yellow card', red: 'Red card' }[e.kind];
+        const pts = e.kind === 'try' ? '+5' : tag ? tag[1] : '';
+        return `<div class="mrow ${esc(e.kind)}${e.side ? ` ${esc(e.side)}` : ''}"><span class="mc">${esc(e.clock)}</span><span class="mi">${icon}</span>
+          <div class="mb"><div><b>${esc(e.who[0] || what)}</b> <span class="off">${e.who[0] ? esc(what) : ''}${pts && m.league !== true ? ` ${pts}` : ''}</span></div><small>${esc(e.team)}${e.score ? ` · ${esc(e.score)}` : ''}</small></div></div>`;
+      }
+      const main = e.kind === 'sub' ? `<b>${esc(e.who[0] || '')}</b> <span class="off">for ${esc(e.who[1] || '')}</span>` : `<b>${esc(e.who[0] || e.label)}</b>${e.kind === 'goal' && e.who[1] ? ` <span class="off">assist ${esc(e.who[1])}</span>` : ''}`;
+      const word = e.kind === 'miss' ? esc(e.label) : '';
+      return `<div class="mrow ${esc(e.kind)}${e.side ? ` ${esc(e.side)}` : ''}"><span class="mc">${esc(e.clock)}</span><span class="mi">${EVENT_ICONS[e.kind]}</span>
+        <div class="mb"><div>${main}${word ? ` <span class="off">${word}</span>` : ''}</div><small>${esc(e.team)}${e.kind === 'goal' && e.label && !/^goal$/i.test(e.label) ? ` · ${esc(e.label.replace(/^goal\s*-\s*/i, ''))}` : ''}</small></div></div>`;
+    }).join('')}</div>`;
+  }
+
+  function matchStats(m) {
+    const h = m.stats.home || {}, a = m.stats.away || {};
+    const list = m.kind === 'rugby' ? RUGBY_STATS : MATCH_STATS;
+    const rows = list.filter(([k]) => m.kind === 'rugby' ? (m.events.length && (k === 'tries' || (h[k] || 0) + (a[k] || 0) > 0)) : Number.isFinite(h[k]) && Number.isFinite(a[k]))
+      .map(([k, label, kind]) => {
+        const hv = h[k] || 0, av = a[k] || 0;
+        const fmt = v => kind === 'pct' ? `${Math.round(v)}%` : String(Math.round(v));
+        const total = hv + av, left = total > 0 ? Math.round(100 * hv / total) : 50;
+        return `<div class="mstat"><div class="mvals"><b>${fmt(hv)}</b><span>${label}</span><b>${fmt(av)}</b></div>
+          <div class="mbar" role="img" aria-label="${esc(label)}: ${esc(m.home.short)} ${fmt(hv)}, ${esc(m.away.short)} ${fmt(av)}"><i class="h" style="width:${left}%"></i><i class="a" style="width:${100 - left}%"></i></div></div>`;
+      });
+    return rows.length ? `<div class="card mstats">${rows.join('')}</div>` : `<p class="gnone">${m.kind === 'rugby' ? 'ESPN has no numbers for this game yet.' : 'Stats come once the game is under way.'}</p>`;
+  }
+
+  // The shots on a pitch: the home side attacks to the right, the away side to the left. Tap a shot for who and when.
+  function matchShots(m) {
+    if (!m.shots.length) return '<p class="gnone">Shots show once the game is under way.</p>';
+    const X = s => (s.side === 'home' ? s.x : 100 - s.x) * 1.05, Y = s => (s.side === 'home' ? 100 - s.y : s.y) * 0.68;
+    const line = 'fill="none" stroke="currentColor" stroke-width="0.35"';
+    const pitch = `<rect x="0.5" y="0.5" width="104" height="67" ${line}/><path d="M52.5 0.5v67" ${line}/><circle cx="52.5" cy="34" r="9.15" ${line}/>
+      <rect x="0.5" y="13.85" width="16.5" height="40.3" ${line}/><rect x="0.5" y="24.85" width="5.5" height="18.3" ${line}/><rect x="88" y="13.85" width="16.5" height="40.3" ${line}/><rect x="99" y="24.85" width="5.5" height="18.3" ${line}/>
+      <rect x="-1.4" y="30.3" width="1.9" height="7.4" ${line}/><rect x="104.5" y="30.3" width="1.9" height="7.4" ${line}/>`;
+    const dot = (s, i) => {
+      const cx = X(s).toFixed(1), cy = Y(s).toFixed(1), sel = match.shot === i ? ' sel' : '';
+      const shape = s.kind === 'goal' ? `<circle class="v" cx="${cx}" cy="${cy}" r="2.5"/>`
+        : s.kind === 'on' ? `<circle class="v" cx="${cx}" cy="${cy}" r="1.7"/>`
+        : s.kind === 'off' ? `<circle class="v" cx="${cx}" cy="${cy}" r="1.7"/>`
+        : s.kind === 'post' ? `<circle class="v" cx="${cx}" cy="${cy}" r="2"/>`
+        : `<path class="v" d="M${(+cx - 1.3).toFixed(1)} ${(+cy - 1.3).toFixed(1)}l2.6 2.6M${(+cx + 1.3).toFixed(1)} ${(+cy - 1.3).toFixed(1)}l-2.6 2.6"/>`;
+      return `<g class="shot ${s.side === 'home' ? 'h' : 'a'} ${s.kind}${sel}" data-shot="${i}" role="button" tabindex="0" aria-label="${esc(`${s.clock} ${s.who} ${s.label}`)}"><circle class="hit" cx="${cx}" cy="${cy}" r="3.4"/>${shape}</g>`;
+    };
+    const n = side => m.shots.filter(s => s.side === side);
+    const sum = side => { const l = n(side); return `${l.length} shot${l.length === 1 ? '' : 's'}${l.some(s => s.kind === 'goal') ? `, ${l.filter(s => s.kind === 'goal').length} goal${l.filter(s => s.kind === 'goal').length === 1 ? '' : 's'}` : ''}`; };
+    const s = match.shot != null ? m.shots[match.shot] : null;
+    const cap = s ? `<b>${esc(s.clock)} ${esc(s.who || '')}</b> <span class="off">${esc({ goal: 'Goal', on: 'On target', off: 'Off target', block: 'Blocked', post: 'Hit the woodwork' }[s.kind])} · ${esc(s.side === 'home' ? m.home.short : m.away.short)}</span><small>${esc(s.text)}</small>` : 'Tap a shot for who, when and how.';
+    return `<div class="card mshots"><div class="mkeys"><span class="h">${esc(m.home.short)} <b>${esc(sum('home'))}</b></span><span class="a">${esc(m.away.short)} <b>${esc(sum('away'))}</b></span></div>
+      <svg class="mpitch" viewBox="-2 -1 109 70" role="group" aria-label="Shot map">${pitch}${m.shots.map(dot).join('')}</svg>
+      <p class="mcap">${cap}</p>
+      <p class="mlegend"><span><i class="k goal"></i>Goal</span><span><i class="k on"></i>On target</span><span><i class="k off"></i>Off target</span><span><i class="k post"></i>Woodwork</span><span><i class="k block"></i>Blocked</span></p></div>`;
+  }
+
+  // Each side's players: the formation, the eleven in shape order, then the substitutes; for football with
+  // the numbers ESPN keeps (goals, assists, shots, shots on target, cards, a keeper's saves).
+  function matchPlayers(m) {
+    if (!m.lineups.length) return `<p class="gnone">${m.kind === 'rugby' ? 'Line-ups come with the team news.' : 'Line-ups come about an hour before kick-off.'}</p>`;
+    const football = m.kind === 'football', started = m.state !== 'pre';
+    const cards = p => `${p.yc ? '<i class="cd y" aria-label="Yellow card"></i>' : ''}${p.rc ? '<i class="cd r" aria-label="Red card"></i>' : ''}`;
+    const num = (n, hot) => `<span class="n${n ? ' on' : ''}">${n || '·'}</span>`;
+    const row = (p, played) => {
+      const cols = football && started && played && p.stats
+        ? (p.pos === 'G' ? `<span class="gk">${p.sv} saves · ${p.ga} conceded</span>` : `${num(p.g)}${num(p.a)}${num(p.sh)}${num(p.sot)}`) : '';
+      const mark = p.off ? ' <i class="out" aria-label="Substituted off">▼</i>' : p.on ? ' <i class="in" aria-label="Came on">▲</i>' : '';
+      return `<div class="mp${p.on ? ' on' : ''}${played === false ? ' bench' : ''}"><span class="no">${esc(p.jersey)}</span><span class="nm">${esc(p.name)}${p.captain ? ' <b class="cap">C</b>' : ''}${cards(p)}${mark}<small>${esc(p.pos)}</small></span>${cols}</div>`;
+    };
+    return m.lineups.map(t => {
+      const head = football && started && t.starters.some(p => p.stats) ? '<div class="mp mph"><span class="no">#</span><span class="nm">Player</span><span class="n">G</span><span class="n">A</span><span class="n">SH</span><span class="n">SOT</span></div>' : '';
+      const used = football ? t.subs.filter(p => p.app > 0 || p.on) : t.subs.filter(p => p.on), unused = football ? t.subs.filter(p => !(p.app > 0 || p.on)) : t.subs.filter(p => !p.on);
+      return `<div class="card mlu"><h4>${esc(t.team)}${t.formation ? `<span>${esc(t.formation)}</span>` : ''}</h4>${head}
+        ${t.starters.map(p => row(p, true)).join('')}
+        ${t.subs.length ? `<div class="msub">Substitutes</div>${used.map(p => row(p, true)).join('')}${unused.map(p => row(p, false)).join('')}` : ''}</div>`;
+    }).join('');
+  }
+
+  function matchTabs(kind) {
+    return kind === 'rugby' ? [['events', 'Scoring'], ['stats', 'Summary'], ['players', 'Line-ups']] : [['events', 'Events'], ['stats', 'Stats'], ['shots', 'Shots'], ['players', 'Players']];
+  }
+
+  function renderMatch() {
+    if (!match) return;
+    const { l, game: g } = match, m = match.data;
+    matchTitle.textContent = l.label;
+    let h = matchHead(m, g);
+    if (match.phase === 'loading' && !m) {
+      h += '<div class="card" aria-busy="true" style="padding:16px"><div class="sk" style="width:90%;height:14px"></div><div class="sk" style="width:70%;height:14px;margin-top:10px"></div><div class="sk" style="width:80%;height:14px;margin-top:10px"></div></div>';
+    } else if (!m) {
+      h += `<div class="notice" style="margin-top:12px"><h2>Match details unavailable</h2><p>Couldn’t reach ESPN for this game. Check your connection and try again.</p><div class="actions"><button data-action="retry-match">Try again</button></div></div>`;
+    } else {
+      const tabs = matchTabs(m.kind);
+      h += `<div class="modes ${tabs.length === 4 ? 'four' : 'three'} mtabs" role="tablist" aria-label="Match">${tabs.map(([id, label]) => `<button class="seg" role="tab" data-mtab="${id}" aria-selected="${match.tab === id}">${label}</button>`).join('')}</div>`;
+      h += match.tab === 'stats' ? matchStats(m) : match.tab === 'shots' ? matchShots(m) : match.tab === 'players' ? matchPlayers(m) : matchEvents(m);
+      const info = [m.venue ? `${m.venue}${m.city ? `, ${m.city}` : ''}` : '', m.attendance ? `${m.attendance.toLocaleString('en-US')} watching` : '', m.state !== 'post' && m.tv.length ? `On ${m.tv.join(' · ')}` : ''].filter(Boolean);
+      if (info.length) h += `<p class="minfo">${info.map(esc).join('<br>')}</p>`;
+      if (match.error) h += '<p class="ai-note">Couldn’t refresh just now; this is the last update.</p>';
+      const link = safeUrl(m.link) || safeUrl(g.link);
+      if (link) h += `<a class="ai-open" href="${esc(link)}" target="_blank" rel="noopener">Open on ESPN</a>`;
+    }
+    const keep = matchBody.scrollTop;
+    matchBody.innerHTML = h;
+    matchBody.scrollTop = keep;
+    const tabsEl = matchBody.querySelector('.mtabs');
+    if (tabsEl) slide(tabsEl, tabsEl.querySelector('[aria-selected="true"]'), 'match-tabs', { jump: true });
+  }
+
+  async function loadMatch() {
+    clearTimeout(matchTimer);
+    if (!match) return;
+    const run = ++matchRun, { l, game } = match;
+    if (!match.data) { match.phase = 'loading'; renderMatch(); }
+    try {
+      const json = await espnGet(`/site/v2/sports/${l.path}/summary?event=${encodeURIComponent(game.id)}`);
+      if (run !== matchRun || !matchOpen) return;
+      const prev = match.data;
+      match.data = normalizeMatch(json, l); match.error = false; match.phase = 'done';
+      if (!prev && match.data.state === 'pre' && match.data.lineups.length && !match.tabPicked) match.tab = 'players';
+    } catch (err) {
+      if (run !== matchRun || !matchOpen) return;
+      match.error = true; match.phase = match.data ? 'done' : 'error';
+    }
+    renderMatch();
+    if (matchOpen && document.visibilityState === 'visible' && match.data && match.data.state === 'in') matchTimer = setTimeout(loadMatch, 45e3);
+  }
+
+  function openMatch(leagueId, id) {
+    const l = (leagues || []).find(x => x.id === leagueId);
+    const game = l && [...(scores[l.id] || []), ...(fixtures[l.id] || [])].find(g => String(g.id) === String(id));
+    if (!l || !game || !matchKind(l)) return;
+    match = { l, game, phase: 'loading', data: null, tab: 'events', tabPicked: false, shot: null, error: false };
+    matchBody.scrollTop = 0;
+    if (!matchOpen) {
+      matchOpen = true;
+      matchWrap.hidden = false;
+      document.documentElement.classList.add('locked');
+      requestAnimationFrame(() => requestAnimationFrame(() => matchWrap.classList.add('open')));
+      matchSheetEl.focus({ preventScroll: true });
+    }
+    loadMatch();
+  }
+
+  function closeMatch() {
+    if (!matchOpen) return;
+    matchOpen = false; matchRun++;
+    clearTimeout(matchTimer);
+    matchWrap.classList.remove('open');
+    document.documentElement.classList.remove('locked');
+    const hide = () => { if (!matchOpen) matchWrap.hidden = true; };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
+  }
+
+  const openFromRow = el => { const g = el.closest('[data-match]'); if (g) openMatch(g.dataset.mlg, g.dataset.match); return !!g; };
+  feedEl.addEventListener('click', e => { if (e.target.closest('[data-match]') && openFromRow(e.target)) e.preventDefault(); });
+  feedEl.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-match]')) { e.preventDefault(); openFromRow(e.target); } });
+  matchWrap.addEventListener('click', e => {
+    if (e.target.closest('[data-action="close-match"]')) return closeMatch();
+    if (e.target.closest('[data-action="retry-match"]')) return loadMatch();
+    const t = e.target.closest('[data-mtab]');
+    if (t && match) { match.tab = t.dataset.mtab; match.tabPicked = true; renderMatch(); return; }
+    const s = e.target.closest('[data-shot]');
+    if (s && match) { match.shot = +s.dataset.shot === match.shot ? null : +s.dataset.shot; renderMatch(); }
+  });
+  matchWrap.addEventListener('keydown', e => {
+    const s = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-shot]');
+    if (s && match) { e.preventDefault(); match.shot = +s.dataset.shot === match.shot ? null : +s.dataset.shot; renderMatch(); }
+  });
+  document.addEventListener('visibilitychange', () => { if (matchOpen && document.visibilityState === 'visible') loadMatch(); else clearTimeout(matchTimer); });
+
   function kickoff(iso) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
@@ -1134,6 +1477,8 @@
       ? `<div class="gtv">${ICON.tv}<span>${esc(g.tv.join(' · '))}</span></div>` : '';
     const body = `<div class="gstat ${esc(g.state)}">${stat}</div><div class="gteams">${team(first)}${team(second)}${tv}</div>`;
     const cls = `game ${esc(g.state)}${decided ? ' decided' : ''}`;
+    // A football or rugby game opens its own page (see "match"); the other sports go to ESPN's.
+    if (matchKind(l) && g.id) return `<div class="${cls} tap" role="button" tabindex="0" data-match="${esc(g.id)}" data-mlg="${esc(l.id)}" aria-label="${esc(`${g.home.short || g.home.name} v ${g.away.short || g.away.name}: match details`)}">${body}</div>`;
     return safeUrl(g.link) ? `<a class="${cls}" href="${esc(g.link)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
 
@@ -1399,6 +1744,7 @@
     if (e.key === 'Escape' && sheetOpen) closeSheet();
     if (e.key === 'Escape' && srcOpen) closeSrcSheet();
     if (e.key === 'Escape' && aiOpen) closeAi();
+    if (e.key === 'Escape' && matchOpen) closeMatch();
   });
 
   // Broken or refused images: try the original, then drop the frame.
