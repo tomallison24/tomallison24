@@ -14,6 +14,9 @@
 //   family account, in that account too, private to you
 //   (functions/drinks/api): it follows you to another phone, and Calendar can
 //   show it. Until accounts are on, it stays on the phone.
+// - From Analysis, Trends: the last twelve weeks, one chart a view, picked from
+//   the pill at the bottom (weekly drinks, weeks over the limit, top drinks,
+//   days of the week, alcohol-free days, days over the limit, strength and size).
 // - More (the person button): your account, your goals, bringing in the ABV
 //   Tracker's history, export, and delete.
 
@@ -36,7 +39,7 @@ if (window.top !== window.self) {
   const pad = n => String(n).padStart(2, '0');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-drinks-v1';
-  const K = { graves: KEY + '-graves', sync: KEY + '-sync', period: KEY + '-period' };
+  const K = { graves: KEY + '-graves', sync: KEY + '-sync', period: KEY + '-period', trview: KEY + '-trview', trgroup: KEY + '-trgroup' };
   // One decimal, as people say it: 3.2, 1, 0.5.
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
@@ -133,6 +136,7 @@ if (window.top !== window.self) {
   function render() {
     renderWeek();
     if (!$('anSheet').hidden) renderAnalysis();
+    if (!$('trends').hidden) renderTrends();
   }
   // What a day was, in words: "Wine ×2, Beer".
   function said(list) {
@@ -196,6 +200,7 @@ if (window.top !== window.self) {
   // one before (calc.js does the sums)
   // ---------------------------------------------------------------------
   const an = $('anBody');
+  const TRENDS_ROW = '<div class="rgroup"><button class="rowbtn" type="button" id="trendsBtn"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3.6 16.4l5-6 4 3.6 7.8-8.6M15 5.4h5.4V11"/></svg></span><span>12-week trends<span class="sub">Weekly totals, weeks over your limit, top drinks, days of the week and more</span></span><span style="margin-left:auto;color:var(--faint);display:flex">' + ICON.chevR + '</span></button></div>';
   const PERIODS = { week: { days: 7, name: 'Week', before: 'the 7 days before' }, month: { days: 28, name: 'Month', before: 'the 4 weeks before' } };
   function openAnalysis() { renderAnalysis(); openSheet('anSheet'); slideSeg(); }
   function renderAnalysis() {
@@ -203,7 +208,7 @@ if (window.top !== window.self) {
     const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
     const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
     if (!a.hasNow && !a.hasBefore) {
-      an.innerHTML = seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>';
+      an.innerHTML = seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>' + TRENDS_ROW;
       slideSeg(); return;
     }
     // Four numbers, each against the window before. Fewer drinks is better; more alcohol-free days is better.
@@ -229,11 +234,13 @@ if (window.top !== window.self) {
     an.innerHTML = seg + note + kpis
       + '<div class="rgroup">' + rows + '</div>'
       + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '')
+      + TRENDS_ROW
       + '<p class="hint">In standard drinks: 14 g of alcohol each (the US measure), such as 12 oz of 5% beer or 1.5 oz of 40% spirits. The average counts the days you logged, drinks or alcohol-free.</p>';
     slideSeg();
   }
   const slideSeg = () => { const box = an.querySelector('.seg'); if (box && !$('anSheet').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
   an.addEventListener('click', e => {
+    if (e.target.closest('#trendsBtn')) { closeSheet('anSheet'); openTrends(); return; }
     const b = e.target.closest('[data-period]'); if (!b) return;
     st.period = b.dataset.period === 'month' ? 'month' : 'week'; ls.set(K.period, st.period);
     renderAnalysis();
@@ -601,6 +608,7 @@ if (window.top !== window.self) {
   });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (trendsEscape()) return;
     const open = [...document.querySelectorAll('.sheetwrap')].reverse().find(w => !w.hidden);
     if (open) closeWrap(open);
   });
@@ -614,6 +622,289 @@ if (window.top !== window.self) {
     toastTimer = setTimeout(() => { $('toast').hidden = true; }, ms || 4000);
   }
   function animateIn(el) { el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
+
+  // ---------------------------------------------------------------------
+  // Trends: the last twelve weeks, one chart a view, picked from the pill at
+  // the bottom (as Home's views). From Analysis. The sums are calc.js's;
+  // these draw them as plain SVG that follows light and dark.
+  // ---------------------------------------------------------------------
+  const WEEKS = 12;
+  const tr = { view: ls.get(K.trview, 'weekly'), sel: null, group: ls.get(K.trgroup, 'name') === 'kind' ? 'kind' : 'name', table: false, T: null, scroll: 0 };
+  const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const wk = w => short(w.start) + ' – ' + short(w.end);
+  const sign = n => (n < 0 ? '−' : '+') + f1(Math.abs(n));
+  const sum = (list, f) => list.reduce((a, x) => a + f(x), 0);
+  const kpi = (label, value, sub) => '<div class="kpi" aria-label="' + esc(label + ': ' + value + (sub ? ', ' + sub : '')) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + esc(value) + '</span><span class="kd">' + esc(sub || '') + '</span></div>';
+  const kpis = list => '<div class="kpis">' + list.join('') + '</div>';
+  const legend = items => '<div class="legend">' + items.map(([c, t]) => '<span><i class="' + c + '"></i>' + esc(t) + '</span>').join('') + '</div>';
+  // Every chart has its numbers as a table too, for anyone who'd rather read them.
+  const tview = (head, rows) => '<details class="tview"' + (tr.table ? ' open' : '') + '><summary>Show as a table</summary><table><thead><tr>' + head.map((h, i) => '<th' + (i ? ' class="n"' : '') + '>' + esc(h) + '</th>').join('')
+    + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map((c, i) => '<td' + (i ? ' class="n"' : '') + '>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></details>';
+  const readout = html => '<p class="readout" aria-live="polite">' + html + '</p>';
+  // A scale that starts at 0 with at most five clean steps; `whole` keeps steps whole numbers.
+  function scale(max, whole) {
+    const steps = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100].filter(s => !whole || s >= 1);
+    const step = steps.find(s => Math.ceil(max / s - 1e-9) <= 5) || 100;
+    return { max: Math.max(step, Math.ceil(max / step - 1e-9) * step), step };
+  }
+  // A scale for a line, not starting at 0.
+  function span(lo, hi) {
+    const steps = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20];
+    const step = steps.find(s => Math.ceil((hi - lo) / s - 1e-9) <= 4) || 20;
+    let a = Math.floor(lo / step + 1e-9) * step, b = Math.ceil(hi / step - 1e-9) * step;
+    if (a === b) b += step;
+    return { min: a, max: b, step };
+  }
+  const dec = step => step % 1 === 0 ? 0 : (step * 10) % 1 === 0 ? 1 : 2;   // decimals a scale's ticks need
+  const W = 340, PL = 30, PR = 8, PT = 16, PB = 24;
+  // The frame every chart shares: grid, ticks, the week labels, and the hit area over each week.
+  function frame(o) {
+    const n = o.n, H = o.h || 190, iw = W - PL - PR, ih = H - PT - PB, slot = iw / n;
+    const y = v => PT + ih - (v - o.min) / (o.max - o.min) * ih;
+    const x = i => PL + slot * (i + 0.5);
+    let g = '';
+    for (let v = o.min; v <= o.max + 1e-9; v += o.step) g += '<line class="grid" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"/><text class="tick" x="' + (PL - 6) + '" y="' + (y(v) + 3.5).toFixed(1) + '" text-anchor="end">' + o.fmt(v) + '</text>';
+    for (let i = 0; i < n; i++) if ((n - 1 - i) % o.every === 0) g += '<text class="xl" x="' + x(i).toFixed(1) + '" y="' + (H - 7) + '">' + esc(o.xl[i]) + '</text>';
+    const sel = o.sel == null ? '' : '<rect class="selbg" x="' + (PL + slot * o.sel).toFixed(1) + '" y="' + (PT - 6) + '" width="' + slot.toFixed(1) + '" height="' + (ih + 6) + '" rx="6"/>';
+    let hits = '';
+    for (let i = 0; i < n; i++) hits += '<rect class="hit" data-i="' + i + '" tabindex="0" role="button" aria-label="' + esc(o.aria[i]) + '" x="' + (PL + slot * i).toFixed(1) + '" y="' + (PT - 6) + '" width="' + slot.toFixed(1) + '" height="' + (ih + PB + 6) + '"/>';
+    return { H, ih, slot, x, y, base: '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="group" aria-label="' + esc(o.label) + '">' + g + sel, hits };
+  }
+  // Columns grow from the baseline with a rounded top; `cls(i)` colours them, `flag(i)` marks one with a triangle.
+  function columns(o) {
+    const f = frame(o), bw = Math.min(20, f.slot - 6);
+    let s = f.base, top = -1;
+    o.vals.forEach((v, i) => { if (v != null && v > 0 && (top < 0 || v > o.vals[top])) top = i; });
+    o.vals.forEach((v, i) => {
+      if (v == null || v <= 0) return;
+      const x0 = f.x(i) - bw / 2, y0 = f.y(v), b = f.y(o.min), r = Math.min(4, b - y0);
+      s += '<path class="bar ' + o.cls(i) + '" d="M' + x0.toFixed(1) + ' ' + b + 'V' + (y0 + r).toFixed(1) + 'Q' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' + (x0 + r).toFixed(1) + ' ' + y0.toFixed(1)
+        + 'H' + (x0 + bw - r).toFixed(1) + 'Q' + (x0 + bw).toFixed(1) + ' ' + y0.toFixed(1) + ' ' + (x0 + bw).toFixed(1) + ' ' + (y0 + r).toFixed(1) + 'V' + b + 'Z"/>';
+      if (o.flag && o.flag(i)) s += '<path class="tri" d="M' + f.x(i).toFixed(1) + ' ' + (y0 - 11).toFixed(1) + 'l4.5 8h-9z"/>';
+    });
+    if (top >= 0) s += '<text class="val" x="' + f.x(top).toFixed(1) + '" y="' + (f.y(o.vals[top]) - (o.flag && o.flag(top) ? 14 : 5)).toFixed(1) + '">' + o.fmt(o.vals[top]) + '</text>';
+    if (o.line != null) s += '<line class="' + (o.lineCls || 'limit') + '" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + f.y(o.line).toFixed(1) + '" y2="' + f.y(o.line).toFixed(1) + '"/><text class="lbl" x="' + (PL + 4) + '" y="' + (f.y(o.line) - 4).toFixed(1) + '">' + esc(o.lineText) + '</text>';
+    if (o.avg) {
+      let d = '';
+      o.avg.forEach((v, i) => { d += v == null ? '' : (d && o.avg[i - 1] != null ? 'L' : 'M') + f.x(i).toFixed(1) + ' ' + f.y(v).toFixed(1); });
+      s += '<path class="avgline" d="' + d + '"/>';
+    }
+    return s + f.hits + '</svg>';
+  }
+  // A line, broken where there is nothing to show; every point is a dot with a ring.
+  function lineChart(o) {
+    const f = frame(o);
+    let s = f.base, d = '';
+    o.vals.forEach((v, i) => { d += v == null ? '' : (d && o.vals[i - 1] != null ? 'L' : 'M') + f.x(i).toFixed(1) + ' ' + f.y(v).toFixed(1); });
+    s += '<path class="ln" d="' + d + '"/>';
+    o.vals.forEach((v, i) => { if (v != null) s += '<circle class="dot" cx="' + f.x(i).toFixed(1) + '" cy="' + f.y(v).toFixed(1) + '" r="4"/>'; });
+    return s + f.hits + '</svg>';
+  }
+  const xlabels = ws => ws.map(w => short(w.start));
+  const selOf = (n, last) => tr.sel != null && tr.sel >= 0 && tr.sel < n ? tr.sel : last;
+  // The week you tapped, or else the newest with something in it.
+  const lastWith = ws => { for (let i = ws.length - 1; i >= 0; i--) if (ws[i].hasData) return i; return ws.length - 1; };
+  const notLogged = T => { const k = sum(T.weeks, w => w.notRecorded); return k ? '<p class="anote">' + plural(k, 'day') + ' in these weeks weren’t logged. They’re left out of the averages, so a week with gaps can read low.</p>' : ''; };
+
+  const TV = [
+    { id: 'weekly', name: 'Weekly drinks',
+      icon: '<svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20V10M20 20V15"/></svg>',
+      sum: T => { const d = T.weeks.filter(w => w.hasData && !w.partial); return d.length ? f1(sum(d, w => w.sd) / d.length) + ' a week on average' : 'Nothing logged yet'; },
+      draw(T) {
+        const g = T.g, ws = T.weeks, done = ws.filter(w => w.hasData && !w.partial), i = selOf(ws.length, lastWith(ws));
+        const avg = done.length ? sum(done, w => w.sd) / done.length : null;
+        const hi = done.reduce((a, w) => !a || w.sd > a.sd ? w : a, null), lo = done.reduce((a, w) => !a || w.sd < a.sd ? w : a, null);
+        const say = w => !w.hasData ? '<b>' + esc(wk(w)) + '</b> · nothing logged'
+          : '<b>' + esc(wk(w)) + '</b> · <b>' + f1(w.sd) + '</b> standard drinks' + (w.partial ? ' so far' : '') + (g.week ? (w.over ? ', <b>' + f1(w.sd - g.week) + ' over</b> your ' + g.week : ', ' + f1(Math.max(0, g.week - w.sd)) + ' under your ' + g.week) : '')
+          + (w.notRecorded ? ' · ' + plural(w.notRecorded, 'day') + ' not logged' : '') + (w.avg4 != null ? ' · 4-week average ' + f1(w.avg4) : '');
+        const plain = w => say(w).replace(/<[^>]+>/g, '');
+        const sc = scale(Math.max(g.week || 0, ...ws.map(w => w.sd)) * 1.08);
+        const chart = columns({ n: ws.length, label: 'Standard drinks each week for the last ' + WEEKS + ' weeks', vals: ws.map(w => w.hasData ? w.sd : null), min: 0, max: sc.max, step: sc.step, fmt: f1, every: 3, xl: xlabels(ws),
+          aria: ws.map(plain), sel: i, cls: j => (ws[j].over ? 'over' : '') + (ws[j].partial ? ' part' : ''), flag: j => ws[j].over, avg: ws.map(w => w.avg4),
+          line: g.week || null, lineText: 'limit ' + g.week });
+        return kpis([kpi('Average a week', avg == null ? '—' : f1(avg), done.length ? 'over ' + plural(done.length, 'finished week') : 'no finished weeks yet'),
+            kpi('Weeks over your limit', g.week ? T.goals.over + ' of ' + T.goals.counted : '—', g.week ? 'limit ' + g.week + ' a week' : 'no weekly limit set'),
+            kpi('Highest week', hi ? f1(hi.sd) : '—', hi ? short(hi.start) : ''), kpi('Lowest week', lo ? f1(lo.sd) : '—', lo ? short(lo.start) : '')])
+          + '<div class="chartcard">' + readout(say(ws[i])) + chart
+          + legend([['', 'Standard drinks'], ['over', 'Over your limit (▲)'], ['part', 'Lighter: this week so far'], ['avg', '4-week average'], ['lim', 'Weekly limit']].filter(x => g.week || (x[0] !== 'over' && x[0] !== 'lim')))
+          + tview(['Week', 'Std drinks', '4-wk avg'], ws.map(w => [wk(w), w.hasData ? f1(w.sd) + (w.partial ? ' so far' : '') : 'not logged', w.avg4 == null ? '—' : f1(w.avg4)])) + '</div>' + notLogged(T);
+      } },
+    { id: 'over', name: 'Weeks over the limit',
+      icon: '<svg viewBox="0 0 24 24"><path d="M5 21V4M5 5h12l-2.4 4 2.4 4H5"/></svg>',
+      sum: T => !T.g.week ? 'No weekly limit set' : T.goals.counted ? T.goals.over + ' of ' + T.goals.counted + ' weeks over' : 'Nothing logged yet',
+      draw(T) {
+        const g = T.g, ws = T.weeks, r = T.goals;
+        if (!g.week) return '<div class="empty"><strong>No weekly limit set</strong>Set “A week, at most” in More (the person button), and this shows which weeks went over.</div>';
+        const kind = w => !w.hasData ? 'none' : w.over ? 'over' : w.partial ? 'going' : 'ok';
+        const sym = { none: '–', over: '▲', going: '…', ok: '✓' };
+        const word = { none: 'nothing logged', over: 'over', going: 'so far, under', ok: 'under' };
+        const strip = '<div class="wstrip" aria-hidden="true">' + ws.map(w => { const k = kind(w); return '<div class="wt ' + k + '"><b>' + sym[k] + '</b><span>' + esc(short(w.start)) + '</span></div>'; }).join('') + '</div>';
+        const rows = '<div class="rgroup">' + ws.slice().reverse().map(w => {
+          const k = kind(w), d = w.sd - g.week;
+          return '<div class="xrow"><span class="xt">' + esc(wk(w)) + '<small>' + (k === 'none' ? 'Nothing logged' : f1(w.sd) + ' standard drinks' + (w.partial ? ' so far' : '')) + '</small></span><span class="xv ' + (k === 'over' ? 'over' : k === 'ok' ? 'ok' : '') + '" aria-label="' + esc(word[k] + (k === 'over' || k === 'ok' ? ' by ' + f1(Math.abs(d)) : '')) + '">'
+            + (k === 'over' ? '▲ ' + sign(d) + ' over' : k === 'ok' ? '✓ ' + f1(-d) + ' under' : k === 'going' ? '… ' + f1(-d) + ' to go' : '–') + '</span></div>';
+        }).join('') + '</div>';
+        return kpis([kpi('Weeks over', r.over + ' of ' + r.counted, 'limit ' + g.week + ' a week'), kpi('Under your limit', String(r.under), r.noData + ' not logged'),
+            kpi('Running under now', plural(r.runUnder, 'week'), 'in a row'), kpi('Best run under', plural(r.bestRun, 'week'), 'in these ' + WEEKS)])
+          + strip + '<p class="anote">✓ under your limit · ▲ over · … this week so far, under it · – nothing logged</p>'
+          + rows + '<p class="anote">A week counts once it’s over, or once it’s finished. Weeks with nothing logged aren’t counted.</p>';
+      } },
+    { id: 'top', name: 'Top drinks',
+      icon: '<svg viewBox="0 0 24 24"><path d="M6.4 4h11.2l-1 6.2a4.6 4.6 0 0 1-9.2 0zM12 14.8V20M8.4 20h7.2"/></svg>',
+      sum: T => { const t = C.topDrinks(data.entries, T.from, T.tod, 'name').sort((a, b) => b.qty - a.qty)[0]; return t ? t.label + ' most often' : 'Nothing logged yet'; },
+      draw(T) {
+        const all = C.topDrinks(data.entries, T.from, T.tod, tr.group), total = sum(all, x => x.sd);
+        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong>Only alcohol-free days so far.</div>';
+        const pc = x => total ? Math.round(x.sd / total * 100) : 0;
+        const row = (x, text, v, max) => '<div class="gbar" data-c="' + esc(x.cat) + '" aria-label="' + esc(x.label + ': ' + text) + '"><span class="gn"><i class="cdot"></i><span class="nm">' + esc(x.label) + '</span></span><span class="gt"><span class="bar" style="width:' + (v / max * 55).toFixed(1) + '%"></span><span class="gv">' + esc(text) + '</span></span></div>';
+        const list = (arr, text, val) => {
+          const top = arr.slice(0, 6), rest = arr.slice(6), max = Math.max(0.1, val(top[0]));
+          return '<div class="rgroup bars tops">' + top.map(x => row(x, text(x), val(x), max)).join('')
+            + (rest.length ? '<div class="gbar rest" aria-label="' + esc(plural(rest.length, 'other drink') + ': ' + text({ qty: sum(rest, val), sd: sum(rest, val) })) + '"><span class="gn"><span class="nm">' + plural(rest.length, 'other') + '</span></span><span class="gt"><span class="bar" style="width:' + (sum(rest, val) / max * 55).toFixed(1) + '%"></span><span class="gv">' + esc(text({ qty: sum(rest, val), sd: sum(rest, val) })) + '</span></span></div>' : '') + '</div>';
+        };
+        const seg = '<div class="seg slides" role="radiogroup" aria-label="Group drinks by">' + [['name', 'By name'], ['kind', 'By kind']].map(([k, t]) => '<button type="button" data-group="' + k + '" aria-pressed="' + (tr.group === k) + '">' + t + '</button>').join('') + '</div>';
+        const byQty = all.slice().sort((a, b) => b.qty - a.qty || b.sd - a.sd), bySd = all.slice().sort((a, b) => b.sd - a.sd);
+        const most = byQty[0], big = bySd[0];
+        const callout = '<p class="callout">In the last ' + WEEKS + ' weeks you had <b>' + esc(most.label) + '</b> most often (' + plural(Math.round(most.qty), 'drink') + ')'
+          + (big.key === most.key ? ', and it’s also what adds up to the most: <b>' + f1(big.sd) + '</b> standard drinks, ' + Math.round(big.sd / total * 100) + '% of all of them.'
+            : ', but <b>' + esc(big.label) + '</b> adds up to the most: <b>' + f1(big.sd) + '</b> standard drinks, ' + pc(big) + '% of all of them.') + '</p>';
+        return seg + callout
+          + '<p class="label">Had most often</p>' + list(byQty, x => plural(Math.round(x.qty), 'drink'), x => x.qty)
+          + '<p class="label">Adds up to the most</p>' + list(bySd, x => f1(x.sd) + ' · ' + pc(x) + '%', x => x.sd)
+          + tview(['Drink', 'Drinks', 'Std drinks'], byQty.map(x => [x.label, String(Math.round(x.qty)), f1(x.sd)]))
+          + '<p class="hint">Drinks with the same name are counted together, whatever their size. A drink with no name is counted as its kind. Standard drinks are 14 g of alcohol each.</p>';
+      } },
+    { id: 'days', name: 'Days of the week',
+      icon: '<svg viewBox="0 0 24 24"><rect x="4" y="5.4" width="16" height="14.6" rx="3"/><path d="M4 10h16M8.6 3.6v3.2M15.4 3.6v3.2M8.6 14h.01M12 14h.01M15.4 14h.01"/></svg>',
+      sum: T => { const d = TVdays(T).filter(x => x.avg != null).sort((a, b) => b.avg - a.avg)[0]; return d ? DOW[d.dow] + 's the heaviest' : 'Nothing logged yet'; },
+      draw(T) {
+        const d = TVdays(T), g = T.g, i = selOf(7, -1), tot = sum(d, x => x.sd), have = d.filter(x => x.avg != null);
+        const hi = have.reduce((a, x) => !a || x.avg > a.avg ? x : a, null), lo = have.reduce((a, x) => !a || x.avg < a.avg ? x : a, null);
+        const say = x => '<b>' + DOW[x.dow] + 's</b> · ' + (x.avg == null ? 'none logged' : '<b>' + f1(x.avg) + '</b> standard drinks on average · ' + Math.round(x.share * 100) + '% of everything · drank on ' + x.drinkingDays + ' of ' + x.recorded + ' logged');
+        const sc = scale(Math.max(g.day || 0, ...d.map(x => x.avg || 0)) * 1.08);
+        const chart = columns({ n: 7, label: 'Average standard drinks on each day of the week', vals: d.map(x => x.avg), min: 0, max: sc.max, step: sc.step, fmt: f1, every: 1, xl: d.map(x => DOW[x.dow].slice(0, 3)),
+          aria: d.map(x => say(x).replace(/<[^>]+>/g, '')), sel: i < 0 ? null : i, cls: j => d[j].avg > g.day ? 'over' : '', flag: j => g.day && d[j].avg > g.day, line: g.day || null, lineText: 'limit ' + g.day });
+        return kpis([kpi('Heaviest day', hi ? DOW[hi.dow] : '—', hi ? f1(hi.avg) + ' on average' : ''), kpi('Lightest day', lo ? DOW[lo.dow] : '—', lo ? f1(lo.avg) + ' on average' : '')])
+          + (hi && tot ? '<p class="callout"><b>' + DOW[hi.dow] + 's</b> are your heaviest: ' + f1(hi.avg) + ' standard drinks on average, ' + Math.round(hi.share * 100) + '% of all you drank in these ' + WEEKS + ' weeks.</p>' : '')
+          + '<div class="chartcard">' + readout(i < 0 ? 'Tap a day to see it.' : say(d[i])) + chart
+          + legend([['', 'Average on that day'], ['over', 'Over your daily limit (▲)'], ['lim', 'Daily limit']].filter(x => g.day || x[0] === ''))
+          + tview(['Day', 'Average', 'Share', 'Days drank'], d.map(x => [DOW[x.dow], x.avg == null ? 'not logged' : f1(x.avg), Math.round(x.share * 100) + '%', x.drinkingDays + ' of ' + x.recorded])) + '</div>'
+          + '<p class="anote">The average counts the days of that name you logged, drinks or alcohol-free.</p>';
+      } },
+    { id: 'free', name: 'Alcohol-free days',
+      icon: '<svg viewBox="0 0 24 24"><path d="M12 3.4c4.6 3.4 6.6 6.4 6.6 9.4a6.6 6.6 0 0 1-13.2 0c0-3 2-6 6.6-9.4zM9.4 13.2l2.2 2.2 3.4-3.8"/></svg>',
+      sum: T => !T.g.af ? 'No goal set' : T.goals.afCounted ? 'Goal met in ' + T.goals.afMet + ' of ' + T.goals.afCounted + ' weeks' : 'Nothing logged yet',
+      draw(T) {
+        const g = T.g, ws = T.weeks, r = T.goals, i = selOf(ws.length, lastWith(ws)), k = C.streaks(data.entries, data.days, T.tod), done = ws.filter(w => w.hasData && !w.partial);
+        const say = w => !w.hasData ? '<b>' + esc(wk(w)) + '</b> · nothing logged' : '<b>' + esc(wk(w)) + '</b> · <b>' + plural(w.afDays, 'alcohol-free day') + '</b>' + (w.partial ? ' so far' : '') + (g.af ? (w.afDays >= g.af ? ' · goal of ' + g.af + ' met ✓' : ' · ' + (g.af - w.afDays) + ' short of your ' + g.af) : '') + ' · drank on ' + w.drinkingDays + (w.notRecorded ? ' · ' + plural(w.notRecorded, 'day') + ' not logged' : '');
+        const chart = columns({ n: ws.length, label: 'Alcohol-free days each week', vals: ws.map(w => w.hasData ? w.afDays : null), min: 0, max: 7, step: 1, fmt: v => String(v), every: 3, xl: xlabels(ws),
+          aria: ws.map(w => say(w).replace(/<[^>]+>/g, '')), sel: i, cls: j => 'af' + (ws[j].partial ? ' part' : ''), line: g.af || null, lineCls: 'goal', lineText: 'goal ' + g.af });
+        return kpis([kpi('Goal met', g.af ? r.afMet + ' of ' + r.afCounted : '—', g.af ? 'goal ' + g.af + ' a week' : 'no goal set'), kpi('Average a week', done.length ? f1(sum(done, w => w.afDays) / done.length) : '—', 'alcohol-free days'),
+            kpi('Alcohol-free in a row', plural(k.current, 'day'), 'now'), kpi('Your best', plural(k.best, 'day'), 'in a row')])
+          + '<div class="chartcard">' + readout(say(ws[i])) + chart
+          + legend([['af', 'Alcohol-free days'], ['part', 'Lighter: this week so far'], ['gl', 'Your goal']].filter(x => g.af || x[0] !== 'gl'))
+          + tview(['Week', 'Alcohol-free', 'Drank on'], ws.map(w => [wk(w), w.hasData ? String(w.afDays) : 'not logged', w.hasData ? String(w.drinkingDays) : '—'])) + '</div>'
+          + '<p class="anote">A day only counts if you marked it alcohol-free. Days you didn’t log don’t.</p>';
+      } },
+    { id: 'heavy', name: 'Days over the limit',
+      icon: '<svg viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6zM12 10v4.2M12 16.9h.01"/></svg>',
+      sum: T => !T.g.day ? 'No daily limit set' : plural(sum(T.weeks, w => w.overDays), 'day') + ' over ' + T.g.day + ' a day',
+      draw(T) {
+        const g = T.g, ws = T.weeks, i = selOf(ws.length, lastWith(ws)), total = sum(ws, w => w.overDays), clean = ws.filter(w => w.hasData && !w.partial && !w.overDays).length;
+        const most = ws.reduce((a, w) => !a || w.overDays > a.overDays ? w : a, null);
+        const say = w => !w.hasData ? '<b>' + esc(wk(w)) + '</b> · nothing logged' : '<b>' + esc(wk(w)) + '</b> · <b>' + plural(w.overDays, 'day') + '</b> over ' + g.day + ' standard drinks' + (w.partial ? ' so far' : '') + ' · drank on ' + w.drinkingDays;
+        const sc = scale(Math.max(1, ...ws.map(w => w.overDays)) * 1.1, true);
+        const chart = columns({ n: ws.length, label: 'Days over your daily limit each week', vals: ws.map(w => w.hasData ? w.overDays : null), min: 0, max: sc.max, step: sc.step, fmt: v => String(v), every: 3, xl: xlabels(ws),
+          aria: ws.map(w => say(w).replace(/<[^>]+>/g, '')), sel: i, cls: j => 'heavy' + (ws[j].partial ? ' part' : '') });
+        return kpis([kpi('Days over', String(total), 'over ' + g.day + ' standard drinks'), kpi('Weeks with none', String(clean), 'of the finished weeks'),
+            kpi('Most in a week', most && most.overDays ? String(most.overDays) : '0', most && most.overDays ? short(most.start) : ''), kpi('Your daily limit', String(g.day), 'standard drinks')])
+          + '<div class="chartcard">' + readout(say(ws[i])) + chart
+          + legend([['heavy', 'Days over your daily limit'], ['part', 'Lighter: this week so far']])
+          + tview(['Week', 'Days over'], ws.map(w => [wk(w), w.hasData ? String(w.overDays) : 'not logged'])) + '</div>'
+          + '<p class="anote">A weekly total can look fine while one night runs high. This counts those nights.</p>';
+      } },
+    { id: 'strength', name: 'Strength and size',
+      icon: '<svg viewBox="0 0 24 24"><path d="M3.6 16.4l5-6 4 3.6 7.8-8.6M15 5.4h5.4V11"/></svg>',
+      sum: T => { const w = T.weeks.filter(x => x.abv != null); return w.length ? strengthAll(T).toFixed(1) + '% average strength' : 'Nothing logged yet'; },
+      draw(T) {
+        const ws = T.weeks, i = selOf(ws.length, lastWith(ws)), all = ws.filter(w => w.abv != null);
+        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong>Only alcohol-free days so far.</div>';
+        const say = w => w.abv == null ? '<b>' + esc(wk(w)) + '</b> · no drinks' : '<b>' + esc(wk(w)) + '</b> · <b>' + w.abv.toFixed(1) + '%</b> average strength · <b>' + (Math.round(w.perDrink * 100) / 100).toLocaleString('en-US') + '</b> standard drinks in an average drink';
+        const abvs = all.map(w => w.abv), pd = all.map(w => w.perDrink);
+        const a = span(Math.min(...abvs) - 0.2, Math.max(...abvs) + 0.2), b = span(Math.min(...pd) - 0.05, Math.max(...pd) + 0.05);
+        const common = { n: ws.length, min: 0, every: 3, xl: xlabels(ws), aria: ws.map(w => say(w).replace(/<[^>]+>/g, '')), sel: i, h: 150 };
+        const c1 = lineChart(Object.assign({}, common, { label: 'Average strength each week, in percent', vals: ws.map(w => w.abv), min: a.min, max: a.max, step: a.step, fmt: v => v.toFixed(dec(a.step)) + '%' }));
+        const c2 = lineChart(Object.assign({}, common, { label: 'Standard drinks in an average drink, each week', vals: ws.map(w => w.perDrink), min: b.min, max: b.max, step: b.step, fmt: v => v.toFixed(dec(b.step)) }));
+        const gAll = sum(T.weeks, w => w.perDrink == null ? 0 : w.sd), nAll = sum(T.weeks, w => w.drinks);
+        return kpis([kpi('Average strength', strengthAll(T).toFixed(1) + '%', 'by volume, all ' + WEEKS + ' weeks'), kpi('An average drink', nAll ? (Math.round(gAll / nAll * 100) / 100).toLocaleString('en-US') : '—', 'standard drinks')])
+          + '<div class="chartcard">' + readout(say(ws[i]))
+          + '<p class="label" style="margin:0 4px 2px">Average strength (ABV)</p>' + c1
+          + '<p class="label" style="margin:12px 4px 2px">Standard drinks in an average drink</p>' + c2
+          + legend([['dk', 'Each dot is a week']])
+          + tview(['Week', 'Strength', 'Std per drink'], ws.map(w => [wk(w), w.abv == null ? '—' : w.abv.toFixed(1) + '%', w.perDrink == null ? '—' : (Math.round(w.perDrink * 100) / 100).toLocaleString('en-US')])) + '</div>'
+          + '<p class="anote">Strength is the alcohol over all the liquid you drank, so a bigger glass of a stronger drink moves it more. These scales don’t start at zero.</p>';
+      } },
+  ];
+  const TVdays = T => C.weekdays(data.entries, data.days, T.from, T.tod, T.tod).slice().sort((p, q) => ((p.dow - (weekStartsSunday() ? 0 : 1) + 7) % 7) - ((q.dow - (weekStartsSunday() ? 0 : 1) + 7) % 7));
+  const strengthAll = T => { let gr = 0, ml = 0; const m = C.byDay(data.entries); for (let d = T.from; d <= T.tod; d = addDays(d, 1)) { const x = m.get(d); if (x) { gr += x.g; ml += x.ml; } } return ml ? gr / C.ETHANOL / ml * 100 : 0; };
+
+  function trendData() {
+    const tod = today(), g = goals(), weeks = C.weeks(data.entries, data.days, weekStartOf(tod), WEEKS, tod, g);
+    return { tod, g, weeks, from: weeks[0].start, goals: C.weekGoals(weeks, g) };
+  }
+  function renderTrends() {
+    if (!TV.some(x => x.id === tr.view)) tr.view = TV[0].id;
+    const T = tr.T = trendData(), v = TV.find(x => x.id === tr.view), has = T.weeks.some(w => w.hasData);
+    $('trBody').innerHTML = '<div class="thead"><h2>' + esc(v.name) + '</h2><small>' + esc(short(T.from) + ' – ' + short(T.tod)) + '</small></div>'
+      + (has ? v.draw(T) : '<div class="empty"><strong>Nothing to chart yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>');
+    $('trName').textContent = v.name; $('trIcon').innerHTML = v.icon;
+    if (!$('trMenu').hidden) drawTrMenu();
+    const box = $('trBody').querySelector('.seg');
+    if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:group');
+  }
+  function drawTrMenu() {
+    const T = tr.T || trendData();
+    $('trMenu').innerHTML = TV.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === tr.view) + '"><span class="ic">' + v.icon + '</span><span class="k">' + esc(v.name) + '<small>' + esc(T.weeks.some(w => w.hasData) ? v.sum(T) : 'Nothing logged yet') + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
+  }
+  function closeTrMenu(focus) { $('trMenu').hidden = true; $('trBtn').setAttribute('aria-expanded', 'false'); if (focus) $('trBtn').focus({ preventScroll: true }); }
+  $('trBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (!$('trMenu').hidden) return closeTrMenu();
+    drawTrMenu(); $('trMenu').hidden = false; $('trBtn').setAttribute('aria-expanded', 'true');
+    const cur = $('trMenu').querySelector('[aria-selected="true"]'); if (cur) cur.focus({ preventScroll: true });
+  });
+  $('trMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-view]'); if (!b) return;
+    tr.view = b.dataset.view; tr.sel = null; ls.set(K.trview, tr.view);
+    closeTrMenu(true); renderTrends(); window.scrollTo({ top: 0 });
+  });
+  document.addEventListener('click', e => { if (!$('trMenu').hidden && !e.target.closest('#trMenu, #trBtn')) closeTrMenu(); });
+  // Tap a week (or a day) to read it; the chart keeps what you picked.
+  function pick(el) {
+    tr.sel = +el.dataset.i; renderTrends();
+    const again = $('trBody').querySelector('.hit[data-i="' + tr.sel + '"]'); if (again) again.focus({ preventScroll: true });
+  }
+  $('trBody').addEventListener('click', e => {
+    const g = e.target.closest('[data-group]');
+    if (g) { tr.group = g.dataset.group === 'kind' ? 'kind' : 'name'; ls.set(K.trgroup, tr.group); renderTrends(); return; }
+    const h = e.target.closest('.hit'); if (h) pick(h);
+  });
+  $('trBody').addEventListener('keydown', e => { const h = e.target.closest && e.target.closest('.hit'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(h); } });
+  $('trBody').addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.tview')) tr.table = e.target.open; }, true);
+  window.addEventListener('resize', () => { const box = $('trBody').querySelector('.seg'); if (box && !$('trends').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:group', { jump: true }); });
+  function openTrends() {
+    tr.scroll = window.scrollY; tr.sel = null;
+    $('app').classList.add('intrends'); $('trends').hidden = false; window.scrollTo(0, 0);
+    renderTrends(); $('trBack').focus({ preventScroll: true });
+  }
+  function closeTrends() {
+    closeTrMenu(); $('trends').hidden = true; $('app').classList.remove('intrends');
+    window.scrollTo(0, tr.scroll || 0);
+    const f = $('sumBtn'); if (f) f.focus({ preventScroll: true });
+  }
+  $('trBack').onclick = closeTrends;
+  // Escape closes the view menu, then Trends (the sheets are all closed while Trends is open).
+  function trendsEscape() { if ($('trends').hidden) return false; if (!$('trMenu').hidden) closeTrMenu(true); else closeTrends(); return true; }
 
   // ---------------------------------------------------------------------
   // Start
@@ -643,5 +934,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (drinks/scripts/app-test.mjs) only.
-  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis };
+  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis, openTrends };
 })();

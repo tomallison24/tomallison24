@@ -140,4 +140,70 @@ test('the presets and kinds fill in sensible numbers', () => {
   for (const c of C.CATS) { assert.ok(C.SIZES[c.unit].includes(c.vol), c.id); assert.ok(C.ABVS.includes(c.abv), c.id); }
 });
 
+// ---- Trends: the 12-week page ----
+test('Trends: a week at a time, with its limits, strength and a 4-week average of finished weeks', () => {
+  const beer = (date, qty = 1) => E(date, 12, 'oz', 5, qty);
+  const es = [beer('2026-09-24', 4), beer('2026-09-26'), beer('2026-10-05'),
+    E('2026-10-09', 5, 'oz', 13, 1, 'wine'), E('2026-10-09', 16, 'oz', 6.8)];
+  const days = [AF('2026-09-21'), AF('2026-09-22'), AF('2026-10-06')];
+  const g = { week: 4.5, day: 2, af: 2 };
+  const ws = C.weeks(es, days, '2026-10-04', 3, TODAY, g);      // weeks of Sun 9/20, Sun 9/27, Sun 10/4 (today is Fri 10/9)
+  assert.deepEqual(ws.map(w => w.start), ['2026-09-20', '2026-09-27', '2026-10-04']);
+  assert.deepEqual(ws.map(w => w.end), ['2026-09-26', '2026-10-03', '2026-10-10']);
+  assert.deepEqual(ws.map(w => w.partial), [false, false, true], 'only the week still going');
+  near(ws[0].sd, 5); assert.ok(ws[0].over, '5 is over 4.5'); assert.equal(ws[2].over, false, 'the week still going has 3.9 so far'); assert.equal(ws[0].overDays, 1, '4 on one day is over 2 a day');
+  assert.equal(ws[0].afDays, 2); assert.equal(ws[0].drinkingDays, 2); assert.equal(ws[0].drinks, 5);
+  near(ws[0].abv, 5, 'all 5% beer'); near(ws[0].perDrink, 1, 'a 12 oz 5% beer is one');
+  assert.equal(ws[1].hasData, false, 'nothing logged');
+  assert.equal(ws[1].abv, null); assert.equal(ws[1].perDrink, null);
+  assert.equal(ws[2].hasData, true); assert.equal(ws[2].notRecorded, 3, 'Sun, Wed, Thu are not logged; later days are not counted yet');
+  const ethanol = 12 * C.OZ_ML * 0.05 + 5 * C.OZ_ML * 0.13 + 16 * C.OZ_ML * 0.068, volume = (12 + 5 + 16) * C.OZ_ML;
+  near(ws[2].abv, ethanol / volume * 100, 'strength is by volume: alcohol over drink');
+  near(ws[2].perDrink, ws[2].sd / 3);
+  near(ws[0].avg4, 5, 'a week with data, alone in its window'); assert.equal(ws[1].avg4, null); assert.equal(ws[2].avg4, null, 'no average for the week still going');
+  const r = C.weekGoals(ws, g);
+  assert.deepEqual(r, { over: 1, under: 0, counted: 1, noData: 1, runUnder: 0, bestRun: 0, afMet: 1, afCounted: 1 });
+});
+
+test('Trends: weeks under the limit in a row; the week still going does not break or add to it', () => {
+  const es = ['2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05'].map(d => E(d, 12, 'oz', 5));
+  const ws = C.weeks(es, [], '2026-10-04', 4, TODAY, { week: 14, day: 4, af: 3 });
+  const r = C.weekGoals(ws, { week: 14, day: 4, af: 3 });
+  assert.equal(r.runUnder, 3); assert.equal(r.bestRun, 3); assert.equal(r.under, 3); assert.equal(r.over, 0); assert.equal(r.counted, 3);
+  assert.equal(r.afCounted, 3, 'finished weeks count against the alcohol-free goal; the one still going only once it is met');
+  assert.equal(r.afMet, 0);
+  // an empty week still going (a Sunday morning) does not end the run either
+  const sunday = C.weeks(es.slice(0, 3), [], '2026-10-04', 4, TODAY, { week: 14 });
+  assert.equal(C.weekGoals(sunday, { week: 14 }).runUnder, 3);
+  // a week is still going on its last day (a Saturday), until that day is over
+  assert.equal(C.weeks(es, [], '2026-10-04', 1, '2026-10-10', {})[0].partial, true);
+  assert.equal(C.weeks(es, [], '2026-10-04', 1, '2026-10-11', {})[0].partial, false);
+  // a week over the limit that is still going breaks it
+  const bad = es.slice(0, 3).concat(E('2026-10-05', 12, 'oz', 5, 20));
+  assert.equal(C.weekGoals(C.weeks(bad, [], '2026-10-04', 4, TODAY, { week: 14 }), { week: 14 }).runUnder, 0);
+  // no limit set: nothing is over
+  assert.equal(C.weeks(bad, [], '2026-10-04', 4, TODAY, { week: 0 }).some(w => w.over), false);
+});
+
+test('Trends: top drinks by the name you gave them, or by kind', () => {
+  const es = [Object.assign(E('2026-10-01', 16, 'oz', 6.8), { name: 'IPA' }), Object.assign(E('2026-10-02', 16, 'oz', 6.8, 2), { name: 'ipa ' }),
+    Object.assign(E('2026-10-02', 5, 'oz', 13, 2, 'wine'), { name: 'Wine' }), Object.assign(E('2026-10-03', 12, 'oz', 5), { name: '' }),
+    Object.assign(E('2026-01-01', 12, 'oz', 5), { name: 'Old' })];
+  const by = (b) => Object.fromEntries(C.topDrinks(es, '2026-09-01', TODAY, b).map(x => [x.key, x]));
+  const names = by('name');
+  assert.deepEqual(Object.keys(names).sort(), ['beer', 'ipa', 'wine'], 'a name with no words is its kind; before the window is left out; case and spaces do not split a name');
+  assert.equal(names.ipa.qty, 3); near(names.ipa.sd, 3 * 1.8134); assert.equal(names.ipa.cat, 'beer'); assert.equal(names.wine.qty, 2);
+  const kinds = by('kind');
+  assert.deepEqual(Object.keys(kinds).sort(), ['beer', 'wine']); assert.equal(kinds.beer.label, 'Beer'); assert.equal(kinds.beer.qty, 4);
+});
+
+test('Trends: each day of the week, over the days you recorded', () => {
+  const es = [E('2026-10-05', 12, 'oz', 5, 2), E('2026-10-09', 12, 'oz', 5)];     // Mon 2, Fri 1
+  const w = C.weekdays(es, [AF('2026-10-06')], '2026-10-04', '2026-10-31', TODAY);   // Sun 10/4 to today; the month's later days aren't counted
+  assert.equal(w.length, 7); assert.deepEqual(w.map(x => x.dow), [0, 1, 2, 3, 4, 5, 6]);
+  assert.equal(w[0].avg, null, 'Sunday was not logged'); near(w[1].avg, 2); near(w[2].avg, 0); near(w[5].avg, 1);
+  assert.equal(w[2].recorded, 1); assert.equal(w[1].drinkingDays, 1);
+  near(w[1].share, 2 / 3); near(w[5].share, 1 / 3); assert.equal(w[6].recorded, 0, 'Saturday has not come yet');
+});
+
 console.log(n + ' tests passed');
