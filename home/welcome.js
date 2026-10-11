@@ -90,6 +90,7 @@
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s, each with its own icon',
         'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',
         'News: in the Scores league pills, the Premier League and Premiership Rugby are pinned to the top',
+        'News: the Scores button no longer shows a number of live games (the red dot still shows when one is on)',
         'News: Sport > Table shows a league\'s standings from ESPN, with a pill to pick the league, kept up to date as games finish (every minute while a game is on), the teams in play marked and the teams you follow tinted',
         'News: tap a football or rugby game in Sport > Scores for its own page instead of ESPN\'s: the score and clock, key events (goals, cards, substitutions), stats side by side, a shot map and each player\'s goals, assists and shots for football, the scoring and line-ups for rugby, refreshed every 45 seconds while the game is on, with Open on ESPN at the bottom',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',

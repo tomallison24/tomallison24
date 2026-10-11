@@ -329,7 +329,7 @@
     const live = liveCount();
     const modes = `<div class="modes three" role="tablist" aria-label="Sport view">
       <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
-      <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}"${live ? ` aria-label="Scores, ${live} live"` : ''}>${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n" aria-hidden="true">${live}</span>` : ''}</button>
+      <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}"${live ? ` aria-label="Scores, ${live} live"` : ''}>${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores</button>
       <button class="seg" role="tab" data-mode="table" aria-selected="${sportMode === 'table'}">Table</button>
     </div>`;
     filterEl.innerHTML = `<div class="fb-top">${modes}${teamPill()}</div>`;
