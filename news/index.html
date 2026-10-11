@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; connect-src 'self' https://site.api.espn.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>News</title>
 <meta name="description" content="Latest headlines for UK, World, US, Business, Tech, Science and Sport in one clean, frosted-glass home-screen app.">
@@ -666,6 +666,52 @@
   .tkey span { display: inline-flex; align-items: center; gap: 6px; }
   .tkey i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
+  /* ---- Match: a football game's own page ----
+     The score and clock over two crests, then Events | Stats | Line-ups in the same glass sheet
+     as the summaries. Stats are two bars side by side (the home side in the accent colour). */
+  .game.tap { cursor: pointer; }
+  .mh { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 2px 6px 6px; }
+  .mt { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
+  .mlogo { width: 44px; height: 44px; object-fit: contain; display: block; }
+  .mn { max-width: 100%; font-size: 14px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .mm { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .msc { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .msc.pre { font-size: 22px; color: var(--muted); font-weight: 600; }
+  .mst { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+  .mst.live { color: var(--live); }
+  .mtabs { margin: 10px 0 12px; }
+  .mev, .mstats, .mlu { padding: 6px 0; border-radius: 22px; }
+  .mlu + .mlu { margin-top: 12px; }
+  .mrow { position: relative; display: grid; grid-template-columns: 48px 26px minmax(0, 1fr); align-items: start; gap: 6px; padding: 9px 14px; }
+  .mrow + .mrow::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .mc { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+  .mi svg { width: 22px; height: 22px; display: block; }
+  .mrow.goal .mi { color: var(--accent); }
+  .mb b { font-size: 15px; font-weight: 600; }
+  .mb .off { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .mb small { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
+  .mphase { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 6px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--accent-soft); }
+  .mphase span { font-weight: 600; opacity: 0.8; }
+  .mstat { padding: 8px 16px; }
+  .mvals { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .mvals b { font-weight: 700; }
+  .mvals b:last-child { text-align: right; }
+  .mvals span { font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; }
+  .mbar { display: flex; gap: 3px; margin-top: 5px; height: 6px; }
+  .mbar i { display: block; height: 100%; min-width: 3px; border-radius: 3px; transition: width 0.4s; }
+  .mbar .h { background: var(--accent); }
+  .mbar .a { background: var(--muted); opacity: 0.55; }
+  .mlu h4 { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 16px 4px; font-size: 15px; font-weight: 700; }
+  .mlu h4 span { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .mp { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 16px; font-size: 14px; }
+  .mp .no { color: var(--muted); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .mp .ps { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .mp .out { font-style: normal; color: #E5575A; font-size: 9px; }
+  .mp .in { font-style: normal; color: #3FB07F; font-size: 9px; }
+  .mp.on .nm { font-weight: 600; }
+  .msub { margin: 6px 16px 0; padding-top: 8px; border-top: 0.5px solid var(--hairline); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .minfo { margin: 12px 8px 0; font-size: 13px; line-height: 1.5; color: var(--muted); text-align: center; }
+
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
@@ -767,6 +813,21 @@
         <svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5.5M6 11.2l6-6 6 6"/></svg>
       </button>
     </div>
+  </section>
+</div>
+
+<!-- Match: a football game's own page, from ESPN's match details. -->
+<div class="sheet-wrap lg" id="match-sheet" hidden>
+  <div class="scrim" data-action="close-match"></div>
+  <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="match-title" tabindex="-1">
+    <div class="grabber" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <h2 id="match-title">Match</h2>
+      <button class="close-btn" data-action="close-match" aria-label="Close">
+        <svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+      </button>
+    </header>
+    <div class="sheet-body" id="match-body" aria-live="polite"></div>
   </section>
 </div>
 

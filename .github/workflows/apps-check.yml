@@ -68,6 +68,7 @@ jobs:
       - run: node house/scripts/app-test.mjs
       - run: node house/scripts/connect-test.mjs
       - run: node news/scripts/table-test.mjs
+      - run: node news/scripts/match-test.mjs
       - run: node calendar/scripts/app-test.mjs
       - run: node drinks/scripts/app-test.mjs
       - run: node fitness/scripts/app-test.mjs

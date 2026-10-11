@@ -206,7 +206,7 @@ La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB, NHL and rugby
 (Premiership Rugby, URC, Champions Cup, Top 14, Six Nations, Rugby
 Championship, Super Rugby Pacific, Rugby World Cup, internationals and
 rugby league). Your
-Sport filters apply to scores too. Tap a game for ESPN's match page.
+Sport filters apply to scores too. Tap a football game for its own page (see Match below); the other sports go to ESPN's match page.
 Games show where to watch in the US (TV or streaming, e.g. FOX, FS2,
 Paramount+) when ESPN lists it; many games get their listing only a few
 days before.
@@ -252,8 +252,7 @@ on made-up ESPN data (`scripts/scores-fixture.mjs`).
 **Table** shows one league's standings at a time, with a pill to pick the league
 (the same leagues as Scores, narrowed by your Sport filters; it opens on the
 Premier League). It reads ESPN's standings feed
-(`site.api.espn.com/apis/v2/sports/<path>/standings`, the same path as
-the scoreboard) and refreshes on the Scores timer: every minute while a game in
+(`site.web.api.espn.com/apis/v2/sports/<path>/standings`) and refreshes on the Scores timer: every minute while a game in
 that league is in play, every 5 minutes otherwise, so a result moves its teams
 as ESPN counts it. The table has a rank, the team and up to six stats, labelled
 with ESPN's own abbreviations (played, won, drawn, lost, goal difference and
@@ -265,9 +264,41 @@ The last table seen is kept on the phone for when ESPN can't be reached. A
 competition ESPN publishes no table for (many cups and rugby competitions)
 says so. ESPN's feed is public but undocumented, so every part is read
 defensively and nothing is assumed beyond a team and its stats.
-`scripts/table-test.mjs` plays it with a stand-in ESPN. **Not yet checked against
-ESPN's live feed** (the build environment can't reach ESPN): the first real
-table is the real check.
+It was checked against ESPN's live Premier League answer on 11 October 2026, and
+`scripts/table-test.mjs` plays that real answer (trimmed, in `scripts/fixtures/`) with
+a stand-in ESPN. The standings are asked of `site.web.api.espn.com` first (answers
+any page, CORS open) and then `site.api.espn.com`. ESPN sent one zone colour as
+`##B5E7CE`, which is read as `#B5E7CE`.
+
+
+### Match: a football game's own page
+
+Tapping a football game under Scores or Coming up opens its own page instead of
+ESPN's (the other sports still go to ESPN). It reads ESPN's match details
+(`site.web.api.espn.com/apis/site/v2/sports/<path>/summary?event=<game id>`, then
+`site.api.espn.com` if that fails; about 35 KB over the wire):
+
+- **The header:** both crests, the score and the clock (a live dot while it is on) or
+  the kick-off time, and the league as the title.
+- **Events:** goals (with the assist), cards and substitutions ("X for Y"), between
+  Kick-off, Half time and Full time; latest first while the game is on, otherwise in
+  order. Delays and the like are left out.
+- **Stats:** possession, shots, shots on target, corners, fouls, offsides, yellow and red
+  cards, saves, passes and pass accuracy (worked out from accurate passes over passes,
+  as ESPN rounds its own to a tenth), the home side in the accent colour.
+- **Line-ups:** each side's formation and eleven in shape order with positions
+  (a red mark for who went off), then the substitutes (green for who came on). Before
+  kick-off it opens on the line-ups when ESPN has them.
+- **Below:** the ground and city, the crowd when ESPN gives one, where to watch in the US
+  until the game is over, and **Open on ESPN**.
+- **Live:** while a game is on it refreshes every 45 seconds, keeping the last answer
+  (with a note) if ESPN doesn't reply. A game ESPN has no details for says so and keeps the
+  score from the game row.
+
+`scripts/match-test.mjs` plays two real answers from 11 October 2026 (a finished game and
+one in play, trimmed, in `scripts/fixtures/`). Football only for now (every league in
+`leagues.json` with sport `football`); the other sports can follow, each with its own
+box score.
 
 ## Add or change sources
 

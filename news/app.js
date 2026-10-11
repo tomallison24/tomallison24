@@ -8,7 +8,19 @@
   const LEAGUES_URL = 'leagues.json';
   const SCORES_URL = 'data/scores.json';                  // copy saved on each refresh
   const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
-  const ESPN_TABLE = 'https://site.api.espn.com/apis/v2/sports';   // the standings live under apis/v2, not apis/site/v2
+  // ESPN answers on two hosts with the same data; the standings and the match details are asked of
+  // site.web.api.espn.com first (the one checked against ESPN's live answers, with CORS open to any
+  // page) and, if that fails, of site.api.espn.com. The standings live under apis/v2, not apis/site/v2.
+  const ESPN_WEB = 'https://site.web.api.espn.com/apis';
+  const ESPN_API = 'https://site.api.espn.com/apis';
+  const espnGet = async paths => {
+    let last;
+    for (const base of [ESPN_WEB, ESPN_API]) {
+      try { const r = await fetch(base + paths, { cache: 'no-store' }); if (r.ok) return await r.json(); last = new Error(`HTTP ${r.status}`); }
+      catch (err) { last = err; }
+    }
+    throw last;
+  };
   const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
   const LATEST = { id: 'latest', label: 'Latest' };
   const SPORT = 'sport';
@@ -1022,7 +1034,7 @@
           name: t.displayName || t.name || '', short: t.shortDisplayName || t.displayName || t.name || '',
           logo: t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null,
           vals: cols.map(c => shown(stat(e, c.name))),
-          zone: note && /^#[0-9a-f]{6}$/i.test(note.color || '') ? { color: note.color, label: String(note.description || '') } : null,
+          zone: note && /^#+[0-9a-f]{6}$/i.test(note.color || '') ? { color: note.color.replace(/^#+/, '#'), label: String(note.description || '') } : null,   // ESPN has sent '##B5E7CE'
         };
       }).sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.order - b.order);
       rows.forEach((r, i) => { if (r.rank == null) r.rank = i + 1; });
@@ -1044,7 +1056,7 @@
     tableBusy = true;
     if (topic === SPORT && sportMode === 'table') renderFeed();
     const get = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)));
-    const [st, sb] = await Promise.allSettled([get(`${ESPN_TABLE}/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
+    const [st, sb] = await Promise.allSettled([espnGet(`/v2/sports/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
     if (run !== tableRun) return;                 // another league was picked meanwhile
     tableBusy = false;
     const cur = tables[l.id];
@@ -1110,6 +1122,209 @@
     return `<section class="sect">${head}${body}${key}</section>${foot}`;
   }
 
+  // ---- match: a football game's own page, from ESPN's match details ----
+  // Tapping a football game opens this instead of ESPN's site: the score and clock, the
+  // key events (goals, cards, substitutions), the team stats side by side, the line-ups, the
+  // ground and where to watch. ESPN's own page stays one tap away at the bottom. While the
+  // game is on it refreshes every 45 seconds. Every part of the answer is read defensively:
+  // a part ESPN doesn't have (no line-ups before kick-off) is left out or says so.
+  const isFootball = l => !!l && l.sport === 'football';
+  const matchWrap = $('match-sheet'), matchSheetEl = matchWrap.querySelector('.sheet'), matchBody = $('match-body'), matchTitle = $('match-title');
+  let matchOpen = false, matchRun = 0, matchTimer = 0, match = null;   // match: { l, game, phase, data, tab, error }
+
+  // The stats shown, in order, by ESPN's name for them; pass accuracy is worked out (ESPN rounds it to a tenth).
+  const MATCH_STATS = [['possessionPct', 'Possession', 'pct'], ['totalShots', 'Shots'], ['shotsOnTarget', 'Shots on target'], ['wonCorners', 'Corners'],
+    ['foulsCommitted', 'Fouls'], ['offsides', 'Offsides'], ['yellowCards', 'Yellow cards'], ['redCards', 'Red cards'], ['saves', 'Saves'],
+    ['totalPasses', 'Passes'], ['passAccuracy', 'Pass accuracy', 'pct']];
+  const PHASES = { 'Kickoff': 'Kick-off', 'Halftime': 'Half time', 'Start 2nd Half': 'Second half', 'End Regular Time': 'Full time', 'End 2nd Half': 'Full time',
+    'Start Extra Time': 'Extra time', 'Penalty Shootout': 'Penalties', 'Full Time': 'Full time' };
+  const EVENT_ICONS = {
+    goal: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.2l3.2 2.3-1.2 3.7h-4l-1.2-3.7z" fill="currentColor"/></svg>',
+    yellow: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#F5C518"/></svg>',
+    red: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#E5242B"/></svg>',
+    sub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v12M4.8 8.2L8 5l3.2 3.2" fill="none" stroke="#3FB07F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19V7M12.8 15.8L16 19l3.2-3.2" fill="none" stroke="#E5575A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    miss: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="3 2.4"/></svg>',
+  };
+
+  // What kind of event ESPN's key event is, or null for the ones not worth a row (delays and the like).
+  function eventKind(e) {
+    const t = String((e.type && e.type.text) || '').toLowerCase();
+    if (/penalty/.test(t) && !/scored|goal/.test(t)) return e.scoringPlay ? 'goal' : 'miss';
+    if (/goal|penalty/.test(t) || e.scoringPlay) return 'goal';
+    if (/red card|yellow.?red|second yellow/.test(t)) return 'red';
+    if (/yellow/.test(t)) return 'yellow';
+    if (/substitution/.test(t)) return 'sub';
+    if (PHASES[(e.type && e.type.text) || '']) return 'phase';
+    return null;
+  }
+
+  // ESPN's match details for the page: the header's score and clock, then the parts.
+  // Keep in step with scripts/match-test.mjs.
+  function normalizeMatch(json) {
+    const comp = ((((json || {}).header || {}).competitions || [])[0]) || {};
+    const type = (comp.status || {}).type || {};
+    const crest = t => t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null;
+    const side = where => {
+      const c = (comp.competitors || []).find(x => x.homeAway === where) || {}, t = c.team || {};
+      return { id: String(t.id ?? ''), name: t.displayName || t.name || '', short: t.shortDisplayName || t.displayName || t.name || '', logo: crest(t), score: c.score == null ? '' : String(c.score), winner: !!c.winner };
+    };
+    const home = side('home'), away = side('away');
+    const events = (Array.isArray(json && json.keyEvents) ? json.keyEvents : []).map(e => {
+      const kind = eventKind(e || {});
+      if (!kind) return null;
+      const who = ((e.participants || []).map(p => p && p.athlete && p.athlete.displayName).filter(Boolean));
+      const teamId = String((e.team && e.team.id) ?? '');
+      return { kind, label: (e.type && e.type.text) || '', clock: (e.clock && e.clock.displayValue) || '', text: String(e.text || ''), who,
+        side: teamId && teamId === home.id ? 'home' : teamId && teamId === away.id ? 'away' : '', team: e.team ? e.team.displayName || '' : '' };
+    }).filter(Boolean);
+    const stats = {};
+    for (const t of (json && json.boxscore && json.boxscore.teams) || []) {
+      const m = {};
+      for (const x of t.statistics || []) if (x && x.name) m[x.name] = parseFloat(x.displayValue);
+      if (Number.isFinite(m.accuratePasses) && m.totalPasses > 0) m.passAccuracy = 100 * m.accuratePasses / m.totalPasses;
+      stats[t.homeAway] = m;
+    }
+    const lineups = ((json && json.rosters) || []).map(r => {
+      const player = p => ({ name: (p.athlete && (p.athlete.displayName || p.athlete.shortName)) || '', jersey: p.jersey || '', pos: (p.position && p.position.abbreviation) || '', on: !!p.subbedIn, off: !!p.subbedOut, place: +p.formationPlace || 0 });
+      const all = (r.roster || []).map(p => ({ ...player(p), starter: !!p.starter }));
+      return { side: r.homeAway, team: (r.team && (r.team.displayName || r.team.name)) || '', formation: r.formation || '',
+        starters: all.filter(p => p.starter).sort((a, b) => a.place - b.place), subs: all.filter(p => !p.starter).sort((a, b) => (+a.jersey || 99) - (+b.jersey || 99)) };
+    }).filter(r => r.starters.length || r.subs.length);
+    const venue = (json && json.gameInfo && json.gameInfo.venue) || {}, attendance = +(json && json.gameInfo && json.gameInfo.attendance) || 0;
+    const tv = [...new Set(((json && json.broadcasts) || []).map(b => b && b.media && b.media.shortName).filter(Boolean))].slice(0, 3);
+    const link = (((json && json.header && json.header.links) || []).find(l => (l.rel || []).includes('summary')) || ((json && json.header && json.header.links) || [])[0] || {}).href || null;
+    return { state: type.state || 'pre', detail: type.shortDetail || type.detail || '', home, away, events, stats, lineups,
+      venue: venue.fullName || '', city: (venue.address && venue.address.city) || '', attendance, tv, link, start: comp.date || null };
+  }
+
+  const kickoffText = iso => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`; };
+
+  function matchHead(m, g) {
+    // The page's own header once the details are in; the game row's until then.
+    const home = m ? m.home : g.home, away = m ? m.away : g.away;
+    const state = m ? m.state : g.state, detail = m ? m.detail : g.detail, start = m ? m.start : g.start;
+    const crest = t => safeUrl(t.logo) ? `<img class="mlogo" src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer">` : '<span class="mlogo"></span>';
+    const score = state === 'pre' ? '<span class="msc pre">v</span>' : `<span class="msc">${esc(home.score)} – ${esc(away.score)}</span>`;
+    const status = state === 'in' ? `<span class="mst live"><span class="live-dot" aria-hidden="true"></span>${esc(detail || 'Live')}</span>`
+      : state === 'post' ? `<span class="mst">${esc(detail || 'FT')}</span>` : `<span class="mst">${esc(start ? kickoffText(start) : '')}</span>`;
+    return `<div class="mh"><div class="mt">${crest(home)}<span class="mn">${esc(home.short || home.name)}</span></div>
+      <div class="mm">${score}${status}</div>
+      <div class="mt">${crest(away)}<span class="mn">${esc(away.short || away.name)}</span></div></div>`;
+  }
+
+  function matchEvents(m) {
+    if (!m.events.length) return '<p class="gnone">Nothing to show yet.</p>';
+    const rows = m.state === 'in' ? [...m.events].reverse() : m.events;      // latest first while it is on
+    return `<div class="card mev">${rows.map(e => {
+      if (e.kind === 'phase') return `<div class="mphase">${esc(PHASES[e.label] || e.label)}${e.clock ? `<span>${esc(e.clock)}</span>` : ''}</div>`;
+      const main = e.kind === 'sub' ? `<b>${esc(e.who[0] || '')}</b> <span class="off">for ${esc(e.who[1] || '')}</span>` : `<b>${esc(e.who[0] || e.label)}</b>${e.kind === 'goal' && e.who[1] ? ` <span class="off">assist ${esc(e.who[1])}</span>` : ''}`;
+      const word = e.kind === 'sub' ? '' : e.kind === 'goal' ? '' : e.kind === 'miss' ? esc(e.label) : '';
+      return `<div class="mrow ${esc(e.kind)}${e.side ? ` ${esc(e.side)}` : ''}"><span class="mc">${esc(e.clock)}</span><span class="mi">${EVENT_ICONS[e.kind]}</span>
+        <div class="mb"><div>${main}${word ? ` <span class="off">${word}</span>` : ''}</div><small>${esc(e.team)}${e.kind === 'goal' && e.label && !/^goal$/i.test(e.label) ? ` · ${esc(e.label.replace(/^goal\s*-\s*/i, ''))}` : ''}</small></div></div>`;
+    }).join('')}</div>`;
+  }
+
+  function matchStats(m) {
+    const h = m.stats.home || {}, a = m.stats.away || {};
+    const rows = MATCH_STATS.filter(([k]) => Number.isFinite(h[k]) && Number.isFinite(a[k])).map(([k, label, kind]) => {
+      const fmt = v => kind === 'pct' ? `${Math.round(v)}%` : String(Math.round(v));
+      const total = h[k] + a[k], left = total > 0 ? Math.round(100 * h[k] / total) : 50;
+      return `<div class="mstat"><div class="mvals"><b>${fmt(h[k])}</b><span>${label}</span><b>${fmt(a[k])}</b></div>
+        <div class="mbar" role="img" aria-label="${esc(label)}: ${esc(m.home.short)} ${fmt(h[k])}, ${esc(m.away.short)} ${fmt(a[k])}"><i class="h" style="width:${left}%"></i><i class="a" style="width:${100 - left}%"></i></div></div>`;
+    });
+    return rows.length ? `<div class="card mstats">${rows.join('')}</div>` : '<p class="gnone">Stats come once the game is under way.</p>';
+  }
+
+  function matchLineups(m) {
+    if (!m.lineups.length) return '<p class="gnone">Line-ups come about an hour before kick-off.</p>';
+    return m.lineups.map(t => `<div class="card mlu"><h4>${esc(t.team)}${t.formation ? `<span>${esc(t.formation)}</span>` : ''}</h4>
+      ${t.starters.map(p => `<div class="mp"><span class="no">${esc(p.jersey)}</span><span class="nm">${esc(p.name)}</span><span class="ps">${esc(p.pos)}${p.off ? ' <i class="out" aria-label="Substituted off">▼</i>' : ''}</span></div>`).join('')}
+      ${t.subs.length ? `<div class="msub">Substitutes</div>${t.subs.map(p => `<div class="mp${p.on ? ' on' : ''}"><span class="no">${esc(p.jersey)}</span><span class="nm">${esc(p.name)}</span><span class="ps">${p.on ? '<i class="in" aria-label="Came on">▲</i>' : ''}</span></div>`).join('')}` : ''}
+    </div>`).join('');
+  }
+
+  function renderMatch() {
+    if (!match) return;
+    const { l, game: g } = match, m = match.data;
+    matchTitle.textContent = l.label;
+    let h = matchHead(m, g);
+    if (match.phase === 'loading' && !m) {
+      h += '<div class="card" aria-busy="true" style="padding:16px"><div class="sk" style="width:90%;height:14px"></div><div class="sk" style="width:70%;height:14px;margin-top:10px"></div><div class="sk" style="width:80%;height:14px;margin-top:10px"></div></div>';
+    } else if (!m) {
+      h += `<div class="notice" style="margin-top:12px"><h2>Match details unavailable</h2><p>Couldn’t reach ESPN for this game. Check your connection and try again.</p><div class="actions"><button data-action="retry-match">Try again</button></div></div>`;
+    } else {
+      const tabs = [['events', 'Events'], ['stats', 'Stats'], ['lineups', 'Line-ups']];
+      h += `<div class="modes three mtabs" role="tablist" aria-label="Match">${tabs.map(([id, label]) => `<button class="seg" role="tab" data-mtab="${id}" aria-selected="${match.tab === id}">${label}</button>`).join('')}</div>`;
+      h += match.tab === 'stats' ? matchStats(m) : match.tab === 'lineups' ? matchLineups(m) : matchEvents(m);
+      const info = [m.venue ? `${m.venue}${m.city ? `, ${m.city}` : ''}` : '', m.attendance ? `${m.attendance.toLocaleString('en-US')} watching` : '', m.state !== 'post' && m.tv.length ? `On ${m.tv.join(' · ')}` : ''].filter(Boolean);
+      if (info.length) h += `<p class="minfo">${info.map(esc).join('<br>')}</p>`;
+      if (match.error) h += '<p class="ai-note">Couldn’t refresh just now; this is the last update.</p>';
+      const link = safeUrl(m.link) || safeUrl(g.link);
+      if (link) h += `<a class="ai-open" href="${esc(link)}" target="_blank" rel="noopener">Open on ESPN</a>`;
+    }
+    const keep = matchBody.scrollTop;
+    matchBody.innerHTML = h;
+    matchBody.scrollTop = keep;
+    const tabsEl = matchBody.querySelector('.mtabs');
+    if (tabsEl) slide(tabsEl, tabsEl.querySelector('[aria-selected="true"]'), 'match-tabs', { jump: true });
+  }
+
+  async function loadMatch() {
+    clearTimeout(matchTimer);
+    if (!match) return;
+    const run = ++matchRun, { l, game } = match;
+    if (!match.data) { match.phase = 'loading'; renderMatch(); }
+    try {
+      const json = await espnGet(`/site/v2/sports/${l.path}/summary?event=${encodeURIComponent(game.id)}`);
+      if (run !== matchRun || !matchOpen) return;
+      const prev = match.data;
+      match.data = normalizeMatch(json); match.error = false; match.phase = 'done';
+      if (!prev && match.data.state === 'pre' && match.data.lineups.length && !match.tabPicked) match.tab = 'lineups';
+    } catch (err) {
+      if (run !== matchRun || !matchOpen) return;
+      match.error = true; match.phase = match.data ? 'done' : 'error';
+    }
+    renderMatch();
+    if (matchOpen && document.visibilityState === 'visible' && match.data && match.data.state === 'in') matchTimer = setTimeout(loadMatch, 45e3);
+  }
+
+  function openMatch(leagueId, id) {
+    const l = (leagues || []).find(x => x.id === leagueId);
+    const game = l && [...(scores[l.id] || []), ...(fixtures[l.id] || [])].find(g => String(g.id) === String(id));
+    if (!l || !game) return;
+    match = { l, game, phase: 'loading', data: null, tab: 'events', tabPicked: false, error: false };
+    matchBody.scrollTop = 0;
+    if (!matchOpen) {
+      matchOpen = true;
+      matchWrap.hidden = false;
+      document.documentElement.classList.add('locked');
+      requestAnimationFrame(() => requestAnimationFrame(() => matchWrap.classList.add('open')));
+      matchSheetEl.focus({ preventScroll: true });
+    }
+    loadMatch();
+  }
+
+  function closeMatch() {
+    if (!matchOpen) return;
+    matchOpen = false; matchRun++;
+    clearTimeout(matchTimer);
+    matchWrap.classList.remove('open');
+    document.documentElement.classList.remove('locked');
+    const hide = () => { if (!matchOpen) matchWrap.hidden = true; };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
+  }
+
+  const openFromRow = el => { const g = el.closest('[data-match]'); if (g) openMatch(g.dataset.mlg, g.dataset.match); return !!g; };
+  feedEl.addEventListener('click', e => { if (e.target.closest('[data-match]') && openFromRow(e.target)) e.preventDefault(); });
+  feedEl.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-match]')) { e.preventDefault(); openFromRow(e.target); } });
+  matchWrap.addEventListener('click', e => {
+    if (e.target.closest('[data-action="close-match"]')) return closeMatch();
+    if (e.target.closest('[data-action="retry-match"]')) return loadMatch();
+    const t = e.target.closest('[data-mtab]');
+    if (t && match) { match.tab = t.dataset.mtab; match.tabPicked = true; renderMatch(); }
+  });
+  document.addEventListener('visibilitychange', () => { if (matchOpen && document.visibilityState === 'visible') loadMatch(); else clearTimeout(matchTimer); });
+
   function kickoff(iso) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
@@ -1134,6 +1349,8 @@
       ? `<div class="gtv">${ICON.tv}<span>${esc(g.tv.join(' · '))}</span></div>` : '';
     const body = `<div class="gstat ${esc(g.state)}">${stat}</div><div class="gteams">${team(first)}${team(second)}${tv}</div>`;
     const cls = `game ${esc(g.state)}${decided ? ' decided' : ''}`;
+    // A football game opens its own page (see "match"); the other sports go to ESPN's.
+    if (isFootball(l) && g.id) return `<div class="${cls} tap" role="button" tabindex="0" data-match="${esc(g.id)}" data-mlg="${esc(l.id)}" aria-label="${esc(`${g.home.short || g.home.name} v ${g.away.short || g.away.name}: match details`)}">${body}</div>`;
     return safeUrl(g.link) ? `<a class="${cls}" href="${esc(g.link)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
 
@@ -1399,6 +1616,7 @@
     if (e.key === 'Escape' && sheetOpen) closeSheet();
     if (e.key === 'Escape' && srcOpen) closeSrcSheet();
     if (e.key === 'Escape' && aiOpen) closeAi();
+    if (e.key === 'Escape' && matchOpen) closeMatch();
   });
 
   // Broken or refused images: try the original, then drop the frame.

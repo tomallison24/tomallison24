@@ -4,9 +4,10 @@
 // (conferences, wins and losses), a league with no table, ESPN not answering (the
 // last table seen is kept), teams in play marked, the teams you follow tinted, and
 // a result moving the table on the next refresh.
-// The stand-ins follow ESPN's standings feed as its public answers are known to look
-// (children[].standings.entries[].team and stats[]); ESPN's feed is undocumented, so
-// this is a check of the app's reading, not a promise about ESPN.
+// The Premier League's table is a real answer from ESPN's standings feed (October 2026,
+// trimmed: scripts/fixtures/espn-eng1-standings.json); the US conferences and the empty
+// league are made up in the same shape. ESPN's feed is undocumented, so this checks the
+// app's reading of it, not a promise about ESPN.
 //   node news/scripts/table-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -39,20 +40,15 @@ const team = (displayName, shortDisplayName) => ({ id: displayName, displayName,
 const soccerEntry = (t, rank, gp, w, d, l, gd, pts, note) => ({ team: t, ...(note ? { note } : {}),
   stats: [stat('rank', 'R', rank), stat('gamesPlayed', 'GP', gp), stat('wins', 'W', w), stat('ties', 'D', d), stat('losses', 'L', l),
     stat('pointsFor', 'F', 0), stat('pointDifferential', 'GD', gd, (gd > 0 ? '+' : '') + gd), stat('points', 'P', pts)] });
-const CL = { color: '#81D6AC', description: 'Champions League', rank: 1 }, REL = { color: '#E8575A', description: 'Relegation', rank: 4 };
-const soccer = pts => ({ name: 'English Premier League', children: [{ name: 'English Premier League', standings: { seasonDisplayName: '2026-27', entries: [
-  // out of order on purpose: the table is by rank
-  soccerEntry(team('Arsenal', 'Arsenal'), 2, 8, 6, 1, 1, 9, 19, CL),
-  soccerEntry(team('Liverpool', 'Liverpool'), 1, 8, 6, 2, 0, 12, pts, CL),
-  soccerEntry(team('Manchester United', 'Man United'), 3, 8, 3, 3, 2, 1, 12),
-  soccerEntry(team('Wolverhampton Wanderers', 'Wolves'), 4, 8, 0, 1, 7, -14, 1, REL),
-] } }] });
+// The real Premier League table; soccer(pts) is the same with the leaders' points changed.
+const real = JSON.parse(fs.readFileSync(path.join(ROOT, 'news/scripts/fixtures/espn-eng1-standings.json'), 'utf8'));
+const soccer = pts => { const j = JSON.parse(JSON.stringify(real)); const p = j.children[0].standings.entries[0].stats.find(x => x.name === 'points'); p.value = pts; p.displayValue = String(pts); return j; };
 const us = { name: 'NBA', children: ['Eastern Conference', 'Western Conference'].map((c, i) => ({ name: c, standings: { entries: [
   { team: team('Boston Celtics' + i, 'Celtics' + i), stats: [stat('wins', 'W', 10), stat('losses', 'L', 2), stat('winPercent', 'PCT', 0.833, '.833'), stat('gamesBehind', 'GB', 0, '-'), stat('streak', 'STRK', 3, 'W3')] },
   { team: team('Miami Heat' + i, 'Heat' + i), stats: [stat('wins', 'W', 8), stat('losses', 'L', 4), stat('winPercent', 'PCT', 0.667, '.667'), stat('gamesBehind', 'GB', 2, '2'), stat('streak', 'STRK', -1, 'L1')] },
 ] } })) };
 const board = live => ({ events: [{ id: '1', date: '2026-10-11T15:30:00Z', status: { type: { state: live ? 'in' : 'post', shortDetail: live ? "63'" : 'FT' } }, competitions: [{ competitors: [
-  { homeAway: 'home', team: { displayName: 'Liverpool', shortDisplayName: 'Liverpool' }, score: '1' }, { homeAway: 'away', team: { displayName: 'Arsenal', shortDisplayName: 'Arsenal' }, score: '1' }] }] }] });
+  { homeAway: 'home', team: { displayName: 'Liverpool', shortDisplayName: 'Liverpool' }, score: '0' }, { homeAway: 'away', team: { displayName: 'Manchester City', shortDisplayName: 'Man City' }, score: '2' }] }] }] });
 
 const calls = [];
 const LATENCY = +process.env.LATENCY || 0;
@@ -61,7 +57,7 @@ async function open(extra = {}, init = {}) {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
   await ctx.route('**/*', async route => {
     const u = new URL(route.request().url());
-    if (u.hostname === 'site.api.espn.com') {
+    if (/^site(\.web)?\.api\.espn\.com$/.test(u.hostname)) {
       if (LATENCY) await new Promise(r => setTimeout(r, LATENCY));   // a slow network, as on CI
       const m = /sports\/([^/]+\/[^/]+)\/(standings|scoreboard)/.exec(u.pathname);
       const id = m && m[1].split('/')[1].replace(/^(\d+)$/, 'rugby.$1');
@@ -88,7 +84,7 @@ async function open(extra = {}, init = {}) {
 }
 const rows = page => page.$$eval('.trow:not(.thead)', rs => rs.map(r => ({ rank: r.querySelector('.tr-rank').textContent, team: r.querySelector('.gname').textContent, cells: [...r.querySelectorAll('.tc')].map(c => c.textContent), me: r.classList.contains('me'), playing: !!r.querySelector('.live-dot'), zone: r.hasAttribute('data-zone') })));
 
-answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us, live: false }, 'rugby.267979': { standings: {}, live: false } };
+answers = { 'eng.1': { standings: soccer(15), live: true }, nba: { standings: us, live: false }, 'rugby.267979': { standings: {}, live: false } };
 {
   const { ctx, page, errors } = await open();
   await page.goto(BASE + '/news/index.html');
@@ -102,17 +98,19 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
   await test('the table is by rank, with ESPN\'s own column labels, points last', async () => {
     assert.deepEqual(await page.$$eval('.trow.thead .tc', c => c.map(x => x.textContent)), ['GP', 'W', 'D', 'L', 'GD', 'P']);
     const r = await rows(page);
-    assert.deepEqual(r.map(x => x.team), ['Liverpool', 'Arsenal', 'Man United', 'Wolves']);
-    assert.deepEqual(r[0].cells, ['8', '6', '2', '0', '+12', '20']);
-    assert.deepEqual(r.map(x => x.rank), ['1', '2', '3', '4']);
+    assert.equal(r.length, 20);
+    assert.deepEqual(r.slice(0, 4).map(x => x.team), ['Man City', 'Arsenal', 'Brighton', 'Brentford']);
+    assert.deepEqual(r[0].cells, ['5', '5', '0', '0', '+8', '15']);
+    assert.deepEqual(r.map(x => x.rank), Array.from({ length: 20 }, (_, i) => String(i + 1)));
   });
   await test('ESPN\'s zones show as a bar and a key', async () => {
     const r = await rows(page);
-    assert.deepEqual(r.map(x => x.zone), [true, true, false, true]);
-    assert.deepEqual(await page.$$eval('.tkey span', s => s.map(x => x.textContent)), ['Champions League', 'Relegation']);
+    assert.deepEqual(r.map(x => x.zone), r.map((_, i) => i < 5 || i >= 17), 'four Champions League, one Europa League (ESPN sent its colour as ##B5E7CE), three relegation');
+    assert.deepEqual(await page.$$eval('.tkey span', s => s.map(x => x.textContent)), ['Champions League', 'Europa League', 'Relegation']);
   });
   await test('teams in play have a live dot', async () => {
-    assert.deepEqual((await rows(page)).map(x => x.playing), [true, true, false, false]);
+    assert.deepEqual((await rows(page)).map(x => x.team).filter((_, i, a) => true).filter(t => ['Man City', 'Liverpool'].includes(t)), ['Man City', 'Liverpool']);
+    assert.deepEqual((await rows(page)).filter(x => x.playing).map(x => x.team), ['Man City', 'Liverpool']);
   });
   await test('another league from the pill: US conferences, with wins, losses and their own labels', async () => {
     await page.click('[data-menu-btn="table"]');
@@ -139,29 +137,29 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
     // for the app to have set its timer, before playing the minute forward.
     for (let i = 0; calls.length < asked + 2 && i < 100; i++) await new Promise(r => setTimeout(r, 50));
     await page.waitForTimeout(300);
-    answers['eng.1'] = { standings: soccer(23), live: false };
+    answers['eng.1'] = { standings: soccer(18), live: false };
     const before = calls.filter(c => c.includes('/standings')).length;
     await page.clock.fastForward(61000);          // a game is in play: a minute
-    await page.waitForFunction(() => document.querySelector('.trow:not(.thead) .tc.last').textContent === '23', null, { timeout: 8000 });
+    await page.waitForFunction(() => document.querySelector('.trow:not(.thead) .tc.last').textContent === '18', null, { timeout: 8000 });
     assert.ok(calls.filter(c => c.includes('/standings')).length > before);
-    assert.deepEqual((await rows(page)).map(x => x.playing), [false, false, false, false], 'the dot goes when the game ends');
+    assert.deepEqual((await rows(page)).filter(x => x.playing), [], 'the dots go when the game ends');
   });
   await test('ESPN not answering: the last table seen stays, marked as a saved copy', async () => {
     answers['eng.1'] = 'fail';
     await page.clock.fastForward(310000);
     await page.waitForFunction(() => /saved copy/.test(document.querySelector('.status').textContent), null, { timeout: 8000 });
-    assert.equal((await rows(page)).length, 4);
+    assert.equal((await rows(page)).length, 20);
   });
   await test('no errors', () => assert.deepEqual(errors, []));
   await ctx.close();
 }
 {
-  answers = { 'eng.1': { standings: soccer(20), live: false }, nba: { standings: us, live: false } };
+  answers = { 'eng.1': { standings: soccer(15), live: false }, nba: { standings: us, live: false } };
   const { ctx, page } = await open({}, { 'news.sport.picks': ['team:football:liverpool'] });
   await page.goto(BASE + '/news/index.html');
   await page.waitForSelector('.trow:not(.thead) .tr-team');
   await test('the team you follow is tinted, and only leagues your filters allow are in the pill', async () => {
-    assert.deepEqual((await rows(page)).map(x => x.me), [true, false, false, false]);
+    assert.deepEqual((await rows(page)).filter(x => x.me).map(x => x.team), ['Liverpool']);
     assert.equal(await page.locator('[data-league="nba"]').count(), 0);
   });
   await ctx.close();
@@ -172,14 +170,14 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
   await page.goto(BASE + '/news/index.html');
   await test('ESPN not answering and nothing seen before: says so, and Try again works', async () => {
     await page.waitForSelector('[data-action="retry-table"]');
-    answers = { 'eng.1': { standings: soccer(20), live: false } };
+    answers = { 'eng.1': { standings: soccer(15), live: false } };
     await page.click('[data-action="retry-table"]');
     await page.waitForSelector('.trow:not(.thead) .tr-team');
   });
   await ctx.close();
 }
 {
-  answers = { 'eng.1': { standings: soccer(20), live: false } };
+  answers = { 'eng.1': { standings: soccer(15), live: false } };
   const { ctx, page } = await open();
   await page.goto(BASE + '/news/index.html');
   await page.waitForSelector('.trow:not(.thead) .tr-team');
@@ -187,7 +185,7 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
     answers = { 'eng.1': 'fail' };
     await page.reload();
     await page.waitForSelector('.trow:not(.thead) .tr-team');
-    assert.equal((await rows(page)).length, 4);
+    assert.equal((await rows(page)).length, 20);
   });
   await ctx.close();
 }
