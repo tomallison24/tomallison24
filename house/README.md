@@ -86,6 +86,13 @@ the same rules:
   pair then, and quietly ignores one on its own). The popup has an **Eco**
   switch to turn it back on. Only shown on a Nest that lists `eco` in its
   `preset_modes`; the Windmill's Eco is its own mode, above.
+- **Inside and outside** on the cards: the room's own temperature leads the
+  header as the biggest bold number, with a house and the word **INSIDE** (36 px,
+  under the room's name); the big thin numbers are the targets (HEAT / COOL, or
+  ECO LOW / ECO HIGH), and the outside temperature is a separate line at the
+  foot with its own weather icon and "outside" ("Idle  ☁ 52° outside"). Each
+  reading has an accessible name ("Inside, 70 degrees"). The popup's own line
+  is unchanged.
 - **Away, the house's Eco** (the Living Room and Office Nests): Home Assistant has
   its own Eco, a flag of the house, `input_boolean.thermostat_eco`: it turns on
   five minutes after the last person leaves ("Away - everyone out" starts

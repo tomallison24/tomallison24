@@ -73,6 +73,28 @@ for (const scheme of ['dark', 'light']) {
     assert.equal(await page.locator('#g-fav .chip2.night').first().getAttribute('aria-pressed'), 'false', 'the moon stays lit at 100%');
   });
 
+  await test(`${scheme}: thermostat cards: the room's temperature leads the header as INSIDE; the outside one has its own icon and word at the foot`, async () => {
+    for (const [id, inside] of [['lr', 70], ['of', 67]]) {
+      const c = page.locator(`#g-fav [data-th="${id}"]`);
+      const inn = c.locator('.tb-in'), out = c.locator('.tb-out');
+      assert.equal((await inn.textContent()).replace(/\s+/g, ''), inside + '°Inside', id + ': the room, labelled');
+      assert.equal(await inn.getAttribute('aria-label'), 'Inside, ' + inside + ' degrees');
+      assert.equal(await inn.locator('small svg').count(), 1, id + ': a house beside INSIDE');
+      assert.match((await out.textContent()).replace(/\s+/g, ' ').trim(), /^52° outside$/, id + ': the outside temperature, labelled');
+      assert.equal(await out.locator('svg').count(), 1, id + ': its own icon');
+      assert.equal(await out.getAttribute('aria-label'), 'Outside, 52 degrees');
+      const [fi, fo, ft] = await Promise.all([inn.locator('b'), out.locator('b'), c.locator('.tb-tg b').first()].map(l => l.evaluate(e => parseFloat(getComputedStyle(e).fontSize))));
+      assert.ok(fi > fo * 2, id + `: inside (${fi}px) is the bigger reading, outside is ${fo}px`);
+      assert.ok(await c.locator('.tb-in').evaluate(e => e.getBoundingClientRect().bottom <= e.closest('.dg').querySelector('.tb-tgs').getBoundingClientRect().top), id + ': inside is above the targets, outside below');
+      assert.ok(await c.locator('.tb-in').evaluate(e => e.getBoundingClientRect().top < e.closest('.dg').querySelector('.tb-out').getBoundingClientRect().top));
+      assert.equal(await c.locator('.dg-name em').count(), 0, id + ': no small grey inside note beside the name');
+    }
+    // It follows the room: the reading changes, so does the card.
+    await page.evaluate(() => { patchEnt('climate.living_room_living_room', null, { current_temperature: 72 }); render(); });
+    assert.equal((await page.locator('#g-fav [data-th="lr"] .tb-in b').textContent()).trim(), '72°');
+    await page.evaluate(() => { patchEnt('climate.living_room_living_room', null, { current_temperature: 70 }); render(); });
+  });
+
   await test(`${scheme}: away from the house: a pulsing pill at the top of Favorites, and the two Nest cards go Eco; back home, all of it clears`, async () => {
     const set = on => page.evaluate(on => { patchEnt('input_boolean.thermostat_eco', on ? 'on' : 'off'); render(); }, on);
     const card = id => page.locator(`#g-fav [data-th="${id}"]`);

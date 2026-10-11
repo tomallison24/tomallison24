@@ -1001,12 +1001,20 @@ function tWord(t, r) {
   if (r.offline) return tStatus(t, r);
   return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : (r.eco || r.away) ? 'Eco' : 'Idle';
 }
-// The line under the targets: what it is doing and the temperature outside
-// (the room is beside the name).
+// The line under the targets: what it is doing, and the temperature outside
+// with its own cloud-and-sun icon and the word, set apart from the word beside
+// it. The room's own temperature is not here: it leads the card's header (tInside).
 function tLine(t, r) {
   if (r.offline) return '';
   const wo = st('weather.forecast_home'), o = wo && Number(wo.attributes.temperature);
-  return [tWord(t, r), Number.isFinite(o) ? Math.round(o) + '° outside' : ''].filter(Boolean).join(' · ');
+  return `<span class="tb-w">${tWord(t, r)}</span>` + (Number.isFinite(o) ? `<span class="tb-out" aria-label="Outside, ${Math.round(o)} degrees">${svg('outside', 15)}<b>${Math.round(o)}°</b> outside</span>` : '');
+}
+// The temperature in the room, at the forefront: the biggest bold number in the
+// card's header with a house and the word INSIDE (the big thin numbers below are
+// the targets, which it was too easy to mistake it for, or for the outside).
+function tInside(r) {
+  if (r.offline || r.cur == null) return '';
+  return `<div class="tb-in" aria-label="Inside, ${Math.round(r.cur)} degrees"><b>${Math.round(r.cur)}<span>°</span></b><small>${svg('home', 13)}Inside</small></div>`;
 }
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
 // The line under the popup's status: the mode, the humidity (or the
@@ -1148,7 +1156,8 @@ function renderThermos() {
     for (const card of document.querySelectorAll(`.dg[data-th="${t.id}"]`)) {
     const R = n => card.querySelector(`[data-r="${n}"]`);
     put(R('fx'), tfxHTML(t, r, 60));
-    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}${r.cur != null && !r.offline ? `<em>${Math.round(r.cur)}° inside</em>` : ''}</button>
+    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
+      ${tInside(r)}
       ${(c => c ? `<div class="alerts">${c}</div>` : '')(tAwayChip(r) + tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
     put(R('tgt'), tTargetHTML(t, r, tLine(t, r)));
