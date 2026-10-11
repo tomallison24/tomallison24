@@ -270,11 +270,40 @@
   .chip.icon { width: 30px; padding: 0; justify-content: center; }
   .modes.four { grid-template-columns: repeat(4, 1fr); }
   .fb-summary { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fb-sep { flex: none; width: 0.5px; height: 18px; background: var(--hairline); }
-  .teams { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-  .teams::-webkit-scrollbar { display: none; }
-  .chip.team { padding: 0 11px; font-weight: 500; }
-  .chip.team[aria-pressed="true"] { background: var(--seg-shine), var(--seg-thumb); color: var(--sel-ink); font-weight: 700; }
+  /* One line: News | Scores, and the pill for everything you follow. */
+  .fb-top { display: flex; align-items: center; gap: 8px; }
+  .fb-top .modes { flex: 1; min-width: 0; margin-bottom: 0; }
+  .chip.pill { gap: 5px; padding: 0 8px 0 10px; }
+  .chip.pill .lbl { max-width: 118px; overflow: hidden; text-overflow: ellipsis; }
+  .chip.pill .dn { width: 18px; height: 18px; margin-right: -2px; opacity: .7; transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+  .chip.pill[aria-expanded="true"] .dn { transform: rotate(180deg); }
+  .chip.pill.on { background: var(--seg-shine), var(--seg-thumb); color: var(--sel-ink); font-weight: 700; }
+  .chip.pill .live-dot { display: inline-block; }
+  /* The pill's menu: clear glass, like the topic picker's, opening downwards. */
+  .pillwrap { position: relative; flex: none; }
+  .pmenu {
+    position: absolute; left: 0; top: calc(100% + 8px); z-index: 30; width: max-content; min-width: 220px; max-width: calc(100vw - 32px);
+    max-height: min(60vh, 440px); overflow-y: auto; overscroll-behavior: contain; padding: 6px; border-radius: 22px;
+    /* over a list of scores, so denser than the topic menu's glass: the words stay readable */
+    background: color-mix(in srgb, var(--lg-solid) 90%, transparent); backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 18px 40px var(--lgs-lift);
+    transform-origin: 0 0; animation: menu-down .22s cubic-bezier(.2, .8, .2, 1) both;
+  }
+  .pillwrap.right .pmenu { left: auto; right: 0; transform-origin: 100% 0; }
+  .pmenu[hidden] { display: none; }
+  @keyframes menu-down { from { opacity: 0; transform: scale(.92) translateY(-6px); } to { opacity: 1; transform: none; } }
+  .pmenu button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 16px; text-align: left; font-size: 16px; font-weight: 600; }
+  .pmenu button:active, .pmenu button[aria-pressed="true"], .pmenu button[aria-selected="true"] { background: var(--lgs-field); }
+  .pmenu .k { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .pmenu .sub { font-size: 14px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pmenu .ic { width: 28px; height: 28px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: var(--pill-ic); flex: none; }
+  .pmenu .ic svg { width: 18px; height: 18px; }
+  .pmenu .tick { width: 20px; height: 20px; flex: none; color: var(--accent); opacity: 0; }
+  .pmenu [aria-pressed="true"] .tick, .pmenu [aria-selected="true"] .tick { opacity: 1; }
+  .pmenu hr { border: 0; border-top: 0.5px solid var(--hairline); margin: 4px 10px; }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .pmenu { background: var(--lg-solid); } }
+  @media (prefers-reduced-motion: reduce) { .pmenu { animation: none; } .chip.pill .dn { transition: none; } }
+  @media (prefers-reduced-transparency: reduce) { .pmenu { background: var(--lg-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---- Filter sheet ---- */
@@ -381,9 +410,20 @@
   .gtv { display: flex; align-items: center; gap: 9px; margin-top: -1px; font-size: 12px; font-weight: 500; color: var(--muted); }
   .gtv svg { width: 16px; height: 16px; flex: none; margin: 0 2px; color: var(--icon); }  /* centred under the 20px team logos */
   .gtv span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .scores .gnext { margin: 0; padding: 10px 14px 0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-  .scores .game + .gnext { border-top: 0.5px solid var(--hairline); margin-top: 2px; }
-  main .sect h3 { margin: 6px 4px 6px; }
+  /* A block (Scores, Coming up): its name on the left, the league pill on the right. */
+  main .sect { position: relative; }
+  main .sect + .sect { margin-top: 4px; }
+  .sect-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; margin: 0 0 8px; }
+  main .sect-head h3 { margin: 0 4px; }
+  .sect-head .one { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .sect-head .pmenu { left: auto; right: 0; transform-origin: 100% 0; min-width: 250px; }
+  .sect-head .pillwrap { display: block; }
+  .sect-head .chip.pill .lbl { max-width: 190px; }
+  .lg-name { margin: 14px 4px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .lg-name:first-of-type { margin-top: 0; }
+  .gnone { margin: 0; padding: 4px 4px 0; font-size: 14px; color: var(--muted); }
+  .scores .more { display: block; width: 100%; min-height: 44px; border-top: 0.5px solid var(--hairline); font-size: 15px; font-weight: 600; color: var(--accent); }
+  .scores .more:active { background: var(--hairline); }
 
   /* ---- Feed ---- */
   main { padding-top: 8px; padding-bottom: calc(env(safe-area-inset-bottom) + 96px);   /* room for the topic picker */
@@ -432,7 +472,7 @@
   @keyframes pulse { 50% { opacity: 0.5; } }
 
   /* ---- Switches with a sliding glass thumb ----
-     News | Scores, the time range, the one-tap teams and the
+     News | Scores, the time range and the
      filter panel's Sports | Competitions | Teams: the options stay clear, and
      one thumb under them glides to the chosen one, stretching as it goes, as
      iOS 26's do (home/slide.js). The tick lists are not switches (tick any
@@ -450,13 +490,6 @@
   .slides > .ink { animation: ink 0.22s ease-in both; }
   @keyframes ink { from { color: var(--text); } }
   @media (prefers-reduced-motion: reduce) { .slides > .ink { animation: none; } }
-  /* The one-tap teams: a bright glass capsule over the frosted ones, the
-     label in the accent colour. */
-  .teams.slides .chip.team[aria-pressed="true"] { background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .teams > .slthumb {
-    background: var(--seg-shine), var(--seg-thumb);
-    box-shadow: inset 0 0 0 0.5px var(--lg-rim), inset 0 1px 0 var(--bar-hi), 0 3px 10px var(--seg-lift);
-  }
   /* Segmented choices: a glass thumb sliding in a frosted track (on the page)
      or a recessed one (in the sheets). */
   .modes.slides .seg[aria-selected="true"], .segmented.slides .seg[aria-selected="true"] { background: none; box-shadow: none; }
@@ -610,8 +643,8 @@
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
-:where(#refresh, [data-action^="retry"]){position:relative}
-:where(#refresh, [data-action^="retry"])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+:where(#refresh, [data-action^="retry"], .chip.pill){position:relative}
+:where(#refresh, [data-action^="retry"], .chip.pill)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 </head>
 <body>

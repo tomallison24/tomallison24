@@ -28,6 +28,7 @@
     x: '<svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
     tv: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.8" y="5.8" width="18.4" height="12.6" rx="3"/><path d="M9 21h6M8.4 2.6l3.6 3.2 3.6-3.2"/></svg>',
     plus: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>',
+    down: '<svg class="dn" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/></svg>',
     chev: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)"><path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/></svg>',
   };
   // The topic picker's icons, one per topic, filled like Home's (Material Design Icons); any other topic gets a tag.
@@ -72,6 +73,12 @@
   // One-tap team button (sport-catalog.json "quick"), on until tapped again.
   let quick = typeof store.get('news.sport.quick') === 'string' ? store.get('news.sport.quick') : null;
   let sportMode = store.get('news.sport.mode') === 'scores' ? 'scores' : 'news';
+  // Scores: the league each pill shows (null: Premier League, or all leagues
+  // while a team filter is on), and which pill menu is open.
+  const LEAGUE_ALL = 'all', LEAGUE_HOME = 'eng.1';
+  let pickedLeague = { scores: store.get('news.scores.league') || null, next: store.get('news.scores.next') || null };
+  let openMenu = null;             // 'team' | 'scores' | 'next'
+  let nextMore = false;            // "Show more" under Coming up
 
   // ---- helpers ----
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -272,16 +279,10 @@
   // ---- switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js) ----
   // Called after each redraw; a label newly chosen gets .ink (see the CSS).
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
-  let shownQuick = null;
-  // The Sport and Stem cells bar: News | Scores or the time range, and the one-tap teams.
+  // The Sport and Stem cells bar: News | Scores or the time range.
   function slideBar(jump) {
-    const modes = filterEl.querySelector('.modes'), teams = filterEl.querySelector('.teams');
+    const modes = filterEl.querySelector('.modes');
     if (modes) slide(modes, modes.querySelector('[aria-selected="true"]'), `modes:${topic}`, { jump });
-    if (!teams) return;
-    const on = teams.querySelector('[aria-pressed="true"]'), was = shownQuick;
-    shownQuick = on ? quick : null;
-    if (on && was && was !== quick) on.classList.add('ink');
-    slide(teams, on, 'teams', { jump: jump || !was });   // from none, it appears where it is
   }
   const slideSeg = jump => slide(segEl, segEl.querySelector('[aria-selected="true"]'), 'sheet-seg', { jump });
   window.addEventListener('resize', () => { slideBar(true); if (sheetOpen) slideSeg(true); });
@@ -312,35 +313,50 @@
     if (filterEl.hidden) return;
     filterEl.setAttribute('aria-label', `${topicLabel(topic)} filters`);
     if (lists) return renderListFilters();
-    const on = quickOn();
-    const n = on ? 0 : savedPickList.length;
     const live = liveCount();
     const modes = `<div class="modes" role="tablist" aria-label="Sport view">
       <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
-      <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n">${live} live</span>` : ''}</button>
+      <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}"${live ? ` aria-label="Scores, ${live} live"` : ''}>${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n" aria-hidden="true">${live}</span>` : ''}</button>
     </div>`;
-    // One line: Filters (with Reset while any are on), then the team buttons.
-    const filters = n
-      ? `<button class="chip" data-action="edit-picks" aria-label="Edit filters, ${n} on" title="${esc(savedPickList.map(p => p.label).join(', '))}">${ICON.sliders}<span class="n">${n}</span></button>
-         <button class="chip icon" data-action="reset-picks" aria-label="Reset filters">${ICON.x}</button>`
-      : `<button class="chip icon" data-action="edit-picks" aria-label="Filter">${ICON.sliders}</button>`;
-    const teams = catalog ? catalog.quick.map(q =>
-      `<button class="chip team" data-quick="${esc(q.key)}" aria-pressed="${on && quick === q.key}">${esc(q.label)}</button>`).join('') : '';
-    filterEl.innerHTML = modes + `<div class="fb-row">${filters}${teams ? `<span class="fb-sep" aria-hidden="true"></span><div class="teams" role="group" aria-label="My teams">${teams}</div>` : ''}</div>`;
-    // Keep the chosen team in view; the row is rebuilt on every change.
-    const row = filterEl.querySelector('.teams');
-    if (row) {
-      const chosen = row.querySelector('[aria-pressed="true"]');
-      if (chosen) {
-        const over = chosen.getBoundingClientRect().right - row.getBoundingClientRect().right;
-        if (over > 0) row.scrollLeft += over + 8;
-      }
-    }
+    filterEl.innerHTML = `<div class="fb-top">${modes}${teamPill()}</div>`;
     slideBar();
+    syncMenus();
+  }
+
+  // One pill for everything you follow: the one-tap teams, your own filters
+  // and Reset live in its menu instead of a row of chips.
+  function teamPill() {
+    const q = quickTeam();
+    const n = q ? 0 : savedPickList.length;
+    const label = q ? q.label : n ? 'Filters' : 'My teams';
+    const row = (attrs, body, on) => `<button type="button" role="menuitem" ${attrs}${on === undefined ? '' : ` aria-pressed="${on}"`}>${body}</button>`;
+    const items = [
+      row('data-quick-clear', `<span class="k">${n ? 'My filters' : 'All sport'}${n ? ` <span class="sub">${n}</span>` : ''}</span>${ICON.tick}`, !q),
+      ...(catalog ? catalog.quick.map(t => row(`data-quick="${esc(t.key)}"`, `<span class="k">${esc(t.label)}</span>${ICON.tick}`, !!q && quick === t.key)) : []),
+      '<hr>',
+      row('data-action="edit-picks"', `<span class="ic">${ICON.sliders}</span><span class="k">Choose sports and teams…</span>`),
+      ...(n ? [row('data-action="reset-picks"', `<span class="ic">${ICON.x}</span><span class="k">Reset filters</span>`)] : []),
+    ].join('');
+    return `<div class="pillwrap right">
+      <button type="button" class="chip pill${q ? ' on' : ''}" data-menu-btn="team" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(label)}${n ? `, ${n} on` : ''}">${ICON.sliders}<span class="lbl">${esc(label)}</span>${n ? `<span class="n">${n}</span>` : ''}${ICON.down}</button>
+      <div class="pmenu" role="menu" data-menu="team" aria-label="My teams" hidden>${items}</div>
+    </div>`;
+  }
+
+  // Pill menus open under their pill and close on a pick, a tap outside or Escape.
+  function syncMenus() {
+    document.querySelectorAll('[data-menu-btn]').forEach(b => b.setAttribute('aria-expanded', String(b.dataset.menuBtn === openMenu)));
+    document.querySelectorAll('[data-menu]').forEach(m => { m.hidden = m.dataset.menu !== openMenu; });
+  }
+  function setMenu(name) {
+    openMenu = name && openMenu !== name ? name : null;
+    syncMenus();
+    const open = document.querySelector('.pmenu:not([hidden])');
+    if (open) { const on = open.querySelector('[aria-pressed="true"], [aria-selected="true"]'); if (on) on.scrollIntoView({ block: 'nearest' }); }
   }
 
   function renderFeed() {
-    if (topic === SPORT && sportMode === 'scores') { feedEl.innerHTML = renderScores(); return; }
+    if (topic === SPORT && sportMode === 'scores') { feedEl.innerHTML = renderScores(); syncMenus(); return; }
     if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', '<button data-action="retry">Try again</button>'); return; }
 
     const isLatest = topic === LATEST.id;
@@ -977,27 +993,54 @@
   }
 
   const STATE_ORDER = { in: 0, pre: 1, post: 2 };
+
+  // Which league a pill shows. A league you picked stays while it has games;
+  // otherwise the Premier League, or every league while a team filter is on
+  // (a team plays in several), or every league if the Premier League is quiet.
+  function leagueShown(which, secs) {
+    const ids = secs.map(x => x.l.id), saved = pickedLeague[which];
+    if (saved === LEAGUE_ALL || ids.includes(saved)) return saved;
+    return !pickList.length && ids.includes(LEAGUE_HOME) ? LEAGUE_HOME : LEAGUE_ALL;
+  }
+
+  // The header of one block (Scores, Coming up): its name and a pill to pick the league.
+  function blockHead(which, title, secs, shown) {
+    const name = secs.length === 1 ? secs[0].l.label : shown === LEAGUE_ALL ? 'All leagues' : secs.find(x => x.l.id === shown).l.label;
+    if (secs.length < 2) return `<div class="sect-head"><h3>${esc(title)}</h3>${secs.length ? `<span class="fb-summary one">${esc(name)}</span>` : ''}</div>`;
+    const count = x => which === 'scores' ? x.games.length : x.next.length;
+    const row = (id, label, n, live) => `<button type="button" role="menuitem" data-league="${esc(id)}" data-for="${which}" aria-selected="${id === shown}">
+        <span class="k">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}${esc(label)}</span><span class="sub">${n}</span>${ICON.tick}</button>`;
+    const total = secs.reduce((n, x) => n + count(x), 0);
+    // Pinned leagues (leagues.json "pin") sit at the top, under All leagues; the rest follow, live ones first.
+    const line = x => row(x.l.id, x.l.label, count(x), which === 'scores' && x.live);
+    const pinned = secs.filter(x => x.l.pin), others = secs.filter(x => !x.l.pin);
+    const list = pinned.map(line).join('') + (pinned.length && others.length ? '<hr>' : '') + others.map(line).join('');
+    return `<div class="sect-head"><h3>${esc(title)}</h3>
+      <div class="pillwrap">
+        <button type="button" class="chip pill" data-menu-btn="${which}" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(title)}: ${esc(name)}">${which === 'scores' && secs.some(x => x.live && (shown === LEAGUE_ALL || x.l.id === shown)) ? '<span class="live-dot" aria-hidden="true"></span>' : ''}<span class="lbl">${esc(name)}</span>${ICON.down}</button>
+        <div class="pmenu" role="menu" data-menu="${which}" aria-label="${esc(title)} league" hidden>${row(LEAGUE_ALL, 'All leagues', total, false)}${list}</div>
+      </div></div>`;
+  }
+
   function renderScores() {
     if (!leagues || (scoresLoading && !allGames().length)) return skeleton();
     const now = Date.now();
-    const sections = relevantLeagues()
+    const secs = relevantLeagues()
       .map((l, i) => {
         const current = scores[l.id] || [];
         const games = current.filter(g => gameMatches(g, l))
           .sort((a, b) => (STATE_ORDER[a.state] ?? 1) - (STATE_ORDER[b.state] ?? 1) || (a.start || '').localeCompare(b.start || ''));
-        // Next fixtures not already on today's scoreboard: 3 a league, or 5 when filtered.
+        // The next fixtures not already on today's scoreboard.
         const ids = new Set(current.map(g => g.id));
-        const next = (fixtures[l.id] || [])
-          .filter(g => !ids.has(g.id) && Date.parse(g.start) > now && gameMatches(g, l))
-          .slice(0, pickList.length ? 5 : 3);
+        const next = (fixtures[l.id] || []).filter(g => !ids.has(g.id) && Date.parse(g.start) > now && gameMatches(g, l));
         return { l, i, games, next, live: games.some(g => g.state === 'in') };
       })
-      .filter(x => x.games.length || x.next.length)
       .sort((a, b) => (b.live - a.live) || (a.i - b.i));
+    const withGames = secs.filter(x => x.games.length), withNext = secs.filter(x => x.next.length);
     const when = scoresAt ? ago(new Date(scoresAt).toISOString()) : '';
-    const fixWhen = snap && sections.some(x => x.next.length) ? ago(snap.generatedAt) : '';
+    const fixWhen = snap && withNext.length ? ago(snap.generatedAt) : '';
     const foot = `<p class="status">Scores from ESPN${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${scoresSource === 'copy' ? ' · saved copy, ESPN unreachable just now' : ''}${fixWhen ? ` · fixtures checked ${esc(fixWhen.toLowerCase())}` : ''}</p>`;
-    if (!sections.length) {
+    if (!withGames.length && !withNext.length) {
       if (!scoresAt) return notice('Scores unavailable', 'Couldn’t reach ESPN or the saved copy. Check your connection and try again.', '<button data-action="retry-scores">Try again</button>');
       if (quickOn()) return notice(`No games for ${esc(quickTeam().label)}`, 'Nothing on now or in the next two weeks.',
         `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all leagues'}</button>`) + foot;
@@ -1005,10 +1048,35 @@
         ? notice('No games for your filters', 'None of the games on now or coming up involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
         : notice('No games right now', 'There are no games or fixtures listed in these leagues at the moment.', '') + foot;
     }
-    return sections.map(({ l, games, next }) =>
-      `<section class="sect"><h3>${esc(l.label)}</h3><div class="card scores">${games.map(g => gameRow(g, l)).join('')}${
-        next.length ? `<p class="gnext">Coming up</p>${next.map(g => gameRow(g, l)).join('')}` : ''}</div></section>`
-    ).join('') + foot;
+
+    // One block per question: what's on (Scores) and what's next (Coming up),
+    // each showing one league until you pick another, or every league.
+    const block = (which, title, list, cards) => {
+      if (!list.length) return '';
+      const shown = leagueShown(which, list);
+      const chosen = shown === LEAGUE_ALL ? list : list.filter(x => x.l.id === shown);
+      const body = chosen.map(x => `${shown === LEAGUE_ALL ? `<h4 class="lg-name">${esc(x.l.label)}</h4>` : ''}${cards(x, shown)}`).join('');
+      return `<section class="sect">${blockHead(which, title, list, shown)}${body}</section>`;
+    };
+    const scoreCard = x => `<div class="card scores">${x.games.map(g => gameRow(g, x.l)).join('')}</div>`;
+    // Coming up: a few a league, or a gameweek's worth of one league, with Show more.
+    const nextCard = (x, shown) => {
+      const single = shown !== LEAGUE_ALL, cap = single ? (nextMore ? 10 : 5) : (pickList.length ? 5 : 3);
+      const rows = x.next.slice(0, cap);
+      const more = single && !nextMore && x.next.length > cap ? `<button type="button" class="more" data-action="more-next">Show ${x.next.length - cap} more</button>` : '';
+      return `<div class="card scores">${rows.map(g => gameRow(g, x.l)).join('')}${more}</div>`;
+    };
+    return (withGames.length ? block('scores', 'Scores', withGames, scoreCard)
+        : `<section class="sect"><div class="sect-head"><h3>Scores</h3></div><p class="gnone">No games on right now.</p></section>`)
+      + block('next', 'Coming up', withNext, nextCard) + foot;
+  }
+
+  function setLeague(which, id) {
+    pickedLeague[which] = id;
+    store.set(which === 'scores' ? 'news.scores.league' : 'news.scores.next', id);
+    nextMore = false;
+    openMenu = null;
+    renderFeed();
   }
 
   function setMode(mode) {
@@ -1099,6 +1167,8 @@
     select(b.dataset.topic);
   });
   document.addEventListener('click', e => { if (!viewMenu.hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+  document.addEventListener('click', e => { if (openMenu && !e.target.closest('.pillwrap')) setMenu(null); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && openMenu) { const b = document.querySelector(`[data-menu-btn="${openMenu}"]`); setMenu(null); if (b) b.focus(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !viewMenu.hidden) { closeViewMenu(); viewBtn.focus(); } });
   filterEl.addEventListener('click', e => {
     const d = e.target.closest('[data-days]');
@@ -1107,15 +1177,23 @@
     if (e.target.closest('[data-action="reset-sources"]')) return setListFilters(topic, { sources: [] });
     const m = e.target.closest('[data-mode]');
     if (m) return setMode(m.dataset.mode);
+    const mb = e.target.closest('[data-menu-btn]');
+    if (mb) return setMenu(mb.dataset.menuBtn);
+    if (e.target.closest('[data-quick-clear]')) { openMenu = null; return setQuick(null); }
     const q = e.target.closest('[data-quick]');
-    if (q) return setQuick(q.dataset.quick);
-    if (e.target.closest('[data-action="edit-picks"]')) return openSheet();
-    if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
+    if (q) { openMenu = null; return setQuick(q.dataset.quick); }
+    if (e.target.closest('[data-action="edit-picks"]')) { openMenu = null; syncMenus(); return openSheet(); }
+    if (e.target.closest('[data-action="reset-picks"]')) { openMenu = null; syncMenus(); return resetFromResults(); }
   });
   feedEl.addEventListener('click', e => {
     if (e.target.closest('[data-action="retry"]')) return load();
     if (e.target.closest('[data-action="reset-list-filters"]')) return setListFilters(topic, { sources: [], days: 0 });
     if (e.target.closest('[data-action="retry-scores"]')) return fetchScores();
+    const mb = e.target.closest('[data-menu-btn]');
+    if (mb) return setMenu(mb.dataset.menuBtn);
+    const lg = e.target.closest('[data-league]');
+    if (lg) return setLeague(lg.dataset.for, lg.dataset.league);
+    if (e.target.closest('[data-action="more-next"]')) { nextMore = true; return renderFeed(); }
     const q = e.target.closest('[data-quick]');
     if (q) return setQuick(q.dataset.quick);
     if (e.target.closest('[data-action="edit-picks"]')) return openSheet();

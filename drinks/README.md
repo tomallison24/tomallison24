@@ -5,7 +5,8 @@ glass as Fitness. It replaces the ABV Tracker (a single HTML file kept in
 Google Drive) and is kept deliberately small: the week, and for each day its
 standard drinks or "alcohol-free".
 
-- **One screen, the week**: one number at the top, the week's standard drinks against the
+- **One screen, the week**: one number at the top (with **Analysis ›** beside it,
+  because tapping it opens the analysis), the week's standard drinks against the
   weekly limit you set (amber once you're over), with how many alcohol-free
   days you've had against your goal. Under it, seven rows, one a day: what you
   had ("Beer ×2, Wine") and its standard drinks (amber over your daily limit),
@@ -23,12 +24,35 @@ standard drinks or "alcohol-free".
   - Tap a drink to change it, or its ✕ to delete it (with **Undo**).
   - A day with nothing logged has **Alcohol-free day**, one tap (tap again to
     take it back). Logging a drink on an alcohol-free day makes it a drinks day.
-- **Analysis** (tap the week's number): the last 7 days against the 7
-  before, or the last 4 weeks against the 4 before. Standard drinks, days you
-  drank, alcohol-free days and a day's average, each with its change (an
-  arrow and the number, never colour alone); your alcohol-free streak and
-  your best; the most in one day; how many days weren't logged; and the
-  standard drinks by kind of drink.
+- **Analysis** (tap the week's number: it says **Analysis ›**): one page, and a
+  glass pill at the bottom (the same pill as Home's view picker) picks what it
+  shows. Its menu opens upwards and says in a line what each view holds. The page
+  remembers the view you left it on, and it opens on the first the first time.
+  Every chart has its numbers as a table too, and over-limit weeks carry a ▲ as
+  well as a colour. Tap a week or a day on a chart to read it.
+  - **Compared with before**: the last 7 days against the 7 before, or the last 4
+    weeks against the 4 before (a Week / Month switch). Standard drinks, days you
+    drank, alcohol-free days and a day's average, each with its change (an arrow
+    and the number, never colour alone); your alcohol-free streak and your best;
+    the most in one day; how many days weren't logged; and the standard drinks by
+    kind of drink.
+  - **Weekly drinks**: a column of standard drinks a week for the last twelve
+    weeks against your weekly limit, with a 4-week average of finished weeks.
+  - **Weeks over the limit**: *n* of *m* weeks, a tile and a row for each week,
+    how many weeks in a row you're under now, and your best run.
+  - **Top drinks**: what you had most often against what adds up to the most
+    standard drinks, by the name you gave a drink or by its kind.
+  - **Days of the week**: the average on each day, against your daily limit.
+  - **Alcohol-free days**: a column a week against your goal.
+  - **Days over the limit**: the days a week above your daily limit.
+  - **Strength and size**: the average strength (ABV) of what you drank, and the
+    standard drinks in an average drink, week by week.
+
+  The twelve weeks run Sunday to Saturday (or Monday, as Calendar), the newest
+  being this week so far, drawn lighter; a week counts against the limit once it
+  is over, or finished. Days you didn't log are left out of averages, so a week
+  with gaps can read low; each view says how many there were. There are no tips
+  for cutting down yet.
 - **More** (the person button): your account, your goals (a week at most, a
   day at most, alcohol-free days a week), **Bring in ABV Tracker history**,
   **Export** (CSV) and **Delete all data**.
@@ -46,8 +70,8 @@ log is left out rather than counted as zero. The
 alcohol-free streak counts days marked alcohol-free in a row; today doesn't
 break it until the day is over (the ABV Tracker's streak read 0 every morning).
 
-`calc.js` has the sums, with no page, so they're tested in Node
-(`scripts/calc-test.mjs`).
+`calc.js` has the sums, with no page (the weeks, top drinks and weekdays of
+the Analysis charts too), so they're tested in Node (`scripts/calc-test.mjs`).
 
 ## Your account: private to you
 
@@ -118,7 +142,8 @@ write to the Sheet any more.
 
 - `index.html`: the page and its look (Fitness's tokens, tiles and Liquid
   Glass sheets, with only the pieces Drinks uses).
-- `app.js`: the app. `calc.js`: the sums and the ABV Tracker import.
+- `app.js`: the app, Analysis included (the charts are plain inline SVG).
+  `calc.js`: the sums and the ABV Tracker import.
 - `sw.js`: the offline shell (network-first; `api/` is left alone).
 - `icon.svg` → `icon-180.png`, `icon-512.png` ("Plum": a white wine glass on
   dusty plum, one of the Sea glass tints), drawn by `scripts/make-icons.mjs`.
