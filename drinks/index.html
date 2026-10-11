@@ -331,6 +331,7 @@ details.tview th{color:var(--faint);font-size:12px} details.tview td.n,details.t
 .vbar .vb-chev svg{width:20px;height:20px;transform:rotate(90deg)}
 .vbar button[aria-expanded="true"] .vb-chev{transform:rotate(180deg)}
 .viewmenu{position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;z-index:5;width:max-content;min-width:260px;max-width:calc(100vw - 24px);padding:6px;border-radius:22px;transform-origin:50% 100%;
+  max-height:calc(100vh - 104px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 104px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;   /* eight views: scrolls on a short phone rather than running off the top */
   background:var(--bar-solid);-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);   /* near solid, not the sheets' glass: it sits over the chart's words */
   box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong);animation:menuUp .22s var(--ease) both}
 @keyframes menuUp{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}

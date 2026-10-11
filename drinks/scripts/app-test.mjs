@@ -489,7 +489,7 @@ await test('Analysis: Escape closes it; nothing logged says so', async () => {
 });
 
 await test('Analysis is never wider than the phone, in every view, light and dark; the menu stays on the screen', async () => {
-  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 568], [390, 844], [440, 956]]) {
+  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 500], [320, 568], [390, 844], [440, 956]]) {
     const p = await newPage(scheme, { 'allison-drinks-v1': seedLog() });
     await p.page.setViewportSize({ width: w, height: h });
     await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(400);
@@ -502,7 +502,8 @@ await test('Analysis is never wider than the phone, in every view, light and dar
     }
     await p.page.click('#trBtn'); await p.page.waitForTimeout(300);
     const r = await p.page.$eval('#trMenu', e => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, w: innerWidth }; });
-    assert.ok(r.l >= 0 && r.r <= r.w && r.t >= 0, w + 'px: the menu is on the screen (' + JSON.stringify(r) + ')');
+    assert.ok(r.l >= 0 && r.r <= r.w && r.t >= 0, w + 'x' + h + ': the menu is on the screen (' + JSON.stringify(r) + ')');
+    assert.ok(await p.page.$eval('#trMenu', e => e.scrollHeight <= e.clientHeight || getComputedStyle(e).overflowY === 'auto'), 'and scrolls if it is taller than the room above the pill');
     if (scheme === 'dark' && w === 390) await shot(p.page, '16-trends-menu-dark');
     assert.deepEqual(await p.page.evaluate(() => window.__csp || []), []);
     await p.ctx.close();
