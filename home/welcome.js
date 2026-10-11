@@ -87,6 +87,7 @@
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s',
+        'News: tap the sparkle on a story for Claude\'s two-sentence summary and key takeaways, then ask questions about the article (signed-in family)',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Home: the 1% light button is a moon on midnight blue, the night setting',
         'Home: the 100% light button is a sun, glowing gold at full brightness',
@@ -235,6 +236,11 @@
           "i": "list",
           "t": "Tap to read",
           "d": "Stories are newest first and each shows only once. Tap one to read the full article on the publisher's site."
+        },
+        {
+          "i": "sparkle",
+          "t": "Summarize a story",
+          "d": "Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about the article. Summaries are for signed-in family."
         },
         {
           "i": "star",
@@ -1244,6 +1250,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   SPOTS.news = { stops: [
     { sel: '#viewBtn', t: 'News by topic', d: 'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.', g: 'tap' },
     { sel: ['#feed > .lead', '#feed .list > .row'], t: 'Tap to read', d: 'Stories are newest first and each shows only once. Tap one to read the full article on the publisher’s site.', g: 'tap' },
+    { sel: ['#feed .sum-btn', '#feed'], t: 'Summarize a story', d: 'Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about the article. Summaries are for signed-in family.', g: 'tap' },
     { sel: '#viewBtn', t: 'Follow your teams', d: 'On Sport, pick the sports, competitions and teams you follow, or tap a team button to see just their news.', g: 'tap' },
     { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV.' },
     { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
