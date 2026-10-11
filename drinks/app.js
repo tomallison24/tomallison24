@@ -8,15 +8,17 @@
 // - Tapping a day opens its sheet: what you had, your usual drinks as tiles
 //   (one tap logs one, with Undo), "Something else…" for anything new, and,
 //   on a day with nothing logged, Alcohol-free day.
-// - Tapping the week's number opens Analysis: the last 7 days against the 7
-//   before, or the last 4 weeks against the 4 before. The sums are calc.js's.
+// - Tapping the week's number ("Analysis ›") opens the Analysis page: a glass
+//   pill at the bottom picks its view, the first being the last 7 days against
+//   the 7 before, or the last 4 weeks against the 4 before; the rest chart the
+//   last twelve weeks. The sums are calc.js's.
 // - The log lives on this phone (allison-drinks-v1) and, signed in to your
 //   family account, in that account too, private to you
 //   (functions/drinks/api): it follows you to another phone, and Calendar can
 //   show it. Until accounts are on, it stays on the phone.
-// - From Analysis, Trends: the last twelve weeks, one chart a view, picked from
-//   the pill at the bottom (weekly drinks, weeks over the limit, top drinks,
-//   days of the week, alcohol-free days, days over the limit, strength and size).
+//   The views: compared with before, weekly drinks, weeks over the limit, top
+//   drinks, days of the week, alcohol-free days, days over the limit, strength
+//   and size.
 // - More (the person button): your account, your goals, bringing in the ABV
 //   Tracker's history, export, and delete.
 
@@ -135,7 +137,6 @@ if (window.top !== window.self) {
   const main = $('main');
   function render() {
     renderWeek();
-    if (!$('anSheet').hidden) renderAnalysis();
     if (!$('trends').hidden) renderTrends();
   }
   // What a day was, in words: "Wine ×2, Beer".
@@ -170,8 +171,8 @@ if (window.top !== window.self) {
     if (thisWeek) { const k = C.streaks(data.entries, data.days, tod).current; if (k > 1) bits.push(k + ' in a row'); }
     $('todayBtn').hidden = thisWeek;
     main.innerHTML = '<div class="navrow" style="--i:0"><button class="iconbtn" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(label) + '</span><button class="iconbtn" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
-      + '<button class="sum' + (over ? ' over' : '') + '" type="button" id="sumBtn" style="--i:1" aria-label="' + esc(f1(s.sd) + ' standard drinks' + (g.week ? ' of your ' + g.week + ' a week' : '') + '. ' + bits.join(', ') + '. Show Analysis') + '">'
-      + '<span class="big"><b>' + f1(s.sd) + '</b><span>' + (g.week ? 'of ' + g.week + ' standard drinks' : 'standard drinks') + (over ? ', over your limit' : '') + '</span>' + ICON.chevR + '</span>'
+      + '<button class="sum' + (over ? ' over' : '') + '" type="button" id="sumBtn" style="--i:1" aria-label="' + esc(f1(s.sd) + ' standard drinks' + (g.week ? ' of your ' + g.week + ' a week' : '') + '. ' + bits.join(', ') + '. Open analysis') + '">'
+      + '<span class="big"><b>' + f1(s.sd) + '</b><span>' + (g.week ? 'of ' + g.week + ' standard drinks' : 'standard drinks') + (over ? ', over your limit' : '') + '</span><span class="more">Analysis' + ICON.chevR + '</span></span>'
       + (g.week ? '<span class="track" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></span>' : '')
       + '<span class="line">' + esc(bits.join(' · ')) + '</span></button>'
       + '<div class="rgroup week" style="--i:2">' + rows + '</div>';
@@ -180,7 +181,7 @@ if (window.top !== window.self) {
   main.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');
     if (a) { goWeek(a.dataset.act === 'prev' ? -1 : 1); return; }
-    if (e.target.closest('#sumBtn')) { openAnalysis(); return; }
+    if (e.target.closest('#sumBtn')) { openTrends(); return; }
     const d = e.target.closest('[data-day]');
     if (d) openDay(d.dataset.day);
   });
@@ -196,56 +197,11 @@ if (window.top !== window.self) {
   $('fab').onclick = () => { st.week = weekStartOf(today()); render(); openDay(today()); };
 
   // ---------------------------------------------------------------------
-  // Analysis, in a sheet from the week's number: this window against the
-  // one before (calc.js does the sums)
+  // Analysis (below, with Trends): the week's number opens one page with a pill
+  // at the bottom for every view. Its first view puts this week or month
+  // against the one before; the sums are calc.js's.
   // ---------------------------------------------------------------------
-  const an = $('anBody');
-  const TRENDS_ROW = '<div class="rgroup"><button class="rowbtn" type="button" id="trendsBtn"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3.6 16.4l5-6 4 3.6 7.8-8.6M15 5.4h5.4V11"/></svg></span><span>12-week trends<span class="sub">Weekly totals, weeks over your limit, top drinks, days of the week and more</span></span><span style="margin-left:auto;color:var(--faint);display:flex">' + ICON.chevR + '</span></button></div>';
   const PERIODS = { week: { days: 7, name: 'Week', before: 'the 7 days before' }, month: { days: 28, name: 'Month', before: 'the 4 weeks before' } };
-  function openAnalysis() { renderAnalysis(); openSheet('anSheet'); slideSeg(); }
-  function renderAnalysis() {
-    const P = PERIODS[st.period], a = C.compare(data.entries, data.days, today(), P.days), r = a.range, n = a.now, b = a.before;
-    const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
-    const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
-    if (!a.hasNow && !a.hasBefore) {
-      an.innerHTML = seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>' + TRENDS_ROW;
-      slideSeg(); return;
-    }
-    // Four numbers, each against the window before. Fewer drinks is better; more alcohol-free days is better.
-    const kpi = (label, now, before, lowerIsBetter) => {
-      const has = now !== null, d = has && before !== null ? C.round(now - before, 1) : null;
-      const dir = !a.hasBefore || d === null || d === 0 ? '' : (d < 0) === lowerIsBetter ? 'good' : 'bad';
-      const delta = !a.hasBefore || d === null ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '↑ +' : '↓ −') + f1(Math.abs(d));
-      const words = !a.hasBefore || d === null || !d ? delta : (d > 0 ? 'up ' : 'down ') + f1(Math.abs(d)) + ' on ' + P.before + (dir === 'good' ? ', better' : ', worse');
-      return '<div class="kpi" aria-label="' + esc(label + ': ' + (has ? f1(now) : 'not known') + ', ' + words) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + (has ? f1(now) : '—') + '</span><span class="kd ' + dir + '">' + esc(delta) + '</span></div>';
-    };
-    const kpis = '<div class="kpis">'
-      + kpi('Standard drinks', n.sd, b.sd, true)
-      + kpi('Days you drank', n.drinkingDays, b.drinkingDays, true)
-      + kpi('Alcohol-free days', n.afDays, b.afDays, false)
-      + kpi('A day, on average', n.avg, b.avg, true) + '</div>';
-    const k = C.streaks(data.entries, data.days, today());
-    const rows = '<div class="xrow"><span class="xt">Alcohol-free in a row<small>Your best: ' + plural(k.best, 'day') + '</small></span><span class="xv">' + plural(k.current, 'day') + '</span></div>'
-      + (n.heaviest ? '<div class="xrow"><span class="xt">Most in one day<small>' + esc(fmt(n.heaviest.date, { weekday: 'long', day: 'numeric', month: 'short' })) + '</small></span><span class="xv">' + f1(n.heaviest.sd) + '</span></div>' : '')
-      + (n.notRecorded ? '<div class="xrow"><span class="xt">Days not logged<small>Left out of the average. Tap a day in the week to fill it in.</small></span><span class="xv">' + n.notRecorded + '</span></div>' : '');
-    const cats = Object.entries(n.cats).sort((p, q) => q[1] - p[1]);
-    const max = Math.max(0.1, ...cats.map(c => c[1]));
-    const bars = cats.map(([c, v]) => '<div class="gbar" data-c="' + esc(c) + '" aria-label="' + esc(catName(c) + ': ' + f1(v) + ' standard drinks') + '"><span class="gn"><i class="cdot"></i>' + esc(catName(c)) + '</span><span class="gt"><span class="bar" style="width:' + (v / max * 72).toFixed(1) + '%"></span><span class="gv">' + f1(v) + '</span></span></div>').join('');
-    an.innerHTML = seg + note + kpis
-      + '<div class="rgroup">' + rows + '</div>'
-      + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '')
-      + TRENDS_ROW
-      + '<p class="hint">In standard drinks: 14 g of alcohol each (the US measure), such as 12 oz of 5% beer or 1.5 oz of 40% spirits. The average counts the days you logged, drinks or alcohol-free.</p>';
-    slideSeg();
-  }
-  const slideSeg = () => { const box = an.querySelector('.seg'); if (box && !$('anSheet').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
-  an.addEventListener('click', e => {
-    if (e.target.closest('#trendsBtn')) { closeSheet('anSheet'); openTrends(); return; }
-    const b = e.target.closest('[data-period]'); if (!b) return;
-    st.period = b.dataset.period === 'month' ? 'month' : 'week'; ls.set(K.period, st.period);
-    renderAnalysis();
-  });
-  window.addEventListener('resize', () => { const box = an.querySelector('.seg'); if (box && !$('anSheet').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); });
 
   // ---------------------------------------------------------------------
   // A day: what you had, your usual drinks, the form
@@ -624,12 +580,12 @@ if (window.top !== window.self) {
   function animateIn(el) { el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   // ---------------------------------------------------------------------
-  // Trends: the last twelve weeks, one chart a view, picked from the pill at
-  // the bottom (as Home's views). From Analysis. The sums are calc.js's;
-  // these draw them as plain SVG that follows light and dark.
+  // The Analysis page: one view at a time, picked from the pill at the bottom
+  // (as Home's views), opened from the week's number. The sums are calc.js's;
+  // the charts are plain SVG that follows light and dark.
   // ---------------------------------------------------------------------
   const WEEKS = 12;
-  const tr = { view: ls.get(K.trview, 'weekly'), sel: null, group: ls.get(K.trgroup, 'name') === 'kind' ? 'kind' : 'name', table: false, T: null, scroll: 0 };
+  const tr = { view: ls.get(K.trview, 'compare'), sel: null, group: ls.get(K.trgroup, 'name') === 'kind' ? 'kind' : 'name', table: false, T: null, scroll: 0 };
   const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const wk = w => short(w.start) + ' – ' + short(w.end);
   const sign = n => (n < 0 ? '−' : '+') + f1(Math.abs(n));
@@ -707,6 +663,40 @@ if (window.top !== window.self) {
   const notLogged = T => { const k = sum(T.weeks, w => w.notRecorded); return k ? '<p class="anote">' + plural(k, 'day') + ' in these weeks weren’t logged. They’re left out of the averages, so a week with gaps can read low.</p>' : ''; };
 
   const TV = [
+    { id: 'compare', name: 'Compared with before', sub: () => '',
+      icon: '<svg viewBox="0 0 24 24"><path d="M8 4v16M4.6 7.4L8 4l3.4 3.4M16 20V4M12.6 16.6L16 20l3.4-3.4"/></svg>',
+      sum: T => { const P = PERIODS[st.period], a = C.compare(data.entries, data.days, T.tod, P.days), d = C.round(a.now.sd - a.before.sd, 1);
+        return !a.hasNow ? 'Nothing logged in the last ' + P.days + ' days' : 'Last ' + P.days + ' days: ' + f1(a.now.sd) + (a.hasBefore && d ? ' (' + (d > 0 ? 'up ' : 'down ') + f1(Math.abs(d)) + ')' : ''); },
+      draw(T) {
+        const P = PERIODS[st.period], a = C.compare(data.entries, data.days, T.tod, P.days), r = a.range, n = a.now, b = a.before;
+        const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
+        const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
+        if (!a.hasNow && !a.hasBefore) return seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>';
+    // Four numbers, each against the window before. Fewer drinks is better; more alcohol-free days is better.
+        const cmp = (label, now, before, lowerIsBetter) => {
+          const has = now !== null, d = has && before !== null ? C.round(now - before, 1) : null;
+          const dir = !a.hasBefore || d === null || d === 0 ? '' : (d < 0) === lowerIsBetter ? 'good' : 'bad';
+          const delta = !a.hasBefore || d === null ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '↑ +' : '↓ −') + f1(Math.abs(d));
+          const words = !a.hasBefore || d === null || !d ? delta : (d > 0 ? 'up ' : 'down ') + f1(Math.abs(d)) + ' on ' + P.before + (dir === 'good' ? ', better' : ', worse');
+          return '<div class="kpi" aria-label="' + esc(label + ': ' + (has ? f1(now) : 'not known') + ', ' + words) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + (has ? f1(now) : '—') + '</span><span class="kd ' + dir + '">' + esc(delta) + '</span></div>';
+        };
+        const kpis = '<div class="kpis">'
+          + cmp('Standard drinks', n.sd, b.sd, true)
+          + cmp('Days you drank', n.drinkingDays, b.drinkingDays, true)
+          + cmp('Alcohol-free days', n.afDays, b.afDays, false)
+          + cmp('A day, on average', n.avg, b.avg, true) + '</div>';
+        const k = C.streaks(data.entries, data.days, T.tod);
+        const rows = '<div class="xrow"><span class="xt">Alcohol-free in a row<small>Your best: ' + plural(k.best, 'day') + '</small></span><span class="xv">' + plural(k.current, 'day') + '</span></div>'
+          + (n.heaviest ? '<div class="xrow"><span class="xt">Most in one day<small>' + esc(fmt(n.heaviest.date, { weekday: 'long', day: 'numeric', month: 'short' })) + '</small></span><span class="xv">' + f1(n.heaviest.sd) + '</span></div>' : '')
+          + (n.notRecorded ? '<div class="xrow"><span class="xt">Days not logged<small>Left out of the average. Tap a day in the week to fill it in.</small></span><span class="xv">' + n.notRecorded + '</span></div>' : '');
+        const cats = Object.entries(n.cats).sort((p, q) => q[1] - p[1]);
+        const max = Math.max(0.1, ...cats.map(c => c[1]));
+        const bars = cats.map(([c, v]) => '<div class="gbar" data-c="' + esc(c) + '" aria-label="' + esc(catName(c) + ': ' + f1(v) + ' standard drinks') + '"><span class="gn"><i class="cdot"></i>' + esc(catName(c)) + '</span><span class="gt"><span class="bar" style="width:' + (v / max * 72).toFixed(1) + '%"></span><span class="gv">' + f1(v) + '</span></span></div>').join('');
+        return seg + note + kpis
+          + '<div class="rgroup">' + rows + '</div>'
+          + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '')
+          + '<p class="hint">In standard drinks: 14 g of alcohol each (the US measure), such as 12 oz of 5% beer or 1.5 oz of 40% spirits. The average counts the days you logged, drinks or alcohol-free.</p>';
+      } },
     { id: 'weekly', name: 'Weekly drinks',
       icon: '<svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20V10M20 20V15"/></svg>',
       sum: T => { const d = T.weeks.filter(w => w.hasData && !w.partial); return d.length ? f1(sum(d, w => w.sd) / d.length) + ' a week on average' : 'Nothing logged yet'; },
@@ -855,12 +845,12 @@ if (window.top !== window.self) {
   function renderTrends() {
     if (!TV.some(x => x.id === tr.view)) tr.view = TV[0].id;
     const T = tr.T = trendData(), v = TV.find(x => x.id === tr.view), has = T.weeks.some(w => w.hasData);
-    $('trBody').innerHTML = '<div class="thead"><h2>' + esc(v.name) + '</h2><small>' + esc(short(T.from) + ' – ' + short(T.tod)) + '</small></div>'
+    $('trBody').innerHTML = '<div class="thead"><h2>' + esc(v.name) + '</h2><small>' + esc(v.sub ? v.sub(T) : short(T.from) + ' – ' + short(T.tod)) + '</small></div>'
       + (has ? v.draw(T) : '<div class="empty"><strong>Nothing to chart yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>');
     $('trName').textContent = v.name; $('trIcon').innerHTML = v.icon;
     if (!$('trMenu').hidden) drawTrMenu();
     const box = $('trBody').querySelector('.seg');
-    if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:group');
+    if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:' + tr.view);
   }
   function drawTrMenu() {
     const T = tr.T || trendData();
@@ -887,11 +877,13 @@ if (window.top !== window.self) {
   $('trBody').addEventListener('click', e => {
     const g = e.target.closest('[data-group]');
     if (g) { tr.group = g.dataset.group === 'kind' ? 'kind' : 'name'; ls.set(K.trgroup, tr.group); renderTrends(); return; }
+    const pd = e.target.closest('[data-period]');
+    if (pd) { st.period = pd.dataset.period === 'month' ? 'month' : 'week'; ls.set(K.period, st.period); renderTrends(); return; }
     const h = e.target.closest('.hit'); if (h) pick(h);
   });
   $('trBody').addEventListener('keydown', e => { const h = e.target.closest && e.target.closest('.hit'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(h); } });
   $('trBody').addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.tview')) tr.table = e.target.open; }, true);
-  window.addEventListener('resize', () => { const box = $('trBody').querySelector('.seg'); if (box && !$('trends').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:group', { jump: true }); });
+  window.addEventListener('resize', () => { const box = $('trBody').querySelector('.seg'); if (box && !$('trends').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:' + tr.view, { jump: true }); });
   function openTrends() {
     tr.scroll = window.scrollY; tr.sel = null;
     $('app').classList.add('intrends'); $('trends').hidden = false; window.scrollTo(0, 0);
@@ -934,5 +926,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (drinks/scripts/app-test.mjs) only.
-  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis, openTrends };
+  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis: openTrends, openTrends };
 })();

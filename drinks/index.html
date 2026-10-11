@@ -20,9 +20,8 @@
   Drinks - a log of what you drink, kept deliberately small: one screen, the
   week as seven days, each with its standard drinks or "alcohol-free", and a
   sheet for each day where your usual drinks are one tap. Tapping the week's
-  number opens Analysis, this week or month against the one before, and from
-  there Trends: twelve weeks of charts, one view at a time, picked from the
-  pill at the bottom.
+  number opens Analysis: one page, with a pill at the bottom to pick its view
+  (this week or month against the one before, then twelve weeks of charts).
 
   Data: on this phone (localStorage allison-drinks-v1) and, signed in, in
   your family account, private to you (functions/drinks/api), so it follows
@@ -154,11 +153,13 @@ svg.b{stroke-width:2.2}
 .navrow .lbl{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* the week's one number, against your weekly limit; tap it for Analysis */
+/* (its "Analysis ›" says so) */
 .sum{width:100%;padding:14px 14px 13px 16px;display:flex;flex-direction:column;gap:8px;text-align:left;color:var(--text);transition:transform .18s var(--ease)}
 .sum:active{transform:scale(.985)}
 .sum .big{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;min-width:0}
 .sum .big > span{min-width:0;overflow-wrap:anywhere}
-.sum .big svg{margin-left:auto;align-self:center;width:18px;height:18px;color:var(--faint);flex:none}
+.sum .big span.more{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:1px;flex:none;font-size:14px;font-weight:600;color:var(--accent-text)}
+.sum .big span.more svg{width:16px;height:16px;color:inherit;margin:0}
 .sum > span{display:block}
 .sum .big b{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
 .sum .big span{font-size:15px;color:var(--muted)}
@@ -267,7 +268,7 @@ svg.b{stroke-width:2.2}
 .gbar .gv{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rgroup.bars{padding:6px 0}
 
-/* ---- Trends: twelve weeks, one view at a time, picked from the pill at the bottom ---- */
+/* ---- Analysis: one view at a time, picked from the pill at the bottom ---- */
 .app.intrends > section[aria-label="Drinks"],.app.intrends .dock{display:none}
 .thead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;margin:2px 6px 0}
 .thead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
@@ -426,14 +427,14 @@ html.locked .dock{opacity:0;pointer-events:none}
     <main class="list" id="main"></main>
   </section>
 
-  <!-- Trends: twelve weeks, one view at a time, picked from the pill at the bottom -->
-  <section id="trends" aria-label="Trends" hidden>
+  <!-- Analysis: from the week's number; one view at a time, picked from the pill at the bottom -->
+  <section id="trends" aria-label="Analysis" hidden>
     <header class="top"><div class="titlerow">
       <button class="iconbtn" id="trBack" type="button" aria-label="Back to the week"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></button>
-      <h1 class="title">Trends</h1>
+      <h1 class="title">Analysis</h1>
     </div></header>
     <div class="list" id="trBody"></div>
-    <nav class="vbar" id="trBar" aria-label="Trends view">
+    <nav class="vbar" id="trBar" aria-label="Analysis view">
       <button id="trBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="trMenu" aria-label="Show a view"><span class="vb-ic" id="trIcon"></span><span id="trName">Weekly drinks</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></span></button>
       <div class="viewmenu" id="trMenu" role="listbox" aria-label="Show" hidden></div>
     </nav>
@@ -450,16 +451,6 @@ html.locked .dock{opacity:0;pointer-events:none}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="dayLbl">Today</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
       <div class="sheetbody" id="dayBody"></div>
-    </div>
-  </div>
-
-  <!-- Analysis: from the week's number -->
-  <div class="sheetwrap" id="anSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="anLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="anLbl">Analysis</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
-      <div class="sheetbody" id="anBody"></div>
     </div>
   </div>
 
