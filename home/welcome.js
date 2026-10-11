@@ -91,7 +91,7 @@
         'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',
         'News: in the Scores league pills, the Premier League and Premiership Rugby are pinned to the top',
         'News: Sport > Table shows a league\'s standings from ESPN, with a pill to pick the league, kept up to date as games finish (every minute while a game is on), the teams in play marked and the teams you follow tinted',
-        'News: tap a football game in Sport > Scores for its own page instead of ESPN\'s: the score and clock, key events (goals, cards, substitutions), stats side by side and line-ups, refreshed every 45 seconds while the game is on, with Open on ESPN at the bottom',
+        'News: tap a football or rugby game in Sport > Scores for its own page instead of ESPN\'s: the score and clock, key events (goals, cards, substitutions), stats side by side, a shot map and each player\'s goals, assists and shots for football, the scoring and line-ups for rugby, refreshed every 45 seconds while the game is on, with Open on ESPN at the bottom',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
         'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
         'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans',
@@ -273,7 +273,7 @@
         {
           "i": "bolt",
           "t": "Live scores",
-          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football game for its own page: events, stats and line-ups."
+          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football or rugby game for its own page: events, stats, shots and players."
         }
       ]
     },
@@ -1276,7 +1276,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['#feed .sum-btn', '#feed'], t: 'Summarize a story', d: 'Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about the article. Summaries are for signed-in family.', g: 'tap' },
     { sel: '#viewBtn', t: 'Follow your teams', d: 'On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams.', g: 'tap' },
     { sel: '#viewBtn', t: 'League tables', d: 'Switch Sport to Table for a league\'s standings, kept up to date as games finish, with the teams in play marked and the ones you follow tinted.' },
-    { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football game for its own page: events, stats and line-ups.' },
+    { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football or rugby game for its own page: events, stats, shots and players.' },
     { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
   ] };
   SPOTS.weather = { ready: '#card', wait: 6000, stops: [

@@ -666,8 +666,8 @@
   .tkey span { display: inline-flex; align-items: center; gap: 6px; }
   .tkey i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
-  /* ---- Match: a football game's own page ----
-     The score and clock over two crests, then Events | Stats | Line-ups in the same glass sheet
+  /* ---- Match: a game's own page ----
+     The score and clock over two crests, then Events | Stats | Shots | Players (rugby: Scoring | Summary | Line-ups) in the same glass sheet
      as the summaries. Stats are two bars side by side (the home side in the accent colour). */
   .game.tap { cursor: pointer; }
   .mh { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 2px 6px 6px; }
@@ -710,6 +710,47 @@
   .mp .in { font-style: normal; color: #3FB07F; font-size: 9px; }
   .mp.on .nm { font-weight: 600; }
   .msub { margin: 6px 16px 0; padding-top: 8px; border-top: 0.5px solid var(--hairline); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .mrow.try .mi { color: var(--accent); }
+  .mtag { display: inline-block; min-width: 22px; padding: 2px 3px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: 0.03em; text-align: center; }
+  .mshots { padding: 12px 12px 14px; border-radius: 22px; }
+  .mkeys { display: flex; justify-content: space-between; gap: 8px; margin: 0 4px 8px; font-size: 13px; font-weight: 600; }
+  .mkeys b { font-weight: 700; color: var(--muted); }
+  .mkeys .h { color: var(--accent); }
+  .mpitch { display: block; width: 100%; height: auto; color: var(--muted); background: var(--accent-soft); border-radius: 10px; }
+  .shot { cursor: pointer; outline: none; }
+  .shot .hit { fill: transparent; }
+  .shot .v { stroke-width: 0.5; }
+  .shot.h .v { fill: var(--accent); stroke: var(--accent); }
+  .shot.a .v { fill: var(--muted); stroke: var(--muted); }
+  .shot.on .v, .shot.off .v { fill-opacity: 0.35; }
+  .shot.off .v { fill-opacity: 0.1; }
+  .shot.post .v { fill-opacity: 0.2; stroke-width: 1; }
+  .shot.block .v { fill: none; stroke-width: 0.7; stroke-linecap: round; }
+  .shot.goal .v { stroke: var(--text); stroke-width: 0.7; }
+  .shot.sel .v { stroke: var(--text); stroke-width: 1; }
+  .shot:focus-visible .hit { stroke: var(--accent); stroke-width: 0.5; }
+  .mcap { min-height: 2.6em; margin: 10px 4px 0; font-size: 14px; line-height: 1.35; color: var(--muted); }
+  .mcap b { color: var(--text); font-weight: 600; }
+  .mcap small { display: block; margin-top: 2px; font-size: 12px; }
+  .mlegend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 4px 0; font-size: 11px; font-weight: 500; color: var(--muted); }
+  .mlegend span { display: inline-flex; align-items: center; gap: 5px; }
+  .mlegend .k { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--muted); box-sizing: border-box; }
+  .mlegend .k.goal { background: var(--muted); border-color: var(--text); }
+  .mlegend .k.on { background: color-mix(in srgb, var(--muted) 40%, transparent); }
+  .mlegend .k.post { border-width: 2.5px; }
+  .mlegend .k.block { border: 0; border-radius: 0; background: linear-gradient(45deg, transparent 43%, var(--muted) 43% 57%, transparent 57%), linear-gradient(-45deg, transparent 43%, var(--muted) 43% 57%, transparent 57%); }
+  .mp .nm small { display: inline-block; white-space: nowrap; margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .mp .cap { display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 800; }
+  .mp .cd { display: inline-block; width: 8px; height: 11px; margin-left: 5px; border-radius: 1.5px; vertical-align: -1px; }
+  .mp .cd.y { background: #F5C518; }
+  .mp .cd.r { background: #E5242B; }
+  .mp.bench { opacity: 0.6; }
+  .mp .n { min-width: 22px; text-align: right; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mp .n.on { color: var(--text); font-weight: 700; }
+  .mp .gk { grid-column: 3 / -1; white-space: nowrap; font-size: 11px; font-weight: 600; color: var(--muted); text-align: right; }
+  .mp:has(.n), .mp:has(.gk) { grid-template-columns: 28px minmax(0, 1fr) repeat(4, 24px); gap: 4px 6px; }
+  .mp.mph { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); padding-top: 2px; }
+  .mp.mph .nm, .mp.mph .no { font-weight: 700; }
   .minfo { margin: 12px 8px 0; font-size: 13px; line-height: 1.5; color: var(--muted); text-align: center; }
 
 /* 44-point tap targets: the smaller controls take taps a little way round them

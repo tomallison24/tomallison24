@@ -206,7 +206,7 @@ La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB, NHL and rugby
 (Premiership Rugby, URC, Champions Cup, Top 14, Six Nations, Rugby
 Championship, Super Rugby Pacific, Rugby World Cup, internationals and
 rugby league). Your
-Sport filters apply to scores too. Tap a football game for its own page (see Match below); the other sports go to ESPN's match page.
+Sport filters apply to scores too. Tap a football or rugby game for its own page (see Match below); the other sports go to ESPN's match page.
 Games show where to watch in the US (TV or streaming, e.g. FOX, FS2,
 Paramount+) when ESPN lists it; many games get their listing only a few
 days before.
@@ -271,34 +271,52 @@ any page, CORS open) and then `site.api.espn.com`. ESPN sent one zone colour as
 `##B5E7CE`, which is read as `#B5E7CE`.
 
 
-### Match: a football game's own page
+### Match: a game's own page
 
-Tapping a football game under Scores or Coming up opens its own page instead of
+Tapping a football or rugby game under Scores or Coming up opens its own page instead of
 ESPN's (the other sports still go to ESPN). It reads ESPN's match details
 (`site.web.api.espn.com/apis/site/v2/sports/<path>/summary?event=<game id>`, then
-`site.api.espn.com` if that fails; about 35 KB over the wire):
+`site.api.espn.com` if that fails; about 35 KB over the wire). The header is the same for
+both: both crests, the score and the clock (a live dot while it is on) or the kick-off
+time, and the league as the title. Below the tabs: the ground and city, the crowd when
+ESPN gives one, where to watch in the US until the game is over, and **Open on ESPN**.
+While a game is on it refreshes every 45 seconds, keeping the last answer (with a note)
+if ESPN doesn't reply. A game ESPN has no details for says so and keeps the score from
+the game row.
 
-- **The header:** both crests, the score and the clock (a live dot while it is on) or
-  the kick-off time, and the league as the title.
+**Football** (every league in `leagues.json` with sport `football`): Events | Stats | Shots | Players.
+
 - **Events:** goals (with the assist), cards and substitutions ("X for Y"), between
   Kick-off, Half time and Full time; latest first while the game is on, otherwise in
   order. Delays and the like are left out.
 - **Stats:** possession, shots, shots on target, corners, fouls, offsides, yellow and red
   cards, saves, passes and pass accuracy (worked out from accurate passes over passes,
   as ESPN rounds its own to a tenth), the home side in the accent colour.
-- **Line-ups:** each side's formation and eleven in shape order with positions
-  (a red mark for who went off), then the substitutes (green for who came on). Before
-  kick-off it opens on the line-ups when ESPN has them.
-- **Below:** the ground and city, the crowd when ESPN gives one, where to watch in the US
-  until the game is over, and **Open on ESPN**.
-- **Live:** while a game is on it refreshes every 45 seconds, keeping the last answer
-  (with a note) if ESPN doesn't reply. A game ESPN has no details for says so and keeps the
-  score from the game row.
+- **Shots:** a pitch with every shot ESPN placed (its commentary gives each one an x/y
+  position): the home side attacks to the right, the away side to the left. Goals are
+  solid, on target shaded, off target hollow, woodwork thick, blocked a cross. Tap one
+  for who, when and how.
+- **Players:** each side's formation and eleven in shape order with positions (a red
+  mark for who went off, yellow and red cards), then the substitutes (green for who came
+  on); once the game is under way, goals, assists, shots and shots on target for each
+  player, and saves and goals conceded for the keeper (ESPN's roster stats). Before
+  kick-off the page opens on the players when ESPN has them.
 
-`scripts/match-test.mjs` plays two real answers from 11 October 2026 (a finished game and
-one in play, trimmed, in `scripts/fixtures/`). Football only for now (every league in
-`leagues.json` with sport `football`); the other sports can follow, each with its own
-box score.
+**Rugby** (union and league, every rugby league in `leagues.json`): Scoring | Summary | Line-ups.
+ESPN gives rugby no key events or commentary, so the page is built from the scoring list.
+
+- **Scoring:** tries, conversions, penalty goals, drop goals and cards in order, each with
+  the points and the running score, between Kick-off, Half time and Full time.
+- **Summary:** tries, conversions, penalty goals, drop goals and cards counted from the
+  scoring list (ESPN has no team stats for most games).
+- **Line-ups:** the starting side by shirt number (15, or 13 in league), the captain,
+  then the bench; who came off and on is read from the substitutions.
+
+`scripts/match-test.mjs` plays real answers from 11 October 2026 (two football games,
+one finished and one in play; two rugby finals, Sale v Harlequins in the Premiership
+and a rugby league game; trimmed, in `scripts/fixtures/`). Not yet seen on a live rugby
+game (the shape of the scoring list while it is on is unconfirmed) or for own goals,
+penalties and VAR in football. The other sports can follow, each with its own box score.
 
 ## Add or change sources
 
