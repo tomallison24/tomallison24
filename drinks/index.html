@@ -20,7 +20,9 @@
   Drinks - a log of what you drink, kept deliberately small: one screen, the
   week as seven days, each with its standard drinks or "alcohol-free", and a
   sheet for each day where your usual drinks are one tap. Tapping the week's
-  number opens Analysis, this week or month against the one before.
+  number opens Analysis, this week or month against the one before, and from
+  there Trends: twelve weeks of charts, one view at a time, picked from the
+  pill at the bottom.
 
   Data: on this phone (localStorage allison-drinks-v1) and, signed in, in
   your family account, private to you (functions/drinks/api), so it follows
@@ -265,6 +267,83 @@ svg.b{stroke-width:2.2}
 .gbar .gv{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rgroup.bars{padding:6px 0}
 
+/* ---- Trends: twelve weeks, one view at a time, picked from the pill at the bottom ---- */
+.app.intrends > section[aria-label="Drinks"],.app.intrends .dock{display:none}
+.thead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;margin:2px 6px 0}
+.thead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.thead small{font-size:13px;color:var(--faint);white-space:nowrap}
+.chartcard{border-radius:22px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge);padding:12px 12px 10px}
+.readout{margin:0 4px 6px;min-height:2.7em;font-size:14px;line-height:1.35;color:var(--muted)}
+.readout b{color:var(--text);font-variant-numeric:tabular-nums}
+.callout{margin:0 6px;font-size:15px;line-height:1.45;color:var(--muted)}
+.callout b{color:var(--text)}
+svg.chart{width:100%;height:auto;display:block;overflow:visible;stroke:none;stroke-width:1;touch-action:manipulation}
+.chart .grid{stroke:var(--hair);stroke-width:1}
+.chart .tick,.chart .xl{fill:var(--faint);font-size:10.5px;font-variant-numeric:tabular-nums}
+.chart .xl{text-anchor:middle}
+.chart .bar{fill:var(--accent)} .chart .bar.over,.chart .bar.heavy{fill:var(--flag)} .chart .bar.af{fill:var(--af)} .chart .bar.part{opacity:.55}
+.chart .selbg{fill:var(--fill)}
+.chart .hit{fill:transparent;cursor:pointer;outline:none} .chart .hit:hover{fill:var(--fill)}
+.chart .hit:focus-visible{stroke:var(--accent);stroke-width:2}
+.chart .limit{stroke:var(--flag);stroke-width:1.5}
+.chart .goal{stroke:var(--text);stroke-width:1.5;opacity:.7}
+.chart .lbl{fill:var(--muted);font-size:10.5px;font-weight:600;text-anchor:start;paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round}
+.chart .val{fill:var(--text);font-size:11px;font-weight:700;text-anchor:middle;font-variant-numeric:tabular-nums}
+.chart .avgline{fill:none;stroke:var(--text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chart .dot{fill:var(--accent);stroke:var(--bg);stroke-width:2}
+.chart .tri{fill:var(--flag)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 4px 0;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;background:var(--accent);flex:none}
+.legend i.over,.legend i.heavy{background:var(--flag)} .legend i.af{background:var(--af)} .legend i.part{opacity:.55}
+.legend i.avg,.legend i.lim,.legend i.gl{height:2px;width:14px;border-radius:1px}
+.legend i.avg{background:var(--text);opacity:.8} .legend i.lim{background:var(--flag)} .legend i.gl{background:var(--text);opacity:.7}
+.legend i.dk{border-radius:50%}
+.legend i.tri{width:0;height:0;border-radius:0;background:none;border:5px solid transparent;border-bottom:8px solid var(--flag);border-top:0;margin:0 0 1px}
+details.tview{margin:8px 4px 0;font-size:13px}
+details.tview summary{cursor:pointer;color:var(--accent-text);font-weight:600;min-height:32px;display:flex;align-items:center}
+details.tview table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-top:2px}
+details.tview th,details.tview td{text-align:left;padding:6px 4px;border-top:1px solid var(--hair-2);font-weight:400;vertical-align:top}
+details.tview th{color:var(--faint);font-size:12px} details.tview td.n,details.tview th.n{text-align:right}
+.wstrip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:10px;border-radius:22px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.wt{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 2px 6px;border-radius:14px;background:var(--fill);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wt b{font-size:17px;line-height:1.2;font-weight:700;color:var(--faint)}
+.wt.ok{background:color-mix(in srgb,var(--af) 16%,transparent)} .wt.ok b{color:var(--up)}
+.wt.over{background:color-mix(in srgb,var(--flag) 18%,transparent)} .wt.over b{color:var(--flag)}
+.wt.going{opacity:.75}
+.tops .gbar{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.tops .gn{overflow:hidden} .tops .gn span.nm{overflow:hidden;text-overflow:ellipsis}
+.tops .gbar:not([data-c]) .bar,.tops .gbar.rest .bar{background:var(--faint)}
+.xrow .xv.over{color:var(--flag)} .xrow .xv.ok{color:var(--up)}
+
+/* the view pill at the bottom, as in Home: the view's icon, its name and a chevron; its menu opens upwards */
+.vbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:8;translate:-50% 0;display:flex;align-items:center;padding:4px;border-radius:999px}
+.vbar::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));
+  -webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong)}
+.vbar > button{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 14px 0 12px;border-radius:999px;white-space:nowrap;font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text);transition:background .2s}
+.vbar > button:active{background:var(--fill)}
+.vbar .vb-ic{display:flex;width:30px;height:30px;border-radius:50%;align-items:center;justify-content:center;background:var(--fill);color:var(--icon)}
+.vbar .vb-ic svg{width:18px;height:18px}
+.vbar .vb-chev{display:flex;opacity:.7;margin-left:-2px;transition:transform .25s var(--ease)}
+.vbar .vb-chev svg{width:20px;height:20px;transform:rotate(90deg)}
+.vbar button[aria-expanded="true"] .vb-chev{transform:rotate(180deg)}
+.viewmenu{position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;z-index:5;width:max-content;min-width:260px;max-width:calc(100vw - 24px);padding:6px;border-radius:22px;transform-origin:50% 100%;
+  background:var(--bar-solid);-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);   /* near solid, not the sheets' glass: it sits over the chart's words */
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong);animation:menuUp .22s var(--ease) both}
+@keyframes menuUp{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}
+.viewmenu button{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:16px;text-align:left;font-size:16px;font-weight:600;color:var(--text)}
+.viewmenu button:active{background:var(--lgs-field)}
+.viewmenu button[aria-selected="true"]{background:var(--lgs-field)}
+.viewmenu .ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--fill);flex:none;color:var(--icon)}
+.viewmenu .ic svg{width:20px;height:20px}
+.viewmenu .k{flex:1;min-width:0}
+.viewmenu small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewmenu .tick{opacity:0;display:flex;color:var(--accent-text)} .viewmenu button[aria-selected="true"] .tick{opacity:1}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.viewmenu,.vbar::before{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.viewmenu,.vbar::before{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
 /* ---- More: your account, goals, your data ---- */
 .rowbtn{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;padding:10px 14px;font-size:15px;font-weight:600;border-top:1px solid var(--hair-2);color:var(--text)}
 .rowbtn:first-child{border-top:0}
@@ -345,6 +424,19 @@ html.locked .dock{opacity:0;pointer-events:none}
       </div>
     </header>
     <main class="list" id="main"></main>
+  </section>
+
+  <!-- Trends: twelve weeks, one view at a time, picked from the pill at the bottom -->
+  <section id="trends" aria-label="Trends" hidden>
+    <header class="top"><div class="titlerow">
+      <button class="iconbtn" id="trBack" type="button" aria-label="Back to the week"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></button>
+      <h1 class="title">Trends</h1>
+    </div></header>
+    <div class="list" id="trBody"></div>
+    <nav class="vbar" id="trBar" aria-label="Trends view">
+      <button id="trBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="trMenu" aria-label="Show a view"><span class="vb-ic" id="trIcon"></span><span id="trName">Weekly drinks</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></span></button>
+      <div class="viewmenu" id="trMenu" role="listbox" aria-label="Show" hidden></div>
+    </nav>
   </section>
 
   <div class="dock">

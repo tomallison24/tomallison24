@@ -92,7 +92,8 @@
         'The welcome link for new family shows Meals with the other Allison family apps',
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
         'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
-        'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans'],
+        'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans',
+        'Drinks: 12-week trends, from Analysis - weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size - one chart a page, picked from the pill at the bottom'],
       apps: {
         meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'],
           notes: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Prime and VIC member prices', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'] },

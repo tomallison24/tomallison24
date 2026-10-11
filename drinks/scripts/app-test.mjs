@@ -207,7 +207,7 @@ await test('goals: a lower weekly limit shows the week as over', async () => {
 });
 
 await test('Analysis, from a tap on the week’s number: four numbers against the window before, the streak, by drink', async () => {
-  assert.equal(await page.$$eval('#viewBtn, .vbar', e => e.length), 0, 'no view picker: one screen');
+  assert.equal(await page.$$eval('.vbar', els => els.filter(e => e.getClientRects().length).length), 0, 'no view picker on the week: one screen (Trends has its own)');
   await page.click('#sumBtn');
   await page.waitForSelector('#anSheet:not([hidden])');
   const kl = await page.$$eval('.kpi .kl', e => e.map(x => x.textContent));
@@ -215,6 +215,7 @@ await test('Analysis, from a tap on the week’s number: four numbers against th
   assert.equal(await page.textContent('.kpi .kv'), '4.3');
   assert.match(await page.textContent('#anBody'), /Alcohol-free in a row.*Your best: 2 days/);
   assert.match(await page.textContent('#anBody'), /By drink/);
+  assert.match(await page.textContent('#trendsBtn'), /12-week trends/);
   await page.waitForTimeout(1000);
   await shot(page, '05-analysis');
   await page.click('[data-period="month"]');
@@ -336,6 +337,178 @@ await test('delete all data: tap twice; gone here and from the account', async (
   const s = stored();
   assert.equal(s.entries.length, 0); assert.equal(s.days.length, 0); assert.ok(Object.keys(s.graves).length >= 4);
 });
+
+// ---- Trends: twelve weeks, one view at a time, from the pill at the bottom ----
+// Eleven weeks back each have one drinking day (the same weekday as today, so the
+// test is the same on every day of the week and at the end of a month): 2 IPAs,
+// except the one 4 weeks back, 9; today has a glass of wine. Three days are alcohol-free.
+const seedLog = () => {
+  const entries = [], days = []; let k = 0;
+  const add = (date, name, cat, vol, abv, qty) => entries.push({ id: 't' + k++, date, time: '19:00', name, cat, vol, unit: 'oz', abv, qty, note: '', updated: 1 });
+  for (let j = 1; j <= 11; j++) add(ymd(day(-7 * j)), 'IPA', 'beer', 16, 6.8, j === 4 ? 9 : 2);
+  add(TODAY, 'Wine', 'wine', 5, 13, 1);
+  for (let j = 1; j <= 3; j++) days.push({ id: ymd(day(-7 * j - 1)), status: 'af', updated: 1 });
+  return JSON.stringify({ v: 1, entries, days, prefs: [] });
+};
+const VIEWS = ['Weekly drinks', 'Weeks over the limit', 'Top drinks', 'Days of the week', 'Alcohol-free days', 'Days over the limit', 'Strength and size'];
+const pickView = async (pg, i) => { await pg.click('#trBtn'); await pg.waitForSelector('#trMenu:not([hidden])'); await pg.click('#trMenu button:nth-child(' + i + ')'); await pg.waitForTimeout(150); };
+const kpiVals = pg => pg.$$eval('#trBody .kpi .kv', e => e.map(x => x.textContent));
+const T = await newPage('light', { 'allison-drinks-v1': seedLog() });
+const tp = T.page;
+await tp.goto(BASE + '/drinks/'); await tp.waitForFunction(() => window.__drinks); await tp.waitForTimeout(700);
+
+await test('Trends opens from Analysis, takes over the screen, and the back button returns to the week', async () => {
+  await tp.click('#sumBtn'); await tp.waitForSelector('#anSheet:not([hidden])');
+  await tp.click('#trendsBtn');
+  await tp.waitForSelector('#trends:not([hidden])');
+  assert.ok(await tp.isHidden('#anSheet'), 'the Analysis sheet is closed');
+  assert.ok(await tp.isHidden('#fab'), 'the + is out of the way');
+  assert.equal(await tp.textContent('#trName'), 'Weekly drinks');
+  await tp.waitForTimeout(500);
+  const bar = await tp.$eval('#trBar', e => { const r = e.getBoundingClientRect(); return { b: r.bottom, l: r.left, r: r.right, h: innerHeight, w: innerWidth }; });
+  assert.ok(bar.b <= bar.h && bar.l > 0 && bar.r < bar.w && Math.abs((bar.l + bar.r) / 2 - bar.w / 2) < 2, 'the pill sits at the bottom, centred');
+  await shot(tp, '10-trends-weekly');
+  await tp.click('#trBack');
+  assert.ok(await tp.isHidden('#trends')); assert.ok(await tp.isVisible('#fab'));
+  assert.match(await tp.textContent('.navrow .lbl'), /^This week/);
+});
+
+await test('the pill’s menu lists the seven views, opens upwards, and picks one', async () => {
+  await tp.evaluate(() => window.__drinks.openTrends());
+  await tp.click('#trBtn');
+  assert.equal(await tp.getAttribute('#trBtn', 'aria-expanded'), 'true');
+  assert.deepEqual(await tp.$$eval('#trMenu button .k', e => e.map(x => x.firstChild.textContent)), VIEWS);
+  assert.equal(await tp.getAttribute('#trMenu button:nth-child(1)', 'aria-selected'), 'true');
+  const m = await tp.evaluate(() => ({ menu: document.getElementById('trMenu').getBoundingClientRect().bottom, pill: document.getElementById('trBtn').getBoundingClientRect().top, left: document.getElementById('trMenu').getBoundingClientRect().left, w: innerWidth }));
+  assert.ok(m.menu <= m.pill, 'the menu is above the pill'); assert.ok(m.left >= 0, 'and on the screen');
+  await tp.waitForTimeout(400);
+  await shot(tp, '11-trends-menu');
+  await tp.keyboard.press('Escape');
+  assert.ok(await tp.isHidden('#trMenu')); assert.ok(await tp.isVisible('#trends'), 'Escape closes the menu first');
+  await tp.click('#trBtn'); await tp.click('#trMenu button:nth-child(3)');
+  assert.equal(await tp.textContent('#trName'), 'Top drinks'); assert.ok(await tp.isHidden('#trMenu'));
+  await pickView(tp, 1);
+});
+
+await test('Weekly drinks: the average, weeks over the limit, a bar a week; tap one to read it', async () => {
+  assert.deepEqual(await tp.$$eval('#trBody .kpi .kl', e => e.map(x => x.textContent)), ['Average a week', 'Weeks over your limit', 'Highest week', 'Lowest week']);
+  assert.deepEqual((await kpiVals(tp)).slice(0, 3), ['4.8', '1 of 11', '16.3']);
+  assert.equal(await tp.$$eval('.chart .hit', e => e.length), 12);
+  assert.equal(await tp.$$eval('.chart .bar', e => e.length), 12, 'a bar for every week with something logged');
+  assert.equal(await tp.$$eval('.chart .bar.over', e => e.length), 1); assert.equal(await tp.$$eval('.chart .tri', e => e.length), 1, 'over weeks carry a triangle too, not only a colour');
+  assert.equal(await tp.$$eval('.chart .bar.part', e => e.length), 1, 'the week still going is lighter');
+  assert.match(await tp.textContent('.readout'), /so far/, 'the newest week is read first');
+  await tp.click('.chart .hit[data-i="7"]');
+  assert.match(await tp.textContent('.readout'), /16\.3 standard drinks, 2\.3 over your 14/);
+  assert.equal(await tp.getAttribute('.chart .hit[data-i="7"]', 'role'), 'button');
+  await tp.focus('.chart .hit[data-i="8"]'); await tp.keyboard.press('Enter');
+  assert.match(await tp.textContent('.readout'), /3\.6 standard drinks, 10\.4 under your 14/, 'the keyboard reads a week too');
+  await tp.click('details.tview summary');
+  assert.ok(await tp.$eval('details.tview', e => e.open)); assert.equal(await tp.$$eval('details.tview tbody tr', e => e.length), 12, 'every number is in a table too');
+  await tp.click('.chart .hit[data-i="3"]');
+  assert.ok(await tp.$eval('details.tview', e => e.open), 'the table stays open when you tap a week');
+  await tp.click('details.tview summary');
+  await shot(tp, '12-trends-weekly-tapped');
+});
+
+await test('Weeks over the limit: a tile and a row for every week, and the runs under it', async () => {
+  await pickView(tp, 2);
+  assert.deepEqual((await kpiVals(tp)).slice(0, 4), ['1 of 11', '10', '3 weeks', '7 weeks']);
+  assert.equal(await tp.$$eval('.wt', e => e.length), 12); assert.equal(await tp.$$eval('.wt.over', e => e.length), 1);
+  assert.equal(await tp.$$eval('.wt.ok', e => e.length), 10); assert.equal(await tp.$$eval('.wt.going', e => e.length), 1);
+  assert.match(await tp.textContent('#trBody .rgroup .xrow:nth-child(1)'), /to go/); assert.match(await tp.textContent('#trBody'), /\+2\.3 over/);
+  await shot(tp, '13-trends-over');
+});
+
+await test('Top drinks: most often against what adds up, by name or by kind, and your choice is kept', async () => {
+  await pickView(tp, 3);
+  assert.match(await tp.textContent('.callout'), /IPA.*most often \(29 drinks\).*also what adds up to the most/);
+  assert.deepEqual(await tp.$$eval('.tops:nth-of-type(1) .nm, .tops .nm', e => [...new Set(e.map(x => x.textContent))]), ['IPA', 'Wine']);
+  await tp.click('[data-group="kind"]');
+  assert.deepEqual(await tp.$$eval('.tops .nm', e => [...new Set(e.map(x => x.textContent))]), ['Beer', 'Wine']);
+  assert.equal(await tp.getAttribute('[data-group="kind"]', 'aria-pressed'), 'true');
+  await tp.waitForTimeout(700);
+  await shot(tp, '14-trends-top');
+  await tp.click('[data-group="name"]');
+});
+
+await test('Days of the week: seven columns from Sunday, the heaviest day named', async () => {
+  await pickView(tp, 4);
+  assert.deepEqual(await tp.$$eval('.chart .xl', e => e.map(x => x.textContent)), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+  assert.equal(await tp.$$eval('.chart .hit', e => e.length), 7);
+  assert.match(await tp.textContent('.callout'), /s<\/b>|are your heaviest/);
+  assert.match(await tp.textContent('.readout'), /Tap a day/);
+  const dow = new Date(day(0)).getDay(), n = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow];
+  assert.match(await tp.textContent('.callout'), new RegExp(n + 's are your heaviest'), 'every drinking day is the same weekday as today');
+  await tp.click('.chart .hit[data-i="' + dow + '"]');
+  assert.match(await tp.textContent('.readout'), new RegExp(n + 's.*of everything'));
+});
+
+await test('Alcohol-free days, days over the limit, strength and size', async () => {
+  await pickView(tp, 5);
+  assert.deepEqual(await tp.$$eval('#trBody .kpi .kl', e => e.map(x => x.textContent)), ['Goal met', 'Average a week', 'Alcohol-free in a row', 'Your best']);
+  assert.equal(await tp.$$eval('.chart .bar.af', e => e.length) > 0, true);
+  assert.match(await tp.textContent('.legend'), /Your goal/);
+  await pickView(tp, 6);
+  assert.equal((await kpiVals(tp))[0], '1', 'one day over 4 standard drinks: the 9 IPAs');
+  assert.equal(await tp.$$eval('.chart .bar.heavy', e => e.length), 1);
+  await pickView(tp, 7);
+  assert.equal((await kpiVals(tp))[0], '6.9%');
+  assert.equal(await tp.$$eval('svg.chart', e => e.length), 2, 'two charts: strength, and the size of an average drink');
+  assert.equal(await tp.$$eval('.chart .dot', e => e.length), 24, 'a dot a week in each');
+  await shot(tp, '15-trends-strength');
+});
+
+await test('the view you left on is the one Trends opens on next time', async () => {
+  await tp.reload(); await tp.waitForFunction(() => window.__drinks); await tp.waitForTimeout(500);
+  await tp.evaluate(() => window.__drinks.openTrends());
+  assert.equal(await tp.textContent('#trName'), 'Strength and size');
+  await pickView(tp, 1);
+});
+
+await test('Trends follows the log: a new drink changes the chart', async () => {
+  const before = (await kpiVals(tp))[0];
+  await tp.evaluate(() => { const d = window.__drinks; d.data.entries.push({ id: 'live1', date: d.st.week, time: '', name: 'Late beer', cat: 'beer', vol: 12, unit: 'oz', abv: 5, qty: 1, note: '', updated: Date.now() }); d.render(); });
+  assert.match(await tp.textContent('.readout'), /so far/); assert.equal((await kpiVals(tp))[1], '1 of 11');
+  assert.notEqual(before, undefined);
+});
+
+await test('Trends: Escape closes it; nothing logged says so', async () => {
+  await tp.keyboard.press('Escape');
+  assert.ok(await tp.isHidden('#trends'));
+  const e = await newPage('light', {});
+  await e.page.goto(BASE + '/drinks/'); await e.page.waitForFunction(() => window.__drinks); await e.page.waitForTimeout(500);
+  await e.page.click('#sumBtn'); await e.page.click('#trendsBtn');
+  assert.match(await e.page.textContent('#trBody'), /Nothing to chart yet/);
+  for (let i = 2; i <= 7; i++) { await pickView(e.page, i); assert.ok(await e.page.isVisible('#trBody .empty, #trBody .kpis, #trBody .callout'), VIEWS[i - 1] + ' has something to say with nothing logged'); }
+  await e.ctx.close();
+});
+
+await test('Trends is never wider than the phone, in every view, light and dark; the menu stays on the screen', async () => {
+  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 568], [390, 844], [440, 956]]) {
+    const p = await newPage(scheme, { 'allison-drinks-v1': seedLog() });
+    await p.page.setViewportSize({ width: w, height: h });
+    await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(400);
+    await p.page.evaluate(() => window.__drinks.openTrends());
+    for (let i = 1; i <= 7; i++) {
+      if (i > 1) await pickView(p.page, i);
+      await p.page.waitForTimeout(120);
+      const m = await p.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: document.documentElement.clientWidth }));
+      assert.ok(m.sw <= m.w, scheme + ' ' + w + 'px, ' + VIEWS[i - 1] + ': the page is ' + m.sw + 'px wide');
+    }
+    await p.page.click('#trBtn'); await p.page.waitForTimeout(300);
+    const r = await p.page.$eval('#trMenu', e => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, w: innerWidth }; });
+    assert.ok(r.l >= 0 && r.r <= r.w && r.t >= 0, w + 'px: the menu is on the screen (' + JSON.stringify(r) + ')');
+    if (scheme === 'dark' && w === 390) await shot(p.page, '16-trends-menu-dark');
+    assert.deepEqual(await p.page.evaluate(() => window.__csp || []), []);
+    await p.ctx.close();
+  }
+});
+
+await test('Trends: no errors and no Content Security Policy violations', async () => {
+  assert.deepEqual(await tp.evaluate(() => window.__csp || []), []);
+});
+await T.ctx.close();
 
 await test('never wider than the phone, from the smallest iPhone up; the title is never cut off', async () => {
   for (const [w, h] of [[320, 568], [375, 667], [393, 852], [440, 956]]) {

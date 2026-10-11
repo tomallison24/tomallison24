@@ -1,7 +1,7 @@
 "use strict";
 
 // Drinks' maths: standard drinks, what each day was, the Analysis windows,
-// alcohol-free streaks, and reading an ABV Tracker export. Pure functions,
+// the 12-week Trends, alcohol-free streaks, and reading an ABV Tracker export. Pure functions,
 // no page, so they can be tested in Node (drinks/scripts/calc-test.mjs);
 // app.js draws the result.
 //
@@ -56,6 +56,7 @@
   const num = v => { const n = +v; return isFinite(n) ? n : 0; };
   const grams = x => (x.unit === 'ml' ? num(x.vol) : num(x.vol) * OZ_ML) * Math.max(0, num(x.qty) || 0) * num(x.abv) / 100 * ETHANOL;
   const std = x => grams(x) / STD_G;
+  const mlOf = x => (x.unit === 'ml' ? num(x.vol) : num(x.vol) * OZ_ML) * Math.max(0, num(x.qty) || 0);
   const round = (n, d = 1) => { const p = Math.pow(10, d); return Math.round(n * p) / p; };
   // Dates are 'YYYY-MM-DD' strings; the sums run in UTC so a day is always 24 hours.
   const add = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * D).toISOString().slice(0, 10);
@@ -70,9 +71,9 @@
     for (const x of entries || []) {
       if (!okEntry(x)) continue;
       let d = m.get(x.date);
-      if (!d) m.set(x.date, d = { sd: 0, n: 0, cats: {} });
+      if (!d) m.set(x.date, d = { sd: 0, n: 0, g: 0, ml: 0, cats: {} });
       const s = std(x);
-      d.sd += s; d.n += num(x.qty);
+      d.sd += s; d.n += num(x.qty); d.g += grams(x); d.ml += mlOf(x);
       const c = CAT[x.cat] ? x.cat : 'other';
       d.cats[c] = (d.cats[c] || 0) + s;
     }
@@ -131,6 +132,94 @@
     let best = 0, run = 0, prev = null;
     for (const x of afDates) { run = prev && add(prev, 1) === x ? run + 1 : 1; prev = x; if (run > best) best = run; }
     return { current, best: Math.max(best, current) };
+  }
+
+  // ---------------------------------------------------------------------
+  // Trends: the last n weeks, one number a week for each chart. The newest
+  // week starts at weekStart (the week today is in) and may be partial; its
+  // days after today are not counted. A week with nothing logged has
+  // hasData false, and is left out of every average and count.
+  // ---------------------------------------------------------------------
+  function weeks(entries, days, weekStart, n, today, goals) {
+    const map = byDay(entries), mk = marks(days), g = Object.assign({}, GOALS, goals || {});
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const start = add(weekStart, -7 * i), end = add(start, 6);
+      const s = stats(null, null, start, end, today, { map, mk });
+      let overDays = 0, gr = 0, ml = 0;
+      for (let d = start; d <= end && d <= today; d = add(d, 1)) {
+        const x = map.get(d);
+        if (!x) continue;
+        if (round(x.sd, 2) > g.day) overDays++;
+        gr += x.g; ml += x.ml;
+      }
+      // partial: a week isn't finished until its last day is over
+      out.push({ start, end, partial: end >= today, sd: s.sd, drinks: s.drinks, drinkingDays: s.drinkingDays, afDays: s.afDays,
+        recorded: s.recorded, notRecorded: s.notRecorded, hasData: s.recorded > 0, overDays,
+        over: g.week > 0 && round(s.sd, 1) > g.week,
+        abv: ml > 0 ? gr / ETHANOL / ml * 100 : null,          // the strength of what was drunk, by volume
+        perDrink: s.drinks > 0 ? s.sd / s.drinks : null,       // standard drinks in an average drink
+        avg4: null });
+    }
+    // A 4-week average of finished weeks (the week still going would drag it down).
+    out.forEach((w, i) => {
+      if (w.partial || !w.hasData) return;
+      const near = out.slice(Math.max(0, i - 3), i + 1).filter(x => !x.partial && x.hasData);
+      w.avg4 = near.reduce((a, x) => a + x.sd, 0) / near.length;
+    });
+    return out;
+  }
+  // Weeks against the limits. A week counts once it is over (it can only get
+  // worse) or has finished; a week still going and under is not known yet.
+  function weekGoals(ws, goals) {
+    const g = Object.assign({}, GOALS, goals || {});
+    const r = { over: 0, under: 0, counted: 0, noData: 0, runUnder: 0, bestRun: 0, afMet: 0, afCounted: 0 };
+    let run = 0;
+    for (const w of ws) {
+      if (!w.hasData) { r.noData++; run = 0; continue; }
+      if (w.over) { r.over++; run = 0; }
+      else if (!w.partial) { r.under++; run++; if (run > r.bestRun) r.bestRun = run; }
+      if (w.over || !w.partial) r.counted++;
+      if (g.af > 0 && (w.afDays >= g.af || !w.partial)) { r.afCounted++; if (w.afDays >= g.af) r.afMet++; }
+    }
+    // the run you are on now: back from the newest week, skipping one still going and under
+    for (let i = ws.length - 1; i >= 0; i--) {
+      const w = ws[i];
+      if (w.partial && !w.over) continue;
+      if (!w.hasData || w.over) break;
+      r.runUnder++;
+    }
+    return r;
+  }
+  // Drinks between two dates, by the name you gave them or by kind: how many
+  // you had (a drink with a quantity of 2 is 2) and their standard drinks.
+  function topDrinks(entries, from, to, by) {
+    const m = new Map();
+    for (const x of entries || []) {
+      if (!okEntry(x) || x.date < from || x.date > to) continue;
+      const cat = CAT[x.cat] ? x.cat : 'other';
+      const label = by === 'kind' ? CAT[cat].name : (String(x.name || '').trim() || CAT[cat].name);
+      const key = by === 'kind' ? cat : label.toLowerCase();
+      let r = m.get(key);
+      if (!r) m.set(key, r = { key, label, cat, qty: 0, sd: 0, last: '' });
+      r.qty += num(x.qty); r.sd += std(x);
+      if (x.date >= r.last) { r.last = x.date; r.label = label; r.cat = cat; }
+    }
+    return [...m.values()];
+  }
+  // Each day of the week (0 = Sunday), over [from, to] up to today: its standard
+  // drinks, how many of those days you recorded, and its share of the total.
+  function weekdays(entries, days, from, to, today) {
+    const map = byDay(entries), mk = marks(days);
+    const out = Array.from({ length: 7 }, (_, dow) => ({ dow, sd: 0, recorded: 0, drinkingDays: 0, avg: null, share: 0 }));
+    let total = 0;
+    for (let d = from; d <= to && d <= today; d = add(d, 1)) {
+      const s = statusOf(d, map, mk), o = out[new Date(Date.parse(d + 'T00:00:00Z')).getUTCDay()];
+      if (s === 'drinks') { const x = map.get(d); o.sd += x.sd; total += x.sd; o.recorded++; o.drinkingDays++; }
+      else if (s === 'af') o.recorded++;
+    }
+    out.forEach(o => { o.avg = o.recorded ? o.sd / o.recorded : null; o.share = total ? o.sd / total : 0; });
+    return out;
   }
 
   // ---------------------------------------------------------------------
@@ -211,5 +300,5 @@
     return { entries: [...out.entries.values()], days: [...out.days].map(([id, status]) => ({ id, status })), goals: out.goals, skipped: out.skipped };
   }
 
-  root.DrinksCalc = { OZ_ML, ETHANOL, STD_G, CATS, CAT, PRESETS, SIZES, ABVS, GOALS, grams, std, round, add, okEntry, byDay, marks, statusOf, stats, overDays, compare, streaks, parseCSV, fromAbvTracker };
+  root.DrinksCalc = { OZ_ML, ETHANOL, STD_G, CATS, CAT, PRESETS, SIZES, ABVS, GOALS, grams, std, round, add, okEntry, byDay, marks, statusOf, stats, overDays, compare, streaks, weeks, weekGoals, topDrinks, weekdays, parseCSV, fromAbvTracker };
 })(typeof window !== 'undefined' ? window : globalThis);
