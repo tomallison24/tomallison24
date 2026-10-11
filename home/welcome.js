@@ -85,6 +85,7 @@
     { v: '1.2', date: '2026-10-11', title: 'The news, in a nutshell',
       highlights: ['News: tap the sparkle on any story for a two-sentence summary and the key takeaways, then ask Claude questions about it',
         'Meals: deals from eight stores near Apex, plans built across them, and plans you accept are saved',
+        'Home: when the last person leaves, a softly pulsing "Away from the house" pill appears at the top of Favorites, and the Living Room and Office thermostats take the green Eco look, until someone is home',
         'Drinks: Analysis is one page, with a pill at the bottom to pick a view'],
       notes: ['News: tap the sparkle on a story for Claude\'s two-sentence summary and key takeaways, then ask questions about the article (signed-in family; a summary is kept for a week for everyone, and each person gets 60 a day)',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s, each with its own icon',

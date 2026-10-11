@@ -1,6 +1,12 @@
 // FAVORITES: the Signal dashboard's landing view (ha-config,
 // views_signal/favorites.yaml) - and this app's, which always opens here.
 // What is on the dashboard's, in its order:
+//   - Away: a softly pulsing pill at the very top of the view (above the energy
+//     strip), only while Home Assistant
+//     has the house in Eco (input_boolean.thermostat_eco - on five minutes after
+//     the last person leaves, off when the first is home; AWAY_FLAG in app.js):
+//     "Away from the house", and since when the thermostats have been in Eco.
+//     Home Assistant decides who is home; this only listens.
 //   - Now Playing: a Sonos that is playing (one card per group, its leader's)
 //   - Running Now: every device that is doing something, as chips; a tap
 //     takes you to it and opens its popup
@@ -62,6 +68,13 @@ function actWhen(t) {
   const d = new Date(Number(t) * 1000), now = new Date(), tm = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
   return days === 0 ? tm : days === 1 ? 'Yesterday ' + tm : d.toLocaleDateString([], { weekday: 'short' }) + ' ' + tm;
+}
+// Away: since when the house has been in Eco, in the phone's clock.
+function favAway() {
+  const e = st(AWAY_FLAG);
+  if (!e || e.state !== 'on') return null;
+  const since = Number(e.lc);
+  return `<i class="away-dot"></i><span class="away-t"><b>Away from the house</b><small>Thermostats in Eco${Number.isFinite(since) && since > 0 ? ' · since ' + actWhen(since) : ''}</small></span>${svg('leaf', 22)}`;
 }
 function favActivity() {
   const ev = actEvents(), x = ev[0];
@@ -180,6 +193,15 @@ family({
     put(np, playing.map(p => sp.shell(p)).join(''));
     for (const card of np.querySelectorAll('.dvc')) sp.paint(card, SPEAKERS.find(p => card.dataset.dv === 'speakers:' + p.id));
 
+    // The Away pill goes first in the view itself, above the energy strip (which
+    // energy.js puts at the start of the same box), so it is the first thing seen.
+    const away = favAway(), box = $('g-fav');
+    let ap = box.querySelector(':scope > .awaypill');
+    if (!ap) { ap = document.createElement('div'); ap.className = 'awaypill'; ap.setAttribute('role', 'status'); ap.hidden = true; }
+    if (box.firstElementChild !== ap) box.prepend(ap);
+    ap.hidden = !away;
+    if (away) put(ap, away);
+
     this.run = this.running();
     const run = this.el.querySelector('[data-r="run"]');
     run.hidden = !this.run.length;
@@ -199,7 +221,7 @@ family({
         <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
         <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name">${esc(name)}</span></button></div>`;
     }).join(''));
-    this.sum = this.run.length ? this.run.length + ' running' : playing.length ? 'Music playing' : 'Nothing running';
+    this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : playing.length ? 'Music playing' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
   },
 
   sheet(id) {
@@ -283,7 +305,7 @@ family({
       ].map(([ago, n, d, i, c, k, w]) => ({ t: now - ago * m, n, d, i, c, k, w, e: '' }));
     })() }),
     'input_boolean.signal_goodnight_ack': e('off'), 'input_boolean.signal_evening_lights_ack': e('off'), 'input_boolean.signal_moms_awake_ack': e('off'),
-    'input_boolean.signal_bug_logged_ack': e('off'), 'input_boolean.babysitter_mode': e('off'),
+    'input_boolean.signal_bug_logged_ack': e('off'), 'input_boolean.babysitter_mode': e('off'),   // (input_boolean.thermostat_eco, the Away flag, is with the thermostats' samples)
     'script.goodnight': e('off'), 'script.evening_lights': e('off'), 'script.moms_awake': e('off'), 'script.hatch_bedtime': e('off'), 'script.log_bug': e('off'),
   }),
   // A routine's script, as the preview's: its helper lit for 3 s.

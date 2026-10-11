@@ -499,6 +499,33 @@
 .ag.lit { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78)); color: #1A1A1C;
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.9), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
 .ag.lit .ag-disc { color: rgb(var(--c)); filter: saturate(1.4) brightness(.8); }
+/* Away: the pill at the very top of Favorites while Home Assistant has the house
+   in Eco (nobody home). The same glass as the weather pill, in the Eco green;
+   it breathes - a slow glow behind the glass - and a ring eases out from its
+   dot. Under Reduce Motion it is still, with the glow held. */
+.awaypill { --c: 140,214,160; position: relative; display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px 0 18px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(140,214,160,0.20), rgba(140,214,160,0.07));
+  -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+  box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.5), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 22px -4px rgba(var(--c),0.55), 0 10px 24px -12px rgba(0,0,0,0.7);
+  animation: away-breathe 3.2s ease-in-out infinite alternate; }
+.awaypill[hidden] { display: none; }
+.gview > .awaypill { margin-bottom: -14px; }   /* the view's 26px gap, closed to 12 under it */
+.away-dot { position: relative; flex: none; width: 10px; height: 10px; border-radius: 50%; background: rgb(var(--c)); box-shadow: 0 0 8px rgba(var(--c),0.9); }
+.away-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgb(var(--c)); animation: away-ring 2.4s cubic-bezier(.2,.7,.3,1) infinite; }
+.away-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.away-t b { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+.away-t small { font-size: 12px; font-weight: 500; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.awaypill > svg { flex: none; color: rgb(var(--c)); opacity: .9; }
+@keyframes away-breathe { from { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.38), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 10px -4px rgba(var(--c),0.3), 0 10px 24px -12px rgba(0,0,0,0.7); }
+  to { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.7), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 30px -2px rgba(var(--c),0.75), 0 10px 24px -12px rgba(0,0,0,0.7); } }
+@keyframes away-ring { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .awaypill { animation: none; } .away-dot::after { display: none; } }
+/* The leaf chip on a Nest card while the house is in Eco. */
+.alert.eco { background: rgba(140,214,160,0.2); color: inherit; }
+.alert.eco svg { color: #A8E6A1; }
+.away-note { display: flex; align-items: flex-start; gap: 6px; }
+.away-note svg { flex: none; margin-top: 2px; color: #A8E6A1; }
+
 /* The weather pill over the automations: the same glass, full width, a glow
    of the condition's colour behind it; a link to the Weather app. */
 .wxw { margin-bottom: 10px; }
@@ -687,6 +714,10 @@
     .es-list { border-top: 0.5px solid rgba(28,32,40,0.08); }
     .es-item + .es-item { border-top: 0.5px solid rgba(28,32,40,0.056); }
     .alert.sched { background: rgba(28,32,40,0.105); }
+    .awaypill { background: linear-gradient(180deg, rgba(120,200,140,0.34), rgba(120,200,140,0.12)); box-shadow: inset 0 0 0 0.5px rgba(40,110,60,0.35), inset 0 1px 0.5px rgba(255,255,255,0.6), 0 0 22px -4px rgba(var(--c),0.6), 0 10px 24px -12px rgba(30,40,60,0.25); }
+    .away-dot { background: #2E9E55; box-shadow: 0 0 8px rgba(46,158,85,0.7); } .away-dot::after { background: #2E9E55; }
+    .awaypill > svg, .alert.eco svg, .away-note svg { color: #2E8B57; }
+    .alert.eco { background: rgba(60,160,90,0.2); }
     .sstep.now { background: rgba(28,32,40,0.09); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
     .bgopt { background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.132), inset 0 1px 0.5px rgba(255,255,255,0.45), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .bg-tick { background: rgba(28,32,40,0.075); }
