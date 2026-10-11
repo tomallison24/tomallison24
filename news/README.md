@@ -197,7 +197,7 @@ Lionesses, Red Roses, WSL...). They only change the Sport tab.
 
 ## Sport: live scores and fixtures
 
-The Sport tab has a **News | Scores** switch. Scores reads ESPN's public
+The Sport tab has a **News | Scores | Table** switch (Table is below). Scores reads ESPN's public
 scoreboard feed directly from your phone while the view is open: every
 minute when a game is live, every 5 minutes otherwise. It covers the
 leagues in `leagues.json`: Premier League, Championship, Scottish
@@ -245,6 +245,29 @@ its right:
 
 Test: `node news/scripts/app-test.mjs` drives Scores in Chromium at iPhone size
 on made-up ESPN data (`scripts/scores-fixture.mjs`).
+
+
+### Table: standings
+
+**Table** shows one league's standings at a time, with a pill to pick the league
+(the same leagues as Scores, narrowed by your Sport filters; it opens on the
+Premier League). It reads ESPN's standings feed
+(`site.api.espn.com/apis/v2/sports/<path>/standings`, the same path as
+the scoreboard) and refreshes on the Scores timer: every minute while a game in
+that league is in play, every 5 minutes otherwise, so a result moves its teams
+as ESPN counts it. The table has a rank, the team and up to six stats, labelled
+with ESPN's own abbreviations (played, won, drawn, lost, goal difference and
+points for football; wins, losses, percentage and games behind for the US
+leagues); leagues in conferences or groups show one table each. ESPN's own
+zones (Champions League, relegation) are a coloured bar down the row's edge, with
+a key; teams in play have a live dot; the teams you follow (My teams) are tinted.
+The last table seen is kept on the phone for when ESPN can't be reached. A
+competition ESPN publishes no table for (many cups and rugby competitions)
+says so. ESPN's feed is public but undocumented, so every part is read
+defensively and nothing is assumed beyond a team and its stats.
+`scripts/table-test.mjs` plays it with a stand-in ESPN. **Not yet checked against
+ESPN's live feed** (the build environment can't reach ESPN): the first real
+table is the real check.
 
 ## Add or change sources
 

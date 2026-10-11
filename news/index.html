@@ -268,6 +268,7 @@
     background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
   }
   .chip.icon { width: 30px; padding: 0; justify-content: center; }
+  .modes.three { grid-template-columns: repeat(3, 1fr); }
   .modes.four { grid-template-columns: repeat(4, 1fr); }
   .fb-summary { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* One line: News | Scores, and the pill for everything you follow. */
@@ -639,6 +640,31 @@
   .ai-send:active { transform: scale(0.92); }
   .ai-send:disabled { opacity: 0.4; }
   .ai-send svg { width: 20px; height: 20px; }
+
+  /* ---- Table: a league's standings ----
+     A rank, the team, and up to six stats, in a faint card like the scores. A thin bar down
+     a row's left edge is ESPN's own zone (Champions League, relegation) in its colour; a
+     team in play has a live dot; the teams you follow are tinted. */
+  .tbl { padding: 4px 0 6px; border-radius: 22px; overflow: hidden; }
+  .tbl + .tbl { margin-top: 12px; }
+  .tgname { padding: 10px 14px 2px; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+  .trow { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) repeat(var(--n, 6), 31px); align-items: center; column-gap: 2px; padding: 8px 12px 8px 14px; min-height: 40px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .trow + .trow::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--hairline); }
+  .trow.thead { min-height: 28px; padding-top: 4px; padding-bottom: 2px; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+  .trow.thead::before { display: none; }
+  .trow[data-zone]::after { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--zone); }
+  .trow.me { background: var(--accent-soft); }
+  .trow.me .gname { font-weight: 700; }
+  .tr-rank { color: var(--muted); font-weight: 600; text-align: left; }
+  .tr-team { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; }
+  .tr-team .gname { flex: 0 1 auto; }
+  .tc { text-align: right; color: var(--muted); }
+  .tc.last { color: var(--text); font-weight: 700; }
+  .thead .tc, .thead .tr-rank { color: var(--muted); font-weight: 700; }
+  .thead .tr-team { padding-left: 28px; font-weight: 700; }   /* over the names, not the logos */
+  .tkey { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 6px 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tkey span { display: inline-flex; align-items: center; gap: 6px; }
+  .tkey i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
