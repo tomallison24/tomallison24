@@ -55,12 +55,14 @@ const board = live => ({ events: [{ id: '1', date: '2026-10-11T15:30:00Z', statu
   { homeAway: 'home', team: { displayName: 'Liverpool', shortDisplayName: 'Liverpool' }, score: '1' }, { homeAway: 'away', team: { displayName: 'Arsenal', shortDisplayName: 'Arsenal' }, score: '1' }] }] }] });
 
 const calls = [];
+const LATENCY = +process.env.LATENCY || 0;
 let answers = {};      // 'eng.1' -> { standings, live } or 'fail'
 async function open(extra = {}, init = {}) {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
-  await ctx.route('**/*', route => {
+  await ctx.route('**/*', async route => {
     const u = new URL(route.request().url());
     if (u.hostname === 'site.api.espn.com') {
+      if (LATENCY) await new Promise(r => setTimeout(r, LATENCY));   // a slow network, as on CI
       const m = /sports\/([^/]+\/[^/]+)\/(standings|scoreboard)/.exec(u.pathname);
       const id = m && m[1].split('/')[1].replace(/^(\d+)$/, 'rugby.$1');
       const a = answers[id === 'nba' ? 'nba' : id] ;
@@ -90,7 +92,7 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
 {
   const { ctx, page, errors } = await open();
   await page.goto(BASE + '/news/index.html');
-  await page.waitForSelector('.trow:not(.thead)');
+  await page.waitForSelector('.trow:not(.thead) .tr-team');
 
   await test('Sport has a Table view beside News and Scores, and it opens on the Premier League', async () => {
     assert.deepEqual(await page.$$eval('.modes .seg', s => s.map(x => x.textContent.replace(/\d+$/, ''))), ['News', 'Scores', 'Table']);
@@ -130,9 +132,13 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
     assert.ok(await page.locator('[data-menu-btn="table"]').count());
   });
   await test('a result moves the table on the next refresh (the scores timer)', async () => {
+    const asked = calls.length;
     await page.click('[data-menu-btn="table"]');
     await page.click('[data-league="eng.1"]');
-    await page.waitForSelector('.trow:not(.thead)');
+    // The saved table shows at once; wait for the fresh answer (standings and scoreboard), and
+    // for the app to have set its timer, before playing the minute forward.
+    for (let i = 0; calls.length < asked + 2 && i < 100; i++) await new Promise(r => setTimeout(r, 50));
+    await page.waitForTimeout(300);
     answers['eng.1'] = { standings: soccer(23), live: false };
     const before = calls.filter(c => c.includes('/standings')).length;
     await page.clock.fastForward(61000);          // a game is in play: a minute
@@ -153,7 +159,7 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
   answers = { 'eng.1': { standings: soccer(20), live: false }, nba: { standings: us, live: false } };
   const { ctx, page } = await open({}, { 'news.sport.picks': ['team:football:liverpool'] });
   await page.goto(BASE + '/news/index.html');
-  await page.waitForSelector('.trow:not(.thead)');
+  await page.waitForSelector('.trow:not(.thead) .tr-team');
   await test('the team you follow is tinted, and only leagues your filters allow are in the pill', async () => {
     assert.deepEqual((await rows(page)).map(x => x.me), [true, false, false, false]);
     assert.equal(await page.locator('[data-league="nba"]').count(), 0);
@@ -168,7 +174,7 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
     await page.waitForSelector('[data-action="retry-table"]');
     answers = { 'eng.1': { standings: soccer(20), live: false } };
     await page.click('[data-action="retry-table"]');
-    await page.waitForSelector('.trow:not(.thead)');
+    await page.waitForSelector('.trow:not(.thead) .tr-team');
   });
   await ctx.close();
 }
@@ -176,11 +182,11 @@ answers = { 'eng.1': { standings: soccer(20), live: true }, nba: { standings: us
   answers = { 'eng.1': { standings: soccer(20), live: false } };
   const { ctx, page } = await open();
   await page.goto(BASE + '/news/index.html');
-  await page.waitForSelector('.trow:not(.thead)');
+  await page.waitForSelector('.trow:not(.thead) .tr-team');
   await test('the Table view is kept: reopened, it opens on the table at once, from the saved copy', async () => {
     answers = { 'eng.1': 'fail' };
     await page.reload();
-    await page.waitForSelector('.trow:not(.thead)');
+    await page.waitForSelector('.trow:not(.thead) .tr-team');
     assert.equal((await rows(page)).length, 4);
   });
   await ctx.close();
