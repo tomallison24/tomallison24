@@ -8,6 +8,7 @@
   const LEAGUES_URL = 'leagues.json';
   const SCORES_URL = 'data/scores.json';                  // copy saved on each refresh
   const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
+  const ESPN_TABLE = 'https://site.api.espn.com/apis/v2/sports';   // the standings live under apis/v2, not apis/site/v2
   const STALE_MS = 10 * 60 * 1000;          // refetch on return after this long
   const LATEST = { id: 'latest', label: 'Latest' };
   const SPORT = 'sport';
@@ -72,12 +73,12 @@
   let savedPickList = [];          // the saved picks alone
   // One-tap team button (sport-catalog.json "quick"), on until tapped again.
   let quick = typeof store.get('news.sport.quick') === 'string' ? store.get('news.sport.quick') : null;
-  let sportMode = store.get('news.sport.mode') === 'scores' ? 'scores' : 'news';
+  let sportMode = ['scores', 'table'].includes(store.get('news.sport.mode')) ? store.get('news.sport.mode') : 'news';   // 'news' | 'scores' | 'table'
   // Scores: the league each pill shows (null: Premier League, or all leagues
   // while a team filter is on), and which pill menu is open.
   const LEAGUE_ALL = 'all', LEAGUE_HOME = 'eng.1';
   let pickedLeague = { scores: store.get('news.scores.league') || null, next: store.get('news.scores.next') || null };
-  let openMenu = null;             // 'team' | 'scores' | 'next'
+  let openMenu = null;             // 'team' | 'scores' | 'next' | 'table'
   let nextMore = false;            // "Show more" under Coming up
 
   // ---- helpers ----
@@ -314,9 +315,10 @@
     filterEl.setAttribute('aria-label', `${topicLabel(topic)} filters`);
     if (lists) return renderListFilters();
     const live = liveCount();
-    const modes = `<div class="modes" role="tablist" aria-label="Sport view">
+    const modes = `<div class="modes three" role="tablist" aria-label="Sport view">
       <button class="seg" role="tab" data-mode="news" aria-selected="${sportMode === 'news'}">News</button>
       <button class="seg" role="tab" data-mode="scores" aria-selected="${sportMode === 'scores'}"${live ? ` aria-label="Scores, ${live} live"` : ''}>${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}Scores${live ? `<span class="n" aria-hidden="true">${live}</span>` : ''}</button>
+      <button class="seg" role="tab" data-mode="table" aria-selected="${sportMode === 'table'}">Table</button>
     </div>`;
     filterEl.innerHTML = `<div class="fb-top">${modes}${teamPill()}</div>`;
     slideBar();
@@ -357,6 +359,7 @@
 
   function renderFeed() {
     if (topic === SPORT && sportMode === 'scores') { feedEl.innerHTML = renderScores(); syncMenus(); return; }
+    if (topic === SPORT && sportMode === 'table') { feedEl.innerHTML = renderTable(); syncMenus(); return; }
     if (!data) { feedEl.innerHTML = loading ? skeleton() : notice('No stories yet', 'Couldn’t reach the news service. Check your connection and try again.', '<button data-action="retry">Try again</button>'); return; }
 
     const isLatest = topic === LATEST.id;
@@ -791,7 +794,7 @@
     renderFilterbar();
     renderFeed();
     keepBarInPlace();
-    if (topic === SPORT && sportMode === 'scores') fetchScores();
+    refreshSport();
   }
 
   function setPicks(next) {
@@ -801,7 +804,7 @@
     refreshPicks();
     if (sheetOpen) renderSheet();
     else { renderFilterbar(); renderFeed(); }
-    if (topic === SPORT && sportMode === 'scores') fetchScores();
+    refreshSport();
   }
 
   // Reset from the results page clears every filter, with a few seconds to undo.
@@ -907,7 +910,7 @@
     } catch (err) {
       console.warn('League list failed to load:', err);
     }
-    if (topic === SPORT && sportMode === 'scores') fetchScores();
+    refreshSport();
   }
 
   // The saved copy, re-read once it's older than maxAge (ms).
@@ -960,9 +963,151 @@
 
   function scheduleScores() {
     clearTimeout(scoresTimer);
-    if (document.visibilityState !== 'visible' || topic !== SPORT || sportMode !== 'scores') return;
-    const live = allGames().some(g => g.state === 'in');
-    scoresTimer = setTimeout(fetchScores, live ? 60e3 : 300e3);
+    if (document.visibilityState !== 'visible' || topic !== SPORT || (sportMode !== 'scores' && sportMode !== 'table')) return;
+    const table = sportMode === 'table';
+    const live = table ? ((tables[(tableLeagueNow() || {}).id] || {}).live || []).length > 0 : allGames().some(g => g.state === 'in');
+    scoresTimer = setTimeout(table ? fetchTable : fetchScores, live ? 60e3 : 300e3);
+  }
+
+  // Whatever the Sport tab is showing live (Scores or Table) is brought up to date;
+  // anything else stops the timer.
+  function refreshSport() {
+    if (topic === SPORT && sportMode === 'scores') fetchScores();
+    else if (topic === SPORT && sportMode === 'table') fetchTable();
+    else clearTimeout(scoresTimer);
+  }
+
+  // ---- table: a league's standings, from ESPN ----
+  // Read live from ESPN's public standings feed while the Table view is open, on the
+  // same timer as the scores (every minute while a game in that league is in play, every 5
+  // minutes otherwise, so a result moves its teams as ESPN counts it). The last table seen
+  // is kept on this phone for when ESPN can't be reached. Teams in play are marked with a
+  // live dot, and the teams you follow are tinted.
+  // ESPN's feed is public but undocumented; every part of it is read defensively, and a
+  // league with no table says so (rugby and cups often have none).
+  let tableLeague = store.get('news.table.league') || null;
+  let tables = store.get('news.table.cache') || {};     // league id -> { at, source, season, groups, live }
+  let tableRun = 0, tableBusy = false;
+  const tableFailed = new Set();
+
+  // Columns, in the order wanted: a stat's ESPN name, and a label for when ESPN gives none.
+  // Over six, the least telling go first (the table has to fit a phone).
+  const TABLE_COLS = [['gamesPlayed', 'GP'], ['wins', 'W'], ['ties', 'D'], ['draws', 'D'], ['losses', 'L'], ['otLosses', 'OTL'],
+    ['winPercent', 'PCT'], ['gamesBehind', 'GB'], ['pointDifferential', 'GD'], ['points', 'PTS']];
+  const TABLE_DROP = ['gamesPlayed', 'draws', 'ties', 'otLosses', 'gamesBehind', 'pointDifferential', 'winPercent'];
+
+  // The groups (a league, or each conference or group) of an ESPN standings answer.
+  // Keep in step with the test in scripts/table-test.mjs.
+  function normalizeTable(json) {
+    const found = [];
+    const walk = node => {
+      if (!node || typeof node !== 'object') return;
+      const st = node.standings;
+      if (st && Array.isArray(st.entries) && st.entries.length) found.push({ name: node.name || st.name || '', st, node });
+      for (const c of Array.isArray(node.children) ? node.children : []) walk(c);
+    };
+    walk(json);
+    const groups = found.map(f => {
+      const stat = (e, name) => (Array.isArray(e.stats) ? e.stats : []).find(x => x && x.name === name);
+      const entries = f.st.entries.filter(e => e && e.team);
+      const cols = TABLE_COLS.filter(([name]) => entries.filter(e => stat(e, name)).length * 2 >= entries.length)
+        .map(([name, label]) => ({ name, label: String((stat(entries.find(e => stat(e, name)), name) || {}).abbreviation || label).slice(0, 4) }));
+      for (const name of TABLE_DROP) if (cols.length > 6) { const i = cols.findIndex(c => c.name === name); if (i >= 0) cols.splice(i, 1); }
+      const shown = x => x == null ? '' : String(x.displayValue != null && x.displayValue !== '' ? x.displayValue : x.value ?? '');
+      const rows = entries.map((e, i) => {
+        const t = e.team, rank = stat(e, 'rank');
+        const note = e.note && typeof e.note === 'object' ? e.note : null;
+        return {
+          rank: rank && Number.isFinite(+rank.value) ? +rank.value : null, order: i,
+          name: t.displayName || t.name || '', short: t.shortDisplayName || t.displayName || t.name || '',
+          logo: t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null,
+          vals: cols.map(c => shown(stat(e, c.name))),
+          zone: note && /^#[0-9a-f]{6}$/i.test(note.color || '') ? { color: note.color, label: String(note.description || '') } : null,
+        };
+      }).sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.order - b.order);
+      rows.forEach((r, i) => { if (r.rank == null) r.rank = i + 1; });
+      return { name: f.name, season: String(f.st.seasonDisplayName || ''), cols, rows };
+    }).filter(g => g.rows.length && g.cols.length);
+    return { season: (groups[0] || {}).season || '', groups };
+  }
+
+  function tableLeagueNow() {
+    const list = relevantLeagues();
+    return list.find(l => l.id === tableLeague) || list.find(l => l.id === LEAGUE_HOME) || list[0] || null;
+  }
+
+  async function fetchTable() {
+    clearTimeout(scoresTimer);
+    const l = tableLeagueNow();
+    if (!leagues || !l) return;
+    const run = ++tableRun;
+    tableBusy = true;
+    if (topic === SPORT && sportMode === 'table') renderFeed();
+    const get = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)));
+    const [st, sb] = await Promise.allSettled([get(`${ESPN_TABLE}/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
+    if (run !== tableRun) return;                 // another league was picked meanwhile
+    tableBusy = false;
+    const cur = tables[l.id];
+    if (st.status === 'fulfilled') {
+      tableFailed.delete(l.id);
+      tables[l.id] = { ...normalizeTable(st.value), at: Date.now(), source: 'live', live: (cur && cur.live) || [] };
+      try { store.set('news.table.cache', Object.fromEntries(Object.entries(tables).sort((a, b) => b[1].at - a[1].at).slice(0, 8).map(([k, v]) => [k, { ...v, live: [] }]))); } catch {}
+    } else if (cur) cur.source = 'saved';
+    else tableFailed.add(l.id);
+    if (sb.status === 'fulfilled' && tables[l.id]) {
+      tables[l.id].live = normalize(sb.value, l).filter(g => g.state === 'in').flatMap(g => [g.home.name, g.home.short, g.away.name, g.away.short]).filter(Boolean);
+    }
+    if (topic === SPORT && sportMode === 'table') renderFeed();
+    scheduleScores();
+  }
+
+  // Are you following this team (a one-tap team, or your own picks)?
+  function followed(name, short) {
+    return pickList.some(p => p.kind === 'kw' ? termRe(p.label, true).test(`${name}\n${short}`)
+      : p.kind === 'team' && (p.terms || []).some(t => sameTeam(t, name) || sameTeam(t, short)));
+  }
+
+  function renderTable() {
+    if (!leagues) return skeleton();
+    const list = relevantLeagues(), l = tableLeagueNow();
+    if (!l) return notice('No leagues here', 'None of the leagues has a table for your filters. Try resetting them.', '<button data-action="reset-picks">Reset filters</button>');
+    const t = tables[l.id];
+    const pin = x => x.l.pin;
+    const row = x => `<button type="button" role="menuitem" data-league="${esc(x.l.id)}" data-for="table" aria-selected="${x.l.id === l.id}"><span class="k">${esc(x.l.label)}</span>${ICON.tick}</button>`;
+    const items = list.map(x => ({ l: x }));
+    const pinned = items.filter(pin), others = items.filter(x => !pin(x));
+    const head = `<div class="sect-head"><h3>Table</h3>${list.length < 2 ? `<span class="fb-summary one">${esc(l.label)}</span>` : `<div class="pillwrap">
+        <button type="button" class="chip pill" data-menu-btn="table" aria-haspopup="menu" aria-expanded="false" aria-label="Table: ${esc(l.label)}"><span class="lbl">${esc(l.label)}</span>${ICON.down}</button>
+        <div class="pmenu" role="menu" data-menu="table" aria-label="Table league" hidden>${pinned.map(row).join('')}${pinned.length && others.length ? '<hr>' : ''}${others.map(row).join('')}</div>
+      </div>`}</div>`;
+    if (!t) {
+      if (tableFailed.has(l.id)) return `<section class="sect">${head}${notice('Table unavailable', `Couldn’t reach ESPN for the ${esc(l.label)} table. Check your connection and try again.`, '<button data-action="retry-table">Try again</button>')}</section>`;
+      return `<section class="sect">${head}<div class="card tbl" aria-busy="true">${Array.from({ length: 8 }, () => '<div class="trow"><span class="sk" style="width:90%;height:14px;grid-column:1/-1"></span></div>').join('')}</div></section>`;
+    }
+    if (!t.groups.length) {
+      return `<section class="sect">${head}${notice(`No table for ${esc(l.label)}`, 'ESPN doesn’t publish a standings table for this competition. Pick another league above.', '')}</section>`;
+    }
+    const live = new Set((t.live || []).map(n => n.toLowerCase()));
+    const zones = new Map();
+    const groupHtml = g => `<div class="card tbl">
+      ${t.groups.length > 1 && g.name ? `<div class="tgname">${esc(g.name)}</div>` : ''}
+      <div class="trow thead" style="--n:${g.cols.length}"><span class="tr-rank">#</span><span class="tr-team">Team</span>${g.cols.map(c => `<span class="tc">${esc(c.label)}</span>`).join('')}</div>
+      ${g.rows.map(r => {
+        const playing = live.has(r.name.toLowerCase()) || live.has(r.short.toLowerCase());
+        const mine = followed(r.name, r.short);
+        if (r.zone && r.zone.label) zones.set(r.zone.label, r.zone.color);
+        return `<div class="trow${mine ? ' me' : ''}${playing ? ' playing' : ''}" style="--n:${g.cols.length}${r.zone ? `;--zone:${r.zone.color}` : ''}"${r.zone ? ' data-zone' : ''}>
+          <span class="tr-rank">${r.rank}</span>
+          <span class="tr-team">${safeUrl(r.logo) ? `<img class="glogo" src="${esc(r.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<span class="glogo"></span>'}<span class="gname">${esc(r.short || r.name)}</span>${playing ? '<span class="live-dot" role="img" aria-label="Playing now"></span>' : ''}</span>
+          ${r.vals.map((v, i) => `<span class="tc${i === r.vals.length - 1 ? ' last' : ''}">${esc(v)}</span>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>`;
+    const body = t.groups.map(groupHtml).join('');
+    const key = zones.size ? `<p class="tkey">${[...zones].map(([label, color]) => `<span><i style="background:${esc(color)}"></i>${esc(label)}</span>`).join('')}</p>` : '';
+    const when = t.at ? ago(new Date(t.at).toISOString()) : '';
+    const foot = `<p class="status">Table from ESPN${t.season ? ` · ${esc(t.season)}` : ''}${when ? ` · updated ${esc(when.toLowerCase())}` : ''}${t.source === 'saved' ? ' · saved copy, ESPN unreachable just now' : ''}</p>`;
+    return `<section class="sect">${head}${body}${key}</section>${foot}`;
   }
 
   function kickoff(iso) {
@@ -1072,6 +1217,14 @@
   }
 
   function setLeague(which, id) {
+    if (which === 'table') {
+      tableLeague = id;
+      store.set('news.table.league', id);
+      openMenu = null;
+      renderFeed();
+      fetchTable();
+      return;
+    }
     pickedLeague[which] = id;
     store.set(which === 'scores' ? 'news.scores.league' : 'news.scores.next', id);
     nextMore = false;
@@ -1086,7 +1239,7 @@
     renderFilterbar();
     renderFeed();
     keepBarInPlace();
-    if (mode === 'scores') fetchScores(); else clearTimeout(scoresTimer);
+    refreshSport();
   }
 
   // ---- data ----
@@ -1149,7 +1302,7 @@
     store.set('news.topic', topic);
     render();
     keepBarInPlace();
-    if (topic === SPORT && sportMode === 'scores') fetchScores(); else clearTimeout(scoresTimer);
+    refreshSport();
   }
 
   // ---- events ----
@@ -1189,6 +1342,7 @@
     if (e.target.closest('[data-action="retry"]')) return load();
     if (e.target.closest('[data-action="reset-list-filters"]')) return setListFilters(topic, { sources: [], days: 0 });
     if (e.target.closest('[data-action="retry-scores"]')) return fetchScores();
+    if (e.target.closest('[data-action="retry-table"]')) { tableFailed.clear(); return fetchTable(); }
     const mb = e.target.closest('[data-menu-btn]');
     if (mb) return setMenu(mb.dataset.menuBtn);
     const lg = e.target.closest('[data-league]');
@@ -1289,7 +1443,7 @@
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') redrawIfNewDay();
     if (document.visibilityState === 'visible' && Date.now() - lastFetch > STALE_MS) load();
-    if (document.visibilityState === 'visible' && topic === SPORT && sportMode === 'scores') fetchScores();
+    if (document.visibilityState === 'visible') refreshSport();
     else clearTimeout(scoresTimer);
   });
 
