@@ -101,7 +101,7 @@ await test('the week: seven days from Sunday, today marked, the week’s one num
   assert.equal(days.length, 7); assert.equal(days[0], weekStart());
   assert.equal(await page.$eval('.drow.today', e => e.dataset.day), TODAY);
   assert.match(await page.textContent('.navrow .lbl'), /^This week · /);
-  assert.match(await page.textContent('.sum'), /^0of 14 standard drinks0 of 3 alcohol-free days$/);
+  assert.match(await page.textContent('.sum'), /^0of 14 standard drinksAnalysis0 of 3 alcohol-free days$/);
   assert.equal(await page.textContent('.drow.today .dsum'), 'Nothing yet');
   assert.ok(await page.isHidden('#todayBtn'));
   await shot(page, '01-week-empty');
@@ -206,21 +206,25 @@ await test('goals: a lower weekly limit shows the week as over', async () => {
   assert.equal((await local(page)).prefs[0].week, 3);
 });
 
-await test('Analysis, from a tap on the week’s number: four numbers against the window before, the streak, by drink', async () => {
-  assert.equal(await page.$$eval('.vbar', els => els.filter(e => e.getClientRects().length).length), 0, 'no view picker on the week: one screen (Trends has its own)');
+await test('Analysis, from a tap on the week’s number (which says so): four numbers against the window before, the streak, by drink', async () => {
+  assert.equal(await page.$$eval('.vbar', els => els.filter(e => e.getClientRects().length).length), 0, 'no view picker on the week: one screen (Analysis has its own)');
+  assert.match(await page.textContent('#sumBtn .more'), /^Analysis$/, 'the number says what tapping it is for');
+  assert.match(await page.getAttribute('#sumBtn', 'aria-label'), /Open analysis/);
   await page.click('#sumBtn');
-  await page.waitForSelector('#anSheet:not([hidden])');
-  const kl = await page.$$eval('.kpi .kl', e => e.map(x => x.textContent));
+  await page.waitForSelector('#trends:not([hidden])');
+  assert.equal(await page.textContent('#trName'), 'Compared with before', 'it opens on the week or month against the one before');
+  const kl = await page.$$eval('#trBody .kpi .kl', e => e.map(x => x.textContent));
   assert.deepEqual(kl, ['Standard drinks', 'Days you drank', 'Alcohol-free days', 'A day, on average']);
-  assert.equal(await page.textContent('.kpi .kv'), '4.3');
-  assert.match(await page.textContent('#anBody'), /Alcohol-free in a row.*Your best: 2 days/);
-  assert.match(await page.textContent('#anBody'), /By drink/);
-  assert.match(await page.textContent('#trendsBtn'), /12-week trends/);
+  assert.equal(await page.textContent('#trBody .kpi .kv'), '4.3');
+  assert.match(await page.textContent('#trBody'), /Alcohol-free in a row.*Your best: 2 days/);
+  assert.match(await page.textContent('#trBody'), /By drink/);
   await page.waitForTimeout(1000);
   await shot(page, '05-analysis');
   await page.click('[data-period="month"]');
-  assert.match(await page.textContent('.anote'), / against /);
-  await page.click('#anSheet [data-close].iconbtn');
+  assert.match(await page.textContent('#trBody .anote'), / against /);
+  assert.equal(await page.getAttribute('[data-period="month"]', 'aria-pressed'), 'true');
+  await page.click('#trBack');
+  assert.ok(await page.isVisible('#sumBtn'));
 });
 
 await test('the account gets your changes, a few at a time', async () => {
@@ -350,30 +354,30 @@ const seedLog = () => {
   for (let j = 1; j <= 3; j++) days.push({ id: ymd(day(-7 * j - 1)), status: 'af', updated: 1 });
   return JSON.stringify({ v: 1, entries, days, prefs: [] });
 };
-const VIEWS = ['Weekly drinks', 'Weeks over the limit', 'Top drinks', 'Days of the week', 'Alcohol-free days', 'Days over the limit', 'Strength and size'];
+const VIEWS = ['Compared with before', 'Weekly drinks', 'Weeks over the limit', 'Top drinks', 'Days of the week', 'Alcohol-free days', 'Days over the limit', 'Strength and size'];
 const pickView = async (pg, i) => { await pg.click('#trBtn'); await pg.waitForSelector('#trMenu:not([hidden])'); await pg.click('#trMenu button:nth-child(' + i + ')'); await pg.waitForTimeout(150); };
 const kpiVals = pg => pg.$$eval('#trBody .kpi .kv', e => e.map(x => x.textContent));
 const T = await newPage('light', { 'allison-drinks-v1': seedLog() });
 const tp = T.page;
 await tp.goto(BASE + '/drinks/'); await tp.waitForFunction(() => window.__drinks); await tp.waitForTimeout(700);
 
-await test('Trends opens from Analysis, takes over the screen, and the back button returns to the week', async () => {
-  await tp.click('#sumBtn'); await tp.waitForSelector('#anSheet:not([hidden])');
-  await tp.click('#trendsBtn');
+await test('Analysis takes over the screen from the week’s number; the pill is at the bottom; back returns to the week', async () => {
+  await tp.click('#sumBtn');
   await tp.waitForSelector('#trends:not([hidden])');
-  assert.ok(await tp.isHidden('#anSheet'), 'the Analysis sheet is closed');
+  assert.equal(await tp.$$eval('#anSheet, #trendsBtn', e => e.length), 0, 'no sheet in between, and no second click to the charts');
   assert.ok(await tp.isHidden('#fab'), 'the + is out of the way');
-  assert.equal(await tp.textContent('#trName'), 'Weekly drinks');
+  assert.equal(await tp.textContent('#trName'), 'Compared with before');
+  assert.equal(await tp.textContent('#trends .title'), 'Analysis');
   await tp.waitForTimeout(500);
   const bar = await tp.$eval('#trBar', e => { const r = e.getBoundingClientRect(); return { b: r.bottom, l: r.left, r: r.right, h: innerHeight, w: innerWidth }; });
   assert.ok(bar.b <= bar.h && bar.l > 0 && bar.r < bar.w && Math.abs((bar.l + bar.r) / 2 - bar.w / 2) < 2, 'the pill sits at the bottom, centred');
-  await shot(tp, '10-trends-weekly');
+  await shot(tp, '10-analysis-compare');
   await tp.click('#trBack');
   assert.ok(await tp.isHidden('#trends')); assert.ok(await tp.isVisible('#fab'));
   assert.match(await tp.textContent('.navrow .lbl'), /^This week/);
 });
 
-await test('the pill’s menu lists the seven views, opens upwards, and picks one', async () => {
+await test('the pill’s menu lists all eight views, opens upwards, and picks one', async () => {
   await tp.evaluate(() => window.__drinks.openTrends());
   await tp.click('#trBtn');
   assert.equal(await tp.getAttribute('#trBtn', 'aria-expanded'), 'true');
@@ -385,9 +389,9 @@ await test('the pill’s menu lists the seven views, opens upwards, and picks on
   await shot(tp, '11-trends-menu');
   await tp.keyboard.press('Escape');
   assert.ok(await tp.isHidden('#trMenu')); assert.ok(await tp.isVisible('#trends'), 'Escape closes the menu first');
-  await tp.click('#trBtn'); await tp.click('#trMenu button:nth-child(3)');
+  await tp.click('#trBtn'); await tp.click('#trMenu button:nth-child(4)');
   assert.equal(await tp.textContent('#trName'), 'Top drinks'); assert.ok(await tp.isHidden('#trMenu'));
-  await pickView(tp, 1);
+  await pickView(tp, 2);
 });
 
 await test('Weekly drinks: the average, weeks over the limit, a bar a week; tap one to read it', async () => {
@@ -412,7 +416,7 @@ await test('Weekly drinks: the average, weeks over the limit, a bar a week; tap 
 });
 
 await test('Weeks over the limit: a tile and a row for every week, and the runs under it', async () => {
-  await pickView(tp, 2);
+  await pickView(tp, 3);
   assert.deepEqual((await kpiVals(tp)).slice(0, 4), ['1 of 11', '10', '3 weeks', '7 weeks']);
   assert.equal(await tp.$$eval('.wt', e => e.length), 12); assert.equal(await tp.$$eval('.wt.over', e => e.length), 1);
   assert.equal(await tp.$$eval('.wt.ok', e => e.length), 10); assert.equal(await tp.$$eval('.wt.going', e => e.length), 1);
@@ -421,7 +425,7 @@ await test('Weeks over the limit: a tile and a row for every week, and the runs 
 });
 
 await test('Top drinks: most often against what adds up, by name or by kind, and your choice is kept', async () => {
-  await pickView(tp, 3);
+  await pickView(tp, 4);
   assert.match(await tp.textContent('.callout'), /IPA.*most often \(29 drinks\).*also what adds up to the most/);
   assert.deepEqual(await tp.$$eval('.tops:nth-of-type(1) .nm, .tops .nm', e => [...new Set(e.map(x => x.textContent))]), ['IPA', 'Wine']);
   await tp.click('[data-group="kind"]');
@@ -433,7 +437,7 @@ await test('Top drinks: most often against what adds up, by name or by kind, and
 });
 
 await test('Days of the week: seven columns from Sunday, the heaviest day named', async () => {
-  await pickView(tp, 4);
+  await pickView(tp, 5);
   assert.deepEqual(await tp.$$eval('.chart .xl', e => e.map(x => x.textContent)), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   assert.equal(await tp.$$eval('.chart .hit', e => e.length), 7);
   assert.match(await tp.textContent('.callout'), /s<\/b>|are your heaviest/);
@@ -445,14 +449,14 @@ await test('Days of the week: seven columns from Sunday, the heaviest day named'
 });
 
 await test('Alcohol-free days, days over the limit, strength and size', async () => {
-  await pickView(tp, 5);
+  await pickView(tp, 6);
   assert.deepEqual(await tp.$$eval('#trBody .kpi .kl', e => e.map(x => x.textContent)), ['Goal met', 'Average a week', 'Alcohol-free in a row', 'Your best']);
   assert.equal(await tp.$$eval('.chart .bar.af', e => e.length) > 0, true);
   assert.match(await tp.textContent('.legend'), /Your goal/);
-  await pickView(tp, 6);
+  await pickView(tp, 7);
   assert.equal((await kpiVals(tp))[0], '1', 'one day over 4 standard drinks: the 9 IPAs');
   assert.equal(await tp.$$eval('.chart .bar.heavy', e => e.length), 1);
-  await pickView(tp, 7);
+  await pickView(tp, 8);
   assert.equal((await kpiVals(tp))[0], '6.9%');
   assert.equal(await tp.$$eval('svg.chart', e => e.length), 2, 'two charts: strength, and the size of an average drink');
   assert.equal(await tp.$$eval('.chart .dot', e => e.length), 24, 'a dot a week in each');
@@ -463,34 +467,34 @@ await test('the view you left on is the one Trends opens on next time', async ()
   await tp.reload(); await tp.waitForFunction(() => window.__drinks); await tp.waitForTimeout(500);
   await tp.evaluate(() => window.__drinks.openTrends());
   assert.equal(await tp.textContent('#trName'), 'Strength and size');
-  await pickView(tp, 1);
+  await pickView(tp, 2);
 });
 
-await test('Trends follows the log: a new drink changes the chart', async () => {
+await test('Analysis follows the log: a new drink changes the chart', async () => {
   const before = (await kpiVals(tp))[0];
   await tp.evaluate(() => { const d = window.__drinks; d.data.entries.push({ id: 'live1', date: d.st.week, time: '', name: 'Late beer', cat: 'beer', vol: 12, unit: 'oz', abv: 5, qty: 1, note: '', updated: Date.now() }); d.render(); });
   assert.match(await tp.textContent('.readout'), /so far/); assert.equal((await kpiVals(tp))[1], '1 of 11');
   assert.notEqual(before, undefined);
 });
 
-await test('Trends: Escape closes it; nothing logged says so', async () => {
+await test('Analysis: Escape closes it; nothing logged says so', async () => {
   await tp.keyboard.press('Escape');
   assert.ok(await tp.isHidden('#trends'));
   const e = await newPage('light', {});
   await e.page.goto(BASE + '/drinks/'); await e.page.waitForFunction(() => window.__drinks); await e.page.waitForTimeout(500);
-  await e.page.click('#sumBtn'); await e.page.click('#trendsBtn');
+  await e.page.click('#sumBtn');
   assert.match(await e.page.textContent('#trBody'), /Nothing to chart yet/);
-  for (let i = 2; i <= 7; i++) { await pickView(e.page, i); assert.ok(await e.page.isVisible('#trBody .empty, #trBody .kpis, #trBody .callout'), VIEWS[i - 1] + ' has something to say with nothing logged'); }
+  for (let i = 2; i <= 8; i++) { await pickView(e.page, i); assert.ok(await e.page.isVisible('#trBody .empty, #trBody .kpis, #trBody .callout'), VIEWS[i - 1] + ' has something to say with nothing logged'); }
   await e.ctx.close();
 });
 
-await test('Trends is never wider than the phone, in every view, light and dark; the menu stays on the screen', async () => {
-  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 568], [390, 844], [440, 956]]) {
+await test('Analysis is never wider than the phone, in every view, light and dark; the menu stays on the screen', async () => {
+  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 500], [320, 568], [390, 844], [440, 956]]) {
     const p = await newPage(scheme, { 'allison-drinks-v1': seedLog() });
     await p.page.setViewportSize({ width: w, height: h });
     await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(400);
     await p.page.evaluate(() => window.__drinks.openTrends());
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 8; i++) {
       if (i > 1) await pickView(p.page, i);
       await p.page.waitForTimeout(120);
       const m = await p.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: document.documentElement.clientWidth }));
@@ -498,14 +502,15 @@ await test('Trends is never wider than the phone, in every view, light and dark;
     }
     await p.page.click('#trBtn'); await p.page.waitForTimeout(300);
     const r = await p.page.$eval('#trMenu', e => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, w: innerWidth }; });
-    assert.ok(r.l >= 0 && r.r <= r.w && r.t >= 0, w + 'px: the menu is on the screen (' + JSON.stringify(r) + ')');
+    assert.ok(r.l >= 0 && r.r <= r.w && r.t >= 0, w + 'x' + h + ': the menu is on the screen (' + JSON.stringify(r) + ')');
+    assert.ok(await p.page.$eval('#trMenu', e => e.scrollHeight <= e.clientHeight || getComputedStyle(e).overflowY === 'auto'), 'and scrolls if it is taller than the room above the pill');
     if (scheme === 'dark' && w === 390) await shot(p.page, '16-trends-menu-dark');
     assert.deepEqual(await p.page.evaluate(() => window.__csp || []), []);
     await p.ctx.close();
   }
 });
 
-await test('Trends: no errors and no Content Security Policy violations', async () => {
+await test('Analysis: no errors and no Content Security Policy violations', async () => {
   assert.deepEqual(await tp.evaluate(() => window.__csp || []), []);
 });
 await T.ctx.close();
@@ -519,9 +524,9 @@ await test('never wider than the phone, from the smallest iPhone up; the title i
       if (where === 'day') await p.page.click('#fab');
       if (where === 'form') await p.page.click('#somethingElse');
       if (where === 'analysis') { await p.page.click('#daySheet .okbtn'); await p.page.click('#sumBtn'); }
-      if (where === 'more') { await p.page.click('#anSheet [data-close].iconbtn'); await p.page.click('#moreBtn'); }
+      if (where === 'more') { await p.page.click('#trBack'); await p.page.click('#moreBtn'); }
       await p.page.waitForTimeout(250);
-      const m = await p.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: document.documentElement.clientWidth, title: document.querySelector('.title').getBoundingClientRect().left }));
+      const m = await p.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: document.documentElement.clientWidth, title: [...document.querySelectorAll('.title')].find(t => t.getClientRects().length).getBoundingClientRect().left }));
       assert.ok(m.sw <= m.w, w + 'px, ' + where + ': the page is ' + m.sw + 'px wide');
       assert.ok(m.title >= 14, w + 'px, ' + where + ': the title starts at ' + m.title + 'px');
     }

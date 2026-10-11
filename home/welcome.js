@@ -96,7 +96,7 @@
         'Meals: deals from the family\'s stores near Apex - Whole Foods, Harris Teeter, Publix, Lidl, Lowes Foods, Aldi, Walmart and Target - one at a time or all together, with Prime and VIC prices',
         'Meals: plan at one store, or with the best deals across all of them; the list says where each sale item is',
         'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans',
-        'Drinks: 12-week trends, from Analysis - weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size - one chart a page, picked from the pill at the bottom'],
+        'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size'],
       apps: {
         meals: { highlights: ['New: a few nights of different dinners, built around one meat', 'This week\'s Whole Foods deals, sorted like a grocery list', 'One shopping list, checked against the family\'s allergies'],
           notes: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Prime and VIC member prices', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'] },
@@ -432,7 +432,7 @@
         {
           "i": "chart",
           "t": "How it's going",
-          "d": "Tap the week's number to compare this week or month with the one before, with your alcohol-free streak."
+          "d": "Tap the week's number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which."
         },
         {
           "i": "lock",
@@ -1306,7 +1306,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['#main .rgroup.week', '#main .week'], t: 'Your week', d: 'Each day shows its standard drinks or alcohol-free. Swipe sideways to move a week at a time.', g: 'swipe-left' },
     { sel: '#sumBtn', t: 'Your week in one number', d: 'The week adds up here against the limit you set.' },
     { sel: '#fab', t: 'One tap to log', d: 'Your usual drinks sit in each day as tiles. Tap one to log it, or Something else for anything new.', g: 'tap' },
-    { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number to compare this week or month with the one before, with your alcohol-free streak.', g: 'tap' },
+    { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which.', g: 'tap' },
     { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in your family account where only you can see it, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
   SPOTS.meals = { stops: [
