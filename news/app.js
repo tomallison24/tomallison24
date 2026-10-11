@@ -868,10 +868,14 @@
     const row = (id, label, n, live) => `<button type="button" role="menuitem" data-league="${esc(id)}" data-for="${which}" aria-selected="${id === shown}">
         <span class="k">${live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}${esc(label)}</span><span class="sub">${n}</span>${ICON.tick}</button>`;
     const total = secs.reduce((n, x) => n + count(x), 0);
+    // Pinned leagues (leagues.json "pin") sit at the top, under All leagues; the rest follow, live ones first.
+    const line = x => row(x.l.id, x.l.label, count(x), which === 'scores' && x.live);
+    const pinned = secs.filter(x => x.l.pin), others = secs.filter(x => !x.l.pin);
+    const list = pinned.map(line).join('') + (pinned.length && others.length ? '<hr>' : '') + others.map(line).join('');
     return `<div class="sect-head"><h3>${esc(title)}</h3>
       <div class="pillwrap">
         <button type="button" class="chip pill" data-menu-btn="${which}" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(title)}: ${esc(name)}">${which === 'scores' && secs.some(x => x.live && (shown === LEAGUE_ALL || x.l.id === shown)) ? '<span class="live-dot" aria-hidden="true"></span>' : ''}<span class="lbl">${esc(name)}</span>${ICON.down}</button>
-        <div class="pmenu" role="menu" data-menu="${which}" aria-label="${esc(title)} league" hidden>${row(LEAGUE_ALL, 'All leagues', total, false)}${secs.map(x => row(x.l.id, x.l.label, count(x), which === 'scores' && x.live)).join('')}</div>
+        <div class="pmenu" role="menu" data-menu="${which}" aria-label="${esc(title)} league" hidden>${row(LEAGUE_ALL, 'All leagues', total, false)}${list}</div>
       </div></div>`;
   }
 
