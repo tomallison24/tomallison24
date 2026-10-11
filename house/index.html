@@ -200,7 +200,11 @@
      a dash. The room and what it is doing are small lines. */
   .tg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .tg-head .pwr { flex: none; }
-  .tc .dg-name em { font-style: normal; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .65; margin-left: 8px; font-size: 13px; }
+  /* INSIDE: the room's temperature, the boldest number in the header; the targets below are thin, and the outside one has its own spot at the foot of the card. */
+  .tb-in { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .tb-in b { font-size: 36px; font-weight: 600; letter-spacing: -1.5px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tb-in b span { font-size: 20px; font-weight: 500; vertical-align: top; letter-spacing: 0; margin-left: 1px; }
+  .tb-in small { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .72; }
   .tb-tgs { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; }
   .tb-tg { display: flex; flex-direction: column; align-items: center; min-width: 92px; }
   .tb-tg b { font-size: 60px; font-weight: 100; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -211,7 +215,10 @@
   .tb-chev:disabled { opacity: .15; }
   .tb-gap { display: block; height: 30px; }
   .tb-dash { font-style: normal; font-size: 40px; font-weight: 100; opacity: .35; margin-top: -26px; }
-  .tb-sub { text-align: center; font-size: 13px; font-weight: 600; opacity: .62; margin-top: 8px; }
+  .tb-sub { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 16px; text-align: center; font-size: 13px; font-weight: 600; opacity: .7; margin-top: 8px; }
+  .tb-out { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
+  .tb-out b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tb-out svg { opacity: .85; flex: none; }
   .tb-off { text-align: center; font-size: 44px; font-weight: 100; opacity: .6; padding: 10px 0 4px; }
   .tb-eco { display: flex; justify-content: center; margin-top: 12px; }
   .usheet .tb-tg b { font-size: 72px; }

@@ -86,6 +86,29 @@ the same rules:
   pair then, and quietly ignores one on its own). The popup has an **Eco**
   switch to turn it back on. Only shown on a Nest that lists `eco` in its
   `preset_modes`; the Windmill's Eco is its own mode, above.
+- **Inside and outside** on the cards: the room's own temperature leads the
+  header as the biggest bold number, with a house and the word **INSIDE** (36 px,
+  under the room's name); the big thin numbers are the targets (HEAT / COOL, or
+  ECO LOW / ECO HIGH), and the outside temperature is a separate line at the
+  foot with its own weather icon and "outside" ("Idle  ☁ 52° outside"). Each
+  reading has an accessible name ("Inside, 70 degrees"). The popup's own line
+  is unchanged.
+- **Away, the house's Eco** (the Living Room and Office Nests): Home Assistant has
+  its own Eco, a flag of the house, `input_boolean.thermostat_eco`: it turns on
+  five minutes after the last person leaves ("Away - everyone out" starts
+  `script.thermostat_eco_leave`, which re-checks that the house is still empty
+  and not on the sitter hold, then `script.thermostat_apply` holds both Nests at
+  64-80) and off when the first person is home ("Thermostat - someone home").
+  The card listens to that flag and does nothing else: while it is on both Nest
+  cards take the Eco look - the moss sky and drifting leaves *even while the Nest
+  heats or cools* (its words, "Heating to 64°", and the power button still say
+  so) - with an **Away · Eco** leaf chip, Eco low / Eco high under the numbers
+  and, in the popup, a line saying why. Unlike the Nest's own Eco (above) the two
+  numbers are ordinary setpoints Home Assistant has written, so the steppers stay:
+  a tap is yours until the next change of profile. The Windmill is left alone. The
+  Signal dashboard's Nest cards have had this theme since 2026-10-02 (its `eco`
+  variable in `views_signal/templates/thermostat.yaml`); this brings Home to the
+  same flag, where before it only knew the Nest's own preset.
 - **Windmill AC** (`climate.windmill_ac`): Cool / Eco / Fan / Off - its Eco
   is Home Assistant's `auto`. It never says what it's doing, so in Cool or
   Eco with the room above the target it counts as cooling. Fan is Auto / Low /
@@ -131,6 +154,18 @@ the same rules:
 
 The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
 
+- **Away** (Home only for now; the dashboard has no pill): a softly pulsing glass pill
+  at the very top of the view, above the energy strip, while Home Assistant has
+  the house in Eco - **Away from the house**, and "Thermostats in Eco · since
+  11:12 PM" (when the flag came on). Green; a slow glow behind the glass and a ring
+  easing out from its dot every 2.4 s, both still with Reduce Motion. It is not
+  a button. It appears five minutes after the last person leaves (Home
+  Assistant waits that long, in case a phone only flickered out of the home
+  zone), not at once; and not at all while the Babysitter hold is on, which stops
+  Home Assistant putting the Nests in Eco. The drop-down says "Away" under
+  Favorites meanwhile. Nothing in the app decides who is home: change the
+  automations in Home Assistant (`away_everyone_out`, `thermostat_someone_home`)
+  and the pill follows.
 - **Now Playing**: a Sonos that is playing, one card per group.
 - **Running Now**: every device that is doing something (heating, cooling,
   a fan, drying, cleaning), as chips; tap one to go to it with its popup open.

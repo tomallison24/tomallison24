@@ -227,6 +227,7 @@ function sampleStates() {
       temperature: 70, target_temp_low: null, target_temp_high: null, fan_mode: 'off', fan_modes: ['on', 'off'], preset_mode: 'none', preset_modes: ['none', 'eco'], min_temp: 50, max_temp: 90 }),
     'climate.windmill_ac': e('cool', { hvac_modes: ['off', 'cool', 'auto', 'fan_only'], current_temperature: 76, temperature: 72,
       fan_mode: 'Auto', fan_modes: ['Auto', 'Low', 'Medium', 'High'], min_temp: 60, max_temp: 86 }),
+    'input_boolean.thermostat_eco': e('off'),   // Home Assistant's house-wide Eco: on while everyone is out
     'sensor.living_room_ac_runtime_today': e(0.75, { unit_of_measurement: 'h' }),
     'sensor.office_ac_runtime_today': e(2.4, { unit_of_measurement: 'h' }),
     'sensor.windmill_ac_runtime_today': e(1.15, { unit_of_measurement: 'h' }),
@@ -877,6 +878,16 @@ const THERMOS = [
     sync: 'automation.hvac_sync_window_ac_with_main_thermostat' },
 ];
 const T_LO = 50, T_HI = 90, T_GAP = 3, T_HOLD = 20000;
+// AWAY: Home Assistant's own Eco. input_boolean.thermostat_eco is turned on five
+// minutes after the last person leaves ("Away - everyone out" starts
+// script.thermostat_eco_leave, which re-checks that the house is still empty
+// and not on the sitter hold) and off when the first person is home ("Thermostat
+// - someone home"); while it is on, script.thermostat_apply holds both Nests at
+// the Eco setpoints (64-80). It is a flag of the house, not the Nest's own Eco
+// preset, so it is read here beside that preset. Nest cards only: the Windmill
+// has its own Eco. Home Assistant is what decides who is home; the app only
+// listens, so a change to the automations needs no change here.
+const AWAY_FLAG = 'input_boolean.thermostat_eco';
 const T_SKY = {
   heat: 'linear-gradient(160deg, #221E19 0%, #382E24 50%, #5C4A36 100%)',   // amber, not red (light mode made red read as pink)
   cool: 'linear-gradient(160deg, #1A1E26 0%, #262E3B 50%, #3E4B5E 100%)',
@@ -920,8 +931,9 @@ function tread(t) {
   // so the card offers Exit Eco instead of steppers.
   const canEco = t.kind === 'nest' && Array.isArray(A.preset_modes) && A.preset_modes.includes('eco');
   const eco = canEco && !offline && s !== 'off' && held(t, 'preset', A.preset_mode) === 'eco';
-  const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : eco ? 'eco' : 'idle';  // Eco resting has its own look; heating or cooling in Eco shows as that
-  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco };
+  const away = t.kind === 'nest' && !offline && s !== 'off' && isOn(AWAY_FLAG);   // the house is empty: Home Assistant has both Nests in Eco
+  const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : (eco || away) ? 'eco' : 'idle';  // Eco resting has its own look (the Nest's own, or the house's); heating or cooling in Eco shows as that
+  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco, away };
 }
 
 // The idle sky: the room's palette from its day colours at the horizon, a
@@ -938,12 +950,16 @@ function idleSky(sc) {
   const stops = D.map((c, i) => c.map((v, j) => { const n = (N[i] || c)[j], d = v + (n - v) * f; return d + (255 - d) * k; }));
   return `linear-gradient(${ang}deg, ${stops.map((c, i) => hex(c) + ' ' + (pos[i] || i * 50 + '%')).join(', ')})`;
 }
-const tSky = (t, r) => r.mood === 'idle' ? idleSky(T_SCENES[t.scene]) : T_SKY[r.mood] || T_SKY.off;
+// While the house is in Eco (r.away) the card looks like Eco whatever the Nest is
+// doing: the moss sky and drifting leaves. Heating or cooling still shows in
+// its words and its power button, as in the Nest's own Eco.
+const tLook = r => r.away ? 'eco' : r.mood;
+const tSky = (t, r) => tLook(r) === 'idle' ? idleSky(T_SCENES[t.scene]) : T_SKY[tLook(r)] || T_SKY.off;
 
 // The sky behind a card or popup: embers rising while heating, frost
 // drifting while cooling, airflow while the fan runs, the room's glow idle.
 function tfxHTML(t, r, top = 60) {
-  const m = r.mood, sc = T_SCENES[t.scene];
+  const m = tLook(r), sc = T_SCENES[t.scene];
   let seed = 17; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
   const pool = (rgb, a, cls) => `<div class="dg-pool ${cls}" style="top:${top}px;background:radial-gradient(circle, rgba(${rgb},${a}) 0%, rgba(${rgb},${(a * 0.35).toFixed(3)}) 38%, rgba(${rgb},0) 68%);"></div>`;
   let L = '';
@@ -976,21 +992,29 @@ function tStatus(t, r) {
   return r.s === 'off' ? 'System off' : r.s === 'fan_only' ? 'Fan only'
     : r.act === 'heating' ? `Heating to ${n(r.range ? r.lo : r.temp)}°`
     : r.act === 'cooling' ? `Cooling to ${n(r.range ? r.hi : r.temp)}°`
-    : r.eco ? `Eco · ${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°`
+    : (r.eco || r.away) ? `Eco · ${r.range ? n(r.lo) + '–' + n(r.hi) : n(r.temp)}°`
     : r.range ? `Keeping ${n(r.lo)}–${n(r.hi)}°` : `Holding ${n(r.temp)}°`;
 }
 // The card says as little as it can: the room, one word for what it is
 // doing, and the temperature outside; the ruler has the targets.
 function tWord(t, r) {
   if (r.offline) return tStatus(t, r);
-  return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : r.eco ? 'Eco' : 'Idle';
+  return r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.s === 'fan_only' ? 'Fan' : (r.eco || r.away) ? 'Eco' : 'Idle';
 }
-// The line under the targets: what it is doing and the temperature outside
-// (the room is beside the name).
+// The line under the targets: what it is doing, and the temperature outside
+// with its own cloud-and-sun icon and the word, set apart from the word beside
+// it. The room's own temperature is not here: it leads the card's header (tInside).
 function tLine(t, r) {
   if (r.offline) return '';
   const wo = st('weather.forecast_home'), o = wo && Number(wo.attributes.temperature);
-  return [tWord(t, r), Number.isFinite(o) ? Math.round(o) + '° outside' : ''].filter(Boolean).join(' · ');
+  return `<span class="tb-w">${tWord(t, r)}</span>` + (Number.isFinite(o) ? `<span class="tb-out" aria-label="Outside, ${Math.round(o)} degrees">${svg('outside', 15)}<b>${Math.round(o)}°</b> outside</span>` : '');
+}
+// The temperature in the room, at the forefront: the biggest bold number in the
+// card's header with a house and the word INSIDE (the big thin numbers below are
+// the targets, which it was too easy to mistake it for, or for the outside).
+function tInside(r) {
+  if (r.offline || r.cur == null) return '';
+  return `<div class="tb-in" aria-label="Inside, ${Math.round(r.cur)} degrees"><b>${Math.round(r.cur)}<span>°</span></b><small>${svg('home', 13)}Inside</small></div>`;
 }
 const modeName = (t, s) => (t.modes.find(m => m[0] === s) || [s, { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', fan_only: 'Fan', off: 'Off' }[s] || s])[1];
 // The line under the popup's status: the mode, the humidity (or the
@@ -1001,9 +1025,12 @@ function tSub(t, r, card) {
   const h = r.A.current_humidity != null ? Math.round(r.A.current_humidity) + (card ? '% RH' : '% humidity') : '';
   return [esc(modeName(t, r.s)), t.kind === 'windmill' ? (r.s !== 'off' && r.fm ? 'Fan ' + esc(r.fm) : '') : h, card ? out : ''].filter(Boolean).join(' · ');
 }
+// Away: a small leaf chip on the card, the Nest's room beside it. Only on the
+// two Nest cards, and only while Home Assistant has the house in Eco.
+const tAwayChip = r => r.away ? `<span class="alert eco">${svg('leaf', 13)}Away · Eco</span>` : '';
 function tPill(t, r) {
   const word = r.offline ? 'Offline' : r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.act === 'fan' ? 'Fan' : 'Idle';
-  const md = r.eco ? 'Eco' : modeName(t, r.s);
+  const md = r.eco || r.away ? 'Eco' : modeName(t, r.s);
   return `<span class="dg-pill">${word}${!r.offline && r.s !== 'off' && md !== word ? ' · ' + esc(md) : ''}</span>`;
 }
 
@@ -1031,16 +1058,21 @@ function tTargetHTML(t, r, sub) {
   const foot = sub ? `<div class="tb-sub">${sub}</div>` : '';
   if (!sets.length) return `<div class="tb-off">${r.s === 'fan_only' ? 'Fan only' : r.offline ? esc(tStatus(t, r)) : 'Off'}</div>${foot}`;
   if (r.eco) return tEcoHTML(t, r, sets);   // Eco keeps its own view
+ // The Nest's own Eco (r.eco) is fixed - nothing to tap. The house's (r.away) takes
+  // the same green and leaf, but its two numbers are ordinary setpoints Home
+  // Assistant has written, so they keep their steppers: a tap is yours until
+  // the next change of profile.
+  const leaf = r.eco || r.away;
   const one = ([f, label, v, rgb]) => {
     const up = r.eco || v == null || v >= r.max, dn = r.eco || v == null || v <= r.min;
-    return `<div class="tb-tg" data-f="${f}" style="--c:${r.eco ? T_ACC.eco : rgb}">
+    return `<div class="tb-tg" data-f="${f}" style="--c:${leaf ? T_ACC.eco : rgb}">
       ${r.eco ? '<i class="tb-gap"></i>' : `<button class="tb-chev" data-a="tplus" data-f="${f}" aria-label="Raise ${label}"${up ? ' disabled' : ''}>${svg('chevUp', 20)}</button>`}
       <b>${n(v)}<span>°</span></b>
       ${r.eco ? '<i class="tb-gap"></i>' : `<button class="tb-chev" data-a="tminus" data-f="${f}" aria-label="Lower ${label}"${dn ? ' disabled' : ''}>${svg('chev', 20)}</button>`}
-      <small>${r.eco ? svg('leaf', 11) + (sets.length === 2 ? (f === 'target_temp_low' ? 'Eco low' : 'Eco high') : 'Eco') : label}</small></div>`;
+      <small>${leaf ? svg('leaf', 11) + (sets.length === 2 ? (f === 'target_temp_low' ? 'Eco low' : 'Eco high') : 'Eco') : label}</small></div>`;
   };
   const eco = r.eco ? `<div class="tb-eco"><button class="ecobtn${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="none">${svg('leaf', 16)}Exit Eco</button></div>` : '';
-  return `<div class="tb-tgs${r.eco ? ' eco' : ''}">${sets.map(one).join('<i class="tb-dash">–</i>')}</div>${foot}${eco}`;
+  return `<div class="tb-tgs${leaf ? ' eco' : ''}">${sets.map(one).join('<i class="tb-dash">–</i>')}</div>${foot}${eco}`;
 }
 
 function tEcoRow(t, r) {
@@ -1124,8 +1156,9 @@ function renderThermos() {
     for (const card of document.querySelectorAll(`.dg[data-th="${t.id}"]`)) {
     const R = n => card.querySelector(`[data-r="${n}"]`);
     put(R('fx'), tfxHTML(t, r, 60));
-    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}${r.cur != null && !r.offline ? `<em>${Math.round(r.cur)}° inside</em>` : ''}</button>
-      ${(c => c ? `<div class="alerts">${c}</div>` : '')(tSchedChip(t))}`);
+    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
+      ${tInside(r)}
+      ${(c => c ? `<div class="alerts">${c}</div>` : '')(tAwayChip(r) + tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
     put(R('tgt'), tTargetHTML(t, r, tLine(t, r)));
     card.classList.toggle('offline', r.offline);
@@ -1142,7 +1175,8 @@ function renderThermo() {
   $('tTitle').textContent = t.name;
   put(S('fx'), tfxHTML(t, r, 150));
   put(S('pill'), tPill(t, r));
-  put(S('hero'), `<div class="uhero"><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${r.cur != null && !r.offline ? Math.round(r.cur) + '° inside · ' : ''}${tSub(t, r, true)}</div></div>`);
+  put(S('hero'), `<div class="uhero"><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${r.cur != null && !r.offline ? Math.round(r.cur) + '° inside · ' : ''}${tSub(t, r, true)}</div></div>`
+    + (r.away ? `<p class="tnote away-note">${svg('leaf', 13)}Away from the house. Home Assistant has this thermostat in Eco while nobody is home, and puts it back on the schedule when someone arrives.</p>` : ''));
   put(S('tgt'), tTargetHTML(t, r));
   put(S('power'), tPowerRow(t, r));
   S('ecoWrap').hidden = !r.canEco;
