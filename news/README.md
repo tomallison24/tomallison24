@@ -18,12 +18,16 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
 - **Liquid Glass**, as in iOS 26 and the Calendar app: the Sport filters and
-  Sources panels float as clear glass sheets, the topic tabs, team buttons
-  and News | Scores are frosted glass with a lit rim, and every switch (the
-  topic tabs, News | Scores, the time range, the team buttons) has a bright
+  Sources panels float as clear glass sheets, the team buttons and
+  News | Scores are frosted glass with a lit rim, and every switch (News | Scores,
+  the time range, the team buttons) has a bright
   glass thumb that slides to what you pick, its label in the accent colour
   (`../home/slide.js`, shared by the apps). The Undo toast is the same clear
   glass as the sheets, and Try again is tinted slate-teal glass.
+- **Topic picker:** a glass pill at the bottom of the screen, the same as
+  Home's view picker: the chosen topic's icon and name with a chevron. Tap it
+  and the topics open upwards as a menu; swiping the stories sideways moves
+  between them too.
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
 
@@ -111,7 +115,7 @@ duplicates each topic lost and why.
 
 ## Stem cells: sources and time
 
-Stories are newest first. The bar under the tabs on Stem cells narrows them:
+Stories are newest first. The bar at the top of Stem cells narrows them:
 
 - **All · Today · 7 days · 30 days**: stories from today, or from today and
   the days before it (by date; a journal's day-only date counts as that day).
@@ -132,7 +136,7 @@ follow, or search for a player, driver or event and follow it as a keyword.
 about your filters. (Sport stories aren't in Latest at all; they have their
 own tab.)
 
-The bar under the tabs shows how many filters are on and what they are.
+The bar at the top shows how many filters are on and what they are.
 **Reset** clears them all, with a few seconds to undo.
 
 - A sport is recognised from the story's web address (`/football/`, `/f1/`),
@@ -189,7 +193,7 @@ Edit `feeds.json`. Each feed needs a `topic` (one of the ids in `topics`), a
 `source` name and an RSS `url`. Optional: `"trusted": true` keeps every
 story from it even when its topic has a `filter`; `"max"` reads more than
 25 items (for a whole-journal feed that's filtered down to one topic);
-`"rank"` (see Duplicates). Topics show up as tabs in A to Z order after Latest.
+`"rank"` (see Duplicates). Topics show up in the topic picker in A to Z order after Latest.
 A feed that fails is skipped for that run and counted in the app's footer;
 the job logs list each feed's result.
 
@@ -207,13 +211,11 @@ npx http-server . -p 8080          # then open http://localhost:8080/news/
    `https://tomallison24-news.pages.dev/news/` in Safari.
 3. Share → **Add to Home Screen**.
 
-Opened from the Home Screen, the topic tabs sit in a floating bar at the
-bottom of the screen. Since iOS 26, iOS blurs the top of home-screen web
+The topic picker sits at the bottom of the screen, in Safari and from the
+Home Screen. Since iOS 26, iOS blurs the top of home-screen web
 apps and nothing a page does turns that off, so nothing you tap stays up
 there. The date and title start just below that band, and on Sport the
-News | Scores switch and team buttons sit at the top of the page. In Safari
-the tabs stay at the top. Add `?bar=bottom` to the address to try the bottom
-bar in a browser.
+News | Scores switch and team buttons sit at the top of the page.
 
 GitHub pauses scheduled workflows in public repositories after 60 days with no
 repository activity. If headlines stop updating, re-enable the workflow in the

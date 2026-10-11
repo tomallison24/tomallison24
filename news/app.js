@@ -28,20 +28,27 @@
     x: '<svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
     tv: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.8" y="5.8" width="18.4" height="12.6" rx="3"/><path d="M9 21h6M8.4 2.6l3.6 3.2 3.6-3.2"/></svg>',
     plus: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>',
+    chev: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)"><path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/></svg>',
   };
+  // The topic picker's icons, one per topic (any other topic gets the lines).
+  const topicSvg = d => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  const TOPIC_ICONS = {
+    latest: topicSvg('<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.2 2"/>'),
+    uk: topicSvg('<path d="M4.5 17.5h15M5.2 17.5l-1.4-9 4.6 3.6L12 6l3.6 5.1 4.6-3.6-1.4 9"/>'),
+    world: topicSvg('<circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 3.6 5.2 3.6 8.4s-1 6-3.6 8.4c-2.6-2.4-3.6-5.2-3.6-8.4S9.4 6 12 3.6z"/>'),
+    us: topicSvg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
+    business: topicSvg('<rect x="3.6" y="7.6" width="16.8" height="11.6" rx="2.4"/><path d="M9 7.6V6a1.8 1.8 0 0 1 1.8-1.8h2.4A1.8 1.8 0 0 1 15 6v1.6M3.6 13h16.8"/>'),
+    tech: topicSvg('<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9.6 3.8v3.2M14.4 3.8v3.2M9.6 17v3.2M14.4 17v3.2M3.8 9.6H7M3.8 14.4H7M17 9.6h3.2M17 14.4h3.2"/>'),
+    ai: topicSvg('<path d="M10 4.5l1.6 4.4 4.4 1.6-4.4 1.6L10 16.5l-1.6-4.4L4 10.5l4.4-1.6zM18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>'),
+    science: topicSvg('<path d="M9.6 4h4.8M10.4 4v5.4L5.6 17.6a1.8 1.8 0 0 0 1.6 2.6h9.6a1.8 1.8 0 0 0 1.6-2.6l-4.8-8.2V4M8 14.5h8"/>'),
+    sport: topicSvg('<path d="M8 4.5h8v5a4 4 0 0 1-8 0zM8 6.5H5.2c0 2.4 1 3.8 3 4M16 6.5h2.8c0 2.4-1 3.8-3 4M12 13.5v3.2M8.8 19.5h6.4M10 16.7h4"/>'),
+    stemcells: topicSvg('<circle cx="9" cy="10" r="4.6"/><circle cx="9" cy="10" r="1.4"/><circle cx="16.4" cy="16" r="3.4"/>'),
+  };
+  const topicIcon = id => TOPIC_ICONS[id] || topicSvg('<path d="M5 8h14M5 12h14M5 16h9"/>');
 
   const $ = id => document.getElementById(id);
-  const feedEl = $('feed'), tabsEl = $('tabs'), filterEl = $('filterbar'), topbar = $('topbar'), refreshBtn = $('refresh');
-
-  // Installed on iPhone, the topic tabs go to the bottom of the screen and the
-  // Sport controls move into the page (see "Bottom tab bar" in the CSS).
-  // ?bar=bottom forces it, to try it in a browser.
-  const bottomBar = /[?&]bar=bottom\b/.test(location.search) ||
-    ((matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) && CSS.supports('-webkit-touch-callout', 'none'));
-  if (bottomBar) {
-    document.documentElement.classList.add('bottom-bar');
-    topbar.after(filterEl);
-  }
+  const feedEl = $('feed'), filterEl = $('filterbar'), refreshBtn = $('refresh');
+  const viewBtn = $('viewBtn'), viewMenu = $('viewMenu');
   const sheetWrap = $('sheet'), sheetEl = sheetWrap.querySelector('.sheet'), sheetBody = $('sheet-body'), searchEl = $('sheet-search');
   const segEl = $('sheet-seg'), sheetReset = $('sheet-reset'), sheetShow = $('sheet-show');
   const toastEl = $('toast'), toastText = $('toast-text'), toastUndo = $('toast-undo');
@@ -263,8 +270,7 @@
   // ---- switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js) ----
   // Called after each redraw; a label newly chosen gets .ink (see the CSS).
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
-  let shownTopic = null, shownQuick = null;
-  const slideTabs = jump => slide(tabsEl, tabsEl.querySelector('[aria-selected="true"]'), 'tabs', { jump });
+  let shownQuick = null;
   // The Sport and Stem cells bar: News | Scores or the time range, and the one-tap teams.
   function slideBar(jump) {
     const modes = filterEl.querySelector('.modes'), teams = filterEl.querySelector('.teams');
@@ -276,21 +282,25 @@
     slide(teams, on, 'teams', { jump: jump || !was });   // from none, it appears where it is
   }
   const slideSeg = jump => slide(segEl, segEl.querySelector('[aria-selected="true"]'), 'sheet-seg', { jump });
-  window.addEventListener('resize', () => { slideTabs(true); slideBar(true); if (sheetOpen) slideSeg(true); });
+  window.addEventListener('resize', () => { slideBar(true); if (sheetOpen) slideSeg(true); });
 
   // ---- render ----
+  // The topic picker: the pill shows the chosen topic, the menu lists them all.
   function renderTabs() {
     const list = [LATEST, ...topics()];
     if (!list.some(t => t.id === topic)) topic = LATEST.id;
-    tabsEl.innerHTML = list.map(t =>
-      `<button class="tab" role="tab" data-topic="${esc(t.id)}" aria-selected="${t.id === topic}">${esc(t.label)}</button>`
-    ).join('');
-    const on = tabsEl.querySelector('[aria-selected="true"]');
-    if (on) on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
-    if (on && shownTopic && shownTopic !== topic) on.classList.add('ink');
-    shownTopic = topic;
-    slideTabs();
+    const now = list.find(t => t.id === topic);
+    $('vbName').textContent = now.label;
+    if ($('vbIcon').dataset.t !== now.id) { $('vbIcon').dataset.t = now.id; $('vbIcon').innerHTML = topicIcon(now.id); }
+    if (!viewBtn.querySelector('.vb-chev svg')) viewBtn.querySelector('.vb-chev').innerHTML = ICON.chev;
+    if (!viewMenu.hidden) drawViewMenu();
   }
+  function drawViewMenu() {
+    viewMenu.innerHTML = [LATEST, ...topics()].map(t =>
+      `<button type="button" role="option" data-topic="${esc(t.id)}" aria-selected="${t.id === topic}">
+        <span class="ic">${topicIcon(t.id)}</span><span class="k">${esc(t.label)}</span><span class="tick">${ICON.tick}</span></button>`).join('');
+  }
+  function closeViewMenu() { viewMenu.hidden = true; viewBtn.setAttribute('aria-expanded', 'false'); }
 
   // Sport tab: a News | Scores switch, then one line saying what is
   // filtered, with Filters and Reset (filters apply to both).
@@ -910,17 +920,15 @@
     }
   }
 
-  // Keep the tab bar pinned where it is, with the new list starting under it.
+  // Bring the start of the new list (or the Sport or Stem cells controls) to just under the clock.
   function keepBarInPlace() {
-    if (bottomBar) {
-      // Bring the start of the new list (or the Sport or Stem cells controls) to just under the clock.
-      const anchor = !filterEl.hidden ? filterEl : feedEl;
-      const top = anchor.getBoundingClientRect().top + window.scrollY - $('statusbar').offsetHeight - 4;
-      if (window.scrollY > top) window.scrollTo({ top });
-      return;
-    }
-    const pinned = parseFloat(getComputedStyle(topbar).top) || 0;
-    const top = feedEl.getBoundingClientRect().top + window.scrollY - pinned - topbar.offsetHeight - 8;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;height:var(--inset-top);visibility:hidden';
+    document.body.append(probe);
+    const inset = probe.offsetHeight;
+    probe.remove();
+    const anchor = !filterEl.hidden ? filterEl : feedEl;
+    const top = anchor.getBoundingClientRect().top + window.scrollY - inset - 8;
     if (window.scrollY > top) window.scrollTo({ top });
   }
 
@@ -934,10 +942,21 @@
   }
 
   // ---- events ----
-  tabsEl.addEventListener('click', e => {
-    const b = e.target.closest('[data-topic]');
-    if (b) select(b.dataset.topic);
+  viewBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!viewMenu.hidden) return closeViewMenu();
+    drawViewMenu(); viewMenu.hidden = false; viewBtn.setAttribute('aria-expanded', 'true');
+    const on = viewMenu.querySelector('[aria-selected="true"]');
+    if (on) on.scrollIntoView({ block: 'nearest' });
   });
+  viewMenu.addEventListener('click', e => {
+    const b = e.target.closest('[data-topic]');
+    if (!b) return;
+    closeViewMenu();
+    select(b.dataset.topic);
+  });
+  document.addEventListener('click', e => { if (!viewMenu.hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !viewMenu.hidden) { closeViewMenu(); viewBtn.focus(); } });
   filterEl.addEventListener('click', e => {
     const d = e.target.closest('[data-days]');
     if (d) return setListFilters(topic, { days: Number(d.dataset.days) });
@@ -1030,15 +1049,6 @@
     const i = ids.indexOf(topic) + (dx < 0 ? 1 : -1);
     if (i >= 0 && i < ids.length) select(ids[i]);
   }, { passive: true });
-
-  // Frost the tab bar only once it is pinned under the status bar.
-  const statusbar = $('statusbar');
-  new IntersectionObserver(([e]) => {
-    const stuck = e.intersectionRatio < 1;
-    topbar.classList.toggle('stuck', stuck);
-    statusbar.classList.toggle('stuck', stuck);
-  }, { threshold: 1 })
-    .observe(document.querySelector('.masthead'));
 
   // Redraw when the date changes, so yesterday's "New" tags go: at midnight
   // if the app is open, or on coming back to it on a later day.
