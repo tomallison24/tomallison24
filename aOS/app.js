@@ -68,7 +68,7 @@
       <p class="muted">Home shows these steps animated, the first time you open it.</p>
       <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` },
     { id: aotd, k: 'App of the day', h: `${D.NAMES[aotd]}: ${T(aotd).tag}`, art: (T(aotd).cards[0] || {}).i, body: () => T(aotd).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
-    { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${[...(r.highlights || []), ...(r.notes || [])].map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
+    { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
     { id: 'travel', k: 'Meet', h: 'Every trip, the whole family\'s', art: 'plane', body: () => T('travel').cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
     { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
       <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
@@ -152,7 +152,8 @@
   // invite link (#invite=...), opened in Safari: the account is made there, then
   // aOS shows how to add it to the Home Screen. Every app signs in with Face ID.
   const li = (n, hi) => `<li${hi ? ' class="hi"' : ''}>${esc(n)}</li>`;
-  const block = x => { const e = D.entry(x); return [...e.highlights.map(n => li(n, 1)), ...e.notes.map(n => li(n))].join(''); };
+  // updates are told simply: what's new at a high level (a release's highlights), never the details
+  const hi = r => { const e = D.entry(r); return (e.highlights.length ? e.highlights : e.notes).slice(0, 5); };
   // ---- Subscription: just for fun, nothing is charged. The family's plan, kept in the
   // family account (functions/aOS/api, POST plan) so every app on every phone sees it:
   // Pro+ until the owner changes it. A cancelled plan runs to the end of its month, a
@@ -221,7 +222,7 @@
       <p class="note" id="planNote"></p>
       <div class="glbl" id="whats-new">Updates</div>
       <div class="group" id="rels">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
-        ${block(r) ? `<ul>${block(r)}</ul>` : ''}${Object.entries(r.apps || {}).sort(([a], [b]) => D.APPS.indexOf(a) - D.APPS.indexOf(b)).map(([id, x]) => block(x) ? `<h5>${esc(D.NAMES[id] || id)}</h5><ul>${block(x)}</ul>` : '').join('')}</div>`).join('')}</div>
+        <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
       <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>`, { up: true });
     el.addEventListener('click', ev => {
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
@@ -339,7 +340,7 @@
     if (u.role !== 'owner') return;
     box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3><p>To everyone in the family who has turned notifications on. Keep it short: the phone shows a title and a few lines.</p>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
-      <div class="row2"><button type="button" class="soft" id="nFill">Use what's new</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
+      <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
       <div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
       <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
@@ -418,7 +419,7 @@
     } catch {}
   }
   // the owner's side: who will get it, and one person at a time (a request only encrypts for a few phones)
-  let audience = [];
+  let audience = [], announce = false;
   async function paintComposer() {
     if (!$('nWho')) return;
     try { audience = (await ACC.call('push/audience')).people; } catch { audience = []; }
@@ -426,9 +427,10 @@
     const phones = audience.reduce((a, p) => a + p.devices, 0);
     $('nWho').textContent = audience.length ? `Goes to ${audience.map(p => p.name.split(/\s+/)[0]).join(', ')} (${phones} ${phones === 1 ? 'phone' : 'phones'}).` : 'No one has turned notifications on yet. Each person does it under their account, from the Home Screen app.';
     $('nFill').onclick = () => {
-      const r = live[0], line = [...(r.highlights || []), ...(r.notes || [])][0] || r.title || '';
-      $('nTitle').value = `New in aOS ${r.v}`; $('nBody').value = line.slice(0, 240);
+      $('nTitle').value = `aOS updated to ${live[0].v}`; $('nBody').value = 'Click for update details.';
+      announce = true;   // a tap on it opens the Updates screen
     };
+    $('nTitle').oninput = () => { announce = false; };
     $('nGo').onclick = async () => {
       const m = $('nErr'); m.style.color = ''; m.textContent = '';
       const title = $('nTitle').value.trim(), body = $('nBody').value.trim();
@@ -440,11 +442,11 @@
       try {
         for (const p of audience) {
           m.style.color = 'var(--muted)'; m.textContent = `Sending to ${p.name.split(/\s+/)[0]}…`;
-          const r = await ACC.call('push/send', { to: p.id, title, body, url: './' });
+          const r = await ACC.call('push/send', { to: p.id, title, body, url: announce ? './#whats-new' : './' });
           sent += r.sent; failed += r.failed + r.gone;
         }
         m.style.color = 'var(--muted)'; m.textContent = `Sent to ${sent} ${sent === 1 ? 'phone' : 'phones'}${failed ? `; ${failed} didn't take it` : ''}.`;
-        $('nTitle').value = ''; $('nBody').value = '';
+        $('nTitle').value = ''; $('nBody').value = ''; announce = false;
       } catch (e) { m.style.color = ''; m.textContent = `Stopped after ${sent} ${sent === 1 ? 'phone' : 'phones'}: ${why(e)}`; }
       busy($('nGo'), false); paintComposer();
     };
@@ -510,6 +512,10 @@
     if (st.user) syncPush();
     if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
+  });
+  // a tap on a notification while aOS is already open (aOS/sw.js)
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.aosGo === '#whats-new') { const w = $('whats-new'); if (w) w.scrollIntoView({ block: 'start' }); else acctPage('updates'); }
   });
   addEventListener('hashchange', () => { if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); } });
 })();

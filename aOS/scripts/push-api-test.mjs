@@ -174,6 +174,7 @@ await test('what a notification may say: trimmed, and it can only open a page on
   assert.equal(message({ title: 't', url: '//evil.example/x' }).url, './');
   assert.equal(message({ title: 't', url: '/weather/' }).url, '/weather/');
   assert.equal(message({ title: 't' }).url, './');
+  assert.equal(message({ title: 't', url: './#whats-new' }).url, './#whats-new', 'opens the Updates screen');
 });
 
 await test('the Pages secrets VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY win over the stored key', async () => {
