@@ -62,7 +62,7 @@ pastel stop that slides between them, and your avatar top right.
   still offers the install steps, in case it's been removed.
 - **Search**: by name, tagline, category or what its walkthrough says.
 - **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
-  (version, category, shared or yours, maker); What's New and Version History;
+  (version, category, shared or yours, maker); What's New (the latest version only);
   Preview (drawn from its walkthrough cards, not screenshots); What it needs;
   About; Information. Swipe from the left edge to go back.
 - **Get**: opens the app's own address with `?via=aos` straight away (in the
@@ -71,8 +71,8 @@ pastel stop that slides between them, and your avatar top right.
 - **The avatar**: your account (the owner's set-up, an invite's Join, Sign in;
   signed in, the owner's tools: the Home Assistant address, invites, the
   family), Appearance (`home.settings.theme`; each app on the Home Screen keeps
-  its own, asked in its walkthrough), Updates (the release log, newest first,
-  silent releases left out, highlights starred) and Replay the welcome. An
+  its own, asked in its walkthrough), Updates (the latest version only,
+  silent releases left out, a short line each) and Replay the welcome. An
   invite link or the owner's first set-up opens it by itself, and
   `../aOS/#whats-new` (the apps' update screens link there) opens it at Updates.
 

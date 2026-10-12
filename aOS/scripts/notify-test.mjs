@@ -121,6 +121,8 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   await p.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { aosGo: '#whats-new' } })));
   await p.waitForSelector('#rels', { timeout: 5000 }).catch(() => pr.push('a tap on a notification (while aOS is open) did not open the Updates screen'));
   const r = await p.evaluate(() => { const top = AllisonOS.welcome.data.RELEASES.filter(x => !x.silent)[0]; return { items: document.querySelectorAll('#rels .rel:first-child li').length, want: top.highlights.length, apps: document.querySelectorAll('#rels h5').length, words: Math.max(...[...document.querySelectorAll('#rels li')].map(l => l.textContent.split(/\s+/).length)) }; });
+  const rels = await p.locator('#rels .rel').count();
+  if (rels !== 1) pr.push('the Updates screen shows ' + rels + ' versions: only the latest belongs there');
   if (r.items !== r.want) pr.push('the newest release shows ' + r.items + ' lines, not its ' + r.want + ' highlights');
   if (r.apps) pr.push('the Updates screen has per-app details');
   if (r.words > 20) pr.push('a line is ' + r.words + ' words: updates should be simple');
@@ -129,6 +131,7 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   await p.click('[data-tab="apps"]'); await p.click('#list [data-app="news"]');
   await p.waitForSelector('.wn li', { timeout: 5000 });
   const wn = await p.evaluate(() => { const r = AllisonOS.welcome.data.RELEASES.find(x => !x.silent && x.apps && x.apps.news); const e = AllisonOS.welcome.data.entry(r.apps.news); return { shown: document.querySelectorAll('.wn li').length, want: (e.highlights.length ? e.highlights : e.notes).slice(0, 5).length, notes: e.notes.length }; });
+  if (await p.locator('[data-hist]').count()) pr.push('an app page offers Version History: only the latest version is told');
   if (wn.shown !== wn.want) pr.push('News\'s page shows ' + wn.shown + ' lines, not its ' + wn.want + ' highlights (it has ' + wn.notes + ' notes)');
   report('the Updates screen is high level, and a notification tap opens it', pr); await ctx.close();
 }
