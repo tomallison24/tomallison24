@@ -40,6 +40,24 @@
     document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
     document.querySelectorAll('[data-gone]').forEach(b => { b.hidden = !INST.has(b.dataset.gone); });
   };
+  // ---- designs: an app that comes in more than one design (home/welcome.js DESIGNS) ----
+  // One row for the app, a Design menu on its page. Each design is its own app, so the one
+  // picked here (kept on this device) decides which app Get adds and which one says Installed.
+  const DESIGNS = D.DESIGNS, hasDesigns = id => !!DESIGNS[id];
+  const baseOf = app => Object.keys(DESIGNS).find(b => DESIGNS[b].some(d => d.app === app));
+  const LOOK_DOTS = { glass: ['#6FA597', '#8193BC', '#BE918F'], vintage: ['#1F6F6B', '#E3A72F', '#D8572A'] };
+  const lookDots = d => `<span class="dd" aria-hidden="true">${LOOK_DOTS[d.look].map(c => `<i style="background:${c}"></i>`).join('')}</span>`;
+  const DKEY = id => 'aos.design.' + id;
+  const chosenDesign = id => {
+    const ds = DESIGNS[id]; let want = null; try { want = localStorage.getItem(DKEY(id)); } catch {}
+    return ds.find(d => d.id === want) || ds.find(d => INST.has(d.app)) || ds[0];
+  };
+  const appOf = id => hasDesigns(id) ? chosenDesign(id).app : id;
+  const pickDesign = (id, did) => { try { localStorage.setItem(DKEY(id), did); } catch {} };
+  const dopts = id => { const cur = chosenDesign(id); return DESIGNS[id].map(d => `<button type="button" role="option" class="dopt" data-did="${d.id}" aria-selected="${d.id === cur.id}"><span class="dth ${d.look}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(d.name)}</b><small>${esc(d.note)} · ${INST.has(d.app) ? 'Installed' : 'Not added'}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join(''); };
+  const CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  const dsel = id => { const cur = chosenDesign(id); return `<div class="dsel" data-dsel="${id}"><button type="button" class="dbtn" aria-haspopup="listbox" aria-expanded="false"><span class="dl">Design</span>${lookDots(cur)}<b>${esc(cur.name)}</b>${CHEV}</button><div class="dmenu" role="listbox" aria-label="Design" hidden>${dopts(id)}</div></div>`; };
+  let repaintLists = () => {};
   const goneBtn = id => `<button type="button" class="gone" data-gone="${id}"${INST.has(id) ? '' : ' hidden'}>Removed it from your Home Screen?</button>`;
   async function markGone(b) {
     const id = b.dataset.gone; b.disabled = true;
@@ -47,7 +65,7 @@
     INST.delete(id); paintGets(); b.disabled = false;
     b.insertAdjacentHTML('afterend', `<p class="gone-note">Shows Get now. Open ${esc(D.NAMES[id])} from your Home Screen and it’s back to Installed.</p>`);
   }
-  const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); };
+  const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); repaintLists(); };
   // an app the newest (non-silent) release changed says so under its name
   const now = live[0];
   const changed = id => { const e = D.entry((now.apps || {})[id]); return e.highlights.length + e.notes.length > 0; };
@@ -61,7 +79,7 @@
 
   // ---- Today ----
   $('date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
-  const day = Math.floor(Date.now() / 864e5), aotd = D.APPS[day % D.APPS.length];
+  const day = Math.floor(Date.now() / 864e5), aotd = D.APPS.filter(id => !D.VARIANTS.has(id))[day % D.APPS.filter(id => !D.VARIANTS.has(id)).length];
   const STORIES = [
     { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
       <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
@@ -85,11 +103,13 @@
        <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
 
   // ---- Apps, and Search ----
-  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i></span>${getBtn(id)}</span></div>`).join('');
-  // two collections: the core apps, then the Allison family's own
-  $('list').innerHTML = `<div class="sec"><h2>Core apps</h2></div>${rows(D.CORE)}<div class="sec"><h2>Allison family apps</h2></div>${rows(D.FAMILY)}`;
-  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], group(id), ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = [...D.CORE, ...D.FAMILY].filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
-  $('q').oninput = find; find();
+  const rows = ids => ids.map(id => { const ap = appOf(id), ds = hasDesigns(id);
+    return `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[ap]}"><img src="${icon(ap)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i>${ds ? `<em class="dtag">${DESIGNS[id].map(d => `<span class="dd" aria-hidden="true"><i style="background:${LOOK_DOTS[d.look][1]}"></i></span>`).join('')}${DESIGNS[id].length} designs</em>` : ''}</span>${getBtn(ap)}</span></div>`; }).join('');
+  // two collections: the core apps, then the Allison family's own (a design of an app is not a row of its own)
+  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], group(id), ...(DESIGNS[id] || []).map(d => d.name + ' ' + d.note), ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = [...D.CORE, ...D.FAMILY].filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
+  const paintList = () => { $('list').innerHTML = `<div class="sec"><h2>Core apps</h2></div>${rows(D.CORE)}<div class="sec"><h2>Allison family apps</h2></div>${rows(D.FAMILY)}`; find(); };
+  repaintLists = paintList; paintList();
+  $('q').oninput = find;
 
   // ---- tabs ----
   const tabs = document.querySelectorAll('[data-tab]');
@@ -119,7 +139,8 @@
   function appPage(id) {
     const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
     const e = r ? D.entry(r.apps[id]) : null;
-    page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}${goneBtn(id)}</div></div>
+    const ap = appOf(id);
+    const el = page(`<div class="apphead"><img src="${icon(ap)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${hasDesigns(id) ? dsel(id) : ''}<span class="gets">${getBtn(ap)}${goneBtn(ap)}</span></div></div>
       <div class="strip">
         <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
         <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
@@ -135,8 +156,38 @@
       <div class="sec"><h2>About</h2></div>
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
-      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
-      .addEventListener('click', ev => { const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[ap] });
+    el.addEventListener('click', ev => {
+      const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) return markGone(g);
+      const ds = el.querySelector('.dsel'); if (!ds) return;
+      const btn = ds.querySelector('.dbtn'), menu = ds.querySelector('.dmenu');
+      const setOpen = on => { menu.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
+      if (ev.target.closest('.dbtn')) return setOpen(menu.hidden);
+      const o = ev.target.closest('.dopt');
+      if (o) {   // a design picked: this page, and the app's row, follow it
+        pickDesign(id, o.dataset.did); setOpen(false);
+        const nap = appOf(id);
+        el.style.setProperty('--c', HUE[nap]); el.querySelector('.apphead img').src = icon(nap);
+        el.querySelector('.gets').innerHTML = getBtn(nap) + goneBtn(nap);
+        const cur = chosenDesign(id); btn.querySelector('b').textContent = cur.name; btn.querySelector('.dd').outerHTML = lookDots(cur);
+        menu.innerHTML = dopts(id); repaintLists(); return;
+      }
+      setOpen(false);
+    });
+  }
+  // Get on an app with designs, not yet added: pick the design first, then the app's own address
+  // opens (it shows how to add it). Several designs can be added; each is its own Home Screen app.
+  function designSheet(id) {
+    const goHtml = ap => INST.has(ap) ? `<a class="get big done" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Installed</a>` : `<a class="get big" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Open ${esc(D.NAMES[ap])} to add it</a>`;
+    const ap0 = appOf(id);
+    const el = page(`<div class="dsheet"><h1>Make ${esc(D.NAMES[id])} yours</h1><p>Pick a design. You can add both, and change your mind later on ${esc(D.NAMES[id])}’s page.</p>
+      <div class="dlist" role="listbox" aria-label="Design">${dopts(id)}</div><div class="dgo">${goHtml(ap0)}</div></div>`, { up: true, c: HUE[ap0] });
+    el.addEventListener('click', ev => {
+      const o = ev.target.closest('.dopt'); if (!o) return;
+      pickDesign(id, o.dataset.did); const nap = appOf(id);
+      el.style.setProperty('--c', HUE[nap]);
+      el.querySelector('.dlist').innerHTML = dopts(id); el.querySelector('.dgo').innerHTML = goHtml(nap); repaintLists();
+    });
   }
   function storyPage(i) {
     const s = STORIES[i];
@@ -477,7 +528,13 @@
 
   // ---- taps ----
   document.addEventListener('click', ev => {
-    if (ev.target.closest('[data-get]')) { watch(); return; }   // Get: the link opens the app's own address, which shows how to add it
+    if (ev.target.closest('[data-go]')) { watch(); return; }    // the design sheet's button: the link opens the app's own address
+    const gt = ev.target.closest('[data-get]');
+    if (gt) {   // Get: the link opens the app's own address, which shows how to add it - after a design is picked, for an app that has them
+      const base = baseOf(gt.dataset.get);
+      if (base && !INST.has(gt.dataset.get)) { ev.preventDefault(); ev.stopPropagation(); designSheet(base); return; }
+      watch(); return;
+    }
     const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
     const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
     if (ev.target.closest('[data-signin-card]')) return acctPage();
