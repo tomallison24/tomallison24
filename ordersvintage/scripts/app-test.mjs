@@ -169,7 +169,7 @@ for (const scheme of ['light', 'dark']) {
     assert.deepEqual(await texts(page, '#opBody .otl li span'), ['Ordered', 'Shipped', 'Out for delivery', 'Delivered']);
     assert.equal(await page.$$eval('#opBody .otl li.on', e => e.length), 4);
     assert.match(await page.textContent('#opBody .okv'), /Order number.*US-0000000001/);
-    assert.ok(await page.$('#opBody a[href^="../mail/?thread="]'), 'a link to the email in Mail');
+    assert.ok(await page.$('#opBody a[href^="../mailvintage/?thread="]'), 'a link to the email in Mail');
     if (SHOTS) { await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOTS, 'order-' + scheme + '.png') }); }
     await page.click('#opBack');
     await page.click('#whenChips [data-when="way"]');

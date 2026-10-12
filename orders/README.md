@@ -94,6 +94,11 @@ What it picks out:
   the day it was delivered, the order date, and how long a pickup is held
   (*until Saturday* is worked out from the day the email came).
 
+**Whole Foods** orders arrive from Amazon's address; they are told apart by the
+store's name in the email and shown as **Whole Foods Market**, as their own
+order (a pickup, with the booked day as the expected date). Amazon Fresh and
+other Amazon-run stores were not seen in a real email and are shown as Amazon.
+
 ## How the emails fit together
 
 One order usually sends several emails: confirmation, shipping, out for

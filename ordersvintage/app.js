@@ -198,7 +198,7 @@ if (window.top !== window.self) {
       case 'shipped':
         if (late) return { label: 'Shipped', cls: 's-warn', when: 'Was due ' + fmtMD(o.eta) };
         return { label: 'Shipped', cls: '', when: o.eta ? 'Arrives ' + (o.etaEnd ? fmtRange(o.eta, o.etaEnd) : dayWord(o.eta) === 'today' ? 'today' : fmtDay(o.eta)) : s.shipped ? fmtMD(s.shipped) : '' };
-      case 'ordered': return { label: 'Ordered', cls: '', when: [s.ordered || o.orderDate ? fmtMD(s.ordered || o.orderDate) : '', o.eta ? 'arrives ' + fmtMD(o.eta) : ''].filter(Boolean).join(' · ') };
+      case 'ordered': return { label: 'Ordered', cls: '', when: [s.ordered || o.orderDate ? fmtMD(s.ordered || o.orderDate) : '', o.eta ? (o.kind === 'pickup' ? 'pickup ' : 'arrives ') + fmtMD(o.eta) : ''].filter(Boolean).join(' · ') };
       case 'pickup': return { label: 'Ready for pickup', cls: 's-now', when: o.pickupBy ? 'Until ' + fmtDay(o.pickupBy) : s.pickup ? 'Since ' + fmtMD(s.pickup) : '' };
       case 'delivered': return { label: 'Delivered', cls: 's-done', when: s.delivered ? fmtDay(s.delivered) : '' };
       case 'pickedup': return { label: 'Picked up', cls: 's-done', when: s.pickedup ? fmtDay(s.pickedup) : '' };
@@ -324,7 +324,7 @@ if (window.top !== window.self) {
   const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
   const LINKS = {
-    mailApp: threadId => '../mail/?thread=' + encodeURIComponent(threadId),
+    mailApp: threadId => '../mailvintage/?thread=' + encodeURIComponent(threadId),
     gmailWeb: msgId => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(msgId),
   };
   const linkRow = (href, title, sub, icon) => '<a class="rowbtn" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"><span class="ic">' + (icon || I.ext) + '</span><span>' + esc(title) + (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') + '</span></a>';
@@ -449,7 +449,7 @@ if (window.top !== window.self) {
       case 'shipped':
         if (o.eta && daysFrom(o.eta, t) > 0) return { h: 'Was due ' + fmtDay(o.eta), p: 'Shipped ' + fmtDay(s.shipped) + via + '. It may be late: check the carrier.' };
         return { h: o.eta ? 'Arrives ' + (o.etaEnd ? fmtRange(o.eta, o.etaEnd) : dayWord(o.eta) === 'today' || dayWord(o.eta) === 'tomorrow' ? dayWord(o.eta) : fmtDay(o.eta)) : 'On its way', p: (s.shipped ? 'Shipped ' + fmtDay(s.shipped) : 'Shipped') + via + '.' };
-      case 'ordered': return { h: 'Ordered' + (s.ordered || o.orderDate ? ' ' + dayWord(s.ordered || o.orderDate) : ''), p: o.eta ? 'Expected ' + fmtDay(o.eta) + '.' : o.kind === 'pickup' ? 'Waiting for the store to say it’s ready.' : 'Waiting for a shipping email.' };
+      case 'ordered': return { h: 'Ordered' + (s.ordered || o.orderDate ? ' ' + dayWord(s.ordered || o.orderDate) : ''), p: o.eta ? (o.kind === 'pickup' ? 'Pickup booked for ' : 'Expected ') + fmtDay(o.eta) + '.' : o.kind === 'pickup' ? 'Waiting for the store to say it’s ready.' : 'Waiting for a shipping email.' };
       case 'pickup': return { h: o.pickupBy ? 'Pick up by ' + fmtDay(o.pickupBy) : 'Ready for pickup', p: s.pickup ? 'Ready since ' + fmtDay(s.pickup) + '.' : '' };
       case 'delivered': return { h: 'Delivered' + (s.delivered ? ' ' + dayWord(s.delivered) : ''), p: o.carrier ? 'Delivered by ' + o.carrier + '.' : '' };
       case 'pickedup': return { h: 'Picked up' + (s.pickedup ? ' ' + dayWord(s.pickedup) : ''), p: '' };
@@ -475,7 +475,7 @@ if (window.top !== window.self) {
     }
     if (o.orderNo) rows.push('<div><dt>Order number</dt><dd>' + esc(o.orderNo) + '</dd></div>');
     if (o.orderDate) rows.push('<div><dt>Ordered</dt><dd>' + esc(fmtDay(o.orderDate)) + '</dd></div>');
-    if (o.eta && isOpen(o)) rows.push('<div><dt>Expected</dt><dd>' + esc(o.etaEnd ? fmtRange(o.eta, o.etaEnd) : fmtDay(o.eta)) + '</dd></div>');
+    if (o.eta && isOpen(o)) rows.push('<div><dt>' + (o.kind === 'pickup' ? 'Pickup' : 'Expected') + '</dt><dd>' + esc(o.etaEnd ? fmtRange(o.eta, o.etaEnd) : fmtDay(o.eta)) + '</dd></div>');
     if (o.pickupBy && o.status === 'pickup') rows.push('<div><dt>Pick up by</dt><dd>' + esc(fmtDay(o.pickupBy)) + '</dd></div>');
     if (rows.length || o.trackUrl) {
       h += '<div class="obox">' + (rows.length ? '<dl class="okv">' + rows.join('') + '</dl>' : '');
@@ -490,7 +490,7 @@ if (window.top !== window.self) {
     if (o.notes) h += '<div class="obox"><p style="margin:8px 0;white-space:pre-line;overflow-wrap:anywhere">' + esc(o.notes) + '</p></div>';
     const acts = [];
     if (o.source && o.source.threadId) {
-      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
+      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail Vintage<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');

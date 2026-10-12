@@ -32,6 +32,10 @@ the style picker in the design canvas is not built.
 It is a second copy of Orders' page and script, not a setting, so the two can
 change independently and Orders is never touched.
 
+- **Opens its email in Mail Vintage**, not Mail (`../mailvintage/?thread=…`). Both are
+  separate Home Screen apps; whether iOS opens that address inside the installed
+  Mail Vintage or in Safari is up to iOS, which treats a link outside an app's
+  own folder as a web page (not checked on a phone).
 - **Own storage.** Every key is `ordersv.…` or `allison-ordersv-…` (Orders' is
   `orders.…` / `allison-orders-…`), so each app has its own orders, settings
   and offline cache (`ordersvintage-v1`). An order edited in one is not edited
