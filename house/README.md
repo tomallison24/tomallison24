@@ -133,8 +133,12 @@ the same rules:
   temperatures are set in the Nest app, so there is nothing to step; **Exit
   Eco** goes back to your own temperatures. Heating or cooling in Eco shows
   the ember or frost sky as usual.
-- **The sky** is what the unit is doing: embers while heating, frost while
-  cooling, airflow with the fan, graphite when off. Idle, each room has its
+- **The sky** is what the unit is doing: embers and one small flickering flame
+  (an outer flame with a brighter core, on the right) while heating, frost and a
+  few small snowflakes that fall slowly, swaying and turning, while cooling,
+  airflow with the fan, graphite when off. All of it is faint and still under
+  Reduce Motion (the flakes stay out of sight, the flame stays put). The
+  Windmill AC takes the same cooling sky. Idle, each room has its
   own palette (Living Room a warm graphite, Office a cool slate, Windmill
   breeze; no pink or purple), a touch brighter as the sun climbs and darker
   after sunset (`sun.sun`). The HEAT / COOL / ECO labels are plain black or

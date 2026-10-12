@@ -101,6 +101,7 @@
         'Meals: a new plan waits for you to accept it, try again or discard it; accepted plans are saved with their dates and shopping list under Past plans',
         'Home: connects to Home Assistant faster when the network is slow to answer: a second and third try open beside a stalled one, and the first answered is kept (before, each try was given up on after 12 seconds and started again from nothing)',
         'Home: the 1% light button is a moon on midnight blue, the night setting',
+        'Home: the thermostats and the Windmill AC show a few small snowflakes falling while they cool and a small flickering flame while they heat, all faint and animated',
         'Home: the 100% light button is a sun, glowing gold at full brightness',
         'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size',
         'Mail\'s new tagline in aOS: Mail.Controlled.',

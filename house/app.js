@@ -965,12 +965,15 @@ function tfxHTML(t, r, top = 60) {
   let L = '';
   if (m === 'heat') {
     L += pool('224,122,79', 0.16, 'dg-breathe');
-    for (let i = 0; i < 12; i++) { const du = 6 + rnd() * 6;
+    // one small flame, flickering low on the right (outer flame and a brighter core), over a few embers
+    L += `<div class="tc-flame" style="top:${top + 70}px" aria-hidden="true"><span class="tc-fo">${svg('fire', 30)}</span><span class="tc-fc">${svg('fire', 14)}</span></div>`;
+    for (let i = 0; i < 7; i++) { const du = 6 + rnd() * 6;
       L += `<i class="tc-ember" style="left:${(5 + rnd() * 90).toFixed(1)}%;background:rgba(255,${150 + Math.round(rnd() * 60)},110,0.85);box-shadow:0 0 5px rgba(255,140,90,0.8);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
   } else if (m === 'cool') {
     L += pool('120,170,230', 0.14, 'dg-breathe');
-    for (let i = 0; i < 12; i++) { const du = 9 + rnd() * 7;
-      L += `<i class="tc-frost" style="left:${(5 + rnd() * 95).toFixed(1)}%;box-shadow:0 0 4px rgba(156,210,255,0.8);animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
+    // a few small snowflakes falling slowly: each falls (the <i>), sways (the <b>) and turns (the svg)
+    for (let i = 0; i < 9; i++) { const du = 11 + rnd() * 8, sz = 8 + Math.round(rnd() * 5);
+      L += `<i class="tc-snow" style="left:${(4 + rnd() * 92).toFixed(1)}%;--o:${(0.3 + rnd() * 0.25).toFixed(2)};animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"><b style="animation-duration:${(3 + rnd() * 3).toFixed(1)}s;animation-delay:-${(rnd() * 3).toFixed(1)}s;">${svg('snow', sz)}</b></i>`; }
   } else if (m === 'fan') {
     for (let i = 0; i < 7; i++) { const du = 3.5 + rnd() * 3;
       L += `<i class="tc-air" style="top:${(12 + rnd() * 76).toFixed(1)}%;background:linear-gradient(90deg, rgba(142,227,214,0), rgba(142,227,214,0.5), rgba(142,227,214,0));animation-duration:${du.toFixed(1)}s;animation-delay:-${(rnd() * du).toFixed(1)}s;"></i>`; }
