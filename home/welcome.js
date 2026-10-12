@@ -106,7 +106,8 @@
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Orders is new, one of the Allison family apps: everything you\'ve bought and where it is, read from the order, shipping and store-pickup emails in your Gmail, with the courier, the tracking number and a link to track it. Packages and store pickups show; food, subscriptions and tickets can be switched on in Settings',
         'Mail Vintage is new, one of the Allison family apps: the same Mail, in a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own sign-in and settings, so Mail stays as it is',
-        'Home Vintage is new, one of the Allison family apps: the same Home, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass and skies, a sun behind the title and Futura type. It is a separate app, with its own Home Assistant connection and settings, so Home stays as it is'],
+        'Home Vintage is new, one of the Allison family apps: the same Home, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass and skies, a sun behind the title and Futura type. It is a separate app, with its own Home Assistant connection and settings, so Home stays as it is',
+        'Orders Vintage is new, one of the Allison family apps: the same Orders, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own orders and settings (it can share Orders\' Google Sheet), so Orders stays as it is'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
@@ -180,13 +181,13 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', ordersvintage: 'Orders Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mailvintage": {
@@ -208,6 +209,17 @@
         { "i": "bulb", "t": "Lights by room", "d": "Switch a whole room on or off, dim each light with a slider, or use All on and All off." },
         { "i": "shield", "t": "Cameras and security", "d": "Arm or disarm Blink, see each camera's latest still, take a snapshot or pause motion detection." },
         { "i": "house", "t": "Its own app", "d": "Home Vintage connects and keeps its settings on its own, so Home stays just as it is. Use either, or both." }
+      ]
+    },
+    "ordersvintage": {
+      "tag": "Everything you've bought, mid-century style",
+      "cards": [
+        { "i": "star", "t": "A vintage look", "d": "The same Orders in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
+        { "i": "inbox", "t": "Fills itself from Gmail", "d": "Connect Gmail and your order, shipping and pickup emails become orders on their own." },
+        { "i": "truck", "t": "See where it is", "d": "On the way, ordered, ready for pickup or delivered, each with its courier and tracking number." },
+        { "i": "box", "t": "Tracking in one tap", "d": "Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up." },
+        { "i": "check", "t": "A quick check when it's unsure", "d": "An order read from the words of an email, or one that has gone quiet, waits under To check." },
+        { "i": "share", "t": "Its own app", "d": "Orders Vintage keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step." }
       ]
     },
     "mail": {
@@ -811,7 +823,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Home, Mail Vintage and Home Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Home, Mail Vintage, Home Vintage and Orders Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1388,16 +1400,26 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox.', g: 'tap' },
     { sel: '.tabs .tab[data-tab="explore"]', t: 'Plan the next one', d: 'Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in.', g: 'tap' },
   ] };
+  // Orders and Orders Vintage share one page, so one demo card.
+  const ORDER_CARD = { into: '#list', hide: '#list .empty, #list .btn', html: () => `<button class="ocard" type="button" tabindex="-1" style="--i:0"><div class="otop"><span class="mono m1">N</span><div class="omid"><div class="ostore">Northfield Hardware</div><div class="owhat">Oak flooring and underlayment</div></div><span class="oprice">$987.21</span></div>
+        <div class="ostate"><b class="s-now">Out for delivery</b><span class="when">Today</span></div><div class="osteps" style="grid-template-columns:repeat(4,1fr)"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="ocarrier"><span class="cpill">UPS</span><span class="t">1Z 000 000 00 0000 0000</span></div></button>` };
   SPOTS.orders = { stops: [
     { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your order, shipping and pickup emails become orders on their own.', g: 'tap' },
     { sel: '#list [data-aos-demo].ocard', t: 'See where it is', d: 'On the way, ordered, ready for pickup or delivered, each with its courier and tracking number.', pad: 4, g: 'tap',
-      demo: { into: '#list', hide: '#list .empty, #list .btn', html: () => `<button class="ocard" type="button" tabindex="-1" style="--i:0"><div class="otop"><span class="mono m1">N</span><div class="omid"><div class="ostore">Northfield Hardware</div><div class="owhat">Oak flooring and underlayment</div></div><span class="oprice">$987.21</span></div>
-        <div class="ostate"><b class="s-now">Out for delivery</b><span class="when">Today</span></div><div class="osteps" style="grid-template-columns:repeat(4,1fr)"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
-        <div class="ocarrier"><span class="cpill">UPS</span><span class="t">1Z 000 000 00 0000 0000</span></div></button>` } },
+      demo: ORDER_CARD },
     { sel: '#list [data-aos-demo] .ocarrier', t: 'Tracking in one tap', d: 'Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up.', g: 'tap' },
     { sel: '#whenChips', t: 'A quick check when it’s unsure', d: 'An order read from the words of an email, or one that has gone quiet, waits under To check.', g: 'tap' },
     { sel: '#setBtn', t: 'Choose what counts', d: 'Packages and store pickups show. Turn on food, subscriptions or tickets in Settings.', g: 'tap' },
     { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add an order yourself, or paste an order email from any inbox.', g: 'tap' },
+  ] };
+  SPOTS.ordersvintage = { stops: [
+    { sel: '#list [data-aos-demo].ocard', demo: ORDER_CARD, pad: 4, t: 'A vintage look', d: 'The same Orders in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
+    { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your order, shipping and pickup emails become orders on their own.', g: 'tap' },
+    { sel: '#list [data-aos-demo].ocard', demo: ORDER_CARD, pad: 4, t: 'See where it is', d: 'On the way, ordered, ready for pickup or delivered, each with its courier and tracking number.', g: 'tap' },
+    { sel: '#list [data-aos-demo] .ocarrier', demo: ORDER_CARD, t: 'Tracking in one tap', d: 'Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up.', g: 'tap' },
+    { sel: '#whenChips', t: 'A quick check when it’s unsure', d: 'An order read from the words of an email, or one that has gone quiet, waits under To check.', g: 'tap' },
+    { sel: '#setBtn', t: 'Its own app', d: 'Orders Vintage keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.', g: 'tap' },
   ] };
   SPOTS.places = { stops: [
     { sel: '#seg', t: 'Want to go and Been', d: 'Keep two lists: places you want to try and places you’ve been. Tap Been to move a place across.', g: 'tap' },

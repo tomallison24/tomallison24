@@ -27,6 +27,11 @@ tracking number, and opens the carrier's own tracking page with one tap.
   are read.
 - **Two phones**: a shared Google Sheet, set up like Notes' and Travel's (below).
 
+**Orders Vintage** is the same app in a mid-century modern look, as its own app
+with its own orders and settings ([`ordersvintage/`](../ordersvintage/README.md)).
+It needs its own redirect address in Google Cloud (below), and can share this
+app's Google Sheet.
+
 ## What counts as an order
 
 Mail's **Orders** tag also catches things that aren't packages, so Settings
@@ -126,6 +131,8 @@ client once:
    application** client.
 2. **Authorised redirect URIs** → add, exactly (trailing slash included):
    - `https://tomallison24-news.pages.dev/orders/`
+   - and, for Orders Vintage, `https://tomallison24-news.pages.dev/ordersvintage/`
+     (each app needs its own address: Google matches them exactly)
    - and the Cloudflare address too, if you use that one: `https://<your
      Cloudflare Pages address>/orders/`
 3. **Save**. Google can take a few minutes to pick it up.
