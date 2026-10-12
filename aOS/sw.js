@@ -1,6 +1,6 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v28';
+const CACHE = 'aos-v29';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/welcome.js', '../home/account.js'];
 
 self.addEventListener('install', e => {
@@ -25,4 +25,25 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
   );
+});
+
+// Notifications from the owner (server/push.js): the push is encrypted for this
+// phone and carries { title, body, url, tag }. A push must always show something.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'AllisonOS', {
+    body: d.body || '', icon: 'icon-180.png', tag: d.tag || undefined, data: { url: d.url || './' },
+  }));
+});
+
+// A tap opens aOS (or the page named), reusing a window that is already open.
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  let to = new URL('./', self.registration.scope);
+  try { const u = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope); if (u.origin === to.origin) to = u; } catch {}
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const open = list.find(c => c.url.split('#')[0] === to.href.split('#')[0] && 'focus' in c);
+    return open ? open.focus() : self.clients.openWindow(to.href);
+  }));
 });

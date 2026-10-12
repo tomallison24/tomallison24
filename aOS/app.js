@@ -334,8 +334,13 @@
       catch (e) { m.textContent = why(e); }
       busy($('aOthers'), false);
     };
+    box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
+    paintNotify();
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
+    box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3><p>To everyone in the family who has turned notifications on. Keep it short: the phone shows a title and a few lines.</p>
+      <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
+      <div class="row2"><button type="button" class="soft" id="nFill">Use what's new</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
+      <div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
       <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
@@ -347,12 +352,101 @@
       busy($('iGo'), false);
     };
     paintFamily();
+    paintComposer();
     ACC.call('home').then(r => { if (r.address && !$('hAddr').value) $('hAddr').value = r.address; }).catch(() => {});
     $('hSave').onclick = async () => {
       busy($('hSave'), true); const m = $('hErr'); m.textContent = ''; m.style.color = '';
       try { const r = await ACC.call('home', { address: $('hAddr').value.trim() }); $('hAddr').value = r.address || ''; m.style.color = 'var(--muted)'; m.textContent = r.address ? 'Saved: Home fills this in for the family.' : 'Cleared.'; }
       catch (e) { m.textContent = e.message === 'address' ? 'Use the https address, like https://xxxxxxxx.ui.nabu.casa.' : why(e); }
       busy($('hSave'), false);
+    };
+  }
+
+  // ---- notifications: Web Push from the owner (server/push.js; aOS/sw.js shows them) ----
+  // On iPhone they only work for an app opened from the Home Screen (iOS 16.4 or later),
+  // and the permission can only be asked for from a tap.
+  const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const keyBytes = k => { const t = k.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(t + '='.repeat((4 - t.length % 4) % 4)), c => c.charCodeAt(0)); };
+  const thisPhone = async () => { const reg = await navigator.serviceWorker.ready; return { reg, sub: await reg.pushManager.getSubscription() }; };
+  async function paintNotify(msg) {
+    const box = $('nBox'); if (!box) return;
+    let on = false, sub = null;
+    if (pushOK() && Notification.permission === 'granted') { try { sub = (await thisPhone()).sub; on = !!sub; } catch {} }
+    if (!$('nBox')) return;
+    const head = '<h3>Notifications</h3>';
+    let html;
+    if (!pushOK()) html = `<p>${iphone && !standalone ? 'On iPhone, notifications work from the Home Screen: add aOS to it (Share → Add to Home Screen), open it from there, and turn them on here.' : 'This browser can\'t show notifications from aOS.'}</p>`;
+    else if (Notification.permission === 'denied') html = `<p>Notifications are blocked for aOS. ${iphone ? 'Turn them on in Settings → Notifications → aOS' : 'Allow them in this browser\'s site settings'}, then come back.</p>`;
+    else if (on) html = '<p>On for this phone: updates and news from the family arrive as notifications.</p><div class="row2"><button type="button" class="soft" id="nTest">Send me a test</button><button type="button" class="soft" id="nOff">Turn off</button></div>';
+    else html = '<p>Get updates and news from the family as notifications on this phone.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
+    box.innerHTML = `<div>${head}${html}<div class="err" id="nMsg"></div></div>`;
+    if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
+    if ($('nOn')) $('nOn').onclick = turnOn;
+    if ($('nOff')) $('nOff').onclick = async () => {
+      busy($('nOff'), true);
+      try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
+      catch (e) { paintNotify({ err: 1, t: why(e) }); }
+    };
+    if ($('nTest')) $('nTest').onclick = async () => {
+      busy($('nTest'), true);
+      try { const r = await ACC.call('push/test', {}); paintNotify({ err: !r.sent, t: r.sent ? 'Sent: it should arrive in a moment.' : 'It didn\'t go through. Turn notifications off and on again.' }); }
+      catch (e) { paintNotify({ err: 1, t: why(e) }); }
+    };
+  }
+  async function turnOn() {
+    busy($('nOn'), true);
+    try {
+      const perm = await Notification.requestPermission();   // from the tap
+      if (perm !== 'granted') return paintNotify({ err: 1, t: perm === 'denied' ? 'Blocked. You can allow it in Settings.' : 'Not turned on.' });
+      const { reg, sub: had } = await thisPhone();
+      const { key } = await ACC.call('push');
+      if (!key) throw new Error('storage');
+      const sub = had || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+      await ACC.call('push/subscribe', { subscription: sub.toJSON() });
+      paintNotify({ t: 'On. Tap Send me a test to see one.' });
+    } catch (e) { paintNotify({ err: 1, t: e && e.message === 'subscription' ? 'This phone\'s notification service isn\'t supported.' : why(e) }); }
+  }
+  // A phone's address can change, and someone else may sign in on it: say again, quietly,
+  // at most twice a day (the server writes only if something changed).
+  async function syncPush() {
+    try {
+      if (!pushOK() || Notification.permission !== 'granted' || !ACC.user()) return;
+      if (Date.now() - (+localStorage.getItem('aos.pushsync') || 0) < 12 * 36e5) return;
+      const { sub } = await thisPhone(); if (!sub) return;
+      await ACC.call('push/subscribe', { subscription: sub.toJSON() });
+      localStorage.setItem('aos.pushsync', String(Date.now()));
+    } catch {}
+  }
+  // the owner's side: who will get it, and one person at a time (a request only encrypts for a few phones)
+  let audience = [];
+  async function paintComposer() {
+    if (!$('nWho')) return;
+    try { audience = (await ACC.call('push/audience')).people; } catch { audience = []; }
+    if (!$('nWho')) return;
+    const phones = audience.reduce((a, p) => a + p.devices, 0);
+    $('nWho').textContent = audience.length ? `Goes to ${audience.map(p => p.name.split(/\s+/)[0]).join(', ')} (${phones} ${phones === 1 ? 'phone' : 'phones'}).` : 'No one has turned notifications on yet. Each person does it under their account, from the Home Screen app.';
+    $('nFill').onclick = () => {
+      const r = live[0], line = [...(r.highlights || []), ...(r.notes || [])][0] || r.title || '';
+      $('nTitle').value = `New in aOS ${r.v}`; $('nBody').value = line.slice(0, 240);
+    };
+    $('nGo').onclick = async () => {
+      const m = $('nErr'); m.style.color = ''; m.textContent = '';
+      const title = $('nTitle').value.trim(), body = $('nBody').value.trim();
+      if (!title) { m.textContent = 'Give it a title.'; return; }
+      if (!audience.length) { m.textContent = 'No one has notifications on yet.'; return; }
+      if (!confirm(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`)) return;
+      busy($('nGo'), true);
+      let sent = 0, failed = 0;
+      try {
+        for (const p of audience) {
+          m.style.color = 'var(--muted)'; m.textContent = `Sending to ${p.name.split(/\s+/)[0]}…`;
+          const r = await ACC.call('push/send', { to: p.id, title, body, url: './' });
+          sent += r.sent; failed += r.failed + r.gone;
+        }
+        m.style.color = 'var(--muted)'; m.textContent = `Sent to ${sent} ${sent === 1 ? 'phone' : 'phones'}${failed ? `; ${failed} didn't take it` : ''}.`;
+        $('nTitle').value = ''; $('nBody').value = '';
+      } catch (e) { m.style.color = ''; m.textContent = `Stopped after ${sent} ${sent === 1 ? 'phone' : 'phones'}: ${why(e)}`; }
+      busy($('nGo'), false); paintComposer();
     };
   }
 
@@ -413,6 +507,7 @@
   getState().then(st => {
     lastCheck = Date.now();
     paintSigninCard(); paintAvatars();
+    if (st.user) syncPush();
     if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
   });
