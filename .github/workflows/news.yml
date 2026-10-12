@@ -201,13 +201,14 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MEALS_MODEL: ${{ secrets.MEALS_MODEL }}
           NEWS_AI_MODEL: ${{ secrets.NEWS_AI_MODEL }}
+          ORDERS_AI_MODEL: ${{ secrets.ORDERS_AI_MODEL }}
         run: |
           # wrangler is pinned to an exact release for the same reason; it runs
           # with the Cloudflare token. It runs from the repository root, so it
           # also deploys functions/ (the Podcasts app's feed fetcher,
           # /podcasts/api/*, Travel's flight status, /travel/api/*, and
           # Calendar's iCloud connection, /calendar/api/*, and Weather's forecast
-          # radar run time, /weather/api/*, Meals' plans and deals, /meals/api/*, and News's summaries, /news/api/*)
+          # radar run time, /weather/api/*, Meals' plans and deals, /meals/api/*, and News's summaries, /news/api/*, and Orders' Fix with Claude, /orders/api/*)
           # as Pages Functions.
           mkdir -p _site && cp -r home news weather mail mailvintage notes podcasts travel calendar places house housevintage fitness drinks meals orders ordersvintage aOS aos _headers _site/ && if [ -d labs ]; then cp -r labs _site/; fi
           npx --yes wrangler@4.131.1 pages project create tomallison24-news --production-branch=main 2>/dev/null || true
@@ -251,8 +252,10 @@ jobs:
           # optional, names another model
           # than Claude Haiku 5.5. News's summaries use the same key (news/README.md,
           # "Summaries"); NEWS_AI_MODEL, optional, names another model than Claude Opus 5.5.
+          # Orders' Fix with Claude uses it too (orders/README.md); ORDERS_AI_MODEL, optional,
+          # names another model than Claude Haiku 5.5.
           # Each is skipped until its repository secret exists.
-          for v in ICLOUD_APPLE_ID ICLOUD_APP_PASSWORD ICLOUD_CALENDAR ACCESS_TEAM_DOMAIN ACCESS_AUD ANTHROPIC_API_KEY MEALS_MODEL NEWS_AI_MODEL; do
+          for v in ICLOUD_APPLE_ID ICLOUD_APP_PASSWORD ICLOUD_CALENDAR ACCESS_TEAM_DOMAIN ACCESS_AUD ANTHROPIC_API_KEY MEALS_MODEL NEWS_AI_MODEL ORDERS_AI_MODEL; do
             if [ -n "${!v}" ]; then
               printf '%s' "${!v}" | npx --yes wrangler@4.131.1 pages secret put "$v" --project-name=tomallison24-news
             fi

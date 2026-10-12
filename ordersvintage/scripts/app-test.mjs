@@ -169,7 +169,7 @@ for (const scheme of ['light', 'dark']) {
     assert.deepEqual(await texts(page, '#opBody .otl li span'), ['Ordered', 'Shipped', 'Out for delivery', 'Delivered']);
     assert.equal(await page.$$eval('#opBody .otl li.on', e => e.length), 4);
     assert.match(await page.textContent('#opBody .okv'), /Order number.*US-0000000001/);
-    assert.ok(await page.$('#opBody a[href^="../mail/?thread="]'), 'a link to the email in Mail');
+    assert.ok(await page.$('#opBody a[href^="../mailvintage/?thread="]'), 'a link to the email in Mail');
     if (SHOTS) { await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOTS, 'order-' + scheme + '.png') }); }
     await page.click('#opBack');
     await page.click('#whenChips [data-when="way"]');
@@ -258,6 +258,39 @@ for (const scheme of ['light', 'dark']) {
     await page.reload();
     assert.ok(await page.evaluate(() => window.__orders.kinds.food), 'kept');
     await page.waitForFunction(() => window.__orders);
+  });
+
+  await step(scheme + ': Fix details with Claude sends one email (no links) to the family server, and the answer lands on the order, with Undo', async () => {
+    const sent = [];
+    await ctx.route('**/orders/api/read', route => { sent.push({ h: route.request().headers(), b: JSON.parse(route.request().postData()) }); return route.fulfill({ json: { fact: {
+      store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD', items: [{ name: 'Mini Fridge 4L Cooler', qty: 1 }], issue: 'An item is unavailable' } } }); });
+    page.once('dialog', d => d.accept());
+    await page.click('#whenChips [data-when="way"]');
+    await page.click('#list .ocard:has(.ostore:text("Walmart"))');
+    await page.waitForSelector('#opage:not([hidden]) #opAi');
+    await page.click('#opAi');
+    await page.waitForFunction(() => /Claude updated/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].h['x-orders'], '1');
+    assert.match(sent[0].b.subject, /Review your order updates/); assert.match(sent[0].b.text, /2000000-00000001/);
+    assert.ok(!/https?:/.test(sent[0].b.text), 'no links are sent');
+    const o = await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart'));
+    assert.equal(o.items[0].name, 'Mini Fridge 4L Cooler'); assert.equal(o.ai, true); assert.equal(o.guess, false);
+    assert.match(await page.textContent('#opBody .srcnote'), /fixed with Claude/);
+    await page.click('#toastAct');
+    const back = await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart'));
+    assert.equal(back.ai, undefined); assert.match(back.items[0].name, /Mini Fridge, 4L/);
+    await page.click('#opBack');
+  });
+
+  await step(scheme + ': Claude not set up, or not signed in: the order page says so and nothing changes', async () => {
+    await ctx.unroute('**/orders/api/read');
+    await ctx.route('**/orders/api/read', route => route.fulfill({ status: 503, json: { error: 'no-ai' } }));
+    await page.click('#list .ocard:has(.ostore:text("Walmart"))');
+    await page.click('#opAi');
+    await page.waitForFunction(() => /isn’t set up/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart').ai), undefined);
+    await page.click('#opBack');
   });
 
   await step(scheme + ': a deleted order stays deleted when Gmail is read again', async () => {

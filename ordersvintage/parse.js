@@ -25,7 +25,7 @@
   // ---------------------------------------------------------------------
   // Sender domain -> the store's name, for the stores people buy from most.
   const STORES = [
-    [/(^|\.)amazon\.[a-z.]+$/, 'Amazon'], [/(^|\.)ebay\.com$/, 'eBay'], [/(^|\.)walmart\.com$/, 'Walmart'],
+    [/(^|\.)wholefoodsmarket\.com$/, 'Whole Foods Market'], [/(^|\.)amazon\.[a-z.]+$/, 'Amazon'], [/(^|\.)ebay\.com$/, 'eBay'], [/(^|\.)walmart\.com$/, 'Walmart'],
     [/(^|\.)target\.com$/, 'Target'], [/(^|\.)homedepot\.com$/, 'Home Depot'], [/(^|\.)lowes\.com$/, 'Lowe’s'],
     [/(^|\.)bestbuy\.com$/, 'Best Buy'], [/(^|\.)costco\.com$/, 'Costco'], [/(^|\.)etsy\.com$/, 'Etsy'],
     [/(^|\.)wayfair\.com$/, 'Wayfair'], [/(^|\.)chewy\.com$/, 'Chewy'], [/(^|\.)nike\.com$/, 'Nike'],
@@ -267,11 +267,16 @@
   const curOf = s => /CA\$|C\$/.test(s) ? 'CAD' : s === '€' ? 'EUR' : s === '£' ? 'GBP' : 'USD';
   const num = s => parseFloat(String(s).replace(/,/g, ''));
   function findTotal(text) {
-    const labels = ['order total', 'grand total', 'total charged(?: to)?', 'amount charged', 'amount paid', 'total paid', 'total due', 'amount due', 'total amount', 'payment total', 'total'];
+    const labels = ['order total', 'grand total', 'payment authorization', 'total charged(?: to)?', 'amount charged', 'amount paid', 'total paid', 'total due', 'amount due', 'total amount', 'payment total', 'total'];
     for (const l of labels) {
       const re = new RegExp('(?:^|[^a-z])' + l + '\\s*(?:\\([^)]{0,30}\\))?\\s*[:|]?\\s*(?:USD\\s*)?' + MONEY, 'i');
       const m = re.exec(text);
       if (m) return { total: num(m[2]), cur: curOf(m[1]) };
+    }
+    // "Grand Total:\n64.23 USD": the currency after the number, no symbol
+    for (const l of labels) {
+      const m = new RegExp('(?:^|[^a-z])' + l + '\\s*:?\\s*(\\d{1,3}(?:,\\d{3})*\\.\\d\\d|\\d+\\.\\d\\d)\\s*(USD|CAD|EUR|GBP)\\b', 'i').exec(text);
+      if (m) return { total: num(m[1]), cur: m[2].toUpperCase() };
     }
     const sub = new RegExp('subtotal\\s*[:|]?\\s*' + MONEY, 'i').exec(text), tax = new RegExp('(?:^|[^a-z])tax\\s*[:|]?\\s*' + MONEY, 'i').exec(text);
     if (sub && tax) return { total: Math.round((num(sub[2]) + num(tax[2])) * 100) / 100, cur: curOf(sub[1]) };
@@ -373,9 +378,11 @@
     notDelivered: /out for delivery|will be delivered|to be delivered|not delivered|delivery (?:attempt|exception|rescheduled)|when (?:it(?:'|’)s|your .{0,20} is) delivered|once (?:it(?:'|’)s|your .{0,20} is) delivered|if (?:it(?:'|’)s|your .{0,20} is) delivered/i,
     out: /out for delivery|arriving today|delivery today|delivered today|(?:\d|one|two|three) stops? away|on (?:its|the) way to you today|scheduled for delivery today/i,
     pickup: /ready (?:for|to) (?:be )?(?:pick ?-?up|collect)|ready for curbside|available (?:now )?(?:for|through|until) (?:pick ?-?up|\w+,? \w+)|pick it up (?:by|before|until)|your order(?:'|’)?s? ready|order is ready|ready at the store/i,
+    // "we'll tell you when your order is ready for pickup" is a promise, not the news
+    notPickup: /(?:when|once|until|if|after|as soon as)\s+(?:your|the)\s+(?:order|items?)\s+(?:is|are)\s+ready/i,
     pickedUp: /thanks? for picking up|you picked up|order (?:was |has been )?picked up by you/i,
     shipped: /\b(?:has shipped|have shipped|shipped[!.:]?|on (?:its|the) way|on the way|in transit|ship notification|shipping confirmation|shipping update|shipment|dispatched|is on its way|label created|packed and picked up|your package|tracking (?:number|information|details))\b/i,
-    ordered: /\b(?:order (?:confirm\w*|received|placed|submitted|details|summary)|order(?:ing)? receipt|thanks? (?:you )?for (?:your )?(?:\w+ )?(?:order|shopping|purchase)|thank you for (?:your )?(?:\w+ )?(?:order|purchase|shopping)|we(?:'|’)?(?:ve)? received your order|your order(?:'|’)?s? (?:confirmed|received|is confirmed|has been (?:received|placed))|getting your order|getting it ready|here(?:'|’)s your order|your (?:receipt|purchase|invoice)|receipt from|order with)\b/i,
+    ordered: /\b(?:order (?:confirm\w*|received|placed|submitted|details|summary)|order(?:ing)? receipt|thanks? (?:you )?for (?:your )?(?:\w+ )?(?:order|shopping|purchase)|thank you for (?:your )?(?:\w+ )?(?:order|purchase|shopping)|we(?:'|’)?(?:ve)? received your order|your order(?:'|’)?s? (?:confirmed|received|is confirmed|has been (?:received|placed))|order (?:has been |was )?(?:received|placed|confirmed)|(?:is|are) confirmed|^ordered \d+ items?|getting your order|getting it ready|here(?:'|’)s your order|your (?:receipt|purchase|invoice)|receipt from|order with)\b/i,
     issue: /\b(?:unavailable|out of stock|backorder\w*|delayed?|can(?:'|’)?t (?:fulfill|ship)|problem with your order|issue with your order|order updates?|action required|payment (?:failed|declined)|couldn(?:'|’)?t be)\b/i,
     partial: /part of your order|some of your (?:items|order|packages?)|one of your (?:items|packages)|a package from your order|\b\d of \d (?:items|packages)\b|partial(?:ly)?/i,
     promo: /\d+\s?% off|\bsale\b|\bdeals?\b|coupon|free shipping (?:on|when)|rewards?\b|how was your|rate your|feedback|survey|review (?:your|this)|we(?:'|’)d love|newsletter|just for you|save \$|\bearn\b|re-?activate|you(?:'|’)re invited|restock|back in stock|price drop|your cart|left in your cart|wish ?list|recommend/i,
@@ -387,12 +394,14 @@
       if (R.pickedUp.test(s)) return 'pickedup';
       if (R.out.test(s)) return 'out';
       if (R.delivered.test(s) && !R.notDelivered.test(s)) return 'delivered';
-      if (R.pickup.test(s)) return 'pickup';
+      if (R.pickup.test(s) && !R.notPickup.test(s)) return 'pickup';
       if (R.shipped.test(s)) return 'shipped';
       if (R.ordered.test(s)) return 'ordered';
       return '';
     };
-    return test(t) || test(String(head || '').slice(0, 500)) || '';
+    // A progress bar listing every stage (Ordered Shipped Out for delivery Delivered) says nothing about which.
+    const h = String(head || '').replace(/ordered\s+shipped\s+out for delivery\s+delivered/gi, ' ').slice(0, 500);
+    return test(t) || test(h) || '';
   }
 
   // ---------------------------------------------------------------------
@@ -458,7 +467,8 @@
   // "Ordered: “Name”", "Shipped: Name", "OUT FOR DELIVERY: Name", "Your order’s confirmed for Name"
   function itemFromSubject(subject) {
     const s = String(subject || '').replace(/^(?:fwd?|re):\s*/i, '');
-    let m = /^(?:ordered|shipped|delivered|out for delivery|arriving[^:]*|now arriving|order confirmed|your order(?:'|’)?s? (?:confirmed|shipped|delivered))\s*(?:for|:)\s*["“”]?(.+?)["“”]?$/i.exec(s)
+    let m = /^ordered\s+\d+\s+items?\s*:\s*["“”]?(.+?)["“”]?$/i.exec(s)
+      || /^(?:ordered|shipped|delivered|out for delivery|arriving[^:]*|now arriving|order confirmed|your order(?:'|’)?s? (?:confirmed|shipped|delivered))\s*(?:for|:)\s*["“”]?(.+?)["“”]?$/i.exec(s)
       || /^(?:out for delivery|delivered|shipped|ordered|arriving)\s*:\s*(.+)$/i.exec(s);
     if (!m) return '';
     const n = cleanItem(m[1].replace(/[“”"]/g, ''));
@@ -546,7 +556,9 @@
     if (!status && issue) status = 'ordered';
     if (!status && trk) status = 'shipped';
     const found = findTotal(text) || (sc.total ? { total: sc.total, cur: sc.cur } : null);
-    const store = sc.store || storeOf(sender, subj, text, !!carrierSender);
+    // Whole Foods orders come from Amazon's address, but they are Whole Foods' (a store, with its own pickup)
+    let store = sc.store || storeOf(sender, subj, text, !!carrierSender);
+    if (store === 'Amazon' && /whole foods/i.test(subj + '\n' + text.slice(0, 300))) store = 'Whole Foods Market';
     const kind = kindOf({ domain: sender.domain, from: msg.from, subject: subj, head: text.slice(0, 1500), status, tracking: trk && trk.tracking, storeName: store });
 
     // Is this about a purchase at all? Offers, surveys and the like are not.
@@ -576,6 +588,12 @@
       }
       if (!eta && /arriving today|out for delivery|delivery today/i.test(subj)) eta = day;
       if (!eta) { const sd = dateIn((/(?:arriving|arrives|delivery by)\s+(?:on\s+)?([^!\n]{3,30})/i.exec(subj) || [])[1] || '', ref); if (sd) eta = sd; }
+    }
+    // A pickup booked for a time: "Pickup Time: Tuesday, October 13, 2026, 4:00 PM - 5:00 PM"
+    if (!eta && kind === 'pickup' && status === 'ordered') {
+      const pm = /pick-?up (?:time|date|window|slot)\s*:?\s*([^\n]{3,60})/i.exec(text);
+      const pd = pm && findDates(pm[1], ref)[0];
+      if (pd) eta = pd.date;
     }
     let deliveredOn = '';
     if (status === 'delivered') {

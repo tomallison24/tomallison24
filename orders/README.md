@@ -94,6 +94,11 @@ What it picks out:
   the day it was delivered, the order date, and how long a pickup is held
   (*until Saturday* is worked out from the day the email came).
 
+**Whole Foods** orders arrive from Amazon's address; they are told apart by the
+store's name in the email and shown as **Whole Foods Market**, as their own
+order (a pickup, with the booked day as the expected date). Amazon Fresh and
+other Amazon-run stores were not seen in a real email and are shown as Amazon.
+
 ## How the emails fit together
 
 One order usually sends several emails: confirmation, shipping, out for
@@ -118,7 +123,36 @@ there is none it becomes a package of its own.
   clears an *unavailable* flag by itself.
 
 Nothing about the emails is kept or sent anywhere: only the orders found in
-them, on the phone and in your Google Sheet if you connect one.
+them, on the phone and in your Google Sheet if you connect one. The one
+exception is **Fix details with Claude**, which only runs when you tap it
+(below).
+
+## Fix details with Claude
+
+When the words-only reader gets an order wrong (a *Check details* card, or any
+order), open it and tap **Fix details with Claude**. The app fetches that one
+email from Gmail again, takes out its links, and sends the text to Claude Haiku
+5.5 through the family server (`functions/orders/api`, the same
+`ANTHROPIC_API_KEY` as News and Meals). Claude reports the store, where the
+order is, the order and tracking numbers, the items, the total and the dates;
+they go onto the order, with **Undo**.
+
+- **Asked first, once.** The first tap explains what is sent and asks.
+- **Nothing is kept.** The server stores no email text and no answer, only a
+  count of calls per person per day (40 a day).
+- **Checked before it is believed.** The server drops an order number, tracking
+  number, total or item that isn't written in the email, so a made-up one
+  doesn't reach a card. The store name, the status and the dates are Claude's
+  reading and can still be wrong: look, and edit what is.
+- **What you edited stays.** Locked fields are not touched. A status only moves
+  forward, unless the order was already marked as a guess.
+- **For signed-in family** (Face ID), like News's summaries. Without the key it
+  says Claude isn't set up. `ORDERS_AI_MODEL` (optional repository secret)
+  names another model.
+- Not tried on a phone or against the real API: the tests use a stand-in for
+  Anthropic's answers (`node orders/scripts/api-test.mjs`), so the first real
+  tap is the real test of the prompt.
+
 
 ## Gmail
 
@@ -207,8 +241,8 @@ switched on is per phone.
 - **No build step.** `index.html` is the page and its look (Travel's style
   block plus Orders' own pieces at the end), `app.js` the app, `parse.js` the
   email reading, `sw.js` the offline shell.
-- **No server.** Gmail is read from the phone and tracking opens the carrier's
-  page, so there is no Pages Function and no secret.
+- **No server for reading.** Gmail is read from the phone and tracking opens the
+  carrier's page. The only Pages Function is Fix with Claude (above).
 - **Security as in Mail and Travel**: a Content Security Policy that only runs
   these files, no email is ever shown as a page (the HTML is only read as
   text), it refuses to run in a frame, and the sign-in carries a random `state`.
@@ -220,6 +254,7 @@ switched on is per phone.
 ## Tests
 
 ```sh
+node orders/scripts/api-test.mjs     # Fix with Claude's server side, with a stand-in for Anthropic
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
 node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed
 node orders/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg

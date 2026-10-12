@@ -313,6 +313,34 @@ test('Amazon-style subjects name the item and the stage', () => {
   assert.equal(s.status, 'shipped'); assert.equal(s.carrier, 'Amazon Logistics'); assert.equal(s.tracking, 'TBA000000000000'); assert.equal(s.id, a.id);
 });
 
+test('Whole Foods orders come from Amazon’s address but are Whole Foods’, and a pickup promise is not “ready”', () => {
+  const wfText = `Whole Foods Market
+https://www.amazon.com/alm/storefront?almBrandId=EXAMPLE
+Hi Sam, Thank you for shopping with us. You can add more items until we start packing your order.
+To reduce your wait, check in 5 minutes before you arrive
+You'll receive a notification when your order is ready for pickup. Check in at least 5 minutes before you arrive.
+Order Details: 113-0000001-0000001
+Pickup Time: Tuesday, October 13, 2026, 4:00 PM - 5:00 PMPickup Location: Whole Foods Market - Cary 1 Example Place, Cary, NC 27518Payment Authorization: $292.50This may include an additional amount.
+Take care, Whole Foods Market
+©2026 Amazon.com, Inc. or its affiliates.`;
+  const wf = one({ from: 'order-update@amazon.com', subject: 'Your Whole Foods Market order has been received', text: wfText }).f;
+  assert.equal(wf.store, 'Whole Foods Market'); assert.equal(wf.orderNo, '113-0000001-0000001');
+  assert.equal(wf.status, 'ordered', 'a promise to say when it is ready is not ready'); assert.equal(wf.kind, 'pickup');
+  assert.equal(wf.eta, '2026-10-13', 'the booked pickup day'); assert.equal(wf.total, 292.5);
+  // later, the store says it is ready: the same order, now ready for pickup
+  const list = fold([], [{ from: 'order-update@amazon.com', subject: 'Your Whole Foods Market order has been received', text: wfText, date: at(10, 12, 9) },
+    { from: 'order-update@amazon.com', subject: 'Your Whole Foods Market order is ready for pickup', text: 'Whole Foods Market\nYour order is ready for pickup.\nOrder Details: 113-0000001-0000001', date: at(10, 13, 15) }]);
+  assert.equal(list.length, 1); assert.equal(list[0].status, 'pickup'); assert.equal(list[0].store, 'Whole Foods Market');
+  // an ordinary Amazon order stays Amazon, and its progress bar (Ordered Shipped Out for delivery Delivered) is not a status
+  const am = one({ from: 'Amazon.com <auto-confirm@amazon.com>', subject: 'Ordered 1 item: Supplements',
+    text: 'Your Orders\nSam, your Supplements are confirmed!\nView or edit order\nOrdered\nShipped\nOut for delivery\nDelivered\nArriving tomorrow 7 AM – 10 AM\nSam - RALEIGH, NC\nOrder #\n113-0000002-0000002\nGrand Total:\n64.23 USD\n' }).f;
+  assert.equal(am.store, 'Amazon'); assert.equal(am.status, 'ordered'); assert.equal(am.kind, 'package');
+  assert.equal(am.total, 64.23); assert.equal(am.eta, '2026-10-13'); assert.deepEqual(am.items.map(i => i.name), ['Supplements']);
+  // a Whole Foods order and an Amazon order are two orders, even from the same address
+  const both = fold([], [{ from: 'order-update@amazon.com', subject: 'Your Whole Foods Market order has been received', text: wfText }, { from: 'Amazon.com <auto-confirm@amazon.com>', subject: 'Ordered 1 item: Supplements', text: 'Order #\n113-0000002-0000002\nGrand Total:\n64.23 USD\n' }]);
+  assert.deepEqual(both.map(o => o.store).sort(), ['Amazon', 'Whole Foods Market']);
+});
+
 test('cancellation, and the order that stays gone once deleted', () => {
   const list = fold([], [{ html: hardwareConfirm, subject: 'We received your order!', from: HARDWARE_FROM, date: at(10, 6) },
     { text: 'Your order WK00000001 has been canceled.', subject: 'Your Home Depot order has been canceled', from: HARDWARE_FROM, date: at(10, 7) }]);
