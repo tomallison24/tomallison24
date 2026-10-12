@@ -105,6 +105,7 @@ export async function sendTo(db, env, id, msg, { fetchImpl } = {}) {
 //                                      so turning this on doesn't announce what everyone has),
 //                                      else { people: [id, ...] } with notifications on
 //   announce/send  { version, to }   -> one person's phones, like push/send
+//                                      (with again: true, the people to tell even if it was announced)
 //   announce/done  { version }       -> remembered (config:announced), so a version is told once,
 //                                      however many merges release it again
 // One person per request, like the owner's composer, so a request never has much to encrypt.
@@ -141,14 +142,14 @@ export async function announce(db, env, request, step, b, { fetchImpl } = {}) {
   if (!(await keyOk(request, env))) return { status: 403, body: { error: 'key' } };
   const version = String((b && b.version) || '');
   if (!VERSION.test(version)) return { status: 400, body: { error: 'version' } };
-  const was = await db.get('config:announced');
+  const was = await db.get('config:announced'), again = !!(b && b.again === true);   // again: tell everyone once more (Actions -> News -> announce again)
   if (step === 'begin') {
-    if (was === version) return { status: 200, body: { already: true } };
-    if (was === null) { await db.put('config:announced', version); return { status: 200, body: { first: true } }; }
+    if (was === version && !again) return { status: 200, body: { already: true } };
+    if (was === null && !again) { await db.put('config:announced', version); return { status: 200, body: { first: true } }; }
     return { status: 200, body: { people: await audienceIds(db) } };
   }
   if (step === 'send') {
-    if (was === version) return { status: 200, body: { ok: true, sent: 0, failed: 0, gone: 0, already: true } };
+    if (was === version && !again) return { status: 200, body: { ok: true, sent: 0, failed: 0, gone: 0, already: true } };
     const id = String((b && b.to) || ''), u = await getJSON(db, 'user:' + id);
     if (!u || u.removed) return { status: 404, body: { error: 'unknown' } };
     return { status: 200, body: { ok: true, ...(await sendTo(db, env, id, announcement(version), { fetchImpl })) } };

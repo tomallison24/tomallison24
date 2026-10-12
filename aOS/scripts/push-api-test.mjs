@@ -232,6 +232,15 @@ await test('a removed person is not announced to, and the next version goes out 
   assert.match(msg, /2 people on 2 phones/); assert.ok(!sent.some(x => x.url === lee1.sub.endpoint));
 });
 
+await test('"announce again" tells everyone once more, and only with the key and the flag', async () => {
+  sent.length = 0;
+  assert.match(await runAnnounce('https://site.example', KEYV, '1.4', { fetchImpl: viaApi() }), /already/);
+  assert.equal(sent.length, 0, 'without the flag: nothing');
+  const msg = await runAnnounce('https://site.example', KEYV, '1.4', { fetchImpl: viaApi(), again: true });
+  assert.match(msg, /Announced aOS 1\.4 to 2 people on 2 phones/); assert.equal(sent.length, 2);
+  assert.equal(await db.get('config:announced'), '1.4');
+});
+
 await test('a deploy that is slow to answer is waited for; a site that is not ours is a clear warning', async () => {
   let n = 0; const waits = [];
   const slow = async (url, init) => (n++ < 2 ? new Response('<html>not yet</html>', { status: 404 }) : viaApi()(url, init));

@@ -5,7 +5,8 @@
 //   node aOS/scripts/announce.mjs --key                                  prints the key (see below)
 // It tells the server (server/push.js, "announce/...") the newest version in the release log that
 // isn't silent; the server tells each person with notifications on, once per version, however many
-// merges release it again (the very first time it only notes the version). It never fails the
+// merges release it again (the very first time it only notes the version). ANNOUNCE_AGAIN=true
+// (Actions -> News -> Run workflow -> "announce again") tells everyone once more. It never fails the
 // release: anything it can't do is a warning.
 //
 // The key between this and the Pages project is derived from the Cloudflare token (the workflow
@@ -28,7 +29,7 @@ export function newestVersion(text) {
 }
 
 // -> a sentence for the log
-export async function announce(base, key, version, { fetchImpl = fetch, wait = ms => new Promise(r => setTimeout(r, ms)), extra = {} } = {}) {
+export async function announce(base, key, version, { fetchImpl = fetch, wait = ms => new Promise(r => setTimeout(r, ms)), extra = {}, again = false } = {}) {
   const post = async (step, body) => {
     for (let tries = 0; ; tries++) {
       try {
@@ -41,11 +42,11 @@ export async function announce(base, key, version, { fetchImpl = fetch, wait = m
       await wait(10000);
     }
   };
-  const begin = await post('begin', { version });
+  const begin = await post('begin', { version, again });
   if (begin.already) return `aOS ${version} was already announced`;
   if (begin.first) return `aOS ${version} noted as the version everyone has: the next new version is announced`;
   let sent = 0, failed = 0;
-  for (const p of begin.people || []) { const r = await post('send', { version, to: p.id || p }); sent += r.sent || 0; failed += (r.failed || 0) + (r.gone || 0); }
+  for (const p of begin.people || []) { const r = await post('send', { version, to: p.id || p, again }); sent += r.sent || 0; failed += (r.failed || 0) + (r.gone || 0); }
   await post('done', { version });
   return `Announced aOS ${version} to ${(begin.people || []).length} people on ${sent} phones${failed ? ` (${failed} didn't take it)` : ''}`;
 }
@@ -58,7 +59,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const version = newestVersion(fs.readFileSync(new URL('../../home/welcome.js', import.meta.url), 'utf8'));
     const extra = process.env.ACCESS_CLIENT_ID && process.env.ACCESS_CLIENT_SECRET ? { 'CF-Access-Client-Id': process.env.ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': process.env.ACCESS_CLIENT_SECRET } : {};
     if (!base || !token || !version) { console.log('::warning::Not announcing: needs the site address, the Cloudflare token and a version in the release log'); process.exit(0); }
-    try { console.log(await announce(base, announceKey(token), version, { extra })); }
+    try { console.log(await announce(base, announceKey(token), version, { extra, again: process.env.ANNOUNCE_AGAIN === 'true' })); }
     catch (e) { console.log(`::warning::Couldn't announce aOS ${version}: ${e.message}`); }
   }
 }
