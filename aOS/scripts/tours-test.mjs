@@ -9,6 +9,7 @@
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node aOS/scripts/tours-test.mjs [repo root]
+//   TOURS_SHARD=1/3 node aOS/scripts/tours-test.mjs   (the second of three shards)
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -54,8 +55,11 @@ let failed = 0;
     if (gaps.length) { failed++; console.log('not ok - ' + id + ' says less than its cards\n  ' + gaps.join('\n  ')); }
   }
 }
+// TOURS_SHARD=i/n plays only every n-th app (CI runs three shards side by side)
+const [SHARD, SHARDS] = (process.env.TOURS_SHARD || '0/1').split('/').map(Number);
+const MINE = APPS.filter((_, k) => k % SHARDS === SHARD);
 const browser = await chromium.launch();
-for (const id of APPS) {
+for (const id of MINE) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.route('**/*', route => {
     const u = new URL(route.request().url());
@@ -101,5 +105,5 @@ for (const id of APPS) {
 }
 await browser.close();
 server.close();
-console.log(failed ? failed + ' failed' : APPS.length + ' of ' + APPS.length + ' passed');
+console.log(failed ? failed + ' failed' : MINE.length + ' of ' + MINE.length + ' passed');
 process.exit(failed ? 1 : 0);
