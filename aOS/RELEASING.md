@@ -139,7 +139,9 @@ secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one
   step warns that the site isn't the accounts server, the site is behind a Cloudflare Access
   policy that stops the call: add the repository secrets `ACCESS_CLIENT_ID` and
   `ACCESS_CLIENT_SECRET` (an Access service token) and it sends them. To announce by hand
-  instead: aOS → Account → Send a notification → **Announce the update**.
+  instead: aOS → Account → Send a notification → **Announce the update**. To tell everyone again
+  through the release itself (a test, or someone missed it): Actions → News → Run workflow → tick
+  **announce again** (leave release blank).
 - The Updates screen (Account → Updates, and aOS's What's new) tells each release simply: only its
   `highlights` (or, with none, its first notes), a short line each. Keep highlights short and high level;
   details belong in `notes`, which the log keeps but those screens don't show.

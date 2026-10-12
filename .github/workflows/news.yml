@@ -40,6 +40,11 @@ on:
         description: 'aOS version to release, like 1.1 (its entry must be the newest in home/welcome.js). Blank: republish the live release with fresh headlines.'
         required: false
         default: ''
+      announce_again:
+        description: 'Tell the family "aOS updated to <newest version>" again with a notification, even though it was already announced.'
+        type: boolean
+        required: false
+        default: false
   push:
     paths:
       - 'news/**'
@@ -263,6 +268,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
           ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
+          ANNOUNCE_AGAIN: ${{ inputs.announce_again }}
         run: node aOS/scripts/announce.mjs https://tomallison24-news.pages.dev
 
   deploy:
