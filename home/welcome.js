@@ -88,7 +88,7 @@
         'Meals: deals from eight stores near Apex, and plans built from them',
         'Home: an "Away from the house" pill, and the room\'s temperature up front',
         'Drinks: a new Analysis page'],
-      notes: ['aOS: notifications. Under your account, from the Home Screen app, turn them on and send yourself a test; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
+      notes: ['aOS: notifications. Under your account, from the Home Screen app, turn them on; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
         'News: tap the sparkle on a story for Claude\'s two-sentence summary and key takeaways, then ask questions about the article (signed-in family; a summary is kept for a week for everyone, and each person gets 60 a day)',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s, each with its own icon',
         'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',

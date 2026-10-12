@@ -116,15 +116,6 @@ await test('only so many phones a person; the newest stay', async () => {
   assert.equal(subs.at(-1).endpoint, many.at(-1).sub.endpoint); assert.ok(!subs.some(s => s.endpoint === many[0].sub.endpoint));
 });
 
-await test('a test goes to your own phones only, and is readable by that phone alone', async () => {
-  sent.length = 0;
-  const r = await call('push/test', {}, tok.mia); assert.equal(r.body.sent, 1);
-  assert.equal(sent.length, 1); assert.equal(sent[0].url, mia1.sub.endpoint);
-  assert.match(sent[0].headers.Authorization, /^vapid t=.+, k=/);
-  const got = await open(mia1, sent[0].body); assert.match(got.body, /test/);
-  await assert.rejects(open(sam1, sent[0].body), 'another phone cannot read it');
-});
-
 await test('members cannot send or list; the owner can', async () => {
   assert.equal((await call('push/send', { to: 'M1', title: 'Hi' }, tok.sam)).status, 403);
   assert.equal((await call('push/audience', undefined, tok.sam)).status, 403);
@@ -137,6 +128,8 @@ await test('the owner sends to one person: all their phones get the message, and
   const r = await call('push/send', { to: 'S1', title: 'New in aOS', body: 'Notifications are here.', url: '/aOS/#whats-new' }, tok.tom);
   assert.deepEqual([r.status, r.body.sent, r.body.failed, r.body.gone], [200, 2, 0, 0]);
   assert.deepEqual(sent.map(s => s.url).sort(), [sam1.sub.endpoint, sam2.sub.endpoint]);
+  await assert.rejects(open(mia1, sent[0].body), 'another person\'s phone cannot read it');
+  assert.match(sent[0].headers.Authorization, /^vapid t=.+, k=/);
   for (const [ph, s] of [[sam1, sent.find(x => x.url === sam1.sub.endpoint)], [sam2, sent.find(x => x.url === sam2.sub.endpoint)]]) {
     const m = await open(ph, s.body); assert.equal(m.title, 'New in aOS'); assert.equal(m.body, 'Notifications are here.'); assert.equal(m.url, './#whats-new');
   }

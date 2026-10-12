@@ -113,7 +113,7 @@ is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.
 
 ## Notifications
 
-Everyone can turn on notifications under **Your account → Notifications**, and the
+Everyone can turn on (and off) notifications under **Your account → Notifications**, and the
 owner can send one under **Send a notification** (a title and a few lines, or **Announce the
 update**: "aOS updated to 1.x. Click for update details.", which opens the Updates screen when tapped). It's Web Push: nothing to set up. The server's push key is made the
 first time anyone asks for it and kept in the same storage (`config:vapid`), and each
@@ -147,8 +147,8 @@ secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one
   notifications (Notes' reminders) are separate, in `notes/push`.
 - Tests: `node aOS/scripts/push-api-test.mjs` (the server, with real encryption) and
   `node aOS/scripts/notify-test.mjs` (the page, in Chromium). What can't be tested
-  here is Apple's own delivery: after the first release, turn them on from your
-  Home Screen and use **Send me a test**.
+  here is Apple's own delivery: to try it, turn them on from your
+  Home Screen and send yourself one (Send a notification, as the owner).
 
 ## The log
 

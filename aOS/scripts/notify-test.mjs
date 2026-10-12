@@ -1,6 +1,6 @@
 // Notifications in aOS's Account page, as a person uses them at iPhone size: a member
 // turns them on (the permission, the phone's subscription, the server told), sends
-// themselves a test and turns them off; on an iPhone not yet on the Home Screen it says
+// and turns them off; on an iPhone not yet on the Home Screen it says
 // how to; the owner has a composer that sends one person at a time. The accounts server
 // and the phone's push service are stood in for (the server rules are push-api-test.mjs).
 //
@@ -51,7 +51,6 @@ async function open(role, { standalone = true, push = true, acct = true, hash = 
     if (route === 'push') return J({ key: KEY, devices: 0 });
     if (route === 'push/subscribe') return J({ ok: true, devices: 1 });
     if (route === 'push/unsubscribe') return J({ ok: true, devices: 0 });
-    if (route === 'push/test') return J({ ok: true, sent: 1, failed: 0, gone: 0 });
     if (route === 'push/audience') return J({ people });
     if (route === 'push/send') return J({ ok: true, sent: body.to === 'u1' ? 2 : 1, failed: 0, gone: 0 });
     if (route === 'family') return J({ family: [] });
@@ -70,16 +69,16 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   const { ctx, p, calls, errs } = await open('member'); const pr = [...errs];
   if (!(await p.locator('#nOn').count())) pr.push('no Turn on button');
   if (await p.locator('#nTitle').count()) pr.push('a member sees the composer');
-  await p.click('#nOn'); await p.waitForSelector('#nTest', { timeout: 8000 }).catch(async () => pr.push('did not turn on: ' + (await text(p, '#nMsg'))));
+  await p.click('#nOn'); await p.waitForSelector('#nOff', { timeout: 8000 }).catch(async () => pr.push('did not turn on: ' + (await text(p, '#nMsg'))));
   const subbed = calls.find(c => c.route === 'push/subscribe');
   if (!subbed || subbed.body.subscription.endpoint !== 'https://web.push.apple.com/fake') pr.push('the server was not told about the phone');
   if (await p.evaluate(() => window.__appKey) !== 65) pr.push('subscribed without the server\'s key');
-  if (await p.locator('#nTest').count()) { await p.click('#nTest'); await p.waitForFunction(() => /Sent/.test(document.getElementById('nMsg').textContent), null, { timeout: 5000 }).catch(() => pr.push('no "Sent" after the test')); }
-  if (!calls.some(c => c.route === 'push/test')) pr.push('the test was not asked for');
+  if (await p.locator('#nTest').count()) pr.push('a test button: that\'s a developer tool, not part of the app');
+  if (/test/i.test(await text(p, '#nBox'))) pr.push('the notifications section mentions a test');
   if (await p.locator('#nOff').count()) { await p.click('#nOff'); await p.waitForSelector('#nOn', { timeout: 5000 }).catch(() => pr.push('did not turn off')); }
   if (!calls.some(c => c.route === 'push/unsubscribe')) pr.push('the server was not told it was off');
   if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) pr.push('the page scrolls sideways');
-  report('a member turns notifications on, tests them and turns them off', pr); await ctx.close();
+  report('a member turns notifications on and off (and there is no test button)', pr); await ctx.close();
 }
 
 // 2. iPhone, not on the Home Screen

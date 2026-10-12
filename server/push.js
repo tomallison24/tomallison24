@@ -1,5 +1,5 @@
 // AllisonOS notifications: the server side of Web Push for aOS, behind
-// functions/aOS/api (routes push, push/subscribe, push/unsubscribe, push/test,
+// functions/aOS/api (routes push, push/subscribe, push/unsubscribe,
 // push/audience, push/send). The owner writes a notification, aOS sends it to
 // each family member's phones one person at a time (so one request never has
 // much to encrypt), and the phone's service worker (aOS/sw.js) shows it.

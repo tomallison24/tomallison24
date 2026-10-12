@@ -15,7 +15,6 @@
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
 //   POST push/unsubscribe (family) { endpoint }     -> it doesn't
-//   POST push/test        (family)                  -> a test notification, to your own phones only
 //   GET  push/audience    (owner) who has notifications on, and on how many phones
 //   POST push/send        (owner) { to: <id>, title, body, url? } -> one person's phones (aOS sends person by person)
 //   POST announce/begin|send|done  (the release workflow only, with its key) tells the family "aOS updated to 1.x", once per version (server/push.js)
@@ -234,10 +233,6 @@ export async function onRequest({ request, params, env }) {
     if (route === 'push/unsubscribe' && method === 'POST') {
       const e = String((await body(request)).endpoint || '');
       return reply({ ok: true, devices: await dropDevices(db, me.id, [e]) });
-    }
-    if (route === 'push/test' && method === 'POST') {
-      const r = await sendTo(db, env, me.id, { title: 'AllisonOS', body: 'Notifications are on. This is a test.', url: './', tag: 'test' });
-      return reply({ ok: true, ...r });
     }
 
     // ---- the owner's tools ----

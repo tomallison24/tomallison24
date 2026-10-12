@@ -378,19 +378,14 @@
     let html;
     if (!pushOK()) html = `<p>${iphone && !standalone ? 'On iPhone, notifications work from the Home Screen: add aOS to it (Share → Add to Home Screen), open it from there, and turn them on here.' : 'This browser can\'t show notifications from aOS.'}</p>`;
     else if (Notification.permission === 'denied') html = `<p>Notifications are blocked for aOS. ${iphone ? 'Turn them on in Settings → Notifications → aOS' : 'Allow them in this browser\'s site settings'}, then come back.</p>`;
-    else if (on) html = '<p>On for this phone: updates and news from the family arrive as notifications.</p><div class="row2"><button type="button" class="soft" id="nTest">Send me a test</button><button type="button" class="soft" id="nOff">Turn off</button></div>';
-    else html = '<p>Get updates and news from the family as notifications on this phone.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
+    else if (on) html = '<p>On for this phone: you\'ll be told when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
+    else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
     box.innerHTML = `<div>${head}${html}<div class="err" id="nMsg"></div></div>`;
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
     if ($('nOn')) $('nOn').onclick = turnOn;
     if ($('nOff')) $('nOff').onclick = async () => {
       busy($('nOff'), true);
       try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
-      catch (e) { paintNotify({ err: 1, t: why(e) }); }
-    };
-    if ($('nTest')) $('nTest').onclick = async () => {
-      busy($('nTest'), true);
-      try { const r = await ACC.call('push/test', {}); paintNotify({ err: !r.sent, t: r.sent ? 'Sent: it should arrive in a moment.' : 'It didn\'t go through. Turn notifications off and on again.' }); }
       catch (e) { paintNotify({ err: 1, t: why(e) }); }
     };
   }
@@ -404,7 +399,7 @@
       if (!key) throw new Error('storage');
       const sub = had || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
       await ACC.call('push/subscribe', { subscription: sub.toJSON() });
-      paintNotify({ t: 'On. Tap Send me a test to see one.' });
+      paintNotify();
     } catch (e) { paintNotify({ err: 1, t: e && e.message === 'subscription' ? 'This phone\'s notification service isn\'t supported.' : why(e) }); }
   }
   // A phone's address can change, and someone else may sign in on it: say again, quietly,
