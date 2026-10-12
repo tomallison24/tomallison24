@@ -32,7 +32,7 @@ the style picker in the design canvas is not built.
 It is a second copy of Orders' page and script, not a setting, so the two can
 change independently and Orders is never touched.
 
-- **Tidying up on its own** (old orders marked received after 5 days, Claude sorting out “To check”) works as in Orders (`orders/README.md`), with its own switches.
+- **The one-off clean-up** of old open orders works as in Orders (`orders/README.md`), once on this app's own orders.
 - **Fix details with Claude** works the same, through the same server route as Orders
   (`/orders/api/read`), and asks its own first-time question.
 - **Opens its email in Mail Vintage**, not Mail (`../mailvintage/?thread=…`). Both are

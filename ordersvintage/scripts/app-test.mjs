@@ -293,7 +293,10 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#opBack');
   });
 
-  await step(scheme + ': old open orders are marked received by themselves, with Undo; recent, expected and edited ones are left alone', async () => {
+  await step(scheme + ': the one-off clean-up marks old open orders as received once, with Undo; recent, expected and edited ones are left alone', async () => {
+    const flag = await page.evaluate(() => Object.keys(localStorage).filter(k => /-cleanup-5d$/.test(k)));
+    assert.equal(flag.length, 1, 'it ran once already, after the first full read of Gmail: ' + flag);
+    await page.evaluate(k => localStorage.removeItem(k), flag[0]);
     await page.evaluate(() => {
       const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
       const mk = (id, over) => Object.assign({ id, store: 'Test ' + id, storeKey: 'test' + id, items: [], status: 'shipped', kind: 'package', locks: {}, created: Date.now(), notes: '' }, over);
@@ -308,49 +311,17 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForFunction(() => /Marked 2 old orders as received/.test(document.getElementById('toastMsg').textContent));
     const st = await page.evaluate(() => Object.fromEntries(window.__orders.orders.filter(o => /^(old1|oldpick|recent|expected|edited)$/.test(o.id)).map(o => [o.id, o.status + (o.auto ? '*' : '')])));
     assert.deepEqual(st, { old1: 'delivered*', oldpick: 'pickedup*', recent: 'shipped', expected: 'shipped', edited: 'shipped' });
+    // a rule it is not: an order that goes quiet later is not marked
+    await page.evaluate(() => {
+      const d = new Date(); d.setDate(d.getDate() - 12); const y = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      window.__orders.orders.push({ id: 'later', store: 'Test later', storeKey: 'testlater', items: [], status: 'shipped', kind: 'package', locks: {}, created: Date.now(), notes: '', steps: { shipped: y } });
+      window.__orders.tidy(); window.__orders.render();
+    });
+    assert.equal(await page.evaluate(() => window.__orders.orders.find(o => o.id === 'later').status), 'shipped', 'once, not a rule');
     await page.click('#toastAct');
     const back = await page.evaluate(() => window.__orders.orders.filter(o => /^old/.test(o.id)).map(o => o.status + (o.auto ? '*' : '') + (o.locks.status ? 'L' : '')));
     assert.deepEqual(back, ['shippedL', 'pickupL'], 'undone, and left alone from now on');
-    await page.evaluate(() => { window.__orders.orders.splice(0, window.__orders.orders.length, ...window.__orders.orders.filter(o => !/^(old1|oldpick|recent|expected|edited)$/.test(o.id))); window.__orders.save(); });
-  });
-
-  await step(scheme + ': Claude sorts out “To check” by itself: fixes what it can read, removes what is not an order, Undo puts it all back', async () => {
-    const sent = [];
-    await ctx.unroute('**/orders/api/read');
-    await ctx.route('**/orders/api/read', route => { const b = JSON.parse(route.request().postData()); sent.push(b.subject);
-      return route.fulfill({ json: /sale/i.test(b.subject) ? { fact: null, reason: 'not-an-order' } : { fact: { store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD' } } }); });
-    await page.evaluate(() => {
-      localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'u1', name: 'Sam' } }));
-      localStorage.setItem('allison-orders-v1-ai-ok', '1');
-      const mk = (id, msgId, subject) => ({ id, store: 'Flagged ' + id, storeKey: 'flagged' + id, items: [], status: 'ordered', kind: 'package', guess: true, locks: {}, steps: { ordered: new Date().toISOString().slice(0, 10) }, created: Date.now(), notes: '',
-        source: { msgId, threadId: 't', subject, from: 'x', date: Date.now() } });
-      window.__orders.orders.push(mk('f1', 'e6', 'Review your order updates'), mk('f2', 'e8', 'Big sale: 50% off orders over $50'));
-      window.__orders.save(); window.__orders.render();
-    });
-    await page.evaluate(() => window.__orders.sort());
-    await page.waitForFunction(() => /Claude sorted 2 orders/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
-    assert.match(await page.textContent('#toastMsg'), /1 updated, 1 not an order, removed/);
-    const after = await page.evaluate(() => ({ f1: window.__orders.orders.find(o => o.id === 'f1'), f2: window.__orders.orders.some(o => o.id === 'f2') }));
-    assert.equal(after.f1.guess, false); assert.equal(after.f1.ai, true); assert.equal(after.f1.total, 49.99); assert.equal(after.f1.aiTried, 'e6'); assert.equal(after.f2, false);
-    assert.equal(sent.length, 2);
-    await page.click('#toastAct');
-    const undone = await page.evaluate(() => ({ f1: window.__orders.orders.find(o => o.id === 'f1'), f2: window.__orders.orders.find(o => o.id === 'f2') }));
-    assert.equal(undone.f1.guess, true); assert.equal(undone.f1.ai, undefined); assert.ok(undone.f2, 'the removed one is back');
-    await page.evaluate(() => window.__orders.sort());
-    await page.waitForTimeout(400);
-    assert.equal(sent.length, 2, 'what Claude has read is not read again');
-    await page.evaluate(() => { window.__orders.orders.splice(0, window.__orders.orders.length, ...window.__orders.orders.filter(o => !/^f\d$/.test(o.id))); window.__orders.save(); localStorage.removeItem('aos.session'); });
-  });
-
-  await step(scheme + ': not signed in to the family: Claude is not used by itself and no sign-in sheet opens', async () => {
-    await page.evaluate(() => {
-      window.__orders.orders.push({ id: 'g1', store: 'Flagged g1', storeKey: 'flaggedg1', items: [], status: 'ordered', kind: 'package', guess: true, locks: {}, steps: {}, created: Date.now(), notes: '', source: { msgId: 'e6', threadId: 't', subject: 's', from: 'x', date: Date.now() } });
-    });
-    let asked = 0; await ctx.unroute('**/orders/api/read'); await ctx.route('**/orders/api/read', route => { asked++; return route.fulfill({ json: { fact: null } }); });
-    await page.evaluate(() => window.__orders.sort());
-    await page.waitForTimeout(300);
-    assert.equal(asked, 0); assert.equal(await page.locator('#aos-signin').count(), 0);
-    await page.evaluate(() => { window.__orders.orders.splice(0, window.__orders.orders.length, ...window.__orders.orders.filter(o => o.id !== 'g1')); window.__orders.save(); });
+    await page.evaluate(() => { window.__orders.orders.splice(0, window.__orders.orders.length, ...window.__orders.orders.filter(o => !/^(old1|oldpick|recent|expected|edited|later)$/.test(o.id))); window.__orders.save(); });
   });
 
   await step(scheme + ': a deleted order stays deleted when Gmail is read again', async () => {
