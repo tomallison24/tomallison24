@@ -60,7 +60,7 @@ pastel stop that slides between them, and your avatar top right.
   storage, an app that has never signed in asks once, after its walkthrough, with
   the family sign-in sheet ("Not now" isn't asked again). A tap on Installed
   still offers the install steps, in case it's been removed.
-- **Designs**: an app that comes in more than one design (Mail and Home: Standard
+- **Designs**: an app that comes in more than one design (Mail, Orders and Home: Standard
   and Vintage, `DESIGNS` in `home/welcome.js`) is one row, with a "2 designs" tag,
   not a row per design. Its page has a **Design** menu under the tagline: each
   option has a small preview and says whether it is installed. Each design is its

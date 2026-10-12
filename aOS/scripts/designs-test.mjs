@@ -1,5 +1,5 @@
 // Designs in the aOS store, as a person uses them at iPhone size: an app that comes in
-// more than one design (home/welcome.js DESIGNS: Mail and Home) is one row with a
+// more than one design (home/welcome.js DESIGNS: Mail, Orders and Home) is one row with a
 // "2 designs" tag, not a row per design; its page has a Design menu; the design picked
 // decides which app Get adds and which one says Installed; Get on a design that isn't
 // added yet asks which design first. Apps with one design are left alone.
@@ -39,11 +39,11 @@ async function open(apps = {}, scheme = 'light') {
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => null);
 
-// 1. one row per app: the designs of Mail and Home have no rows of their own, only a tag
+// 1. one row per app: the designs of Mail, Orders and Home have no rows of their own, only a tag
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  for (const id of ['mailvintage', 'housevintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
-  for (const id of ['mail', 'house']) {
+  for (const id of ['mailvintage', 'housevintage', 'ordersvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
+  for (const id of ['mail', 'orders', 'house']) {
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
   }
@@ -51,8 +51,8 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   // searching for a design finds the app that has it, once
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
-  if (found.join() !== 'mail,house') pr.push('searching "vintage" found ' + found.join() + ', not mail,house');
-  report('Mail and Home are one row each, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
+  if (found.join() !== 'mail,orders,house') pr.push('searching "vintage" found ' + found.join() + ', not mail,orders,house');
+  report('Mail, Orders and Home are one row each, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
 }
 
 // 2. the Design menu on the app's page: Standard first; picking Vintage changes the icon and what Get adds

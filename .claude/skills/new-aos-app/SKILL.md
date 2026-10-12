@@ -71,7 +71,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
-A **design of an existing app** (Mail Vintage, Home Vintage) is a new app folder wired in
+A **design of an existing app** (Mail Vintage, Home Vintage, Orders Vintage) is a new app folder wired in
 as above, plus an entry in `home/welcome.js` `DESIGNS` (the app's id, then its designs; the
 first is the standard one). aOS then shows one row for the app and a Design menu on its page;
 the design's folder gets no row of its own (`VARIANTS`) and is not in the Allison family
