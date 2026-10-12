@@ -9,8 +9,8 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const CAT = { mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const HUE = { mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
+  const CAT = { mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
@@ -24,6 +24,7 @@
     podcasts: [['ok', 'Nothing']],
     travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
     places: [['once', 'The family Google Sheet, to share lists (optional)']],
+    orders: [['once', 'Your Google account, to find orders in Gmail (optional)']],
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     drinks: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
     meals: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],
