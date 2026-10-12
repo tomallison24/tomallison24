@@ -117,7 +117,6 @@
   function appPage(id) {
     const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
     const e = r ? D.entry(r.apps[id]) : null;
-    const hist = live.filter(x => { const y = D.entry((x.apps || {})[id]); return y.highlights.length + y.notes.length; });
     page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${getBtn(id)}${goneBtn(id)}</div></div>
       <div class="strip">
         <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
@@ -125,7 +124,7 @@
         <div>${line(SHARED.includes(id) ? 'people' : 'lock')}<i>${SHARED.includes(id) ? 'Shared with family' : 'Just you'}</i></div>
         <div>${line('sparkle')}<i>Allison Corporation</i></div>
       </div>
-      <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
+      <div class="sec"><h2>What's New</h2></div>
       <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${hi(r.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
       <div class="sec"><h2>Preview</h2></div>
       <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
@@ -135,10 +134,7 @@
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
       <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] })
-      .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
-  }
-  function histPage(id, hist) {
-    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${hi(x.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`).join('')}`);
+      .addEventListener('click', ev => { const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
   }
   function storyPage(i) {
     const s = STORIES[i];
@@ -221,7 +217,7 @@
       <div class="group plans" id="plans"></div>
       <p class="note" id="planNote"></p>
       <div class="glbl" id="whats-new">Updates</div>
-      <div class="group" id="rels">${live.map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
+      <div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
         <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
       <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>`, { up: true });
     el.addEventListener('click', ev => {
