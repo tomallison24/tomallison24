@@ -4,8 +4,11 @@
 # nothing is built or published here.
 name: Apps check
 
+# A branch's checks run once, on its pull request; pushes only run here for the
+# default branch (the merge itself), so every commit isn't checked twice.
 on:
   push:
+    branches: [claude/custom-iphone-photos-app-0ubcek]
   pull_request:
 
 permissions:
@@ -44,8 +47,6 @@ jobs:
       - run: node calendar/scripts/layers-test.mjs
       # every app works on its own: users may want only some of the core apps
       - run: node aOS/scripts/standalone-test.mjs
-      # each app's live tour finds its way round the app, and tidies up after itself
-      - run: node aOS/scripts/tours-test.mjs
       # an invite on a phone: the account, then how to add aOS (iPhone and Android)
       - run: node aOS/scripts/join-test.mjs
       # notifications in aOS: turning them on and off, and the owner's composer, as on a phone
@@ -54,6 +55,26 @@ jobs:
       - run: node aOS/scripts/release-test.mjs
       # Meals at iPhone size, against its real server code and a stand-in AI
       - run: node meals/scripts/app-test.mjs
+
+  # Each app's live tour finds its way round the app, and tidies up after itself
+  # (aOS/scripts/tours-test.mjs). The slowest test, so it's in three shards that run
+  # side by side with everything else: shard i plays every third app.
+  tours:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
+    name: tours-${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      - run: node aOS/scripts/tours-test.mjs
+        env:
+          TOURS_SHARD: ${{ matrix.shard }}/3
 
   # Each app at iPhone size in Chromium, driven through what a person does:
   # its own app test, and the security tests that run in a page. A job of its
@@ -74,6 +95,16 @@ jobs:
       - run: node calendar/scripts/app-test.mjs
       - run: node drinks/scripts/app-test.mjs
       - run: node fitness/scripts/app-test.mjs
+
+  # The other half of the apps' own tests, a job of its own so the two run side by side.
+  apps-more:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node notes/scripts/aisles-app-test.mjs
       - run: node notes/scripts/push-app-test.mjs
       - run: node notes/scripts/security-test.mjs
