@@ -60,7 +60,17 @@ pastel stop that slides between them, and your avatar top right.
   storage, an app that has never signed in asks once, after its walkthrough, with
   the family sign-in sheet ("Not now" isn't asked again). A tap on Installed
   still offers the install steps, in case it's been removed.
-- **Search**: by name, tagline, category or what its walkthrough says.
+- **Designs**: an app that comes in more than one design (Mail, Orders and Home: Standard
+  and Vintage, `DESIGNS` in `home/welcome.js`) is one row, with a "2 designs" tag,
+  not a row per design. Its page has a **Design** menu under the tagline: each
+  option has a small preview and says whether it is installed. Each design is its
+  own app folder and its own Home Screen app (its own sign-in and settings), so the
+  design picked, kept on this phone (`aos.design.<app>`), decides which app **Get**
+  adds and which one says **Installed**. **Get** on a design that isn't added asks
+  which design first ("Make Mail yours"), then opens that app's own address as
+  usual. Only the first design has a row (`VARIANTS` are the rest); search finds an
+  app by its design names. `node aOS/scripts/designs-test.mjs` covers it.
+- **Search**: by name, tagline, category, design or what its walkthrough says.
 - **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
   (version, category, shared or yours, maker); What's New (the latest version only);
   Preview (drawn from its walkthrough cards, not screenshots); What it needs;

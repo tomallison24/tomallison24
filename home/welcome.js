@@ -105,16 +105,16 @@
         'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Orders is new, one of the Allison family apps: everything you\'ve bought and where it is, read from the order, shipping and store-pickup emails in your Gmail, with the courier, the tracking number and a link to track it. Packages and store pickups show; food, subscriptions and tickets can be switched on in Settings',
-        'Mail Vintage is new, one of the Allison family apps: the same Mail, in a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own sign-in and settings, so Mail stays as it is',
-        'Home Vintage is new, one of the Allison family apps: the same Home, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass and skies, a sun behind the title and Futura type. It is a separate app, with its own Home Assistant connection and settings, so Home stays as it is',
-        'Orders Vintage is new, one of the Allison family apps: the same Orders, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own orders and settings (it can share Orders\' Google Sheet), so Orders stays as it is'],
+        'Mail has a Vintage design: the same Mail in a mid-century modern look in the Retro colors - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. Pick it from the Design menu on Mail\'s page in aOS. It is its own app on your Home Screen, with its own sign-in and settings, so Mail stays as it is',
+        'Home has a Vintage design too, in the same look: cream and walnut cards instead of glass and skies, a sun behind the title, and Futura. Pick it from the Design menu on Home\'s page in aOS. It is its own app, with its own Home Assistant connection and settings, so Home stays as it is',
+        'Orders has a Vintage design too, in the same look: cream and walnut cards instead of glass, atomic shapes behind the title and Futura. Pick it from the Design menu on Orders\' page in aOS. It is its own app, with its own orders and settings (it can share Orders\' Google Sheet), so Orders stays as it is'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
         meals: { highlights: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'],
           notes: ['Prime and VIC member prices'] },
-        house: { highlights: ['Connects to Home Assistant faster when the network is slow to answer: a stalled try no longer holds it up', 'The 1% light button is a moon on midnight blue, the night setting', 'The 100% light button is a sun, glowing gold at full brightness', 'New in aOS: Home Vintage, your house in a mid-century modern look. Get it in aOS'] },
-        mail: { highlights: ['Mail has a new tagline: Mail.Controlled.', 'New in aOS: Mail Vintage, your Gmail in a mid-century modern look. Get it in aOS'] },
+        house: { highlights: ['Connects to Home Assistant faster when the network is slow to answer: a stalled try no longer holds it up', 'The 1% light button is a moon on midnight blue, the night setting', 'The 100% light button is a sun, glowing gold at full brightness', 'New: a Vintage design for Home, a mid-century modern look. Pick it on Home\'s page in aOS'] },
+        mail: { highlights: ['Mail has a new tagline: Mail.Controlled.', 'New: a Vintage design for Mail, a mid-century modern look. Pick it on Mail\'s page in aOS'] },
         drinks: { highlights: ['Analysis is one page, opened from the week\'s number, with a pill at the bottom to pick a view', 'Pick a view from the pill: this week or month against the one before, your top drinks, days of the week, and more'] },
       } },
     { v: '1.1', date: '2026-10-10', title: 'Dinner is served',
@@ -185,7 +185,16 @@
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
-  const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
+  // Apps that come in more than one design. aOS shows one row for the app and a Design menu on its
+  // page; each design is its own app folder (and its own Home Screen app, with its own sign-in and
+  // settings). The first is the standard one; the rest get no row of their own (VARIANTS).
+  const DESIGNS = {
+    mail: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'mail' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mailvintage' }],
+    orders: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'orders' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'ordersvintage' }],
+    house: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'house' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'housevintage' }],
+  };
+  const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
+  const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
   const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', ordersvintage: 'Orders Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
@@ -823,7 +832,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Home, Mail Vintage, Home Vintage and Orders Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1685,7 +1694,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, CORE, FAMILY: FAMILY_APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, CORE, DESIGNS, VARIANTS, FAMILY: FAMILY_APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
 
   // ---- on this phone: an app on the Home Screen tells the family account ----
   // aOS shows ✓ Installed for it. The report needs this app's own session (each
