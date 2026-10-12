@@ -128,6 +128,18 @@ secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one
   automatically. A removed person is never sent to. A phone belongs to one person:
   signing in as someone else on it moves it to them.
 - A notification can only open a page on this site; it opens aOS unless told otherwise.
+- **A new version announces itself.** After a release publishes, the workflow tells the
+  family "aOS updated to 1.x. Click for update details." (a tap opens Account → Updates),
+  once per version: only the merge that adds a new entry to the log announces; every other
+  merge re-releases the same version and says nothing. A `silent: true` entry isn't
+  announced. It never fails a release (a warning in the run instead). The key between the
+  workflow and the site is derived from the Cloudflare token (`aOS/scripts/announce.mjs`,
+  the Pages secret `ANNOUNCE_KEY`), so there is nothing to set up. The first time it ran it
+  only noted the current version, so turning it on told no one. If a run's "Tell the family"
+  step warns that the site isn't the accounts server, the site is behind a Cloudflare Access
+  policy that stops the call: add the repository secrets `ACCESS_CLIENT_ID` and
+  `ACCESS_CLIENT_SECRET` (an Access service token) and it sends them. To announce by hand
+  instead: aOS → Account → Send a notification → **Announce the update**.
 - The Updates screen (Account → Updates, and aOS's What's new) tells each release simply: only its
   `highlights` (or, with none, its first notes), a short line each. Keep highlights short and high level;
   details belong in `notes`, which the log keeps but those screens don't show.

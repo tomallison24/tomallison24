@@ -18,6 +18,7 @@
 //   POST push/test        (family)                  -> a test notification, to your own phones only
 //   GET  push/audience    (owner) who has notifications on, and on how many phones
 //   POST push/send        (owner) { to: <id>, title, body, url? } -> one person's phones (aOS sends person by person)
+//   POST announce/begin|send|done  (the release workflow only, with its key) tells the family "aOS updated to 1.x", once per version (server/push.js)
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
@@ -27,7 +28,7 @@
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
-import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo } from '../../../server/push.js';
+import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo, announce, audienceIds } from '../../../server/push.js';
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
@@ -104,6 +105,12 @@ export async function onRequest({ request, params, env }) {
   try {
     const me = await sessionUser(db, request);
     const P = party(request);
+
+    // The release tells the family a new version is out (server/push.js): its own key, no session.
+    if (route.startsWith('announce/') && method === 'POST') {
+      const r = await announce(db, env, request, route.slice(9), await body(request));
+      return reply(r.body, r.status);
+    }
 
     if (route === 'signup/begin' && method === 'POST') {
       const b = await body(request);
@@ -237,19 +244,7 @@ export async function onRequest({ request, params, env }) {
     if (me.role !== 'owner') return reply({ error: 'owner-only' }, 403);
 
     // Who has notifications on (only people still in the family), and on how many phones.
-    if (route === 'push/audience' && method === 'GET') {
-      const out = [];
-      let cursor;
-      do {
-        const page = await db.list({ prefix: 'push:', cursor });
-        for (const k of page.keys) {
-          const id = k.name.slice(5), u = await getJSON(db, 'user:' + id);
-          if (u && !u.removed) out.push({ id, name: u.name, devices: (await devices(db, id)).length });
-        }
-        cursor = page.list_complete ? null : page.cursor;
-      } while (cursor);
-      return reply({ people: out.filter(p => p.devices) });
-    }
+    if (route === 'push/audience' && method === 'GET') return reply({ people: await audienceIds(db) });
 
     // One person at a time, so a request only ever encrypts for a handful of phones.
     if (route === 'push/send' && method === 'POST') {

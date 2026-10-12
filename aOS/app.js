@@ -126,7 +126,7 @@
         <div>${line('sparkle')}<i>Allison Corporation</i></div>
       </div>
       <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
-      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${[...e.highlights, ...e.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
+      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${hi(r.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
       <div class="sec"><h2>Preview</h2></div>
       <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
       <div class="sec"><h2>What it needs</h2></div>
@@ -138,7 +138,7 @@
       .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
   }
   function histPage(id, hist) {
-    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => { const y = D.entry(x.apps[id]); return `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${[...y.highlights, ...y.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`; }).join('')}`);
+    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${hi(x.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`).join('')}`);
   }
   function storyPage(i) {
     const s = STORIES[i];

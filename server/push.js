@@ -95,3 +95,64 @@ export async function sendTo(db, env, id, msg, { fetchImpl } = {}) {
   if (dead.length) await dropDevices(db, id, dead);
   return out;
 }
+
+// ---- "aOS updated to 1.x", sent by the release itself ----
+// The release workflow (.github/workflows/news.yml, aOS/scripts/announce.mjs) walks these
+// steps after publishing, with a key only it and the Pages project have (ANNOUNCE_KEY,
+// derived by announce.mjs from the Cloudflare token, so there is nothing to set up):
+//   announce/begin { version }       -> { already } for a version already announced,
+//                                      { first } the very first time (it only notes the version,
+//                                      so turning this on doesn't announce what everyone has),
+//                                      else { people: [id, ...] } with notifications on
+//   announce/send  { version, to }   -> one person's phones, like push/send
+//   announce/done  { version }       -> remembered (config:announced), so a version is told once,
+//                                      however many merges release it again
+// One person per request, like the owner's composer, so a request never has much to encrypt.
+// The same notification replaces itself on a phone (tag), if a half-finished run is repeated.
+const VERSION = /^[0-9]+(\.[0-9]+)*$/;
+export const announcement = version => ({ title: `aOS updated to ${version}`, body: 'Click for update details.', url: './#whats-new', tag: 'aos-update' });
+
+async function keyOk(request, env) {
+  const want = String((env && env.ANNOUNCE_KEY) || ''), got = (request.headers.get('Authorization') || '').replace(/^Bearer /, '');
+  if (want.length < 32 || !got) return false;
+  const h = async s => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  const [a, b] = await Promise.all([h(want), h(got)]);
+  return a.every((x, i) => x === b[i]);
+}
+
+// everyone still in the family who has notifications on: [id, ...]
+export async function audienceIds(db) {
+  const out = [];
+  let cursor;
+  do {
+    const page = await db.list({ prefix: 'push:', cursor });
+    for (const k of page.keys) {
+      const id = k.name.slice(5), u = await getJSON(db, 'user:' + id);
+      if (u && !u.removed && (await devices(db, id)).length) out.push({ id, name: u.name, devices: (await devices(db, id)).length });
+    }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out;
+}
+
+// -> { status, body }
+export async function announce(db, env, request, step, b, { fetchImpl } = {}) {
+  if (!env || !env.ANNOUNCE_KEY) return { status: 404, body: { error: 'not-found' } };
+  if (!(await keyOk(request, env))) return { status: 403, body: { error: 'key' } };
+  const version = String((b && b.version) || '');
+  if (!VERSION.test(version)) return { status: 400, body: { error: 'version' } };
+  const was = await db.get('config:announced');
+  if (step === 'begin') {
+    if (was === version) return { status: 200, body: { already: true } };
+    if (was === null) { await db.put('config:announced', version); return { status: 200, body: { first: true } }; }
+    return { status: 200, body: { people: await audienceIds(db) } };
+  }
+  if (step === 'send') {
+    if (was === version) return { status: 200, body: { ok: true, sent: 0, failed: 0, gone: 0, already: true } };
+    const id = String((b && b.to) || ''), u = await getJSON(db, 'user:' + id);
+    if (!u || u.removed) return { status: 404, body: { error: 'unknown' } };
+    return { status: 200, body: { ok: true, ...(await sendTo(db, env, id, announcement(version), { fetchImpl })) } };
+  }
+  if (step === 'done') { await db.put('config:announced', version); return { status: 200, body: { ok: true } }; }
+  return { status: 404, body: { error: 'not-found' } };
+}

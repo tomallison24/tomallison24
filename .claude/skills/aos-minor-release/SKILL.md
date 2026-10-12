@@ -54,8 +54,12 @@ Above the old one, at the top of `RELEASES`:
   aOS: Meals, the family's dinners. Get it in aOS" in the apps you name.
 - An app with nothing new: leave it out. It shows nothing and still moves to
   the new number.
+- Highlights are read on the Updates screen and in the app update screens, so keep them
+  short and high level (a line each, no details; details go in `notes`).
+- The merge that adds this entry also sends the family a notification, "aOS updated to
+  1.x. Click for update details." (once per version; `aOS/RELEASING.md`, "Notifications").
 - `silent: true` only if the owner wants the number logged but announced
-  nowhere.
+  nowhere (no notification either).
 
 ## 3. Everywhere else the version shows
 
