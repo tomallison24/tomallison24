@@ -114,8 +114,8 @@ is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.
 ## Notifications
 
 Everyone can turn on notifications under **Your account → Notifications**, and the
-owner can send one under **Send a notification** (a title and a few lines, or **Use
-what's new**). It's Web Push: nothing to set up. The server's push key is made the
+owner can send one under **Send a notification** (a title and a few lines, or **Announce the
+update**: "aOS updated to 1.x. Click for update details.", which opens the Updates screen when tapped). It's Web Push: nothing to set up. The server's push key is made the
 first time anyone asks for it and kept in the same storage (`config:vapid`), and each
 person's phones are `push:<id>`. (To use a key of your own instead, set the Pages
 secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one.)
@@ -128,6 +128,9 @@ secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one
   automatically. A removed person is never sent to. A phone belongs to one person:
   signing in as someone else on it moves it to them.
 - A notification can only open a page on this site; it opens aOS unless told otherwise.
+- The Updates screen (Account → Updates, and aOS's What's new) tells each release simply: only its
+  `highlights` (or, with none, its first notes), a short line each. Keep highlights short and high level;
+  details belong in `notes`, which the log keeps but those screens don't show.
 - Only aOS has a service worker that shows them so far: the other apps' own
   notifications (Notes' reminders) are separate, in `notes/push`.
 - Tests: `node aOS/scripts/push-api-test.mjs` (the server, with real encryption) and
