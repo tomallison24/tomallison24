@@ -1,5 +1,5 @@
-// Draws mail/icon-512.png and mail/icon-180.png from mail/icon.svg (a white envelope on
-// mist blue, one of the Sea glass tints), by rendering the SVG in headless
+// Draws mail/icon-512.png and mail/icon-180.png from mail/icon.svg (a cream envelope on
+// teal with a mustard sun, the Mid-century Retro look), by rendering the SVG in headless
 // Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
