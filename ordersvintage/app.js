@@ -49,9 +49,12 @@ if (window.top !== window.self) {
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at',
     aiOk: KEY + '-ai-ok',
+    autoRecv: KEY + '-auto-recv', aiSort: KEY + '-ai-sort',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 500;              // messages read in one go at most; the rest follow straight away
+  const AUTO_DAYS = 5;               // an open order nothing has been heard about for longer than this is marked received
+  const SORT_MAX = 8;                // orders Claude sorts out in one go
   const STALE_DAYS = 45;             // an open order nothing has been heard about for this long is worth a look
   // What an order email looks like: the subjects stores and carriers use, and
   // the senders you buy from. Plus everything Mail's Orders auto-tag has
@@ -499,7 +502,7 @@ if (window.top !== window.self) {
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');
     if (isOpen(o)) acts.push('<button class="rowbtn" type="button" id="opDelivered"><span class="ic">' + I.check + '</span><span>' + (o.kind === 'pickup' ? 'Mark as picked up' : 'Mark as delivered') + '</span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
-    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed with Claude.' : '') + '</p>';
+    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed with Claude.' : '') + (o.auto ? ' Marked as received automatically: nothing had been heard for over ' + AUTO_DAYS + ' days.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;
   }
@@ -578,28 +581,37 @@ if (window.top !== window.self) {
     }
     if ((o.carrier || o.tracking) && (changed.includes('courier') || changed.includes('tracking number'))) { const u = P.trackUrl(o.carrier, o.tracking); if (u) o.trackUrl = u; }
     if (o.status === 'delivered' || o.status === 'pickedup') o.issue = ''; else if (f.issue) o.issue = f.issue; else if (o.issue && changed.length) o.issue = '';
-    o.guess = false; o.ai = true;
+    o.guess = !!o.issue; o.ai = true;
     return changed;
   }
+  // The email of an order, fetched again from Gmail, read by Claude: its facts, or null for "not an order".
+  async function aiRead(o) {
+    const msg = await gmail('/messages/' + o.source.msgId, { format: 'full' });
+    const { html, text } = bodies(msg.payload);
+    const fromHtml = html ? P.htmlToText(html) : '';
+    const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
+      .replace(/https?:\/\/\S+/g, '[link]').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000);
+    const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body });
+    return j.fact || null;
+  }
+  // The first time Claude is used, say what is sent and ask. False if the answer is no.
+  function aiAsk() {
+    if (ls.get(K.aiOk, '')) return true;
+    if (!confirm('Claude will read the email of an order to fix its details. The text, without links, goes to Anthropic through the family server. It isn’t kept, and nothing else is sent.\n\nContinue?')) return false;
+    ls.set(K.aiOk, '1'); return true;
+  }
   async function aiFix(o) {
-    if (st.aiBusy || !o.source || !o.source.msgId) return;
+    if (st.aiBusy || st.sorting || !o.source || !o.source.msgId) return;
     if (!getToken()) { toast('Connect Gmail in Settings first, so Orders can open the email.'); return; }
-    if (!ls.get(K.aiOk, '')) {
-      if (!confirm('Claude will read this one email to fix the details. Its text, without links, goes to Anthropic through the family server. It isn’t kept, and nothing else is sent.\n\nContinue?')) return;
-      ls.set(K.aiOk, '1');
-    }
+    if (!aiAsk()) return;
     st.aiBusy = true; renderOrder();
     const before = JSON.parse(JSON.stringify(o));
     try {
-      const msg = await gmail('/messages/' + o.source.msgId, { format: 'full' });
-      const { html, text } = bodies(msg.payload);
-      const fromHtml = html ? P.htmlToText(html) : '';
-      const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
-        .replace(/https?:\/\/\S+/g, '[link]').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000);
-      const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body });
-      if (!j.fact) toast('Claude doesn’t think that email is about an order.');
+      const f = await aiRead(o);
+      if (!f) toast('Claude doesn’t think that email is about an order.');
       else {
-        const changed = applyAi(o, j.fact);
+        const changed = applyAi(o, f);
+        o.aiTried = o.source.msgId;
         save();
         toast(changed.length ? 'Claude updated the ' + [...new Set(changed)].slice(0, 4).join(', ') + '.' : 'Claude agrees with what’s there.',
           changed.length ? () => { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); save(); if (st.order === o) renderOrder(); render(); } : null, 6000);
@@ -610,6 +622,84 @@ if (window.top !== window.self) {
     } finally {
       st.aiBusy = false; if (st.order === o) renderOrder(); render();
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // Tidying up on its own: old open orders are marked received, and what is under
+  // "To check" is sorted out by Claude, a few at a time. Each has a switch in Settings.
+  // ---------------------------------------------------------------------
+  const optOn = k => ls.get(K[k], '') !== '0';
+  // An open order nothing has been heard about for more than AUTO_DAYS, and not still expected
+  // (or still held for pickup), has surely arrived: delivered, or picked up for a pickup.
+  function autoReceive() {
+    if (!optOn('autoRecv')) return;
+    const t = todayStr(), hit = [];
+    orders.forEach(o => {
+      if (!isOpen(o) || (o.locks && o.locks.status)) return;
+      if (o.eta && o.eta >= t) return;
+      if (o.status === 'pickup' && o.pickupBy && o.pickupBy >= t) return;
+      const l = last(o);
+      if (!l || daysFrom(l, t) <= AUTO_DAYS) return;
+      hit.push([o, JSON.parse(JSON.stringify(o))]);
+      const to = o.kind === 'pickup' ? 'pickedup' : 'delivered';
+      o.steps = { ...(o.steps || {}), [to]: l }; o.status = to; o.issue = ''; o.guess = false; o.auto = true;
+    });
+    if (!hit.length) return;
+    save();
+    toast('Marked ' + plural(hit.length, 'old order') + ' as received.', () => {
+      hit.forEach(([o, b]) => { Object.keys(o).forEach(k => { if (!(k in b)) delete o[k]; }); Object.assign(o, b); o.locks = { ...(o.locks || {}), status: true }; });
+      save(); if (st.order) renderOrder(); render();
+    }, 7000);
+  }
+  // Claude reads the email of each order under "To check" (not one it has read before, not more than
+  // SORT_MAX at a time, and only for someone signed in to the family: it never opens a sign-in sheet).
+  async function aiSort({ loud } = {}) {
+    if (st.sorting || st.scanning || st.aiBusy || !getToken() || (!loud && !optOn('aiSort'))) return;
+    const acct = window.AllisonOS && window.AllisonOS.account;
+    if (!acct || !acct.user || !acct.user()) { if (loud) toast(AI_SAY.signin); return; }
+    const todo = orders.filter(o => kindOn(o) && needsCheck(o) && o.source && o.source.msgId && o.aiTried !== o.source.msgId).slice(0, SORT_MAX);
+    if (!todo.length) { if (loud) toast('Nothing for Claude to sort.'); return; }
+    if (!aiAsk()) { ls.set(K.aiSort, '0'); renderSettings(); return; }
+    st.sorting = true; busyPill('Claude is sorting ' + plural(todo.length, 'order'));
+    const log = [], gone = [];
+    let stop = '';
+    try {
+      await pool(todo, 2, async o => {
+        if (stop) return;
+        const before = JSON.parse(JSON.stringify(o)), msgId = o.source.msgId;
+        try {
+          const f = await aiRead(o);
+          o.aiTried = msgId;
+          if (!f) { orders = orders.filter(x => x !== o); gone.push(before); log.push([o, before, 'removed']); }
+          else log.push([o, before, applyAi(o, f).length ? 'updated' : 'agreed']);
+        } catch (e) {
+          if (e instanceof AuthError) stop = 'auth';
+          else if (['limit', 'signin', 'no-ai', 'accounts-off', 'ai-key', 'ai-busy', 'ai-unreachable', 'offline'].includes(e.code)) stop = e.code;
+          else o.aiTried = msgId;                    // this one can't be read (refused, odd answer): don't try it again
+        }
+      });
+    } finally {
+      st.sorting = false; busyPill();
+      if (log.length) {
+        save();
+        if (st.order && !orders.includes(st.order)) { st.order = null; closeSheet('opage'); }
+      }
+      render();
+    }
+    if (!log.length) { if (loud || (stop && stop !== 'limit')) toast(AI_SAY[stop] || (stop === 'auth' ? 'Gmail needs you to sign in again.' : 'Claude couldn’t read those. Try again later.')); return; }
+    const n = k => log.filter(x => x[2] === k).length, bits = [];
+    if (n('updated')) bits.push(n('updated') + ' updated');
+    if (n('agreed')) bits.push(n('agreed') + ' looked right');
+    if (n('removed')) bits.push(n('removed') + ' not ' + (n('removed') === 1 ? 'an order' : 'orders') + ', removed');
+    toast('Claude sorted ' + plural(log.length, 'order') + ': ' + bits.join(', ') + '.', () => {
+      log.forEach(([o, b]) => {
+        if (!orders.includes(o)) orders.push(o);
+        Object.keys(o).forEach(k => { if (!(k in b)) delete o[k]; }); Object.assign(o, b); o.aiTried = b.source.msgId;
+      });
+      save(); if (st.order) renderOrder(); render();
+    }, 8000);
+    if (stop === 'limit') setTimeout(() => toast('That’s enough Claude for today. The rest will wait.'), 8500);
+    else if (!stop && orders.some(o => kindOn(o) && needsCheck(o) && o.source && o.source.msgId && o.aiTried !== o.source.msgId)) setTimeout(() => aiSort(), 8500);
   }
 
   // ---------------------------------------------------------------------
@@ -872,6 +962,7 @@ if (window.top !== window.self) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
       saveSeen(); save(); revive = new Set();
+      autoReceive();
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -882,6 +973,7 @@ if (window.top !== window.self) {
         if (added) bits.push(plural(added, 'new order'));
         if (changed) bits.push(plural(changed, 'update'));
         pillDone(bits.length ? bits.join(', ') : 'Up to date');
+        setTimeout(() => aiSort(), 1500);
         if (loud && !bits.length) toast(read ? 'Read ' + plural(read, 'email') + '. Nothing new.' : 'Nothing new in Gmail.');
       }
     }
@@ -899,6 +991,10 @@ if (window.top !== window.self) {
     $('stKinds').innerHTML = KIND_ROWS.map(([k, t, sub]) => k === 'package'
       ? '<div class="swrow"><span class="grow">' + esc(t) + '<span class="sub">' + esc(sub) + '</span></span><span class="fixed">Always on</span></div>'
       : '<button class="swrow" type="button" role="switch" aria-checked="' + (kinds[k] !== false) + '" data-kind="' + k + '"><span class="grow">' + esc(t) + '<span class="sub">' + esc(sub) + '</span></span><span class="switch" aria-hidden="true"></span></button>').join('');
+    const sw = (opt, t, sub) => '<button class="swrow" type="button" role="switch" aria-checked="' + optOn(opt) + '" data-opt="' + opt + '"><span class="grow">' + esc(t) + '<span class="sub">' + esc(sub) + '</span></span><span class="switch" aria-hidden="true"></span></button>';
+    $('stTidy').innerHTML = sw('autoRecv', 'Mark old orders as received', 'An open order nothing has been heard about for over ' + AUTO_DAYS + ' days moves to Delivered (Picked up, for pickups)')
+      + sw('aiSort', 'Let Claude sort out “To check”', 'Claude reads the email of each order that needs a look, a few at a time, and fixes the details. Links are removed, nothing is kept')
+      + (orders.some(o => kindOn(o) && needsCheck(o)) ? '<button class="rowbtn" type="button" id="stSortNow"><span class="ic">' + I.spark + '</span><span>Sort out “To check” now<span class="sub">Claude reads each one, up to ' + SORT_MAX + ' at a time</span></span></button>' : '');
     let rows = '';
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new orders now<span class="sub">'
@@ -926,6 +1022,14 @@ if (window.top !== window.self) {
     saveSeen();
     if (n && getToken()) { closeSheet('setSheet'); scan({ loud: true }); toast('Looking for ' + plural(n, 'email') + ' that were skipped.'); }
     else if (!getToken() && hasGmail()) toast('Connect Gmail again to look for them.');
+  });
+  $('stTidy').addEventListener('click', e => {
+    if (e.target.closest('#stSortNow')) { closeSheet('setSheet'); aiSort({ loud: true }); return; }
+    const b = e.target.closest('[data-opt]'); if (!b) return;
+    const k = b.dataset.opt, on = !optOn(k);
+    ls.set(K[k], on ? '1' : '0'); renderSettings();
+    if (on && k === 'autoRecv') { autoReceive(); render(); }
+    if (on && k === 'aiSort') aiSort();
   });
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
@@ -1098,6 +1202,7 @@ if (window.top !== window.self) {
     if (document.visibilityState !== 'visible') return;
     if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
     if (getToken() && scanDue()) scan();
+    autoReceive();
     render();
   });
   window.addEventListener('online', () => { if (syncCfg) sync(false); });
@@ -1107,6 +1212,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const back = consumeRedirect();
   if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  autoReceive();
   render();
   if (back && back.error) {
     if (!(back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error))) toast(back.error === 'access_denied' ? 'Gmail access was declined.' : 'Gmail sign-in didn’t work (' + back.error + ').', null, 6000);
@@ -1114,6 +1220,7 @@ if (window.top !== window.self) {
   }
   // Read Gmail on open: always after a sign-in, else if it's been a while.
   if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
+  else if (getToken()) setTimeout(() => aiSort(), 2500);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
@@ -1139,5 +1246,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (ordersvintage/scripts/app-test.mjs) only.
-  window.__orders = { get orders() { return orders; }, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale };
+  window.__orders = { get orders() { return orders; }, tidy: autoReceive, sort: aiSort, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale };
 })();

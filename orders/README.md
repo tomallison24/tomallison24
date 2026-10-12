@@ -127,6 +127,31 @@ them, on the phone and in your Google Sheet if you connect one. The one
 exception is **Fix details with Claude**, which only runs when you tap it
 (below).
 
+## Tidying up on its own
+
+Two things happen by themselves each time Orders opens (and after each read of
+Gmail); each has a switch under **Settings → Tidying up**, on by default.
+
+- **Old open orders are marked received.** An open order (ordered, shipped, out
+  for delivery, or ready for pickup) that nothing has been heard about for more
+  than **5 days** moves to Delivered, or Picked up for a pickup. The 5 days
+  count from the newest email or step, not from the order date, so something
+  shipped yesterday isn't touched; an order whose expected date is still ahead,
+  a pickup still being held, and an order whose status you set yourself are left
+  alone. Many stores send no "delivered" email (Amazon often doesn't), which is
+  what this is for. The date given to the Delivered step is the last news, not
+  the real arrival. A toast says how many, with **Undo**, which also locks the
+  status so it isn't marked again.
+- **Claude sorts out “To check”.** For someone signed in to the family, Claude
+  reads the email of each order under *To check* (never one it has read before,
+  up to 8 at a time, then the next 8) and fixes the details as below. An order it
+  finds nothing wrong with leaves *To check*; one it says isn't an order at all
+  (a survey the reader took for an order) is **removed**; an order the store says
+  has a problem (an unavailable item) stays for you. A toast says what it did,
+  with one **Undo** that puts everything back. It asks the first time. If you
+  aren't signed in it does nothing and opens no sign-in sheet. **Sort out “To
+  check” now** in Settings runs it on request.
+
 ## Fix details with Claude
 
 When the words-only reader gets an order wrong (a *Check details* card, or any
