@@ -15,8 +15,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mail</title>
 <meta name="description" content="Gmail triage for the home screen: one tap buckets a sender's whole domain into Marketing, and Marketing empties itself.">
-<meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#241E1A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- default, not black-translucent: that one always draws the clock white,
@@ -25,8 +25,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mail">
 <meta name="referrer" content="origin">
-<link rel="apple-touch-icon" href="icon-180.png?v=3">
-<link rel="icon" type="image/png" href="icon-512.png?v=3">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<link rel="icon" type="image/png" href="icon-512.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   Mail - Gmail triage as a home-screen app. No build step, no server, no
@@ -61,9 +61,8 @@
   Scopes: gmail.modify (label, move, trash) and gmail.settings.basic (the
   domain filters). Both are per-device; the token never leaves the phone.
 
-  Look: mid-century modern in the Retro colours (see the last block of the
-  style sheet): flat cream cards, mustard / teal / burnt orange / olive,
-  atomic shapes behind the title, Futura. Every action has its own motion - a tag stamp and a sheen before a row flies out to the
+  Look: one sheet of frosted glass over a slow aurora, and every action has
+  its own motion - a tag stamp and a sheen before a row flies out to the
   right, a row flying back left when it returns, a crumble for a deleted
   rule, a wipe down the bucket when it empties. All of it collapses to
   nothing under prefers-reduced-motion.
@@ -1391,249 +1390,6 @@
   @media (prefers-reduced-transparency: reduce) {
     .sheet, .menu, #toast { background: var(--bar-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
-
-  /* ======================================================================
-     Mid-century modern, in the Retro colours
-     ----------------------------------------------------------------------
-     Mail's look, from the aOS Design Styles canvas ("Mid-century modern" +
-     "Retro"): flat, solid shapes instead of glass; a cream ground with
-     mustard, teal, burnt orange and olive; atomic circles behind the title;
-     Futura (iOS's own, so nothing to download) for every word. Last in the
-     sheet so it wins over the glass above. Dark mode is the same shapes on
-     walnut. Only colours, shapes and type change - every button, swipe and
-     sheet works as before.
-     ====================================================================== */
-  :root {
-    --mc-ground: #241E1A; --mc-card: #322A25; --mc-card-2: #3D332C; --mc-edge: rgba(244, 236, 221, 0.14);
-    --mc-ink: #F4ECDD; --mc-mustard: #E3A72F; --mc-teal: #4FB3AB; --mc-orange: #D8572A; --mc-olive: #A3B04A;
-    --mc-walnut: #4A3426; --mc-cream-ink: #FFF8EC; --mc-on-mustard: #2B2522;
-    --bg: #241E1A; --page: #241E1A;
-    --text: #F4ECDD; --muted: #CFC1AC; --faint: #A99C86;
-    --accent: #5CBDB5; --on-accent: #1E1916; --accent-ink: #F4ECDD; --accent-text: #5CBDB5; --sel-ink: #F4ECDD;
-    --cta: #D8572A; --cta-ink: #FFF8EC;
-    --icon: #E3A72F; --icon-text: #E3A72F;
-    --tag: #E3A72F; --danger: #E8684A; --danger-ink: #F2906E; --danger-text: #F2906E; --bad-text: #F2907A;
-    --gb: #3D332C; --gb-edge: rgba(244, 236, 221, 0.14); --gb-shine: none; --gb-shadow: none;
-    --glass: #322A25; --glass-2: #3D332C; --fill: rgba(244, 236, 221, 0.07); --pill: #3D332C;
-    --hair: rgba(244, 236, 221, 0.14); --hair-2: rgba(244, 236, 221, 0.09); --hi: transparent;
-    --lift: rgba(0, 0, 0, 0.22); --lift-strong: rgba(0, 0, 0, 0.4);
-    --tile: #322A25; --tile-edge: rgba(244, 236, 221, 0.05);
-    --sheet: #322A25; --toast: #3D332C; --scrim: rgba(12, 8, 5, 0.55); --grab: rgba(244, 236, 221, 0.28); --ring: rgba(244, 236, 221, 0.4);
-    --bar-top: #322A25; --bar-bottom: #322A25; --bar-rim: rgba(244, 236, 221, 0.14); --bar-solid: #2D2621;
-    --lg-bg: #322A25; --lg-filter: none; --lg-rim: inset 0 0 0 1.5px rgba(244, 236, 221, 0.14);
-    --seg-thumb: #E3A72F; --pill-rim: rgba(244, 236, 221, 0.16); --chip-on-text: #F4ECDD; --tl: 78%;
-    --swipe-track: rgba(79, 179, 171, 0.12); --tag-ink: #7FD0C8; --armed-ink: #FFF8EC;
-    --flag-tint: #E3A72F; --arch-tint: #A3B04A; --bin-tint: #D8572A;
-    --flag-ink: #F0C766; --arch-ink: #C5D071; --bin-ink: #F2906E;
-    --gi-mix: 26%; --armed-mix: 88%; --armed-mix-l: 88%; --tint-mix: 30%;
-    --lgs-top: #322A25; --lgs-bottom: #322A25; --lgs-rim: transparent; --lgs-edge: rgba(244, 236, 221, 0.14);
-    --lgs-row: rgba(244, 236, 221, 0.07); --lgs-field: #241E1A; --lgs-filter: none; --lgs-scrim: rgba(12, 8, 5, 0.5);
-    --sw-off: rgba(244, 236, 221, 0.24);
-    --vb-top: #4A3426; --vb-bottom: #4A3426; --vb-chip: #E3A72F; --vb-press: rgba(244, 236, 221, 0.14);
-    --vb-rim: inset 0 0 0 1px rgba(244, 236, 221, 0.12), 0 12px 24px -10px rgba(0, 0, 0, 0.6);
-    --aurora: 0.9;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --mc-ground: #F4ECDD; --mc-card: #FBF5E9; --mc-card-2: #F0E5D0; --mc-edge: rgba(43, 37, 34, 0.14);
-      --mc-ink: #2B2522; --mc-teal: #1F6F6B; --mc-olive: #7E8C34;
-      --bg: #F4ECDD; --page: #F4ECDD;
-      --text: #2B2522; --muted: #5B4A3F; --faint: #75635A;
-      --accent: #1F6F6B; --on-accent: #FFF8EC; --accent-ink: #1F6F6B; --accent-text: #1F6F6B; --sel-ink: #2B2522;
-      --cta: #C9502A; --cta-ink: #FFF8EC;
-      --icon: #1F6F6B; --icon-text: #1F6F6B;
-      --tag: #C9502A; --danger: #B8452B; --danger-ink: #9E3A1A; --danger-text: #9E3A1A; --bad-text: #B02E1F;
-      --gb: #F0E5D0; --gb-edge: rgba(43, 37, 34, 0.14); --gb-shine: none; --gb-shadow: none;
-      --glass: #FBF5E9; --glass-2: #F0E5D0; --fill: rgba(43, 37, 34, 0.06); --pill: #F0E5D0;
-      --hair: rgba(43, 37, 34, 0.14); --hair-2: rgba(43, 37, 34, 0.08); --hi: transparent;
-      --lift: rgba(43, 37, 34, 0.10); --lift-strong: rgba(43, 37, 34, 0.22);
-      --tile: #FBF5E9; --tile-edge: rgba(43, 37, 34, 0.05);
-      --sheet: #FBF5E9; --toast: #FBF5E9; --scrim: rgba(43, 37, 34, 0.35); --grab: rgba(43, 37, 34, 0.28); --ring: rgba(43, 37, 34, 0.38);
-      --bar-top: #FBF5E9; --bar-bottom: #FBF5E9; --bar-rim: rgba(43, 37, 34, 0.12); --bar-solid: #FBF5E9;
-      --lg-bg: #FBF5E9; --lg-filter: none; --lg-rim: inset 0 0 0 1.5px rgba(43, 37, 34, 0.12);
-      --seg-thumb: #E3A72F; --pill-rim: rgba(43, 37, 34, 0.16); --chip-on-text: #2B2522; --tl: 30%;
-      --swipe-track: rgba(31, 111, 107, 0.10); --tag-ink: #1F6F6B; --armed-ink: #FFF8EC;
-      --flag-ink: #7A5400; --arch-ink: #4F5A1E; --bin-ink: #9E3A1A;
-      --gi-mix: 24%; --armed-mix: 90%; --armed-mix-l: 90%; --tint-mix: 14%;
-      --lgs-top: #FBF5E9; --lgs-bottom: #FBF5E9; --lgs-rim: transparent; --lgs-edge: rgba(43, 37, 34, 0.12);
-      --lgs-row: rgba(43, 37, 34, 0.05); --lgs-field: #F4ECDD; --lgs-filter: none; --lgs-scrim: rgba(43, 37, 34, 0.30);
-      --sw-off: rgba(43, 37, 34, 0.22);
-      --vb-top: #4A3426; --vb-bottom: #4A3426; --vb-chip: #E3A72F; --vb-press: rgba(244, 236, 221, 0.14);
-      --vb-rim: 0 10px 22px -10px rgba(43, 37, 34, 0.55);
-      --aurora: 1;
-    }
-  }
-  /* the mailbox menu sets its own glass tokens above; give it the same cream or walnut */
-  .menu { --lgs-top: var(--mc-card); --lgs-bottom: var(--mc-card); }
-  @media (prefers-color-scheme: light) { .menu { --lgs-top: var(--mc-card); --lgs-bottom: var(--mc-card); } }
-
-  body { font-family: "Futura", "Futura-Medium", "Avenir Next", "Jost", system-ui, sans-serif; }
-  #c-body { font-family: inherit; }
-  .panel code, code.url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-
-  /* the atomic shapes behind the title (they scroll away with the page) */
-  .aurora { position: absolute; inset: 0 0 auto 0; height: 270px; }
-  .aurora b { filter: none; animation: none; opacity: var(--aurora); will-change: auto; }
-  .aurora b:nth-child(1) { width: 220px; height: 220px; left: auto; right: -70px; top: -60px; background: var(--mc-mustard); }
-  .aurora b:nth-child(2) { width: 64px; height: 64px; left: auto; right: 74px; top: 98px; bottom: auto; background: var(--mc-teal); }
-  .aurora b:nth-child(3) { width: 120px; height: 34px; left: auto; right: 20px; top: 152px; bottom: auto; border-radius: 17px; background: var(--mc-orange); transform: rotate(-18deg); }
-  .aurora b:nth-child(4) { display: none; }
-
-  /* the title: big, tight, with the three little bars under it */
-  header h1 { font-size: 44px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
-  header h1.fit1 { font-size: 34px; }
-  header h1.fit2 { font-size: 28px; }
-  header h1::after {
-    content: ''; display: block; width: 62px; height: 6px; margin-top: 10px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat;
-    transition: opacity .2s, height .28s var(--ease), margin .28s var(--ease);
-  }
-  header { --hh: 74px; }
-  header .sub { font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-  body.scrolled header { --hh: 40px; }
-  body.scrolled header h1 { font-size: 22px; letter-spacing: -0.02em; }
-  body.scrolled header h1::after { opacity: 0; height: 0; margin-top: 0; }
-  header::before { border-radius: 999px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 6px 16px -8px var(--lift-strong); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  header::after { background: linear-gradient(180deg, var(--bg), transparent); }
-
-  /* section labels */
-  .card h2, .stack > h2, .tidyh { font-size: 12px; font-weight: 600; letter-spacing: .2em; color: var(--muted); }
-  .menu .mhead { letter-spacing: .2em; font-weight: 600; color: var(--muted); }
-
-  /* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
-  .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink, .rgroup, .search, .seg, .fab, .ptr {
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  .iconbtn, .textbtn, .pillbtn, .btn.ghost, .plink { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .iconbtn:active, .pillbtn:active, .textbtn:active { background: var(--mc-card-2); }
-  .iconbtn { color: var(--icon); }
-  .textbtn { color: var(--accent-text); }
-  .btn.ghost { color: var(--text); font-weight: 600; }
-  .btn { min-height: 50px; font-weight: 600; letter-spacing: .02em; backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .btn:not(.ghost), .send {
-    background: var(--cta); color: var(--cta-ink); border-color: transparent; box-shadow: none;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  .btn::after { display: none; }
-  .btn:not(.ghost):active, .send:active { filter: brightness(.92); background: var(--cta); }
-  .btn.warn, .btn.danger { background: transparent; color: var(--danger-text); box-shadow: inset 0 0 0 2px var(--danger); }
-  .sheet .btn.warn, .sheet .btn.danger { background: transparent; box-shadow: inset 0 0 0 2px var(--danger); }
-  .sheet .btn:not(.ghost):not(.warn):not(.danger) { background: var(--cta); color: var(--cta-ink); box-shadow: none; }
-  .sheet .btn.ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent-text); }
-  .send { box-shadow: none; }
-  #selbar button, .more button, .mini, .imgnote button, .tidylist .tkeep, .sheet .tidylist .tkeep {
-    background: transparent; color: var(--accent-text); box-shadow: inset 0 0 0 2px var(--accent); border: 0;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  #selbar button.danger, .more button.danger { color: var(--danger-text); box-shadow: inset 0 0 0 2px var(--danger); background: transparent; }
-  .mini { color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .mini.on { background: transparent; color: var(--accent-text); box-shadow: inset 0 0 0 2px var(--accent); }
-  .more button { color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .more button:active, .mini:active, #selbar button:active { background: var(--fill); }
-  #selbar { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 10px 26px -10px var(--lift-strong); }
-  .tidylist .tk, .tidylist .tkeep { color: var(--accent-text); }
-  .notify-modes .textbtn[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
-  .notify-modes > .slthumb { box-shadow: inset 0 0 0 2px var(--accent); background: none; }
-
-  /* search, tabs, the bottom pill and the compose button */
-  .search { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .search:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
-  .search .x { background: var(--fill); box-shadow: none; }
-  .seg { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .slthumb { background: var(--seg-thumb); box-shadow: none; }
-  .seg button { font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; }
-  .seg button[aria-checked="true"] { background: var(--mc-mustard); color: var(--mc-on-mustard); box-shadow: none; }
-  .seg.slides button[aria-checked="true"] { background: none; }
-  .seg.slides button[aria-checked="true"] { color: var(--mc-on-mustard); }
-  .tagpick > .slthumb { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
-  .seg .udot { background: var(--mc-orange); }
-  .vbar::before { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--mc-walnut); box-shadow: var(--vb-rim); }
-  .vbar > button { color: #F4ECDD; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; }
-  .vbar .vb-ic { color: var(--mc-on-mustard); }
-  .vbar .vb-chev svg { color: #E3A72F; }
-  .vbar .vb-ic .dot { box-shadow: none; }
-  .fab { background: var(--cta); color: var(--cta-ink); box-shadow: 0 8px 18px -8px rgba(43, 37, 34, 0.55); }
-  .ptr { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-
-  /* the list: solid cream cards, round-cornered, no rim light */
-  .card { border-radius: 20px; background: var(--mc-card); box-shadow: none; }
-  #reader .card, #compose .card { border-radius: 20px; }
-  ul.list.pills > li { border-radius: 20px; background: var(--mc-card); box-shadow: none; padding: 13px 14px 13px 16px; }
-  ul.list.pills > li.sel { background: color-mix(in srgb, var(--accent) 14%, var(--mc-card)); box-shadow: inset 0 0 0 2px var(--accent); border-color: transparent; }
-  .stack .skel { border-radius: 20px; box-shadow: none; }
-  .who { font-weight: 600; letter-spacing: 0; }
-  .subj { font-weight: 500; }
-  ul.list.pills > li.unread .subj { font-weight: 600; }
-  .who .dot { width: 9px; height: 9px; background: var(--mc-orange); box-shadow: none; }
-  .who .when .flagged, .rb.on { color: var(--mc-mustard); }
-  .chip { background: var(--fill); border-color: transparent; color: var(--muted); }
-  .chip.due { color: var(--danger-text); background: color-mix(in srgb, var(--danger) 14%, transparent); border-color: transparent; }
-  .act { background: transparent; box-shadow: inset 0 0 0 2px var(--tag); border: 0; color: var(--tag); }
-  .act:active { background: color-mix(in srgb, var(--tag) 18%, transparent); }
-  .act.undo { color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
-  .act.warn { color: var(--danger); box-shadow: inset 0 0 0 2px var(--danger); }
-  .hero { background: var(--mc-mustard); color: var(--mc-on-mustard); border: 0; box-shadow: none; border-radius: 50%; }
-  @keyframes stamp { 0% { transform: scale(1); } 32% { transform: scale(1.3); } 100% { transform: scale(1); } }
-  ul.list > li.confirm::after { background: linear-gradient(105deg, transparent 20%, rgba(227,167,47,0.30) 50%, transparent 78%); }
-  ul.list > li.confirm.blue::after { background: linear-gradient(105deg, transparent 20%, rgba(79,179,171,0.28) 50%, transparent 78%); }
-
-  /* tags and dots: the same hues, calmer */
-  .tchip { color: hsl(var(--h) 55% var(--tl)); background: hsl(var(--h) 55% 50% / .16); border-color: transparent; }
-  .chip2 { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .sheet .chip2:not(.on) { background: var(--mc-card); }
-  .chip2.on { color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
-  .chip2.has { border-color: transparent; }
-  .chip2 i, .menu .dot, .vbar .vb-ic .dot { background: hsl(var(--h) 60% 52%); box-shadow: none; }
-  .avatar { background: hsl(var(--h) 52% 42%); box-shadow: none; }
-  .fext { background: hsl(var(--h) 52% 42%); border-radius: 50% 50% 8px 8px / 30% 30% 8px 8px; }
-
-  /* the swipe actions: solid colour discs */
-  .sa.tagx { --tint: var(--mc-teal); --ink: var(--tag-ink); }
-  .sa.inbx { --tint: var(--mc-teal); --ink: var(--accent-text); }
-  .gi { background: color-mix(in srgb, var(--tint) var(--gi-mix), transparent); border: 0; box-shadow: none; }
-  li.armed .sa.tagx .gi, li.armed-l .sa.bin .gi { background: color-mix(in srgb, var(--tint) var(--armed-mix), transparent); }
-  .swipe-r { background: var(--fill); }
-
-  /* selecting */
-  ul.list > li.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  li.sel .check { background: var(--accent); border-color: var(--accent); box-shadow: none; }
-  li.sel .check::after { border-color: var(--on-accent); }
-
-  /* the mailbox menu and the sheets: cream panels with round corners */
-  .menu, .sheet { background: var(--mc-card); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px var(--lift-strong); }
-  .menu { border-radius: 24px; background: var(--mc-card); }
-  .sheet { border-radius: 28px; }
-  #boxmenu .catch { backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .menu button { border-radius: 16px; text-transform: none; }
-  .menu button:active { background: var(--fill); }
-  .menu .ico { background: hsl(var(--h) 55% 50% / .22); box-shadow: none; border-radius: 50%; color: hsl(var(--h) 55% var(--tl)); }
-  .menu .ico.plain { background: var(--fill); box-shadow: none; color: var(--muted); }
-  .menu [aria-checked="true"] { background: var(--fill); box-shadow: none; }
-  .menu .cnt { background: var(--fill); box-shadow: none; }
-  .menu hr { background: var(--hair); }
-  .sheet h3, .ctitle, .rsubj { font-weight: 600; letter-spacing: -0.01em; }
-  .sheet input[type=text], .panel input[type=text], .field input[type=number], .field input[type=url] {
-    border-radius: 16px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--mc-edge);
-  }
-  .sheet input[type=text]:focus, .panel input[type=text]:focus, .field input[type=number]:focus, .field input[type=url]:focus {
-    box-shadow: inset 0 0 0 2px var(--accent);
-  }
-  .sheet .fchip, .sheet .tidylist, .fchip, .tidylist { background: var(--bg); box-shadow: none; border-radius: 16px; }
-  .imgnote button { color: var(--accent-text); }
-  .unsub { background: var(--fill); border: 0; box-shadow: none; }
-  .foot button { background: var(--mc-card); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  #toast { background: var(--mc-card-2); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 12px 26px -10px var(--lift-strong); border-radius: 18px; }
-  #toast button { color: var(--accent-text); }
-  #toast.bad { box-shadow: inset 0 0 0 2px var(--danger), 0 12px 26px -10px var(--lift-strong); }
-
-  /* the toolbar on a message, compose, switches */
-  .rgroup { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 10px 22px -10px var(--lift-strong); }
-  .rb { color: var(--icon); }
-  .switch { background: var(--sw-off); box-shadow: none; }
-  .switch::after { background: #FFF8EC; box-shadow: 0 1px 3px rgba(43, 37, 34, 0.3); }
-  .switch[aria-checked="true"] { background: var(--mc-teal); }
-  .panel input[type=text]:focus { border-color: transparent; }
-  .rtext a { color: var(--accent-text); }
 </style>
 </head>
 <body>

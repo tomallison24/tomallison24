@@ -104,14 +104,14 @@
         'Home: the 100% light button is a sun, glowing gold at full brightness',
         'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
-        'Mail: a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type; everything works as before'],
+        'Mail Vintage is new, one of the Allison family apps: the same Mail, in a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own sign-in and settings, so Mail stays as it is'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
         meals: { highlights: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'],
           notes: ['Prime and VIC member prices'] },
         house: { highlights: ['Connects to Home Assistant faster when the network is slow to answer: a stalled try no longer holds it up', 'The 1% light button is a moon on midnight blue, the night setting', 'The 100% light button is a sun, glowing gold at full brightness'] },
-        mail: { highlights: ['Mail has a new look: mid-century modern, in mustard, teal and burnt orange, with flat shapes and Futura type', 'Mail has a new tagline: Mail.Controlled.'] },
+        mail: { highlights: ['Mail has a new tagline: Mail.Controlled.', 'New in aOS: Mail Vintage, your Gmail in a mid-century modern look. Get it in aOS'] },
         drinks: { highlights: ['Analysis is one page, opened from the week\'s number, with a pill at the bottom to pick a view', 'Pick a view from the pill: this week or month against the one before, your top drinks, days of the week, and more'] },
       } },
     { v: '1.1', date: '2026-10-10', title: 'Dinner is served',
@@ -178,15 +178,25 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house', 'mailvintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
+    "mailvintage": {
+      "tag": "Your mail, mid-century style",
+      "cards": [
+        { "i": "inbox", "t": "A vintage look", "d": "The same Mail in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
+        { "i": "swipe", "t": "Swipe to sort", "d": "Swipe right to tag or move to Marketing; swipe left to flag, archive or trash. Every swipe has Undo." },
+        { "i": "tag", "t": "Tags that stick", "d": "Tag one email and everything from that sender gets the tag too, now and in future." },
+        { "i": "bell", "t": "Remind Me", "d": "Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top." },
+        { "i": "share", "t": "Its own app", "d": "Mail Vintage signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both." }
+      ]
+    },
     "mail": {
       "tag": "Mail.Controlled.",
       "cards": [
@@ -758,7 +768,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Home and Mail Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1268,6 +1278,16 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       pre: () => mailFab() },
   ], done: () => mailFab() };
   function mailFab() { const f = document.getElementById('fab'); if (f && f.dataset.aosShown) { f.classList.add('hide'); delete f.dataset.aosShown; } }
+  // Mail Vintage is Mail's page in another look, so it has Mail's screen to point at.
+  SPOTS.mailvintage = { stops: [
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'A vintage look', d: 'The same Mail in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
+    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Swipe to sort', d: 'Swipe right to tag or move to Marketing; swipe left to flag, archive or trash. Every swipe has Undo.', g: 'swipe-right',
+      pre: () => { const li = mailRow(); if (li) { li.classList.remove('peek'); void li.offsetWidth; li.classList.add('peek'); } } },
+    { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future.' },
+    { sel: '[data-aos-demo="mail-row"] .tchip.rem', demo: MAIL_ROW, pad: 6, t: 'Remind Me', d: 'Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top.' },
+    { sel: '#screen .signin [data-act="signin"]', t: 'Its own app', d: 'Mail Vintage signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both.', g: 'tap',
+      pre: () => mailFab() },
+  ], done: () => mailFab() };
   SPOTS.calendar = { stops: [
     { sel: ['#mgrid', '#main .mgrid'], t: 'One shared calendar', d: 'This is your iCloud Family calendar, so changes here show up in everyone’s iPhone Calendar too.' },
     { sel: '.dock .tabs', t: 'Day to Year views', d: 'Pick Day, Week, Month, Year or List from the bottom bar, swipe to move through time, and tap Today to come back.', g: 'tap' },

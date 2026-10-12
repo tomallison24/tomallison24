@@ -1,7 +1,7 @@
 # Mail
 
-Gmail triage as a home-screen web app: a mid-century modern look in the Retro
-colours (see *The look* below), a Marketing bucket that empties itself, tags that sort mail by who sent it,
+Gmail triage as a home-screen web app: frosted glass over a slow aurora, a
+Marketing bucket that empties itself, tags that sort mail by who sent it,
 Gmail's own categories, a page for each conversation, search, and the everyday
 parts of iOS Mail: swipes, reply and forward with Undo Send, attachments,
 Remind Me, and an unread count on the icon.
@@ -24,19 +24,6 @@ Orders) is never emptied out. The sweep runs when the
 app opens (the Marketing list has a **Clean up now** button to run it at once); `.github/workflows/mail.yml` can run it daily too, so it happens on
 days you never open the app — but only once its Google credentials are set up
 (Setup, step 2). Until then the daily run just logs "No Google credentials set".
-
-## The look
-
-Mid-century modern in the Retro colours, from the aOS Design Styles canvas:
-flat cream cards and buttons (walnut in dark mode) in place of glass; mustard,
-teal, burnt orange and olive; three atomic shapes behind the title that scroll
-away with the page; a walnut pill at the bottom with a mustard icon; a solid
-orange compose button; Futura, which iOS has built in, so no font is
-downloaded. It is the last block of the style sheet in `index.html`; the glass
-styles above it are still there underneath, so where the README below says
-"glass" or "Liquid Glass" it means the shape and place of the control, not its
-surface. Mail is drawn this way for everyone: the style picker in the design
-canvas is not built yet.
 
 ## Finding your way around
 

@@ -111,4 +111,5 @@ jobs:
       - run: node places/scripts/app-test.mjs
       - run: node travel/scripts/app-test.mjs
       - run: node mail/scripts/security-test.mjs
+      - run: node mailvintage/scripts/security-test.mjs
       - run: node news/scripts/app-test.mjs
