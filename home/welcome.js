@@ -104,13 +104,14 @@
         'Home: the 100% light button is a sun, glowing gold at full brightness',
         'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
-        'Mail Vintage is new, one of the Allison family apps: the same Mail, in a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own sign-in and settings, so Mail stays as it is'],
+        'Mail Vintage is new, one of the Allison family apps: the same Mail, in a mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. It is a separate app, with its own sign-in and settings, so Mail stays as it is',
+        'Home Vintage is new, one of the Allison family apps: the same Home, in the same mid-century modern look in the Retro colours - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards instead of glass and skies, a sun behind the title and Futura type. It is a separate app, with its own Home Assistant connection and settings, so Home stays as it is'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
         meals: { highlights: ['Deals from eight stores near Apex: pick one, or see them all together', 'Plan at one store, or with the best deals across them', 'Accept a plan to save it with its dates and shopping list; past plans stay to look back on'],
           notes: ['Prime and VIC member prices'] },
-        house: { highlights: ['Connects to Home Assistant faster when the network is slow to answer: a stalled try no longer holds it up', 'The 1% light button is a moon on midnight blue, the night setting', 'The 100% light button is a sun, glowing gold at full brightness'] },
+        house: { highlights: ['Connects to Home Assistant faster when the network is slow to answer: a stalled try no longer holds it up', 'The 1% light button is a moon on midnight blue, the night setting', 'The 100% light button is a sun, glowing gold at full brightness', 'New in aOS: Home Vintage, your house in a mid-century modern look. Get it in aOS'] },
         mail: { highlights: ['Mail has a new tagline: Mail.Controlled.', 'New in aOS: Mail Vintage, your Gmail in a mid-century modern look. Get it in aOS'] },
         drinks: { highlights: ['Analysis is one page, opened from the week\'s number, with a pill at the bottom to pick a view', 'Pick a view from the pill: this week or month against the one before, your top drinks, days of the week, and more'] },
       } },
@@ -178,13 +179,13 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house', 'mailvintage'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'house', 'mailvintage', 'housevintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mailvintage": {
@@ -195,6 +196,17 @@
         { "i": "tag", "t": "Tags that stick", "d": "Tag one email and everything from that sender gets the tag too, now and in future." },
         { "i": "bell", "t": "Remind Me", "d": "Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top." },
         { "i": "share", "t": "Its own app", "d": "Mail Vintage signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both." }
+      ]
+    },
+    "housevintage": {
+      "tag": "Your whole house, mid-century style",
+      "cards": [
+        { "i": "star", "t": "A vintage look", "d": "The same Home in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
+        { "i": "star", "t": "Favorites first", "d": "It opens on what you use most: what's playing, what's running now, the weather, thermostats, cameras and lamps." },
+        { "i": "thermo", "t": "Heat and cool", "d": "Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls." },
+        { "i": "bulb", "t": "Lights by room", "d": "Switch a whole room on or off, dim each light with a slider, or use All on and All off." },
+        { "i": "shield", "t": "Cameras and security", "d": "Arm or disarm Blink, see each camera's latest still, take a snapshot or pause motion detection." },
+        { "i": "house", "t": "Its own app", "d": "Home Vintage connects and keeps its settings on its own, so Home stays just as it is. Use either, or both." }
       ]
     },
     "mail": {
@@ -768,7 +780,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Home and Mail Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail and Calendar, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Home, Mail Vintage and Home Vintage, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1377,6 +1389,15 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
     { sel: '#viewBtn', t: 'Every room and system', d: 'Tap here for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
+  ] };
+  // Home Vintage is Home's page in another look, so it has Home's screen to point at.
+  SPOTS.housevintage = { stops: [
+    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'A vintage look', d: 'The same Home in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
+    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'It opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
+    { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
+    { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights by room', d: 'Switch a whole room on or off, dim each light with a slider, or use All on and All off.', g: 'tap' },
+    { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
+    { sel: '#bannerBtn', t: 'Its own app', d: 'Home Vintage connects and keeps its settings on its own, so Home stays just as it is. Use either, or both. Tap Connect to link your Home Assistant.', g: 'tap' },
   ] };
   let spotEnd = null;
   const onScreen = e => {
