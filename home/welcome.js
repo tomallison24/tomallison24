@@ -103,6 +103,7 @@
         'Home: the 1% light button is a moon on midnight blue, the night setting',
         'Home: the thermostats and the Windmill AC show a few small snowflakes falling while they cool and a small flickering flame while they heat, all faint and animated',
         'Home: the 100% light button is a sun, glowing gold at full brightness',
+        'aOS on Android: an app you removed from the tablet shows Get again once you tap it in aOS (Chrome tells the app it is no longer installed). iPhone can\'t tell, so there it is still the "Removed it from your Home Screen?" button',
         'Drinks: Analysis is one page, opened from the week\'s number (it now says Analysis), with a pill at the bottom to pick a view - this week or month against the one before, weekly drinks against your limit, weeks over it, your top drinks, days of the week, alcohol-free days, days over your daily limit, and strength and size',
         'Mail\'s new tagline in aOS: Mail.Controlled.',
         'Orders is new, one of the Allison family apps: everything you\'ve bought and where it is, read from the order, shipping and store-pickup emails in your Gmail, with the courier, the tracking number and a link to track it. Packages and store pickups show; food, subscriptions and tickets can be switched on in Settings',
@@ -1719,11 +1720,29 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     } catch {}
     return true;
   }
+  // Android Chrome can tell a page whether its own app is installed (getInstalledRelatedApps,
+  // from the manifest's related_applications). Tapping an app in aOS that was removed from the
+  // tablet opens it in a Chrome tab; there it says so, and aOS shows Get again. Opened in a tab
+  // while it is installed, it says that too. Chrome only answers for the page's own app, and
+  // at most 3 apps can be asked about per page, so aOS can't check every app itself. iOS has no
+  // such call. Checked at most every 20 minutes; needs a sign-in (without one, it stays quiet).
+  const IR = 'aos.ir.';
+  async function androidCheck() {
+    if (!android || !APP || !APPS.includes(APP) || standalone() || !navigator.getInstalledRelatedApps) return;
+    const t = token(); if (!t) return;
+    let last = 0; try { last = +localStorage.getItem(IR + APP) || 0; } catch {}
+    if (Date.now() - last < 1200e3) return;
+    let found; try { found = (await navigator.getInstalledRelatedApps()).some(a => a && a.platform === 'webapp'); } catch { return; }
+    try { localStorage.setItem(IR + APP, String(Date.now())); } catch {}
+    try { await fetch(api('installed'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify(found ? { app: APP } : { app: APP, removed: true }) }); } catch {}
+    return found;
+  }
   const loadAccount = () => AOS.account ? Promise.resolve(AOS.account) : new Promise((ok, no) => {
     const s = document.createElement('script'); s.src = url('account.js'); s.onload = () => ok(AOS.account); s.onerror = no; document.head.appendChild(s);
   });
   async function onPhone() {
-    if (!APP || !APPS.includes(APP) || !standalone() || viaAOS()) return;
+    if (!standalone()) return androidCheck();   // a Chrome tab: is the app still on the tablet?
+    if (!APP || !APPS.includes(APP) || viaAOS()) return;
     addEventListener('aos:account', e => { if (e.detail) report(); });   // signed in some other way (a locked route asked)
     if (await report()) return;
     try { if (localStorage.getItem(ASKED)) return; } catch { return; }

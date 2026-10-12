@@ -10,5 +10,8 @@
   "icons": [
     { "src": "icon-180.png?v=2", "sizes": "180x180", "type": "image/png" },
     { "src": "icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/podcasts/", "url": "https://tomallison24-news.pages.dev/podcasts/manifest.webmanifest" }
   ]
 }
