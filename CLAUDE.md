@@ -46,6 +46,11 @@ notice, add a line for it:
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
   list is all notes). An app a minor release doesn't mention shows no update
   screen.
+- **A new version notifies the family.** When a merge adds a new non-silent entry (1.3, 2),
+  the release also sends "aOS updated to 1.x. Click for update details." to everyone with
+  notifications on (`aOS/scripts/announce.mjs`, once per version; see `aOS/RELEASING.md`,
+  "Notifications"). So write highlights that read well on the Updates screen: short and
+  high level, a line each; the details go in `notes`, which that screen doesn't show.
 - `silent: true` on an entry: it's only logged in `RELEASES`, shown nowhere
   (not in aOS's What's new); the apps keep showing the last version that wasn't
   silent, with no update screens.

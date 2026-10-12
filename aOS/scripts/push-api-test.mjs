@@ -8,6 +8,8 @@ import { onRequest } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON, getJSON } from '../../server/auth.js';
 import { sendTo, message, cleanSub, MAX_DEVICES } from '../../server/push.js';
 import { b64u } from '../../mail/push/webpush.js';
+import fs from 'fs';
+import { announce as runAnnounce, announceKey, newestVersion } from './announce.mjs';
 
 function fakeKV() {
   const m = new Map();
@@ -114,15 +116,6 @@ await test('only so many phones a person; the newest stay', async () => {
   assert.equal(subs.at(-1).endpoint, many.at(-1).sub.endpoint); assert.ok(!subs.some(s => s.endpoint === many[0].sub.endpoint));
 });
 
-await test('a test goes to your own phones only, and is readable by that phone alone', async () => {
-  sent.length = 0;
-  const r = await call('push/test', {}, tok.mia); assert.equal(r.body.sent, 1);
-  assert.equal(sent.length, 1); assert.equal(sent[0].url, mia1.sub.endpoint);
-  assert.match(sent[0].headers.Authorization, /^vapid t=.+, k=/);
-  const got = await open(mia1, sent[0].body); assert.match(got.body, /test/);
-  await assert.rejects(open(sam1, sent[0].body), 'another phone cannot read it');
-});
-
 await test('members cannot send or list; the owner can', async () => {
   assert.equal((await call('push/send', { to: 'M1', title: 'Hi' }, tok.sam)).status, 403);
   assert.equal((await call('push/audience', undefined, tok.sam)).status, 403);
@@ -135,6 +128,8 @@ await test('the owner sends to one person: all their phones get the message, and
   const r = await call('push/send', { to: 'S1', title: 'New in aOS', body: 'Notifications are here.', url: '/aOS/#whats-new' }, tok.tom);
   assert.deepEqual([r.status, r.body.sent, r.body.failed, r.body.gone], [200, 2, 0, 0]);
   assert.deepEqual(sent.map(s => s.url).sort(), [sam1.sub.endpoint, sam2.sub.endpoint]);
+  await assert.rejects(open(mia1, sent[0].body), 'another person\'s phone cannot read it');
+  assert.match(sent[0].headers.Authorization, /^vapid t=.+, k=/);
   for (const [ph, s] of [[sam1, sent.find(x => x.url === sam1.sub.endpoint)], [sam2, sent.find(x => x.url === sam2.sub.endpoint)]]) {
     const m = await open(ph, s.body); assert.equal(m.title, 'New in aOS'); assert.equal(m.body, 'Notifications are here.'); assert.equal(m.url, './#whats-new');
   }
@@ -182,6 +177,76 @@ await test('the Pages secrets VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY win over th
   const k = await vapidKeys(db, { VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' });
   assert.equal(k.publicKey, 'pub');
   assert.equal((await vapidKeys(db, {})).publicKey, key);
+});
+
+
+// ---- the release tells the family "aOS updated to 1.x" (announce.mjs, server/push.js) ----
+const KEYV = announceKey('a-cloudflare-token'), withKey = { ...env, ANNOUNCE_KEY: KEYV };
+const viaApi = (e = withKey, key = KEYV) => async (url, init) => {
+  const route = new URL(url).pathname.replace('/aOS/api/', '');
+  const request = new Request(url, { method: 'POST', headers: { ...init.headers, ...(key ? { Authorization: 'Bearer ' + key } : {}) }, body: init.body });
+  const res = await onRequest({ request, params: { route: route.split('/') }, env: e });
+  return res;
+};
+await db.delete('config:announced');
+await db.delete('push:T1');
+const lastSam = await phone('sam-announce'), lastMia = await phone('mia-announce');
+await call('push/subscribe', { subscription: lastSam.sub }, tok.sam); await call('push/subscribe', { subscription: lastMia.sub }, tok.mia);
+sent.length = 0;
+
+await test('the announce routes are off without the key, and shut to anyone without it', async () => {
+  assert.equal((await viaApi({ ...env })('https://site.example/aOS/api/announce/begin', { headers: {}, body: '{"version":"1.3"}' })).status, 404, 'no ANNOUNCE_KEY: not there');
+  assert.equal((await viaApi(withKey, null)('https://site.example/aOS/api/announce/begin', { headers: {}, body: '{"version":"1.3"}' })).status, 403);
+  assert.equal((await viaApi(withKey, 'wrong'.repeat(10))('https://site.example/aOS/api/announce/begin', { headers: {}, body: '{"version":"1.3"}' })).status, 403);
+  assert.equal((await viaApi(withKey)('https://site.example/aOS/api/announce/begin', { headers: {}, body: '{"version":"1.3; drop"}' })).status, 400);
+  assert.equal((await call('announce/begin', { version: '1.3' }, tok.tom)).status, 404, 'the owner\'s session is no key: signed in or not');
+  assert.equal(await db.get('config:announced'), null);
+});
+
+await test('the first run only notes the version: turning it on announces nothing', async () => {
+  const msg = await runAnnounce('https://site.example', KEYV, '1.2', { fetchImpl: viaApi() });
+  assert.match(msg, /noted/); assert.equal(sent.length, 0); assert.equal(await db.get('config:announced'), '1.2');
+});
+
+await test('a new version tells everyone with notifications on, "aOS updated to 1.3", opening the Updates screen', async () => {
+  const msg = await runAnnounce('https://site.example', KEYV, '1.3', { fetchImpl: viaApi() });
+  assert.match(msg, /Announced aOS 1\.3 to 2 people on 2 phones/);
+  assert.deepEqual(sent.map(x => x.url).sort(), [lastMia.sub.endpoint, lastSam.sub.endpoint]);
+  const m = await open(lastSam, sent.find(x => x.url === lastSam.sub.endpoint).body);
+  assert.deepEqual([m.title, m.body, m.url, m.tag], ['aOS updated to 1.3', 'Click for update details.', './#whats-new', 'aos-update']);
+  assert.equal(await db.get('config:announced'), '1.3');
+});
+
+await test('a version is told once, however many merges release it again', async () => {
+  sent.length = 0;
+  assert.match(await runAnnounce('https://site.example', KEYV, '1.3', { fetchImpl: viaApi() }), /already/);
+  assert.equal(sent.length, 0);
+  const r = await viaApi()('https://site.example/aOS/api/announce/send', { headers: {}, body: JSON.stringify({ version: '1.3', to: 'S1' }) });
+  assert.equal((await r.json()).sent, 0, 'not even a send, once it is done');
+});
+
+await test('a removed person is not announced to, and the next version goes out again', async () => {
+  await putJSON(db, 'push:L1', { subs: [{ ...cleanSub(lee1.sub), at: 1 }] });   // Lee left, but still has a phone listed
+  sent.length = 0;
+  const msg = await runAnnounce('https://site.example', KEYV, '1.4', { fetchImpl: viaApi() });
+  assert.match(msg, /2 people on 2 phones/); assert.ok(!sent.some(x => x.url === lee1.sub.endpoint));
+});
+
+await test('a deploy that is slow to answer is waited for; a site that is not ours is a clear warning', async () => {
+  let n = 0; const waits = [];
+  const slow = async (url, init) => (n++ < 2 ? new Response('<html>not yet</html>', { status: 404 }) : viaApi()(url, init));
+  assert.match(await runAnnounce('https://site.example', KEYV, '1.4', { fetchImpl: slow, wait: async ms => waits.push(ms) }), /already/);
+  assert.equal(waits.length, 2);
+  await assert.rejects(runAnnounce('https://site.example', KEYV, '1.5', { fetchImpl: async () => new Response('<html>log in</html>', { status: 302 }), wait: async () => {} }), /Cloudflare Access/);
+});
+
+await test('the version announced is the newest in the release log that is not silent', () => {
+  assert.equal(newestVersion(fs.readFileSync(new URL('../../home/welcome.js', import.meta.url), 'utf8')), JSON.parse(JSON.stringify(
+    (fs.readFileSync(new URL('../../home/welcome.js', import.meta.url), 'utf8').match(/const RELEASES = \[\s*\{\s*v:\s*'([^']+)'/) || [])[1])));
+  const log = "const RELEASES = [\n    { v: '2.1', date: 'x', title: 'Quiet', silent: true,\n      highlights: ['a'] },\n    { v: '2', date: 'x', title: 'Loud',\n      highlights: ['b'] },\n    { v: '1', date: 'x', title: 'Old',\n      highlights: ['c'] },\n  ];";
+  assert.equal(newestVersion(log), '2');
+  assert.equal(newestVersion("const RELEASES = [\n    { v: '3', date: 'x', title: 'T',\n      silent: true,\n      highlights: ['a'] },\n    { v: '2', date: 'x', title: 'L',\n      highlights: ['b'] },\n  ];"), '2');
+  assert.notEqual(announceKey('a'), announceKey('b')); assert.equal(announceKey('a').length, 64);
 });
 
 globalThis.fetch = realFetch;

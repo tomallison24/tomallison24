@@ -126,7 +126,7 @@
         <div>${line('sparkle')}<i>Allison Corporation</i></div>
       </div>
       <div class="sec"><h2>What's New</h2>${hist.length > 1 ? '<button type="button" data-hist>Version History</button>' : ''}</div>
-      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${[...e.highlights, ...e.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
+      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${hi(r.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
       <div class="sec"><h2>Preview</h2></div>
       <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
       <div class="sec"><h2>What it needs</h2></div>
@@ -138,7 +138,7 @@
       .addEventListener('click', ev => { if (ev.target.closest('[data-hist]')) histPage(id, hist); const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) markGone(g); });
   }
   function histPage(id, hist) {
-    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => { const y = D.entry(x.apps[id]); return `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${[...y.highlights, ...y.notes].map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`; }).join('')}`);
+    page(`<h1 style="margin:0 0 10px;font-size:30px">Version History</h1>${hist.map(x => `<div class="group"><div class="rel"><h4>${mk(x.v)}</h4><small>${esc(x.date || '')}</small><ul>${hi(x.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul></div></div>`).join('')}`);
   }
   function storyPage(i) {
     const s = STORIES[i];
@@ -378,19 +378,14 @@
     let html;
     if (!pushOK()) html = `<p>${iphone && !standalone ? 'On iPhone, notifications work from the Home Screen: add aOS to it (Share → Add to Home Screen), open it from there, and turn them on here.' : 'This browser can\'t show notifications from aOS.'}</p>`;
     else if (Notification.permission === 'denied') html = `<p>Notifications are blocked for aOS. ${iphone ? 'Turn them on in Settings → Notifications → aOS' : 'Allow them in this browser\'s site settings'}, then come back.</p>`;
-    else if (on) html = '<p>On for this phone: updates and news from the family arrive as notifications.</p><div class="row2"><button type="button" class="soft" id="nTest">Send me a test</button><button type="button" class="soft" id="nOff">Turn off</button></div>';
-    else html = '<p>Get updates and news from the family as notifications on this phone.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
+    else if (on) html = '<p>On for this phone: you\'ll be told when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
+    else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
     box.innerHTML = `<div>${head}${html}<div class="err" id="nMsg"></div></div>`;
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
     if ($('nOn')) $('nOn').onclick = turnOn;
     if ($('nOff')) $('nOff').onclick = async () => {
       busy($('nOff'), true);
       try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
-      catch (e) { paintNotify({ err: 1, t: why(e) }); }
-    };
-    if ($('nTest')) $('nTest').onclick = async () => {
-      busy($('nTest'), true);
-      try { const r = await ACC.call('push/test', {}); paintNotify({ err: !r.sent, t: r.sent ? 'Sent: it should arrive in a moment.' : 'It didn\'t go through. Turn notifications off and on again.' }); }
       catch (e) { paintNotify({ err: 1, t: why(e) }); }
     };
   }
@@ -404,7 +399,7 @@
       if (!key) throw new Error('storage');
       const sub = had || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
       await ACC.call('push/subscribe', { subscription: sub.toJSON() });
-      paintNotify({ t: 'On. Tap Send me a test to see one.' });
+      paintNotify();
     } catch (e) { paintNotify({ err: 1, t: e && e.message === 'subscription' ? 'This phone\'s notification service isn\'t supported.' : why(e) }); }
   }
   // A phone's address can change, and someone else may sign in on it: say again, quietly,
