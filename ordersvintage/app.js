@@ -48,6 +48,7 @@ if (window.top !== window.self) {
     token: 'ordersv.token', state: 'ordersv.state', silent: 'ordersv.silent', silentFail: 'ordersv.silentFail', lastAuth: 'ordersv.lastAuth', hint: 'ordersv.hint', me: 'ordersv.me',
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at',
+    aiOk: KEY + '-ai-ok',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 500;              // messages read in one go at most; the rest follow straight away
@@ -68,6 +69,7 @@ if (window.top !== window.self) {
     out: '<svg viewBox="0 0 24 24"><path d="M9.6 20H6.8A2.8 2.8 0 0 1 4 17.2V6.8A2.8 2.8 0 0 1 6.8 4h2.8"/><path d="M15.4 16.6l4.1-4.1a.7.7 0 0 0 0-1l-4.1-4.1M19.6 12H9.4"/></svg>',
     edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.4 2.4 0 0 0 0-3.4l-.6-.6a2.4 2.4 0 0 0-3.4 0L4 16z"/><path d="M13.6 6.4l4 4"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
+    spark: '<svg viewBox="0 0 24 24"><path d="M11 3.6l1.9 5.1 5.1 1.9-5.1 1.9L11 17.6l-1.9-5.1L4 10.6l5.1-1.9z"/><path d="M18.4 15.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     box: '<svg viewBox="0 0 24 24"><path d="M3.8 8.2L12 4l8.2 4.2v7.6L12 20l-8.2-4.2z"/><path d="M3.8 8.2L12 12.4l8.2-4.2M12 12.4V20"/></svg>',
   };
   const KIND_ROWS = [
@@ -493,10 +495,11 @@ if (window.top !== window.self) {
       acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail Vintage<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
+    if (o.source && o.source.msgId) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Claude is reading it…' : 'Fix details with Claude') + '<span class="sub">Sends this one email’s text to Claude. Nothing is kept.</span></span></button>');
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');
     if (isOpen(o)) acts.push('<button class="rowbtn" type="button" id="opDelivered"><span class="ic">' + I.check + '</span><span>' + (o.kind === 'pickup' ? 'Mark as picked up' : 'Mark as delivered') + '</span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
-    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.</p>';
+    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed with Claude.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;
   }
@@ -510,6 +513,7 @@ if (window.top !== window.self) {
       setTimeout(() => { if (document.contains(cp)) cp.textContent = 'Copy'; }, 1400); return;
     }
     if (e.target.closest('#opOk')) { o.checked = true; o.guess = false; save(); renderOrder(); render(); toast('Thanks. Marked as checked.'); return; }
+    if (e.target.closest('#opAi')) return aiFix(o);
     if (e.target.closest('#opEdit2')) return openEdit(o.id);
     if (e.target.closest('#opDelivered')) {
       const to = o.kind === 'pickup' ? 'pickedup' : 'delivered', before = JSON.parse(JSON.stringify(o));
@@ -527,6 +531,86 @@ if (window.top !== window.self) {
       toast('Deleted. It won’t come back from the email.', () => { orders.push(gone); save(); render(); });
     }
   });
+
+  // ---------------------------------------------------------------------
+  // Fix with Claude: one email, read by Claude when the words-only reader got it wrong
+  // (server: functions/orders/api; it is for signed-in family, and checks the answer)
+  // ---------------------------------------------------------------------
+  const AI_SAY = {
+    signin: 'Sign in with Face ID to use Claude.', 'accounts-off': 'Family sign-in isn’t switched on yet, so Claude can’t be used.',
+    'no-ai': 'Claude isn’t set up yet: the owner needs to add the AI key.', limit: 'That’s enough Claude for today. Try again tomorrow.',
+    'ai-key': 'Anthropic didn’t accept the key. The owner can check it.', 'ai-busy': 'Claude is busy. Try again in a minute.',
+    'ai-unreachable': 'Couldn’t reach Claude. Try again in a minute.', 'ai-refused': 'Claude wouldn’t read this one.',
+    'ai-format': 'That didn’t come back right. Try again.', empty: 'There’s too little text in that email to read.',
+    offline: 'No connection. Try again when you’re online.',
+  };
+  const AI_LABEL = { store: 'store', kind: 'kind', orderNo: 'order number', items: 'items', total: 'total', carrier: 'courier', tracking: 'tracking number', eta: 'expected date', etaEnd: 'expected date', pickupBy: 'pickup date', status: 'status' };
+  async function aiCall(body) {
+    const opts = { method: 'POST', cache: 'no-store', headers: { 'X-Orders': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    const acct = window.AllisonOS && window.AllisonOS.account;
+    let r;
+    try { r = acct ? await acct.fetch('../orders/api/read', opts) : await fetch('../orders/api/read', opts); }
+    catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
+    let j = {}; try { j = await r.json(); } catch {}
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'no-ai' : 'server') });
+    return j;
+  }
+  // What Claude found goes onto the order: whatever it found replaces what is there, except what
+  // you edited (locked); a status only moves forward, unless the order was already marked as a guess.
+  function applyAi(o, f) {
+    const L = o.locks || {}, changed = [], flagged = needsCheck(o) || !!o.issue;
+    const put = (k, v) => {
+      if (L[k] || v == null || v === '' || (Array.isArray(v) && !v.length) || JSON.stringify(o[k]) === JSON.stringify(v)) return;
+      o[k] = v; if (!changed.includes(AI_LABEL[k] || k)) changed.push(AI_LABEL[k] || k);
+    };
+    put('store', f.store); if (!L.store && f.store) o.storeKey = P.keyOf(o.store);
+    put('kind', f.kind); put('orderNo', f.orderNo); put('items', f.items);
+    if (f.total != null && !L.total) { put('total', f.total); if (f.cur) o.cur = f.cur; }
+    put('carrier', f.carrier); put('tracking', f.tracking); put('eta', f.eta); put('etaEnd', f.etaEnd); put('pickupBy', f.pickupBy);
+    if (f.status && !L.status && f.status !== o.status && o.status !== 'cancelled') {
+      const up = P.rank(f.status) > P.rank(o.status);
+      if (up || flagged || f.status === 'cancelled') {
+        const day = o.source && o.source.date ? P.localYmd(o.source.date) : todayStr(), s = { ...(o.steps || {}) };
+        if (!up && s[o.status] === day) delete s[o.status];          // the step the misreading added
+        s[f.status] = s[f.status] || (f.status === 'delivered' && f.deliveredOn) || day;
+        o.steps = s; o.status = f.status; changed.push('status');
+      }
+    }
+    if ((o.carrier || o.tracking) && (changed.includes('courier') || changed.includes('tracking number'))) { const u = P.trackUrl(o.carrier, o.tracking); if (u) o.trackUrl = u; }
+    if (o.status === 'delivered' || o.status === 'pickedup') o.issue = ''; else if (f.issue) o.issue = f.issue; else if (o.issue && changed.length) o.issue = '';
+    o.guess = false; o.ai = true;
+    return changed;
+  }
+  async function aiFix(o) {
+    if (st.aiBusy || !o.source || !o.source.msgId) return;
+    if (!getToken()) { toast('Connect Gmail in Settings first, so Orders can open the email.'); return; }
+    if (!ls.get(K.aiOk, '')) {
+      if (!confirm('Claude will read this one email to fix the details. Its text, without links, goes to Anthropic through the family server. It isn’t kept, and nothing else is sent.\n\nContinue?')) return;
+      ls.set(K.aiOk, '1');
+    }
+    st.aiBusy = true; renderOrder();
+    const before = JSON.parse(JSON.stringify(o));
+    try {
+      const msg = await gmail('/messages/' + o.source.msgId, { format: 'full' });
+      const { html, text } = bodies(msg.payload);
+      const fromHtml = html ? P.htmlToText(html) : '';
+      const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
+        .replace(/https?:\/\/\S+/g, '[link]').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000);
+      const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body });
+      if (!j.fact) toast('Claude doesn’t think that email is about an order.');
+      else {
+        const changed = applyAi(o, j.fact);
+        save();
+        toast(changed.length ? 'Claude updated the ' + [...new Set(changed)].slice(0, 4).join(', ') + '.' : 'Claude agrees with what’s there.',
+          changed.length ? () => { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); save(); if (st.order === o) renderOrder(); render(); } : null, 6000);
+      }
+    } catch (e) {
+      if (e instanceof AuthError) { toast('Gmail needs you to sign in again.'); openSettings(); }
+      else toast(AI_SAY[e.code] || (e.code ? 'Something went wrong. Try again in a minute.' : e.message));
+    } finally {
+      st.aiBusy = false; if (st.order === o) renderOrder(); render();
+    }
+  }
 
   // ---------------------------------------------------------------------
   // Edit an order, or add one by hand

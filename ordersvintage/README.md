@@ -32,6 +32,8 @@ the style picker in the design canvas is not built.
 It is a second copy of Orders' page and script, not a setting, so the two can
 change independently and Orders is never touched.
 
+- **Fix details with Claude** works the same, through the same server route as Orders
+  (`/orders/api/read`), and asks its own first-time question.
 - **Opens its email in Mail Vintage**, not Mail (`../mailvintage/?thread=…`). Both are
   separate Home Screen apps; whether iOS opens that address inside the installed
   Mail Vintage or in Safari is up to iOS, which treats a link outside an app's

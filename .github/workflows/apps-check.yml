@@ -30,7 +30,7 @@ jobs:
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
-      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node orders/scripts/parse-test.mjs && node ordersvintage/scripts/same-reader-test.mjs
+      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node ordersvintage/scripts/same-reader-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).
