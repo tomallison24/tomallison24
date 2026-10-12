@@ -274,6 +274,31 @@
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
+  /* designs: an app that comes in more than one (home/welcome.js DESIGNS) - a Design menu on its page, one row in the list */
+  .dd { display: inline-flex; gap: 3px; } .row .dd i, .dd i { display: block; width: 9px; height: 9px; border-radius: 50%; }
+  .row .t .dd { flex: none; }
+  .dtag { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--dot); font-style: normal; font-size: 12px; font-weight: 650; color: var(--muted); }
+  .dtag .dd + .dd { margin-left: -2px; }
+  .gets { display: flex; flex-direction: column; align-items: center; }
+  .dsel { position: relative; z-index: 5; margin: 0 0 12px; }
+  .dbtn { display: flex; align-items: center; gap: 10px; width: 248px; max-width: 100%; height: 48px; padding: 0 14px 0 16px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); font-size: 16px; font-weight: 700; }
+  .dbtn .dl { flex: 1; text-align: left; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .dbtn svg { color: var(--muted); transition: transform .2s; } .dbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dbtn[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .dmenu { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); width: min(304px, calc(100vw - 36px)); padding: 6px; border-radius: 26px; background: var(--solid); box-shadow: inset 0 0 0 1px var(--edge), 0 26px 56px -12px rgba(16,24,26,.38); }
+  .dmenu[hidden] { display: none; }
+  .dopt { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px 10px 10px; border-radius: 18px; text-align: left; }
+  .dopt[aria-selected="true"] { background: rgba(59,115,102,.12); }
+  .dopt .dt { flex: 1; min-width: 0; } .dopt .dt b { display: block; font-size: 17px; font-weight: 700; } .dopt .dt small { display: block; font-size: 13.5px; color: var(--muted); }
+  .dopt .dck { width: 20px; text-align: center; font-weight: 800; color: var(--accent); visibility: hidden; } .dopt[aria-selected="true"] .dck { visibility: visible; }
+  .dth { position: relative; flex: 0 0 44px; height: 58px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--edge); padding: 14px 5px 0; display: flex; flex-direction: column; gap: 4px; }
+  .dth i { position: relative; display: block; height: 11px; border-radius: 5px; background: rgba(255,255,255,.9); }
+  .dth.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.9), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.9), transparent 70%), #EEF2F0; }
+  .dth.vintage { background: #F4ECDD; } .dth.vintage i { background: #FBF5E9; }
+  .dth.vintage::before { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
+  .dsheet h1 { margin: 6px 0 6px; font-size: 28px; letter-spacing: -.5px; } .dsheet p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; line-height: 1.4; }
+  .dlist { display: grid; gap: 8px; } .dlist .dopt { background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); } .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+  .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
 :where(.get, button.avatar){position:relative}
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>

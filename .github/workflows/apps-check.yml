@@ -51,6 +51,7 @@ jobs:
       - run: node aOS/scripts/join-test.mjs
       # notifications in aOS: turning them on and off, and the owner's composer, as on a phone
       - run: node aOS/scripts/notify-test.mjs
+      - run: node aOS/scripts/designs-test.mjs
       # the newest release in the log: the right update screen in aOS and every app, or none
       - run: node aOS/scripts/release-test.mjs
       # Meals at iPhone size, against its real server code and a stand-in AI
