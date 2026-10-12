@@ -12,6 +12,12 @@
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
 //   GET  layer            (family)             -> your own layers, for Calendar
+//   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
+//   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
+//   POST push/unsubscribe (family) { endpoint }     -> it doesn't
+//   POST push/test        (family)                  -> a test notification, to your own phones only
+//   GET  push/audience    (owner) who has notifications on, and on how many phones
+//   POST push/send        (owner) { to: <id>, title, body, url? } -> one person's phones (aOS sends person by person)
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
@@ -21,6 +27,7 @@
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
+import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo } from '../../../server/push.js';
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
@@ -207,8 +214,51 @@ export async function onRequest({ request, params, env }) {
       return reply({ token: await issue(db, me.id, Date.now(), sv), user: pub(me) });
     }
 
+    // ---- notifications (server/push.js) ----
+    if (route === 'push' && method === 'GET') {
+      const k = await vapidKeys(db, env);
+      return reply({ key: k && k.publicKey, devices: (await devices(db, me.id)).length });
+    }
+    if (route === 'push/subscribe' && method === 'POST') {
+      const sub = cleanSub((await body(request)).subscription);
+      if (!sub) return reply({ error: 'subscription' }, 400);
+      return reply({ ok: true, devices: await addDevice(db, me.id, sub) });
+    }
+    if (route === 'push/unsubscribe' && method === 'POST') {
+      const e = String((await body(request)).endpoint || '');
+      return reply({ ok: true, devices: await dropDevices(db, me.id, [e]) });
+    }
+    if (route === 'push/test' && method === 'POST') {
+      const r = await sendTo(db, env, me.id, { title: 'AllisonOS', body: 'Notifications are on. This is a test.', url: './', tag: 'test' });
+      return reply({ ok: true, ...r });
+    }
+
     // ---- the owner's tools ----
     if (me.role !== 'owner') return reply({ error: 'owner-only' }, 403);
+
+    // Who has notifications on (only people still in the family), and on how many phones.
+    if (route === 'push/audience' && method === 'GET') {
+      const out = [];
+      let cursor;
+      do {
+        const page = await db.list({ prefix: 'push:', cursor });
+        for (const k of page.keys) {
+          const id = k.name.slice(5), u = await getJSON(db, 'user:' + id);
+          if (u && !u.removed) out.push({ id, name: u.name, devices: (await devices(db, id)).length });
+        }
+        cursor = page.list_complete ? null : page.cursor;
+      } while (cursor);
+      return reply({ people: out.filter(p => p.devices) });
+    }
+
+    // One person at a time, so a request only ever encrypts for a handful of phones.
+    if (route === 'push/send' && method === 'POST') {
+      const b = await body(request), msg = message(b), id = String(b.to || '');
+      if (!msg) return reply({ error: 'message' }, 400);
+      const u = await getJSON(db, 'user:' + id);
+      if (!u || u.removed) return reply({ error: 'unknown' }, 404);
+      return reply({ ok: true, ...(await sendTo(db, env, id, msg)) });
+    }
 
     if (route === 'family' && method === 'GET') return reply({ family: await everyone(db) });
 

@@ -111,6 +111,30 @@ picks a plan. Off is only a screen over the app: nothing is deleted, so
 everything is there when a plan starts again. With accounts off there
 is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.mjs`.
 
+## Notifications
+
+Everyone can turn on notifications under **Your account → Notifications**, and the
+owner can send one under **Send a notification** (a title and a few lines, or **Use
+what's new**). It's Web Push: nothing to set up. The server's push key is made the
+first time anyone asks for it and kept in the same storage (`config:vapid`), and each
+person's phones are `push:<id>`. (To use a key of your own instead, set the Pages
+secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one.)
+
+- **On iPhone** it only works for aOS opened from the Home Screen, on iOS 16.4 or
+  later, and the permission can only be asked for from a tap: aOS says so in Safari.
+- The owner's Send goes to one person at a time (a request encrypts for just that
+  person's phones: up to 5 each), so it fits the free plan's limits.
+- A phone that has let go (the push service answers 404 or 410) is forgotten
+  automatically. A removed person is never sent to. A phone belongs to one person:
+  signing in as someone else on it moves it to them.
+- A notification can only open a page on this site; it opens aOS unless told otherwise.
+- Only aOS has a service worker that shows them so far: the other apps' own
+  notifications (Notes' reminders) are separate, in `notes/push`.
+- Tests: `node aOS/scripts/push-api-test.mjs` (the server, with real encryption) and
+  `node aOS/scripts/notify-test.mjs` (the page, in Chromium). What can't be tested
+  here is Apple's own delivery: after the first release, turn them on from your
+  Home Screen and use **Send me a test**.
+
 ## The log
 
 `home/welcome.js`'s `RELEASES` is the log, by aOS version. aOS shows all of it

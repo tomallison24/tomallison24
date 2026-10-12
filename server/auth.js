@@ -24,6 +24,8 @@
 //   drinks:<id>      that person's Drinks log (functions/drinks/api); only they can
 //                    read it, and it stays when they are removed (for an invite back)
 //   config:plan, config:trial   the family's plan (functions/aOS/api, planView)
+//   push:<id>, config:vapid   that person's phones for notifications, and the server's push
+//                    key (functions/aOS/api, server/push.js); only they can change their phones
 //   meals:settings, meals:deals:<store>, meals:draft, meals:plan, meals:log,
 //   meals:log:<id>, meals:history   the family's Meals
 //                    (functions/meals/api): shared by the whole family, not per person
