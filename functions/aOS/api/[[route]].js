@@ -184,14 +184,14 @@ export async function onRequest({ request, params, env }) {
     if (route === 'members' && method === 'GET') return reply({ members: (await everyone(db)).filter(u => !u.removed).map(u => ({ name: u.name, role: u.role })) });
 
     // An app opened from your Home Screen says so (home/welcome.js); written at most twice a
-    // day, but at once after you said in aOS that it was gone (iOS never tells a page it was
-    // removed, so that's yours to say). Kept apart from the user record (apps:<id>), so it can
+    // day, but at once after it was said to be gone: by you in aOS (iOS never tells a page it
+    // was removed), or by the app itself opened in Android Chrome, which can tell (androidCheck). Kept apart from the user record (apps:<id>), so it can
     // never write a removed person back.
     if (route === 'installed' && method === 'POST') {
       const b = await body(request), app = String(b.app || '');
       if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
       const apps = (await getJSON(db, 'apps:' + me.id)) || {};
-      if (b.removed === true) { if (apps[app] === 0) return reply({ ok: true }); apps[app] = 0; }
+      if (b.removed === true) { if (!apps[app]) return reply({ ok: true }); apps[app] = 0; }   // never installed, or already gone: no write
       else { if (apps[app] > 0 && Date.now() - apps[app] < 12 * 3600e3) return reply({ ok: true }); apps[app] = Date.now(); }
       await putJSON(db, 'apps:' + me.id, apps);
       return reply({ ok: true });

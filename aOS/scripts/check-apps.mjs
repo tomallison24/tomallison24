@@ -151,6 +151,12 @@ for (const id of ids) {
     if (mf.display !== 'standalone') err(id, 'manifest display should be standalone');
     const sizes = (mf.icons || []).map(i => i.sizes);
     if (!sizes.includes('180x180') || !sizes.includes('512x512')) err(id, 'manifest needs a 180x180 and a 512x512 icon');
+    // Android Chrome tells a page whether its own app is installed only if the manifest lists itself
+    // (home/welcome.js androidCheck): without it aOS keeps showing Installed after the app is removed.
+    if (store) {
+      const me = (mf.related_applications || []).find(r => r && r.platform === 'webapp');
+      if (!me || !/^https:\/\/[^/]+\/([^/]+)\/manifest\.webmanifest$/.test(me.url || '') || RegExp.$1 !== id) err(id, 'manifest needs related_applications: [{ platform: "webapp", id, url }] naming itself (https://…/' + id + '/manifest.webmanifest)');
+    }
   }
 
   // ---- ground rules ----

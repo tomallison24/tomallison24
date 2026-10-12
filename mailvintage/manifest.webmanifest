@@ -19,5 +19,8 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/mailvintage/", "url": "https://tomallison24-news.pages.dev/mailvintage/manifest.webmanifest" }
   ]
 }
