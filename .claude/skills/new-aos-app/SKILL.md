@@ -133,9 +133,9 @@ node aOS/scripts/standalone-test.mjs   # every app on its own, signed out and in
 node <id>/scripts/<tests>.mjs          # the app's own tests
 ```
 
-`.github/workflows/apps-check.yml` runs all of this on every push and pull
-request: add each new test to it (plain Node tests to the `check` job, browser
-tests to the `apps` job). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
+`.github/workflows/apps-check.yml` runs all of this on every pull request (and on
+pushes to the default branch): add each new test to it (plain Node tests to the
+`check` job, browser tests to the `apps` or `apps-more` job, whichever is shorter). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
 that no workflow runs. Fix every error; say in the PR which warnings remain and why.
 
 Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),
