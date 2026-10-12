@@ -253,6 +253,23 @@
   .tc-ember { position: absolute; bottom: -6px; width: 3px; height: 3px; border-radius: 50%; animation: dg-rise linear infinite; }
   .tc-frost { position: absolute; top: -8px; width: 3px; height: 3px; border-radius: 50%; background: rgba(235,245,255,0.75); animation: tc-fall linear infinite; }
   .tc-air { position: absolute; left: -40%; height: 1.5px; width: 40%; border-radius: 2px; animation: tc-air linear infinite; }
+  /* Cooling: a few small snowflakes fall slowly, each swaying and turning. Heating: one small flame
+     flickers on the right, a brighter core inside it. Both faint, so the card still reads first. */
+  .tc-snow { position: absolute; top: -16px; color: rgba(214,234,255,0.9); opacity: 0; animation: tc-snowfall linear infinite; }
+  .tc-snow b { display: block; animation: tc-snowsway ease-in-out infinite alternate; }
+  .tc-snow svg { display: block; animation: tc-snowspin 12s linear infinite; }
+  @keyframes tc-snowfall { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: var(--o, .4); } 80% { opacity: var(--o, .4); } 100% { transform: translateY(400px); opacity: 0; } }
+  @keyframes tc-snowsway { from { transform: translateX(-8px); } to { transform: translateX(8px); } }
+  @keyframes tc-snowspin { to { transform: rotate(360deg); } }
+  .tc-flame { position: absolute; right: 34px; width: 30px; height: 38px; display: block; opacity: .5; transform-origin: 50% 100%; color: rgba(255,150,70,0.95);
+    filter: drop-shadow(0 0 7px rgba(255,140,60,0.5)); animation: tc-flick 2.1s ease-in-out infinite; }
+  .tc-flame span { position: absolute; left: 50%; bottom: 0; display: block; transform-origin: 50% 100%; }
+  .tc-fo { margin-left: -15px; }
+  .tc-fo svg { display: block; }
+  .tc-fc { margin-left: -7px; margin-bottom: 3px; color: rgba(255,222,140,0.95); animation: tc-flick2 1.4s ease-in-out infinite; }
+  .tc-fc svg { display: block; }
+  @keyframes tc-flick { 0%, 100% { transform: scale(1, 1) skewX(0deg); } 18% { transform: scale(.95, 1.08) skewX(-3deg); } 42% { transform: scale(1.04, .94) skewX(2deg); } 68% { transform: scale(.97, 1.05) skewX(-2deg); } 85% { transform: scale(1.02, .97) skewX(1.5deg); } }
+  @keyframes tc-flick2 { 0%, 100% { transform: scale(1, 1); opacity: .9; } 30% { transform: scale(.9, 1.12); opacity: 1; } 60% { transform: scale(1.06, .92); opacity: .75; } }
   @keyframes tc-fall { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .9; } 100% { transform: translate(-30px, 420px); opacity: 0; } }
   @keyframes tc-air { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: .55; } 100% { transform: translateX(360%); opacity: 0; } }
   .ecobtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; font-weight: 600;
@@ -263,7 +280,7 @@
   .tgt-row .leaf { display: inline-flex; align-items: center; gap: 4px; }
   .tgt-row .leaf svg { color: #A8E6A1; }
   .tnote { font-size: 13px; color: rgba(255,255,255,0.7); margin: 10px 8px 0; line-height: 1.4; }
-  @media (prefers-reduced-motion: reduce) { .tc-ember, .tc-frost, .tc-air { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .tc-ember, .tc-frost, .tc-air, .tc-snow, .tc-snow b, .tc-snow svg, .tc-flame, .tc-fc { animation: none !important; } }
 
   /* ---- DG1 card ---- */
   /* Every card as clear as the energy tiles: the faint tile over the
@@ -651,6 +668,8 @@
     }
     .bgfx::after { background: linear-gradient(180deg, rgba(240,243,247,0.78) 0%, rgba(240,243,247,0.64) 38%, rgba(240,243,247,0.56) 62%, rgba(240,243,247,0.64) 100%); }
     .usheet { background: #F2F3F6; }
+    .tc-snow { color: rgba(70,125,200,0.85); }
+    .tc-flame { opacity: .62; }
     .dg-sky { filter: invert(1) hue-rotate(180deg) saturate(1.3); }
     .dg > .dg-fx > .dg-sky { opacity: .5; }
     /* Tone sliders (devices.css .tsl): the generated twins frost the bar white,
