@@ -3,6 +3,11 @@
 The Signal dashboard's W3 "Vivid" weather card (ha-config,
 `views_signal/favorites.yaml`) as a standalone home-screen web app.
 
+**Weather Vintage** is the same app in a mid-century modern look, as its own app
+with its own places and settings ([`weathervintage/`](../weathervintage/README.md)).
+It uses this app's forecast code (`data.js`: when it changes here, copy it to
+`weathervintage/`) and its radar helper (`functions/weather/api`).
+
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
   when NWS is down. Place names outside the US: BigDataCloud. No API keys.

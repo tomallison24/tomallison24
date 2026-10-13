@@ -29,13 +29,14 @@ const RADAR_TILE = png(64, 64, (x, y) => {
 
 // ---- the forecast ----
 // cond: an NWS icon code ('few' sunny, 'sct' partly, 'ovc' cloudy, 'rain', 'tsra', 'snow', 'fog', 'wind_sct')
-// and its words; opts: { cond, alerts, rainSoon, directHrrr: false to refuse the model run's time the way IEM does for other sites }
+// and its words; opts: { cond, alerts, rainSoon, directHrrr: false to refuse the model run's time the way IEM does for other sites,
+// now: the time the page's clock is set to, in milliseconds (the test sets it from TEST_NOW) }
 const WORDS = { few: 'Mostly Sunny', sct: 'Partly Cloudy', ovc: 'Cloudy', rain: 'Rain Showers', tsra: 'Thunderstorms', snow: 'Snow', fog: 'Fog', wind_sct: 'Windy' };
 const day = (code, isDay) => `https://api.weather.gov/icons/land/${isDay ? 'day' : 'night'}/${code}?size=medium`;
 
 export async function installWeather(ctx, opts = {}) {
   const cond = opts.cond || 'few', words = WORDS[cond] || 'Cloudy', wet = ['rain', 'tsra', 'snow'].includes(cond);
-  const now = Date.now(), hour0 = Math.floor(now / 3600e3) * 3600e3;
+  const now = opts.now || Date.now(), hour0 = Math.floor(now / 3600e3) * 3600e3;
   const OFF = 4 * 3600e3;                                         // Raleigh in EDT: local = UTC - 4h
   const midnight = Math.floor((now - OFF) / 86400e3) * 86400e3 + OFF;   // local midnight, as UTC milliseconds
   const iso = ms => new Date(ms).toISOString();

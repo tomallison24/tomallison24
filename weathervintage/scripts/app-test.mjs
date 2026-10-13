@@ -11,6 +11,7 @@
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node weathervintage/scripts/app-test.mjs [repo root] [screenshot dir]
+// It works at any time of day, on any day: TEST_NOW=<an ISO time> pretends it is another moment.
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -23,6 +24,8 @@ const { chromium } = require('playwright');
 
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
 const SHOTS = process.argv[3] || '';
+// TEST_NOW=2026-10-31T03:30:00Z sets the page's clock (and the made-up forecast's) to another moment, to see it by night or on another day
+const NOW = process.env.TEST_NOW ? Date.parse(process.env.TEST_NOW) : 0;
 
 // ---- a static server for the repo ----
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -62,9 +65,10 @@ const newPage = async (scheme, { weather = {}, geo = true, seed, route } = {}) =
     geolocation: geo ? { latitude: PLACE.lat, longitude: PLACE.lon } : undefined, permissions: geo ? ['geolocation'] : [] });
   await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ weathervintage: '999' })));   // no aOS walkthrough over the page
   if (seed) await ctx.addInitScript(seed);
-  const calls = await installWeather(ctx, weather);
+  const calls = await installWeather(ctx, Object.assign({ now: NOW }, weather));
   if (route) await route(ctx);
   const page = await ctx.newPage();
+  if (NOW) { await page.clock.install({ time: new Date(NOW) }); await page.clock.resume(); }   // TEST_NOW: see the top
   const problems = [], requests = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
   page.on('pageerror', e => problems.push(String(e)));
@@ -325,7 +329,7 @@ for (const scheme of ['light', 'dark']) {
   // the radar's forecast frames come through Weather's own helper (IEM won't let another site read the model run's time)
   const hrrr = [];
   const { ctx, page, problems, requests, calls } = await newPage('light', { weather: { directHrrr: false },
-    route: ctx => ctx.route('**/weather/api/hrrr', route => { hrrr.push(route.request().headers()); return route.fulfill({ json: { model_init_utc: new Date(Math.floor(Date.now() / 3600e3) * 3600e3).toISOString().slice(0, 16).replace(/[-T:]/g, '') } }); }) });
+    route: ctx => ctx.route('**/weather/api/hrrr', route => { hrrr.push(route.request().headers()); return route.fulfill({ json: { model_init_utc: new Date(Math.floor((NOW || Date.now()) / 3600e3) * 3600e3).toISOString().slice(0, 16).replace(/[-T:]/g, '') } }); }) });
   await page.goto(BASE + '/weathervintage/');
   await ready(page);
   await step('radar: the forecast frames come from Weather\'s helper, /weather/api/hrrr', async () => {
