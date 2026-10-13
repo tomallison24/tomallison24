@@ -366,7 +366,7 @@ if (window.top !== window.self) {
     const out = [], lists = new Map((data.lists || []).map(l => [l.id, l]));
     for (const t of data.todos || []) {
       if (!t || !t.date || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
-      const list = lists.get(t.list), color = list && /^#[0-9a-f]{6}$/i.test(list.color || '') ? list.color : LAYER.note.color;
+      const list = lists.get(t.list), color = LAYER.note.color;   // Retro plum for every Notes item: a list's own bright colour (Notes) would fight the palette; the list's name is still in the line under the title
       const extra = { sub: (list ? list.name : 'Reminder') + (t.done ? ' · done' : ''), color, link: '../notes/', done: !!t.done, notes: t.notes || '', flagged: !!t.flagged };
       if (t.time && /^\d{2}:\d{2}$/.test(t.time)) {
         const [h, mi] = t.time.split(':').map(Number);

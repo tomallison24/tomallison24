@@ -29,7 +29,7 @@ const RADAR_TILE = png(64, 64, (x, y) => {
 
 // ---- the forecast ----
 // cond: an NWS icon code ('few' sunny, 'sct' partly, 'ovc' cloudy, 'rain', 'tsra', 'snow', 'fog', 'wind_sct')
-// and its words; opts: { cond, alerts, rainSoon }
+// and its words; opts: { cond, alerts, rainSoon, directHrrr: false to refuse the model run's time the way IEM does for other sites }
 const WORDS = { few: 'Mostly Sunny', sct: 'Partly Cloudy', ovc: 'Cloudy', rain: 'Rain Showers', tsra: 'Thunderstorms', snow: 'Snow', fog: 'Fog', wind_sct: 'Windy' };
 const day = (code, isDay) => `https://api.weather.gov/icons/land/${isDay ? 'day' : 'night'}/${code}?size=medium`;
 
@@ -40,7 +40,7 @@ export async function installWeather(ctx, opts = {}) {
   const midnight = Math.floor((now - OFF) / 86400e3) * 86400e3 + OFF;   // local midnight, as UTC milliseconds
   const iso = ms => new Date(ms).toISOString();
   const temp = ms => Math.round(63 + 15 * Math.sin(((ms - OFF) / 3600e3 % 24 - 9) / 24 * 2 * Math.PI));
-  const calls = { points: 0, forecast: 0, hourly: 0, nowcast: 0 };
+  const calls = { points: 0, forecast: 0, hourly: 0, nowcast: 0, radarTiles: 0, forecastTiles: 0, baseTiles: 0 };
 
   const hourly = Array.from({ length: 168 }, (_, i) => {
     const t = hour0 + i * 3600e3, h = ((t - OFF) / 3600e3) % 24, isDay = h >= 7 && h < 19;
@@ -93,10 +93,12 @@ export async function installWeather(ctx, opts = {}) {
   });
   await ctx.route('https://mesonet.agron.iastate.edu/**', route => {
     const u = route.request().url();
+    if (u.endsWith('.json') && opts.directHrrr === false) return route.abort();   // IEM won't let a page on another site read it: the app asks its own site's helper instead
     if (u.endsWith('.json')) return route.fulfill({ json: { model_init_utc: new Date(Math.floor(now / 3600e3) * 3600e3).toISOString().slice(0, 16).replace(/[-T:]/g, '') }, headers: { 'access-control-allow-origin': '*' } });
+    if (u.includes('hrrr::')) calls.forecastTiles++; else calls.radarTiles++;
     return route.fulfill({ body: RADAR_TILE, contentType: 'image/png' });
   });
-  await ctx.route('https://*.basemaps.cartocdn.com/**', route => route.fulfill({ body: BASE_TILE, contentType: 'image/png' }));
+  await ctx.route('https://*.basemaps.cartocdn.com/**', route => { calls.baseTiles++; return route.fulfill({ body: BASE_TILE, contentType: 'image/png' }); });
   await ctx.route('https://radar.weather.gov/**', route => route.fulfill({ status: 404, body: '' }));
   return calls;
 }

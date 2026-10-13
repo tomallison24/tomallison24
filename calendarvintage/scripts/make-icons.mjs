@@ -1,9 +1,10 @@
-// Draws calendar/icon-512.png and calendar/icon-180.png from calendar/icon.svg (a white calendar page on
-// shell rose, one of the Sea glass tints), by rendering the SVG in headless
-// Chromium, so icon.svg stays the single source of the picture.
+// Draws calendarvintage/icon-512.png and calendarvintage/icon-180.png from calendarvintage/icon.svg (a
+// cream calendar page on denim blue, with a mustard sun and a burnt-orange pill, in the Retro
+// colours), by rendering the SVG in headless Chromium, so icon.svg stays the single source of
+// the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node calendar/scripts/make-icons.mjs
+//   node calendarvintage/scripts/make-icons.mjs
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';

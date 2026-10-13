@@ -1,9 +1,9 @@
-// Draws weather/icon-512.png and weather/icon-180.png from weather/icon.svg (a white cloud over a white sun on
-// sea glass sky blue, one of the Sea glass tints), by rendering the SVG in headless
+// Draws weathervintage/icon-512.png and weathervintage/icon-180.png from weathervintage/icon.svg (a cream cloud on
+// olive, one of the Retro colours, with a mustard sun and a burnt-orange pill), by rendering the SVG in headless
 // Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node weather/scripts/make-icons.mjs
+//   node weathervintage/scripts/make-icons.mjs
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
