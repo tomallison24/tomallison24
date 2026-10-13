@@ -65,8 +65,8 @@ async function tab(app, { ua = ANDROID, answer = [], signed = true, store } = {}
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
   const p = await ctx.newPage(); await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]'); await p.waitForSelector('#list .row'); await p.waitForTimeout(800);
   const label = id => p.locator(`#list .row[data-app="${id}"] [data-get]`).first().innerText().catch(() => '(no button)');
-  if (!/Get/.test(await label('house'))) pr.push('aOS still says Home is ' + await label('house'));
-  if (!/Installed/.test(await label('mail'))) pr.push('aOS says Mail is ' + await label('mail'));
+  if (!/Get/i.test(await label('house'))) pr.push('aOS still says Home is ' + await label('house'));
+  if (!/Installed/i.test(await label('mail'))) pr.push('aOS says Mail is ' + await label('mail'));
   await ctx.close();
   report('an app removed from an Android tablet: opened in Chrome it says so, and aOS shows Get', pr);
 }

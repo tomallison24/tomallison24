@@ -1,8 +1,31 @@
 # aOS
 
-The home of every AllisonOS app, laid out as an app store, in the same
-Sea glass as the AllisonOS welcome. Part of the Allison Corporation.
-Its address ends in `/aOS/`.
+The home of every AllisonOS app, laid out as an app store, in a mid-century
+modern look. Part of the Allison Corporation. Its address ends in `/aOS/`.
+
+## The look
+
+Mid-century modern in the Retro colors, the same as Mail Vintage, Home Vintage
+and Orders Vintage (from the aOS Design Styles canvas):
+
+- a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+  place of glass;
+- mustard, teal, burnt orange and walnut; three atomic shapes behind each
+  title that scroll away with the page, and three little bars under it;
+- Today's postcards each in a color of their own (teal, mustard, cream, orange,
+  walnut), with their own shapes, and the same colors on the story when it opens;
+  the preview cards on an app's page cycle through four of them;
+- a walnut pill for the tabs, with a mustard pill that slides; solid orange for
+  the one main button (Get, Send, Save), outlined teal for the rest;
+- Futura, which iOS has built in, so no font is downloaded;
+- an icon to match: a geometric cream "aOS" on teal with a mustard sun
+  (`icon.svg`, drawn into the PNGs by `scripts/make-icons.mjs`).
+
+It is the last block of the style sheet in `index.html`; the Sea glass styles
+above it are still there underneath. The apps' own icons in the list keep their
+look, and the Welcome and update screens the apps share (`home/welcome.js`) are
+unchanged. The status bar is `default`, not `black-translucent`, which always
+draws the clock white and would vanish on the cream.
 
 ## The flow
 

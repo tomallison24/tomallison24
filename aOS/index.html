@@ -6,16 +6,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- default, not black-translucent: that one always draws the clock white, which vanishes on the cream theme. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="aOS">
-<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#241E1A" media="(prefers-color-scheme: dark)">
 <title>aOS</title>
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
-<link rel="icon" type="image/png" href="icon-512.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=3">
+<link rel="icon" type="image/png" href="icon-512.png?v=3">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
-  aOS - the home of every AllisonOS app, as an app store in Sea glass.
+  aOS - the home of every AllisonOS app, as an app store, in a mid-century modern look
+  (the last block of the style sheet; the Sea glass styles above it are still there).
 
   - Today: the family card first - the family icon, "The Allison Family", a
     greeting by name and everyone in the family (signed in) - then postcards, as a bento (one tall, two halves, one wide): setting up
@@ -301,9 +303,170 @@
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
 :where(.get, button.avatar){position:relative}
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+  /* ======================================================================
+     Mid-century modern, in the Retro colors
+     ----------------------------------------------------------------------
+     aOS in the look Mail Vintage, Home Vintage and Orders Vintage use (from the
+     aOS Design Styles canvas, "Mid-century modern" + "Retro"): flat, solid shapes
+     instead of glass; a cream ground (walnut in dark mode) with mustard, teal,
+     burnt orange and walnut; atomic shapes behind each title that scroll away;
+     Futura (iOS's own, so nothing to download) for every word. Last in the sheet
+     so it wins over the Sea glass styles above, which are still underneath. Only
+     colors, shapes and type change: every tab, page, button and menu works as
+     before. The app icons in the list keep their own look.
+     ====================================================================== */
+  :root { --mc-card: #FBF5E9; --mc-card-2: #F0E5D0; --mc-edge: rgba(43,37,34,.14); --mc-mustard: #E3A72F; --mc-teal: #1F6F6B; --mc-orange: #D8572A; --mc-walnut: #4A3426; --mc-on-mustard: #2B2522;
+    --bg: #F4ECDD; --card: #FBF5E9; --solid: #FBF5E9; --text: #2B2522; --muted: #5B4A3F; --line: rgba(43,37,34,.12); --dot: rgba(43,37,34,.07);
+    --glass: #FBF5E9; --edge: rgba(43,37,34,.10); --accent: #1F6F6B; --sand: #7A5400; --on: #FFF8EC;
+    --pastel: #E3A72F; --cta: #B8452B; --cta-ink: #FFF8EC; --ink2: #B8452B; --danger-text: #9E3A1A; --atom: 1;
+    --blob1: transparent; --blob2: transparent; --blob3: transparent; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mc-card: #322A25; --mc-card-2: #3D332C; --mc-edge: rgba(244,236,221,.14); --mc-teal: #4FB3AB;
+    --bg: #241E1A; --card: #322A25; --solid: #322A25; --text: #F4ECDD; --muted: #CFC1AC; --line: rgba(244,236,221,.12); --dot: rgba(244,236,221,.07);
+    --glass: #322A25; --edge: rgba(244,236,221,.12); --accent: #5CBDB5; --sand: #F0C766; --on: #1E1916; --ink2: #F0C766; --danger-text: #F2906E; --atom: .9; } }
+  :root[data-theme="dark"] { --mc-card: #322A25; --mc-card-2: #3D332C; --mc-edge: rgba(244,236,221,.14); --mc-teal: #4FB3AB;
+    --bg: #241E1A; --card: #322A25; --solid: #322A25; --text: #F4ECDD; --muted: #CFC1AC; --line: rgba(244,236,221,.12); --dot: rgba(244,236,221,.07);
+    --glass: #322A25; --edge: rgba(244,236,221,.12); --accent: #5CBDB5; --sand: #F0C766; --on: #1E1916; --ink2: #F0C766; --danger-text: #F2906E; --atom: .9; }
+
+  body { font-family: "Futura", "Futura-Medium", "Avenir Next", "Jost", system-ui, sans-serif; }
+  body::before { display: none; }
+  .ink { background: none; color: var(--accent); -webkit-text-fill-color: currentColor; }
+  .tab { position: relative; z-index: 1; }
+
+  /* the atomic shapes behind the title (they scroll away with the page) */
+  .atoms { --ox: max(0px, calc(50% - 320px)); position: absolute; top: 0; left: 0; right: 0; z-index: 0; height: 270px; overflow: hidden; pointer-events: none; }   /* --ox: the shapes hang off the edge of the 640px column, on a wide screen too */
+  .atoms b { position: absolute; display: block; opacity: var(--atom); }
+  .atoms b:nth-child(1) { width: 220px; height: 220px; right: calc(var(--ox) - 70px); top: -60px; border-radius: 50%; background: var(--mc-mustard); }
+  .atoms b:nth-child(2) { width: 64px; height: 64px; right: calc(var(--ox) + 74px); top: 98px; border-radius: 50%; background: var(--mc-teal); }
+  .atoms b:nth-child(3) { width: 120px; height: 34px; right: calc(var(--ox) + 20px); top: 152px; border-radius: 17px; background: var(--mc-orange); transform: rotate(-18deg); }
+
+  /* the title: big and tight, the date small under it, the three little bars below */
+  .head { margin: 8px 2px 24px; }
+  .head .mark { font-size: 13px; font-weight: 600; letter-spacing: .14em; }
+  .head h1 { margin-top: 6px; padding-bottom: 20px; font-size: 44px; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+  .head h1 small { display: block; margin: 8px 0 0; font-size: 11.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .head h1::after { width: 62px; height: 6px; border-radius: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat; }
+  .avatar, .me .avatar { border-radius: 50%; background: var(--cta); color: var(--cta-ink); box-shadow: none; }
+
+  /* Today: flat postcards, each in its own color with its own shapes */
+  .s0 { --bgc: #1F6F6B; --ink: #FFF8EC; --a1: #E3A72F; --a2: #D8572A; }
+  .s1 { --bgc: #E3A72F; --ink: #2B2522; --a1: #1F6F6B; --a2: #D8572A; }
+  .s2 { --bgc: var(--mc-card); --ink: var(--text); --a1: #E3A72F; --a2: #1F6F6B; }
+  .s3 { --bgc: #B8452B; --ink: #FFF8EC; --a1: #E3A72F; --a2: #4A3426; }
+  .s4 { --bgc: #4A3426; --ink: #FFF8EC; --a1: #E3A72F; --a2: #1F6F6B; }
+  .story { border-radius: 28px; color: var(--ink); background: var(--bgc); box-shadow: none; }
+  .story::before { content: ''; position: absolute; right: -70px; top: -80px; width: 170px; height: 170px; border-radius: 50%; background: var(--a1); }
+  .story.half::before { right: -40px; top: -40px; width: 120px; height: 120px; }
+  .story.wide::before { right: -50px; top: -60px; width: 150px; height: 150px; }
+  .story .art { background: none; }
+  .story .art::before { content: ''; position: absolute; right: 30px; bottom: 100px; width: 104px; height: 28px; border-radius: 14px; background: var(--a2); transform: rotate(-18deg); }
+  .story.half .art::before { display: none; }
+  .story.plain.half .art::before { display: block; right: 14px; bottom: 28px; width: 76px; height: 22px; border-radius: 11px; }
+  .story.wide .art::before { right: 22px; bottom: 26px; width: 84px; height: 22px; border-radius: 11px; }
+  .story .art::after { display: none; }
+  .story .art img, .story.half .art img, .story.wide .art img { box-shadow: 0 0 0 7px rgba(255,248,236,.9); animation: none; }
+  .story .art svg { color: rgba(255,248,236,.2); }
+  .s1 .art svg { color: rgba(43,37,34,.14); }
+  .story .txt h2 { font-weight: 600; letter-spacing: -.02em; max-width: 62%; }
+  .story.half .txt h2, .story.wide .txt h2 { max-width: none; }
+  .chip { height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: .04em; background: #FFF8EC; color: #2B2522; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .chip::before { border-radius: 50%; background: var(--mc-orange); }
+  .story .foot { border-radius: 999px; background: var(--mc-card); color: var(--text); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+  .story .foot i { opacity: 1; color: var(--muted); }
+  .story .foot b { font-weight: 600; }
+  .story.plain { box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .story.plain .chip { background: var(--dot); color: var(--text); }
+  .story.plain .mk { font-weight: 600; letter-spacing: -.04em; color: var(--ink2); }
+  .story.plain.half .mk { letter-spacing: -.03em; }
+
+  /* Apps: solid cream cards, a flat disc of the app's color behind the icon */
+  .row { border-radius: 22px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .row::before { display: none; }
+  .row b { font-weight: 600; }
+  .get { height: 34px; border-radius: 999px; background: var(--cta); color: var(--cta-ink); box-shadow: none; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .story .get.done { color: var(--accent); }
+  .get.big, .apphead .get { text-transform: none; letter-spacing: .01em; font-size: 16px; border-radius: 999px; }
+  .sec { margin: 32px 2px 12px; }
+  .sec h2 { gap: 10px; font-size: 12.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .sec h2::before { width: 9px; height: 9px; border-radius: 50%; background: var(--mc-mustard); }
+  .sec a, .sec button { font-size: 14px; }
+
+  /* the dock: a walnut pill, a mustard pill that slides */
+  .tabs { padding: 5px; border-radius: 999px; background: var(--mc-walnut); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(244,236,221,.12), 0 12px 24px -10px rgba(0,0,0,.6); }
+  .tabs .ind { top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: var(--mc-mustard); opacity: 1; box-shadow: none; }
+  .tabs button { border-radius: 999px; color: #F4ECDD; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .tabs button[aria-selected="true"] { color: #2B2522; }
+  .find { border-radius: 999px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .find:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  /* pages that slide in */
+  .back, .close { border-radius: 50%; background: var(--mc-card); color: var(--accent); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .apphead::before { top: -44px; width: 168px; height: 168px; margin-left: -84px; border-radius: 50%; background: var(--mc-mustard); }
+  .apphead::after { content: ''; position: absolute; left: 50%; top: 94px; width: 92px; height: 26px; margin-left: 66px; border-radius: 13px; background: var(--mc-orange); transform: rotate(-18deg); }
+  .apphead img { border-radius: 30px; box-shadow: 0 0 0 7px var(--mc-card); }
+  .apphead h1 { font-weight: 600; letter-spacing: -.02em; }
+  .strip div { border-radius: 999px; }
+  .wn, .info, .group, .famhero, .approw, .signin { border-radius: 22px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .need { border-radius: 18px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .need em { border-radius: 999px; }
+  .shot { border-radius: 28px; background: var(--bgc); color: var(--ink); box-shadow: none; }
+  .shot:nth-child(4n+1) { --bgc: #1F6F6B; --ink: #FFF8EC; --a1: #E3A72F; }
+  .shot:nth-child(4n+2) { --bgc: #E3A72F; --ink: #2B2522; --a1: #1F6F6B; }
+  .shot:nth-child(4n+3) { --bgc: #B8452B; --ink: #FFF8EC; --a1: #E3A72F; }
+  .shot:nth-child(4n) { --bgc: #4A3426; --ink: #FFF8EC; --a1: #D8572A; }
+  .shot::before { content: ''; position: absolute; right: -40px; top: -40px; width: 112px; height: 112px; border-radius: 50%; background: var(--a1); }
+  .shot svg { position: relative; color: var(--ink); }
+  .shot b, .shot p { position: relative; font-weight: 600; } .shot p { font-weight: 400; opacity: 1; }
+
+  /* a story, opened */
+  .hero { background: var(--bgc); color: var(--ink); border-radius: 0 0 44px 44px; }
+  .hero::before { content: ''; position: absolute; right: -70px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: var(--a1); }
+  .hero .art { background: none; }
+  .hero .art img { box-shadow: 0 0 0 8px rgba(255,248,236,.9); }
+  .hero h2 { font-weight: 600; letter-spacing: -.02em; }
+  .body h3 { font-weight: 600; } .body h3::before { width: 8px; height: 8px; border-radius: 50%; background: var(--mc-mustard); flex-basis: 8px; }
+
+  /* the family card and the account */
+  .famhero { box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .famhero::before { display: none; }
+  .famhero .ficon { border-radius: 20px; box-shadow: none; }
+  .famhero h2 { font-weight: 600; letter-spacing: -.02em; }
+  .famhero h2 .ink { color: var(--ink2); }
+  .famhero small, .glbl { letter-spacing: .12em; text-transform: uppercase; }
+  .fwho span { border-radius: 999px; }
+  .fwho i { border-radius: 50%; background: var(--accent); color: var(--on); }
+  .glbl { font-size: 12px; font-weight: 600; letter-spacing: .18em; }
+  .glbl::before { width: 8px; height: 8px; border-radius: 50%; background: var(--mc-teal); }
+  .ptitle { margin-bottom: 26px; font-size: 38px; font-weight: 600; letter-spacing: -.035em; }
+  .ptitle::after { content: ''; display: block; width: 62px; height: 6px; margin-top: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat; }
+  .seg { border-radius: 999px; background: var(--mc-card-2); }
+  .seg button { border-radius: 999px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .seg button[aria-pressed="true"] { background: var(--mc-mustard); color: var(--mc-on-mustard); box-shadow: none; }
+  .acct input, .acct textarea { border-radius: 16px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .acct input:focus, .acct textarea:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+  .acct .go, .acct .soft, .plans .pick button { border-radius: 999px; font-weight: 600; letter-spacing: .02em; }
+  .acct .go, .plans .pick .go { background: var(--cta); color: var(--cta-ink); box-shadow: none; }
+  .acct .soft, .plans .pick button { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .plans .pick .go.stop { background: transparent; color: var(--danger-text); box-shadow: inset 0 0 0 2px var(--danger-text); }
+  .plan[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+  .plan em, .plan em.off, .plan em.used { border-radius: 999px; }
+  .perr, .acct .err, .acct .fam button, .plans .pact.stop { color: var(--danger-text); }
+  .plan em.off { color: var(--danger-text); }
+  .acct .link { border-radius: 14px; }
+  .lab { border-radius: 20px; }
+
+  /* the Design menu and the sheet that asks which design */
+  .dbtn { box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .dmenu { border-radius: 24px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px rgba(43,37,34,.4); }
+  .dopt { border-radius: 16px; }
+  .dopt[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .dlist .dopt { border-radius: 20px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+  .dsheet h1 { font-weight: 600; letter-spacing: -.03em; }
 </style>
 </head>
 <body>
+<div class="atoms" aria-hidden="true"><b></b><b></b><b></b></div>
 
 <section class="tab" id="today">
   <div class="head"><div><span class="mark ink">aOS</span><h1>Today<small id="date"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>

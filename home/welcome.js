@@ -112,7 +112,8 @@
         'Orders has a Vintage design too, in the same look: cream and walnut cards instead of glass, atomic shapes behind the title and Futura. Pick it from the Design menu on Orders\' page in aOS. It is its own app, with its own orders and settings (it can share Orders\' Google Sheet), so Orders stays as it is',
         'Orders: Whole Foods orders show as Whole Foods Market, not Amazon, and a booked pickup shows its day; an order that was only received is no longer shown as ready or out for delivery; Orders Vintage opens an order\'s email in Mail Vintage',
         'Orders: Fix details with Claude, on an order\'s page, sends that one email\'s text (links removed) to Claude to read again when the details look wrong; nothing is kept, and it is for signed-in family',
-        'Orders: a one-off clean-up marks open orders nothing had been heard about for over 5 days as received (Undo in the toast)'],
+        'Orders: a one-off clean-up marks open orders nothing had been heard about for over 5 days as received (Undo in the toast)',
+        'aOS has the mid-century modern look too, the same as the Vintage designs of Mail, Home and Orders: cream (walnut in dark mode) instead of glass, mustard, teal and burnt orange, atomic shapes behind each title, flat round-cornered cards and buttons, a walnut pill for the tabs, Futura type, and a new aOS icon'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
