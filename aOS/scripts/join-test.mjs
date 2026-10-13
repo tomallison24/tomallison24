@@ -40,7 +40,7 @@ for (const dev of ['android', 'iphone']) {
   await p.waitForTimeout(3500);
   // on an iPhone aOS asks for its look first (Vintage or Sea glass: iOS takes the icon when it is added), then how to add it
   let lookStep = null;
-  if (dev === 'iphone') { lookStep = await p.evaluate(() => (document.querySelector('#aos-welcome h2') || {}).textContent || null); if (lookStep === 'Choose your look') { await p.click('#aos-welcome .c-btns .w-btn'); await p.waitForTimeout(900); } }
+  if (dev === 'iphone') { lookStep = await p.evaluate(() => (document.querySelector('#aos-welcome h2') || {}).textContent || null); if (lookStep === 'Choose your look') { await p.waitForSelector('#aos-welcome .c-panel.on', { timeout: 5000 }); await p.click('#aos-welcome .c-btns .w-btn'); await p.waitForFunction(() => (document.querySelector('#aos-welcome h2') || {}).textContent !== 'Choose your look', null, { timeout: 5000 }).catch(() => {}); } }
   const after = await p.evaluate(() => ({ h2: (document.querySelector('#aos-welcome h2') || {}).textContent || null, inst: (document.querySelector('#aos-welcome .c-inst') || {}).textContent || null, sd: !!document.querySelector('#aos-welcome .c-sd'), err: (document.getElementById('aErr') || {}).textContent || '' }));
   const problems = [...errs];
   if (atLoad) problems.push('something covered the invite at first: ' + atLoad);

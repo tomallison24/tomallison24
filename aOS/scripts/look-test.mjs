@@ -96,7 +96,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
 // 4. the install steps: Choose your look first; Sea glass changes the icon, the status bar and the address; then how to add it
 {
   const { ctx, p, errs } = await open('light', { __install: '1' }); const pr = [...errs];
-  await p.waitForSelector('#aos-welcome .c-look', { timeout: 15000 });
+  await p.waitForSelector('#aos-welcome .c-panel.on .c-look', { timeout: 15000 });   // .on: the buttons are wired up (the cards are drawn a moment before)
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allInnerTexts();
@@ -109,7 +109,8 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await bar() !== 'black-translucent') pr.push('Sea glass: the status bar style is ' + await bar());
   if (!/[?&]look=glass/.test(await p.evaluate(() => location.search))) pr.push('the address does not carry look=glass: ' + await p.evaluate(() => location.search));
   if (await p.evaluate(() => document.cookie) !== 'aos_look=glass') pr.push('the cookie is ' + await p.evaluate(() => document.cookie));
-  await p.click('#aos-welcome .c-btns .w-btn'); await p.waitForTimeout(900);
+  await p.click('#aos-welcome .c-btns .w-btn');
+  await p.waitForFunction(() => (document.querySelector('#aos-welcome h2') || {}).textContent !== 'Choose your look', null, { timeout: 5000 }).catch(() => {});
   if (await h2() !== 'Add aOS to your Home Screen') pr.push('then showed ' + await h2());
   if (!await p.locator('#aos-welcome .c-sd').count()) pr.push('no Safari steps after the look');
   report('install steps: Choose your look first; Sea glass sets the icon, status bar, address and cookie; then the Safari steps', pr); await ctx.close();
