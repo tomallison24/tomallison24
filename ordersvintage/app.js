@@ -15,8 +15,8 @@
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
-  document.body.textContent = 'Orders Vintage can’t be opened inside another page.';
-  throw new Error('Orders Vintage refuses to run inside a frame');
+  document.body.textContent = 'Orders can’t be opened inside another page.';
+  throw new Error('Orders refuses to run inside a frame');
 }
 
 (function () {
@@ -494,7 +494,7 @@ if (window.top !== window.self) {
     if (o.notes) h += '<div class="obox"><p style="margin:8px 0;white-space:pre-line;overflow-wrap:anywhere">' + esc(o.notes) + '</p></div>';
     const acts = [];
     if (o.source && o.source.threadId) {
-      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail Vintage<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
+      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     if (o.source && o.source.msgId) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Claude is reading it…' : 'Fix details with Claude') + '<span class="sub">Sends this one email’s text to Claude. Nothing is kept.</span></span></button>');
@@ -948,7 +948,7 @@ if (window.top !== window.self) {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Orders can read email, never send, change or delete it</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using the sign-in Orders or Mail already has in this browser. Orders Vintage only reads.'
+    $('stGmailHint').textContent = viaMail ? 'Using the sign-in Orders or Mail already has in this browser. Orders only reads.'
       : 'Orders looks for order, shipping and pickup emails in the last year of email (Mail’s Orders tag, and the big stores and carriers), then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
   }

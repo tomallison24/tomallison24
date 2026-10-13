@@ -213,7 +213,7 @@ for (const scheme of ['light', 'dark']) {
     const t = await page.textContent('#bkLive');
     assert.match(t, /Gate B32/); assert.match(t, /Bags: belt 4/);
     assert.ok(await page.$('#bkBody .verify'), 'guess banner');
-    assert.ok(await page.$('#bkBody a[href^="../mailvintage/?thread="]'), 'a link to the email in Mail Vintage');
+    assert.ok(await page.$('#bkBody a[href^="../mailvintage/?thread="]'), 'a link to the email in Mail');
     assert.equal(await page.inputValue('#bf_conf'), 'KQ7T2M');
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'booking-' + scheme + '.png') });

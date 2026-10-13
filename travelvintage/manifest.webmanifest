@@ -1,6 +1,6 @@
 {
-  "name": "Travel Vintage",
-  "short_name": "Travel Vintage",
+  "name": "Travel",
+  "short_name": "Travel",
   "description": "Travel in a mid-century modern look: every flight, hotel and rental car in one place, read from your Gmail.",
   "start_url": "./",
   "scope": "./",

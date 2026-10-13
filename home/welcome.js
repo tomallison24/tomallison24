@@ -209,7 +209,7 @@
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', ordersvintage: 'Orders Vintage', drinksvintage: 'Drinks Vintage', fitnessvintage: 'Fitness Vintage', newsvintage: 'News Vintage', weathervintage: 'Weather Vintage', travelvintage: 'Travel Vintage', calendarvintage: 'Calendar Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mailvintage": {
@@ -219,7 +219,7 @@
         { "i": "swipe", "t": "Swipe to sort", "d": "Swipe right to tag or move to Marketing; swipe left to flag, archive or trash. Every swipe has Undo." },
         { "i": "tag", "t": "Tags that stick", "d": "Tag one email and everything from that sender gets the tag too, now and in future." },
         { "i": "bell", "t": "Remind Me", "d": "Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top." },
-        { "i": "share", "t": "Its own app", "d": "Mail Vintage signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both." }
+        { "i": "share", "t": "Its own app", "d": "Mail signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both." }
       ]
     },
     "housevintage": {
@@ -230,7 +230,7 @@
         { "i": "thermo", "t": "Heat and cool", "d": "Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls." },
         { "i": "bulb", "t": "Lights by room", "d": "Switch a whole room on or off, dim each light with a slider, or use All on and All off." },
         { "i": "shield", "t": "Cameras and security", "d": "Arm or disarm Blink, see each camera's latest still, take a snapshot or pause motion detection." },
-        { "i": "house", "t": "Its own app", "d": "Home Vintage connects and keeps its settings on its own, so Home stays just as it is. Use either, or both." }
+        { "i": "house", "t": "Its own app", "d": "Home connects and keeps its settings on its own, so Home stays just as it is. Use either, or both." }
       ]
     },
     "ordersvintage": {
@@ -241,7 +241,7 @@
         { "i": "truck", "t": "See where it is", "d": "On the way, ordered, ready for pickup or delivered, each with its courier and tracking number." },
         { "i": "box", "t": "Tracking in one tap", "d": "Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up." },
         { "i": "check", "t": "A quick check when it's unsure", "d": "An order read from the words of an email, or one that has gone quiet, waits under To check." },
-        { "i": "share", "t": "Its own app", "d": "Orders Vintage keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step." }
+        { "i": "share", "t": "Its own app", "d": "Orders keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step." }
       ]
     },
     "mail": {
@@ -1364,7 +1364,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       pre: () => { const li = mailRow(); if (li) { li.classList.remove('peek'); void li.offsetWidth; li.classList.add('peek'); } } },
     { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future.' },
     { sel: '[data-aos-demo="mail-row"] .tchip.rem', demo: MAIL_ROW, pad: 6, t: 'Remind Me', d: 'Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top.' },
-    { sel: '#screen .signin [data-act="signin"]', t: 'Its own app', d: 'Mail Vintage signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both.', g: 'tap',
+    { sel: '#screen .signin [data-act="signin"]', t: 'Its own app', d: 'Mail signs in and keeps its settings on its own, so Mail stays just as it is. Use either, or both.', g: 'tap',
       pre: () => mailFab() },
   ], done: () => mailFab() };
   SPOTS.calendar = { stops: [
@@ -1441,7 +1441,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#list [data-aos-demo].ocard', demo: ORDER_CARD, pad: 4, t: 'See where it is', d: 'On the way, ordered, ready for pickup or delivered, each with its courier and tracking number.', g: 'tap' },
     { sel: '#list [data-aos-demo] .ocarrier', demo: ORDER_CARD, t: 'Tracking in one tap', d: 'Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up.', g: 'tap' },
     { sel: '#whenChips', t: 'A quick check when it’s unsure', d: 'An order read from the words of an email, or one that has gone quiet, waits under To check.', g: 'tap' },
-    { sel: '#setBtn', t: 'Its own app', d: 'Orders Vintage keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.', g: 'tap' },
+    { sel: '#setBtn', t: 'Its own app', d: 'Orders keeps its orders and settings on its own, so Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.', g: 'tap' },
   ] };
   SPOTS.places = { stops: [
     { sel: '#seg', t: 'Want to go and Been', d: 'Keep two lists: places you want to try and places you’ve been. Tap Been to move a place across.', g: 'tap' },
@@ -1485,7 +1485,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
     { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights by room', d: 'Switch a whole room on or off, dim each light with a slider, or use All on and All off.', g: 'tap' },
     { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
-    { sel: '#bannerBtn', t: 'Its own app', d: 'Home Vintage connects and keeps its settings on its own, so Home stays just as it is. Use either, or both. Tap Connect to link your Home Assistant.', g: 'tap' },
+    { sel: '#bannerBtn', t: 'Its own app', d: 'Home connects and keeps its settings on its own, so Home stays just as it is. Use either, or both. Tap Connect to link your Home Assistant.', g: 'tap' },
   ] };
   let spotEnd = null;
   const onScreen = e => {

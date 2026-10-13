@@ -453,7 +453,7 @@ await test('Drinks beside your training, signed in: a glass on the week, and Ana
   assert.deepEqual(calls[0], { x: '1', auth: 'Bearer tok.sig', from: D(-13), to: D(0) }, 'both windows, signed in, with the app header');
   const rows0 = await dr.page.$$eval('#anDrinks .xrow', rs => rs.map(r => r.textContent));
   const rows = rows0;
-  assert.deepEqual(rows, ['Standard drinks4 in the 7 before2.5', 'Alcohol-free days0 in the 7 before2', 'Open Drinks Vintage']);
+  assert.deepEqual(rows, ['Standard drinks4 in the 7 before2.5', 'Alcohol-free days0 in the 7 before2', 'Open Drinks']);
   assert.equal(await dr.page.getAttribute('#anDrinks a', 'href'), '../drinksvintage/');
   await dr.page.waitForTimeout(1000);
   if (SHOTS) await dr.page.screenshot({ path: path.join(SHOTS, '15-analysis-drinks.png'), fullPage: true });

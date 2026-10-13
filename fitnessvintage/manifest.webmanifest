@@ -1,6 +1,6 @@
 {
-  "name": "Fitness Vintage",
-  "short_name": "Fitness Vintage",
+  "name": "Fitness",
+  "short_name": "Fitness",
   "description": "Fitness in a mid-century modern look: a simple workout log, the week as days, and for each day the muscle group, exercise, weight, reps and sets.",
   "start_url": "./",
   "scope": "./",

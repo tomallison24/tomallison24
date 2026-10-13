@@ -32,8 +32,8 @@
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
-  document.body.textContent = 'Fitness Vintage can’t be opened inside another page.';
-  throw new Error('Fitness Vintage refuses to run inside a frame');
+  document.body.textContent = 'Fitness can’t be opened inside another page.';
+  throw new Error('Fitness refuses to run inside a frame');
 }
 
 (function () {
@@ -188,7 +188,7 @@ if (window.top !== window.self) {
   let storeWarned = false;
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises })) && ls.set(K.graves, JSON.stringify(graves));
-    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness Vintage: storage is full.' + (syncCfg ? ' Your log is safe in the Google Sheet.' : '')); }
+    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (syncCfg ? ' Your log is safe in the Google Sheet.' : '')); }
     shareCal();
   }
   // Calendar's Fitness layer: the last 400 days of your log, just what Calendar shows,
@@ -413,7 +413,7 @@ if (window.top !== window.self) {
     return '<p class="sechead" style="--i:5">Drinks<span>from Drinks</span></p><div class="rgroup" id="anDrinks" style="--i:5">'
       + '<div class="xrow"><span class="xt">Standard drinks<small>' + f1(before.sd) + ' in ' + P.before + '</small></span><span class="chg">' + f1(now.sd) + '</span></div>'
       + '<div class="xrow"><span class="xt">Alcohol-free days<small>' + before.af + ' in ' + P.before + '</small></span><span class="chg">' + now.af + '</span></div>'
-      + '<a class="xrow" href="../drinksvintage/"><span class="xt">Open Drinks Vintage</span>' + ICON.chevR + '</a></div>';
+      + '<a class="xrow" href="../drinksvintage/"><span class="xt">Open Drinks</span>' + ICON.chevR + '</a></div>';
   }
   const slideSeg = () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period'); };
   main.addEventListener('click', e => {
@@ -676,7 +676,7 @@ if (window.top !== window.self) {
     'bad-request': 'The Sheet didn’t understand the request.',
     'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
     'not-json': 'That link didn’t answer like the Fitness script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Fitness Vintage needs the web app link from the Fitness Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
+    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Fitness needs the web app link from the Fitness Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
   };
   // A copy of the link and code in IndexedDB, as in Travel: it survives a
   // full or cleared localStorage (every AllisonOS app shares its space).
@@ -800,7 +800,7 @@ if (window.top !== window.self) {
   const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
   $('syShare').onclick = async () => {
     const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({ u: syncCfg.url, s: syncCfg.secret }));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Fitness Vintage on the other phone. Keep it private.', null, 6000); }
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Fitness on the other phone. Keep it private.', null, 6000); }
     catch { toast('Copy isn’t available here.'); }
   };
   $('syOff').onclick = () => {

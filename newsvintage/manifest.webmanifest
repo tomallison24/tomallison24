@@ -1,6 +1,6 @@
 {
-  "name": "News Vintage",
-  "short_name": "News Vintage",
+  "name": "News",
+  "short_name": "News",
   "description": "News in a mid-century modern look: the latest headlines by topic, with live sport scores.",
   "start_url": "./",
   "scope": "./",

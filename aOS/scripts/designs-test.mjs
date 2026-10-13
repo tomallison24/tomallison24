@@ -39,11 +39,12 @@ async function open(apps = {}, scheme = 'light') {
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => null);
 
-// 1. one row per app: the designs of Mail, Orders and Home have no rows of their own, only a tag
+// 1. one row per app: the designs of Mail, Orders, Home and the rest have no rows of their own, only a tag
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
   for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
-  for (const id of ['mail', 'orders', 'house']) {
+  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks'];
+  for (const id of WITH_DESIGNS) {
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
   }
@@ -51,8 +52,8 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   // searching for a design finds the app that has it, once
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
-  if (found.join() !== 'mail,orders,house') pr.push('searching "vintage" found ' + found.join() + ', not mail,orders,house');
-  report('Mail, Orders and Home are one row each, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
+  if ([...found].sort().join() !== [...WITH_DESIGNS].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + WITH_DESIGNS.join());
+  report('Every app with a design is one row, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
 }
 
 // 2. the Design menu on the app's page: Standard first; picking Vintage changes the icon and what Get adds
@@ -94,7 +95,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   if (await attr(p, '[data-go]', 'data-go') !== 'house') pr.push('the sheet does not start on Standard');
   await p.click('.dsheet .dopt[data-did="vintage"]');
   if (await attr(p, '[data-go]', 'data-go') !== 'housevintage' || !/\/housevintage\/\?via=aos/.test(await attr(p, '[data-go]', 'href') || '')) pr.push('the button does not go to Home Vintage');
-  if (!/Home Vintage/.test(await text(p, '[data-go]'))) pr.push('the button does not name Home Vintage: ' + await text(p, '[data-go]'));
+  if (!/Home/.test(await text(p, '[data-go]'))) pr.push('the button does not name Home: ' + await text(p, '[data-go]'));
   if (await attr(p, '[data-go]', 'target') !== '_blank') pr.push('the button does not open in a new tab');
   await p.click('.dsheet .dopt[data-did="standard"]');
   if (await attr(p, '[data-go]', 'data-go') !== 'house') pr.push('going back to Standard did not change the button');

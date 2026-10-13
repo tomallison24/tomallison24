@@ -1,6 +1,6 @@
 {
-  "name": "Orders Vintage",
-  "short_name": "Orders Vintage",
+  "name": "Orders",
+  "short_name": "Orders",
   "description": "Orders in a mid-century modern look: everything you've bought and where it is, read from your Gmail.",
   "start_url": "./",
   "scope": "./",

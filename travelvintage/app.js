@@ -17,8 +17,8 @@
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
-  document.body.textContent = 'Travel Vintage can’t be opened inside another page.';
-  throw new Error('Travel Vintage refuses to run inside a frame');
+  document.body.textContent = 'Travel can’t be opened inside another page.';
+  throw new Error('Travel refuses to run inside a frame');
 }
 
 (function () {
@@ -603,7 +603,7 @@ if (window.top !== window.self) {
     }).join('') + '<div class="f w"><label for="bf_notes">Notes</label><textarea id="bf_notes" data-k="notes" placeholder="Anything to remember">' + esc(b.notes || '') + '</textarea></div></div></div>';
     const rows = [];
     if (b.source && b.source.threadId) {
-      rows.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(b.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail Vintage<span class="sub">' + esc(b.source.subject || '') + '</span></span></a>');
+      rows.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(b.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(b.source.subject || '') + '</span></span></a>');
       rows.push(linkRow(LINKS.gmailWeb(b.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     const place = b.type === 'hotel' ? [b.name, b.address].filter(Boolean).join(', ') : b.type === 'car' ? b.pickupPlace : b.type === 'other' ? b.place : '';
@@ -1132,7 +1132,7 @@ if (window.top !== window.self) {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using the sign-in Travel, Orders or Mail already has in this browser. Travel Vintage only reads.'
+    $('stGmailHint').textContent = viaMail ? 'Using the sign-in Travel, Orders or Mail already has in this browser. Travel only reads.'
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     const n = lookupsThisMonth();
