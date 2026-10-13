@@ -245,10 +245,29 @@ the *deployed* copy, so after changing `SECRET` choose **Deploy → Manage
 deployments → ✏️ → Version: New version → Deploy**; and make sure the link is
 the Orders Sheet's, not Notes' or Travel's (Orders says so when it can tell).
 
+The Sheet's link is already filled in (`SHEET_URL` in `app.js`: the owner's
+Sheet; to use another, paste its URL over it), so only the phrase is typed. The
+phrase is never in the code.
+
 The Sheet gets a readable **Orders** tab (newest first) and hidden `_orders`
 and `_deleted` tabs the app reads back. Newest change wins. Each phone reads
 its own Gmail; the same order found by both is still one order. Which kinds are
 switched on is per phone.
+
+**The Log tab** is a history that only grows (oldest at the top). One row each
+time an order is **Added**, **Status changed** (with "Shipped → Delivered"),
+**Updated** (which fields), or **Deleted** (the order as it was), and one row
+(**Left out**) for each email whose kind is switched off in Settings, so the Log
+has everything that passes through whatever Settings say; only orders, never the
+other emails. The first time a Sheet is connected, the orders already in the
+app are logged once as **Existing**. Rows are never rebuilt or cleared by the
+script; a row can't be written twice (every event has an id, and two phones
+that notice the same thing write one row). The phone queues events and sends
+them with the next sync; an old copy of the script doesn't acknowledge them, so
+they stay queued until the new script is deployed (paste
+[`google-sheet-sync.gs`](google-sheet-sync.gs) over `Code.gs`, **Deploy → Manage
+deployments → ✏️ → Version: New version → Deploy**). Tracking and order numbers
+are kept as text.
 
 ## How it's built
 
@@ -270,6 +289,7 @@ switched on is per phone.
 ```sh
 node orders/scripts/api-test.mjs     # Fix with Claude's server side, with a stand-in for Anthropic
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
+node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs)
 node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed
 node orders/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg
 ```

@@ -607,6 +607,7 @@ await test('Google Sheet sync: More has the row; connecting sends the log, and a
   assert.match(await sp.textContent('#sheetBtn'), /Google Sheet sync\s*Not connected/);
   await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
   assert.equal(await sp.isVisible('#syForm'), true); assert.equal(await sp.isHidden('#syOn'), true);
+  assert.match(await sp.inputValue('#syUrl'), /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/, 'the owner\'s Sheet link is filled in'); assert.equal(await sp.inputValue('#sySecret'), '');
   // a link that isn't Apps Script's is refused before anything is sent
   await sp.fill('#syUrl', 'https://example.com/x'); await sp.fill('#sySecret', 'abc'); await sp.click('#syConnect');
   assert.match(await sp.textContent('#syStatus'), /starts with https:\/\/script\.google\.com/);

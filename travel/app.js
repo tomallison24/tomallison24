@@ -1285,8 +1285,10 @@ if (window.top !== window.self) {
     if (!$('setSheet').hidden) renderSettings();
     if (!$('tripsView').hidden) { const sub = $('tripsSub').textContent; if (/Sync/.test(sub) || on) render(); }
   }
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzUnDjs8aCSQZqdRKTbxBXUK4BjRYykeZTKLwUiUGRjYZMfhSauQR0u5WukZOuLTzE-/exec';
   function openSyncSheet(pre) {
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : '';
+    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
     renderSyncStatus();
     if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
