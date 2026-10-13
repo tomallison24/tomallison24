@@ -160,7 +160,8 @@ It uses the same design as Fitness's (read `fitness/README.md`, "Google Sheet sy
    and change `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it up: there is nothing to look up).
 3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone* → **Deploy** → authorise →
    copy the **Web app URL**.
-4. Drinks → **More → Google Sheet sync** → paste the URL and the phrase → **Connect and sync**. **Copy setup
+4. Drinks → **More → Google Sheet sync** → the link is already filled in (`SHEET_URL` in `app.js`: the owner's Sheet; to
+   use another, paste its URL over it) → type the phrase → **Connect and sync**. The phrase is never in the code. **Copy setup
    link** sets up your other phone.
 
 **The Log tab** has the ABV Tracker's columns, newest first: `Timestamp, Date, Time, Name, Category, Volume, Unit,

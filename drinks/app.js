@@ -527,6 +527,8 @@ if (window.top !== window.self) {
   // goes both ways: a row typed or changed there comes back here.
   // ---------------------------------------------------------------------
   const SHEET_APP = 'allison-drinks-sync';
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzjULI2qY8he38bdMmGq2Pv1J3cjIX8gC5m2YzaGPVkqWgNpcURDco2CYLuldHRKHtz/exec';
   let sheetCfg = ls.json(K.sheet, null);
   if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
   let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false;
@@ -642,7 +644,7 @@ if (window.top !== window.self) {
     const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
   }
   function openSheetSync(pre) {
-    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : '';
+    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : sheetCfg ? sheetCfg.secret : '';
     renderSheetStatus();
     if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
