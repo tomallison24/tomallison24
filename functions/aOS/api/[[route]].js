@@ -11,7 +11,8 @@
 //                         { app, removed: true } -> you took it off your Home Screen (aOS shows Get)
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail;
-//                                                  'travelv' is Travel's Vintage design: GET layer shows it as part of Travel)
+//                                                  'travelv' and 'notesv' are the Vintage designs of Travel and Notes: GET layer
+//                                                  shows each as part of its app)
 //   GET  layer            (family)             -> your own layers, for Calendar
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
@@ -35,7 +36,7 @@ const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
-const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage'];
+const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage'];
 // Calendar's layers from the other apps. On an iPhone each Home Screen app keeps its
 // own storage, so Calendar can't read theirs: each app keeps a copy of just what
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
@@ -43,7 +44,7 @@ const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'trave
 const LAYERS = ['notes', 'travel', 'fitness', 'mail'];
 // Travel's Vintage design keeps its bookings under its own name, so the two Travel apps never overwrite each
 // other; Calendar only knows Travel, so GET layer shows the two together (travelBookings).
-const LAYER_APPS = [...LAYERS, 'travelv'];
+const LAYER_APPS = [...LAYERS, 'travelv', 'notesv'];
 const bookingKey = b => b && (b.id || [b.type, b.conf, b.depIso || b.dep, b.checkIn, b.pickup].join('|'));
 function mergeTravel(a, b) {
   if (!b) return a;
@@ -55,6 +56,25 @@ function mergeTravel(a, b) {
   }
   const newer = b.at > a.at ? b : a;
   return { at: newer.at, data: Object.assign({}, newer.data, { bookings }) };
+}
+// Notes' Vintage design the same way ('notesv'): its lists, reminders and notes join Notes', one of each id, the
+// newer copy winning (the two apps can share a Google Sheet, so the same item can be in both).
+const NOTE_KINDS = ['lists', 'todos', 'notes'];
+const stamp = x => Number(x && (x.updated || x.at || x.created)) || 0;
+function mergeNotes(a, b) {
+  if (!b) return a;
+  if (!a) return b;
+  const data = Object.assign({}, b.at > a.at ? b.data : a.data);
+  for (const k of NOTE_KINDS) {
+    const by = new Map();
+    for (const x of [...((a.data && a.data[k]) || []), ...((b.data && b.data[k]) || [])]) {
+      if (!x || typeof x.id !== 'string') continue;
+      const cur = by.get(x.id);
+      if (!cur || stamp(x) > stamp(cur)) by.set(x.id, x);
+    }
+    data[k] = Array.from(by.values());
+  }
+  return { at: Math.max(a.at, b.at), data };
 }
 const LAYER_MAX = 192 * 1024;
 
@@ -229,6 +249,8 @@ export async function onRequest({ request, params, env }) {
       for (const a of LAYERS) { const x = await getJSON(db, 'layer:' + a + ':' + me.id); if (x) out[a] = x; }
       const tv = await getJSON(db, 'layer:travelv:' + me.id);
       if (tv) out.travel = mergeTravel(out.travel, tv);
+      const nv = await getJSON(db, 'layer:notesv:' + me.id);
+      if (nv) out.notes = mergeNotes(out.notes, nv);
       return reply({ layers: out });
     }
 

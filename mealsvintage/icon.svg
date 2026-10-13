@@ -1,19 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream bowl with steam rising, a band cut out of the bowl, on paprika red, with a mustard sun and a teal pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
-  <defs>
-    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <path d="M104 262H408C408 346 340 404 256 404S104 346 104 262Z" fill="#fff"/>
-      <path d="M196 404H316" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
-      <path d="M104 304H408" fill="none" stroke="#000" stroke-width="14"/>
-      <g fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M196 218c-18-22 18-38 0-62s14-36 4-52"/>
-        <path d="M256 218c-18-22 18-38 0-62s14-36 4-52"/>
-        <path d="M316 218c-18-22 18-38 0-62s14-36 4-52"/>
-      </g>
-    </mask>
-  </defs>
-  <rect width="512" height="512" fill="#A63A2B"/>
+  <!-- Mid-century modern, Retro colours: the meals glyph in cream on #8E3A2B, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. the standard app has its own sea glass icon. -->
+  <defs></defs>
+  <rect width="512" height="512" fill="#8E3A2B"/>
   <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
-  <rect x="32" y="418" width="136" height="50" rx="25" fill="#1F6F6B" transform="rotate(-18 100 443)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 100 443)"/>
+  <g>
+    <path d="M104 262h304c0 84-68 142-152 142S104 346 104 262z" fill="#FBF5E9"/>
+    <path d="M196 404h120" fill="none" stroke="#FBF5E9" stroke-width="22" stroke-linecap="round"/>
+    <g fill="none" stroke="#FBF5E9" stroke-width="20" stroke-linecap="round">
+      <path d="M196 214c-18-22 18-38 0-62s14-36 4-52"/>
+      <path d="M256 214c-18-22 18-38 0-62s14-36 4-52"/>
+      <path d="M316 214c-18-22 18-38 0-62s14-36 4-52"/>
+    </g>
+  </g>
 </svg>

@@ -1,13 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream map pin with its dot cut out, on pine green, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
-  <defs>
-    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <g transform="translate(-22 -4)"><path d="M256 430C220 392 134 308 134 216a122 122 0 0 1 244 0c0 92-86 176-122 214z" fill="#fff"/>
-      <circle cx="256" cy="212" r="46" fill="#000"/></g>
-    </mask>
-  </defs>
-  <rect width="512" height="512" fill="#3B7A57"/>
-  <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
-  <rect x="40" y="396" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 135 421)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  <!-- Mid-century modern, Retro colours: the places glyph in cream on #3E8E5A, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. the standard app has its own sea glass icon. -->
+  <defs><mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <path d="M256 420C222 382 140 300 140 214a116 116 0 0 1 232 0c0 86-82 168-116 206z" fill="#fff"/>
+      <circle cx="256" cy="212" r="44" fill="#000"/>
+    </mask></defs>
+  <rect width="512" height="512" fill="#3E8E5A"/>
+  <circle cx="430" cy="82" r="100" fill="#E3A72F"/>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 100 443)"/>
+  <g>
+    <ellipse cx="256" cy="430" rx="64" ry="14" fill="#FBF5E9" fill-opacity="0.45"/>
+    <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  </g>
 </svg>

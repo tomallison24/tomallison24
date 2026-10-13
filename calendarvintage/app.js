@@ -340,7 +340,7 @@ if (window.top !== window.self) {
   // Where this browser shares storage with the app (a computer), its own data comes first: the
   // Vintage app's key, then the standard app's. Else the copy in your family account (either
   // one writes it: they show the same thing).
-  const SRC = { notes: ['allison-notes-v1'], travel: ['allison-travelv-v1', 'allison-travel-v1'], fitness: ['allison-fitnessv-v1', 'allison-fitness-v1'] };
+  const SRC = { notes: ['allison-notesv-v1', 'allison-notes-v1'], travel: ['allison-travelv-v1', 'allison-travel-v1'], fitness: ['allison-fitnessv-v1', 'allison-fitness-v1'] };
   const localData = app => { for (const k of SRC[app]) { const d = ls.json(k, null); if (d) return d; } return null; };
   const layerData = (app) => localData(app) || (st.layers && st.layers[app] && st.layers[app].data) || null;
   // Mail's Remind Me days: from Gmail itself where this browser has Mail's sign-in, else Mail's copy.

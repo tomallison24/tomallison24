@@ -69,6 +69,8 @@ let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 6).join('\n   ')); } };
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png') }); };
 const calls = [];
+// getComputedStyle gives a colour as rgb(…), or as color(srgb r g b) (0 to 1) for a colour-mix: read both
+const rgbOf = c => { const n = (c.match(/[\d.]+/g) || []).map(Number); return /^color\(/.test(c) ? n.slice(0, 3).map(v => Math.round(v * 255)) : n.slice(0, 3); };
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
@@ -76,6 +78,7 @@ for (const scheme of ['light', 'dark']) {
   await ctx.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, json: {} }));
   const page = await ctx.newPage();
+  page.setDefaultTimeout(6000);
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
   page.on('pageerror', e => problems.push(String(e)));
@@ -122,12 +125,12 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForTimeout(900);
     const [ybg, yshadow, yblur] = await q('.card[data-color="yellow"]', ['backgroundColor', 'boxShadow', 'backdropFilter']);
     assert.notEqual(ybg, cream, 'a yellow note is tinted');
-    const [r, g, b] = ybg.match(/\d+/g).map(Number);
+    const [r, g, b] = rgbOf(ybg);
     assert.ok(r > b + 30 && r >= g, 'tinted mustard (warm, not blue): ' + ybg);
-    assert.ok(yshadow.includes('inset') && !/\d+px \d+px \d+px/.test(yshadow.replace(/inset \d+px \d+px \d+px/, '')), 'a ring, no drop shadow: ' + yshadow);
+    assert.ok(/ 0px 0px 0px 1\.5px inset$/.test(yshadow), 'a ring, no drop shadow: ' + yshadow);
     assert.ok(yblur === 'none' || yblur === '');
     const [bbg] = await q('.card[data-color="blue"]', ['backgroundColor']);
-    const [br, bg2, bb] = bbg.match(/\d+/g).map(Number);
+    const [br, bg2, bb] = rgbOf(bbg);
     assert.ok(bg2 > br && bb >= br, 'a "blue" note is tinted teal (greenish blue, not iOS blue): ' + bbg);
     assert.equal(await page.$eval('.tchip', e => e.getAttribute('style').startsWith('--tc:var(--tc')), true, 'a tag takes one of the ten Retro colours (tokens), not a hue');
     assert.notEqual((await q('.tchip', ['color']))[0], 'rgb(0, 0, 0)');
@@ -167,6 +170,7 @@ for (const scheme of ['light', 'dark']) {
     assert.equal(await page.getAttribute('.swatch[data-sw="pink"]', 'aria-checked'), 'true');
     await page.click('#edPrivate');
     assert.equal(await page.getAttribute('#edPrivate', 'aria-checked'), 'true');
+    await page.waitForTimeout(400);
     assert.equal((await q('#edPrivate .switch', ['backgroundColor']))[0], teal, 'a switch that is on is teal');
     await page.click('#edPrivate');
     await shot(page, '03-editor-' + scheme);
@@ -302,13 +306,12 @@ for (const scheme of ['light', 'dark']) {
     assert.equal((await q('#cook', ['backgroundColor'], '::before'))[0], 'rgb(227, 167, 47)', 'a mustard sun');
     assert.equal((await q('#ckCard', ['backgroundColor']))[0], cream);
     assert.equal((await q('#ckBar', ['backgroundColor']))[0], teal);
-    await page.click('#ckDots + #ckNext').catch(() => {});
     await page.click('#ckNext');
     await page.waitForTimeout(400);
     assert.match(await page.textContent('#ckCard'), /Step 1 of 2/);
     await shot(page, '06-cook-' + scheme);
     await page.click('#ckClose');
-    await page.click('#edDelete').catch(() => {});
+    await page.click('#edBack');
     await page.waitForTimeout(300);
   });
 

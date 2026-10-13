@@ -88,7 +88,9 @@
         'Meals: deals from eight stores near Apex, and plans built from them',
         'Home: an "Away from the house" pill, and the room\'s temperature up front',
         'Drinks: a new Analysis page'],
-      notes: ['aOS: notifications. Under your account, from the Home Screen app, turn them on; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
+      notes: ['New: a Vintage design for Notes, Podcasts, Places and Meals, so every app has one (pick it on the app\'s page in aOS)',
+        'Meals and Podcasts can keep a readable copy in a Google Sheet of your own (Meals: every plan, the list, deals; Podcasts: shows, saved episodes and history); Orders\' Sheet gets a Log tab of every order, status change and deletion',
+        'aOS: notifications. Under your account, from the Home Screen app, turn them on; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
         'News: tap the sparkle on a story for Claude\'s two-sentence summary and key takeaways, then ask questions about the article (signed-in family; a summary is kept for a week for everyone, and each person gets 60 a day)',
         'News: the topics (UK, US, AI and the rest) are a drop-down pill at the bottom, the same as Home\'s, each with its own icon',
         'News: Sport > Scores shows the Premier League first, with a pill to pick another league (or all of them), for scores and for Coming up; Liverpool, England and the other team buttons are tucked into one My teams pill',
@@ -189,7 +191,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
@@ -206,11 +208,15 @@
     travel: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'travel' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'travelvintage' }],
     fitness: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'fitness' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'fitnessvintage' }],
     drinks: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'drinks' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'drinksvintage' }],
+    notes: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'notes' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'notesvintage' }],
+    podcasts: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'podcasts' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'podcastsvintage' }],
+    places: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'places' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'placesvintage' }],
+    meals: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'meals' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mealsvintage' }],
   };
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', notesvintage: 'Notes', podcastsvintage: 'Podcasts', placesvintage: 'Places', mealsvintage: 'Meals', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "newsvintage": {
@@ -420,6 +426,146 @@
           "i": "share",
           "t": "Its own app",
           "d": "This design is its own app: it keeps its own settings and uses Calendar's iCloud connection and layers, so the standard Calendar stays just as it is. Use either, or both."
+        }
+      ]
+    },
+    "notesvintage": {
+      "tag": "Notes, reminders and lists, mid-century style",
+      "cards": [
+        {
+          "i": "star",
+          "t": "A vintage look",
+          "d": "The same Notes in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
+        },
+        {
+          "i": "note",
+          "t": "Notes with #tags",
+          "d": "Type a #tag anywhere to file a note into a collection. Pin, color and search your notes too."
+        },
+        {
+          "i": "check",
+          "t": "Quick reminders",
+          "d": "Type \"Call mom tomorrow #family\" and it's set. See Today, Upcoming and Flagged at a glance."
+        },
+        {
+          "i": "list",
+          "t": "Smart grocery lists",
+          "d": "Grocery items sort into store sections in aisle order, and it learns where you like things to go."
+        },
+        {
+          "i": "sparkle",
+          "t": "Paste from anywhere",
+          "d": "Copy a reply from Claude or anywhere, tap the clipboard button, and it becomes a note or a list of reminders."
+        },
+        {
+          "i": "share",
+          "t": "Its own app",
+          "d": "This design is its own app: it keeps its own notes, lists and settings, so the standard Notes stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step."
+        }
+      ]
+    },
+    "podcastsvintage": {
+      "tag": "Your shows, ready to play, mid-century style",
+      "cards": [
+        {
+          "i": "star",
+          "t": "A vintage look",
+          "d": "The same Podcasts in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
+        },
+        {
+          "i": "play",
+          "t": "Up Next",
+          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
+        },
+        {
+          "i": "search",
+          "t": "Find new shows",
+          "d": "Browse Apple's Top shows, search by name, or paste a show's feed link. Private and premium feeds work too."
+        },
+        {
+          "i": "clock",
+          "t": "Listen your way",
+          "d": "Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV."
+        },
+        {
+          "i": "refresh",
+          "t": "Resume where you left off",
+          "d": "Each episode resumes right where you stopped, and the next one in Up Next plays when it ends."
+        },
+        {
+          "i": "share",
+          "t": "Its own app",
+          "d": "This design is its own app: it keeps its own shows, progress and settings, so the standard Podcasts stays just as it is. Use either, or both, and move your shows across with Export and Import."
+        }
+      ]
+    },
+    "placesvintage": {
+      "tag": "Where to go, and where you've been, mid-century style",
+      "cards": [
+        {
+          "i": "star",
+          "t": "A vintage look",
+          "d": "The same Places in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
+        },
+        {
+          "i": "list",
+          "t": "Want to go and Been",
+          "d": "Keep two lists: places you want to try and places you've been. Tap Been to move a place across."
+        },
+        {
+          "i": "map",
+          "t": "Your places on a map",
+          "d": "Pins show blue for Want to go and gold for Been. Touch and hold anywhere on the map to add a spot."
+        },
+        {
+          "i": "search",
+          "t": "Find somewhere new",
+          "d": "Search \"tacos\" or a name to find nearby businesses, or zoom in to see food, things to do and shops."
+        },
+        {
+          "i": "star",
+          "t": "Rate and remember",
+          "d": "Add stars, price and notes with #tags, and Places keeps track of every visit."
+        },
+        {
+          "i": "share",
+          "t": "Its own app",
+          "d": "This design is its own app: it keeps its own places, so the standard Places stays just as it is. Use either, or both, and give them the same Google Sheet (Notes’) to keep them in step."
+        }
+      ]
+    },
+    "mealsvintage": {
+      "tag": "Dinner for the family, for less, mid-century style",
+      "cards": [
+        {
+          "i": "star",
+          "t": "A vintage look",
+          "d": "The same Meals in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
+        },
+        {
+          "i": "calendar",
+          "t": "A week of dinners",
+          "d": "Pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine."
+        },
+        {
+          "i": "tag",
+          "t": "This week's deals",
+          "d": "Your Whole Foods' sales, found for you or pasted from its app, sorted like a grocery list."
+        },
+        {
+          "i": "list",
+          "t": "One shopping list",
+          "d": "Everything the dinners need in one list, sorted by aisle, with what's on sale. Tick it off in the store."
+        },
+        {
+          "i": "shield",
+          "t": "Safe for the family",
+          "d": "Every plan is checked against your family's allergies before it's kept."
+        },
+        {
+          "i": "share",
+          "t": "Its own app",
+          "d": "This design is its own app: it shares the family’s plans, deals and settings with the standard Meals, so a plan made in either shows in both. Use either, or both."
         }
       ]
     },
@@ -1717,6 +1863,10 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     drinksvintage: "The same Drinks in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
     weathervintage: "The same Weather in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
     calendarvintage: "The same Calendar in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
+    notesvintage: "The same Notes in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
+    podcastsvintage: "The same Podcasts in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
+    placesvintage: "The same Places in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
+    mealsvintage: "The same Meals in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
   };
   const OWN_TEXT = {
     newsvintage: "This design is its own app: it keeps its own topic and team choices and reads the same headlines, so the standard News stays just as it is. Use either, or both.",
@@ -1725,6 +1875,10 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     drinksvintage: "This design is its own app: it keeps its own copy of your log on the phone and shares your private log with Drinks through your account, so a drink logged in either shows in both. Use either, or both.",
     weathervintage: "This design is its own app: it keeps its own saved places and settings, so the standard Weather stays just as it is. Use either, or both.",
     calendarvintage: "This design is its own app: it keeps its own settings and uses Calendar's iCloud connection and layers, so the standard Calendar stays just as it is. Use either, or both.",
+    notesvintage: "This design is its own app: it keeps its own notes, lists and settings, so the standard Notes stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.",
+    podcastsvintage: "This design is its own app: it keeps its own shows, progress and settings, so the standard Podcasts stays just as it is. Use either, or both, and move your shows across with Export and Import.",
+    placesvintage: "This design is its own app: it keeps its own places, so the standard Places stays just as it is. Use either, or both, and give them the same Google Sheet (Notes’) to keep them in step.",
+    mealsvintage: "This design is its own app: it shares the family’s plans, deals and settings with the standard Meals, so a plan made in either shows in both. Use either, or both.",
   };
   // A Vintage design is its base app's page in another look, so its tour is the base app's stops, with the
   // look first and "its own app" last (the base app's first and last controls are what they point at).
@@ -1735,6 +1889,10 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     drinksvintage: "drinks",
     weathervintage: "weather",
     calendarvintage: "calendar",
+    notesvintage: "notes",
+    podcastsvintage: "podcasts",
+    placesvintage: "places",
+    mealsvintage: "meals",
   };
   for (const [v, base] of Object.entries(VINTAGE_TOURS)) {
     const src = SPOTS[base]; if (!src) continue;

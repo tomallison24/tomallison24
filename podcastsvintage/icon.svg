@@ -1,17 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream broadcast signal (a dot, a stem and two arcs, as in Podcasts) on aubergine, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
-  <defs>
-    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <g transform="translate(256 262) scale(.8) translate(-256 -246)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="32">
-        <path d="M179 324a110 110 0 1 1 154 0"/>
-        <path d="M128 376a182 182 0 1 1 256 0"/>
-        <circle cx="256" cy="246" r="43" fill="#fff" stroke="none"/>
-        <rect x="239" y="296" width="34" height="124" rx="17" fill="#fff" stroke="none"/>
-      </g>
-    </mask>
-  </defs>
-  <rect width="512" height="512" fill="#6C4E8E"/>
+  <!-- Mid-century modern, Retro colours: the podcasts glyph in cream on #7A4A8C, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. the standard app has its own sea glass icon. -->
+  <defs></defs>
+  <rect width="512" height="512" fill="#7A4A8C"/>
   <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
-  <rect x="40" y="416" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 135 441)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 100 443)"/>
+  <g>
+    <g transform="scale(.5)"><g fill="none" stroke="#FBF5E9" stroke-linecap="round" stroke-width="56">
+      <path d="M358 648a220 220 0 1 1 308 0"/>
+      <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+    </g>
+    <circle cx="512" cy="492" r="86" fill="#FBF5E9"/>
+    <rect x="478" y="600" width="68" height="236" rx="34" fill="#FBF5E9"/></g>
+  </g>
 </svg>
