@@ -162,6 +162,17 @@ for (const scheme of ['dark', 'light']) {
     }
   });
 
+  await test(`${scheme}: the gear opens Settings, titled Settings with a Done tick, and the sub-views get a Close cross`, async () => {
+    await page.click('#gear');
+    await page.waitForFunction(() => document.getElementById('sheetWrap').classList.contains('open'));
+    assert.equal((await page.textContent('#sheetTitle')).trim(), 'Settings');
+    assert.equal(await page.getAttribute('#sheetClose', 'aria-label'), 'Done');
+    assert.ok(await page.$('#sheetClose.okbtn'), 'the Done tick is the main button');
+    assert.ok(await page.$('#sheetWrap .label'), 'labelled sections');
+    await page.click('#sheetClose'); await page.waitForTimeout(500);
+    assert.ok(!(await page.evaluate(() => document.getElementById('sheetWrap').classList.contains('open'))), 'Done closes it');
+  });
+
   await test(`${scheme}: no script errors, nothing blocked by the page's policy`, async () => {
     const csp = await page.evaluate(() => window.__csp || []);
     assert.deepEqual([...errors, ...csp.map(c => 'blocked: ' + c)], []);

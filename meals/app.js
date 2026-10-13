@@ -411,7 +411,7 @@ if (window.top !== window.self) {
       + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>').join('') + '</div>'
       + '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
       + '<p class="hint">“Tree nuts” covers almonds, cashews, pecans, walnuts, pistachios, pine nuts, pesto and the like; peanuts are fine. Anything else you add is checked by its name.</p>'
-      + '<p class="label">Google Sheet</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
+      + '<p class="label">Backup Log</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
       + '<p class="hint">A readable copy of the plans, the shopping list and the deals. One way: nothing typed in the Sheet comes back.</p>'
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }

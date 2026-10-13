@@ -1393,24 +1393,28 @@ function tidyHTML() {
   const last = Number(ls.get(K.tidied, 0)), keeps = tidyKeeps(), on = tidyOn();
   const mon = mktSortOn(), mlast = Number(ls.get(K.mktSorted, 0));
   const since = t => ' Last run ' + (ago(t) === 'now' ? 'just now' : ago(t) + ' ago') + '.';
-  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><b>Inbox clean-up</b></div>' +
-    '<div class="field"><span>Move marketing out of the inbox</span><button class="switch" role="switch" data-act="mkt-toggle" aria-checked="' + mon + '" aria-label="Move marketing out of the inbox"></button></div>' +
-    '<p class="note">As the app opens, Gmail’s Promotions (and Cars.com’s saved-search alerts) go to ' + esc(settings.label) + ', which is emptied after ' + settings.days + ' days.' +
+  const sw = (act, v, label) => '<div class="frow"><span class="l">' + label + '</span><button class="switch" role="switch" data-act="' + act + '" aria-checked="' + v + '" aria-label="' + label + '"></button></div>';
+  return '<p class="label">Inbox clean-up</p>' +
+    '<div class="sgroup">' + sw('mkt-toggle', mon, 'Move marketing out of the inbox') + '</div>' +
+    '<p class="hint">As the app opens, Gmail’s Promotions (and Cars.com’s saved-search alerts) go to ' + esc(settings.label) + ', which is emptied after ' + settings.days + ' days.' +
       (mon && mlast ? since(mlast) : '') + '</p>' +
-    '<div class="field"><span>Tidy old unread mail</span><button class="switch" role="switch" data-act="tidy-toggle" aria-checked="' + on + '" aria-label="Tidy old unread mail"></button></div>' +
-    '<p class="note">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger, under “' + TIDY_LABEL + '” (kept, never deleted).' +
-      (on && last ? since(last) : '') + '</p>' +
-    '<p class="note">Banks, alerts, receipts, tagged mail and people you’ve written to always stay.</p>' +
-    '<div class="field"><button class="textbtn" data-act="tidy-preview">Preview Tidy</button><button class="textbtn" data-act="tidy-see">See tidied mail</button></div>' +
-    (keeps.length ? '<div class="field"><span>Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
-      (showKeeps ? keeps.map(e => '<div class="blocked"><span>' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '');
+    '<div class="sgroup">' + sw('tidy-toggle', on, 'Tidy old unread mail') + '</div>' +
+    '<p class="hint">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger, under “' + TIDY_LABEL + '” (kept, never deleted).' +
+      (on && last ? since(last) : '') + ' Banks, alerts, receipts, tagged mail and people you’ve written to always stay.</p>' +
+    '<div class="sgroup">' +
+      '<button class="rowbtn" type="button" data-act="tidy-preview"><span class="ic">' + ICON.eye + '</span><span>Preview Tidy<span class="sub">What it would archive, before anything is changed</span></span></button>' +
+      '<button class="rowbtn" type="button" data-act="tidy-see"><span class="ic">' + ICON.archive + '</span><span>See tidied mail<span class="sub">Everything Tidy has archived</span></span></button>' +
+      (keeps.length ? '<div class="frow"><span class="l">Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
+        (showKeeps ? keeps.map(e => '<div class="frow"><span class="l">' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '') +
+    '</div>';
 }
 
 // The preview: what would go, grouped by sender, and what is kept and why.
 let tidyPreview = null;
+let backToSettings = false;
 async function openTidyPreview() {
   const el = $('#sheet');
+  backToSettings = !!state.sheet?.settings;
   state.sheet = { tidy: true };
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Tidy preview">' +
     '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note" id="tidy-progress">' + ICON.spin + ' Nothing is changed yet.</p>' +
@@ -1666,7 +1670,6 @@ const MENU_ICON = {
 
 // What the title says: the mailbox or tag on screen.
 function viewName() {
-  if (state.view === 'settings') return 'Settings';
   if (state.view === 'rules') return 'Tags';
   if (state.view === 'marketing') return settings.label;
   return catOf(state.tag)?.name || (state.tag === 'STARRED' ? 'Flagged' : labelsById.get(state.tag)?.name) || 'Inbox';
@@ -1746,7 +1749,7 @@ function slideSeg(jump) {
   slide(seg, on, 'unread', { jump });
 }
 function slideNotify(jump) {
-  const g = screen.querySelector('.notify-modes');
+  const g = document.querySelector('.notify-modes');
   if (g) slide(g, g.querySelector('[aria-checked="true"]'), 'notify', { jump });
 }
 let tagPicks = 0;                   // each tag sheet starts afresh: its thumb appears where it's picked
@@ -1758,7 +1761,7 @@ function slideTags(jump) {
 // Everything around the list: the header, its title menu, and the select bar.
 function renderChrome() {
   const signedIn = !!getToken() && !!clientId();
-  const main = signedIn && state.view !== 'settings';
+  const main = signedIn;
   const listView = main && state.view !== 'rules';
   const items = listView ? state.lists[currentList().key]?.items || [] : [];
   if (state.select && !listView) state.select = null;
@@ -1770,7 +1773,7 @@ function renderChrome() {
   $('#find').classList.toggle('hide', !main || !!sel || searching || state.view === 'rules');
   $('#home').classList.toggle('hide', !signedIn || !!sel);
   $('#gear').classList.toggle('hide', !signedIn || !!sel);
-  $('#gear').setAttribute('aria-label', state.view === 'settings' ? 'Close settings' : 'Settings');
+  $('#gear').setAttribute('aria-label', 'Settings');
   $('#edit').classList.toggle('hide', !listView || (!items.length && !sel));
   $('#edit').textContent = sel ? 'Done' : 'Edit';
   $('#selall').classList.toggle('hide', !sel);
@@ -1801,10 +1804,13 @@ function renderChrome() {
 }
 
 function render() {
+  renderMain();
+  if (state.sheet?.settings) paintSettings();
+}
+function renderMain() {
   renderChrome();
   if (!clientId()) return paint(viewSetup());
   if (!getToken()) return paint(viewSignIn());
-  if (state.view === 'settings') return paint(viewSettings());
   if (state.view === 'rules') return paint(viewRules());
   return paint(viewList());
 }
@@ -1960,24 +1966,55 @@ function viewRules() {
 }
 
 function viewSettings() {
-  return '<div class="card panel">' +
-    '<div class="field"><label for="days">Delete after</label>' +
-      '<span><input type="number" id="days" min="1" max="30" value="' + settings.days + '"> days</span></div>' +
-    '<div class="field"><label for="lab">Bucket label</label>' +
-      '<input type="text" id="lab" style="width:150px" value="' + esc(settings.label) + '"></div>' +
-    '<button class="btn ghost" data-act="save-settings">Save</button>' +
-    '<p class="note">Mail is moved to the Trash, where Gmail deletes it for good after 30 days — so there is always a way back.</p>' +
-    '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><span>Signed in</span><span>' + esc(state.me || '—') + '</span></div>' +
-    '<div class="field"><span>Filter permission</span><span>' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
-    '<div class="field"><span>Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div>' +
+  const ic = s => '<span class="ic">' + s + '</span>';
+  const UP = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.6"/><path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0"/><path d="M16.6 5a3.4 3.4 0 0 1 0 6.6"/><path d="M18.2 14a5.6 5.6 0 0 1 3 5.2"/></svg>';
+  const OUT = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M10 4H6.8A2.8 2.8 0 0 0 4 6.8v10.4A2.8 2.8 0 0 0 6.8 20H10"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9.6"/></svg>';
+  return '<p class="label">Account</p>' +
+    '<div class="sgroup">' +
+      '<div class="frow"><span class="l">Signed in</span><span class="v">' + esc(state.me || '—') + '</span></div>' +
+      '<div class="frow"><span class="l">Filter permission</span><span class="v">' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
+      '<button class="rowbtn" type="button" data-act="signin-pick">' + ic(UP) + '<span>Switch account</span></button>' +
+      '<button class="rowbtn danger" type="button" data-act="signout">' + ic(OUT) + '<span>Sign out</span></button>' +
+    '</div>' +
+    '<p class="label">Marketing</p>' +
+    '<div class="sgroup">' +
+      '<div class="frow"><label for="lab">Bucket label</label><input type="text" id="lab" maxlength="40" value="' + esc(settings.label) + '" autocomplete="off"></div>' +
+      '<div class="frow"><label for="days">Delete after</label><span class="num"><input type="number" id="days" min="1" max="30" value="' + settings.days + '"> days</span></div>' +
+    '</div>' +
+    '<p class="hint">Mail is moved to the Trash, where Gmail deletes it for good after 30 days — so there is always a way back. The tick saves these two.</p>' +
     tidyHTML() +
+    '<p class="label">App icon</p>' +
+    '<div class="sgroup"><div class="frow"><span class="l">Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div></div>' +
     notifyHTML() +
     blockedHTML() +
-    '<button class="btn ghost" data-act="signin-pick">Switch account</button>' +
-    '<button class="btn warn" data-act="signout">Sign out</button>' +
-    '<p class="note">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>' +
-  '</div>';
+    '<p class="hint">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>';
+}
+
+// Settings is a sheet over whatever Mail is showing, as in every other app. It is
+// repainted by render(), so a switch or a list that changed shows at once.
+function openSettings() {
+  closeSheet(true);
+  state.sheet = { settings: true };
+  const el = $('#sheet');
+  el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
+    '<div class="sheet sset" role="dialog" aria-modal="true" aria-label="Settings">' +
+      '<div class="grab"></div>' +
+      '<div class="sheethead"><h2>Settings</h2><div class="acts"><button class="iconbtn okbtn" type="button" data-act="settings-done" aria-label="Done">' + MENU_ICON.tick.replace('width="16" height="16"', 'width="22" height="22"') + '</button></div></div>' +
+      '<div class="sheetbody" id="stBody"></div>' +
+    '</div>';
+  el.classList.remove('hide', 'leaving');
+  paintSettings();
+}
+
+function paintSettings() {
+  const body = $('#stBody');
+  if (!body || !state.sheet?.settings) return;
+  const keep = ['days', 'lab', 'push-url'].map(id => { const e = document.getElementById(id); return e && { id, v: e.value, f: document.activeElement === e }; }).filter(Boolean);
+  const top = body.scrollTop;
+  body.innerHTML = viewSettings();
+  for (const k of keep) { const e = document.getElementById(k.id); if (e) { e.value = k.v; if (k.f) e.focus({ preventScroll: true }); } }
+  body.scrollTop = top;
+  slideNotify();
 }
 
 // ---------------------------------------------------------------------------
@@ -1996,20 +2033,25 @@ const NOTIFY_MODES = () => [
 
 function notifyHTML() {
   const on = notifyMode(), url = pushUrl();
-  const hr = '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">';
   if (!url) {
-    return hr + '<div class="field"><span>New-mail notifications</span><span>not set up</span></div>' +
-      '<p class="note">These need the small notification server in <code>mail/push</code> (see the README, “Notifications”). Once it is deployed, paste its address:</p>' +
-      '<div class="field"><input type="url" id="push-url" placeholder="https://mail-push….workers.dev" style="width:100%" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
-      '<button class="btn ghost" data-act="push-url-save">Save address</button>';
+    return '<p class="label">Notifications</p>' +
+      '<div class="sgroup">' +
+        '<div class="frow"><span class="l">New-mail notifications</span><span class="v">not set up</span></div>' +
+        '<div class="frow"><input type="url" id="push-url" placeholder="https://mail-push….workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Notification server address"></div>' +
+        '<button class="rowbtn" type="button" data-act="push-url-save"><span>Save address</span></button>' +
+      '</div>' +
+      '<p class="hint">These need the small notification server in <code>mail/push</code> (see the README, “Notifications”). Once it is deployed, paste its address.</p>';
   }
-  return hr + '<div class="field"><span>New-mail notifications</span><span>' + (on ? 'On' : 'Off') + '</span></div>' +
+  return '<p class="label">Notifications</p>' +
+    '<div class="sgroup"><div class="frow"><span class="l">New-mail notifications</span><span class="v">' + (on ? 'On' : 'Off') + '</span></div></div>' +
     '<div class="notify-modes" role="radiogroup" aria-label="Notify me about">' +
       NOTIFY_MODES().map(([id, label]) => '<button class="textbtn" role="radio" data-act="notify-mode" data-mode="' + id + '" aria-checked="' + (on === id) + '">' + esc(label) + '</button>').join('') +
     '</div>' +
-    (on ? '<div class="field"><button class="textbtn" data-act="notify-test">Send a test</button><button class="textbtn" data-act="notify-off">Turn off</button></div>' : '') +
-    '<p class="note">From ' + esc(url.replace(/^https:\/\//, '')) + '. It sees senders and subjects, never what an email says; the notification itself is encrypted for this phone.</p>' +
-    '<button class="btn ghost" data-act="push-url-change">Change server</button>';
+    '<div class="sgroup">' +
+      (on ? '<button class="rowbtn" type="button" data-act="notify-test"><span>Send a test</span></button><button class="rowbtn" type="button" data-act="notify-off"><span>Turn off</span></button>' : '') +
+      '<button class="rowbtn" type="button" data-act="push-url-change"><span>Change server</span></button>' +
+    '</div>' +
+    '<p class="hint">From ' + esc(url.replace(/^https:\/\//, '')) + '. It sees senders and subjects, never what an email says; the notification itself is encrypted for this phone.</p>';
 }
 
 async function pushCall(path, body) {
@@ -2088,14 +2130,14 @@ async function openThreadById(id) {
 function blockedHTML() {
   if (!canFilter()) return '';
   if (!filtersCache) {
-    refreshFilters().then(() => { if (state.view === 'settings') render(); }).catch(() => {});
+    refreshFilters().then(() => { if (state.sheet?.settings) render(); }).catch(() => {});
     return '';
   }
   const list = blockedList();
-  return '<hr style="border:0;border-top:1px solid var(--hair);margin:2px 0">' +
-    '<div class="field"><span>Blocked senders</span><span>' + (list.length || 'none') + '</span></div>' +
-    list.map(b => '<div class="blocked"><span>' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') +
-    (list.length ? '<p class="note">Unblocking lets their new mail in. Anything already in the Trash stays there until Gmail empties it after 30 days.</p>' : '');
+  return '<p class="label">Blocked senders</p>' +
+    '<div class="sgroup"><div class="frow"><span class="l">Blocked senders</span><span class="v">' + (list.length || 'none') + '</span></div>' +
+    list.map(b => '<div class="frow"><span class="l">' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') + '</div>' +
+    (list.length ? '<p class="hint">Unblocking lets their new mail in. Anything already in the Trash stays there until Gmail empties it after 30 days.</p>' : '');
 }
 
 
@@ -3121,8 +3163,10 @@ function closeSheet(instant) {
   if (confirmDone) { const done = confirmDone; confirmDone = null; done(null); }
   if (state.sheet?.url) { const u = state.sheet.url; state.sheet.url = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
   if (el.classList.contains('hide')) return;
+  const back = backToSettings && !state.sheet?.settings;
+  backToSettings = false;
   state.sheet = null;
-  const finish = () => { if (state.sheet) return; el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; };
+  const finish = () => { if (state.sheet) return; el.classList.add('hide'); el.classList.remove('leaving'); el.innerHTML = ''; if (back && getToken()) openSettings(); };
   if (reduced || instant === true) return finish();
   el.classList.add('leaving');
   setTimeout(finish, 280);
@@ -3133,7 +3177,7 @@ function closeSheet(instant) {
 let sheetDrag = null;
 document.addEventListener('pointerdown', e => {
   const sh = e.target.closest('#sheet .sheet');
-  if (!sh || e.button > 0 || e.target.closest('button, input, textarea, a, select, label')) return;
+  if (!sh || e.button > 0 || e.target.closest('button, input, textarea, a, select, label, .sheetbody')) return;
   sheetDrag = { sh, id: e.pointerId, y0: e.clientY, t0: performance.now(), dy: 0 };
 });
 document.addEventListener('pointermove', e => {
@@ -3214,7 +3258,7 @@ function retryLater() {
   if (retryTimer) return;
   retryTimer = setTimeout(() => {
     retryTimer = null;
-    if (!state.reading && state.view !== 'settings' && state.view !== 'rules') loadList({ force: true, quiet: true });
+    if (!state.reading && state.view !== 'rules') loadList({ force: true, quiet: true });
   }, Math.max(1000, slowUntil - Date.now()));
 }
 
@@ -3260,7 +3304,7 @@ async function loadProfile() {
     const p = await api('/profile');
     state.me = p.emailAddress;
     ls.set(K.hint, p.emailAddress);          // names the account for silent renewal
-    if (state.view !== 'settings') $('#sub').textContent = state.me;
+    $('#sub').textContent = state.me;
   } catch {}
 }
 
@@ -3268,7 +3312,7 @@ async function loadProfile() {
 function go({ force } = {}) {
   render();
   if (state.view === 'rules') loadRules({ force });
-  else if (state.view !== 'settings') loadList({ force });
+  else loadList({ force });
 }
 
 // ---------------------------------------------------------------------------
@@ -3670,7 +3714,7 @@ addEventListener('scroll', () => document.body.classList.toggle('scrolled', scro
 const PULL_SEARCH = 28, PULL_REFRESH = 70;
 let pull = null;
 const pullable = t => !state.select && !state.reading && !state.compose && !state.sheet && getToken() &&
-  state.view !== 'settings' && !boxMenuOpen() && !t.closest('#boxmenu, input, textarea, #sheet, #reader, #compose, #selbar, #toast');
+  !boxMenuOpen() && !t.closest('#boxmenu, input, textarea, #sheet, #reader, #compose, #selbar, #toast');
 function pullStart(y, t) {
   if (scrollY > 0 || !pullable(t)) return;
   pull = { y0: y, d: 0, on: false };
@@ -3720,10 +3764,7 @@ addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && pull) pullMove(e.clientY, null); });
 addEventListener('pointerup', e => { if (e.pointerType === 'mouse') pullEnd(); });
 
-$('#gear').addEventListener('click', () => {
-  state.view = state.view === 'settings' ? 'inbox' : 'settings';
-  go();
-});
+$('#gear').addEventListener('click', () => { if (state.sheet?.settings) closeSheet(); else openSettings(); });
 
 function findItem(id) {
   if (state.reading?.item.id === id) return state.reading.item;
@@ -3819,16 +3860,18 @@ document.addEventListener('click', async e => {
     case 'forget-cid': ls.del(K.clientId); return render();
     case 'signin': return signIn();
     case 'signin-pick': return signIn({ chooseAccount: true });
-    case 'signout': state.view = 'inbox'; state.lists = {}; return signOut();
+    case 'signout': closeSheet(true); state.view = 'inbox'; state.lists = {}; return signOut();
 
-    case 'save-settings': {
-      const d = Math.max(1, Math.min(30, parseInt($('#days').value, 10) || 3));
-      const name = ($('#lab').value || 'Marketing').trim();
-      const changed = name !== settings.label;
+    case 'settings-done': {
+      const dEl = $('#days'), lEl = $('#lab');
+      const d = dEl ? Math.max(1, Math.min(30, parseInt(dEl.value, 10) || settings.days)) : settings.days;
+      const name = lEl ? (lEl.value || '').trim() || 'Marketing' : settings.label;
+      const changed = name !== settings.label, daysChanged = d !== settings.days;
       settings.days = d; settings.label = name;
+      closeSheet();
+      if (!changed && !daysChanged) return;
       if (changed) { labelsPromise = null; state.lists = {}; state.rules = null; }
       toast('Saved');
-      state.view = 'inbox';
       return go({ force: changed });
     }
 
@@ -4073,6 +4116,7 @@ document.addEventListener('click', async e => {
       return go();
     }
     case 'tidy-see':
+      closeSheet(true); backToSettings = false;
       state.view = 'inbox'; state.tag = null;
       state.search = 'label:' + TIDY_LABEL; state.showSearch = true;
       if ($('#q')) $('#q').value = state.search;
