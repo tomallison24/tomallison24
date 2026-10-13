@@ -21,16 +21,40 @@ and Orders Vintage (from the aOS Design Styles canvas):
 - an icon to match: a geometric cream "aOS" on teal with a mustard sun
   (`icon.svg`, drawn into the PNGs by `scripts/make-icons.mjs`).
 
-It is the last block of the style sheet in `index.html`; the Sea glass styles
-above it are still there underneath. The apps' own icons in the list keep their
-look, and the Welcome and update screens the apps share (`home/welcome.js`) are
-unchanged. The status bar is `default`, not `black-translucent`, which always
-draws the clock white and would vanish on the cream.
+It is its own `<style id="vintage">` block in `index.html`, after the Sea glass
+styles, which are still there underneath.
+
+**Look picker.** Two places, the same choice. In Safari, the first install step
+(**Choose your look**, `home/welcome.js` `playInstall`) comes before the steps for
+adding aOS to the Home Screen, since iOS takes the icon, status bar style and
+address then. Afterward, under your account (the avatar), Appearance > **Look**.
+**Vintage** is the default; **Sea glass** is the original. The choice is kept on
+that phone (`localStorage` `aos.look`), not in the family account.
+
+The Home Screen app has storage of its own, apart from Safari's, so the choice made
+in Safari travels two ways: `?look=` on the address in Safari (which is what iOS adds)
+and an `aos_look` cookie. On its first launch, with nothing stored yet, the app takes
+whichever it finds and keeps it; after that its own storage decides. Sea glass also
+means the Sea glass icon (`icon-glass-180.png`, `icon-glass-512.png`: the original
+icons) and the original status bar style (`black-translucent`; Vintage uses `default`).
+On Android, Chrome installs with the manifest's icon (Vintage's), so there the look is
+picked under the account after it is installed. `look.js` runs
+in `<head>`, after the styles and before the first paint: it sets `data-look` on
+`<html>`, switches the Vintage `<style>` off for Sea glass (`media="not all"`), and
+sets the two `theme-color` tints, so there is no flash of the other look. The
+family icon on Today follows it too. `scripts/look-test.mjs` covers it, `join-test.mjs` the install step.
+
+In either look the apps' own icons in the list keep their look, and the Welcome
+and update screens the apps share (`home/welcome.js`) are unchanged. The status
+bar is `default`, not `black-translucent`, which always draws the clock white and
+would vanish on the cream.
 
 ## The flow
 
-1. The aOS link opens in Safari: aOS shows how to add it to the Home Screen
-   (Safari's steps, animated) and nothing else.
+1. The aOS link opens in Safari: aOS asks for its look first (**Choose your look**:
+   Vintage or Sea glass, see "The look" below), because iOS takes the icon, the
+   status bar style and the address when it is added; then it shows how to add it
+   to the Home Screen (Safari's steps, animated, with the chosen icon) and nothing else.
 2. aOS opened from the Home Screen: the AllisonOS welcome and its tour, ending
    on the apps.
 3. An app tapped in aOS opens its own address with `?via=aos`. In Safari, or

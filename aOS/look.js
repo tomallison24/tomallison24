@@ -1,0 +1,53 @@
+// aOS's look: Vintage (mid-century modern, the default) or Sea glass. Picked in the install steps
+// before aOS is added to the Home Screen (home/welcome.js), or later under the account
+// (Appearance > Look). Loaded in <head> after the styles, so the page is drawn once, in the
+// right look. Vintage is the <style id="vintage"> block: Sea glass is that block switched off,
+// the styles above it showing as they always did.
+//
+// Where the choice is kept, and how it reaches the Home Screen app (which has storage of its
+// own, apart from Safari's): localStorage aos.look; and, for the install, ?look= on the
+// address added to the Home Screen and an aos_look cookie. The first launch from the Home
+// Screen takes whichever it finds, if nothing is stored yet, and keeps it.
+//
+// What iOS reads when the app is added follows the look too: the icon, the status bar style.
+'use strict';
+(() => {
+  const KEY = 'aos.look', root = document.documentElement;
+  // per look: [light, dark] status bar tints, the Home Screen icon (180, 512), the status bar style
+  const SET = {
+    vintage: { ground: ['#F4ECDD', '#241E1A'], icon: ['icon-180.png?v=3', 'icon-512.png?v=3'], bar: 'default' },
+    glass: { ground: ['#EEF2F0', '#0D1213'], icon: ['icon-glass-180.png?v=1', 'icon-glass-512.png?v=1'], bar: 'black-translucent' },
+  };
+  const ok = v => v === 'glass' || v === 'vintage' ? v : null;
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const fromCookie = () => ok((/(?:^|; )aos_look=(\w+)/.exec(document.cookie) || [])[1]);
+  const fromUrl = () => ok(new URLSearchParams(location.search).get('look'));
+  const stored = () => { try { return ok(localStorage.getItem(KEY)); } catch { return null; } };
+  const keep = look => { try { localStorage.setItem(KEY, look); } catch {} };
+  const apply = look => {
+    const s = SET[look];
+    root.setAttribute('data-look', look);
+    const mc = document.getElementById('vintage'); if (mc) mc.media = look === 'glass' ? 'not all' : 'all';
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = s.ground[/dark/.test(m.media) ? 1 : 0];
+    const bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (bar) bar.content = s.bar;
+    const touch = document.querySelector('link[rel="apple-touch-icon"]'); if (touch) touch.href = s.icon[0];
+    const tab = document.querySelector('link[rel="icon"]'); if (tab) tab.href = s.icon[1];
+  };
+  // stored first; else what the install carried over (address, then cookie), kept from now on
+  let look = stored();
+  if (!look) { look = fromUrl() || fromCookie(); if (look) keep(look); }
+  look = look || 'vintage';
+  window.aosLook = {
+    get: () => root.getAttribute('data-look') || look,
+    set(next) {
+      next = ok(next) || 'vintage';
+      keep(next);
+      try { document.cookie = 'aos_look=' + next + '; path=/aOS/; max-age=31536000; SameSite=Lax'; } catch {}
+      if (!standalone()) {   // the address added to the Home Screen carries it
+        try { const q = new URLSearchParams(location.search); q.set('look', next); history.replaceState(history.state, '', location.pathname + '?' + q + location.hash); } catch {}
+      }
+      apply(next); window.dispatchEvent(new Event('aos:look'));
+    },
+  };
+  apply(look);
+})();

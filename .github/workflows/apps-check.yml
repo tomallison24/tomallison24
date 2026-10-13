@@ -52,6 +52,8 @@ jobs:
       # notifications in aOS: turning them on and off, and the owner's composer, as on a phone
       - run: node aOS/scripts/notify-test.mjs
       - run: node aOS/scripts/designs-test.mjs
+      # aOS's Look picker: Vintage by default, Sea glass back under the account, kept on the phone
+      - run: node aOS/scripts/look-test.mjs
       # an app removed from an Android tablet: opened in Chrome it says so, and aOS shows Get
       - run: node aOS/scripts/android-installed-test.mjs
       # the newest release in the log: the right update screen in aOS and every app, or none

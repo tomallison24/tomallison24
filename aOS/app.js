@@ -193,7 +193,7 @@
   }
   function storyPage(i) {
     const s = STORIES[i];
-    page(`<div class="hero s${i}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:600;letter-spacing:-4px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
+    page(`<div class="hero s${i}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
       ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
@@ -263,11 +263,16 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
+  // Look: Vintage (mid-century, the default) or Sea glass, kept on this phone (look.js)
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
+  const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   function acctPage(at) {
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="glbl">Appearance</div>
       <div class="group"><div><div class="seg" id="theme" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
+      <div class="glbl">Look</div>
+      <div class="dlist" id="looks" role="listbox" aria-label="Look" style="margin-top:10px">${lookOpts()}</div>
       <div class="glbl" id="subscription">Subscription</div>
       <div class="group plans" id="plans"></div>
       <p class="note" id="planNote"></p>
@@ -277,6 +282,7 @@
       <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>`, { up: true });
     el.addEventListener('click', ev => {
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      const lk = ev.target.closest('[data-look]'); if (lk) { aosLook.set(lk.dataset.look); el.querySelector('#looks').innerHTML = lookOpts(); }
       if (ev.target.closest('[data-replay]')) W.play();
       onPlanTap(ev);
     });
@@ -304,19 +310,28 @@
   // The family card: aOS is curated for the Allison family. A greeting by name, and
   // everyone in the family (names only, for signed-in family).
   const FAMILY = 'Allison';
-  const FAMILY_ICON = `<svg class="ficon" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#1F6F6B"/><circle cx="52" cy="10" r="19" fill="#E3A72F"/>
+  const FAMILY_ICON_VINTAGE = `<svg class="ficon" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#1F6F6B"/><circle cx="52" cy="10" r="19" fill="#E3A72F"/>
       <path d="M32 8.6c-1.3-2.1-4.8-1.7-4.8 1.1 0 2.4 4.8 5.1 4.8 5.1s4.8-2.7 4.8-5.1c0-2.8-3.5-3.2-4.8-1.1z" fill="#D8572A"/><g fill="#FBF5E9">
       <circle cx="21.5" cy="22" r="6.2"/><path d="M10 46c0-7.4 5.2-12.6 11.5-12.6S33 38.6 33 46z"/>
       <circle cx="42.5" cy="22" r="6.2"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z"/></g>
       <g fill="#FBF5E9" stroke="#1F6F6B" stroke-width="2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
+  const FAMILY_ICON_GLASS = `<svg class="ficon" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fam-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9D3C7"/><stop offset=".35" stop-color="#B9C6E0"/><stop offset=".68" stop-color="#E3C5C3"/><stop offset="1" stop-color="#E9D6B4"/></linearGradient></defs>
+      <rect width="64" height="64" rx="18" fill="url(#fam-g)"/><g fill="#fff">
+      <path d="M32 8.6c-1.3-2.1-4.8-1.7-4.8 1.1 0 2.4 4.8 5.1 4.8 5.1s4.8-2.7 4.8-5.1c0-2.8-3.5-3.2-4.8-1.1z"/>
+      <circle cx="21.5" cy="22" r="6.2" opacity=".9"/><path d="M10 46c0-7.4 5.2-12.6 11.5-12.6S33 38.6 33 46z" opacity=".9"/>
+      <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
+      <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
+      <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
+  const familyIcon = () => aosLook.get() === 'glass' ? FAMILY_ICON_GLASS : FAMILY_ICON_VINTAGE;
+  addEventListener('aos:look', () => { if (state) paintHero(state); });   // the picker: the family icon follows the look
   let members = null;
   async function paintHero(st) {
     const u = st && st.user, h = new Date().getHours();
     const hello = u ? `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${esc(u.name.split(/\s+/)[0])}` : 'Welcome home';
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
-    $('famhero').innerHTML = `<div class="famhero">${FAMILY_ICON}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
+    $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
       <p>Every app here is chosen for our family: ${D.CORE.length} core apps and ${D.FAMILY.length} made just for us, with one account.</p></div>
       ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
