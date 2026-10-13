@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Drinks</title>
 <meta name="description" content="A simple log of what you drink: each day's standard drinks, alcohol-free days, and how this week or month compares with the one before.">
@@ -400,6 +400,26 @@ html.locked .dock{opacity:0;pointer-events:none}
 .toast span{min-width:0}
 .toast button{color:var(--accent-text);font-weight:600;flex:none;min-height:36px;padding:0 6px}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.toast{background:var(--bar-solid)}}
+/* ---- "Syncing" pill: pulses, with the sync arrows turning, while the Google Sheet syncs (as in Fitness) ---- */
+.updpill{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:40;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 11px;border-radius:999px;
+  font-size:14px;font-weight:600;color:var(--accent-text);background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);
+  box-shadow:var(--lg-rim),0 8px 24px var(--lift);transform:translateX(-50%);animation:updIn .5s var(--ease) both}
+.updpill svg{width:17px;height:17px;color:var(--icon)}
+.updpill.out{animation:updOut .45s ease both}
+@keyframes updIn{from{opacity:0;transform:translate(-50%,-14px) scale(.94)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes updOut{to{opacity:0;transform:translate(-50%,-10px) scale(.96)}}
+.syncpill{pointer-events:none;animation:updIn .5s var(--ease) both,syncPulse 1.6s ease-in-out .5s infinite}
+.syncpill .spin{animation:syncTurn 1.1s linear infinite}
+.syncpill .tick{display:none}
+.syncpill.done{animation:updIn .01s both}
+.syncpill.done .spin{display:none}
+.syncpill.done .tick{display:block;animation:popIn .3s var(--ease) both}
+.syncpill.out{animation:updOut .45s ease both}
+@keyframes syncTurn{to{transform:rotate(360deg)}}
+@keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:var(--lg-rim),0 8px 24px var(--lift),0 0 0 6px color-mix(in srgb,var(--accent) 22%,transparent)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.updpill{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
 
 @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 @keyframes rowIn{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
@@ -408,6 +428,8 @@ html.locked .dock{opacity:0;pointer-events:none}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+.stackform{display:flex;flex-direction:column;gap:14px}
+.stackform[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -464,9 +486,37 @@ html.locked .dock{opacity:0;pointer-events:none}
       <div class="sheetbody" id="moreBody"></div>
     </div>
   </div>
+  <!-- Google Sheet sync -->
+  <div class="sheetwrap" id="syncSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <form id="syForm" autocomplete="on" action="#" class="stackform">
+          <div class="rgroup">
+            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="The SECRET you set in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
+          <p class="hint">Set up the Sheet first (steps in the Drinks README; it is a Sheet of your own, and its Log tab holds your log). On a second phone, open the setup link from the first instead.</p>
+        </form>
+        <div id="syOn" class="stackform" hidden>
+          <div class="rgroup">
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Sync now<span class="sub">Sends your log to the Sheet and brings back rows you changed or added there</span></span></button>
+            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
+          </div>
+          <p class="hint">In the Sheet’s Log tab: change a row or add one and it comes back here. Set a drink’s Qty to 0 to remove it.</p>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" tabindex="-1" aria-hidden="true">
 
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
+  <div class="updpill syncpill" id="syncPill" role="status" hidden><svg class="spin" viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg><svg class="tick b" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg><span id="syncPillTxt">Syncing</span></div>
 </div>
 
 <script src="../home/slide.js"></script>
