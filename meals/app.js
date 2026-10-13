@@ -399,11 +399,9 @@ if (window.top !== window.self) {
     const s = data.settings, user = A() && A().user();
     const model = modelName();
     const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
-    $('setBody').innerHTML = '<div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
+    $('setBody').innerHTML = '<p class="label">Account</p><div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
-      + '<p class="label">Readable copy</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
-      + '<p class="hint">A readable copy of the plans, the shopping list and the deals. One way: nothing typed in the Sheet comes back.</p>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
       + (data.stores || STORES).map(x => '<button class="opt" type="button" role="checkbox" data-store="' + x.id + '" aria-checked="' + draft.stores.includes(x.id) + '">' + esc(x.name) + '</button>').join('') + '</div>'
       + '<p class="hint">Their deals, and plans across them. All near Apex and Cary.</p>'
@@ -413,7 +411,8 @@ if (window.top !== window.self) {
       + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>').join('') + '</div>'
       + '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
       + '<p class="hint">“Tree nuts” covers almonds, cashews, pecans, walnuts, pistachios, pine nuts, pesto and the like; peanuts are fine. Anything else you add is checked by its name.</p>'
-      + '<button class="btn okbtn" type="button" id="sSave">Save</button>'
+      + '<p class="label">Google Sheet</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
+      + '<p class="hint">A readable copy of the plans, the shopping list and the deals. One way: nothing typed in the Sheet comes back.</p>'
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
   let draftAvoid = null, draft = { stores: [], cards: [] };
@@ -434,11 +433,14 @@ if (window.top !== window.self) {
       if (!draftAvoid.includes(v)) { draftAvoid.push(v); $('avoid').insertAdjacentHTML('beforeend', '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(v) + '" aria-label="Remove ' + esc(v) + '">' + esc(cap(v)) + ' ✕</button>'); }
       $('sAdd').value = ''; return;
     }
-    if (e.target.closest('#sSave')) {
-      const body = { stores: draft.stores, cards: draft.cards, avoid: draftAvoid };
-      try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
-      catch (err) { toast(say(err.code), null, 6000); }
-    }
+  });
+  // Done (the tick) saves what was changed, then closes; with nothing changed it only closes
+  $('sSave').addEventListener('click', async () => {
+    const body = { stores: draft.stores, cards: draft.cards, avoid: draftAvoid }, was = data.settings;
+    const same = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
+    if (same(body.stores, was.stores) && same(body.cards, was.cards) && same(body.avoid, was.avoid)) return closeSheet('setSheet');
+    try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
+    catch (err) { toast(say(err.code), null, 6000); }
   });
 
   // Tabs

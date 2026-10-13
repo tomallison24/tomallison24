@@ -521,6 +521,11 @@ svg.fs{fill:currentColor}
 .lg .rowbtn:active,.lg .qrow:active{background:var(--lgs-field)}
 .lg .label{margin:0 8px}
 .lg .hint{text-align:center;margin:0 12px}
+#setSheet .sheetbody > *{flex-shrink:0}
+#setSheet .sheetbody > .label{margin:4px 8px -6px}
+#setSheet .sheetbody > .hint{text-align:start}
+#setSheet .opt{height:38px;padding:0 14px;gap:7px}
+#setSheet .opts{padding:0 4px}
 .lg .ephead{padding:4px 4px 0}
 .lg .opt{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
 .lg .opt[aria-checked="true"]{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--lgs-field));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--lgs-edge))}
@@ -922,34 +927,31 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
-        <div class="field"><p class="label">Skip back</p><div class="opts" id="setBack" role="radiogroup" aria-label="Skip back"></div></div>
-        <div class="field"><p class="label">Skip forward</p><div class="opts" id="setFwd" role="radiogroup" aria-label="Skip forward"></div></div>
-        <div class="field">
-          <p class="label">When an episode ends</p>
-          <div class="opts" id="setAuto" role="radiogroup" aria-label="When an episode ends"></div>
+        <p class="label">Skip back</p>
+        <div class="opts" id="setBack" role="radiogroup" aria-label="Skip back"></div>
+        <p class="label">Skip forward</p>
+        <div class="opts" id="setFwd" role="radiogroup" aria-label="Skip forward"></div>
+        <p class="label">When an episode ends</p>
+        <div class="opts" id="setAuto" role="radiogroup" aria-label="When an episode ends"></div>
+        <p class="label">Top shows from</p>
+        <div class="opts" id="setCc" role="radiogroup" aria-label="Top shows from"></div>
+        <p class="label">Google Sheet</p>
+        <div class="rgroup glass">
+          <button class="rowbtn" type="button" id="setSheetBtn">
+            <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
+            <span>Google Sheet backup<span class="sub" id="sheetSub">Not connected</span></span>
+          </button>
         </div>
-        <div class="field"><p class="label">Top shows from</p><div class="opts" id="setCc" role="radiogroup" aria-label="Top shows from"></div></div>
-        <div class="field">
-          <p class="label">Your shows</p>
-          <div class="rgroup glass">
-            <button class="rowbtn" type="button" id="setImport">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-              <span>Import shows<span class="sub">An OPML file from another podcast app</span></span>
-            </button>
-            <button class="rowbtn" type="button" id="setExport">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-              <span>Export shows<span class="sub">An OPML file any podcast app can import</span></span>
-            </button>
-          </div>
-        </div>
-        <div class="field">
-          <p class="label">Backup</p>
-          <div class="rgroup glass">
-            <button class="rowbtn" type="button" id="setSheetBtn">
-              <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg></span>
-              <span>Google Sheet backup<span class="sub" id="sheetSub">Not connected</span></span>
-            </button>
-          </div>
+        <p class="label">Backup</p>
+        <div class="rgroup glass">
+          <button class="rowbtn" type="button" id="setExport">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
+            <span>Export shows<span class="sub">An OPML file any podcast app can import</span></span>
+          </button>
+          <button class="rowbtn" type="button" id="setImport">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
+            <span>Import shows<span class="sub">An OPML file from another podcast app</span></span>
+          </button>
         </div>
         <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. What you follow, where you got to, Up Next and Saved are kept on this phone. A Google Sheet backup of your shows, saved episodes and history is optional.</p>
       </div>
