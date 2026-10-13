@@ -42,7 +42,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
 // 1. one row per app: the designs of Mail, Orders and Home have no rows of their own, only a tag
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
+  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
   for (const id of ['mail', 'orders', 'house']) {
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);

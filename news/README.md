@@ -31,6 +31,11 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
 
+**News Vintage** is the same app in a mid-century modern look, as its own app
+with its own settings ([`newsvintage/`](../newsvintage/README.md)). It reads the
+headlines and scores this app publishes and uses this app's summaries route, so
+nothing here is made twice.
+
 ## Summaries
 
 Tap the sparkle at the end of a story's source line for **Claude's summary of

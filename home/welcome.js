@@ -114,7 +114,7 @@
         'Orders: Fix details with Claude, on an order\'s page, sends that one email\'s text (links removed) to Claude to read again when the details look wrong; nothing is kept, and it is for signed-in family',
         'Orders: a one-off clean-up marks open orders nothing had been heard about for over 5 days as received (Undo in the toast)',
         'aOS has the mid-century modern look too, the same as the Vintage designs of Mail, Home and Orders: cream (walnut in dark mode) instead of glass, mustard, teal and burnt orange, atomic shapes behind each title, flat round-cornered cards and buttons, a walnut pill for the tabs, Futura type, and a new aOS icon',
-        'Drinks, Fitness, News, Weather and Travel have a Vintage design too, in the same look: cream and walnut cards instead of glass, mustard, teal and burnt orange, atomic shapes behind the title, Futura, and a new geometric icon for each. Pick it from the Design menu on the app\'s page in aOS. Each is its own app, with its own settings and storage (News Vintage and Weather Vintage start fresh; Fitness Vintage and Travel Vintage can share the original\'s Google Sheet; Travel Vintage needs its own Google sign-in address added once), so the originals stay as they are'],
+        'Calendar, Drinks, Fitness, News, Weather and Travel have a Vintage design too, in the same look: cream and walnut cards instead of glass, mustard, teal and burnt orange, atomic shapes behind the title, Futura, and a new geometric icon for each. Pick it from the Design menu on the app\'s page in aOS. Each is its own app, with its own settings and storage (News Vintage and Weather Vintage start fresh; Fitness Vintage and Travel Vintage can share the original\'s Google Sheet; Travel Vintage needs its own Google sign-in address added once), so the originals stay as they are'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
@@ -188,7 +188,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage'];
+  const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar'];
@@ -199,6 +199,7 @@
     mail: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'mail' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mailvintage' }],
     orders: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'orders' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'ordersvintage' }],
     house: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'house' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'housevintage' }],
+    calendar: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'calendar' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'calendarvintage' }],
     news: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'news' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'newsvintage' }],
     weather: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'weather' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'weathervintage' }],
     travel: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'travel' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'travelvintage' }],
@@ -208,7 +209,7 @@
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', ordersvintage: 'Orders Vintage', drinksvintage: 'Drinks Vintage', fitnessvintage: 'Fitness Vintage', newsvintage: 'News Vintage', weathervintage: 'Weather Vintage', travelvintage: 'Travel Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail Vintage', housevintage: 'Home Vintage', ordersvintage: 'Orders Vintage', drinksvintage: 'Drinks Vintage', fitnessvintage: 'Fitness Vintage', newsvintage: 'News Vintage', weathervintage: 'Weather Vintage', travelvintage: 'Travel Vintage', calendarvintage: 'Calendar Vintage', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "mailvintage": {
