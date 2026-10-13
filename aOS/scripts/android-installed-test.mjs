@@ -59,7 +59,8 @@ async function tab(app, { ua = ANDROID, answer = [], signed = true, store } = {}
   await t.ctx.close();
   // and aOS, opened after, shows Get for it and Installed for Mail
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, userAgent: ANDROID, serviceWorkers: 'block' });
-  await ctx.addInitScript(t => { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() })); sessionStorage.setItem('aos.later.aos', '1'); }, tok);
+  // the Sea glass look: Standard is the design the list shows, so Mail's row is the Mail that was installed (in the Vintage look it offers Get on the Vintage design)
+  await ctx.addInitScript(t => { localStorage.setItem('aos.look', 'glass'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() })); sessionStorage.setItem('aos.later.aos', '1'); }, tok);
   await ctx.route('**/aOS/api/**', async route => { const rq = route.request(), u = new URL(rq.url());
     const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.split('/aOS/api/')[1].split('/') }, env: { ACCOUNTS: db } });
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
