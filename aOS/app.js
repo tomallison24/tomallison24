@@ -9,12 +9,18 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const CAT = { mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const HUE = { newsvintage: '126,140,52', fitnessvintage: '74,52,38', travelvintage: '74,52,38', drinksvintage: '126,140,52', weathervintage: '126,140,52', calendarvintage: '63,110,154', mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
+  const CAT = { newsvintage: 'News', fitnessvintage: 'Health & Fitness', travelvintage: 'Travel', drinksvintage: 'Health & Fitness', weathervintage: 'Weather', calendarvintage: 'Productivity', mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
+    newsvintage: [['ok', 'Nothing']],
+    fitnessvintage: [['once', 'Your own Google Sheet, as a backup (optional)']],
+    travelvintage: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
+    drinksvintage: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
+    weathervintage: [['ok', 'Your location, if you allow it']],
+    calendarvintage: [['ok', 'Your family account (Face ID)']],
     mail: [['once', 'Sign in with your own Google account']],
     mailvintage: [['once', 'Sign in with your own Google account']],
     calendar: [['ok', 'Your family account (Face ID)']],
