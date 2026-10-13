@@ -144,6 +144,45 @@ After that the ABV Tracker can be retired: in its Sheet, **Extensions → Apps
 Script → Deploy → Manage deployments**, archive the web app, so nothing can
 write to the Sheet any more.
 
+## Google Sheet sync
+
+Optional. **More → Google Sheet sync** backs your log up to a Google Sheet of your own, and the Sheet's
+**Log** tab goes both ways: almost every drink comes from the app, but a row changed or added in the Sheet
+comes back. Your log is already kept in your family account; the Sheet is a second copy you can read, filter
+and edit. It is private to you like the account: each person uses a Sheet of their own, and another person
+who signs in on the same phone is not connected to yours (their log replaces it, and the link is forgotten).
+It uses the same design as Fitness's (read `fitness/README.md`, "Google Sheet sync").
+
+1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Drinks**. Use a new Sheet, not your old ABV
+   Tracker's: the Log tab is rebuilt in place (rows it can read are kept, rows it can't are left with a note, and
+   the ABV Tracker's own "Unknown day" and connection-test rows are dropped).
+2. **Extensions → Apps Script**, replace `Code.gs` with the whole of [`google-sheet-sync.gs`](google-sheet-sync.gs),
+   and change `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it up: there is nothing to look up).
+3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone* → **Deploy** → authorise →
+   copy the **Web app URL**.
+4. Drinks → **More → Google Sheet sync** → paste the URL and the phrase → **Connect and sync**. **Copy setup
+   link** sets up your other phone.
+
+**The Log tab** has the ABV Tracker's columns, newest first: `Timestamp, Date, Time, Name, Category, Volume, Unit,
+ABV, Qty, StandardDrinks, GramsAlcohol, Note, EntryID`, and a `Check` column that only has something in it when a
+row you typed needs fixing. An alcohol-free day is a row whose Category is `alcohol-free`. The Sheet also holds
+hidden tabs (`_entries`, `_days`, `_prefs`, `_deleted`, `_rows`) that the app reads back.
+
+**What you can do in the Log tab**
+- **Change a row**: the app takes the change if it is newer than the app's own copy (the Timestamp fills itself in
+  when you edit). StandardDrinks and GramsAlcohol are worked out for you.
+- **Add a row**: fill in Date (`2026-10-12` or `10/12/2026`), Name, Category, Volume, Unit (`oz` or `ml`) and ABV;
+  Qty is 1 if left empty, Time is optional. The EntryID and sums fill themselves in.
+- **Remove a drink**: set its Qty to **0** (an alcohol-free day too). Deleting a row does not remove the drink: the
+  app puts it back at the next sync, because a deleted row looks the same as one the Sheet hasn't heard of.
+- A row that can't be read (no date, no size, a strength outside 0 to 100) stays where it is with a note in
+  `Check`, and is not sent to the app until you fix it.
+
+**When it syncs**: when you connect, a couple of seconds after any change, when the app is opened or comes back to
+the front, and when the phone comes back online. A change typed in the Sheet is picked up at the next sync (any
+phone's, or **Sync now**), not the moment you type it. How changes merge is as in Fitness: the newest change to a
+drink wins, wherever it was made, and a deletion reaches the other phones.
+
 ## Files
 
 - `index.html`: the page and its look (Fitness's tokens, tiles and Liquid
@@ -153,6 +192,7 @@ write to the Sheet any more.
 - `sw.js`: the offline shell (network-first; `api/` is left alone).
 - `icon.svg` → `icon-180.png`, `icon-512.png` ("Plum": a white wine glass on
   dusty plum, one of the Sea glass tints), drawn by `scripts/make-icons.mjs`.
+- `google-sheet-sync.gs`: the Apps Script that goes in your Sheet.
 - `../functions/drinks/api/[[route]].js`: your log in your account.
 
 ## Tests
@@ -160,9 +200,10 @@ write to the Sheet any more.
 ```
 node drinks/scripts/calc-test.mjs    # the sums and the import
 node drinks/scripts/api-test.mjs     # the server route, on Workers KV in memory
+node drinks/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (fake-sheet.mjs)
 node drinks/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright)
 ```
 
 `app-test.mjs` runs the real server route behind the page, so it covers two
 phones kept in step, a delete travelling between them, signed out, accounts
-not yet on, and Calendar's layer.
+not yet on, Calendar's layer, and the Google Sheet (the real script, on a fake Sheet).
