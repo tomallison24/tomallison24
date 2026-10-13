@@ -1,0 +1,17 @@
+{
+  "name": "Places",
+  "short_name": "Places",
+  "description": "Places in a mid-century modern look: places you want to go and places you've been, with your own ratings, on a map.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241E1A",
+  "theme_color": "#241E1A",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/placesvintage/", "url": "https://tomallison24-news.pages.dev/placesvintage/manifest.webmanifest" }
+  ]
+}

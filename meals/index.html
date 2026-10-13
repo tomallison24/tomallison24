@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Meals</title>
 <meta name="description" content="Dinner for the family: this week's deals at your Whole Foods, sorted like a grocery list, and a few nights of different dinners built around one meat, with the shopping list.">
@@ -167,6 +167,8 @@ svg.b{stroke-width:2.2}
 .frow .unit{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill)}
 .frow .unit button{min-width:44px;height:34px;padding:0 10px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted)}
 .frow .unit button[aria-pressed="true"]{background:var(--seg-thumb);color:var(--text);box-shadow:inset 0 0 0 1px var(--gb-edge)}
+.stackform{display:flex;flex-direction:column;gap:14px}
+.stackform[hidden]{display:none}
 .formbtns{display:flex;gap:8px}
 .formbtns .btn{flex:1}
 .calc{font-size:14px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
@@ -384,6 +386,34 @@ ul.plain small{color:var(--muted)}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Meals</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
       <div class="sheetbody" id="setBody"></div>
+    </div>
+  </div>
+
+  <!-- Google Sheet: a readable copy of Meals (one way) -->
+  <div class="sheetwrap" id="syncSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <form id="syForm" autocomplete="on" action="#" class="stackform">
+          <div class="rgroup">
+            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="Paste the link" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="Your phrase" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
+          <p class="hint">Set up the Sheet first (steps in the Meals README). On a second phone, open the setup link from the first instead.</p>
+        </form>
+        <div id="syOn" class="stackform" hidden>
+          <div class="rgroup">
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Sync now<span class="sub">Sends the plans, the shopping list, the deals and the settings to the Sheet</span></span></button>
+            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
+          </div>
+          <p class="hint">The Sheet is a copy to read: the Plans tab keeps every plan you accept, and nothing typed in it comes back to Meals.</p>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
+      </div>
     </div>
   </div>
 
