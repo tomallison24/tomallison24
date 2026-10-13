@@ -347,7 +347,8 @@ paused while the app is hidden, still with reduced motion.
 
 ## Connecting to Home Assistant
 
-The gear (top right) opens the Home Assistant sheet: an **address** and a
+The gear (top right) opens Settings, laid out like every other aOS app's (titled
+Settings, a Done tick, labelled groups): the Home Assistant **address** and a
 **long-lived access token**. Both are kept in `localStorage` on that phone
 and go nowhere except to that address.
 

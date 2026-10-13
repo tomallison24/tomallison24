@@ -1216,6 +1216,46 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
   .sheet .btn[disabled] { opacity: .6; }
+  /* ---- Settings: a sheet, laid out as in every other app's Settings (title and Done tick, labelled groups, hints) ---- */
+  .sheet.sset { padding: 0; gap: 0; max-height: calc(100% - env(safe-area-inset-top) - 32px); }
+  .sset .grab { width: 38px; height: 5px; margin: 0 auto; padding: 10px 60px 8px; box-sizing: content-box; background-clip: content-box; flex: none; }
+  .sset .sheethead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 12px 10px; }
+  .sset .sheethead h2 { margin: 0; padding-left: 8px; font-size: 17px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sset .acts { display: flex; gap: 8px; align-items: center; }
+  .sset .iconbtn { width: 44px; height: 44px; }
+  .sset .iconbtn.okbtn { color: var(--cta-ink); background: var(--cta); border: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
+  .sset .iconbtn.okbtn:active { color: var(--cta-ink); background: var(--cta); filter: brightness(.94); }
+  .sset .sheetbody {
+    overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: flex; flex-direction: column; gap: 14px;
+    padding: 6px 12px calc(16px + env(safe-area-inset-bottom));
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
+  }
+  .sset .sheetbody > * { flex-shrink: 0; }
+  .sset .label { margin: 4px 8px -6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+  .sset .hint { margin: 0 12px; font-size: 12px; line-height: 1.55; color: var(--faint); text-align: start; }
+  .sset .hint code { word-break: break-all; }
+  .sset .sgroup { border-radius: 26px; overflow: hidden; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge); }
+  .sset .frow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--hair-2); font-size: 15px; min-height: 48px; color: var(--text); }
+  .sset .frow:first-child { border-top: 0; }
+  .sset .frow > label, .sset .frow > .l { flex: 1; min-width: 0; }
+  .sset .frow .v { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sset .frow .num { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+  .sset .frow input[type=text], .sset .frow input[type=number], .sset .frow input[type=url] {
+    border: 0; outline: none; background: var(--lgs-field); border-radius: 999px; padding: 8px 13px; font: inherit; font-size: 15px; color: var(--text); min-width: 0;
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim);
+  }
+  .sset .frow input[type=text] { width: 150px; text-align: right; }
+  .sset .frow input[type=number] { width: 64px; text-align: center; }
+  .sset .frow input[type=url] { width: 100%; text-align: start; padding: 8px 4px; background: none; box-shadow: none; font-size: 16px; }
+  .sset .rowbtn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; font-size: 15px; font-weight: 600; border-top: 1px solid var(--hair-2); color: var(--text); }
+  .sset .rowbtn:first-child { border-top: 0; }
+  .sset .rowbtn:active { background: var(--lgs-field); }
+  .sset .rowbtn > span:not(.ic) { flex: 1; min-width: 0; }
+  .sset .rowbtn .ic { width: 26px; display: grid; place-items: center; flex: none; color: var(--icon); }
+  .sset .rowbtn .ic svg { width: 22px; height: 22px; }
+  .sset .rowbtn .sub { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .sset .rowbtn.danger, .sset .rowbtn.danger .ic { color: var(--danger-text); }
+  .sset .frow .textbtn { flex: none; }
   .sheet .chip2:not(.on) { background: var(--gb-shine), var(--lgs-field); }
   .sheet .chip2 { backdrop-filter: none; -webkit-backdrop-filter: none; }
   .sheet .fchip, .sheet .tidylist {
@@ -1619,6 +1659,7 @@
     box-shadow: inset 0 0 0 2px var(--accent);
   }
   .sheet .fchip, .sheet .tidylist, .fchip, .tidylist { background: var(--bg); box-shadow: none; border-radius: 16px; }
+  .sset .sgroup { background: var(--bg); box-shadow: none; }   /* Settings' groups: solid cards, as the other sheets' tiles */
   .imgnote button { color: var(--accent-text); }
   .unsub { background: var(--fill); border: 0; box-shadow: none; }
   .foot button { background: var(--mc-card); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--mc-edge); }

@@ -33,6 +33,7 @@ The gear: which stores to follow, the family's member cards (Prime, VIC), what
 the family never eats (tree nuts and coconut to start; peanuts are fine), your
 account, and an optional **Google Sheet** that keeps a readable copy of it all
 (below).
+Tap the tick (Done) to save what you changed for the family; with nothing changed it just closes.
 
 **Meals Vintage** is the same app in a mid-century modern look, as its own app
 ([`mealsvintage/`](../mealsvintage/README.md)). It uses this app's server route

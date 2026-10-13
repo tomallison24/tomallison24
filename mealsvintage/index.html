@@ -231,6 +231,7 @@ html.locked .dock{opacity:0;pointer-events:none}
 .sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
 .sheetbody > *{flex-shrink:0}
+#setSheet .sheetbody > .hint{margin:0 12px}
 .sheet .rgroup{border-radius:26px}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
@@ -525,7 +526,7 @@ textarea.paste:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accen
     <div class="scrim" data-close></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="setLbl">Meals</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" id="sSave" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody" id="setBody"></div>
     </div>
   </div>

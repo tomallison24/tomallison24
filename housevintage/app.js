@@ -1368,6 +1368,8 @@ function toast(msg) {
 // Status chip, banner and the settings sheet.
 $('gear').innerHTML = svg('cog', 22);
 for (const b of document.querySelectorAll('h2 [data-close]')) b.innerHTML = svg('close', 18);
+for (const [id, ic] of [['lkEdit', 'link'], ['lkForget', 'plug'], ['lkShare', 'handoff'], ['lkAccess', 'shield']]) $(id).insertAdjacentHTML('afterbegin', '<span class="ic">' + svg(ic, 22) + '</span>');
+const TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>';
 const sheetWrap = $('sheetWrap');
 function openSheet() {
   showView(saved().token ? 'locked' : 'edit');
@@ -1408,7 +1410,9 @@ function showView(v) {
   $('vAccess').hidden = v !== 'access';
   $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join' || v === 'access';
   if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
-  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : v === 'access' ? 'Devices with access' : 'Home Assistant';
+  $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : v === 'access' ? 'Devices with access' : 'Settings';
+  const done = v === 'locked' || v === 'edit', cb = $('sheetClose');   // Settings closes with a Done tick; its sub-views with a cross
+  cb.classList.toggle('okbtn', done); cb.setAttribute('aria-label', done ? 'Done' : 'Close'); cb.innerHTML = done ? TICK : svg('close', 18);
   if (v === 'edit') {
     const s = saved();
     $('haUrl').value = s.url || '';

@@ -57,8 +57,10 @@ days you never open the app — but only once its Google credentials are set up
   are Liquid Glass, as in iOS 26: clear glass floating just inside the
   screen's edges with the mail blurred through it, glass buttons and fields,
   and the main action filled blue. A message and New Message stay full pages
-  with the same glass (✕ to cancel, a blue ↑ to send), Settings has iOS 26's
-  switches, and **All | Unread**, the tag picker and *Notify me about* have a
+  with the same glass (✕ to cancel, a blue ↑ to send), Settings is a sheet over
+  the mailbox, laid out like every other aOS app's Settings (a Done tick that
+  saves the bucket label and days; a scrim tap or a swipe down closes without
+  saving) with iOS 26's switches, and **All | Unread**, the tag picker and *Notify me about* have a
   glass thumb that slides to your choice. The small buttons in a card
   (**Show more**, *In menu* on the Tags page, a message's **Show** for images)
   are the same clear glass, and the toast is the sheets' glass, with a red rim

@@ -192,7 +192,12 @@ for (const name of ['Manage Tags', 'Marketing', 'Promotions', 'Inbox']) {
   await page.click('#boxbtn'); await page.waitForTimeout(400);
   await page.click(`#boxmenu .menu button:has(.name:text-is("${name}"))`); await page.waitForTimeout(500);
 }
-for (const sel of ['#gear', '#gear', '#find']) { await page.click(sel); await page.waitForTimeout(400); }
+// Settings is a sheet, as in every other app: titled Settings, with a Done tick that closes it
+await page.click('#gear'); await page.waitForTimeout(500);
+check((await page.textContent('#sheet .sset .sheethead h2')) === 'Settings' && (await page.getAttribute('#sheet .sset [data-act="settings-done"]', 'aria-label')) === 'Done', 'Settings is a sheet titled Settings, with a Done tick');
+await page.click('[data-act="settings-done"]'); await page.waitForTimeout(700);
+check(await page.isHidden('#sheet .sset'), 'Done closes Settings');
+await page.click('#find'); await page.waitForTimeout(400);
 await page.fill('#q', 'invoice'); await page.press('#q', 'Enter'); await page.waitForTimeout(700);
 await page.click('#fab');
 await page.fill('#c-to', 'friend@example.com'); await page.fill('#c-subj', 'Hi'); await page.fill('#c-body', 'Hello');

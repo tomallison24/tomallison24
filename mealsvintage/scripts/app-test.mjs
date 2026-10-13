@@ -219,6 +219,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
 { // settings are the family's
   const { ctx, page } = await phone('dark');
   await page.click('#setBtn'); await page.waitForTimeout(300);
+  ok('Settings: titled Settings, with a Done tick like the other apps', (await page.textContent('#setLbl')) === 'Settings' && (await page.getAttribute('#sSave', 'aria-label')) === 'Done');
   await page.fill('#sAdd', 'Shellfish'); await page.click('#sAddGo');
   await page.click('[data-avoid="coconut"]');
   await page.click('[data-store="target"]'); await page.click('[data-store="lidl"]'); await page.click('[data-card="prime"]');
@@ -336,7 +337,7 @@ const SHEET_STEP = async () => {
   ok('Sheet: the status says connected', /Connected/.test(await page.textContent('#syStatus')), await page.textContent('#syStatus'));
   await shot(page, 'sheet-on');
   // a second plan accepted: only it goes (the first was sent as the current plan, and is not fetched again)
-  await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#setSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
+  await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#sSave'); await page.waitForTimeout(300);
   const n0 = posts.length, l0 = logs.length;
   await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
   await page.waitForSelector('[data-act="accept"]', { timeout: 8000 });
