@@ -4,6 +4,11 @@ The iCloud **Family** calendar as a home-screen web app, in the same frosted
 glass as Mail, Notes, News and Travel, with the everyday parts of iOS Calendar
 and Google Calendar, and the other AllisonOS apps' dates alongside.
 
+**Calendar Vintage** is the same app in a mid-century modern look, as its own app
+with its own settings ([`calendarvintage/`](../calendarvintage/README.md)). It uses
+this app's iCloud connection (`functions/calendar/api`), so there is nothing more to
+set up.
+
 - **Views**: Day, Week, Month, Year and List, in the bar along the bottom.
   Swipe left or right to move through days, weeks or months; **Today** brings
   you back; tap the big title for the year. In Month, tap a day to see it

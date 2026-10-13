@@ -1,11 +1,13 @@
-// Calendar's Notes, Travel, Fitness and Mail layers through the family account,
+// Calendar Vintage's Notes, Travel, Fitness and Mail layers through the family account (the same
+// layers Calendar reads: Notes, Travel, Fitness and Mail write them, and whichever design of
+// Calendar is open shows them),
 // as on an iPhone, where every Home Screen app keeps its own storage: each app runs
 // in its own browser context (its own storage), signed in, and sends its copy
 // (AllisonOS.layer in home/welcome.js) to the real functions/aOS/api code on an
 // in-memory KV; then Calendar, with none of their data in its own storage, shows
 // them all. Also: only changes are sent, Notes' samples never are, and signed out,
-// Calendar says to sign in.
-//   node calendar/scripts/layers-test.mjs [repo root]
+// Calendar Vintage says to sign in.
+//   node calendarvintage/scripts/layers-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -58,7 +60,7 @@ async function app(dir, { signedIn = true, seed = {} } = {}) {
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/ping') ? { ok: true, configured: true, calendar: { name: 'Family', color: '#FF2968' } } : { ok: true, items: [], calendar: { name: 'Family' } }) }));
   await ctx.route(/open-meteo|gmail\.googleapis|googleapis|bigdatacloud/, route => route.fulfill({ status: 404, body: '' }));
   await ctx.addInitScript(([token, seed]) => {
-    localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(['aos', 'notes', 'travel', 'fitness', 'mail', 'calendar'].map(a => [a, '999']))));
+    localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(['aos', 'notes', 'travel', 'fitness', 'mail', 'calendarvintage'].map(a => [a, '999']))));
     localStorage.setItem('aos.signin.asked', '1');
     if (token) localStorage.setItem('aos.session', JSON.stringify({ token, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
     for (const [k, v] of Object.entries(seed)) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(v));
@@ -100,8 +102,8 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
 
 await putJSON(db, 'layer:mail:O1', { at: Date.now(), data: { items: [{ id: 'th1', date: TOMORROW, subject: 'Book the vet', from: 'Sam' }] } });
 
-await test('Calendar, with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
-  const { page, ctx } = await app('calendar');
+await test('Calendar Vintage, with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
+  const { page, ctx } = await app('calendarvintage');
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
   await page.waitForTimeout(400);
   const kinds = await page.evaluate(() => { const c = window.__calendar; return [...new Set(c.st.all ? c.st.all.map(x => x.kind) : [])]; }).catch(() => []);
@@ -110,12 +112,12 @@ await test('Calendar, with none of their data in its own storage, shows Notes, T
   const text = await page.textContent('#main');
   for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Workout', 'Remind: Book the vet']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
   assert.ok(!text.includes('Old hotel'));
-  assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar has no Notes data of its own');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar Vintage has no Notes data of its own');
   await ctx.close();
 });
 
-await test('signed out, Calendar asks to sign in, and shows none of it', async () => {
-  const { page, ctx } = await app('calendar', { signedIn: false });
+await test('signed out, Calendar Vintage asks to sign in, and shows none of it', async () => {
+  const { page, ctx } = await app('calendarvintage', { signedIn: false });
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'signin', null, { timeout: 8000 });
   await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
   assert.ok((await page.textContent('#stBody')).includes('Sign in to your family account first'));

@@ -14,8 +14,8 @@
     </mask>
   </defs>
   <rect width="512" height="512" fill="#3F6E9A"/>
-  <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
-  <rect x="40" y="396" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 135 421)"/>
+  <circle cx="404" cy="108" r="140" fill="#E3A72F"/>
+  <rect x="34" y="424" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 129 449)"/>
   <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
   <rect x="166" y="88" width="26" height="68" rx="13" fill="#FBF5E9"/><rect x="320" y="88" width="26" height="68" rx="13" fill="#FBF5E9"/>
 </svg>

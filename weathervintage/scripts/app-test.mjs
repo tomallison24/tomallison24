@@ -190,7 +190,7 @@ for (const scheme of ['light', 'dark']) {
     const t0 = await text(page, '#dayTitle');
     await page.click('#dayWrap [data-dstep="1"]');
     assert.notEqual(await text(page, '#dayTitle'), t0);
-    await page.click('#dayWrap [data-close]');
+    await page.click('#dayWrap .hnav [data-close]');
     await page.waitForFunction(() => !document.getElementById('dayWrap').classList.contains('open'));
   });
 
@@ -229,7 +229,7 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#results button[data-pick="0"]');
     await page.waitForSelector('#dots .dot', { timeout: 8000 });
     assert.equal((await page.$$('#dots .dot')).length, 2, 'My Location and the new city');
-    assert.equal(await text(page, '#hero .w3-place'), 'Raleigh', 'the fake forecast is for the same spot for every city');
+    assert.equal(await text(page, '#hero .w3-place'), 'Columville', 'the new city is on screen');
     const places = await page.evaluate(() => JSON.parse(localStorage.getItem('wxv.places')));
     assert.equal(places.length, 1); assert.equal(places[0].name, 'Columville');
     assert.equal((await q('#dots .dot.on i', ['backgroundColor']))[0], rgb(216, 87, 42), 'the current dot is an orange pill');
@@ -292,7 +292,7 @@ for (const scheme of ['light', 'dark']) {
     assert.equal(await text(page, '.msg b'), 'Weather Vintage');
     const cs = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return { bg: c.backgroundColor, color: c.color, shadow: c.boxShadow, radius: c.borderRadius }; });
     const main = await cs('.pill.primary'), other = await cs('.pill:not(.primary)'), msg = await cs('.msg');
-    assert.equal(main.bg, scheme === 'light' ? rgb(201, 80, 42) : rgb(216, 87, 42)); assert.equal(main.shadow, 'none');
+    assert.equal(main.bg, rgb(194, 76, 40), 'burnt orange, a shade deeper than the shapes so cream words read on it'); assert.equal(main.shadow, 'none');
     assert.ok(contrast(main.color, main.bg) >= 4.5, 'the main button reads');
     assert.equal(other.bg, 'rgba(0, 0, 0, 0)'); assert.match(other.shadow, /inset/);
     assert.equal(msg.bg, scheme === 'light' ? rgb(251, 245, 233) : rgb(50, 42, 37)); assert.equal(msg.radius, '20px');
