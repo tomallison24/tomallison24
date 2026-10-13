@@ -53,7 +53,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
   };
   const src = fs.readFileSync(gsPath, 'utf8').replace("const SECRET = 'CHANGE-ME';", 'const SECRET = ' + JSON.stringify(secret) + ';');
   vm.createContext(ctx);
-  vm.runInContext(src + '\n;this.__api = { doGet, doPost, onEdit, rebuildTabs };', ctx);
+  vm.runInContext(src + '\n;this.__api = { doGet, doPost, onEdit: typeof onEdit === "function" ? onEdit : null, rebuildTabs };', ctx);
   const api = {
     sheets,
     get: () => JSON.parse(ctx.__api.doGet().text),

@@ -45,7 +45,7 @@ if (window.top !== window.self) {
   const K = {
     token: 'orders.token', state: 'orders.state', silent: 'orders.silent', silentFail: 'orders.silentFail', lastAuth: 'orders.lastAuth', hint: 'orders.hint', me: 'orders.me',
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
-    sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at',
+    sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
     aiOk: KEY + '-ai-ok',
     cleanup: KEY + '-cleanup-5d',
   };
@@ -94,6 +94,8 @@ if (window.top !== window.self) {
   let seen = new Set(ls.json(K.seen, []));
   let skipped = ls.json(K.skipped, {});                                       // message id -> the kind that was switched off when it was read
   let syncCfg = ls.json(K.sync, null);
+  let outbox = ls.json(K.log, []);                                            // log events not yet in the Sheet's Log tab
+  if (!Array.isArray(outbox)) outbox = [];
   const shadow = new Map();
   const st = { tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
@@ -126,14 +128,41 @@ if (window.top !== window.self) {
       const { updated, ...rest } = it; shadow.set(kind + ':' + it.id, JSON.stringify(rest));
     }));
   }
+  // The Log tab in the Sheet only ever grows: every order added, every status change, edit and
+  // deletion, and every email left out because its kind is off in Settings, is queued here
+  // (whatever the kinds are set to) and goes to the Sheet with the next sync. Ids are fixed for
+  // the common ones so two phones that notice the same thing write one row.
+  const LOG_MAX = 2000;
+  const LOG_WATCH = { store: 'store', items: 'items', total: 'total', orderNo: 'order number', orderDate: 'order date', eta: 'expected date', carrier: 'carrier', tracking: 'tracking', kind: 'kind', pickupBy: 'pickup date', notes: 'notes' };
+  function logEvent(ev, o, note, id) {
+    if (!syncCfg || !o) return;
+    const at = Date.now(), snap = {};
+    ['id', 'store', 'kind', 'items', 'total', 'status', 'carrier', 'tracking', 'eta', 'orderNo'].forEach(k => { if (o[k] != null) snap[k] = o[k]; });
+    outbox.push({ id: id || ev.toLowerCase().replace(/\W+/g, '-') + '-' + o.id + '-' + at, at, ev, note: note || '', o: snap });
+    if (outbox.length > LOG_MAX) outbox = outbox.slice(-LOG_MAX);
+    ls.set(K.log, JSON.stringify(outbox));
+  }
+  function logChange(prev, o) {
+    if (!syncCfg) return;
+    if (prev == null) return logEvent('Added', o, '', 'add-' + o.id + '-' + (o.created || 0));
+    let p; try { p = JSON.parse(prev); } catch { return; }
+    const same = k => JSON.stringify(p[k] == null ? null : p[k]) === JSON.stringify(o[k] == null ? null : o[k]);
+    const fields = Object.keys(LOG_WATCH).filter(k => !same(k)).map(k => LOG_WATCH[k]);
+    if (p.status !== o.status) return logEvent('Status changed', o, (P.STATUS_NAMES[p.status] || p.status) + ' → ' + (P.STATUS_NAMES[o.status] || o.status) + (fields.length ? '; also ' + fields.join(', ') : ''), 'st-' + o.id + '-' + p.status + '-' + o.status + '-' + todayStr());
+    if (fields.length) logEvent('Updated', o, 'Changed: ' + fields.join(', '));
+  }
+  function logGone(prev) {
+    let p; try { p = JSON.parse(prev); } catch { return; }
+    if (p && p.id) logEvent('Deleted', p, '');
+  }
   function track() {
     const now = Date.now(), have = new Set();
     kindsOfData().forEach(([kind, arr]) => arr.forEach(it => {
       const k = kind + ':' + it.id, { updated, ...rest } = it, j = JSON.stringify(rest);
       have.add(k);
-      if (shadow.get(k) !== j) { it.updated = now; shadow.set(k, j); delete graves[k]; }
+      if (shadow.get(k) !== j) { logChange(shadow.get(k), it); it.updated = now; shadow.set(k, j); delete graves[k]; }
     }));
-    shadow.forEach((j, k) => { if (!have.has(k)) { graves[k] = now; shadow.delete(k); } });
+    shadow.forEach((j, k) => { if (!have.has(k)) { logGone(j); graves[k] = now; shadow.delete(k); } });
   }
   initShadow();
   let storeWarned = false;
@@ -893,7 +922,7 @@ if (window.top !== window.self) {
         if (html && /itemscope/i.test(html) && window.DOMParser) { try { doc = new DOMParser().parseFromString(html, 'text/html'); } catch {} }
         const r = P.parseEmail({ html, text, doc, subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now(), id: msg.id, threadId: msg.threadId });
         r.orders.forEach(f => {
-          if (kinds[f.kind] === false) { skipped[m.id] = f.kind; return; }   // switched off in Settings: remembered, so turning it on reads it
+          if (kinds[f.kind] === false) { skipped[m.id] = f.kind; logEvent('Left out', f, 'The “' + f.kind + '” kind is switched off in Settings', 'skip-' + m.id + '-' + f.id); return; }   // switched off in Settings: remembered, so turning it on reads it; the Log tab still gets it
           const x = P.upsert(orders, f, { graves, revive });
           if (x === 'new') added++; else if (x === 'changed') changed++;
         });
@@ -1001,8 +1030,10 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // Google Sheet sync - the same as Notes' and Travel's, for orders
   // ---------------------------------------------------------------------
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
+  let logNagged = false, syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxPNuQHt5-wfnhwPUIxQlSGZSk2MYf0-Vs2p7gcCsjc99ferLXQGi-c-khQD5P1itQw/exec';
   const SYNC_ERRORS = {
     'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes or Travel code.',
     'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
@@ -1050,7 +1081,7 @@ if (window.top !== window.self) {
       let r, res;
       try {
         r = await fetch(syncCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 1, orders, graves }) });
+          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 1, orders, graves, log: outbox.slice(0, 300) }) });
       } catch { throw new Error('network'); }
       try { res = await r.json(); } catch { throw new Error('not-json'); }
       if (res && res.ok && res.app && res.app !== 'allison-orders-sync') throw new Error('wrong-app');
@@ -1059,6 +1090,13 @@ if (window.top !== window.self) {
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
       applyRemote(res);
+      if (res.log) {
+        const got = new Set(res.logged || []);
+        outbox = outbox.filter(e => !got.has(e.id)); ls.set(K.log, JSON.stringify(outbox));
+        if (got.size && outbox.length) syncAgain = true;
+        // The first time this Sheet's Log is on: what is already in Orders is logged once, so the Log starts complete.
+        if (ls.get(K.logSeed, '') !== syncCfg.url) { orders.forEach(o => logEvent('Existing', o, 'Already in Orders when the Log began', 'ex-' + o.id)); ls.set(K.logSeed, syncCfg.url); syncAgain = true; }
+      } else if (outbox.length && !logNagged) { logNagged = true; toast('The Sheet’s script is an old copy, so its Log tab isn’t filling. Paste the new script and deploy a new version (Orders README).'); }
       if (loud) pillDone('Synced');
     } catch (e) {
       syncState = 'error'; syncErr = e.message; busyPill();
@@ -1091,7 +1129,7 @@ if (window.top !== window.self) {
     if (!$('listView').hidden) { const sub = $('sub').textContent; if (/Sync/.test(sub) || on) render(); }
   }
   function openSyncSheet(pre) {
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : '';
+    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
     renderSyncStatus();
     if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
@@ -1121,7 +1159,7 @@ if (window.top !== window.self) {
     const b = $('syOff');
     if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
     delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; saveSyncCfg(); renderSyncStatus();
+    syncCfg = null; syncState = 'off'; outbox = []; ls.del(K.log); saveSyncCfg(); renderSyncStatus();
     toast('Disconnected. Your orders stay on this phone and in the Sheet.');
   };
   function takeSetupLink(text) {

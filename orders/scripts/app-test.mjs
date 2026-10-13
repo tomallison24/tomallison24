@@ -383,6 +383,69 @@ await step('Sheet sync sends this phone’s orders and merges the other phone’
   await ctx.close();
 });
 
+// The Log tab: whatever passes through goes to the Sheet, whatever the kinds in Settings say.
+await step('Sheet Log: every order added, every status change, deletion and left-out email is sent once and acknowledged', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })));
+  await ctx.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
+    localStorage.setItem('orders.token.ever', '1');
+    localStorage.setItem('allison-orders-v1-sync', JSON.stringify({ url: 'https://script.google.com/macros/s/abc/exec', secret: 'maple-otter' }));
+  });
+  const page = await ctx.newPage();
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: EMAILS.map(m => ({ id: m.id, threadId: m.threadId })) } });
+    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  const events = [], posts = [];
+  let scriptKnowsLog = true;
+  await ctx.route('https://script.google.com/**', route => {
+    if (route.request().method() !== 'POST') return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1 } });
+    const body = JSON.parse(route.request().postData()); posts.push(body);
+    const res = { ok: true, app: 'allison-orders-sync', v: 2, at: Date.now(), graves: {}, orders: [] };
+    if (scriptKnowsLog) { res.log = 1; res.logged = (body.log || []).map(e => e.id); (body.log || []).forEach(e => events.push(e)); }
+    return route.fulfill({ json: res });
+  });
+  const until = async (fn, what) => { for (let i = 0; i < 80; i++) { if (fn()) return; await page.waitForTimeout(150); } assert.fail('never saw ' + what + ': ' + JSON.stringify(events.map(e => e.ev + ' ' + (e.o.store || '') + ' ' + e.note))); };
+  await page.goto(BASE + '/orders/');
+  await page.waitForFunction(() => window.__orders && window.__orders.orders.length >= 5, null, { timeout: 8000 });
+  await until(() => events.filter(e => e.ev === 'Added').length >= 5, 'five Added');
+  const added = events.filter(e => e.ev === 'Added').map(e => e.o.store).sort();
+  assert.deepEqual(added, ['Green Home Supply', 'Home Depot', 'Skin Tech', 'Target', 'Walmart']);
+  // the food order Settings leaves out is in the Log all the same
+  await until(() => events.some(e => e.ev === 'Left out'), 'Left out');
+  const left = events.find(e => e.ev === 'Left out');
+  assert.equal(left.o.kind, 'food'); assert.match(left.note, /switched off in Settings/);
+  assert.equal(await page.evaluate(() => window.__orders.orders.some(o => o.kind === 'food')), false, 'and it is still not in the list');
+  // a status change is a new row, with where it came from
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Home Depot'); o.status = 'delivered'; o.steps = { ...o.steps, delivered: '2026-01-05' }; window.__orders.save(); });
+  await until(() => events.some(e => e.ev === 'Status changed' && e.o.store === 'Home Depot'), 'Status changed');
+  const st = events.find(e => e.ev === 'Status changed');
+  assert.equal(st.note, 'Shipped → Delivered'); assert.equal(st.o.status, 'delivered'); assert.equal(st.o.orderNo, 'WK00000001');
+  // a detail edit is an Updated row; a deletion is a Deleted row with the order as it was
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK123'; window.__orders.save(); });
+  await until(() => events.some(e => e.ev === 'Updated' && e.o.store === 'Target'), 'Updated');
+  assert.equal(events.find(e => e.ev === 'Updated').note, 'Changed: tracking');
+  await page.evaluate(() => { const a = window.__orders.orders, i = a.findIndex(x => x.store === 'Walmart'); a.splice(i, 1); window.__orders.save(); });
+  await until(() => events.some(e => e.ev === 'Deleted'), 'Deleted');
+  assert.equal(events.find(e => e.ev === 'Deleted').o.store, 'Walmart');
+  // the orders that were already there when the Log began were logged once as Existing (none here: the Sheet link was set before any order)
+  assert.equal(new Set(events.map(e => e.id)).size, events.length, 'every event id is sent once');
+  await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log') || '[]').length), 0, 'acknowledged events are not kept');
+  // an old script (no "log" in its answer) leaves the events queued, and says so
+  scriptKnowsLog = false;
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK456'; window.__orders.save(); });
+  await page.waitForFunction(() => /old copy/.test(document.body.textContent), null, { timeout: 8000 });
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log')).length), 1);
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

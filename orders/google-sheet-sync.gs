@@ -10,8 +10,12 @@
  *   _orders, _deleted   hidden tabs the app reads back from
  *                       (one row per order, as JSON)
  *   Orders              every order, newest first
+ *   Log                 a history that only grows: one row each time an order
+ *                       is added, changes status, is updated or deleted, or an
+ *                       email is left out because its kind is switched off
+ *                       in Settings (oldest at the top)
  * The Orders tab is rebuilt on every change, so edit orders in the app,
- * not there.
+ * not there. The Log tab is never rebuilt or cleared: rows are only added.
  *
  * How changes merge: every order carries the time it was last changed; the
  * newest version wins. Deleted items are kept as a short
@@ -21,9 +25,13 @@
 
 const SECRET = 'CHANGE-ME';   // <- replace with your own long phrase, e.g. 'maple-otter-47-lantern-quiet'
 
-const APP = 'allison-orders-sync', VERSION = 1;
+const APP = 'allison-orders-sync', VERSION = 2;
 const DATA = {orders: '_orders'};
 const GRAVES = '_deleted';
+const LOG = 'Log';
+const LOGHEAD = ['Logged', 'Event', 'Store', 'Kind', 'Items', 'Total', 'Status', 'Carrier', 'Tracking', 'Expected', 'Order number', 'What changed', 'Order ID', 'EventID'];
+const LOG_TEXT = [3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14];   // everything but the time and the total: kept as text, so a tracking number stays a tracking number
+const STATUS_NAMES = {ordered: 'Ordered', shipped: 'Shipped', out: 'Out for delivery', pickup: 'Ready for pickup', delivered: 'Delivered', pickedup: 'Picked up', cancelled: 'Canceled'};
 const KEEP_DELETED_DAYS = 400;   // longer than the year of email the app reads
 const CHUNK = 45000;             // a Sheet cell holds up to 50,000 characters
 
@@ -36,7 +44,7 @@ function same(s) {
 }
 
 function doGet() {
-  return out({ok: true, app: APP, v: VERSION});
+  return out({ok: true, app: APP, v: VERSION, log: 1});
 }
 
 function doPost(e) {
@@ -49,10 +57,12 @@ function doPost(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const db = load(ss);
+    let logged = [];
+    try { logged = appendLog(ss, req.log); } catch (err) { logged = []; }   // not acknowledged: the phone sends them again
     const changed = req.action === 'sync' ? merge(db, req) : false;
     if (changed || req.action === 'rebuild') { store(ss, db); views(ss, db); }
     return out({
-      ok: true, app: APP, v: VERSION, at: Date.now(),
+      ok: true, app: APP, v: VERSION, log: 1, logged: logged, at: Date.now(),
       orders: Array.from(db.orders.values()),
       graves: Object.fromEntries(db.graves)
     });
@@ -154,7 +164,7 @@ function views(ss, db) {
   const sh = ss.getSheetByName('Orders') || ss.insertSheet('Orders');
   sh.clearContents();
   sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
-  if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(body);
+  if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(body.map(r => r.map(asText)));
   sh.setFrozenRows(1);
   sh.setColumnWidth(2, 160);
   sh.setColumnWidth(3, 360);
@@ -163,6 +173,44 @@ function views(ss, db) {
     if ((n === 'Sheet1' || n === 'Sheet 1') && s.getLastRow() === 0) ss.deleteSheet(s);
   });
 }
+
+// ---------- the Log tab: rows are only ever added ----------
+
+// Adds the events a phone sent (each has an id, so one sent twice is written once) and
+// returns the ids it now holds, which the phone then stops sending.
+function appendLog(ss, events) {
+  if (!Array.isArray(events) || !events.length) return [];
+  const sh = ss.getSheetByName(LOG) || startLog(ss);
+  const last = sh.getLastRow(), col = LOGHEAD.length;
+  const have = new Set(last > 1 ? sh.getRange(2, col, last - 1, 1).getValues().map(r => String(r[0])) : []);
+  const fresh = [], done = [];
+  events.slice(0, 500).sort((a, b) => (Number(a && a.at) || 0) - (Number(b && b.at) || 0)).forEach(e => {
+    if (!e || typeof e.id !== 'string' || !e.id || e.id.length > 120) return;
+    done.push(e.id);
+    if (have.has(e.id)) return;
+    have.add(e.id);
+    const o = e.o || {};
+    const items = (Array.isArray(o.items) ? o.items : []).map(i => i && ((i.qty > 1 ? i.qty + ' x ' : '') + (i.name || ''))).filter(Boolean).join('; ');
+    const total = o.total == null || o.total === '' ? '' : Number(o.total);
+    fresh.push([new Date(Number(e.at) || Date.now()), String(e.ev || ''), o.store || '', o.kind || 'package', items, isFinite(total) ? total : '',
+      STATUS_NAMES[o.status] || o.status || '', o.carrier || '', o.tracking || '', o.eta || '', o.orderNo || '', String(e.note || '').slice(0, 300), o.id || '', e.id]);
+  });
+  if (fresh.length) sh.getRange(last + 1, 1, fresh.length, col).setValues(fresh.map(r => r.map(asText)));
+  return done;
+}
+
+function startLog(ss) {
+  const sh = ss.insertSheet(LOG);
+  LOG_TEXT.forEach(c => sh.getRange(1, c, sh.getMaxRows(), 1).setNumberFormat('@'));
+  sh.getRange(1, 1, sh.getMaxRows(), 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sh.getRange(1, 1, 1, LOGHEAD.length).setValues([LOGHEAD]).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  sh.setColumnWidth(1, 150); sh.setColumnWidth(3, 160); sh.setColumnWidth(5, 320); sh.setColumnWidth(12, 260);
+  return sh;
+}
+
+// Text a cell would otherwise read as a formula (=, +, -, @) is kept as text.
+function asText(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; }
 
 function out(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);

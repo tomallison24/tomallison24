@@ -56,6 +56,9 @@ change independently and Orders is never touched.
   Sheet script (`orders/google-sheet-sync.gs`), so pasting one Sheet's link and
   secret into both keeps the two in step: each order carries the time it was
   last changed, and the newest wins. Or give each its own Sheet.
+  The Sheet's link is already filled in (the owner's), so only the secret is typed.
+  Its **Log** tab (every order added, status change, update and deletion, and every email
+  left out by a switched-off kind) is described in `orders/README.md`, "Google Sheet sync".
 - **The same email reader.** `parse.js` is the same file as Orders' (checked by
   `scripts/same-reader-test.mjs`), so an email reads the same in both. When
   `orders/parse.js` changes, copy it over: `cp orders/parse.js
