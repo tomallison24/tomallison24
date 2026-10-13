@@ -175,6 +175,20 @@ await test('Calendar layers: each person reads only their own, writes happen onl
   assert.equal((await call('layer', undefined)).status, 401);
 });
 
+await test('Travel Vintage\'s bookings show in Calendar as part of Travel, without overwriting Travel\'s', async () => {
+  const flight = { id: 'b1', type: 'flight', conf: 'AAA111', dep: '2026-10-20T07:05' }, hotel = { id: 'b2', type: 'hotel', conf: 'BBB222', name: 'Harbor Inn', checkIn: '2026-10-20' };
+  assert.equal((await call('layer', { app: 'travel', data: { bookings: [flight] } }, tom)).body.ok, true);
+  assert.equal((await call('layer', { app: 'travelv', data: { bookings: [flight, hotel] } }, tom)).body.ok, true);
+  assert.deepEqual(JSON.parse(db.m.get('layer:travel:' + owner)).data.bookings, [flight], 'Travel\'s own layer is untouched');
+  const l = (await call('layer', undefined, tom)).body.layers;
+  assert.deepEqual(l.travel.data.bookings.map(b => b.id), ['b1', 'b2'], 'both, the shared booking once');
+  assert.equal(l.travelv, undefined, 'Calendar only knows Travel');
+  assert.equal((await call('layer', undefined, await issue(db, samId))).body.layers.travel, undefined, 'Sam can\'t see it');
+  // Travel Vintage alone still shows
+  db.m.delete('layer:travel:' + owner);
+  assert.deepEqual((await call('layer', undefined, tom)).body.layers.travel.data.bookings.map(b => b.id), ['b1', 'b2']);
+});
+
 await test('asking to sign in writes nothing to KV, so no one can use up the writes', async () => {
   const before = db.m.size;
   for (let i = 0; i < 50; i++) assert.equal((await call('signin/begin', {})).status, 200);

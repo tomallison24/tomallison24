@@ -10,7 +10,8 @@
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
 //                         { app, removed: true } -> you took it off your Home Screen (aOS shows Get)
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
-//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail)
+//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail;
+//                                                  'travelv' is Travel's Vintage design: GET layer shows it as part of Travel)
 //   GET  layer            (family)             -> your own layers, for Calendar
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
@@ -40,6 +41,21 @@ const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'trave
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
 // it's written only when it changed (KV writes are scarce on the free plan).
 const LAYERS = ['notes', 'travel', 'fitness', 'mail'];
+// Travel's Vintage design keeps its bookings under its own name, so the two Travel apps never overwrite each
+// other; Calendar only knows Travel, so GET layer shows the two together (travelBookings).
+const LAYER_APPS = [...LAYERS, 'travelv'];
+const bookingKey = b => b && (b.id || [b.type, b.conf, b.depIso || b.dep, b.checkIn, b.pickup].join('|'));
+function mergeTravel(a, b) {
+  if (!b) return a;
+  if (!a) return b;
+  const seen = new Set(), bookings = [];
+  for (const x of [...((a.data && a.data.bookings) || []), ...((b.data && b.data.bookings) || [])]) {
+    const k = bookingKey(x); if (!k || seen.has(k)) continue;
+    seen.add(k); bookings.push(x);
+  }
+  const newer = b.at > a.at ? b : a;
+  return { at: newer.at, data: Object.assign({}, newer.data, { bookings }) };
+}
 const LAYER_MAX = 192 * 1024;
 
 // The family's subscription, just for fun (aOS -> Subscription): nothing is charged.
@@ -199,7 +215,7 @@ export async function onRequest({ request, params, env }) {
 
     if (route === 'layer' && method === 'POST') {
       const b = await body(request);
-      if (!LAYERS.includes(b.app)) return reply({ error: 'app' }, 400);
+      if (!LAYER_APPS.includes(b.app)) return reply({ error: 'app' }, 400);
       if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data)) return reply({ error: 'data' }, 400);
       const json = JSON.stringify(b.data);
       if (json.length > LAYER_MAX) return reply({ error: 'too-big' }, 413);
@@ -211,6 +227,8 @@ export async function onRequest({ request, params, env }) {
     if (route === 'layer' && method === 'GET') {
       const out = {};
       for (const a of LAYERS) { const x = await getJSON(db, 'layer:' + a + ':' + me.id); if (x) out[a] = x; }
+      const tv = await getJSON(db, 'layer:travelv:' + me.id);
+      if (tv) out.travel = mergeTravel(out.travel, tv);
       return reply({ layers: out });
     }
 

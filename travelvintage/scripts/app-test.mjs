@@ -362,10 +362,12 @@ await step('a fresh sign-in from Orders or Mail is used', async () => {
   await ctx.close();
 });
 
-// Calendar's Travel layer belongs to Travel: two apps with bookings of their own would overwrite it.
-await step('it leaves Calendar\'s Travel layer to Travel', async () => {
-  const js = fs.readFileSync(path.join(ROOT, 'travelvintage/app.js'), 'utf8');
-  assert.ok(!/layer\.share|AllisonOS\.layer/.test(js.replace(/\/\/.*$/gm, '')), 'no AllisonOS.layer.share call');
+// Calendar's Travel layer: Travel Vintage keeps its own copy, under its own name ('travelv'), so it never overwrites
+// Travel's; the server shows the two together as Travel.
+await step('it shares its bookings with Calendar under its own layer name', async () => {
+  const js = fs.readFileSync(path.join(ROOT, 'travelvintage/app.js'), 'utf8').replace(/\/\/.*$/gm, '');
+  assert.ok(/AllisonOS\.layer/.test(js) && js.includes("L.share('travelv',"), 'it shares as travelv');
+  assert.ok(!js.includes("L.share('travel',"), 'never as travel');
   assert.ok(js.includes("new URL('../travel/api/', location.href)"), 'flight status comes from Travel\'s route');
 });
 

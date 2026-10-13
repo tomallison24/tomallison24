@@ -62,16 +62,13 @@ change independently and Travel is never touched.
   server, and the function's 10-minute answers are shared: two phones, or the
   two apps, watching one flight spend the monthly allowance once. Each app
   still counts its own lookups on the phone (250 a month) in its own storage.
-- **Calendar's Travel layer stays Travel's.** Travel keeps a copy of its
-  bookings in your family account for Calendar's Travel layer
-  (`AllisonOS.layer.share('travel', …)`); a write replaces the whole layer, so
-  two apps with bookings of their own would overwrite each other's. Travel
-  Vintage therefore does not write one (it is not a separate layer either:
-  Calendar and the server know the four layers notes, travel, fitness and mail).
-  If you only use Travel Vintage, Calendar's Travel layer stays empty; the
-  trip's **Add to calendar** button (the Family calendar, or a calendar file)
-  works as in Travel, and adds the same events (they carry the same ids, so
-  adding a trip from either app never doubles it).
+- **Its bookings show in Calendar.** Like Travel, it keeps a copy of its bookings in your family account for
+  Calendar's Travel layer (`AllisonOS.layer.share`), but under its own name, `travelv`, so it never overwrites
+  Travel's copy (a write replaces the whole layer). When Calendar or Calendar Vintage asks for your layers, the
+  server shows the two together as Travel (`functions/aOS/api`, `GET layer`; a booking in both shows once, matched by
+  its id). Use either Travel or both: the Travel layer in Calendar lists every booking from either. The trip's
+  **Add to calendar** button (the Family calendar, or a calendar file) works as in Travel and adds the same events
+  (they carry the same ids, so adding a trip from either app never doubles it).
 - **The same Google Sheet, if you like.** Travel and Travel Vintage use the same
   Sheet script (`travel/google-sheet-sync.gs`), so pasting one Sheet's link and
   secret into both keeps the two in step: each booking and trip name carries the

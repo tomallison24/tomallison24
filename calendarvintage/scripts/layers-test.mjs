@@ -60,7 +60,7 @@ async function app(dir, { signedIn = true, seed = {} } = {}) {
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/ping') ? { ok: true, configured: true, calendar: { name: 'Family', color: '#FF2968' } } : { ok: true, items: [], calendar: { name: 'Family' } }) }));
   await ctx.route(/open-meteo|gmail\.googleapis|googleapis|bigdatacloud/, route => route.fulfill({ status: 404, body: '' }));
   await ctx.addInitScript(([token, seed]) => {
-    localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(['aos', 'notes', 'travel', 'fitness', 'mail', 'calendarvintage'].map(a => [a, '999']))));
+    localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(['aos', 'notes', 'travel', 'travelvintage', 'fitness', 'mail', 'calendarvintage'].map(a => [a, '999']))));
     localStorage.setItem('aos.signin.asked', '1');
     if (token) localStorage.setItem('aos.session', JSON.stringify({ token, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
     for (const [k, v] of Object.entries(seed)) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(v));
@@ -89,15 +89,19 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
   const travel = await app('travel', { seed: { 'allison-travel-v1': { bookings: [
     { id: 'bk1', type: 'flight', airlineCode: 'UA', flightNo: '1234', from: 'DEN', to: 'BOS', fromName: 'Denver', toName: 'Boston', dep: TOMORROW + 'T07:05', depIso: '', arr: TOMORROW + 'T13:50', arrIso: '', conf: 'KQ7T2M', updated: 1 },
     { id: 'bk2', type: 'hotel', status: 'cancelled', name: 'Old hotel', checkIn: TOMORROW, checkOut: TOMORROW, updated: 1 }], trips: [] } } });
+  // Travel's Vintage design keeps its bookings under its own layer name, so it never overwrites Travel's
+  const travelv = await app('travelvintage', { seed: { 'allison-travelv-v1': { bookings: [
+    { id: 'bk3', type: 'hotel', name: 'Harbor Inn', city: 'Boston', checkIn: TOMORROW, checkOut: TOMORROW, updated: 1 }], trips: [] } } });
   const fitness = await app('fitness', { seed: { 'allison-fitness-v1': { v: 2, logs: [{ id: 'f1', date: TODAY, exercise: 'Bench press', group: 'chest', sets: 3, reps: 8, weight: 135, updated: 1 }], exercises: [] } } });
-  assert.ok(await waitFor(() => ['notes', 'travel', 'fitness'].every(a => m.has('layer:' + a + ':O1'))), 'all three sent: ' + [...m.keys()].join());
+  assert.ok(await waitFor(() => ['notes', 'travel', 'travelv', 'fitness'].every(a => m.has('layer:' + a + ':O1'))), 'all four sent: ' + [...m.keys()].join());
   const t = JSON.parse(m.get('layer:travel:O1')).data;
   assert.deepEqual(t.bookings.map(b => b.id), ['bk1'], 'cancelled bookings stay out');
+  assert.deepEqual(JSON.parse(m.get('layer:travelv:O1')).data.bookings.map(b => b.id), ['bk3'], 'Travel Vintage\'s own layer, apart from Travel\'s');
   assert.equal(JSON.parse(m.get('layer:notes:O1')).data.todos[0].title, 'Call the plumber');
   const before = posts;
   await notes.page.reload(); await new Promise(r => setTimeout(r, 4500));
   assert.equal(posts, before, 'nothing new: nothing sent');
-  for (const x of [notes, travel, fitness]) await x.ctx.close();
+  for (const x of [notes, travel, travelv, fitness]) await x.ctx.close();
 });
 
 await putJSON(db, 'layer:mail:O1', { at: Date.now(), data: { items: [{ id: 'th1', date: TOMORROW, subject: 'Book the vet', from: 'Sam' }] } });
@@ -110,7 +114,7 @@ await test('Calendar, with none of their data in its own storage, shows Notes, T
   await page.click('.tab[data-view="list"]').catch(() => {});
   await page.waitForTimeout(300);
   const text = await page.textContent('#main');
-  for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Workout', 'Remind: Book the vet']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
+  for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Harbor Inn', 'Workout', 'Remind: Book the vet']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
   assert.ok(!text.includes('Old hotel'));
   assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar has no Notes data of its own');
   await ctx.close();
