@@ -772,7 +772,7 @@ if (window.top !== window.self) {
     $('syncBtn').classList.toggle('warn', on && syncState === 'error');
   }
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwkTW-Mdj1uwHSdZoBZgVruYVapyGm3U9sMSiON3eudWdFjMIOWDWZ42uYznQhaDenP/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
   function openSyncSheet(pre) {
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';

@@ -1286,7 +1286,7 @@ if (window.top !== window.self) {
     if (!$('tripsView').hidden) { const sub = $('tripsSub').textContent; if (/Sync/.test(sub) || on) render(); }
   }
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzUnDjs8aCSQZqdRKTbxBXUK4BjRYykeZTKLwUiUGRjYZMfhSauQR0u5WukZOuLTzE-/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEjKlk2PnB_VrMrrPdX6ObNX_kRX2cdxrdfhqjAJFmyzQ8mJEDU9phaKDD_B2CElI1gg/exec';
   function openSyncSheet(pre) {
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';

@@ -1518,7 +1518,7 @@
     return app ? 'the Notes app' : 'this browser';
   };
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycby92DH5iMgKbSfF3oP5i8qgsgFg669HfUzFAB2MuHkAE0WbHuuPboutO5SnfPWvPeXV/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzjWJ3Iwk0J8YZiQ20sYKCKeUaG-OcQiPM2n0O9F2cDvNL4wiAEbjptQNYFzz4cf_HL/exec';
   function openSyncSheet(pre){
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';

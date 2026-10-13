@@ -1289,7 +1289,7 @@
   // =====================================================================
   const SHEET_APP = 'allison-podcasts-sync';
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzwuwHHtymHvAQ38d_7CmyedychhdLWcaTXsbjTetH0GAWWADFV9DQurDIlKpzGve0l4w/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzyRxvnOvC97ByhaBJ0_Oc1Z-pP_SBIA9rZPEa5dyvvn1c4W1tGcOyM8LG4XXXbf7Vb/exec';
   const SHEET_MAX = 3000;
   const SK = {cfg: KEY + '-sheet', at: KEY + '-sheet-at', device: KEY + '-device'};
   const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };

@@ -1033,7 +1033,7 @@ if (window.top !== window.self) {
   let logNagged = false, syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxPNuQHt5-wfnhwPUIxQlSGZSk2MYf0-Vs2p7gcCsjc99ferLXQGi-c-khQD5P1itQw/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxj_O0w_Q30WKA-AfWXh86ZyspCG2JsxtsSal_pO8_rpz1xQbbDRNx0L_LY-2ylKJgT/exec';
   const SYNC_ERRORS = {
     'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes or Travel code.',
     'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
