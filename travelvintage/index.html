@@ -738,7 +738,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 
 /* the atomic shapes behind the title (they scroll away with the page) */
 .ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
-.ambient i{filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
 .ambient i:nth-child(1){width:220px;height:220px;left:auto;right:-70px;top:-60px;bottom:auto;background:var(--mc-mustard)}
 .ambient i:nth-child(2){width:44px;height:44px;left:auto;right:100px;top:64px;bottom:auto;background:var(--mc-teal)}
 .ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-30px;top:100px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
