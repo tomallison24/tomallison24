@@ -1,6 +1,6 @@
 {
-  "name": "Drinks Vintage",
-  "short_name": "Drinks Vintage",
+  "name": "Drinks",
+  "short_name": "Drinks",
   "description": "Drinks in a mid-century modern look: a simple log of what you drink, each day's standard drinks, alcohol-free days, and how this week or month compares with the one before.",
   "start_url": "./",
   "scope": "./",

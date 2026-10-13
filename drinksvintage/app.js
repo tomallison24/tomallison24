@@ -27,8 +27,8 @@
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
-  document.body.textContent = 'Drinks Vintage can’t be opened inside another page.';
-  throw new Error('Drinks Vintage refuses to run inside a frame');
+  document.body.textContent = 'Drinks can’t be opened inside another page.';
+  throw new Error('Drinks refuses to run inside a frame');
 }
 
 (function () {
@@ -102,7 +102,7 @@ if (window.top !== window.self) {
   let storeWarned = false;
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ v: 1, entries: data.entries, days: data.days, prefs: data.prefs })) && ls.set(K.graves, JSON.stringify(graves));
-    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Drinks Vintage: its storage is full.'); }
+    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Drinks: its storage is full.'); }
   }
   function save() { track(); persist(); scheduleSync(); }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

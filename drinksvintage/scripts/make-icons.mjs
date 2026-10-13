@@ -1,9 +1,9 @@
-// Draws drinks/icon-512.png and drinks/icon-180.png from drinks/icon.svg (a white wine glass on
-// dusty plum, one of the Sea glass tints), by rendering the SVG in headless
+// Draws drinksvintage/icon-512.png and drinksvintage/icon-180.png from drinksvintage/icon.svg (a cream wine glass on
+// olive, one of the Retro colours), by rendering the SVG in headless
 // Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node drinks/scripts/make-icons.mjs
+//   node drinksvintage/scripts/make-icons.mjs
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
