@@ -962,7 +962,7 @@ function renderMsg(title, body, retry) {
 }
 
 function renderWelcome() {
-  renderShell(`<div class="msg"><b>Weather Vintage</b>It opens to wherever you are. Allow your location, or search for a city.<div class="row">
+  renderShell(`<div class="msg"><b>Weather</b>It opens to wherever you are. Allow your location, or search for a city.<div class="row">
     <button class="pill primary" data-action="gps">${svg('crosshairs-gps', 18)}Use my location</button>
     <button class="pill" data-action="location">${svg('magnify', 18)}Search</button></div>
     ${S.error ? `<p class="note" style="margin:12px 0 0;">${esc(S.error)}</p>` : ''}</div>`);

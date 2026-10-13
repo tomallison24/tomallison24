@@ -1,6 +1,6 @@
 {
-  "name": "Weather Vintage",
-  "short_name": "Weather Vintage",
+  "name": "Weather",
+  "short_name": "Weather",
   "description": "Weather in a mid-century modern look: opens to where you are, with hourly and 7-day forecasts and radar. NWS data, with Open-Meteo as fallback.",
   "start_url": "./",
   "scope": "./",

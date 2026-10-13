@@ -310,7 +310,7 @@ for (const scheme of ['light', 'dark']) {
   await page.goto(BASE + '/weathervintage/');
   await page.waitForSelector('.msg .pill.primary');
   await step(scheme + ': the welcome: a cream card, a solid orange button and an outlined teal one', async () => {
-    assert.equal(await text(page, '.msg b'), 'Weather Vintage');
+    assert.equal(await text(page, '.msg b'), 'Weather');
     const cs = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return { bg: c.backgroundColor, color: c.color, shadow: c.boxShadow, radius: c.borderRadius }; });
     const main = await cs('.pill.primary'), other = await cs('.pill:not(.primary)'), msg = await cs('.msg');
     assert.equal(main.bg, rgb(194, 76, 40), 'burnt orange, a shade deeper than the shapes so cream words read on it'); assert.equal(main.shadow, 'none');
