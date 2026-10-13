@@ -670,7 +670,7 @@
     toast('Connected. ' + places.length + (places.length === 1 ? ' place' : ' places') + ' in the Sheet.');
   }
   // Places shares Notes' Sheet, so the owner's Notes link is filled in; only the secret phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycby92DH5iMgKbSfF3oP5i8qgsgFg669HfUzFAB2MuHkAE0WbHuuPboutO5SnfPWvPeXV/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzjWJ3Iwk0J8YZiQ20sYKCKeUaG-OcQiPM2n0O9F2cDvNL4wiAEbjptQNYFzz4cf_HL/exec';
   $('syncBtn').onclick = () => { renderSync(); if (syncCfg) { $('syUrl').value = syncCfg.url; $('sySecret').value = syncCfg.secret; } else $('syUrl').value = SHEET_URL; openSheet('syncSheet'); };
   $('syForm').addEventListener('submit', e => { e.preventDefault(); connect($('syUrl').value.trim(), $('sySecret').value.trim()); });
   $('syNotes').onclick = () => { const n = store.get(NOTES_SYNC, null); if (n) connect(n.url, n.secret); };

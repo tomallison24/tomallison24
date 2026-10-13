@@ -528,7 +528,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const SHEET_APP = 'allison-drinks-sync';
   // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzjULI2qY8he38bdMmGq2Pv1J3cjIX8gC5m2YzaGPVkqWgNpcURDco2CYLuldHRKHtz/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxzpSXXD2t-j7kaNrA3S-kK74uaxC5J6P_OykrOQrdYYww4JCViMrwMnXSVo4Qn3nOO/exec';
   let sheetCfg = ls.json(K.sheet, null);
   if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
   let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false;
