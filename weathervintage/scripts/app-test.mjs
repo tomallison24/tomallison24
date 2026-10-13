@@ -55,7 +55,7 @@ const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v 
 const contrast = (a, b) => { const x = lum(parse(a)), y = lum(parse(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 const rgb = (r, g, b) => `rgb(${r}, ${g}, ${b})`;
 
-const DISC = scheme => ({ sun: rgb(227, 167, 47), night: scheme === 'light' ? rgb(251, 245, 233) : rgb(233, 221, 196), cloud: rgb(143, 207, 199), rain: rgb(111, 189, 180), storm: rgb(232, 128, 90), snow: rgb(196, 224, 217), fog: rgb(185, 196, 106), wind: rgb(163, 176, 74), alert: rgb(238, 138, 104) });
+const DISC = scheme => ({ sun: rgb(227, 167, 47), night: scheme === 'light' ? rgb(251, 245, 233) : rgb(233, 221, 196), cloud: rgb(143, 207, 199), rain: rgb(111, 189, 180), storm: rgb(232, 128, 90), snow: rgb(168, 211, 202), fog: rgb(185, 196, 106), wind: rgb(163, 176, 74), alert: rgb(238, 138, 104) });
 const SKY_GROUPS = ['sun', 'night', 'cloud', 'rain', 'storm', 'snow', 'fog', 'wind', 'alert'];
 const newPage = async (scheme, { weather = {}, geo = true, seed, route } = {}) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block',

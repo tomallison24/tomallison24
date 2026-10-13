@@ -67,8 +67,10 @@ change independently and Calendar is never touched.
   Drinks from your account (`../drinks/api/`), as in Calendar.
   - The account keeps one copy of each layer, written by whichever of Notes,
     Travel, Mail or Fitness (or their Vintage designs) last sent it. Travel
-    Vintage does not send one (see `travelvintage/README.md`), so on an iPhone
-    Travel's layer comes from Travel only.
+    Vintage keeps bookings of its own and (when this was written) does not send
+    one, so that two apps do not overwrite each other's layer: on an iPhone
+    Travel's layer then comes from Travel only, while on a computer that shares
+    the apps' storage Travel Vintage's bookings show.
 - **Opens its layer items in the Vintage apps**: Travel Vintage, Mail Vintage,
   Fitness Vintage and Drinks Vintage (`../travelvintage/`, `../mailvintage/?thread=…`,
   `../fitnessvintage/?date=…`, `../drinksvintage/?date=…`); Notes has no Vintage.
