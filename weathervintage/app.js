@@ -879,6 +879,14 @@ function renderShell(inner, keepSky) {
   app.innerHTML = inner;
 }
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The disc and shapes of the sky sit behind the hero, wherever the alerts above it leave it, and scroll away with the page.
+function placeSky() {
+  const c = document.getElementById('card');
+  if (!c || skyEl.hidden) return;
+  const at = Math.max(0, Math.round(c.getBoundingClientRect().top + window.scrollY)), y = Math.max(0, at - 120);   // a little room above the card, so the disc is not cut off at the top
+  skyEl.style.top = y + 'px'; skyEl.style.setProperty('--pad', (at - y) + 'px');
+}
+window.addEventListener('resize', placeSky);
 
 function render() {
   if (!S.loc) return S.locating ? renderShell(`<div class="skeleton" aria-hidden="true"><p class="locating">Finding where you are…</p></div>${S.places.length ? `<div class="row-c"><button class="pill" data-action="location">${svg('magnify', 18)}Choose a place</button></div>` : ''}`) : renderWelcome();
@@ -943,6 +951,7 @@ function render() {
     : S.locError && S.loc.mode === 'gps' ? `Location unavailable · last known place · ${at}`
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
+  placeSky();
   put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Places</button>`);
 }
 
