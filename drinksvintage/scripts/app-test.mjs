@@ -24,6 +24,7 @@ import path from 'path';
 import assert from 'assert/strict';
 import { onRequest } from '../../functions/drinks/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';   // the same Sheet script as Drinks: drinks/google-sheet-sync.gs
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -580,6 +581,109 @@ await test('never wider than the phone, from the smallest iPhone up; the title i
     }
     await p.ctx.close();
   }
+});
+
+
+// ---- Google Sheet sync: the real google-sheet-sync.gs, run in Node on an in-memory Sheet, answers the app ----
+const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET = 'test-secret-phrase';
+const withSheet = async (pg, sheet) => {
+  await pg.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => {
+    const req = route.request(), cors = { 'access-control-allow-origin': '*' };
+    if (req.method() === 'POST') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.post(req.postData())) });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.get()) });
+  });
+};
+const sheetDrink = (id, extra) => Object.assign({ id, date: TODAY, time: '19:00', name: 'IPA', cat: 'beer', vol: 16, unit: 'oz', abv: 6.8, qty: 1, note: '', updated: Date.now() }, extra);   // now: the account, shared by every test here, has graves for earlier days
+const logRow = (sheet, id) => sheet.tab('Log').slice(1).find(r => r[12] === id);
+const logIndex = (sheet, id) => sheet.tab('Log').findIndex(r => r[12] === id) + 1;
+
+await test('Google Sheet sync: More has the row; connecting sends the log, and a row changed or added in the Sheet comes back', async () => {
+  const sheet = fakeSheet();
+  const S = await newPage('light', { 'aos.session': SESSION, 'allison-drinksv-v1': JSON.stringify({ v: 1, entries: [sheetDrink('s1'), sheetDrink('s2', { name: 'Wine', cat: 'wine', vol: 5, abv: 13 })], days: [{ id: YESTERDAY, status: 'af', updated: Date.now() }], prefs: [] }) });
+  await withSheet(S, sheet);
+  const sp = S.page;
+  await sp.goto(BASE + '/drinksvintage/'); await sp.waitForFunction(() => window.__drinks); await sp.waitForTimeout(700);
+  await sp.click('#moreBtn');
+  assert.match(await sp.textContent('#sheetBtn'), /Google Sheet sync\s*Not connected/);
+  await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
+  assert.equal(await sp.isVisible('#syForm'), true); assert.equal(await sp.isHidden('#syOn'), true);
+  // a link that isn't Apps Script's is refused before anything is sent
+  await sp.fill('#syUrl', 'https://example.com/x'); await sp.fill('#sySecret', 'abc'); await sp.click('#syConnect');
+  assert.match(await sp.textContent('#syStatus'), /starts with https:\/\/script\.google\.com/);
+  // a wrong secret says so, and nothing is kept
+  await sp.fill('#syUrl', SHEET_URL); await sp.fill('#sySecret', 'wrong'); await sp.click('#syConnect');
+  await sp.waitForFunction(() => /secret code doesn.t match/.test(document.getElementById('syStatus').textContent));
+  assert.equal(await sp.evaluate(() => window.__drinks.sheetCfg()), null);
+  await sp.fill('#sySecret', SHEET_SECRET); await sp.click('#syConnect');
+  await sp.waitForSelector('#syOn:not([hidden])');
+  assert.deepEqual(sheet.tab('Log')[0].slice(0, 13), ['Timestamp', 'Date', 'Time', 'Name', 'Category', 'Volume', 'Unit', 'ABV', 'Qty', 'StandardDrinks', 'GramsAlcohol', 'Note', 'EntryID']);
+  assert.ok(logRow(sheet, 's1') && logRow(sheet, 's2') && logRow(sheet, 'af-' + YESTERDAY), 'the drinks and the alcohol-free day are in the Log tab: ' + JSON.stringify(sheet.tab('Log')));
+  assert.equal(logRow(sheet, 's1')[7], 6.8);
+  assert.match(await sp.textContent('#syStatus'), /Connected/);
+  await sp.click('#syncSheet [data-close]'); await sp.waitForTimeout(150);
+  assert.match(await sp.textContent('#sheetBtn'), /Connected/);
+  // a row changed in the Sheet comes back here, and goes on to the account
+  sheet.type(logIndex(sheet, 's1'), 'ABV', 7.5); sheet.type(logIndex(sheet, 's1'), 'Note', 'a big one');
+  await sp.evaluate(() => window.__drinks.sheetSync());
+  assert.equal((await local(sp)).entries.find(x => x.id === 's1').abv, 7.5);
+  assert.equal((await local(sp)).entries.find(x => x.id === 's1').note, 'a big one');
+  await sp.waitForFunction(() => window.__drinks.state() === 'ok'); await sp.waitForTimeout(5200);
+  assert.equal(stored().entries.find(x => x.id === 's1').abv, 7.5, 'the account has the Sheet\'s change');
+  // a row typed into the Sheet
+  const i = sheet.tab('Log').length + 1;
+  sheet.type(i, 'Date', TODAY); sheet.type(i, 'Name', 'Old Fashioned'); sheet.type(i, 'Category', 'Cocktail'); sheet.type(i, 'Volume', 2); sheet.type(i, 'Unit', 'oz'); sheet.type(i, 'ABV', 40);
+  await sp.evaluate(() => window.__drinks.sheetSync());
+  const typed = (await local(sp)).entries.find(x => x.name === 'Old Fashioned');
+  assert.ok(typed && typed.cat === 'cocktail' && typed.qty === 1, 'a typed row is a drink here');
+  // Qty 0 removes one, here and in the account
+  sheet.type(logIndex(sheet, 's2'), 'Qty', 0);
+  await sp.evaluate(() => window.__drinks.sheetSync());
+  assert.ok(!(await local(sp)).entries.some(x => x.id === 's2'), 'removed here');
+  assert.ok((await local(sp)).entries.some(x => x.id === 's1'));
+  // a drink logged here reaches the Sheet by itself a moment later
+  await sp.click('#moreSheet .iconbtn[data-close]'); await sp.waitForSelector('#moreSheet', { state: 'hidden' });
+  await sp.click('#fab'); await sp.waitForSelector('#daySheet:not([hidden])');
+  const known = new Set(sheet.tab('Log').slice(1).map(r => r[12]));
+  await sp.click('.utile[data-usual="0"]');
+  await sp.waitForFunction(() => window.__drinks.sheetState() === 'ok'); await sp.waitForTimeout(3600);
+  const fresh = sheet.tab('Log').slice(1).filter(r => !known.has(r[12]));   // (the first usual is the IPA already logged)
+  assert.equal(fresh.length, 1, 'the drink logged here shows up in the Sheet by itself');
+  await sp.click('#daySheet .okbtn');
+  assert.deepEqual(await sp.evaluate(() => window.__csp || []), [], 'the Content Security Policy lets Apps Script through');
+  // disconnect: tap twice, and the link is forgotten
+  await sp.click('#moreBtn'); await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
+  await sp.click('#syOff'); assert.match(await sp.textContent('#syOff'), /Tap again/); await sp.click('#syOff');
+  assert.equal(await sp.evaluate(() => window.__drinks.sheetCfg()), null);
+  assert.equal(await sp.evaluate(() => localStorage.getItem('allison-drinksv-v1-sheet')), null);
+  await S.ctx.close();
+});
+
+await test('Google Sheet sync: the Sheet is yours alone: another person signing in on this phone is not connected to it', async () => {
+  const sheet = fakeSheet();
+  const S = await newPage('light', { 'aos.session': SESSION, 'allison-drinksv-v1': JSON.stringify({ v: 1, entries: [sheetDrink('other1')], days: [], prefs: [] }),
+    'allison-drinksv-v1-sheet': JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }), 'allison-drinksv-v1-sync': JSON.stringify({ at: 1, pushed: 1, user: 'SOMEONE_ELSE', when: 1 }) });
+  await withSheet(S, sheet);
+  const calls = []; S.ctx.on('request', r => { if (/script\.google/.test(r.url()) && r.method() === 'POST') calls.push(r.url()); });
+  await S.page.goto(BASE + '/drinksvintage/'); await S.page.waitForFunction(() => window.__drinks); await S.page.waitForTimeout(1800);
+  assert.equal(await S.page.evaluate(() => window.__drinks.sheetCfg()), null, 'disconnected');
+  assert.ok(!(await local(S.page)).entries.some(x => x.id === 'other1'), 'and the other person\'s log is gone from here (this person\'s own, from the account, takes its place)');
+  assert.equal(sheet.tab('Log'), null, 'nothing reached the Sheet');
+  await S.ctx.close();
+});
+
+await test('Google Sheet sync: a setup link from the other phone fills in the form, and the link and code are backed up on the phone', async () => {
+  const sheet = fakeSheet();
+  const S = await newPage('light', { 'aos.session': SESSION });
+  await withSheet(S, sheet);
+  const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  await S.page.goto(BASE + '/drinksvintage/' + link); await S.page.waitForFunction(() => window.__drinks);
+  await S.page.waitForSelector('#syncSheet:not([hidden])');
+  assert.equal(await S.page.inputValue('#syUrl'), SHEET_URL); assert.equal(await S.page.inputValue('#sySecret'), SHEET_SECRET);
+  assert.equal(await S.page.evaluate(() => location.hash), '', 'the secret is out of the address bar');
+  await S.page.click('#syConnect'); await S.page.waitForSelector('#syOn:not([hidden])');
+  const idb = await S.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-drinksv', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => res(q.result); }; }));
+  assert.deepEqual(idb, { url: SHEET_URL, secret: SHEET_SECRET });
+  await S.ctx.close();
 });
 
 await test('no errors and no Content Security Policy violations', async () => {

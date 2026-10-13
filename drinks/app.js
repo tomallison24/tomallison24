@@ -41,7 +41,7 @@ if (window.top !== window.self) {
   const pad = n => String(n).padStart(2, '0');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-drinks-v1';
-  const K = { graves: KEY + '-graves', sync: KEY + '-sync', period: KEY + '-period', trview: KEY + '-trview', trgroup: KEY + '-trgroup' };
+  const K = { graves: KEY + '-graves', sync: KEY + '-sync', sheet: KEY + '-sheet', sheetAt: KEY + '-sheet-at', period: KEY + '-period', trview: KEY + '-trview', trgroup: KEY + '-trgroup' };
   // One decimal, as people say it: 3.2, 1, 0.5.
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
@@ -54,6 +54,7 @@ if (window.top !== window.self) {
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 6v12M6 12h12"/></svg>',
     import: '<svg viewBox="0 0 24 24"><path d="M12 3.6v11M7.6 10.6l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-2.6"/></svg>',
+    sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
     export: '<svg viewBox="0 0 24 24"><path d="M12 15V4M7.6 8.4L12 4l4.4 4.4"/><path d="M4.4 13.6v4.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-4.6"/></svg>',
     bin: '<svg viewBox="0 0 24 24"><path d="M4.6 6.8h14.8M9.6 6.8V4.6h4.8v2.2M6.6 6.8l.9 12a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12"/></svg>',
   };
@@ -101,7 +102,7 @@ if (window.top !== window.self) {
     const ok = ls.set(KEY, JSON.stringify({ v: 1, entries: data.entries, days: data.days, prefs: data.prefs })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Drinks: its storage is full.'); }
   }
-  function save() { track(); persist(); scheduleSync(); }
+  function save() { track(); persist(); scheduleSync(); scheduleSheet(); }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const goals = () => Object.assign({}, C.GOALS, data.prefs.find(p => p.id === 'goals') || {});
   const entriesOn = day => data.entries.filter(x => x.date === day).sort((a, b) => (a.time || '99').localeCompare(b.time || '99') || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));   // ids start with when they were made
@@ -382,9 +383,10 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="gAf">Alcohol-free days a week</label><select id="gAf">' + opts([0, 1, 2, 3, 4, 5, 6, 7], g.af) + '</select></div></div>'
       + '<p class="hint">In standard drinks (14 g of alcohol each).</p>'
       + '<p class="label">Your data</p><div class="rgroup">'
+      + '<button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet sync<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button>'
       + '<button class="rowbtn" type="button" id="importBtn"><span class="ic">' + ICON.import + '</span><span>Bring in ABV Tracker history<span class="sub">Its JSON backup, or its Google Sheet’s Log tab downloaded as CSV</span></span></button>'
       + '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + ICON.export + '</span><span>Export<span class="sub">Everything you’ve logged, as a spreadsheet (CSV)</span></span></button>'
-      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone and your account</span></span></button></div>';
+      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone, your account' + (sheetCfg ? ' and your Google Sheet' : '') + '</span></span></button></div>';
   }
   const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); if (syncState !== 'syncing') sync(); };
@@ -401,6 +403,7 @@ if (window.top !== window.self) {
       catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
+    if (e.target.closest('#sheetBtn')) { openSheetSync(); return; }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }
     if (e.target.closest('#exportBtn')) { exportCSV(); return; }
     const w = e.target.closest('#wipeBtn');
@@ -458,6 +461,7 @@ if (window.top !== window.self) {
   function forOtherPerson(user) {
     if (!user || !info.user || info.user === user.id) return false;
     data.entries = []; data.days = []; data.prefs = []; graves = {};
+    sheetForget();   // and the Google Sheet is theirs: it stays connected only for them
     initShadow(); persist(); info = {}; saveInfo(); render();
     return true;
   }
@@ -476,6 +480,7 @@ if (window.top !== window.self) {
     initShadow(); persist();
     render();
     if (st.day && !$('daySheet').hidden) { if (st.form && st.form.editing && !data.entries.some(x => x.id === st.form.editing)) st.form = null; renderDay(); }
+    scheduleSheet();   // the Google Sheet, if connected, hears what another phone changed
     return missing;
   }
   async function sync(loud) {
@@ -514,6 +519,185 @@ if (window.top !== window.self) {
   // A few seconds after the last change, so a night's drinks are a few saves, not dozens.
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 4000 : ms); }
   addEventListener('aos:account', e => { if (e.detail) sync(true); else setState('signin'); });
+
+  // ---------------------------------------------------------------------
+  // Google Sheet sync - optional, the same design as Fitness's, for the whole log
+  // (google-sheet-sync.gs; steps in the README). The Sheet is your own, so it is for you
+  // alone: another person who signs in on this phone does not inherit it. Its Log tab
+  // goes both ways: a row typed or changed there comes back here.
+  // ---------------------------------------------------------------------
+  const SHEET_APP = 'allison-drinks-sync';
+  let sheetCfg = ls.json(K.sheet, null);
+  if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
+  let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false;
+  let sheetAt = +ls.get(K.sheetAt, 0) || 0;
+  const SHEET_ERRORS = {
+    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t add a space to the code.',
+    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
+    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
+    'busy': 'The Sheet was busy. Trying again shortly.',
+    'bad-request': 'The Sheet didn’t understand the request.',
+    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
+    'not-json': 'That link didn’t answer like the Drinks script. Check it ends in /exec and “Who has access” is Anyone.',
+    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Drinks needs the web app link from its own Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
+  };
+  // A copy of the link and code in IndexedDB, as in Fitness: it survives a full or cleared localStorage
+  // (every AllisonOS app shares its space).
+  const sheetKeep = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-drinks', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
+    }));
+    return {
+      get: k => tx('readonly', x => x.get(k)).catch(() => null),
+      set: (k, v) => tx('readwrite', x => v == null ? x.delete(k) : x.put(v, k)).catch(() => {}),
+    };
+  })();
+  function saveSheetCfg() {
+    if (sheetCfg) ls.set(K.sheet, JSON.stringify(sheetCfg)); else ls.del(K.sheet);
+    sheetKeep.set('sheet', sheetCfg ? { url: sheetCfg.url, secret: sheetCfg.secret } : null);
+  }
+  // Disconnect (someone else signed in on this phone): the link and code are gone from here, and the Sheet is left as it is.
+  function sheetForget() {
+    if (!sheetCfg) return;
+    sheetCfg = null; sheetState = 'off'; ls.del(K.sheetAt); sheetAt = 0; saveSheetCfg(); renderSheetStatus();
+  }
+  function applyFromSheet(res) {
+    Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
+    const before = JSON.stringify([data.entries, data.days, data.prefs]);
+    for (const kind of KINDS) {
+      const map = new Map(data[kind].map(x => [x.id, x])), remote = Array.isArray(res[kind]) ? res[kind] : [];
+      remote.forEach(r => { const l = map.get(r.id); if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r); });
+      data[kind] = [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); })
+        .filter(kind === 'entries' ? C.okEntry : kind === 'days' ? okDay : okPref);
+    }
+    const changed = JSON.stringify([data.entries, data.days, data.prefs]) !== before;
+    initShadow(); persist();
+    if (changed) {
+      render();
+      if (st.day && !$('daySheet').hidden) { if (st.form && st.form.editing && !data.entries.some(x => x.id === st.form.editing)) st.form = null; renderDay(); }
+      scheduleSync();   // a change typed into the Sheet goes on to your account
+    }
+    return changed;
+  }
+  async function sheetSync(loud) {
+    if (!sheetCfg) return false;
+    if (sheetBusy) { sheetAgain = true; return false; }
+    if (!navigator.onLine) { sheetState = 'offline'; renderSheetStatus(); return false; }
+    sheetBusy = true; sheetState = 'syncing';
+    if (loud) busyPill('Syncing');
+    let ok = false;
+    try {
+      track(); persist();
+      let r, res;
+      try {
+        r = await fetch(sheetCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
+          body: JSON.stringify({ secret: sheetCfg.secret, action: 'sync', v: 1, entries: data.entries, days: data.days, prefs: data.prefs, graves }) });
+      } catch { throw new Error('network'); }
+      try { res = await r.json(); } catch { throw new Error('not-json'); }
+      if (res && res.ok && res.app && res.app !== SHEET_APP) throw new Error('wrong-app');
+      if (res && res.error === 'wrong-secret' && res.app !== SHEET_APP) throw new Error(await whichSheetScript(sheetCfg.url));
+      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      sheetAt = Date.now(); ls.set(K.sheetAt, String(sheetAt));
+      sheetState = 'ok'; sheetErr = ''; sheetErrShown = false; ok = true;
+      applyFromSheet(res);
+      if (loud) pillDone('Synced');
+    } catch (e) {
+      sheetState = 'error'; sheetErr = e.message; busyPill();
+      if (loud || !sheetErrShown) { sheetErrShown = true; toast(SHEET_ERRORS[sheetErr] || 'The Google Sheet didn’t sync. Trying again later.', null, 6000); }
+    } finally {
+      sheetBusy = false; renderSheetStatus();
+      if (sheetAgain) { sheetAgain = false; scheduleSheet(800); }
+    }
+    return ok;
+  }
+  // A "wrong secret" from a script that doesn't say it's Drinks': ask the link which app it belongs to (every script
+  // answers a plain GET with its name).
+  async function whichSheetScript(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+      const d = await r.json();
+      if (d && d.app && d.app !== SHEET_APP) return 'wrong-app';
+      if (d && d.app === SHEET_APP) return 'old-script';
+    } catch {}
+    return 'wrong-secret';
+  }
+  function scheduleSheet(ms) { if (!sheetCfg) return; clearTimeout(sheetTimer); sheetTimer = setTimeout(() => sheetSync(false), ms == null ? 2500 : ms); }
+  const sheetLine = () => !sheetCfg ? 'Not connected' : sheetState === 'error' ? 'Couldn’t sync just now' : sheetState === 'syncing' ? 'Syncing…'
+    : sheetState === 'offline' ? 'Offline: will sync when you’re back online' : sheetAt ? 'Connected. Last synced ' + ago(sheetAt) + '.' : 'Connected';
+  function renderSheetStatus() {
+    const on = !!sheetCfg;
+    if ($('syStatus')) {
+      $('syStatus').textContent = !on ? 'Back up your log to a Google Sheet of your own. Its Log tab goes both ways: change a row there, or add one, and it comes back here.'
+        : sheetState === 'error' ? (SHEET_ERRORS[sheetErr] || 'Not synced') : sheetState === 'syncing' ? 'Syncing…'
+        : sheetState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : sheetAt ? 'Connected. Last synced ' + ago(sheetAt) + '.' : 'Connected.';
+      $('syForm').hidden = on; $('syOn').hidden = !on;
+    }
+    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
+  }
+  function openSheetSync(pre) {
+    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : '';
+    $('sySecret').value = pre ? pre.s : sheetCfg ? sheetCfg.secret : '';
+    renderSheetStatus();
+    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
+    openSheet('syncSheet');
+  }
+  $('syForm').onsubmit = async e => {
+    e.preventDefault();
+    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
+    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
+    const before = sheetCfg;
+    sheetCfg = { url, secret };
+    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
+    const ok = await sheetSync(true);
+    $('syConnect').disabled = false;
+    if (!ok) { sheetCfg = before; sheetState = before ? 'idle' : 'off'; const err = sheetErr; renderSheetStatus(); $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = SHEET_ERRORS[err] || 'Couldn’t connect.'; return; }
+    saveSheetCfg(); renderSheetStatus();
+    toast('Connected. ' + plural(data.entries.length, 'drink') + ' now in the Sheet.');
+  };
+  $('syNow').onclick = async () => { if (await sheetSync(true)) toast('Synced'); };
+  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+  $('syShare').onclick = async () => {
+    const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({ u: sheetCfg.url, s: sheetCfg.secret }));
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Drinks on your other phone. Keep it private.', null, 6000); }
+    catch { toast('Copy isn’t available here.'); }
+  };
+  $('syOff').onclick = () => {
+    const b = $('syOff');
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
+    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
+    sheetCfg = null; sheetState = 'off'; saveSheetCfg(); renderSheetStatus();
+    toast('Disconnected. Your log stays on this phone, in your account and in the Sheet.');
+  };
+  function takeSetupLink(text) {
+    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return false;
+    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSheetSync(c); return true; } } catch {}
+    toast('That setup link is damaged. Copy it again.'); return true;
+  }
+  // The pill at the top while the Sheet syncs (as in Fitness).
+  let pillAt = 0, pillTimer = null;
+  function busyPill(text) {
+    const p = $('syncPill');
+    if (text) { clearTimeout(pillTimer); if (p.hidden) pillAt = Date.now(); p.classList.remove('out', 'done'); p.hidden = false; $('syncPillTxt').textContent = text; return; }
+    if (p.hidden || p.classList.contains('out')) return;
+    clearTimeout(pillTimer);
+    pillTimer = setTimeout(() => { p.classList.add('out'); pillTimer = setTimeout(() => { p.hidden = true; p.classList.remove('out', 'done'); }, 450); }, Math.max(0, 900 - (Date.now() - pillAt)));
+  }
+  function pillDone(text) {
+    const p = $('syncPill');
+    if (p.hidden) return;
+    clearTimeout(pillTimer);
+    p.classList.add('done'); $('syncPillTxt').textContent = text;
+    pillTimer = setTimeout(() => { p.classList.add('out'); pillTimer = setTimeout(() => { p.hidden = true; p.classList.remove('out', 'done'); }, 450); }, 1300);
+  }
 
   // ---------------------------------------------------------------------
   // Sheets and the toast (as in Fitness)
@@ -904,6 +1088,8 @@ if (window.top !== window.self) {
   load();
   render();
   animateIn(main);
+  // A setup link from your other phone: #sync=...
+  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
   // Opened from Calendar's Drinks layer: ?date=YYYY-MM-DD opens that day.
   const q = new URLSearchParams(location.search).get('date');
   if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.week = weekStartOf(q); render(); openDay(q); }
@@ -919,12 +1105,19 @@ if (window.top !== window.self) {
     if (today() !== shownDay) { shownDay = today(); st.week = weekStartOf(today()); }
     if (!st.day) render();
     if (Date.now() - lastSyncAt > 60000) sync(false);
+    if (sheetCfg && Date.now() - sheetAt > 30000) sheetSync(false);
   });
-  window.addEventListener('online', () => sync(false));
+  window.addEventListener('online', () => { sync(false); if (sheetCfg) sheetSync(false); });
   setTimeout(() => sync(false), 600);
+  if (sheetCfg) { setTimeout(() => sheetSync(false), 900); sheetKeep.get('sheet').then(c => { if (!c || c.url !== sheetCfg.url || c.secret !== sheetCfg.secret) saveSheetCfg(); }); }
+  else sheetKeep.get('sheet').then(c => {
+    if (sheetCfg || !c || !c.url || !c.secret) return;
+    sheetCfg = { url: c.url, secret: c.secret }; sheetState = 'idle'; ls.set(K.sheet, JSON.stringify(sheetCfg));
+    sheetSync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
+  });
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (drinks/scripts/app-test.mjs) only.
-  window.__drinks = { st, data, render, openDay, sync, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis: openTrends, openTrends };
+  window.__drinks = { st, data, render, openDay, sync, sheetSync, sheetState: () => sheetState, sheetCfg: () => sheetCfg, graves: () => graves, info: () => info, state: () => syncState, usual, openAnalysis: openTrends, openTrends };
 })();

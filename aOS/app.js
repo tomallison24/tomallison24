@@ -67,7 +67,10 @@
   const DKEY = id => 'aos.design.' + id;
   const chosenDesign = id => {
     const ds = DESIGNS[id]; let want = null; try { want = localStorage.getItem(DKEY(id)); } catch {}
-    return ds.find(d => d.id === want) || ds.find(d => INST.has(d.app)) || ds[0];
+    // a pick made here, else the design already added, else the one that goes with aOS's look: Vintage in the
+    // Vintage look (every link and Get in aOS then goes to the Vintage app), Standard in Sea glass
+    const byLook = ds.find(d => d.look === (window.aosLook && aosLook.get() === 'glass' ? 'glass' : 'vintage'));
+    return ds.find(d => d.id === want) || ds.find(d => INST.has(d.app)) || byLook || ds[0];
   };
   const appOf = id => hasDesigns(id) ? chosenDesign(id).app : id;
   const pickDesign = (id, did) => { try { localStorage.setItem(DKEY(id), did); } catch {} };
@@ -117,7 +120,7 @@
     ? `<div class="story plain s${i} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
     : `<div class="story s${i} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
-       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div></div>`).join('');
 
   // ---- Apps, and Search ----
   const rows = ids => ids.map(id => { const ap = appOf(id), ds = hasDesigns(id);
@@ -211,7 +214,7 @@
     page(`<div class="hero s${i}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
-      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
+      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
   }
   // ---- your account (the avatar): family accounts with passkeys (Face ID) ----
   // The owner sets up once with the owner code; everyone else joins with an

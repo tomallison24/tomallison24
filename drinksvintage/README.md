@@ -35,6 +35,14 @@ it are still there underneath. Drinks Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built. It follows the phone's
 Light or Dark, or aOS's own choice, like every app.
 
+## Google Sheet sync
+
+Drinks Vintage has the same **More → Google Sheet sync** as Drinks, with its Log tab that goes both ways (see
+`drinks/README.md`, "Google Sheet sync"), and the same script: paste `drinks/google-sheet-sync.gs` into your Sheet. The
+two apps keep their own link and code (`allison-drinksv-v1-sheet`, and an IndexedDB copy, `allison-drinksv`), so
+connect each; they can use the same Sheet and phrase, and then each drink is in the Log tab once. Its test is
+`drinksvintage/scripts/app-test.mjs`, which runs Drinks' script and fake Sheet (`../../drinks/scripts/fake-sheet.mjs`).
+
 ## What is separate from Drinks
 
 It is a second copy of Drinks' page and script, not a setting, so the two can

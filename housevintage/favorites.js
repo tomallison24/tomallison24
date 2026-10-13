@@ -25,7 +25,7 @@
 //   - Weather: a glass pill over the automations - the condition and the
 //     temperature outside (with today's high and low, small, beneath the
 //     condition), the Weather app's own reading (WXNOW below) - that
-//     opens the AllisonOS Weather app (../weather/, a plain link)
+//     opens the AllisonOS Weather app (Weather Vintage, ../weathervintage/, a plain link)
 //   - Activity: a glass pill under the weather with the latest event; it
 //     opens the last 10 from the dashboard's own log, sensor.signal_activity_log
 //     (ha-config configuration.yaml: `events`, newest first, each t epoch,
@@ -152,7 +152,7 @@ family({
       <div class="fnp" data-r="np"></div>
       <div class="runpanel" data-r="run" hidden></div>
       <div class="vsec-h"><span>Automations</span></div>
-      <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weather/" aria-label="Open Weather"></a></div>
+      <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weathervintage/" aria-label="Open Weather"></a></div>
       <div class="agw wxw acw" data-r="acw" data-dv="fav:activity"><i class="ag-glow"></i><button class="wxpill acpill" data-r="ac" data-a="activity" aria-label="Recent activity"></button></div>
       <div class="autos" data-dv="fav:autos"></div>
       <div class="vsec-h"><span>Thermostats</span></div>
