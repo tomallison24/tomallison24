@@ -605,7 +605,7 @@ if (window.top !== window.self) {
     if (!sheetCfg) return false;
     if (sheetBusy) { sheetAgain = true; return false; }
     if (!navigator.onLine) { sheetState = 'offline'; renderSheetStatus(); return false; }
-    sheetBusy = true; sheetState = 'syncing'; renderSheetStatus();
+    sheetBusy = true; sheetState = 'syncing';
     let ok = false;
     try {
       const snap = await sheetSnapshot(), key = JSON.stringify(snap.body);

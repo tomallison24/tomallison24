@@ -1478,7 +1478,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && sheetCfg && Date.now() - sheetAt > 10 * MIN) sheetSync(false); });
   addEventListener('online', () => { if (sheetCfg && sheetState !== 'ok') sheetSync(false); });
   // For the tests (podcasts/scripts/app-test.mjs) only.
-  window.__podcasts = {S, sheetSync, sheetState: () => sheetState, sheetCfg: () => sheetCfg, device: () => deviceId, setSheetDelay: ms => { sheetDelay = ms; }};
+  window.__podcasts = {S, save, sheetSync, sheetState: () => sheetState, sheetCfg: () => sheetCfg, device: () => deviceId, setSheetDelay: ms => { sheetDelay = ms; }};
 
   // =====================================================================
   // START
