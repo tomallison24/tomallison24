@@ -6,7 +6,7 @@
       <path d="M150 172H362" fill="none" stroke="#000" stroke-width="18"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#7E8C34"/>
+  <rect width="512" height="512" fill="#A8456E"/>
   <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
   <rect x="32" y="418" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 100 443)"/>
   <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>

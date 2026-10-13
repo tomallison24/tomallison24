@@ -27,6 +27,16 @@ look, and the Welcome and update screens the apps share (`home/welcome.js`) are
 unchanged. The status bar is `default`, not `black-translucent`, which always
 draws the clock white and would vanish on the cream.
 
+## App icons
+
+Because aOS is mid-century, every app shows its mid-century icon in aOS, whichever design is picked: an app
+with a Vintage design shows that design's icon (`<app>vintage/icon-512.png`), and Notes, Podcasts, Places and
+Meals, which have no Vintage design, show theirs from `aOS/icons/` (`node aOS/scripts/make-app-icons.mjs` redraws
+the PNGs from the SVGs there). `icon()` in `app.js` decides. This changes only what aOS draws: each app's own icon
+(what a Home Screen shows, and the install steps) is still its folder's `icon-512.png`. The 13 icons each have a
+different background colour: teal Mail, mustard Home, orange Orders, olive News, denim Calendar, walnut Fitness,
+berry Drinks, sky Weather, indigo Travel, slate Notes, plum Podcasts, green Places, brick Meals.
+
 ## The flow
 
 1. The aOS link opens in Safari: aOS shows how to add it to the Home Screen

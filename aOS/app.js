@@ -5,7 +5,11 @@
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
-  const icon = id => `../${id}/icon-512.png`;
+  // aOS is drawn in the mid-century look, so every app shows its mid-century icon here, whichever design is picked:
+  // an app with a Vintage design shows that design's icon, the apps without one (Notes, Podcasts, Places, Meals)
+  // theirs in aOS/icons/. The app's own icon (what a Home Screen shows) is its folder's, and is not changed.
+  const RETRO_ICONS = ['notes', 'podcasts', 'places', 'meals'];
+  const icon = id => { const v = (D.DESIGNS[id] || []).find(d => d.look === 'vintage'); return v ? `../${v.app}/icon-512.png` : RETRO_ICONS.includes(id) ? `icons/${id}-512.png` : `../${id}/icon-512.png`; };
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);

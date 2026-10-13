@@ -56,13 +56,15 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   report('Every app with a design is one row, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
 }
 
-// 2. the Design menu on the app's page: Standard first; picking Vintage changes the icon and what Get adds
+// 2. the Design menu on the app's page: Standard first; picking Vintage changes what Get adds
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
   await p.click('#list .row[data-app="mail"]'); await p.waitForSelector('.dbtn');
   if (!/Standard/.test(await text(p, '.dbtn'))) pr.push('the menu does not start on Standard');
   if (await p.locator('.dmenu').isVisible()) pr.push('the menu is open before it is tapped');
   if (!/\/mail\/\?via=aos/.test(await attr(p, '.apphead [data-get]', 'href') || '')) pr.push('Get does not add Mail');
+  // aOS is mid-century, so the icon is the mid-century one on Standard too (and for apps with no Vintage design)
+  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('Standard Mail does not show the mid-century icon');
   await p.click('.dbtn');
   if (await p.getAttribute('.dbtn', 'aria-expanded') !== 'true') pr.push('aria-expanded does not say open');
   const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
@@ -71,7 +73,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   await p.click('.dopt[data-did="vintage"]');
   if (await p.locator('.dmenu').isVisible()) pr.push('the menu stays open after a pick');
   if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the menu does not say Vintage after the pick');
-  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('the page keeps Mail\'s icon');
+  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('the page does not show the mid-century icon');
   if (await attr(p, '.apphead [data-get]', 'data-get') !== 'mailvintage') pr.push('Get still adds ' + await attr(p, '.apphead [data-get]', 'data-get'));
   if (await p.locator('.apphead h1').innerText() !== 'Mail') pr.push('the name changed');
   // the list agrees, and the choice is kept on this phone
@@ -80,7 +82,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   await p.reload(); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]');
   if (await attr(p, '#list .row[data-app="mail"] [data-get]', 'data-get') !== 'mailvintage') pr.push('the pick was not kept');
   if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) pr.push('the page scrolls sideways');
-  report('the Design menu: Standard first, Vintage changes the icon and what Get adds, and it is kept', pr); await ctx.close();
+  report('the Design menu: Standard first, Vintage changes what Get adds, the icon is mid-century either way, and it is kept', pr); await ctx.close();
 }
 
 // 3. Get on a design not added yet asks which design, then opens that app's own address (no new tab until then)
@@ -140,6 +142,19 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   const bg = await p.locator('.dmenu').evaluate(e => getComputedStyle(e).backgroundColor);
   if (/250, ?251, ?250/.test(bg)) pr.push('the menu is light in dark mode: ' + bg);
   report('dark mode: the menu fits and is dark', pr); await ctx.close();
+}
+
+// 5. the mid-century icons: every row shows one that loads, the same whichever design is picked, and the four apps
+// with no Vintage design have theirs in aOS/icons/
+{
+  const { ctx, p, errs } = await open(); const pr = [...errs];
+  await p.waitForTimeout(800);
+  const rows = await p.locator('#list .row').evaluateAll(rs => rs.map(r => ({ app: r.dataset.app, src: r.querySelector('img').getAttribute('src'), ok: r.querySelector('img').naturalWidth > 0 })));
+  for (const r of rows) if (!r.ok) pr.push(r.app + '\'s icon does not load: ' + r.src);
+  for (const id of ['notes', 'podcasts', 'places', 'meals']) { const r = rows.find(x => x.app === id); if (!r || !new RegExp('icons/' + id + '-512\\.png$').test(r.src)) pr.push(id + ' does not show its mid-century icon: ' + (r && r.src)); }
+  for (const [id, v] of [['mail', 'mailvintage'], ['news', 'newsvintage'], ['drinks', 'drinksvintage'], ['calendar', 'calendarvintage']]) { const r = rows.find(x => x.app === id); if (!r || !new RegExp(v + '/icon-512\\.png$').test(r.src)) pr.push(id + ' does not show the ' + v + ' icon: ' + (r && r.src)); }
+  if (new Set(rows.map(r => r.src)).size !== rows.length) pr.push('two apps share an icon');
+  report('every app shows its mid-century icon, and each loads', pr); await ctx.close();
 }
 
 await b.close(); server.close();
