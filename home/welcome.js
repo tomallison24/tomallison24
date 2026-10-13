@@ -113,8 +113,8 @@
         'Orders: Whole Foods orders show as Whole Foods Market, not Amazon, and a booked pickup shows its day; an order that was only received is no longer shown as ready or out for delivery; Orders Vintage opens an order\'s email in Mail Vintage',
         'Orders: Fix details with Claude, on an order\'s page, sends that one email\'s text (links removed) to Claude to read again when the details look wrong; nothing is kept, and it is for signed-in family',
         'Orders: a one-off clean-up marks open orders nothing had been heard about for over 5 days as received (Undo in the toast)',
-        'aOS has the mid-century modern look too, the same as the Vintage designs of Mail, Home and Orders: cream (walnut in dark mode) instead of glass, mustard, teal and burnt orange, atomic shapes behind each title, flat round-cornered cards and buttons, a walnut pill for the tabs, Futura type, and a new aOS icon',
-        'Calendar, Drinks, Fitness, News, Weather and Travel have a Vintage design too, in the same look: cream and walnut cards instead of glass, mustard, teal and burnt orange, atomic shapes behind the title, Futura, and a new geometric icon for each. Pick it from the Design menu on the app\'s page in aOS. Each is its own app, with its own settings and storage (News Vintage and Weather Vintage start fresh; Fitness Vintage and Travel Vintage can share the original\'s Google Sheet; Travel Vintage needs its own Google sign-in address added once), so the originals stay as they are'],
+        'aOS has the mid-century modern look too, the same as the Vintage designs of Mail, Home and Orders: cream (walnut in dark mode) instead of glass, mustard, teal and burnt orange, atomic shapes behind each title, flat round-cornered cards and buttons, a walnut pill for the tabs, Futura type, and a new aOS icon. The original Sea glass look is still there: choose Vintage or Sea glass before you add aOS to your Home Screen (its icon goes with it), or later under your account, in Look',
+        'Calendar, Drinks, Fitness, News, Weather and Travel have a Vintage design too, in the same look: cream and walnut cards instead of glass, mustard, teal and burnt orange, atomic shapes behind the title, Futura, and a new geometric icon for each. Pick it from the Design menu on the app\'s page in aOS. Each is its own app, with its own settings and storage (the Vintage designs of Fitness and Travel can share the original\'s Google Sheet; Travel\'s needs its own Google sign-in address added once), so the originals stay as they are. In the Vintage look, aOS shows every app with a mid-century icon, including new ones for Notes, Podcasts, Places and Meals; Sea glass keeps the original icons'],
       apps: {
         news: { highlights: ['Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about it', 'The topics (UK, US, AI and the rest) are a drop-down pill at the bottom, like Home\'s', 'Sport scores are tidier: the Premier League first, a pill to pick another league, and your teams in one pill'],
           notes: ['Summaries are for signed-in family: Face ID asks the first time', 'Each topic has its own icon in the pill', 'In the Scores league pills, the Premier League and Premiership Rugby are pinned to the top'] },
@@ -1288,6 +1288,13 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-tip { font-size: 13px !important; margin-top: 4px !important; }
 #aos-welcome .c-seg { display: flex; margin: 16px auto 0; max-width: 300px; padding: 3px; border-radius: 999px; background: var(--w-dot); }
 #aos-welcome .c-seg button { flex: 1; height: 36px; border-radius: 999px; font-size: 15px; font-weight: 600; transition: background .25s, box-shadow .25s; }
+#aos-welcome .c-looks { display: grid; gap: 10px; margin: 16px auto 0; max-width: 320px; }
+#aos-welcome .c-look { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px 10px 10px; border-radius: 18px; text-align: left; background: var(--w-dot); box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .25s; }
+#aos-welcome .c-look[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--w-text); }
+#aos-welcome .c-look b { display: block; font-size: 17px; font-weight: 700; } #aos-welcome .c-look small { display: block; font-size: 13.5px; color: var(--w-muted); }
+#aos-welcome .c-sw { position: relative; flex: 0 0 44px; height: 56px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--w-edge); }
+#aos-welcome .c-sw.vintage { background: #F4ECDD; } #aos-welcome .c-sw.vintage::after { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
+#aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin-top: 16px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1480,7 +1487,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     });
   }
   // The glass panel and its cards. A card: { t, d, i (drawing) | noart, x: special
-  // ('theme' | 'install' | 'store' | 'notes'), name (install), notes (notes) }.
+  // ('theme' | 'install' | 'look' | 'store' | 'notes'), name (install), notes (notes) }.
   async function tour(o, cards, last = 'Get started') {
     const { el, q, close } = o, body = q('.c-body');
     let i = 0;
@@ -1489,10 +1496,15 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       const c = cards[i];
       el.classList.toggle('tall', c.x === 'install' || !!c.tall);
       const extra = c.x === 'theme' ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`
+        : c.x === 'look' ? `<div class="c-looks" role="listbox" aria-label="Look">${LOOKS.map(([v, n, d]) => `<button type="button" role="option" class="c-look" data-look="${v}" aria-selected="${v === window.aosLook.get()}"><i class="c-sw ${v}" aria-hidden="true"></i><span><b>${n}</b><small>${d}</small></span></button>`).join('')}</div>`
         : c.x === 'store' ? `<a class="c-link" href="${url('../aOS/')}">Open aOS</a>`
         : c.x === 'notes' ? `<ul class="c-notes">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>${c.more ? `<a class="c-link" href="${url('../aOS/#whats-new')}">${c.more}</a>` : ''}` : '';
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
       for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+      for (const b of body.querySelectorAll('.c-look')) b.onclick = () => {   // aOS's look, before it is added: its icon follows
+        window.aosLook.set(b.dataset.look); if (c.onLook) c.onLook(b.dataset.look);
+        body.querySelectorAll('.c-look').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+      };
       const sd = body.querySelector('.c-sd'); if (sd) safariDemo(sd, c.name, c.icon || icon('aos'));
       body.querySelectorAll('.c-inst').forEach(fillInstall);
       el.querySelectorAll('.w-dots i').forEach((x, j) => x.classList.toggle('on', j === i));
@@ -1923,13 +1935,23 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   // Opened from aOS (the in-app Safari view an app tile opens), the steps stay, with
   // no Not now: the only way out is the view's ✕, back to aOS's tiles. So that view
   // never shows the app itself, and coming back to aOS later lands on aOS.
+  // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
+  // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
+  const lookIcon = look => url(`../aOS/icon-${look === 'glass' ? 'glass-' : ''}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now
     try { if (!stay && sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
     const name = NAMES[id] || 'aOS';
     return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
       o.q('.w-skip').hidden = true;
-      await tour(o, [{ x: 'install', noart: true, stay, t: `Add ${name} to your Home Screen`, name, icon: icon(id) }], 'Not now');
+      const inst = { x: 'install', noart: true, stay, t: `Add ${name} to your Home Screen`, name, icon: icon(id) };
+      if (id === 'aos' && ios && window.aosLook) {   // choose the look, then add it
+        inst.icon = lookIcon(window.aosLook.get());
+        const pick = { x: 'look', noart: true, t: 'Choose your look', d: 'Pick one before you add aOS: its icon on your Home Screen goes with it. You can change it later under your account.', onLook: l => { inst.icon = lookIcon(l); } };
+        return tour(o, [pick, inst], 'Not now');
+      }
+      await tour(o, [inst], 'Not now');
     });
   }
   // An app's own walkthrough.

@@ -154,7 +154,15 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   for (const id of ['notes', 'podcasts', 'places', 'meals']) { const r = rows.find(x => x.app === id); if (!r || !new RegExp('icons/' + id + '-512\\.png$').test(r.src)) pr.push(id + ' does not show its mid-century icon: ' + (r && r.src)); }
   for (const [id, v] of [['mail', 'mailvintage'], ['news', 'newsvintage'], ['drinks', 'drinksvintage'], ['calendar', 'calendarvintage']]) { const r = rows.find(x => x.app === id); if (!r || !new RegExp(v + '/icon-512\\.png$').test(r.src)) pr.push(id + ' does not show the ' + v + ' icon: ' + (r && r.src)); }
   if (new Set(rows.map(r => r.src)).size !== rows.length) pr.push('two apps share an icon');
-  report('every app shows its mid-century icon, and each loads', pr); await ctx.close();
+  // the Sea glass look brings the original icons back, in the list, at once
+  await p.evaluate(() => aosLook.set('glass')); await p.waitForTimeout(500);
+  const g = await p.locator('#list .row').evaluateAll(rs => rs.map(r => ({ app: r.dataset.app, src: r.querySelector('img').getAttribute('src'), ok: r.querySelector('img').naturalWidth > 0 })));
+  for (const r of g) if (!r.ok) pr.push('Sea glass: ' + r.app + '\'s icon does not load: ' + r.src);
+  for (const id of ['notes', 'mail', 'news', 'meals']) { const r = g.find(x => x.app === id); if (!r || !new RegExp('\\.\\./' + id + '/icon-512\\.png$').test(r.src)) pr.push('Sea glass: ' + id + ' does not show its own icon: ' + (r && r.src)); }
+  await p.evaluate(() => aosLook.set('vintage')); await p.waitForTimeout(500);
+  const back = await p.locator('#list .row[data-app="notes"] img').getAttribute('src');
+  if (!/icons\/notes-512\.png$/.test(back || '')) pr.push('Vintage does not bring the mid-century icons back: ' + back);
+  report('every app shows its mid-century icon in the Vintage look (the original in Sea glass), and each loads', pr); await ctx.close();
 }
 
 await b.close(); server.close();

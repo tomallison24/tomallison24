@@ -38,11 +38,15 @@ for (const dev of ['android', 'iphone']) {
   const atLoad = await p.evaluate(() => document.getElementById('aos-welcome') ? (document.querySelector('#aos-welcome h2') || {}).textContent || 'overlay' : null);
   await p.fill('#aName', 'Sarah'); await p.locator('#aGo').scrollIntoViewIfNeeded(); await p.click('#aGo').catch(e => errs.push('click: ' + e.message.split('\n')[0]));   // a person scrolls to it too
   await p.waitForTimeout(3500);
+  // on an iPhone aOS asks for its look first (Vintage or Sea glass: iOS takes the icon when it is added), then how to add it
+  let lookStep = null;
+  if (dev === 'iphone') { lookStep = await p.evaluate(() => (document.querySelector('#aos-welcome h2') || {}).textContent || null); if (lookStep === 'Choose your look') { await p.waitForSelector('#aos-welcome .c-panel.on', { timeout: 5000 }); await p.click('#aos-welcome .c-btns .w-btn'); await p.waitForFunction(() => (document.querySelector('#aos-welcome h2') || {}).textContent !== 'Choose your look', null, { timeout: 5000 }).catch(() => {}); } }
   const after = await p.evaluate(() => ({ h2: (document.querySelector('#aos-welcome h2') || {}).textContent || null, inst: (document.querySelector('#aos-welcome .c-inst') || {}).textContent || null, sd: !!document.querySelector('#aos-welcome .c-sd'), err: (document.getElementById('aErr') || {}).textContent || '' }));
   const problems = [...errs];
   if (atLoad) problems.push('something covered the invite at first: ' + atLoad);
   if (!signed) problems.push('the account was not made' + (after.err ? ': ' + after.err : ''));
   if (after.h2 !== 'Add aOS to your Home Screen') problems.push('then showed ' + (after.h2 || 'nothing') + ', not how to add aOS');
+  if (dev === 'iphone' && lookStep !== 'Choose your look') problems.push('the first step was ' + (lookStep || 'nothing') + ', not Choose your look');
   if (dev === 'iphone' && !after.sd) problems.push("no Safari steps");
   if (dev === 'android' && !after.inst) problems.push("no Install or menu steps");
   if (problems.length) { failed++; console.log('not ok - ' + dev + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + dev + ': invite, account, then how to add aOS');
