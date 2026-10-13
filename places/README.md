@@ -60,6 +60,12 @@ the business cards on the map and the toast are the sheets' clear glass).
   **Open in Apple Maps** shows the place in Apple Maps, for its photos,
   reviews and Look Around.
 
+**Places Vintage** is the same app in a mid-century modern look, as its own app
+with its own lists on the phone ([`placesvintage/`](../placesvintage/README.md)).
+It can use this app's Google Sheet (the Notes Sheet), so with the same link and
+secret in both the two stay in step and the outings from your calendar reach
+both. It needs nothing new set up.
+
 ## Where the data comes from
 
 All free, with no account:

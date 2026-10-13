@@ -14,8 +14,10 @@
 //   the family avoids. The last ones are kept on this phone
 //   (allison-meals-v1), so the list works in the store with no signal; ticks
 //   stay on this phone only.
-// - Settings (the gear): the store, Prime prices, what the family avoids, and
-//   your account.
+// - Settings (the gear): the store, Prime prices, what the family avoids, your
+//   account, and an optional Google Sheet that keeps a readable copy of the
+//   plans, the shopping list and the deals (one way: google-sheet-sync.gs;
+//   steps in the README).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -30,14 +32,17 @@ if (window.top !== window.self) {
   const ls = {
     json: (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } },
     set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del: k => { try { localStorage.removeItem(k); } catch {} },
   };
   // (v2: deals by store. The v1 copy, one store's deals, is left behind.)
-  const KEY = 'allison-meals-v2', K = { ticks: 'allison-meals-v1-ticks', tab: 'allison-meals-v1-tab', store: 'allison-meals-v1-store' };
+  const KEY = 'allison-meals-v2', K = { ticks: 'allison-meals-v1-ticks', tab: 'allison-meals-v1-tab', store: 'allison-meals-v1-store',
+    sheet: 'allison-meals-v1-sheet', sheetAt: 'allison-meals-v1-sheet-at', sheetSent: 'allison-meals-v1-sheet-sent' };
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
   const MEATS = [['chicken', 'Chicken'], ['beef', 'Beef'], ['pork', 'Pork'], ['turkey', 'Turkey'], ['lamb', 'Lamb'], ['salmon', 'Salmon'], ['white fish', 'White fish'], ['shrimp', 'Shrimp'], ['on sale', 'Whatever’s on sale']];
   const ICON = {
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
+    sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
     copy: '<svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="11.6" height="11.6" rx="2.4"/><path d="M15.6 8.4V6.2A2.2 2.2 0 0 0 13.4 4H6.2A2.2 2.2 0 0 0 4 6.2v7.2a2.2 2.2 0 0 0 2.2 2.2h2.2"/></svg>',
   };
 
@@ -94,6 +99,7 @@ if (window.top !== window.self) {
       const j = await api('state');
       data = { ai: j.ai, model: j.model, week: j.week, stores: j.stores || STORES, settings: j.settings, deals: j.deals || {}, draft: j.draft || null, plan: j.plan, log: j.log || [] };
       ls.set(KEY, data); st.state = 'ok'; st.error = '';
+      scheduleSheet();   // the Google Sheet, if connected, hears what the family changed
     } catch (e) { st.state = e.code; st.error = e.code; }
     render();
   }
@@ -260,7 +266,7 @@ if (window.top !== window.self) {
   // one store's deals: searched for, or read from pasted text
   async function oneStore(id, text) {
     const j = await api('deals', text ? { store: id, text } : { store: id, refresh: thisWeek((data.deals || {})[id]) });
-    if (j.deals && j.deals.items.length) { data.deals = Object.assign({}, data.deals, { [id]: j.deals }); ls.set(KEY, data); }
+    if (j.deals && j.deals.items.length) { data.deals = Object.assign({}, data.deals, { [id]: j.deals }); ls.set(KEY, data); scheduleSheet(); }
     return j.deals ? j.deals.items.length : 0;
   }
   async function findDeals(text) {
@@ -348,12 +354,13 @@ if (window.top !== window.self) {
       const j = await api('accept', { start });
       data.plan = j.plan; data.log = j.log; data.draft = null; ls.set(KEY, data);
       ticks = { at: j.plan.at, keys: [] }; ls.set(K.ticks, ticks);
+      scheduleSheet();
       toast('Saved for the family, from ' + dayLabel(j.plan.start) + '. The shopping list is ready.', null, 5000);
     } catch (e) { toast(say(e.code), null, 6000); }
     render(); scrollTo(0, 0);
   }
   async function discard() {
-    try { await api('discard', {}); data.draft = null; ls.set(KEY, data); toast('New plan discarded.'); }
+    try { await api('discard', {}); data.draft = null; ls.set(KEY, data); scheduleSheet(); toast('New plan discarded.'); }
     catch (e) { toast(say(e.code), null, 6000); }
     render();
   }
@@ -387,13 +394,16 @@ if (window.top !== window.self) {
   }
 
   // Settings: the family's stores and member cards, what they avoid, your account
+  const modelName = () => String(data.model || '').replace(/^.*\//, '').replace(/^claude-(\w+)-(\d+)-(\d+)$/, (_, n, a, b) => 'Claude ' + cap(n) + ' ' + a + '.' + b);
   function renderSettings() {
     const s = data.settings, user = A() && A().user();
-    const model = String(data.model || '').replace(/^.*\//, '').replace(/^claude-(\w+)-(\d+)-(\d+)$/, (_, n, a, b) => 'Claude ' + cap(n) + ' ' + a + '.' + b);
+    const model = modelName();
     const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
     $('setBody').innerHTML = '<div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
+      + '<p class="label">Readable copy</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
+      + '<p class="hint">A readable copy of the plans, the shopping list and the deals. One way: nothing typed in the Sheet comes back.</p>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
       + (data.stores || STORES).map(x => '<button class="opt" type="button" role="checkbox" data-store="' + x.id + '" aria-checked="' + draft.stores.includes(x.id) + '">' + esc(x.name) + '</button>').join('') + '</div>'
       + '<p class="hint">Their deals, and plans across them. All near Apex and Cary.</p>'
@@ -410,6 +420,7 @@ if (window.top !== window.self) {
   $('setBtn').onclick = () => { draftAvoid = [...(data.settings.avoid || [])]; draft = { stores: [...(data.settings.stores || [])], cards: [...(data.settings.cards || [])] }; renderSettings(); openSheet('setSheet'); };
   $('setBody').addEventListener('click', async e => {
     if (e.target.closest('[data-act="signin"]')) { closeSheet('setSheet'); return signIn(); }
+    if (e.target.closest('#sheetBtn')) { openSheetSync(); return; }
     const tg = e.target.closest('[data-store], [data-card]');
     if (tg) {
       const [list, v] = tg.dataset.store ? [draft.stores, tg.dataset.store] : [draft.cards, tg.dataset.card], i = list.indexOf(v);
@@ -425,7 +436,7 @@ if (window.top !== window.self) {
     }
     if (e.target.closest('#sSave')) {
       const body = { stores: draft.stores, cards: draft.cards, avoid: draftAvoid };
-      try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
+      try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
       catch (err) { toast(say(err.code), null, 6000); }
     }
   });
@@ -500,11 +511,212 @@ if (window.top !== window.self) {
   function animateIn(el) { el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   // ---------------------------------------------------------------------
+  // Google Sheet - optional, a readable copy of Meals (google-sheet-sync.gs; steps in the
+  // README). One way: Meals writes, nothing is read back, so nothing typed in the Sheet
+  // comes back. It holds every plan ever accepted (Plans), the current shopping list, the
+  // deals of the last weeks and the settings. The plans, the deals and the settings are the
+  // family's, so the Sheet is the family's too: it stays connected for whoever signs in
+  // on this phone, and only "Disconnect this phone" forgets it.
+  // ---------------------------------------------------------------------
+  const SHEET_APP = 'allison-meals-sync';
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzv7J6TBCsbVBVa55VwNqNLckzUxOEUtN2FwUDurPlta4k3-ZKPmYVBmUEqWcFQEv4k/exec';
+  let sheetCfg = ls.json(K.sheet, null);
+  if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
+  let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false, sheetLast = '';
+  let sheetAt = +localStorage.getItem(K.sheetAt) || 0;
+  const SHEET_ERRORS = {
+    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t add a space to the code.',
+    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
+    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
+    'busy': 'The Sheet was busy. Trying again shortly.',
+    'bad-request': 'The Sheet didn’t understand the request.',
+    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
+    'not-json': 'That link didn’t answer like the Meals script. Check it ends in /exec and “Who has access” is Anyone.',
+    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Meals needs the web app link from its own Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
+  };
+  // A copy of the link and code in IndexedDB, as in Drinks: it survives a full or cleared localStorage
+  // (every AllisonOS app shares its space).
+  const sheetKeep = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-meals', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
+    }));
+    return {
+      get: k => tx('readonly', x => x.get(k)).catch(() => null),
+      set: (k, v) => tx('readwrite', x => v == null ? x.delete(k) : x.put(v, k)).catch(() => {}),
+    };
+  })();
+  function saveSheetCfg() {
+    if (sheetCfg) ls.set(K.sheet, sheetCfg); else ls.del(K.sheet);
+    sheetKeep.set('sheet', sheetCfg ? { url: sheetCfg.url, secret: sheetCfg.secret } : null);
+  }
+  const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+
+  // What goes to the Sheet. The plans are whole (the sale prices they were planned with are left out: the
+  // Sheet doesn't show them); the app's list only has a summary of each past plan, so each one it hasn't
+  // sent to this link yet is fetched whole, once (at most 52, three at a time). Then only the current plan
+  // and newly seen ones go. The script keeps every plan forever.
+  const sheetPlan = p => { const { sales, ...rest } = p; return { ...rest, shopName: where(p) }; };
+  async function wholePlan(id) {
+    if (data.plan && data.plan.id === id) return data.plan;
+    if (pastCache[id]) return pastCache[id];
+    return (pastCache[id] = (await api('log/' + id)).plan);
+  }
+  function sheetShopping() {
+    const p = data.plan;
+    if (!p || !p.meals || !p.meals.length) return { buy: [], pantry: [] };
+    const s = shop(), all = !p.shop || p.shop === 'all';
+    const nights = x => 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ');
+    return {
+      buy: L.sections(s.buy, x => x.item).flatMap(g => g.items.map(x => ({ section: g.name, item: cap(x.item), amount: L.total(x.amounts), nights: nights(x),
+        sale: x.deal ? (x.deal.price || 'On sale') + (all && x.deal.at && x.deal.at.name ? ' at ' + x.deal.at.name : '') : '' }))),
+      pantry: s.pantry.map(x => ({ item: cap(x.item), amount: L.total(x.amounts), nights: nights(x) })),
+    };
+  }
+  async function sheetSnapshot() {
+    const sent = ls.json(K.sheetSent, null), have = new Set(sent && sent.url === sheetCfg.url && Array.isArray(sent.ids) ? sent.ids : []);
+    const cur = data.plan && data.plan.meals ? data.plan : null, plans = [], ids = [];
+    if (cur) { plans.push(sheetPlan(cur)); ids.push(cur.id); }
+    // (only when signed in: a call that fails with a 401 would ask for Face ID, and a copy to a Sheet never should)
+    const todo = st.state === 'ok' ? (data.log || []).map(e => e.id).filter(id => !have.has(id) && !(cur && cur.id === id)).slice(0, 52) : [];
+    let i = 0;
+    const worker = async () => {
+      while (i < todo.length) {
+        const id = todo[i++];
+        try { const p = await wholePlan(id); if (p && Array.isArray(p.meals)) { plans.push(sheetPlan(p)); ids.push(id); } } catch {}
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    const deals = Object.entries(data.deals || {}).map(([id, d]) => { const s = storeById(id);
+      return s && d && d.week && d.items && d.items.length ? { store: s.name, week: d.week, at: d.at || 0, validFrom: d.validFrom || '', validTo: d.validTo || '',
+        items: d.items.map(x => ({ name: x.name, price: x.price || '', regular: x.regular || '', member: !!x.member, note: x.note || '' })) } : null; }).filter(Boolean);
+    const set = data.settings || {};
+    const settings = { stores: mine().map(x => x.name), cards: (set.cards || []).map(k => (CARDS.find(c => c[0] === k) || [k, k])[1]), avoid: set.avoid || [], model: modelName() };
+    return { ids, have, pending: todo.some(id => !ids.includes(id)), fresh: ids.some(id => !have.has(id) && !(cur && cur.id === id)), body: { v: 1, plans, deals, shopping: sheetShopping(), settings } };
+  }
+  async function sheetSync(loud) {
+    if (!sheetCfg) return false;
+    if (sheetBusy) { sheetAgain = true; return false; }
+    if (!navigator.onLine) { sheetState = 'offline'; renderSheetStatus(); return false; }
+    sheetBusy = true; sheetState = 'syncing';
+    let ok = false;
+    try {
+      const snap = await sheetSnapshot();
+      // (the plans that were only sent because they were new don't count when comparing with the last copy)
+      const cur = data.plan && data.plan.id, key = JSON.stringify(Object.assign({}, snap.body, { plans: snap.body.plans.filter(p => p.id === cur) }));
+      if (!loud && key === sheetLast && !snap.fresh && !snap.pending) { sheetState = 'ok'; ok = true; return true; }   // nothing new since the last copy
+      let r, res;
+      try {
+        r = await fetch(sheetCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
+          body: JSON.stringify(Object.assign({ secret: sheetCfg.secret, action: 'sync' }, snap.body)) });
+      } catch { throw new Error('network'); }
+      try { res = await r.json(); } catch { throw new Error('not-json'); }
+      if (res && res.ok && res.app && res.app !== SHEET_APP) throw new Error('wrong-app');
+      if (res && res.error === 'wrong-secret' && res.app !== SHEET_APP) throw new Error(await whichSheetScript(sheetCfg.url));
+      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      sheetLast = key;
+      snap.ids.forEach(id => snap.have.add(id));
+      ls.set(K.sheetSent, { url: sheetCfg.url, ids: [...snap.have].slice(-400) });
+      sheetAt = Date.now(); try { localStorage.setItem(K.sheetAt, String(sheetAt)); } catch {}
+      sheetState = 'ok'; sheetErr = ''; sheetErrShown = false; ok = true;
+    } catch (e) {
+      sheetState = 'error'; sheetErr = e.message;
+      if (loud || !sheetErrShown) { sheetErrShown = true; toast(SHEET_ERRORS[sheetErr] || 'The Google Sheet didn’t sync. Trying again later.', null, 6000); }
+    } finally {
+      sheetBusy = false; renderSheetStatus();
+      if (sheetAgain) { sheetAgain = false; scheduleSheet(800); }
+    }
+    return ok;
+  }
+  // A "wrong secret" from a script that doesn't say it's Meals': ask the link which app it belongs to (every
+  // script answers a plain GET with its name).
+  async function whichSheetScript(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+      const d = await r.json();
+      if (d && d.app && d.app !== SHEET_APP) return 'wrong-app';
+      if (d && d.app === SHEET_APP) return 'old-script';
+    } catch {}
+    return 'wrong-secret';
+  }
+  function scheduleSheet(ms) { if (!sheetCfg) return; clearTimeout(sheetTimer); sheetTimer = setTimeout(() => sheetSync(false), ms == null ? 2500 : ms); }
+  function sheetLine() {
+    return !sheetCfg ? 'Not connected' : sheetState === 'error' ? 'Couldn’t sync just now' : sheetState === 'syncing' ? 'Syncing…'
+      : sheetState === 'offline' ? 'Offline: will sync when you’re back online' : sheetAt ? 'Connected. Last synced ' + ago(sheetAt) + '.' : 'Connected';
+  }
+  function renderSheetStatus() {
+    const on = !!sheetCfg;
+    if ($('syStatus')) {
+      $('syStatus').textContent = !on ? 'Keep a readable copy of Meals in a Google Sheet of your own: every plan you accept, the shopping list, the deals and the settings. It goes one way: nothing typed in the Sheet comes back.'
+        : sheetState === 'error' ? (SHEET_ERRORS[sheetErr] || 'Not synced') : sheetState === 'syncing' ? 'Syncing…'
+        : sheetState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : sheetAt ? 'Connected. Last synced ' + ago(sheetAt) + '.' : 'Connected.';
+      $('syForm').hidden = on; $('syOn').hidden = !on;
+    }
+    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
+  }
+  function openSheetSync(pre) {
+    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : SHEET_URL;
+    $('sySecret').value = pre ? pre.s : sheetCfg ? sheetCfg.secret : '';
+    renderSheetStatus();
+    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
+    openSheet('syncSheet');
+  }
+  $('syForm').onsubmit = async e => {
+    e.preventDefault();
+    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
+    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
+    const before = sheetCfg;
+    sheetCfg = { url, secret };
+    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
+    const ok = await sheetSync(true);
+    $('syConnect').disabled = false;
+    if (!ok) { sheetCfg = before; sheetState = before ? 'idle' : 'off'; const err = sheetErr; renderSheetStatus(); $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = SHEET_ERRORS[err] || 'Couldn’t connect.'; return; }
+    saveSheetCfg(); renderSheetStatus();
+    toast('Connected. Meals’ plans, list and deals are now in the Sheet.');
+  };
+  $('syNow').onclick = async () => { if (await sheetSync(true)) toast('Synced'); };
+  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+  $('syShare').onclick = async () => {
+    const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({ u: sheetCfg.url, s: sheetCfg.secret }));
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Meals on your other phone. Keep it private.', null, 6000); }
+    catch { toast('Copy isn’t available here.'); }
+  };
+  $('syOff').onclick = () => {
+    const b = $('syOff');
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
+    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
+    sheetCfg = null; sheetState = 'off'; sheetLast = ''; ls.del(K.sheetAt); ls.del(K.sheetSent); sheetAt = 0; saveSheetCfg(); renderSheetStatus();
+    toast('Disconnected. Your plans stay in Meals and in the Sheet.');
+  };
+  function takeSetupLink(text) {
+    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return false;
+    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSheetSync(c); return true; } } catch {}
+    toast('That setup link is damaged. Copy it again.'); return true;
+  }
+
+  // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
   render();
   animateIn(main);
   load();
+  // A setup link from your other phone: #sync=...
+  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  if (sheetCfg) sheetKeep.get('sheet').then(c => { if (!c || c.url !== sheetCfg.url || c.secret !== sheetCfg.secret) saveSheetCfg(); });
+  else sheetKeep.get('sheet').then(c => {
+    if (sheetCfg || !c || !c.url || !c.secret) return;
+    sheetCfg = { url: c.url, secret: c.secret }; sheetState = 'idle'; ls.set(K.sheet, sheetCfg);
+    sheetSync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
+  });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !st.busy) load(); });
   window.addEventListener('online', () => { if (!st.busy) load(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -33,8 +33,14 @@ in the same frosted glass as Mail, Notes and News.
   count as played. When an episode ends, the next one in Up Next plays
   (Settings can switch that off).
 - **Settings**: skip back (10/15/30 s) and forward (15/30/45/60 s), what
-  happens when an episode ends, the country for Top shows, and **Import /
-  Export** your shows as OPML, the file other podcast apps use.
+  happens when an episode ends, the country for Top shows, **Import /
+  Export** your shows as OPML (the file other podcast apps use), and an
+  optional **Google Sheet backup** (below).
+
+**Podcasts Vintage** is the same app in a mid-century modern look, as its own
+app with its own shows and settings ([`podcastsvintage/`](../podcastsvintage/README.md)).
+It starts empty: **Export shows** here and **Import shows** there moves your
+shows over.
 
 Episodes stream from each podcast's own servers; nothing is downloaded, so
 they need a connection.
@@ -45,7 +51,9 @@ they need a connection.
   offline; `manifest.webmanifest` and the icons make it installable.
 - **Data**: what you follow, where you got to, Up Next, Saved and History
   are in the browser's `localStorage`; each show's episode list (the newest
-  250) is in IndexedDB, so the app opens with it. Nothing leaves the phone.
+  250) is in IndexedDB, so the app opens with it. Nothing leaves the phone
+  unless you connect the optional Google Sheet backup (below), which gets only
+  your shows, saved episodes and history.
   Each place the app opens (its own Home Screen icon, aOS,
   Safari) keeps its own copy on an iPhone; Export and Import move your shows
   between them.
@@ -70,6 +78,53 @@ they need a connection.
 - **Artwork** comes from Apple's directory (600 px) where there is one, as
   feeds' own pictures can be several megabytes.
 
+## Google Sheet backup
+
+Optional. **Settings → Google Sheet backup** keeps a **readable backup** of
+your shows, saved episodes and listening history in a Google Sheet of your
+own. It is one way: the phone writes, nothing is read back, so edit nothing in
+the Sheet. Only the three lists are sent (never episode lists, progress, Up
+Next or settings), the whole list each time, at most a few seconds after a
+change and only when something changed, off the player's path: it never slows
+playback. Several phones can back up to one Sheet; each says who it is (a
+random id made once per install), and the Sheet adds them together.
+
+1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Podcasts**.
+2. **Extensions → Apps Script**, replace `Code.gs` with the whole of
+   [`google-sheet-sync.gs`](google-sheet-sync.gs), and change
+   `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it
+   up: there is nothing to look up).
+3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access:
+   Anyone* → **Deploy** → authorise → copy the **Web app URL**.
+4. Podcasts → **Settings → Google Sheet backup** → the link is already filled
+   in (`SHEET_URL` in `app.js`: the owner's Sheet; to use another, paste its
+   URL over it) → type the phrase → **Connect and back up**. The phrase is
+   never in the code. **Copy setup link** sets up your other phone.
+
+**The Sheet** has three readable tabs (and hidden `_shows`, `_saved`,
+`_history` ones they are built from; a **Podcasts → Rebuild tabs** menu
+rebuilds them by hand):
+- **Shows**: every show ever followed, its author, genre, feed link, when it
+  was first followed, and **Following** (Yes/No).
+- **Saved**: every episode ever saved, with its show, length, links and
+  **Saved** (Yes/No).
+- **History**: every episode you played, newest first. The app keeps only its
+  last 100; the Sheet keeps them all, forever.
+
+Nothing is ever deleted from the Sheet: an unfollowed show or a removed saved
+episode reads **No**, and stays listed. With two phones, a show reads Yes while
+any phone still follows it. **When it backs up**: when you connect, a few
+seconds after a change to what you follow, save or play, when the app opens or
+comes back after a while, and when the phone is back online. A playing
+episode's progress alone doesn't send anything; pausing does.
+
+The link and code are also kept in a small database of their own
+(`allison-podcasts-sheet`), with the phone's id, so they survive a full or
+cleared `localStorage`. It uses the same design as Drinks' (read
+`drinks/README.md`, "Google Sheet sync"), but one way and for these three
+lists only; the script's logic is tested on an in-memory Sheet
+(`scripts/sheet-test.mjs`).
+
 ## Look
 
 Everything from Notes: the same colours for light and dark, the drifting
@@ -87,6 +142,14 @@ pills like the other buttons.
 
 The icon (`icon.svg`, drawn as `icon-512.png` and `icon-180.png`) is a white
 signal on a pink-to-violet gradient.
+
+## Tests
+
+```
+node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
+node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library,
+                                       # and the Sheet backup end to end, on the real script
+```
 
 ## Keep in mind
 

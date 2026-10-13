@@ -536,6 +536,17 @@ svg.fs{fill:currentColor}
    position they already have. */
 :where(.btn){position:relative}
 :where(.btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+
+/* ---- Google Sheet backup (Settings): the link and code form, and a disconnect button ---- */
+.stackform{display:flex;flex-direction:column;gap:14px}
+.frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
+.frow:first-child{border-top:0}
+.frow > label{flex:0 0 auto;white-space:nowrap}
+.frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
+.frow input.txt::placeholder{color:var(--faint)}
+.btn.danger{--tint:var(--danger);color:var(--danger-text);font-weight:500;width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+#epLbl,#setLbl,#actLbl,#syLbl{padding-left:8px}
 </style>
 </head>
 <body>
@@ -712,7 +723,44 @@ svg.fs{fill:currentColor}
             </button>
           </div>
         </div>
-        <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. What you follow, where you got to, Up Next and Saved are kept on this phone only.</p>
+        <div class="field">
+          <p class="label">Backup</p>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="setSheetBtn">
+              <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg></span>
+              <span>Google Sheet backup<span class="sub" id="sheetSub">Not connected</span></span>
+            </button>
+          </div>
+        </div>
+        <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. What you follow, where you got to, Up Next and Saved are kept on this phone. A Google Sheet backup of your shows, saved episodes and history is optional.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Sheet backup -->
+  <div class="sheetwrap lg" id="syncSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet backup</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <form id="syForm" autocomplete="on" action="#" class="stackform">
+          <div class="rgroup glass">
+            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="Paste the link" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="Your phrase" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <button class="btn" id="syConnect" type="submit">Connect and back up</button>
+          <p class="hint">Set up the Sheet first (steps in the Podcasts README, “Google Sheet backup”; it is a Sheet of your own). On a second phone, open the setup link from the first instead. Several phones can back up to one Sheet.</p>
+        </form>
+        <div id="syOn" class="stackform" hidden>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Back up now<span class="sub">Sends your shows, saved episodes and history to the Sheet</span></span></button>
+            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
+          </div>
+          <p class="hint">The Sheet has Shows, Saved and History tabs. History keeps every episode you play, even after the app trims its own list. Nothing is ever deleted there (an unfollowed show reads No), and nothing is read back, so edit nothing in it.</p>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
       </div>
     </div>
   </div>

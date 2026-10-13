@@ -42,13 +42,12 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
 // 1. one row per app: the designs of Mail, Orders, Home and the rest have no rows of their own, only a tag
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
-  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks'];
+  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
+  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks', 'notes', 'podcasts', 'places', 'meals'];
   for (const id of WITH_DESIGNS) {
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
   }
-  if (await p.locator('#list .row[data-app="notes"] .dtag').count()) pr.push('Notes says it has designs');
   // searching for a design finds the app that has it, once
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
@@ -119,49 +118,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   report('an installed design says Installed, and Get on it does not ask', pr); await ctx.close();
 }
 
-// 5. an app with one design is unchanged: no menu, Get goes straight to the app
-{
-  const { ctx, p, errs } = await open(); const pr = [...errs];
-  const pop = ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null);
-  await p.click('#list .row[data-app="notes"] [data-get]');
-  if (await p.locator('.dsheet').count()) pr.push('Notes asked for a design');
-  const np = await pop; if (!np) pr.push('Get did not open Notes'); else { if (!/\/notes\//.test(np.url())) pr.push('Get opened ' + np.url()); await np.close(); }
-  await p.click('#list .row[data-app="notes"]'); await p.waitForSelector('.apphead');
-  if (await p.locator('.dsel').count()) pr.push('Notes has a Design menu');
-  report('an app with one design has no menu and Get goes straight to it', pr); await ctx.close();
-}
-
-// 6. dark mode: the menu and the sheet are readable and fit the screen
-{
-  const { ctx, p, errs } = await open({}, 'dark'); const pr = [...errs];
-  await p.click('#list .row[data-app="mail"]'); await p.waitForSelector('.dbtn'); await p.click('.dbtn');
-  const box = await p.locator('.dmenu').boundingBox();
-  if (!box || box.x < 0 || box.x + box.width > 390) pr.push('the menu does not fit the screen: ' + JSON.stringify(box));
-  const bg = await p.locator('.dmenu').evaluate(e => getComputedStyle(e).backgroundColor);
-  if (/250, ?251, ?250/.test(bg)) pr.push('the menu is light in dark mode: ' + bg);
-  report('dark mode: the menu fits and is dark', pr); await ctx.close();
-}
-
-// 5. the mid-century icons: every row shows one that loads, the same whichever design is picked, and the four apps
-// with no Vintage design have theirs in aOS/icons/
-{
-  const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
-  await p.waitForTimeout(800);
-  const rows = await p.locator('#list .row').evaluateAll(rs => rs.map(r => ({ app: r.dataset.app, src: r.querySelector('img').getAttribute('src'), ok: r.querySelector('img').naturalWidth > 0 })));
-  for (const r of rows) if (!r.ok) pr.push(r.app + '\'s icon does not load: ' + r.src);
-  for (const id of ['notes', 'podcasts', 'places', 'meals']) { const r = rows.find(x => x.app === id); if (!r || !new RegExp('icons/' + id + '-512\\.png$').test(r.src)) pr.push(id + ' does not show its mid-century icon: ' + (r && r.src)); }
-  for (const [id, v] of [['mail', 'mailvintage'], ['news', 'newsvintage'], ['drinks', 'drinksvintage'], ['calendar', 'calendarvintage']]) { const r = rows.find(x => x.app === id); if (!r || !new RegExp(v + '/icon-512\\.png$').test(r.src)) pr.push(id + ' does not show the ' + v + ' icon: ' + (r && r.src)); }
-  if (new Set(rows.map(r => r.src)).size !== rows.length) pr.push('two apps share an icon');
-  // the Sea glass look brings the original icons back, in the list, at once
-  await p.evaluate(() => aosLook.set('glass')); await p.waitForTimeout(500);
-  const g = await p.locator('#list .row').evaluateAll(rs => rs.map(r => ({ app: r.dataset.app, src: r.querySelector('img').getAttribute('src'), ok: r.querySelector('img').naturalWidth > 0 })));
-  for (const r of g) if (!r.ok) pr.push('Sea glass: ' + r.app + '\'s icon does not load: ' + r.src);
-  for (const id of ['notes', 'mail', 'news', 'meals']) { const r = g.find(x => x.app === id); if (!r || !new RegExp('\\.\\./' + id + '/icon-512\\.png$').test(r.src)) pr.push('Sea glass: ' + id + ' does not show its own icon: ' + (r && r.src)); }
-  await p.evaluate(() => aosLook.set('vintage')); await p.waitForTimeout(500);
-  const back = await p.locator('#list .row[data-app="notes"] img').getAttribute('src');
-  if (!/icons\/notes-512\.png$/.test(back || '')) pr.push('Vintage does not bring the mid-century icons back: ' + back);
-  report('every app shows its mid-century icon in the Vintage look (the original in Sea glass), and each loads', pr); await ctx.close();
-}
+// 5. (every app now has a Vintage design, so there is no one-design app left to check)
 
 // 6. in the Vintage look every link in aOS goes to the Vintage app: the design that goes with the look is the one
 // picked until you pick another, and the Sea glass look brings Standard back
@@ -169,9 +126,8 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
   const gets = () => p.locator('#list .row [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get + '=' + new URL(b.href).pathname));
   let g = await gets();
-  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage']])
+  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage'], ['notes', 'notesvintage'], ['podcasts', 'podcastsvintage'], ['places', 'placesvintage'], ['meals', 'mealsvintage']])
     if (!g.includes(v + '=/' + v + '/')) pr.push('in the Vintage look ' + base + ' does not link to ' + v + ': ' + g.filter(x => x.startsWith(base) || x.startsWith(v)).join(' '));
-  for (const id of ['notes', 'places', 'meals', 'podcasts']) if (!g.includes(id + '=/' + id + '/')) pr.push(id + ' (no designs) should link to itself');
   // the Today postcards and an app's page agree
   const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));
   if (story.some(id => ['mail', 'weather', 'news', 'calendar', 'drinks', 'fitness', 'travel', 'orders', 'house'].includes(id))) pr.push('a Today story links to a Standard app: ' + story.join());

@@ -67,6 +67,7 @@
   })();
   let warned = false;
   function save(){
+    scheduleSheet();   // the Google Sheet backup, if connected: soon, and only if its three lists changed
     const write = () => localStorage.setItem(KEY, JSON.stringify(S));
     try { write(); }
     catch(e) {
@@ -1228,6 +1229,7 @@
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
     opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
     slideOpts();
+    renderSheetStatus();
   }
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
   const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
@@ -1271,6 +1273,212 @@
     render();
     if (n) refreshAll(false);
   };
+
+  // =====================================================================
+  // GOOGLE SHEET BACKUP - optional; a readable copy of your shows, saved
+  // episodes and history in a Sheet of your own (google-sheet-sync.gs; steps
+  // in the README). One way: the phone writes, nothing is read back. It sends
+  // the three lists only (never episode lists, progress or settings), whole
+  // each time, at most every few seconds and only when they changed, off the
+  // player's path. Several phones can back up to one Sheet: each says who it is
+  // (`device`) and the script adds them together.
+  // =====================================================================
+  const SHEET_APP = 'allison-podcasts-sync';
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzwuwHHtymHvAQ38d_7CmyedychhdLWcaTXsbjTetH0GAWWADFV9DQurDIlKpzGve0l4w/exec';
+  const SHEET_MAX = 3000;
+  const SK = {cfg: KEY + '-sheet', at: KEY + '-sheet-at', device: KEY + '-device'};
+  const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+  const lsDel = k => { try { localStorage.removeItem(k); } catch(e) {} };
+  const DEVICE_OK = /^p[0-9a-f]{16}$/;
+  let deviceNew = false, deviceId = lsGet(SK.device) || '';
+  if (!DEVICE_OK.test(deviceId)) {
+    const a = new Uint8Array(8);
+    try { crypto.getRandomValues(a); } catch(e) { for (let i = 0; i < 8; i++) a[i] = Math.floor(Math.random() * 256); }
+    deviceId = 'p' + Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+    deviceNew = true; lsSet(SK.device, deviceId);
+  }
+  let sheetCfg = null;
+  try { sheetCfg = JSON.parse(lsGet(SK.cfg)); } catch(e) {}
+  if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
+  let sheetBusy = false, sheetAgain = false, sheetTimer = 0, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false, sheetLastSig = '', sheetDelay = 6000;
+  let sheetAt = +lsGet(SK.at) || 0, sheetCounts = null;
+  const SHEET_ERRORS = {
+    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t add a space to the code.',
+    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
+    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
+    'busy': 'The Sheet was busy. Trying again shortly.',
+    'bad-request': 'The Sheet didn’t understand the request.',
+    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
+    'not-json': 'That link didn’t answer like the Podcasts script. Check it ends in /exec and “Who has access” is Anyone.',
+    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Podcasts needs the web app link from its own Sheet (Extensions → Apps Script → Deploy → Manage deployments).'
+  };
+  // A copy of the link, code and this phone's id in a small database of its own, as in Drinks: it survives a full or
+  // cleared localStorage (every AllisonOS app shares its space). Separate from the episode database, so that one is never touched.
+  const sheetKeep = (function(){
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-podcasts-sheet', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error);
+    }));
+    return {
+      get: k => tx('readonly', x => x.get(k)).catch(() => null),
+      set: (k, v) => tx('readwrite', x => v == null ? x.delete(k) : x.put(v, k)).catch(() => {})
+    };
+  })();
+  // This phone's id: the copy in IndexedDB wins if localStorage was just emptied, so the Sheet doesn't see a new phone.
+  const deviceReady = sheetKeep.get('device').then(d => {
+    if (deviceNew && typeof d === 'string' && DEVICE_OK.test(d)) { deviceId = d; lsSet(SK.device, d); }
+    else if (d !== deviceId) sheetKeep.set('device', deviceId);
+  });
+  function saveSheetCfg(){
+    if (sheetCfg) lsSet(SK.cfg, JSON.stringify(sheetCfg)); else lsDel(SK.cfg);
+    sheetKeep.set('sheet', sheetCfg ? {url: sheetCfg.url, secret: sheetCfg.secret} : null);
+  }
+
+  // What is sent: the show's name looked up from the loaded show, else what the episode remembers, else the follow.
+  const showName = e => { const sh = shows.get(e.sid), f = followOf(e.sid); return (sh && sh.title) || e.st || (f && f.title) || ''; };
+  const sheetEp = e => ({k: e.k, show: showName(e), t: e.t || '', d: e.d || 0, dur: e.dur || (S.prog[e.k] && S.prog[e.k].d) || 0, u: e.u || '', link: e.link || ''});
+  function sheetSnapshot(){
+    return {
+      follows: S.follows.slice(0, SHEET_MAX).map(f => ({id: f.id, feed: f.feed, title: f.title || '', author: f.author || '', genre: f.genre || '', at: f.at || 0})),
+      saved: S.saved.slice(0, SHEET_MAX).map(sheetEp),
+      hist: S.hist.slice(0, SHEET_MAX).map(e => Object.assign(sheetEp(e), {played: (S.prog[e.k] && S.prog[e.k].at) || 0}))
+    };
+  }
+  // Has anything changed? An episode that is playing moves its "played" time on every ten seconds; that alone doesn't count.
+  function sheetSig(snap){
+    snap = snap || sheetSnapshot();
+    const playing = cur && player && !player.paused ? cur.k : '';
+    return JSON.stringify([snap.follows, snap.saved, snap.hist.map(h => h.k === playing ? Object.assign({}, h, {played: 0}) : h)]);
+  }
+  async function sheetSync(loud){
+    if (!sheetCfg) return false;
+    if (sheetBusy) { sheetAgain = true; return false; }
+    if (navigator.onLine === false) { sheetState = 'offline'; renderSheetStatus(); return false; }
+    sheetBusy = true; sheetState = 'syncing'; renderSheetStatus();
+    let ok = false;
+    try {
+      await deviceReady;
+      const snap = sheetSnapshot(), sig = sheetSig(snap);
+      let r, res;
+      try {
+        r = await fetch(sheetCfg.url, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, redirect: 'follow', cache: 'no-store',
+          body: JSON.stringify({secret: sheetCfg.secret, action: 'sync', v: 1, device: deviceId, follows: snap.follows, saved: snap.saved, hist: snap.hist})});
+      } catch(e) { throw new Error('network'); }
+      try { res = await r.json(); } catch(e) { throw new Error('not-json'); }
+      if (res && res.ok && res.app && res.app !== SHEET_APP) throw new Error('wrong-app');
+      if (res && res.error === 'wrong-secret' && res.app !== SHEET_APP) throw new Error(await whichSheetScript(sheetCfg.url));
+      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      sheetAt = Date.now(); lsSet(SK.at, String(sheetAt)); sheetLastSig = sig;
+      sheetState = 'ok'; sheetErr = ''; sheetErrShown = false; ok = true;
+      sheetCounts = {shows: +res.shows || 0, saved: +res.saved || 0, history: +res.history || 0};
+    } catch(e) {
+      sheetState = 'error'; sheetErr = e.message;
+      if (loud || !sheetErrShown) { sheetErrShown = true; toast(SHEET_ERRORS[sheetErr] || 'The Google Sheet didn’t sync. Trying again later.'); }
+      if (sheetErr === 'busy') scheduleSheet(10000);
+    } finally {
+      sheetBusy = false; renderSheetStatus();
+      if (sheetAgain) { sheetAgain = false; scheduleSheet(800); }
+    }
+    return ok;
+  }
+  // A "wrong secret" from a script that doesn't say it's Podcasts': ask the link which app it belongs to (every script
+  // answers a plain GET with its name).
+  async function whichSheetScript(url){
+    try {
+      const r = await fetch(url, {cache: 'no-store', redirect: 'follow'});
+      const d = await r.json();
+      if (d && d.app && d.app !== SHEET_APP) return 'wrong-app';
+      if (d && d.app === SHEET_APP) return 'old-script';
+    } catch(e) {}
+    return 'wrong-secret';
+  }
+  // Called by every save(). Once a timer is pending, more saves add nothing; when it fires, a send happens only if the lists changed.
+  function scheduleSheet(ms){
+    if (!sheetCfg || sheetTimer) return;
+    sheetTimer = setTimeout(() => {
+      sheetTimer = 0;
+      if (sheetCfg && !sheetBusy && (sheetState !== 'ok' || sheetSig() !== sheetLastSig)) sheetSync(false);
+      else if (sheetCfg && sheetBusy) sheetAgain = true;
+    }, ms == null ? sheetDelay : ms);
+  }
+  const sheetLine = () => !sheetCfg ? 'Not connected' : sheetState === 'error' ? 'Couldn’t back up just now' : sheetState === 'syncing' ? 'Backing up…'
+    : sheetState === 'offline' ? 'Offline: will back up when you’re back online' : sheetAt ? 'Connected. Last backed up ' + ago(sheetAt) + '.' : 'Connected';
+  function renderSheetStatus(){
+    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
+    if (!$('syStatus')) return;
+    const on = !!sheetCfg;
+    $('syStatus').textContent = !on ? 'Keep a readable copy of your shows, saved episodes and listening history in a Google Sheet of your own. It is a one-way backup: nothing is read back from the Sheet.'
+      : sheetState === 'error' ? (SHEET_ERRORS[sheetErr] || 'Not backed up')
+      : sheetState === 'syncing' ? 'Backing up…'
+      : sheetState === 'offline' ? 'Offline. Your changes will be backed up when you’re back online.'
+      : sheetAt ? 'Connected. Last backed up ' + ago(sheetAt) + (sheetCounts ? ': ' + sheetCounts.shows + (sheetCounts.shows === 1 ? ' show, ' : ' shows, ') + sheetCounts.saved + ' saved, ' + sheetCounts.history + ' in history.' : '.')
+      : 'Connected.';
+    $('syForm').hidden = on; $('syOn').hidden = !on;
+  }
+  function openSheetSync(pre){
+    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : SHEET_URL;
+    $('sySecret').value = pre ? pre.s : sheetCfg ? sheetCfg.secret : '';
+    renderSheetStatus();
+    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and back up.'; }
+    openSheet('syncSheet');
+  }
+  $('setSheetBtn').onclick = () => openSheetSync();
+  $('syForm').onsubmit = async e => {
+    e.preventDefault();
+    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
+    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
+    const before = sheetCfg;
+    sheetCfg = {url, secret};
+    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
+    const ok = await sheetSync(true);
+    $('syConnect').disabled = false;
+    if (!ok) { sheetCfg = before; sheetState = before ? 'idle' : 'off'; const err = sheetErr; renderSheetStatus(); $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = SHEET_ERRORS[err] || 'Couldn’t connect.'; return; }
+    saveSheetCfg(); renderSheetStatus();
+    toast('Connected. ' + S.follows.length + (S.follows.length === 1 ? ' show' : ' shows') + ' backed up to the Sheet.');
+  };
+  $('syNow').onclick = async () => { if (await sheetSync(true)) toast('Backed up'); };
+  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+  $('syShare').onclick = async () => {
+    const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({u: sheetCfg.url, s: sheetCfg.secret}));
+    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Podcasts on your other phone. Keep it private.'); }
+    catch(e) { toast('Copy isn’t available here.'); }
+  };
+  $('syOff').onclick = () => {
+    const b = $('syOff');
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
+    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
+    sheetCfg = null; sheetState = 'off'; clearTimeout(sheetTimer); sheetTimer = 0; sheetLastSig = ''; saveSheetCfg(); renderSheetStatus();
+    toast('Disconnected. Your shows stay on this phone and in the Sheet.');
+  };
+  function takeSetupLink(text){
+    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return;
+    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSheetSync(c); return; } } catch(e) {}
+    toast('That setup link is damaged. Copy it again.');
+  }
+  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  // When the app opens, and when it comes back after a while or the phone is online again.
+  if (sheetCfg) {
+    setTimeout(() => sheetSync(false), 2500);
+    sheetKeep.get('sheet').then(c => { if (sheetCfg && (!c || c.url !== sheetCfg.url || c.secret !== sheetCfg.secret)) saveSheetCfg(); });
+  } else sheetKeep.get('sheet').then(c => {
+    if (sheetCfg || !c || !c.url || !c.secret) return;
+    sheetCfg = {url: c.url, secret: c.secret}; sheetState = 'idle'; lsSet(SK.cfg, JSON.stringify(sheetCfg));
+    sheetSync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && sheetCfg && Date.now() - sheetAt > 10 * MIN) sheetSync(false); });
+  addEventListener('online', () => { if (sheetCfg && sheetState !== 'ok') sheetSync(false); });
+  // For the tests (podcasts/scripts/app-test.mjs) only.
+  window.__podcasts = {S, save, sheetSync, sheetState: () => sheetState, sheetCfg: () => sheetCfg, device: () => deviceId, setSheetDelay: ms => { sheetDelay = ms; }};
 
   // =====================================================================
   // START

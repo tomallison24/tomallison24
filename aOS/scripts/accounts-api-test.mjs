@@ -189,6 +189,20 @@ await test('Travel Vintage\'s bookings show in Calendar as part of Travel, witho
   assert.deepEqual((await call('layer', undefined, tom)).body.layers.travel.data.bookings.map(b => b.id), ['b1', 'b2']);
 });
 
+await test('Notes Vintage\'s lists, reminders and notes show in Calendar as part of Notes, the newer copy of each winning', async () => {
+  const l1 = { id: 'l1', name: 'Groceries' }, t1 = { id: 't1', title: 'Old', updated: 100 }, t1n = { id: 't1', title: 'New', updated: 200 }, t2 = { id: 't2', title: 'Only in Vintage', updated: 150 }, n1 = { id: 'n1', title: 'A note' };
+  assert.equal((await call('layer', { app: 'notes', data: { lists: [l1], todos: [t1n], notes: [n1] } }, tom)).body.ok, true);
+  assert.equal((await call('layer', { app: 'notesv', data: { lists: [l1], todos: [t1, t2], notes: [] } }, tom)).body.ok, true);
+  assert.deepEqual(JSON.parse(db.m.get('layer:notes:' + owner)).data.todos, [t1n], 'Notes\' own layer is untouched');
+  const l = (await call('layer', undefined, tom)).body.layers;
+  assert.deepEqual(l.notes.data.todos.map(x => x.title).sort(), ['New', 'Only in Vintage'], 'both, the newer copy of a shared reminder');
+  assert.deepEqual(l.notes.data.lists.map(x => x.id), ['l1']); assert.deepEqual(l.notes.data.notes.map(x => x.id), ['n1']);
+  assert.equal(l.notesv, undefined, 'Calendar only knows Notes');
+  assert.equal((await call('layer', undefined, await issue(db, samId))).body.layers.notes, undefined, 'Sam can\'t see it');
+  db.m.delete('layer:notes:' + owner);
+  assert.deepEqual((await call('layer', undefined, tom)).body.layers.notes.data.todos.map(x => x.id).sort(), ['t1', 't2'], 'Notes Vintage alone still shows');
+});
+
 await test('asking to sign in writes nothing to KV, so no one can use up the writes', async () => {
   const before = db.m.size;
   for (let i = 0; i < 50; i++) assert.equal((await call('signin/begin', {})).status, 200);

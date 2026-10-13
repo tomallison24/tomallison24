@@ -3,8 +3,9 @@
 // stand-in for the AI service (no network, no key): no key yet, finding the
 // week's deals (sorted into grocery sections), planning dinners, a recipe, the
 // shopping list (ticks kept, the list there offline), a plan that keeps using
-// coconut never saved, settings, and no script errors or sideways scrolling in
-// light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
+// coconut never saved, settings, the Google Sheet copy (the real google-sheet-sync.gs
+// on a fake Sheet: the form, the errors, what is sent and when), and no script errors
+// or sideways scrolling in light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node meals/scripts/app-test.mjs
@@ -13,6 +14,8 @@ import { execSync } from 'child_process';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';   // an in-memory Sheet; the script under test is meals/google-sheet-sync.gs
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 const R = path.resolve(new URL('../..', import.meta.url).pathname);
@@ -228,6 +231,135 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('dark: nothing wider than the phone', !(await wide(page)));
   await ctx.close();
 }
+
+// ---- The Google Sheet: a readable copy, one way ----
+const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET = 'test-secret-phrase';
+const GS = path.join(R, 'meals/google-sheet-sync.gs');
+const until = async (fn, ms = 12000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise(r => setTimeout(r, 100)); } return false; };
+const withSheet = async (ctx, sheet, posts) => {
+  await ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => {
+    const req = route.request(), cors = { 'access-control-allow-origin': '*' };
+    if (req.method() === 'POST') { posts.push(JSON.parse(req.postData())); return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.post(req.postData())) }); }
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.get()) });
+  });
+};
+const logCalls = page => { const a = []; page.on('request', r => { if (/\/meals\/api\/log\//.test(r.url())) a.push(r.url()); }); return a; };
+const SHEET_STEP = async () => {
+  const sheet = fakeSheet(GS, SHEET_SECRET), posts = [];
+  const { ctx, page, errs } = await phone();
+  await withSheet(ctx, sheet, posts);
+  const logs = logCalls(page);
+  await page.click('#setBtn'); await page.waitForTimeout(300);
+  ok('Sheet: the gear has the row, not connected', /Google Sheet\s*Not connected/.test(await page.textContent('#sheetBtn')));
+  await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
+  ok('Sheet: the form shows, with the owner\'s link filled in and no secret', await page.isVisible('#syForm') && await page.isHidden('#syOn')
+    && /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(await page.inputValue('#syUrl')) && (await page.inputValue('#sySecret')) === '');
+  await page.fill('#syUrl', 'https://example.com/x'); await page.fill('#sySecret', 'abc'); await page.click('#syConnect');
+  ok('Sheet: a link that is not Apps Script\'s is refused before anything is sent', /starts with https:\/\/script\.google\.com/.test(await page.textContent('#syStatus')) && posts.length === 0);
+  await page.fill('#syUrl', SHEET_URL); await page.fill('#sySecret', 'wrong'); await page.click('#syConnect');
+  await page.waitForFunction(() => /secret code doesn.t match/.test(document.getElementById('syStatus').textContent));
+  ok('Sheet: a wrong secret says so, and nothing is kept', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-sheet'))) === null);
+  await shot(page, 'sheet-form');
+  await page.fill('#sySecret', SHEET_SECRET); await page.click('#syConnect');
+  await page.waitForSelector('#syOn:not([hidden])', { timeout: 12000 });
+  const first = posts[posts.length - 1];
+  ok('Sheet: connecting sends a snapshot: the whole current plan, deals, shopping list, settings', first.action === 'sync' && first.v === 1 && first.secret === SHEET_SECRET && first.plans.length >= 1 && first.deals.length > 0 && first.shopping.buy.length > 0 && !!first.settings.stores.length, Object.keys(first).join());
+  const cur = first.plans.find(p => p.meals.length === 4);
+  ok('Sheet: the plan is whole (id, who, when, dates, store name, meals with ingredients and steps), without the sale prices kept for the list', !!cur && /^p/.test(cur.id) && cur.acceptedBy === 'Tom' && cur.acceptedAt > 0 && cur.dates.length === 4 && cur.shopName === 'Best deals' && cur.meat === 'beef'
+    && cur.meals[0].ingredients[0].item === 'ground beef' && cur.meals[0].steps.length === 2 && cur.sales === undefined && cur.tip === 'Buy the beef in one family pack.', JSON.stringify(cur && Object.keys(cur)));
+  const beefRow = first.shopping.buy.find(x => x.item === 'Ground beef');
+  ok('Sheet: the shopping list is as the List tab shows it (section, amount, nights, sale)', !!beefRow && beefRow.section === 'Meat' && beefRow.amount === '6 lb' && beefRow.nights === 'nights 1, 2, 3, 4' && /^\$5\.99\/lb at /.test(beefRow.sale) && first.shopping.pantry.some(x => x.item === 'Olive oil' && x.amount === '4 tbsp'), JSON.stringify(beefRow));
+  const d0 = first.deals.find(d => d.store === 'Publix');
+  ok('Sheet: deals go with the store\'s name and week', !!d0 && /^\d{4}-\d\d-\d\d$/.test(d0.week) && d0.items.length === 5 && d0.items[0].name && typeof d0.items[0].member === 'boolean', JSON.stringify(d0 && d0.items[0]));
+  ok('Sheet: settings are the stores and cards by name, and what is avoided', first.settings.stores.includes('Harris Teeter') && !first.settings.stores.includes('Target') && first.settings.cards.join() === 'VIC (Harris Teeter)' && first.settings.avoid.join() === 'tree nuts,shellfish' && /^Claude /.test(first.settings.model), JSON.stringify(first.settings));
+  const plansTab = sheet.tab('Plans');
+  ok('Sheet: Plans has a row a night, Shopping list and Deals are readable', plansTab.length === 1 + 4 * first.plans.length && plansTab[1][4] && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '6 lb') && sheet.tab('Deals').some(r => r[1] === 'Publix') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
+  ok('Sheet: the status says connected', /Connected/.test(await page.textContent('#syStatus')), await page.textContent('#syStatus'));
+  await shot(page, 'sheet-on');
+  // a second plan accepted: only it goes (the first was sent as the current plan, and is not fetched again)
+  await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#setSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
+  const n0 = posts.length, l0 = logs.length;
+  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
+  await page.waitForSelector('[data-act="accept"]', { timeout: 8000 });
+  await page.click('[data-act="accept"]');
+  ok('Sheet: accepting a plan sends it a moment later, and nothing old again', await until(() => posts.length > n0));
+  const second = posts[posts.length - 1], newId = JSON.parse(m.get('meals:plan')).id;
+  ok('Sheet: that send has just the new plan, with no fetch of the older one', second.plans.length === 1 && second.plans[0].id === newId && logs.length === l0, second.plans.map(p => p.id).join() + ' ' + (logs.length - l0));
+  ok('Sheet: Plans now holds both plans, newest first', sheet.tab('Plans').length === 1 + 4 * 2 && sheet.tab('Plans')[1][16] === newId);
+  // discarding a draft changes nothing the Sheet shows: no send
+  const n1 = posts.length;
+  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo'); await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
+  await page.click('[data-act="discard"]'); await page.waitForTimeout(3800);
+  ok('Sheet: nothing changed, nothing sent', posts.length === n1);
+  // settings saved: the Settings tab follows
+  await page.click('#setBtn'); await page.waitForTimeout(300); await page.fill('#sAdd', 'Mushrooms'); await page.click('#sAddGo'); await page.click('#sSave');
+  ok('Sheet: saving settings sends them', await until(() => sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && /mushrooms/.test(r[1]))));
+  ok('no script errors', !errs.length, errs.join(' | '));
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-meals-v1-sheet')));
+  ok('Sheet: the link and code are kept on this phone', kept && kept.url === SHEET_URL && kept.secret === SHEET_SECRET);
+  await ctx.close();
+
+  // a fresh phone: connecting fetches the plans the list only summarised, once, and sends all of them
+  const sheet2 = fakeSheet(GS, SHEET_SECRET), posts2 = [];
+  const B = await phone('dark');
+  await withSheet(B.ctx, sheet2, posts2);
+  const logs2 = logCalls(B.page);
+  await B.page.click('#setBtn'); await B.page.click('#sheetBtn');
+  await B.page.fill('#syUrl', SHEET_URL); await B.page.fill('#sySecret', SHEET_SECRET); await B.page.click('#syConnect');
+  await B.page.waitForSelector('#syOn:not([hidden])', { timeout: 15000 });
+  const all = posts2[posts2.length - 1];
+  const logLen = JSON.parse(await B.page.evaluate(() => localStorage.getItem('allison-meals-v2'))).log.length;
+  ok('Sheet: a new connection sends every plan, fetching each past one whole once', all.plans.length === logLen && logLen >= 2 && logs2.length === logLen - 1 && new Set(all.plans.map(p => p.id)).size === logLen && all.plans.every(p => p.meals.length && p.meals[0].steps.length), logLen + ' ' + logs2.length);
+  ok('Sheet: and Plans has them all', sheet2.tab('Plans').length === 1 + 4 * logLen);
+  await shot(B.page, 'sheet-on-dark');
+  // later sends: only the current plan
+  await B.page.evaluate(() => window.__meals.load()); await B.page.waitForTimeout(3500);
+  ok('Sheet: opening again with nothing new sends nothing', posts2.length === 1);
+  // disconnecting forgets the link here and leaves the Sheet as it is
+  await B.page.click('#syOff'); await B.page.click('#syOff');
+  ok('Sheet: Disconnect forgets the link and code on this phone', (await B.page.evaluate(() => localStorage.getItem('allison-meals-v1-sheet'))) === null && await B.page.isVisible('#syForm') && sheet2.tab('Plans').length === 1 + 4 * logLen);
+  ok('Sheet: no script errors, nothing blocked by the page policy', !B.errs.length, B.errs.join(' | '));
+  await B.ctx.close();
+
+  // the other errors, in words
+  const E = await phone();
+  let app = 'allison-drinks-sync', reply = null;
+  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.request().method() === 'POST'
+    ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(reply || { ok: false, error: 'wrong-secret' }) })
+    : route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, app, v: 1 }) }));
+  await E.page.click('#setBtn'); await E.page.click('#sheetBtn');
+  const tryConnect = async re => { await E.page.evaluate(() => { document.getElementById('toast').hidden = true; }); await E.page.fill('#syUrl', SHEET_URL); await E.page.fill('#sySecret', 'x'); await E.page.click('#syConnect'); await E.page.waitForFunction(r => new RegExp(r).test(document.getElementById('syStatus').textContent), re.source); };
+  await tryConnect(/another AllisonOS app/);
+  app = 'allison-meals-sync'; await tryConnect(/old copy of the script/);
+  reply = { ok: false, error: 'secret-not-set' }; await tryConnect(/still says SECRET/);
+  reply = { ok: false, error: 'busy' }; await tryConnect(/Sheet was busy/);
+  reply = { ok: false, error: 'bad-request' }; await tryConnect(/didn.t understand/);
+  reply = { ok: true, app: 'allison-orders-sync' }; await tryConnect(/another AllisonOS app/);
+  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.request().method() === 'POST' ? route.fulfill({ status: 200, contentType: 'text/html', body: '<html>sign in</html>' }) : route.abort());
+  await tryConnect(/didn.t answer like the Meals script/);
+  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.abort());
+  await tryConnect(/Couldn.t reach the Sheet/);
+  ok('Sheet: every error says what to do', true);
+  await E.ctx.close();
+
+  // a setup link from another phone fills the form; the backup copy in IndexedDB reconnects a phone that lost its storage
+  const sheet3 = fakeSheet(GS, SHEET_SECRET), posts3 = [];
+  const S = await phone();
+  await withSheet(S.ctx, sheet3, posts3);
+  const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  await S.page.goto('about:blank'); await S.page.goto(BASE + '/meals/' + link);
+  await S.page.waitForSelector('#syncSheet:not([hidden])');
+  ok('Sheet: a setup link opens the form filled in', (await S.page.inputValue('#syUrl')) === SHEET_URL && (await S.page.inputValue('#sySecret')) === SHEET_SECRET && !(await S.page.evaluate(() => location.hash)));
+  await S.page.click('#syConnect'); await S.page.waitForSelector('#syOn:not([hidden])', { timeout: 15000 });
+  const idb = await S.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-meals', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => res(q.result); }; }));
+  ok('Sheet: the link and code are also kept in IndexedDB', !!idb && idb.url === SHEET_URL && idb.secret === SHEET_SECRET);
+  const n3 = posts3.length;
+  await S.page.evaluate(() => localStorage.removeItem('allison-meals-v1-sheet'));
+  await S.page.reload(); await S.page.waitForTimeout(500);
+  ok('Sheet: a phone that lost its storage reconnects from the IndexedDB copy', await until(() => posts3.length > n3), String(posts3.length - n3));
+  await S.ctx.close();
+};
+await SHEET_STEP();
 await browser.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed');
 process.exit(failed ? 1 : 0);
