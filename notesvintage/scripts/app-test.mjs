@@ -335,7 +335,9 @@ for (const scheme of ['light', 'dark']) {
     await page.fill('#sySecret', 'maple-otter');
     await page.click('#syConnect');
     await page.waitForFunction(() => !document.getElementById('syOn').hidden, null, { timeout: 8000 });
-    assert.ok(await page.evaluate(KEY => !!localStorage.getItem(KEY + '-sync'), KEY), 'the Sheet link is kept under its own key');
+    // saved once the Sheet has answered, which can be a moment after the form switches: wait for it, don't race it
+    await page.waitForFunction(KEY => !!localStorage.getItem(KEY + '-sync'), KEY, { timeout: 8000 }).catch(() => { throw new Error('the Sheet link is kept under its own key'); });
+    await page.waitForFunction(async () => (await indexedDB.databases()).some(d => d.name === 'allison-notesv'), null, { timeout: 8000 });
     await page.waitForTimeout(500);
     const dbs = await page.evaluate(async () => (await indexedDB.databases()).map(d => d.name));
     assert.deepEqual(dbs, ['allison-notesv'], 'the Sheet copy is in its own IndexedDB');
