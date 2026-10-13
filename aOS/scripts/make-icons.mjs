@@ -1,31 +1,26 @@
-// Draws aOS/icon-512.png and aOS/icon-180.png: "aOS" in white - no version
-// number, which changes - on the AllisonOS pastels (sea glass, mist, shell, sand), with a
-// soft glossy light from the top. Full-bleed: the phone rounds the corners.
-// The picture is HTML, photographed by headless Chromium.
+// Draws aOS/icon-512.png and aOS/icon-180.png from aOS/icon.svg ("aOS" in cream on teal, with a
+// mustard sun and a burnt-orange pill: the Mid-century Retro look), by rendering the SVG in
+// headless Chromium, so icon.svg stays the single source of the picture. No version number in
+// it: that changes.
 //
-//   CHROMIUM=/path/to/chrome node aOS/scripts/make-icons.mjs
-// (needs playwright-core where node can find it)
-import { chromium } from 'playwright-core';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// Needs Playwright with Chromium (npm i -g playwright):
+//   node aOS/scripts/make-icons.mjs
+import { createRequire } from 'module';
+import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+const require = createRequire(execSync('npm root -g').toString().trim() + '/');
+const { chromium } = require('playwright');
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const html = `<!doctype html><html><body style="margin:0">
-<div style="width:1024px;height:1024px;position:relative;overflow:hidden;
-  background:linear-gradient(135deg,#78AE9F 0%,#8C9DC6 36%,#C4958F 68%,#C9A671 100%);
-  font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-serif">
-  <div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 30% -10%,rgba(255,255,255,.55),rgba(255,255,255,0) 60%)"></div>
-  <div style="position:absolute;inset:0;background:radial-gradient(90% 60% at 90% 110%,rgba(169,211,199,.5),rgba(169,211,199,0) 60%)"></div>
-  <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-53%);text-align:center;color:#fff;font-weight:800;font-size:360px;letter-spacing:-13px;
-    text-shadow:0 18px 48px rgba(30,45,60,.26)">aOS</div>
-</div></body></html>`;
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM });
-const p = await b.newPage({ viewport: { width: 1024, height: 1024 } });
-await p.setContent(html);
-for (const [n, s] of [[512, 0.5], [180, 180 / 1024]]) {
-  const q = await b.newPage({ viewport: { width: n, height: n }, deviceScaleFactor: 1 });
-  await q.setContent(`<body style="margin:0"><div style="width:1024px;height:1024px;transform:scale(${s});transform-origin:0 0">${html.replace(/^.*<body style="margin:0">/s, '').replace(/<\/body>.*$/s, '')}</div></body>`);
-  await q.screenshot({ path: join(OUT, `icon-${n}.png`), clip: { x: 0, y: 0, width: n, height: n } });
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const svg = readFileSync(path.join(DIR, 'icon.svg'), 'utf8');
+const browser = await chromium.launch();
+for (const n of [512, 180]) {
+  const page = await browser.newPage({ viewport: { width: n, height: n } });
+  await page.setContent('<style>html,body{margin:0}svg{display:block;width:' + n + 'px;height:' + n + 'px}</style>' + svg);
+  await page.screenshot({ path: path.join(DIR, 'icon-' + n + '.png') });
+  await page.close();
 }
-await b.close();
-console.log('aos icons written');
+await browser.close();
+console.log('Wrote icon-512.png and icon-180.png');
