@@ -19,11 +19,11 @@ let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
 // a phone on the store; `apps` are the Home Screen apps the account says are installed
-async function open(apps = {}, scheme = 'light') {
+async function open(apps = {}, scheme = 'light', look = 'glass') {   // the Sea glass look unless asked: Standard is then the design that comes first
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps };
-  await ctx.addInitScript(() => { try { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); sessionStorage.setItem('aos.later.aos', '1'); } catch {} });
+  await ctx.addInitScript(look => { try { localStorage.setItem('aos.look', look); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); sessionStorage.setItem('aos.later.aos', '1'); } catch {} }, look);
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
     if (!u.pathname.startsWith('/aOS/api/')) return r.continue();
@@ -63,8 +63,6 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   if (!/Standard/.test(await text(p, '.dbtn'))) pr.push('the menu does not start on Standard');
   if (await p.locator('.dmenu').isVisible()) pr.push('the menu is open before it is tapped');
   if (!/\/mail\/\?via=aos/.test(await attr(p, '.apphead [data-get]', 'href') || '')) pr.push('Get does not add Mail');
-  // aOS is mid-century, so the icon is the mid-century one on Standard too (and for apps with no Vintage design)
-  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('Standard Mail does not show the mid-century icon');
   await p.click('.dbtn');
   if (await p.getAttribute('.dbtn', 'aria-expanded') !== 'true') pr.push('aria-expanded does not say open');
   const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
@@ -73,7 +71,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   await p.click('.dopt[data-did="vintage"]');
   if (await p.locator('.dmenu').isVisible()) pr.push('the menu stays open after a pick');
   if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the menu does not say Vintage after the pick');
-  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('the page does not show the mid-century icon');
+  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('the page keeps Mail\'s icon');
   if (await attr(p, '.apphead [data-get]', 'data-get') !== 'mailvintage') pr.push('Get still adds ' + await attr(p, '.apphead [data-get]', 'data-get'));
   if (await p.locator('.apphead h1').innerText() !== 'Mail') pr.push('the name changed');
   // the list agrees, and the choice is kept on this phone
@@ -82,7 +80,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   await p.reload(); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]');
   if (await attr(p, '#list .row[data-app="mail"] [data-get]', 'data-get') !== 'mailvintage') pr.push('the pick was not kept');
   if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) pr.push('the page scrolls sideways');
-  report('the Design menu: Standard first, Vintage changes what Get adds, the icon is mid-century either way, and it is kept', pr); await ctx.close();
+  report('the Design menu: Standard first, Vintage changes the icon and what Get adds, and it is kept', pr); await ctx.close();
 }
 
 // 3. Get on a design not added yet asks which design, then opens that app's own address (no new tab until then)
@@ -147,7 +145,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
 // 5. the mid-century icons: every row shows one that loads, the same whichever design is picked, and the four apps
 // with no Vintage design have theirs in aOS/icons/
 {
-  const { ctx, p, errs } = await open(); const pr = [...errs];
+  const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
   await p.waitForTimeout(800);
   const rows = await p.locator('#list .row').evaluateAll(rs => rs.map(r => ({ app: r.dataset.app, src: r.querySelector('img').getAttribute('src'), ok: r.querySelector('img').naturalWidth > 0 })));
   for (const r of rows) if (!r.ok) pr.push(r.app + '\'s icon does not load: ' + r.src);
@@ -163,6 +161,33 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   const back = await p.locator('#list .row[data-app="notes"] img').getAttribute('src');
   if (!/icons\/notes-512\.png$/.test(back || '')) pr.push('Vintage does not bring the mid-century icons back: ' + back);
   report('every app shows its mid-century icon in the Vintage look (the original in Sea glass), and each loads', pr); await ctx.close();
+}
+
+// 6. in the Vintage look every link in aOS goes to the Vintage app: the design that goes with the look is the one
+// picked until you pick another, and the Sea glass look brings Standard back
+{
+  const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
+  const gets = () => p.locator('#list .row [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get + '=' + new URL(b.href).pathname));
+  let g = await gets();
+  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage']])
+    if (!g.includes(v + '=/' + v + '/')) pr.push('in the Vintage look ' + base + ' does not link to ' + v + ': ' + g.filter(x => x.startsWith(base) || x.startsWith(v)).join(' '));
+  for (const id of ['notes', 'places', 'meals', 'podcasts']) if (!g.includes(id + '=/' + id + '/')) pr.push(id + ' (no designs) should link to itself');
+  // the Today postcards and an app's page agree
+  const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));
+  if (story.some(id => ['mail', 'weather', 'news', 'calendar', 'drinks', 'fitness', 'travel', 'orders', 'house'].includes(id))) pr.push('a Today story links to a Standard app: ' + story.join());
+  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.dbtn');
+  if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the Design menu does not start on Vintage: ' + await text(p, '.dbtn'));
+  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weathervintage') pr.push('Get on Weather does not add Weather Vintage');
+  // a pick still wins
+  await p.click('.dbtn'); await p.click('.dopt[data-did="standard"]');
+  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weather') pr.push('picking Standard does not bring Weather back');
+  await p.click('.page .back'); await p.waitForTimeout(400);
+  if (await attr(p, '#list .row[data-app="weather"] [data-get]', 'data-get') !== 'weather') pr.push('the list ignores the pick');
+  // and the Sea glass look, with no pick, is Standard everywhere
+  await p.evaluate(() => { localStorage.removeItem('aos.design.weather'); aosLook.set('glass'); }); await p.waitForTimeout(500);
+  g = await gets();
+  if (!g.includes('mail=/mail/') || !g.includes('weather=/weather/')) pr.push('the Sea glass look does not link to Standard: ' + g.slice(0, 6).join(' '));
+  report('in the Vintage look every link goes to the Vintage app, a pick wins, and Sea glass goes back to Standard', pr); await ctx.close();
 }
 
 await b.close(); server.close();
