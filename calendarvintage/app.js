@@ -355,7 +355,7 @@ if (window.top !== window.self) {
     if (localData({ note: 'notes', travel: 'travel', fitness: 'fitness' }[k])) return LAYER[k].sub;   // this browser has it
     if (st.layersState === 'signin') return 'Sign in to your family account first: open aOS.';
     if (st.layersState === 'off') return 'Family accounts aren’t switched on yet.';
-    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'If you use ' + (k === 'note' ? LAYER[k].name : LAYER[k].name + ' or ' + LAYER[k].name + ' Vintage') + ', open it once, signed in, and it shows here';
+    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'If you use ' + LAYER[k].name + ', open it once, signed in, and it shows here';
     return LAYER[k].sub;
   };
 
