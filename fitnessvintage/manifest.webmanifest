@@ -1,0 +1,17 @@
+{
+  "name": "Fitness",
+  "short_name": "Fitness",
+  "description": "Fitness in a mid-century modern look: a simple workout log, the week as days, and for each day the muscle group, exercise, weight, reps and sets.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241E1A",
+  "theme_color": "#241E1A",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/fitnessvintage/", "url": "https://tomallison24-news.pages.dev/fitnessvintage/manifest.webmanifest" }
+  ]
+}

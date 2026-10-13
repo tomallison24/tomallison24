@@ -1,6 +1,6 @@
 {
-  "name": "Mail Vintage",
-  "short_name": "Mail Vintage",
+  "name": "Mail",
+  "short_name": "Mail",
   "description": "Mail in a mid-century modern look: one tap files a sender's whole domain, and the bucket empties itself.",
   "start_url": "./",
   "scope": "./",

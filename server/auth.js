@@ -12,7 +12,7 @@
 //   apps:<id>        { <app>: when it was last opened from their Home Screen }
 //   sv:<id>          how many times they've used "Sign out other devices"
 //   used:<challenge> a sign-in challenge already used, gone after 5 minutes
-//   layer:<app>:<id> { at, data } - what Notes, Travel, Fitness or Mail shows in that
+//   layer:<app>:<id> { at, data } - what Notes, Travel (travelv: Travel Vintage), Fitness or Mail shows in that
 //                    person's Calendar (functions/aOS/api); only they can read it
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
 //   invite:<token>   { name, by, user? } - one use, gone after 24 hours; with user,

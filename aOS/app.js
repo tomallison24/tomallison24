@@ -5,16 +5,31 @@
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
-  const icon = id => `../${id}/icon-512.png`;
+  // In the Vintage look every app shows its mid-century icon here, whichever design is picked: an app with a Vintage
+  // design shows that design's icon, and the apps without one (Notes, Podcasts, Places, Meals) theirs in aOS/icons/.
+  // In the Sea glass look an app shows its own folder's icon (the Vintage design's, for a Vintage design). The app's
+  // own icon (what a Home Screen shows) is its folder's, and is not changed.
+  const RETRO_ICONS = ['notes', 'podcasts', 'places', 'meals'];
+  const icon = id => {
+    if (window.aosLook && aosLook.get() === 'glass') return `../${id}/icon-512.png`;
+    const v = (D.DESIGNS[id] || []).find(d => d.look === 'vintage');
+    return v ? `../${v.app}/icon-512.png` : RETRO_ICONS.includes(id) ? `icons/${id}-512.png` : `../${id}/icon-512.png`;
+  };
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const CAT = { mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const HUE = { newsvintage: '126,140,52', fitnessvintage: '74,52,38', travelvintage: '74,52,38', drinksvintage: '126,140,52', weathervintage: '126,140,52', calendarvintage: '63,110,154', mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
+  const CAT = { newsvintage: 'News', fitnessvintage: 'Health & Fitness', travelvintage: 'Travel', drinksvintage: 'Health & Fitness', weathervintage: 'Weather', calendarvintage: 'Productivity', mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
+    newsvintage: [['ok', 'Nothing']],
+    fitnessvintage: [['once', 'Your own Google Sheet, as a backup (optional)']],
+    travelvintage: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
+    drinksvintage: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
+    weathervintage: [['ok', 'Your location, if you allow it']],
+    calendarvintage: [['ok', 'Your family account (Face ID)']],
     mail: [['once', 'Sign in with your own Google account']],
     mailvintage: [['once', 'Sign in with your own Google account']],
     calendar: [['ok', 'Your family account (Face ID)']],
@@ -324,7 +339,11 @@
       <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
   const familyIcon = () => aosLook.get() === 'glass' ? FAMILY_ICON_GLASS : FAMILY_ICON_VINTAGE;
-  addEventListener('aos:look', () => { if (state) paintHero(state); });   // the picker: the family icon follows the look
+  addEventListener('aos:look', () => {   // the picker: the family icon and every app's icon follow the look
+    if (state) paintHero(state);
+    paintList();
+    for (const el of document.querySelectorAll('#stories .story[data-story]')) { const st = STORIES[+el.dataset.story], im = el.querySelector('.art img'); if (st && st.id && im) im.src = icon(st.id); }
+  });   // the picker: the family icon follows the look
   let members = null;
   async function paintHero(st) {
     const u = st && st.user, h = new Date().getHours();

@@ -57,6 +57,12 @@ standard drinks or "alcohol-free".
   day at most, alcohol-free days a week), **Bring in ABV Tracker history**,
   **Export** (CSV) and **Delete all data**.
 
+**Drinks Vintage** is the same app in a mid-century modern look, as its own app
+with its own copy of the log on the phone ([`drinksvintage/`](../drinksvintage/README.md)).
+It uses this app's server route, so signed in it is the same private log in
+your family account, and Calendar shows it either way. It needs nothing new
+set up.
+
 ## The sums
 
 A standard drink is the US one, 14 g of alcohol: a drink's alcohol is

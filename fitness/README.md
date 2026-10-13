@@ -4,6 +4,10 @@ A simple workout log as a home-screen web app, in the same frosted glass as
 Calendar, Notes and Travel. It is kept deliberately small: the week, and for
 each day what you did.
 
+**Fitness Vintage** is the same app in a mid-century modern look, as its own app
+with its own log and settings ([`fitnessvintage/`](../fitnessvintage/README.md)).
+It needs nothing new from Google, and can share this app's Google Sheet.
+
 - **The week**: seven rows, one a day, each with coloured chips for the
   muscle groups worked and how many exercises and sets. Today is marked. A day you
   drank on (from Drinks, signed in) also shows a small glass and its

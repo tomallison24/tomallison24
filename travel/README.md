@@ -30,6 +30,11 @@ with the details filled in.
   by someone else) the same way Gmail's are read.
 - **Two phones**: a shared Google Sheet, set up like Notes' (below).
 
+**Travel Vintage** is the same app in a mid-century modern look, as its own app
+with its own bookings and settings ([`travelvintage/`](../travelvintage/README.md)).
+It needs its own redirect address in Google Cloud (below), asks this app's flight
+status function, and can share this app's Google Sheet.
+
 ## How the emails are read
 
 Travel reads Gmail **on the phone, read-only** (`gmail.readonly`: it can't
@@ -123,6 +128,8 @@ client once:
    application** client.
 2. **Authorised redirect URIs** → add, exactly (trailing slash included):
    - `https://tomallison24-news.pages.dev/travel/`
+   - and, for Travel Vintage, `https://tomallison24-news.pages.dev/travelvintage/`
+     (each app needs its own address: Google matches them exactly)
    - and the Cloudflare address too, if you use that one: `https://<your
      Cloudflare Pages address>/travel/`
 3. **Save**. Google can take a few minutes to pick it up.

@@ -22,7 +22,7 @@ const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).p
 const W = fs.readFileSync(path.join(ROOT, 'home/welcome.js'), 'utf8');
 const APPS = Function('return ' + /const APPS = (\[[^\]]*\])/.exec(W)[1])();
 const DARK_ONLY = Function('return ' + /const DARK_ONLY = (\[[^\]]*\])/.exec(W)[1])();
-const CARDS_OFFLINE = ['weather'];   // its stops are on the forecast, which needs the network
+const CARDS_OFFLINE = ['weather', 'weathervintage'];   // its stops are on the forecast, which needs the network
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {

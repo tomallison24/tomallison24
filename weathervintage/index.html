@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https://mesonet.agron.iastate.edu https://*.basemaps.cartocdn.com https://radar.weather.gov; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://api.weather.gov https://api.bigdatacloud.net https://mesonet.agron.iastate.edu">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weather</title>
+<meta name="description" content="Weather: the Weather app in a mid-century modern look. Hourly and 7-day forecasts and radar for where you are, from the National Weather Service.">
+<meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#241E1A" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- default, not black-translucent: that one always draws the clock white, which vanishes on the cream theme. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Weather">
+<link rel="apple-touch-icon" href="icon-180.png?v=1">
+<link rel="icon" type="image/png" href="icon-512.png?v=1">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  Weather Vintage - Weather in a mid-century modern look (the last block of the
+  style sheet), as its own app with its own storage. Below is Weather's own note
+  on where the card comes from.
+
+  Weather - the Signal dashboard's W3 "Vivid" card as a standalone app.
+
+  The card is a port of views_signal/favorites.yaml in ha-config (the WEATHER
+  block, promoted 2026-09-23): same skies, particle layer, glass chips, hourly
+  tray, chevron and 7-day drawer, same numbers and timings. What changed is
+  only the plumbing:
+
+    HA                                  HERE
+    weather.forecast_home (Met.no)   -> Open-Meteo /v1/forecast, no key
+    sensor.signal_weather            -> toForecast(): same short keys
+                                        (t c p r h l), same 12h / 7d cut
+    sun.sun                          -> current.is_day + daily sunrise/sunset
+    input_boolean..._expanded        -> localStorage, per phone
+    <ha-icon>                        -> inline MDI paths, so it works offline
+
+  Markup is still deterministic (seeded particles) and the DOM is only
+  replaced when the string changes, for the same reason as on the dashboard:
+  a repaint must not restart the animations.
+-->
+<style>
+  :root {
+    --bg: #0D1213;
+    --surface: #141B1C;
+    --border: #283133;
+    --text: #FFFFFF;
+    --muted: rgba(235, 235, 245, 0.6);
+    --accent: #A9D3C7;
+    --cta: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%);
+    --cta-ink: #10181A;
+    /* Cards: very faint tiles, the same in every AllisonOS app (a whisper of fill, a hairline edge, no shadow) */
+    --tile: rgba(255, 255, 255, 0.05);
+    --tile-edge: rgba(255, 255, 255, 0.10);
+    /* Liquid Glass for the sheets: clear glass, a lit rim, lighter glass fields */
+    --lgs-top: rgba(40, 50, 51, 0.60);
+    --lgs-bottom: rgba(20, 27, 28, 0.52);
+    --lgs-rim: rgba(255, 255, 255, 0.20);
+    --lgs-edge: rgba(255, 255, 255, 0.12);
+    --lgs-field: rgba(255, 255, 255, 0.10);
+    --lgs-thumb: rgba(255, 255, 255, 0.16);
+    --lgs-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+    --lgs-filter: blur(28px) saturate(180%) brightness(0.92);
+    --lgs-lift: rgba(0, 0, 0, 0.38);
+    --lgs-lift-strong: rgba(0, 0, 0, 0.5);
+    --lgs-solid: rgba(18, 24, 25, 0.96);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: calc(env(safe-area-inset-top) + 12px) max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 24px) max(16px, env(safe-area-inset-left));
+    overscroll-behavior-y: none;
+  }
+  main { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  svg.i { display: inline-block; flex: none; }
+
+  /* ---- The card: ha-card + button-card grid, as W3 styles them ---- */
+  .w3-card {
+    position: relative; overflow: hidden;
+    border-radius: 28px; padding: 30px 18px 16px 18px; color: #FFFFFF;
+    display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 16px; touch-action: pan-y; will-change: transform;
+  }
+  .w3-days { position: relative; z-index: 1; min-width: 0; }
+  /* Hourly and the 7-day forecast each sit on their own very faint tile (--tile), so the sky still shows
+     through. The tiles reach 10px past the card's padding on each side and pad back in by the same,
+     so what is inside keeps its width; the card's row gap keeps the two apart. */
+  .w3-hours, .w3-days { margin: 0 -10px; padding: 12px 10px 8px; border-radius: 22px;
+    background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
+  .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
+  .w3-place { display: inline-flex; align-items: center; gap: 4px; }
+  /* Room to breathe: under the place name, around the chips, and before Hourly. */
+  .w3-hero { padding-bottom: 14px; }
+
+  .w3-fx { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  /* The sky fills the whole screen behind everything, so the forecast sits on it rather than in a box. */
+  #sky { position:fixed; inset:0; z-index:0; }
+  #sky[hidden] { display:none; }
+  main { position:relative; z-index:1; }
+  .w3-sky { position:absolute; inset:-2px; background-size:100% 180% !important; animation:w3-sky 22s ease-in-out infinite alternate; }
+  .w3-sun { position:absolute; top:-90px; right:-90px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle, rgba(255,226,120,0.60) 0%, rgba(255,214,10,0.22) 32%, rgba(255,214,10,0) 64%); animation:w3-pulse 6s ease-in-out infinite alternate; }
+  .w3-rays { position:absolute; top:-170px; right:-170px; width:420px; height:420px; border-radius:50%; background:repeating-conic-gradient(from 0deg, rgba(255,255,255,0.13) 0deg 5deg, rgba(255,255,255,0) 5deg 15deg); -webkit-mask-image:radial-gradient(circle, #000 18%, transparent 62%); mask-image:radial-gradient(circle, #000 18%, transparent 62%); animation:w3-spin 80s linear infinite; }
+  .w3-moon { position:absolute; top:-70px; right:-70px; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle, rgba(215,225,255,0.35) 0%, rgba(215,225,255,0.10) 35%, rgba(215,225,255,0) 65%); animation:w3-pulse 7s ease-in-out infinite alternate; }
+  .w3-star { position:absolute; border-radius:50%; background:#FFFFFF; animation:w3-twinkle ease-in-out infinite alternate; }
+  .w3-cloud { position:absolute; left:-45%; border-radius:999px; background:radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.95), rgba(255,255,255,0) 70%); filter:blur(6px); animation:w3-drift linear infinite; }
+  .w3-drop { position:absolute; top:-40px; width:1.5px; border-radius:2px; background:linear-gradient(180deg, rgba(255,255,255,0), rgba(220,238,255,0.85)); animation:w3-fall linear infinite; }
+  .w3-flake { position:absolute; top:-12px; border-radius:50%; background:#FFFFFF; animation:w3-snow linear infinite; }
+  .w3-flash { position:absolute; inset:0; background:#EBEBFF; opacity:0; animation:w3-flash 9s linear infinite; }
+  .w3-fog { position:absolute; left:-30%; width:160%; border-radius:999px; background:rgba(255,255,255,0.22); filter:blur(14px); animation:w3-fogdrift ease-in-out infinite alternate; }
+  .w3-gust { position:absolute; left:-40%; height:1.5px; border-radius:2px; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0)); animation:w3-gust linear infinite; }
+  .w3-in { position:relative; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,0.18); }
+  .w3-in.rise { animation:w3-rise .7s cubic-bezier(.2,.8,.2,1) both; }
+  .w3-hours { position:relative; z-index:1; min-width:0; }
+  .w3-ico { display:inline-flex; }
+  .w3-spin-slow { animation:w3-spin 30s linear infinite; }
+  .w3-bob { animation:w3-bob 4s ease-in-out infinite alternate; }
+  .w3-glow { animation:w3-glow 4s ease-in-out infinite alternate; }
+  .w3-flicker { animation:w3-flicker 5s linear infinite; }
+  @keyframes w3-sky { from { background-position:50% 0%; } to { background-position:50% 100%; } }
+  @keyframes w3-pulse { from { transform:scale(1); opacity:.85; } to { transform:scale(1.12); opacity:1; } }
+  @keyframes w3-spin { to { transform:rotate(360deg); } }
+  @keyframes w3-twinkle { from { opacity:.15; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
+  @keyframes w3-drift { from { left:-45%; } to { left:110%; } }
+  @keyframes w3-fall { from { transform:translate(0, 0) rotate(12deg); } to { transform:translate(-200px, 110vh) rotate(12deg); } }
+  @keyframes w3-snow { 0% { transform:translate(0, 0); } 50% { transform:translate(14px, 55vh); } 100% { transform:translate(-8px, 110vh); } }
+  @keyframes w3-flash { 0%, 86%, 100% { opacity:0; } 87% { opacity:.55; } 88% { opacity:.05; } 90% { opacity:.4; } 92% { opacity:0; } }
+  @keyframes w3-fogdrift { from { transform:translateX(-8%); } to { transform:translateX(8%); } }
+  @keyframes w3-gust { from { left:-40%; } to { left:120%; } }
+  @keyframes w3-bob { from { transform:translateY(-2px); } to { transform:translateY(3px); } }
+  @keyframes w3-glow { from { filter:drop-shadow(0 0 4px rgba(255,255,255,0.25)); } to { filter:drop-shadow(0 0 14px rgba(255,255,255,0.60)); } }
+  @keyframes w3-flicker { 0%, 84%, 100% { opacity:1; } 85% { opacity:.35; } 87% { opacity:1; } 89% { opacity:.5; } 91% { opacity:1; } }
+  @keyframes w3-rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes w3-sway { from { transform:rotate(calc(var(--w3-rot) - 10deg)); } to { transform:rotate(calc(var(--w3-rot) + 10deg)); } }
+  @media (prefers-reduced-motion: reduce) {
+    .w3-fx *, .w3-in, .w3-ico, .w3-sway, .hx-col, .hx-col *, .hx-col .i { animation:none !important; }
+  }
+
+
+  /* ---- The hourly tray: 24 hours you scroll sideways. Each hour has its
+     time, a moving icon, a temperature on a curve, and a rain bar. ---- */
+  /* No panel: the hours sit straight on the sky (the radar keeps its own dark map panel, .hx.rd). */
+  .hx { border-radius: 24px; background: none; overflow: hidden; }
+  .hx-tray { scroll-padding-left: 6px; display: flex; overflow-x: auto; overflow-y: hidden; padding: 6px; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .hx-tray::-webkit-scrollbar { display: none; }
+  .hx-col { position: relative; flex: 0 0 calc((100% - 12px) / 6.5); min-width: 0; display: flex; flex-direction: column; align-items: center;
+    border-radius: 14px; padding-top: 6px; scroll-snap-align: start; }
+  .hx-now { background: rgba(255,255,255,0.22); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.50); }
+  .hx-time { height: 18px; font-size: 12px; font-weight: 600; letter-spacing: -0.3px; line-height: 18px; white-space: nowrap; opacity: 0.92; font-variant-numeric: tabular-nums; }
+  .hx-now .hx-time { font-weight: 700; opacity: 1; }
+  .hx-day { font-weight: 800; letter-spacing: 0.2px; }
+  .hx-time.sm { font-size: 11px; letter-spacing: -0.3px; }
+  .hx-ico { height: 36px; display: flex; align-items: center; justify-content: center; }
+  .hx-ico .i { transform-origin: 50% 55%; }
+  .hx-curve { position: relative; width: 100%; height: 70px; }
+  .hx-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  /* The temperature line and dots stay quiet, so the rain bars and amounts under them stand out. */
+  .hx-line { fill: none; stroke: rgba(255,255,255,0.38); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .hx-dot { position: absolute; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,0.72); }
+  .hx-temp { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; line-height: 20px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.22); }
+  .hx-rain { height: 34px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
+  .hx-bar { width: 14px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #CDEBFF, #6CB8FF); transform-origin: 50% 100%; box-shadow: 0 0 10px rgba(108,184,255,0.55); }
+  .hx-pct { font-size: 11.5px; font-weight: 700; color: #CDEBFF; line-height: 1; }
+  /* The chance of rain's own line under the temperatures (Hourly and Feels like). */
+  .hx-rc { position: relative; width: 100%; height: 60px; }
+  .hx-rc svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .hx-rline { fill: none; stroke: rgba(108,184,255,0.6); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .hx-rdot { position: absolute; left: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #9FD0FF; }
+  .hx-rc .hx-pct { position: absolute; left: 0; right: 0; text-align: center; }
+  .hx-rc .dry { opacity: 0.5; }
+  .hx-lbl.sm { font-size: 10px; letter-spacing: -0.2px; }
+  .hx-lbl { font-size: 11.5px; font-weight: 700; line-height: 1; opacity: 0.95; }
+  /* Icons move to suit the weather; each hour starts at its own point in the cycle. */
+  .hx-m-spin .i { animation: w3-spin 24s linear infinite; }
+  .hx-m-bob .i { animation: w3-bob 3s ease-in-out infinite alternate; }
+  .hx-m-rain .i { animation: hx-patter 1.1s ease-in-out infinite; }
+  .hx-m-snow .i { animation: hx-snow 3.2s ease-in-out infinite alternate; }
+  .hx-m-zap .i { animation: w3-flicker 4.5s linear infinite; }
+  .hx-m-moon .i { animation: w3-glow 3s ease-in-out infinite alternate; }
+  .hx-m-wind .i { animation: hx-wind 1.8s ease-in-out infinite alternate; }
+  .hx-m-fog .i { animation: hx-fog 3.4s ease-in-out infinite alternate; }
+  .hx-m-up .i { animation: hx-rise 3.2s ease-in-out infinite alternate; }
+  .hx-m-down .i { animation: hx-set 3.2s ease-in-out infinite alternate; }
+  @keyframes hx-patter { 0%, 100% { transform: translateY(-1px) scale(1); } 50% { transform: translateY(3px) scale(1.06, 0.96); } }
+  @keyframes hx-snow { from { transform: rotate(-10deg) translateY(-1px); } to { transform: rotate(10deg) translateY(3px); } }
+  @keyframes hx-wind { from { transform: translateX(-3px); } to { transform: translateX(4px); } }
+  @keyframes hx-fog { from { opacity: 0.55; transform: translateX(-2px); } to { opacity: 1; transform: translateX(2px); } }
+  @keyframes hx-rise { from { transform: translateY(5px); } to { transform: translateY(-4px); } }
+  @keyframes hx-set { from { transform: translateY(-4px); } to { transform: translateY(5px); } }
+
+
+  .row-c { display: flex; justify-content: center; margin-top: 12px; }
+  .locating { margin: 0; padding: 120px 0 0; text-align: center; font-size: 18px; color: var(--muted); }
+  .skeleton { position: relative; }
+  /* The Places sheet's rows */
+  .prow { display: flex; align-items: center; }
+  .prow + .prow { border-top: 0.5px solid rgba(255,255,255,0.10); }
+  .list .prow button { border-top: 0; }
+  .list .pmain { flex: 1; min-width: 0; gap: 14px; padding: 14px 16px; }
+  .prow.on .pmain { background: var(--lgs-field); }
+  .pn { flex: 1; min-width: 0; }
+  .pn b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .pn small { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pr-t { flex: none; font-size: 26px; font-weight: 300; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  .list .prm { flex: none; width: 54px; height: 60px; padding: 0; justify-content: center; color: var(--muted); }
+
+
+  /* ---- The view switcher above the timeline, and the radar ---- */
+  .hx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .hx-title { min-width: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vsw { flex: none; display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.20);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
+  .vsw button { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,0.74); transition: color .25s; }
+  .vsw button[aria-pressed="true"] { color: #fff; }
+  .vsw .slthumb { background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.18));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0,0,0,0.25); }
+  .hx-title small { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; letter-spacing: 0; opacity: 0.75; }
+  .hx-empty { padding: 56px 0; text-align: center; font-size: 17px; opacity: 0.8; }
+  .hx-rot { display: inline-flex; }
+  @keyframes hx-swayr { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+  .hx.rd { position: relative; height: 300px; background: #10131A; }
+  .rd-base, .rd-fr { position: absolute; inset: 0; }
+  .rd-fr { opacity: 0; transition: opacity .25s; }
+  .rd-fr.on { opacity: 0.88; }
+  .rd-t { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; -webkit-user-drag: none; }
+  .rd-dot { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+    background: #0A84FF; border: 2.5px solid #fff; animation: rd-ping 2.2s ease-out infinite; pointer-events: none; }
+  @keyframes rd-ping { 0% { box-shadow: 0 0 0 0 rgba(10,132,255,0.65); } 80%, 100% { box-shadow: 0 0 0 16px rgba(10,132,255,0); } }
+  .rd-zoom { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+  /* The controls on the map: Liquid Glass with a dark tint, so they stay legible over the radar colours */
+  .rd-zoom button, .rd-play, .rd-bar, .rd-note.small {
+    background: rgba(28,30,38,0.46); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 1px rgba(255,255,255,0.28), 0 4px 14px rgba(0,0,0,0.25); }
+  .rd-zoom button, .rd-play { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 500; color: #fff; }
+  .rd-play { flex: none; font-size: 15px; }
+  .rd-bar { position: absolute; left: 10px; right: 10px; bottom: 26px; display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 5px; border-radius: 999px; }
+  /* The scrubber: a thin glass track filled in white up to the thumb (--p, 0 to 1, set by radarShow),
+     and a white capsule thumb that turns into a clear lens while it's held */
+  .rd-bar input { flex: 1; min-width: 0; height: 28px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none;
+    --rd-at: calc(14px + var(--p, 0) * (100% - 28px)); }
+  .rd-bar input:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: 2px; border-radius: 999px; }
+  .rd-bar input::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14);
+    background: linear-gradient(90deg, #fff 0 var(--rd-at), rgba(255,255,255,0.18) var(--rd-at)); }
+  .rd-bar input::-moz-range-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.18); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14); }
+  .rd-bar input::-moz-range-progress { height: 6px; border-radius: 3px; background: #fff; }
+  .rd-bar input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 20px; margin-top: -7px; border: 0; border-radius: 999px;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.22), inset 0 0 0 0.5px rgba(0,0,0,0.06); transition: transform .18s, background-color .18s, box-shadow .18s; }
+  .rd-bar input::-moz-range-thumb { width: 28px; height: 20px; border: 0; border-radius: 999px;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.22), inset 0 0 0 0.5px rgba(0,0,0,0.06); transition: transform .18s, background-color .18s, box-shadow .18s; }
+  .rd-bar input:active::-webkit-slider-thumb { transform: scale(1.15); background: rgba(255,255,255,0.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.22); }
+  .rd-bar input:active::-moz-range-thumb { transform: scale(1.15); background: rgba(255,255,255,0.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.22); }
+  .rd-kind { position: absolute; top: 12px; left: 12px; padding: 4px 9px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.35); font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #1B1B1F; background: #FFD60A; }
+  .rd-kind[hidden] { display: none; }
+  .rd-fr.ahead.on { opacity: 0.75; }
+  .rd-time { flex: none; min-width: 84px; text-align: right; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rd-attr { position: absolute; left: 10px; right: 10px; bottom: 6px; font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rd-note { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; font-size: 16px; line-height: 1.4; color: rgba(255,255,255,0.85); }
+  .rd-note b { font-size: 19px; color: #fff; }
+  .rd-note.over { background: rgba(16,19,26,0.88); }
+  .rd-note.small { inset: auto 10px 70px 10px; padding: 8px 12px; border-radius: 14px; background: rgba(28,30,38,0.46); font-size: 14px; }   /* with the map controls' glass, above */
+  .rd-note a { color: #9FD8FF; }
+  @media (prefers-reduced-motion: reduce) { .rd-dot { animation: none; } .rd-fr { transition: none; } }
+
+
+  /* ---- Page dots under the forecast ---- */
+  .dots { display: flex; justify-content: center; align-items: center; gap: 2px; margin-top: -2px; }
+  .dots:empty { display: none; }
+  .dot { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: rgba(255,255,255,0.38); transition: color .3s; }
+  .dot i { display: block; width: 8px; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.30);
+    transition: width .4s cubic-bezier(.3,1.4,.5,1), background .3s; }
+  .dot svg { transition: transform .35s cubic-bezier(.3,1.4,.5,1); }
+  .dot.on { color: #fff; }
+  .dot.on i { width: 22px; background: #fff; }
+  .dot.on svg { transform: scale(1.25); }
+  /* ---- The hour popup: the same Liquid Glass sheet as Places ---- */
+  .hnav { display: flex; gap: 8px; }
+  .hnav button:disabled { opacity: 0.35; }
+  .hd-hero { --k: 0; border-radius: 28px; padding: 20px 20px 20px 22px; display: flex; align-items: center; justify-content: space-between; color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 1px 1px rgba(255,255,255,0.35), 0 10px 26px -12px rgba(0,0,0,0.5); }
+  .hd-temp { font-size: 76px; font-weight: 200; letter-spacing: -3.5px; line-height: 0.95; font-variant-numeric: tabular-nums; }
+  .hd-temp span { opacity: 0.9; }
+  .hd-words { margin-top: 8px; font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
+  .hd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  /* The hour and day sheets' tiles: as faint as the Hourly and 7-day tiles on the main screen. */
+  .hd-tile { border-radius: 24px; padding: 14px 16px 12px; background: var(--tile); min-width: 0;
+    box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
+  .hd-k { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+  .hd-v { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 600; letter-spacing: -0.8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hd-v small { font-size: 17px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .hd-arrow { display: inline-flex; }
+  .hd-s { margin-top: 3px; font-size: 15px; color: var(--muted); }
+  .hd-tile.wide .hd-v { font-size: 26px; }
+  .hd-hero, .hd-tile { animation: w3-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--k) * 55ms); }
+  .hx-col[data-hour] { cursor: pointer; -webkit-user-select: none; user-select: none; }
+  .hx-col[data-hour]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) { .hd-hero, .hd-tile { animation: none; } .dot i, .dot svg { transition: none; } }
+  /* ---- The day sheet: the hour popup's glass, with the day drawn hour by hour ---- */
+  .hd-temp em { font-style: normal; font-size: 38px; letter-spacing: -1.2px; opacity: 0.72; margin-left: 6px; }
+  .hd-tile.full { grid-column: 1 / -1; }
+  .dd-chart { display: block; width: 100%; height: auto; margin-top: 6px; overflow: visible; }
+  .dd-chart text { font: 600 11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; fill: rgba(255,255,255,0.62); }
+  .dd-chart .lbl { font-size: 13px; font-weight: 700; fill: #fff; }
+  .dd-key { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .dd-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .dd-none { padding: 18px 0 8px; font-size: 16px; color: var(--muted); }
+  .dd-txt { margin-top: 8px; font-size: 16px; line-height: 1.42; }
+  .dd-txt + .dd-txt { margin-top: 10px; }
+  .dd-txt b { display: block; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .dc[data-day] { cursor: pointer; -webkit-user-select: none; user-select: none; border-radius: 16px; }
+  .dc[data-day]:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: -2px; }
+  .dc[data-day]:active { background: rgba(255,255,255,0.08); }
+
+
+  /* ---- 7-day: a column per day, the high over a bar down to the low ---- */
+  .dcols { display: flex; padding-top: 2px; }
+  .dc { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+  .dc-n { margin-top: 8px; font-size: 13px; font-weight: 700; letter-spacing: -0.3px; white-space: nowrap; }
+  .dc-ic { height: 30px; display: flex; align-items: center; }
+  .dc-r { height: 14px; font-size: 11px; font-weight: 700; line-height: 14px; color: #BFE3FF; white-space: nowrap; }
+  .dc-area { position: relative; width: 100%; }
+  .dc-hi, .dc-lo { position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dc-lo { font-weight: 500; opacity: 0.75; }
+  .dc-bar { position: absolute; left: 50%; width: 12px; margin-left: -6px; border-radius: 7px; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
+  .dc-now { position: absolute; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); }
+
+  /* ---- App chrome: Signal's own surfaces, not the sky ---- */
+  .foot { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 14px; color: rgba(255,255,255,0.8); padding: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  .foot button { display: inline-flex; align-items: center; gap: 4px; color: rgba(255,255,255,0.85); padding: 6px 8px; border-radius: 999px; }
+  .foot button:active { background: var(--surface); }
+  .spin { animation: w3-spin 1s linear infinite; }
+
+  .msg { background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); border-radius: 22px; padding: 20px 18px; font-size: 17px; line-height: 1.4; }
+  .msg b { display: block; font-size: 20px; margin-bottom: 4px; }
+  .msg .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  /* Buttons on the welcome, error and locating screens: clear glass (the view switcher's), and the Sea glass pastel for the main action */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 18px; border-radius: 999px; border: 1px solid transparent; font-size: 17px; font-weight: 600;
+    background: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.20);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
+  .pill:active { background: rgba(255,255,255,0.22); }
+  .pill.primary { color: var(--cta-ink); background: var(--cta);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
+  .pill.primary:active { background: var(--cta); filter: brightness(.94); }
+
+  .skeleton { height: 290px; border-radius: 26px; background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); animation: w3-pulse 1.4s ease-in-out infinite alternate; }
+
+  /* NWS alerts: Signal surfaces with the severity as the one colour */
+  .alerts { display: flex; flex-direction: column; gap: 8px; }
+  .alerts:empty { display: none; }
+  .alert { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .alert > button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; }
+  .alert .dot { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .alert .t { flex: 1; min-width: 0; }
+  .alert .t b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -0.24px; }
+  .alert .t small { display: block; font-size: 14px; color: var(--muted); margin-top: 1px; }
+  .alert .chev { color: var(--muted); transition: transform .2s; }
+  .alert.open .chev { transform: rotate(90deg); }
+  .alert .body { display: none; padding: 0 16px 16px 68px; font-size: 16px; line-height: 1.45; color: rgba(235,235,245,0.85); white-space: pre-line; }
+  .alert.open .body { display: block; }
+
+  /* Location sheet: Liquid Glass. One sheet of clear glass floating just
+     inside the screen's edges, as iOS 26's are: the sky blurs through it, a
+     lit rim runs round it, the lists are the same faint tiles as every card
+     and the fields are lighter glass on top. Neither blurs again (the sheet
+     already has). */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.30); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
+  .sheet {
+    position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 11; margin: 0 auto; max-width: 544px;
+    display: flex; flex-direction: column; overflow: hidden; border-radius: 34px;
+    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom));
+    backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px var(--lgs-lift-strong), 0 2px 8px var(--lgs-lift);
+    transform: translateY(calc(100% + 24px)); visibility: hidden;
+    transition: transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s linear .32s;
+    max-height: min(85vh, calc(100dvh - env(safe-area-inset-top) - 32px));
+  }
+  .open .scrim { opacity: 1; pointer-events: auto; }
+  .open .sheet { transform: none; visibility: visible; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  .grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22); margin: 6px auto 0; flex: none; }
+  .sheet h2 { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.4px; margin: 0; padding: 2px 12px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+  /* Close: a round glass button, as iOS 26's sheets have */
+  .sheet h2 button {
+    width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text);
+    background: var(--lgs-shine), var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 4px 14px var(--lgs-lift);
+    transition: transform .18s cubic-bezier(.22,1,.36,1);
+  }
+  .sheet h2 button:active { transform: scale(0.9); }
+  /* The list fades in under the header rather than being cut off by it. */
+  .sheet-body {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px calc(env(safe-area-inset-bottom) + 16px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
+  }
+  .search {
+    display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 0 16px; color: var(--muted); background: var(--lgs-field);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--lgs-lift); transition: box-shadow .2s;
+  }
+  .search:focus-within { box-shadow: inset 0 0 0 1.5px rgba(169,211,199,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(169,211,199,0.18); }
+  .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 12px 0; }
+  .list {
+    margin-top: 10px; border-radius: 26px; overflow: hidden; background: var(--tile);
+    box-shadow: inset 0 0 0 0.5px var(--tile-edge);
+  }
+  .list:empty { display: none; }
+  .list button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; padding: 15px 16px; font-size: 18px; }
+  .list button + button { border-top: 0.5px solid rgba(255,255,255,0.10); }
+  .list button small { display: block; color: var(--muted); font-size: 15px; margin-top: 1px; }
+  .list button:active { background: var(--lgs-field); }
+  .label { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin: 18px 8px 8px; }
+  .seg { display: flex; border-radius: 999px; padding: 3px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift); }
+  .seg button { flex: 1; padding: 11px 0; border-radius: 999px; font-size: 16px; font-weight: 600; color: var(--muted); transition: color .25s; }
+  .seg button[aria-pressed="true"] { background: #3A3A3F; color: var(--text); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--lgs-solid); } }
+  @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+  /* The units switch's sliding glass thumb: the options stay clear, and one
+     thumb under them glides to the chosen one, stretching as it goes, as
+     iOS 26's do (home/slide.js). */
+  .slides { position: relative; isolation: isolate; }
+  .slides > :not(.slthumb) { position: relative; z-index: 1; }
+  .slthumb {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 999px; z-index: 0; pointer-events: none;
+    background: var(--lgs-shine), var(--lgs-thumb);
+    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 0 var(--lgs-rim), 0 3px 10px var(--lgs-lift);
+    transition: opacity .25s ease, scale .25s cubic-bezier(.22,1,.36,1), background-color .3s;
+  }
+  .slthumb.off { opacity: 0; scale: .7; }
+  .seg.slides button[aria-pressed="true"] { background: none; }
+  .note { font-size: 14px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
+
+  /* ======================================================================
+     Mid-century modern, in the Retro colours
+     ----------------------------------------------------------------------
+     Weather's look, from the aOS Design Styles canvas ("Mid-century modern" +
+     "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+     shapes instead of glass; a cream ground (walnut in dark mode) with
+     mustard, teal, burnt orange and olive; Futura (iOS's own, so nothing to
+     download) for every word. Last in the sheet so it wins over the glass
+     above. Only colours, shapes and type change: every number, chart, view and
+     swipe is Weather's.
+
+     The sky is no longer a gradient: each kind of weather has a colour group
+     (app.js V.vivid, put on <html data-c> and on the hour and day heroes) that
+     gives it a flat disc, a sun, a moon or a cloud, behind the top of the page,
+     and a ground tinted to match. The sun, rain, snow, stars, fog and wind
+     are flat shapes in the palette. They scroll away with the page.
+     ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --accent-text:#1F6F6B; --on-accent:#FFF8EC; --icon:#1F6F6B;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#FBF5E9; --border:rgba(43,37,34,.14);
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06);
+  --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-field:rgba(43,37,34,.06); --lgs-edge:rgba(43,37,34,.12); --lgs-rim:transparent; --lgs-shine:linear-gradient(transparent,transparent);
+  --lgs-thumb:#E3A72F; --lgs-filter:none; --lgs-solid:#FBF5E9; --lgs-lift:rgba(43,37,34,.10); --lgs-lift-strong:rgba(43,37,34,.22);
+  --gmix:17%; --wv-night-disc:#FBF5E9;
+  /* the weather's own colours: icons on the cards, rain, the bolt, alerts, and the sky's shapes */
+  --wv-ink:#2B2522; --wv-disc-ink:#2B2522;
+  --wv-sun:#D8572A; --wv-moon:#1F6F6B; --wv-rain:#1F6F6B; --wv-olive:#6A7A22; --wv-orange:#D8572A; --wv-bolt:#C98A12;
+  --wv-al-hi:#B8452B; --wv-al-mid:#9A6508; --wv-al-lo:#6A7A22;
+  --wv-night:rgba(43,37,34,.09);
+  --wv-cloud:#FFFDF6; --wv-drop:#1F6F6B; --wv-flake:#1F6F6B; --wv-star:#1F6F6B; --wv-gust:#D8572A;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --accent-text:#5CBDB5; --on-accent:#1E1916; --icon:#E3A72F;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#322A25; --border:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-field:rgba(244,236,221,.07); --lgs-edge:rgba(244,236,221,.14); --lgs-solid:#322A25; --lgs-lift:rgba(0,0,0,.22); --lgs-lift-strong:rgba(0,0,0,.4);
+  --gmix:24%; --wv-night-disc:#E9DDC4;
+  --wv-ink:#F4ECDD; --wv-sun:#E3A72F; --wv-moon:#F4ECDD; --wv-rain:#5CBDB5; --wv-olive:#A3B04A; --wv-orange:#E8684A; --wv-bolt:#E3A72F;
+  --wv-al-hi:#E8684A; --wv-al-mid:#E3A72F; --wv-al-lo:#A3B04A;
+  --wv-night:rgba(0,0,0,.26);
+  --wv-cloud:#5A4D42; --wv-drop:#5CBDB5; --wv-flake:#F4ECDD; --wv-star:#F4ECDD; --wv-gust:#E3A72F;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --accent-text:#5CBDB5; --on-accent:#1E1916; --icon:#E3A72F;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#322A25; --border:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-field:rgba(244,236,221,.07); --lgs-edge:rgba(244,236,221,.14); --lgs-solid:#322A25; --lgs-lift:rgba(0,0,0,.22); --lgs-lift-strong:rgba(0,0,0,.4);
+  --gmix:24%; --wv-night-disc:#E9DDC4;
+  --wv-ink:#F4ECDD; --wv-sun:#E3A72F; --wv-moon:#F4ECDD; --wv-rain:#5CBDB5; --wv-olive:#A3B04A; --wv-orange:#E8684A; --wv-bolt:#E3A72F;
+  --wv-al-hi:#E8684A; --wv-al-mid:#E3A72F; --wv-al-lo:#A3B04A;
+  --wv-night:rgba(0,0,0,.26);
+  --wv-cloud:#5A4D42; --wv-drop:#5CBDB5; --wv-flake:#F4ECDD; --wv-star:#F4ECDD; --wv-gust:#E3A72F;
+  color-scheme:dark;
+}
+
+/* the colour groups: a disc (sun, moon, cloud...) and a ground tinted with the same hue */
+[data-c]{--hue:#1F6F6B; --disc:#8FCFC7; --gk:.8; --ground:color-mix(in srgb,var(--hue) calc(var(--gmix) * var(--gk)),var(--bg))}
+[data-c="sun"]{--hue:#E3A72F; --disc:#E3A72F; --gk:1.15}
+[data-c="night"]{--hue:#1F6F6B; --disc:var(--wv-night-disc); --gk:1.5}
+[data-c="rain"]{--hue:#1F6F6B; --disc:#6FBDB4; --gk:1.4}
+[data-c="storm"]{--hue:#D8572A; --disc:#E8805A; --gk:.95}
+[data-c="snow"]{--hue:#1F6F6B; --disc:#A8D3CA; --gk:.6}
+[data-c="fog"]{--hue:#7E8C34; --disc:#B9C46A; --gk:1.05}
+[data-c="wind"]{--hue:#7E8C34; --disc:#A3B04A; --gk:.85}
+[data-c="alert"]{--hue:#D8572A; --disc:#EE8A68; --gk:1.3}
+
+html{background:var(--bg)}
+html[data-c]{background:var(--ground)}
+body{background:transparent;font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.w3-card,.w3-in{color:var(--text);text-shadow:none}
+svg.i{filter:none}
+
+/* ---- the sky: flat shapes behind the top of the page ---- */
+#sky{--pad:12px;position:absolute;inset:0 0 auto 0;height:440px;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}   /* app.js placeSky() puts its top at the hero's */
+.w3-sky{animation:none;inset:auto;left:auto;bottom:auto;width:236px;height:236px;border-radius:50%;background:var(--disc);background-size:auto !important;
+  top:calc(var(--pad) - 14px);right:calc(max(16px,(100% - 480px) / 2) - 70px)}
+.w3-sun,.w3-moon{display:none}
+.w3-rays{width:560px;height:560px;left:auto;bottom:auto;top:calc(var(--pad) - 180px);right:calc(max(16px,(100% - 480px) / 2) - 240px);
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--disc) 38%,transparent) 0deg 6deg,transparent 6deg 18deg);
+  -webkit-mask-image:radial-gradient(circle,transparent 20%,#000 22%,transparent 68%);mask-image:radial-gradient(circle,transparent 20%,#000 22%,transparent 68%)}
+#sky::before,#sky::after{content:'';position:absolute;pointer-events:none}
+#sky::after{width:36px;height:36px;border-radius:50%;background:var(--mc-teal);right:calc(max(16px,(100% - 480px) / 2) + 162px);top:calc(var(--pad) + 124px)}
+#sky::before{width:118px;height:34px;border-radius:17px;background:var(--mc-orange);right:calc(max(16px,(100% - 480px) / 2) - 40px);top:calc(var(--pad) + 228px);transform:rotate(-18deg)}
+.w3-star{background:var(--wv-star)}
+.w3-cloud{filter:none;border-radius:999px;height:22px !important;background:var(--wv-cloud)}
+.w3-drop{width:3px;background:var(--wv-drop)}
+.w3-flake{background:var(--wv-flake)}
+.w3-flash{background:var(--mc-mustard)}
+.w3-fog{filter:none;height:16px !important;background:color-mix(in srgb,var(--mc-olive) 34%,transparent)}
+.w3-gust{height:2px;background:var(--wv-gust);opacity:.5}
+@keyframes w3-glow{from{opacity:.78}to{opacity:1}}
+
+/* ---- the hero ---- */
+.w3-side{color:var(--wv-disc-ink)}
+.w3-place{font-weight:600}
+.w3-temp{position:relative;font-weight:500;letter-spacing:-.05em}
+.w3-temp::before{content:'';position:absolute;left:3px;top:-11px;width:62px;height:6px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.w3-chip{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border-radius:999px;background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);
+  font-size:14px;font-weight:600;letter-spacing:0;white-space:nowrap}
+.w3-chip svg{color:var(--accent-text)}
+
+/* ---- the cards: flat, round-cornered, no rim light ---- */
+.w3-hours,.w3-days{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.w3-dhead{font-weight:600;letter-spacing:.14em;opacity:1;color:var(--muted);border-bottom:1.5px solid var(--hair)}
+.msg,.skeleton{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.hx-title{font-weight:600;letter-spacing:-.01em}
+.hx-title small{opacity:1;color:var(--muted)}
+
+/* the hourly tray */
+.hx-now{background:color-mix(in srgb,var(--mc-mustard) 30%,var(--mc-card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--mc-mustard) 70%,transparent)}
+.hx-line{stroke:color-mix(in srgb,var(--text) 38%,transparent)}
+.hx-dot{background:var(--text);opacity:.75}
+.hx-temp{text-shadow:none;font-weight:600}
+.hx-bar{background:var(--mc-teal);box-shadow:none}
+.hx-pct{color:var(--accent-text)}
+.hx-rline{stroke:var(--mc-teal);opacity:.8}
+.hx-rdot{background:var(--mc-teal)}
+.hx-col[data-hour]:focus-visible,.dc[data-day]:focus-visible,.rd-bar input:focus-visible{outline:2px solid var(--accent)}
+
+/* the five little view buttons: a cream pill with a mustard thumb */
+.vsw{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);-webkit-backdrop-filter:none;backdrop-filter:none}
+.vsw button{color:var(--muted)}
+.vsw button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.slthumb,.vsw .slthumb{background:var(--mc-mustard);box-shadow:none}
+
+/* the 7-day forecast */
+.dc-r{color:var(--accent-text)}
+.dc-bar{box-shadow:none}
+.dc-now{background:var(--text);box-shadow:0 0 0 2.5px var(--mc-card)}
+.dc[data-day]:active{background:var(--fill)}
+
+/* page dots */
+.dot{color:var(--faint)}
+.dot i{background:color-mix(in srgb,var(--text) 28%,transparent)}
+.dot.on{color:var(--text)}
+.dot.on i{background:var(--mc-orange)}
+
+/* the line under it all */
+.foot{color:var(--muted);text-shadow:none}
+.foot button{color:var(--muted)}
+
+/* buttons: outlined teal, and solid orange for the main one */
+.pill{background:transparent;color:var(--accent-text);font-weight:600;letter-spacing:.02em;border:0;box-shadow:inset 0 0 0 2px var(--accent);-webkit-backdrop-filter:none;backdrop-filter:none}
+.pill:active{background:var(--fill)}
+.pill.primary,.pill.primary:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+
+/* alerts */
+.alert{background:var(--mc-card);border:0;border-radius:20px}
+.alert .body{color:var(--text)}
+
+/* ---- radar: the map's tiles stay as they are; the chrome around them is Retro ---- */
+.hx.rd{border-radius:20px;background:#10131A}
+.rd-zoom button,.rd-play,.rd-bar,.rd-note.small{background:var(--mc-card);color:var(--text);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.rd-play{color:var(--accent-text)}
+.rd-note.small{background:var(--mc-card);color:var(--text)}
+.rd-note.over{background:color-mix(in srgb,var(--mc-card) 94%,transparent);color:var(--text)}
+.rd-note b{color:var(--text)}
+.rd-note a{color:var(--accent-text)}
+.rd-kind{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.rd-dot{background:var(--mc-orange);border-color:#FBF5E9}
+@keyframes rd-ping{0%{box-shadow:0 0 0 0 rgba(216,87,42,.65)}80%,100%{box-shadow:0 0 0 16px rgba(216,87,42,0)}}
+.rd-bar input::-webkit-slider-runnable-track{box-shadow:none;background:linear-gradient(90deg,var(--mc-teal) 0 var(--rd-at),var(--hair) var(--rd-at))}
+.rd-bar input::-moz-range-track{box-shadow:none;background:var(--hair)}
+.rd-bar input::-moz-range-progress{background:var(--mc-teal)}
+.rd-bar input::-webkit-slider-thumb{background:var(--mc-mustard);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input::-moz-range-thumb{background:var(--mc-mustard);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input:active::-webkit-slider-thumb{background:var(--mc-orange);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input:active::-moz-range-thumb{background:var(--mc-orange);box-shadow:0 0 0 2px var(--mc-card)}
+
+/* ---- the sheets: cream panels with round corners ---- */
+.scrim{background:var(--scrim)}
+.sheet{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.grab{background:var(--grab)}
+.sheet h2{font-weight:600;letter-spacing:-.01em}
+.sheet h2 button{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text)}
+.search{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.list{background:var(--mc-card-2);box-shadow:none;border-radius:20px}
+.list button + button,.prow + .prow{border-top:1.5px solid var(--hair-2)}
+.list button:active{background:var(--fill)}
+.prow.on .pmain{background:color-mix(in srgb,var(--mc-mustard) 26%,transparent)}
+.pr-t{font-weight:500}
+.label{font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--muted)}
+.seg{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg button{color:var(--muted)}
+.seg button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.seg.slides button[aria-pressed="true"]{background:none}
+
+/* the hour and day sheets */
+.hd-hero{background:var(--disc);color:var(--wv-disc-ink);box-shadow:none;border-radius:20px}
+.hd-temp{font-weight:500;letter-spacing:-.05em}
+.hd-tile{background:var(--mc-card-2);box-shadow:none;border-radius:20px}
+.dd-chart text{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif;fill:var(--muted)}
+.dd-chart .lbl{fill:var(--text)}
+.dd-night{fill:var(--wv-night)}
+.dd-key .dd-night{background:var(--wv-night);box-shadow:inset 0 0 0 1px var(--hair)}
+.dd-rain{fill:var(--wv-rain);background:var(--wv-rain)}
+.dd-pt{fill:var(--text)}
+.dd-tick,.dd-base{stroke:var(--hair)}
+.dd-now{stroke:var(--text)}
+.dd-fade{stop-color:var(--text)}
+.wv-bolt{fill:var(--wv-bolt)}
+.wv-drops{fill:var(--wv-rain)}
+.w3-ico .wv-bolt,.w3-ico .wv-drops,.hd-hero .wv-bolt,.hd-hero .wv-drops{fill:var(--wv-disc-ink)}
+</style>
+</head>
+<body>
+<div id="sky" class="w3-fx" aria-hidden="true"></div>
+<main id="app"><div class="skeleton" aria-hidden="true"></div></main>
+
+<div id="sheetWrap">
+  <div class="scrim" data-close></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="grab"></div>
+    <h2><span id="sheetTitle">Places</span><button data-close aria-label="Close"></button></h2>
+    <div class="sheet-body">
+      <label class="search"><span id="searchIcon"></span><input id="q" type="search" placeholder="Add a city" autocomplete="off" enterkeyhint="search"></label>
+      <div class="list" id="results"></div>
+      <div class="label">Your places</div>
+      <div class="list" id="placesList"></div>
+      <div class="label">Units</div>
+      <div class="seg" id="units">
+        <button data-u="us" aria-pressed="true">°F · mph · in</button>
+        <button data-u="metric" aria-pressed="false">°C · km/h · mm</button>
+      </div>
+      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. In the continental US, when rain starts or stops comes from Open-Meteo's 15-minute forecast. Your location goes only to those services.</p>
+    </div>
+  </section>
+</div>
+
+<div id="hourWrap">
+  <div class="scrim" data-close></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="hourTitle">
+    <div class="grab"></div>
+    <h2><span id="hourTitle">Hour</span><span class="hnav"><button data-hstep="-1" aria-label="Previous hour"></button><button data-hstep="1" aria-label="Next hour"></button><button data-close aria-label="Close"></button></span></h2>
+    <div class="sheet-body" id="hourBody"></div>
+  </section>
+</div>
+
+<div id="dayWrap">
+  <div class="scrim" data-close></div>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dayTitle">
+    <div class="grab"></div>
+    <h2><span id="dayTitle">Day</span><span class="hnav"><button data-dstep="-1" aria-label="Previous day"></button><button data-dstep="1" aria-label="Next day"></button><button data-close aria-label="Close"></button></span></h2>
+    <div class="sheet-body" id="dayBody"></div>
+  </section>
+</div>
+
+<script src="../home/slide.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="../home/welcome.js" data-app="weathervintage" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
+</body>
+</html>

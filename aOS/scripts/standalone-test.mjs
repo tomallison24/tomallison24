@@ -34,9 +34,10 @@ const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { 
   list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
 const tok = await issue(db, 'O1');
-const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'aOS'];
+const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'aOS'];
 const b = await chromium.launch();
 const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
+const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
 const out = [];
 for (const app of APPS) for (const signed of [false, true]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, serviceWorkers: 'block', geolocation: { latitude: 39.74, longitude: -104.99 }, permissions: ['geolocation'] });
@@ -64,7 +65,10 @@ await b.close();
 server.close();
 let bad = 0;
 for (const r of out) {
-  const odd = r.reqs.filter(x => !SHARED(x.split(' ')[1]));
+  // a Vintage design reads the files and server routes of the app it is a design of (News's headlines, Calendar's account
+  // data): published by the server, not that app's storage or install
+  const own = new RegExp('^/' + (DESIGN_OF[r.app] || '\\0') + '/');
+  const odd = r.reqs.filter(x => !SHARED(x.split(' ')[1]) && !own.test(x.split(' ')[1]));
   const okRun = !r.errs.length && !odd.length;
   if (!okRun) bad++;
   console.log((okRun ? 'ok - ' : 'not ok - ') + r.app + (r.signed ? ', signed in' : ', signed out') + (r.errs.length ? '  errors: ' + r.errs.join(' | ') : '') + (odd.length ? '  needs another app: ' + odd.join(', ') : ''));

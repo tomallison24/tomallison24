@@ -1,6 +1,6 @@
 {
-  "name": "Home Vintage",
-  "short_name": "Home Vintage",
+  "name": "Home",
+  "short_name": "Home",
   "description": "Home in a mid-century modern look, live over Home Assistant's own WebSocket API.",
   "start_url": "./",
   "scope": "./",
