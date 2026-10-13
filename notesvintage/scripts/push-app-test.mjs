@@ -1,12 +1,12 @@
-// Drives Notes in headless Chromium against a stubbed Google Sheet and a
-// stubbed notification server (notes/push): the bell and its sheet, turning
+// Drives Notes Vintage in headless Chromium against a stubbed Google Sheet and a
+// stubbed notification server (notes/push, which Notes Vintage shares with Notes): the bell and its sheet, turning
 // notifications on (what the phone sends the server), choosing lists, the
 // per-reminder Alert choice, the ping after a sync, a test notification,
 // opening the app from a notification, and turning them off. The browser's
 // push service is stubbed too: headless Chromium can't reach Apple's.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node notes/scripts/push-app-test.mjs [repo root] [screenshot dir]
+//   node notesvintage/scripts/push-app-test.mjs [repo root] [screenshot dir]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -89,12 +89,12 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-await page.goto(BASE + '/notes/');
+await page.goto(BASE + '/notesvintage/');
 await page.evaluate(({ seed, SHEET }) => {
-  localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
-  localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
-  localStorage.setItem('allison-notes-v1-tab', 'rem');
-  localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
+  localStorage.setItem('allison-notesv-v1', JSON.stringify(seed));
+  localStorage.setItem('allison-notesv-v1-sync', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
+  localStorage.setItem('allison-notesv-v1-tab', 'rem');
+  localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' }));   // the walkthrough as seen, as on a phone in use
 }, { seed, SHEET });
 await page.reload();
 await page.waitForTimeout(1500);
@@ -143,7 +143,7 @@ if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '3-alert.png') });
 const before = calls.filter(c => c.path === '/refresh').length;
 await page.click('#tdDone');
 await page.waitForTimeout(3500);
-const t1 = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notes-v1')).todos.find(t => t.id === 't1'));
+const t1 = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notesv-v1')).todos.find(t => t.id === 't1'));
 ok('the choice is saved on the reminder', t1.alert === 15);
 ok('it reached the Sheet', sheetItems && sheetItems.todos.find(t => t.id === 't1').alert === 15);
 ok('after the sync, the server is pinged to read the Sheet again', calls.filter(c => c.path === '/refresh').length === before + 1);
@@ -158,7 +158,7 @@ ok('a Groceries reminder says this phone won\'t alert for it', (await page.textC
 await page.click('#tdDone');
 
 // ---- opening from a notification ----
-await page.goto(BASE + '/notes/?open=' + encodeURIComponent('todo:t2'));
+await page.goto(BASE + '/notesvintage/?open=' + encodeURIComponent('todo:t2'));
 await page.waitForTimeout(1000);
 ok('?open=todo:… opens that reminder, and the address is tidied', await page.isVisible('#todoSheet') && await page.inputValue('#tdTitle') === 'Milk' && !page.url().includes('open='));
 await page.click('#tdDone');
@@ -168,12 +168,12 @@ await page.waitForTimeout(600);
 ok('a tap while the app is open (message from the service worker) opens the note', await page.isVisible('#editor') && await page.inputValue('#edTitle') === 'Book the dentist');
 await page.click('#edBack');
 await page.waitForTimeout(300);
-await page.goto(BASE + '/notes/?open=' + encodeURIComponent('todo:nope'));
+await page.goto(BASE + '/notesvintage/?open=' + encodeURIComponent('todo:nope'));
 await page.waitForTimeout(1500);
 ok('a reminder that isn\'t there: syncs, then says so', calls.filter(c => c.to === 'sheet').length > 1 && (await page.textContent('#toastMsg')).includes('isn’t here any more'));
 
 // ---- the service worker's push and click handlers ----
-const sw = fs.readFileSync(path.join(ROOT, 'notes/sw.js'), 'utf8');
+const sw = fs.readFileSync(path.join(ROOT, 'notesvintage/sw.js'), 'utf8');
 ok('the service worker shows every push and opens ?open= on a tap', /addEventListener\('push'/.test(sw) && /showNotification/.test(sw) && /\?open=/.test(sw));
 
 // ---- off ----

@@ -672,7 +672,7 @@ svg.fs{fill:currentColor}
   --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
   --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
   --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
-  --tint-mix:14%; --note-mix:30%; --tl:27%; --ts:56%; --tdot:44%; --aurora:1; --mark:rgba(227,167,47,.45); --blur:none;
+  --tint-mix:14%; --note-mix:30%; --tcm:42%; --aurora:1; --mark:rgba(227,167,47,.45); --blur:none;
   --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
   --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
   --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
@@ -686,6 +686,8 @@ svg.fs{fill:currentColor}
   /* the seven list colours, and the ink on each (a tick on a filled box) */
   --lc0:#1F6F6B; --lc1:#E3A72F; --lc2:#7E8C34; --lc3:#8B5E83; --lc4:#D8572A; --lc5:#4DAFA6; --lc6:#B8452B;
   --lci0:#FFF8EC; --lci1:#2B2522; --lci2:#FFF8EC; --lci3:#FFF8EC; --lci4:#FFF8EC; --lci5:#2B2522; --lci6:#FFF8EC;
+  /* the ten tag colours: teal, orange, plum, olive, rose, mustard, light teal, walnut, denim, brick */
+  --tc0:#1F6F6B; --tc1:#D8572A; --tc2:#8B5E83; --tc3:#7E8C34; --tc4:#C96F5E; --tc5:#D9A02A; --tc6:#3E9A92; --tc7:#8A5A3A; --tc8:#3F6E9A; --tc9:#B8452B;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
@@ -696,8 +698,9 @@ svg.fs{fill:currentColor}
   --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
   --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
   --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
-  --tint-mix:30%; --note-mix:26%; --tl:77%; --ts:52%; --tdot:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --tint-mix:30%; --note-mix:26%; --tcm:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
   --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --gb-shine:none; --gb-shadow:none; --hi:transparent; --blur:none; --seg-thumb:#E3A72F; --lg-filter:none; --lgs-filter:none; --lgs-rim:transparent;
   --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
   --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
   --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-row:rgba(244,236,221,.07); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
@@ -707,6 +710,7 @@ svg.fs{fill:currentColor}
   --flag-ink:#2B2522; --tag-ink:#1E1916; --arch-ink:#1E1916; --bin-ink:#1E1916;
   --lc0:#4FB3AB; --lc1:#E3A72F; --lc2:#A3B04A; --lc3:#B58BB0; --lc4:#E8684A; --lc5:#8FD3CC; --lc6:#E8684A;
   --lci0:#1E1916; --lci1:#2B2522; --lci2:#1E1916; --lci3:#1E1916; --lci4:#1E1916; --lci5:#1E1916; --lci6:#1E1916;
+  --tc0:#4FB3AB; --tc1:#E8704A; --tc2:#B58BB0; --tc3:#A3B04A; --tc4:#E8856F; --tc5:#E3A72F; --tc6:#8FD3CC; --tc7:#B78A66; --tc8:#7FA9D1; --tc9:#E8684A;
 }}
 :root[data-theme="dark"]{
   --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
@@ -717,8 +721,9 @@ svg.fs{fill:currentColor}
   --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
   --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
   --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
-  --tint-mix:30%; --note-mix:26%; --tl:77%; --ts:52%; --tdot:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --tint-mix:30%; --note-mix:26%; --tcm:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
   --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --gb-shine:none; --gb-shadow:none; --hi:transparent; --blur:none; --seg-thumb:#E3A72F; --lg-filter:none; --lgs-filter:none; --lgs-rim:transparent;
   --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
   --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
   --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-row:rgba(244,236,221,.07); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
@@ -728,6 +733,7 @@ svg.fs{fill:currentColor}
   --flag-ink:#2B2522; --tag-ink:#1E1916; --arch-ink:#1E1916; --bin-ink:#1E1916;
   --lc0:#4FB3AB; --lc1:#E3A72F; --lc2:#A3B04A; --lc3:#B58BB0; --lc4:#E8684A; --lc5:#8FD3CC; --lc6:#E8684A;
   --lci0:#1E1916; --lci1:#2B2522; --lci2:#1E1916; --lci3:#1E1916; --lci4:#1E1916; --lci5:#1E1916; --lci6:#1E1916;
+  --tc0:#4FB3AB; --tc1:#E8704A; --tc2:#B58BB0; --tc3:#A3B04A; --tc4:#E8856F; --tc5:#E3A72F; --tc6:#8FD3CC; --tc7:#B78A66; --tc8:#7FA9D1; --tc9:#E8684A;
 }
 
 body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
@@ -737,7 +743,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
 .ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
 .ambient i:nth-child(1){width:220px;height:220px;left:auto;right:-70px;top:-60px;bottom:auto;background:var(--mc-mustard)}
-.ambient i:nth-child(2){width:48px;height:48px;left:auto;right:150px;top:58px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(2){width:44px;height:44px;left:auto;right:92px;top:80px;bottom:auto;background:var(--mc-teal)}
 .ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-30px;top:100px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
 .ambient i:nth-child(4){display:none}
 
@@ -746,7 +752,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 #remView .title{font-size:clamp(30px,8.6vw,40px)}
 .title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
-.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;max-width:210px;line-height:1.5}
+.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;max-width:190px;line-height:1.5}
 .sechead,.label{font-weight:600;letter-spacing:.16em;color:var(--muted)}
 .hint,.resulthead{color:var(--faint)}
 
@@ -795,14 +801,14 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .chips > .slthumb,.opts > .slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .chip.ghost{background:transparent;border:1.5px dashed var(--ring);box-shadow:none}
 .chip .badge,.badge{background:var(--mc-orange);color:#FFF8EC}
-.chip i,.ctile i{background:hsl(var(--h) var(--ts) var(--tdot));box-shadow:none}
+.ctile i{width:14px;height:14px;background:var(--tc);box-shadow:none}
 .ctile.plain i{background:var(--ring)}
 .chip .sw,.opt .sw{background:var(--lc);box-shadow:none}
 
 /* tags: outlined chips, one Retro hue each */
-.tchip,.chip,.ctile{--h:177}
-.tchip{background:hsl(var(--h) var(--ts) 50% / .16);border:0;box-shadow:inset 0 0 0 1.5px hsl(var(--h) var(--ts) 42% / .5);color:hsl(var(--h) var(--ts) var(--tl));font-weight:600;letter-spacing:.02em}
-.tchip.over{--h:12}
+.tchip,.ctile{--tc:var(--tc0)}
+.tchip{background:color-mix(in srgb,var(--tc) 18%,transparent);border:0;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tc) 55%,transparent);color:color-mix(in srgb,var(--tc) var(--tcm),var(--text));font-weight:600;letter-spacing:.02em}
+.tchip.over{--tc:var(--tc9)}
 .tchip.lst{color:var(--muted);background:transparent;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .tchip.lst::before{background:var(--lc);box-shadow:none}
 
@@ -820,8 +826,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .card h3{font-weight:600;letter-spacing:-.015em}
 .empty{padding:26px 20px}
 .empty strong{font-weight:600;letter-spacing:-.01em}
-.ctile.glass{padding:11px 14px 10px;box-shadow:inset 0 5px 0 hsl(var(--h) var(--ts) var(--tdot))}
-.ctile.glass.plain{box-shadow:inset 0 5px 0 var(--ring)}
 .ctile .cn{font-weight:600}
 .ctile .cname{font-weight:600}
 .cookcard.glass{border-radius:24px}
@@ -886,6 +890,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 /* step by step */
 #cook{background:var(--bg)}
 #cook::before{content:'';position:absolute;z-index:-1;width:220px;height:220px;border-radius:50%;right:-80px;top:-120px;background:var(--mc-mustard);opacity:var(--aurora)}
+.cooktop .cn{min-width:0;padding:5px 12px;border-radius:999px;background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text);text-align:center}
 .cookbar{background:var(--fill)}
 .cookbar i{background:var(--mc-teal)}
 .cookdots i{background:var(--ring)}

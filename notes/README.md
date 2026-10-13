@@ -63,6 +63,10 @@ Mail and News. Free, no accounts, no server.
   note's nudge. Each phone picks which lists alert it. See *Notifications*
   below; it needs the Google Sheet sync and a small free server.
 
+**Notes Vintage** is the same app in a mid-century modern look, as its own app
+with its own notes and settings ([`notesvintage/`](../notesvintage/README.md)).
+It can share this app's Google Sheet and notification server.
+
 ## Notifications
 
 A web app can't wake itself up on a timer, so a small server does it:

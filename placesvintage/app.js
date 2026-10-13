@@ -1,6 +1,7 @@
 // Places Vintage: Places in a mid-century modern look, as its own app (its look is the last
 // block of index.html; this is Places' script with its own storage, allison-placesv-v1*, the
-// Retro colours of the businesses on the map, and nothing else changed). Places: where you want
+// Retro colours of the businesses on the map, the map's top padding 26px more for the taller
+// header, and nothing else changed). Places: where you want
 // to go and where you've been. See README.md.
 (() => {
   'use strict';
@@ -209,7 +210,7 @@
       let m = bizShown.get(key);
       if (!m) {
         m = L.circleMarker([o.lat, o.lon], { radius: 7, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group] || BIZ_COLOR.fun, fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(key) })
-          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] }).addTo(biz);
+          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 226] }).addTo(biz);
         bizShown.set(key, m);
       }
       m.openPopup();
@@ -307,7 +308,7 @@
     for (const [k, o] of want) {
       if (bizShown.has(k)) continue;
       const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group], fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(k) })
-        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] })
+        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 226] })
         .addTo(biz);
       bizShown.set(k, m);
     }
@@ -346,7 +347,7 @@
     pts = pts || sorted(shown()).filter(p => p.lat != null).map(p => [p.lat, p.lon]);
     if (!pts.length) { if (st.here) map.setView([st.here.lat, st.here.lon], 13); return; }
     if (pts.length === 1) map.setView(pts[0], 15);
-    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 220], maxZoom: 15 });
+    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 246], maxZoom: 15 });
   }
   function setView(v) {
     st.view = v;

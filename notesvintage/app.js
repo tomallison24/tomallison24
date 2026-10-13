@@ -168,9 +168,12 @@
   const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const normTag = s => s.trim().replace(/^#+/,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-_]/g,'');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
-  const HUES = [177, 22, 305, 70, 350, 41, 186, 330, 88, 12];   // Retro: teal, orange, plum, olive, rose, mustard, light teal, mauve, lime, brick (Notes: 211, 28, 268, 162, 340, 45, 190, 300, 120, 10)
-  const hue = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return HUES[h % HUES.length]; };
-  const tchip = (t, q) => '<span class="tchip" style="--h:'+hue(t)+'">'+hl(t, q)+'</span>';
+  // A tag's colour is picked from its name, as in Notes (ten, by the same sum), but drawn as one of ten Retro
+  // colours: the tokens --tc0..9 in index.html (teal, orange, plum, olive, rose, mustard, light teal, walnut, denim,
+  // brick), which follow Light and Dark. Notes' own are ten hues of the colour wheel (211, 28, 268, 162, 340, 45, 190, 300, 120, 10).
+  const hue = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 10; };
+  const tcv = n => '--tc:var(--tc' + n + ')';
+  const tchip = (t, q) => '<span class="tchip" style="'+tcv(hue(t))+'">'+hl(t, q)+'</span>';
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
@@ -302,7 +305,7 @@
       getItem().tags.forEach(t => {
         const s = document.createElement('span');
         s.className = 'tchip';
-        s.style.setProperty('--h', hue(t));
+        s.style.setProperty('--tc', 'var(--tc' + hue(t) + ')');
         s.innerHTML = esc(t)+'<button type="button" aria-label="Remove tag '+esc(t)+'">'+I.x+'</button>';
         s.querySelector('button').onclick = () => { const it = getItem(); it.tags = it.tags.filter(x => x !== t); render(); };
         input.before(s);
@@ -439,7 +442,7 @@
       if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>' + grid(pinned) + '</section>';
       const tags = countTags(live), untagged = live.filter(n => !n.tags.length);
       const latest = t => live.filter(n => t ? n.tags.includes(t) : !n.tags.length).sort(byCreated)[0];
-      const tile = (coll, name, count, h, last, i) => '<button class="ctile glass" type="button" style="--h:' + h + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
+      const tile = (coll, name, count, h, last, i) => '<button class="ctile glass" type="button" style="' + tcv(h) + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
         + '<span class="ctop"><i></i><span class="cn">' + count + '</span></span><span class="cname">' + esc(name) + '</span>'
         + '<span class="clast">' + esc(last ? (last.title || snippet(last) || 'Untitled') : '') + '</span></button>';
       const tiles = tags.map(([t, k], i) => tile('tag:' + t, collName('tag:' + t), k, hue(t), latest(t), i));
@@ -576,7 +579,7 @@
   }
   function renderQuickTag(){
     qtTags.render();
-    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="--lc:hsl(' + hue(t) + ' var(--ts) var(--tdot))"><span class="sw"></span>' + esc(t) + '</button>').join('');
+    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="--lc:var(--tc' + hue(t) + ')"><span class="sw"></span>' + esc(t) + '</button>').join('');
   }
   $('qtAll').addEventListener('click', e => { const b = e.target.closest('[data-qt]'); if (!b) return; const t = b.dataset.qt; qt.tags = qt.tags.includes(t) ? qt.tags.filter(x => x !== t) : [...qt.tags, t]; renderQuickTag(); });
   function finishQuickTag(){

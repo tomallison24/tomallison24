@@ -1,13 +1,18 @@
-// Drives Places in headless Chromium against stand-ins for Photon (search),
+// Drives Places Vintage in headless Chromium against stand-ins for Photon (search),
 // Overpass (opening hours etc.), CARTO's map tiles and the Notes Google Sheet:
 // adding by search, by a pasted Apple Maps link and from where you are; the
 // place sheet (status, stars, price, dates, notes and #tags, OpenStreetMap
 // details); moving a place to Been; the lists, sorting and filters; the map
 // and its pins; Apple Maps directions; delete with undo; and the Sheet sync,
-// including an old script that doesn't know Places yet.
+// including an old script that doesn't know Places yet. (It is Places' own test, run
+// on this app.) Then that it is drawn in the Retro look, light and dark (Futura,
+// the cream or walnut ground, flat cards and sheets, a mustard thumb, orange
+// buttons, the shapes behind the title, teal and mustard pins, Retro dots for the
+// businesses), that every key it stores is its own (allison-placesv-*), and that
+// Notes Vintage's Sheet link is offered too.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node places/scripts/app-test.mjs [repo root] [screenshot dir]
+//   node placesvintage/scripts/app-test.mjs [repo root] [screenshot dir]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -47,7 +52,7 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
 const calls = { photon: [], overpass: 0, sheet: [], apple: [], biz: [] };
 let sheetMode = 'old', sheetPlaces = [];
-await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
+const stub = async route => {
   const u = route.request().url(), cors = { 'Access-Control-Allow-Origin': '*' };
   if (u.startsWith('https://photon.komoot.io/api/')) {
     const q = new URL(u).searchParams.get('q').toLowerCase(); calls.photon.push(q);
@@ -81,9 +86,10 @@ await ctx.route(/^https?:\/\/(?!localhost)/, async route => {
   }
   if (u.startsWith('https://maps.apple.com/')) { calls.apple.push(u); return route.fulfill({ status: 204, body: '' }); }
   return route.fulfill({ status: 404, body: '' });
-});
+};
+await ctx.route(/^https?:\/\/(?!localhost)/, stub);
 await ctx.addInitScript(() => {
-  localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
+  localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));   // the walkthrough as seen, as on a phone in use
   window.__clip = '';
   Object.defineProperty(navigator, 'clipboard', { value: { readText: async () => window.__clip, writeText: async () => {} }, configurable: true });
 });
@@ -92,7 +98,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-await page.goto(BASE + '/places/');
+await page.goto(BASE + '/placesvintage/');
 await page.waitForTimeout(600);
 const rows = () => page.$$eval('#list .row', rs => rs.map(r => r.querySelector('b').textContent + ' | ' + r.querySelector('.r').textContent));
 const toastText = () => page.textContent('#toastMsg');
@@ -260,6 +266,116 @@ await page.click('#syncSheet [data-close].iconbtn');
 await page.click('#list .row:has-text("Corner Café")'); await page.waitForTimeout(300);
 await page.click('#plDelete'); await page.waitForTimeout(2200);
 ok('a delete reaches the Sheet as a deleted mark', !sheetPlaces.some(p => p.name === 'Corner Café') && Object.keys(calls.sheet.at(-1).graves).some(k => k.startsWith('places:')));
+
+
+// ---- its own storage: every key is allison-placesv-*, and the Sheet works from either Notes ----
+{
+  const keys = await page.evaluate(() => Object.keys(localStorage));
+  const mine = keys.filter(k => /^allison-places/.test(k));
+  ok('its keys are its own: allison-placesv-v1…, never Places’ allison-places-v1…', mine.length > 0 && mine.every(k => k.startsWith('allison-placesv-v1')) && keys.includes('allison-placesv-v1') && !keys.some(k => /^allison-places-v1/.test(k)), mine.join(' '));
+  const caches = await page.evaluate(async () => (window.caches ? await caches.keys() : []));
+  ok('its offline cache is placesvintage-*', caches.every(k => k.startsWith('placesvintage-')), caches.join(' '));
+}
+for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes', 'allison-notes-v1-sync']]) {
+  const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
+  await c2.route(/^https?:\/\/(?!localhost)/, stub);
+  await c2.addInitScript(([key, sheet]) => {
+    localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));
+    localStorage.setItem(key, JSON.stringify({ url: sheet, secret: 'maple-otter' }));
+  }, [key, SHEET]);
+  const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
+  await p2.goto(BASE + '/placesvintage/'); await p2.waitForTimeout(500);
+  await p2.click('#syncBtn'); await p2.waitForTimeout(200);
+  ok('the Sheet link of ' + label + ' is offered in one tap', await p2.isVisible('#syNotes'));
+  sheetMode = 'new'; sheetPlaces = [{ id: 'pv1', name: 'Sushi Den', status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], created: 1, updated: Date.now() }];
+  await p2.click('#syNotes'); await p2.waitForTimeout(700);
+  ok('and one tap connects it (' + label + '): its secret is sent and the Sheet’s places load', calls.sheet.at(-1).secret === 'maple-otter' && calls.sheet.at(-1).action === 'places' && (await p2.textContent('#syStatus')).includes('Connected') && (await p2.textContent('#list')).includes('Sushi Den'), await p2.textContent('#syStatus'));
+  ok('no errors on the page (' + label + ')', e2.length === 0, e2.join(' | '));
+  await c2.close();
+}
+{
+  const c3 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
+  await c3.route(/^https?:\/\/(?!localhost)/, stub);
+  await c3.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' })));
+  const p3 = await c3.newPage(); await p3.goto(BASE + '/placesvintage/'); await p3.waitForTimeout(400);
+  await p3.click('#syncBtn'); await p3.waitForTimeout(200);
+  ok('no Notes Sheet in this browser: no one-tap button, and the owner’s link is filled in for the secret to be typed', await p3.isHidden('#syNotes') && (await p3.inputValue('#syUrl')).startsWith('https://script.google.com/macros/s/') && (await p3.inputValue('#sySecret')) === '');
+  await c3.close();
+}
+
+// ---- drawn in the Retro look, light and dark ----
+const q = (pg, sel, props, pseudo) => pg.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
+const soonStr2 = soonStr;
+for (const scheme of ['light', 'dark']) {
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+  const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orangeBtn = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
+  const MUSTARD = 'rgb(227, 167, 47)', ORANGE = 'rgb(216, 87, 42)';
+  const rc = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
+  await rc.route(/^https?:\/\/(?!localhost)/, stub);
+  await rc.addInitScript(([planned, today]) => {
+    localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));
+    const mk = (id, name, status, lat, lon, extra) => Object.assign({ id, name, status, lat, lon, category: 'Restaurant', city: 'Denver', emoji: '🍽️', tags: [], notes: '', created: 1, updated: 1 }, extra);
+    localStorage.setItem('allison-placesv-v1', JSON.stringify([
+      mk('r1', 'Rioja', 'want', 39.7432, -104.9950, { planned, price: 3, notes: 'Dinner #date-night', tags: ['date-night'] }),
+      mk('r2', 'Corner Café', 'want', 39.7393, -104.9903, { emoji: '☕', category: 'Café' }),
+      mk('r3', 'Denver Art Museum', 'want', 39.7372, -104.9892, { emoji: '🏛️', category: 'Museum' }),
+      mk('r4', 'Sushi Den', 'been', 39.7385, -104.9910, { rating: 4, price: 3, visited: today, visits: [today] }),
+    ]));
+    localStorage.setItem('allison-placesv-v1-here', JSON.stringify({ lat: 39.7392, lon: -104.9903 }));
+  }, [soonStr2, today]);
+  const rp = await rc.newPage(); const re = []; rp.on('pageerror', e => re.push(e.message));
+  rp.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) re.push(m.text()); });
+  await rp.goto(BASE + '/placesvintage/'); await rp.waitForTimeout(1500);
+  const lbl = s => scheme + ': ' + s;
+  // the map, which Places opens on
+  ok(lbl('Retro: Futura, and the ' + (scheme === 'light' ? 'cream' : 'walnut') + ' ground'), /Futura/.test((await q(rp, 'body', ['fontFamily']))[0]) && (await q(rp, 'body', ['backgroundColor']))[0] === ground);
+  ok(lbl('Retro: a mustard sun, a teal dot and an orange pill behind the title'), (await q(rp, '.ambient i:nth-child(1)', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q(rp, '.ambient i:nth-child(3)', ['backgroundColor']))[0] === ORANGE);
+  ok(lbl('Retro: on the map the header is clear and the shapes (in it, behind the controls) sit over the map'), (await q(rp, '.top', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && await rp.evaluate(() => { const a = document.querySelector('.ambient'); return !!a.closest('.top') && +getComputedStyle(a.closest('.top')).zIndex > +getComputedStyle(document.getElementById('map')).zIndex; }));
+  ok(lbl('Retro: a 44px title with the three little bars under it'), (await q(rp, '.title', ['fontSize']))[0] === '44px' && (await q(rp, '.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
+  ok(lbl('Retro: the add button is solid orange'), (await q(rp, '#fab', ['backgroundColor']))[0] === orangeBtn);
+  ok(lbl('Retro: the tab switch is flat, with a mustard thumb'), (await q(rp, '#seg .slthumb', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '#seg', ['backgroundColor', 'backdropFilter'])).join('|').startsWith(cream + '|') && ['none', ''].includes((await q(rp, '#seg', ['backdropFilter']))[0]));
+  ok(lbl('Retro: Food & drink and Things to do are on (mustard), Shops is off (cream)'), (await q(rp, '#chips [data-layer="food"]', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '#chips [data-layer="shops"]', ['backgroundColor']))[0] === cream);
+  ok(lbl('Retro: pins for Want to go are teal'), (await q(rp, '.pin.want', ['backgroundColor']))[0] === teal);
+  await rp.click('#fitBtn'); await rp.waitForTimeout(2500);
+  const dotFill = async c => (await rp.$$eval('path.' + c, d => d.map(x => getComputedStyle(x).fill)))[0];
+  ok(lbl('Retro: business dots: orange for food, olive for things to do'), (await dotFill('osm-food')) === ORANGE && (await dotFill('osm-fun')) === (scheme === 'light' ? 'rgb(126, 140, 52)' : 'rgb(163, 176, 74)'), (await dotFill('osm-food')) + ' / ' + (await dotFill('osm-fun')));
+  await rp.click('path.osm-k-node-501'); await rp.waitForTimeout(400);
+  const [cb, cr, cf] = await q(rp, '.bizpop .leaflet-popup-content-wrapper', ['backgroundColor', 'borderRadius', 'backdropFilter']);
+  ok(lbl('Retro: the business card is a flat panel, with an orange Want to go and outlined teal Been'), cb === cream && cr === '20px' && ['none', ''].includes(cf) && (await q(rp, '.bizacts [data-bizadd="want"]', ['backgroundColor']))[0] === orangeBtn && (await q(rp, '.bizacts [data-bizadd="been"]', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)');
+  if (SHOTS) await rp.screenshot({ path: path.join(SHOTS, '20-retro-map-' + scheme + '.png') });
+  await rp.keyboard.press('Escape');
+  await rp.click('#seg [data-tab="been"]'); await rp.waitForTimeout(500);
+  ok(lbl('Retro: pins for Been are mustard'), (await q(rp, '.pin.been', ['backgroundColor']))[0] === MUSTARD);
+  await rp.click('#seg [data-tab="want"]');
+  // the list
+  await rp.click('#viewBtn'); await rp.waitForTimeout(500);
+  const [gb, gs, gf, gr] = await q(rp, '#list .group', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+  ok(lbl('Retro: the lists are flat cards, 20px round, no blur or shadow'), gb === cream && gs === 'none' && ['none', ''].includes(gf) && gr === '20px', [gb, gs, gf, gr].join(' '));
+  ok(lbl('Retro: in the list the header is solid ground, so the list slides under it, never through the title'), (await q(rp, '.top', ['backgroundColor']))[0] === ground && (await q(rp, '.top', ['position']))[0] === 'sticky');
+  ok(lbl('Retro: the chosen sort is a mustard pill, the others cream'), (await q(rp, '#chips [data-sort="soon"]', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '#chips [data-sort="near"]', ['backgroundColor']))[0] === cream);
+  ok(lbl('Retro: the search box is a flat cream pill'), (await q(rp, '#filterWrap', ['backgroundColor']))[0] === cream && ['none', ''].includes((await q(rp, '#filterWrap', ['backdropFilter']))[0]));
+  ok(lbl('Retro: no sideways scroll'), await rp.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  if (SHOTS) await rp.screenshot({ path: path.join(SHOTS, '21-retro-list-' + scheme + '.png') });
+  // a place's sheet
+  await rp.click('#list .row:has-text("Rioja")'); await rp.waitForTimeout(700);
+  const [sb, sr, sf] = await q(rp, '#placeSheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
+  ok(lbl('Retro: the sheet is a flat panel with round corners'), sb === cream && sr === '28px' && ['none', ''].includes(sf), [sb, sr, sf].join(' '));
+  ok(lbl('Retro: Save is solid orange'), (await q(rp, '#plSave', ['backgroundColor']))[0] === orangeBtn);
+  ok(lbl('Retro: Want to go / Been and the price have a mustard thumb'), (await q(rp, '#plStatus .slthumb', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '#plPrice .slthumb', ['backgroundColor']))[0] === MUSTARD);
+  ok(lbl('Retro: Delete place is outlined, not filled'), (await q(rp, '#plDelete', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)');
+  await rp.click('#plStatus [data-st="been"]'); await rp.click('#plRate [data-r="4"]'); await rp.waitForTimeout(300);
+  ok(lbl('Retro: the chosen stars are mustard'), (await q(rp, '#plRate button.on', ['color']))[0] === (scheme === 'light' ? 'rgb(184, 120, 15)' : MUSTARD));
+  if (SHOTS) await rp.screenshot({ path: path.join(SHOTS, '22-retro-place-' + scheme + '.png') });
+  await rp.click('#placeSheet [data-close].iconbtn'); await rp.waitForTimeout(300);
+  // the sync sheet and the toast
+  await rp.click('#syncBtn'); await rp.waitForTimeout(500);
+  ok(lbl('Retro: Connect is solid orange, Paste a setup link is outlined teal'), (await q(rp, '#syConnect', ['backgroundColor']))[0] === orangeBtn && (await q(rp, '#syPaste', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)');
+  await rp.click('#syncSheet [data-close].iconbtn');
+  await rp.click('#list .row:has-text("Corner")'); await rp.waitForTimeout(300); await rp.click('#plDelete'); await rp.waitForTimeout(300);
+  ok(lbl('Retro: the toast is a flat panel'), (await q(rp, '#toast', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(240, 229, 208)' : 'rgb(61, 51, 44)') && ['none', ''].includes((await q(rp, '#toast', ['backdropFilter']))[0]));
+  ok(lbl('no errors on the page'), re.length === 0, re.join(' | '));
+  await rc.close();
+}
 
 ok('no errors on the page', errors.length === 0, errors.join(' | '));
 await browser.close(); server.close();

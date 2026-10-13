@@ -30,8 +30,13 @@ Dinner for the family, for less. One screen, three tabs:
   phone), or copy it into a grocery list in Notes.
 
 The gear: which stores to follow, the family's member cards (Prime, VIC), what
-the family never eats (tree nuts and coconut to start; peanuts are fine), and
-your account.
+the family never eats (tree nuts and coconut to start; peanuts are fine), your
+account, and an optional **Google Sheet** that keeps a readable copy of it all
+(below).
+
+**Meals Vintage** is the same app in a mid-century modern look, as its own app
+([`mealsvintage/`](../mealsvintage/README.md)). It uses this app's server route
+and the same Google Sheet script, so a plan made in either shows in both.
 
 ## Data
 
@@ -94,11 +99,55 @@ is held to 5 searches a store.
   (`scripts/deals-live.mjs`); it saves nothing.
 - Made by AI: check times and temperatures, as the recipe says.
 
+## Google Sheet
+
+Optional. **Gear → Google Sheet** keeps a **readable copy** of Meals in a Google Sheet. It goes **one way**: Meals
+writes, nothing is read back, so nothing typed in the Sheet comes back (and anything you change in the Deals, Shopping
+list or Settings tabs is replaced the next time the app sends). The family's plans, deals and settings are already
+kept in the family account; the Sheet is a copy you can read, filter and keep. It is the family's, like the data: it
+stays connected for whoever signs in on that phone, and **Disconnect this phone** only forgets the link on that phone.
+
+The tabs:
+- **Plans**: one row per planned night, for **every plan ever accepted**, newest first (date accepted, the plan, night
+  number, date, dinner, cuisine, method, minutes, store, people, planned by, why, what's on sale in it, ingredients,
+  steps, tip, and the plan's id). Meals itself keeps only the last 52 plans; **Plans never drops one**, so it grows
+  for good. A plan is only ever added (a plan the app has dropped stays).
+- **Shopping list**: the current plan's list as the List tab shows it, in the same sections, with how much, which nights,
+  the sale price, and the staples ("You probably have") at the end. It is a picture of the latest copy.
+- **Deals**: each store's deals by week (the last 8 weeks are kept), with the store, price, usual price, member price
+  and note.
+- **Settings**: the stores, member cards and foods the family avoids, and the AI model. A picture of the latest copy.
+- Two hidden tabs (`_plans`, `_deals`) that the readable tabs are rebuilt from, and a **Meals** menu in the Sheet
+  (**Rebuild Plans tab**).
+
+1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Meals**.
+2. **Extensions → Apps Script**, replace `Code.gs` with the whole of [`google-sheet-sync.gs`](google-sheet-sync.gs),
+   and change `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it up: there is nothing to look up).
+3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone* → **Deploy** → authorise →
+   copy the **Web app URL**.
+4. Meals → **gear → Google Sheet** → the link is already filled in (`SHEET_URL` in `app.js`: the owner's Sheet; to use
+   another, paste its URL over it) → type the phrase → **Connect and sync**. The phrase is never in the code. **Copy
+   setup link** sets up your other phone.
+
+**When it syncs**: when you connect, a couple of seconds after the app is opened or comes back to the front, after a
+plan is accepted or discarded, after deals are found or pasted, after settings are saved, and when the phone comes back
+online (**Sync now** does it by hand). The app sends only when it is connected and something changed since the last
+copy. The first time (for a link it has not sent to), it fetches each past plan whole (at most 52, three at a time),
+remembers which it has sent (`allison-meals-v1-sheet-sent`), and after that sends only the current plan and any new one.
+The link and code are kept in `allison-meals-v1-sheet` and a backup copy in IndexedDB (`allison-meals`), so a phone
+that lost its storage reconnects by itself.
+
+**Errors** are named in the form: the secret doesn't match, an old copy of the script, `SECRET` still `CHANGE-ME`, the
+Sheet was busy, the Sheet didn't understand the request, couldn't reach the Sheet, the link didn't answer like the Meals
+script, and another AllisonOS app's Sheet link. Its test is `meals/scripts/sheet-test.mjs` (the script on a fake Sheet)
+and a step in `app-test.mjs` (what the app sends).
+
 ## Tests
 
 ```
 node meals/scripts/api-test.mjs     # the server: sign-in, both AI services (stand-ins), deals, plans, the allergy check
 node meals/scripts/logic-test.mjs   # sections, the shopping list, matching sales, the week
-node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI
+node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
+node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, and the Google Sheet copy
 node meals/scripts/make-icons.mjs   # icon-512.png and icon-180.png from icon.svg
 ```

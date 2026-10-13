@@ -402,7 +402,7 @@ if (window.top !== window.self) {
     $('setBody').innerHTML = '<div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
-      + '<p class="label">Google Sheet</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
+      + '<p class="label">Readable copy</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
       + '<p class="hint">A readable copy of the plans, the shopping list and the deals. One way: nothing typed in the Sheet comes back.</p>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
       + (data.stores || STORES).map(x => '<button class="opt" type="button" role="checkbox" data-store="' + x.id + '" aria-checked="' + draft.stores.includes(x.id) + '">' + esc(x.name) + '</button>').join('') + '</div>'
@@ -599,7 +599,7 @@ if (window.top !== window.self) {
         items: d.items.map(x => ({ name: x.name, price: x.price || '', regular: x.regular || '', member: !!x.member, note: x.note || '' })) } : null; }).filter(Boolean);
     const set = data.settings || {};
     const settings = { stores: mine().map(x => x.name), cards: (set.cards || []).map(k => (CARDS.find(c => c[0] === k) || [k, k])[1]), avoid: set.avoid || [], model: modelName() };
-    return { ids, have, body: { v: 1, plans, deals, shopping: sheetShopping(), settings } };
+    return { ids, have, pending: todo.some(id => !ids.includes(id)), fresh: ids.some(id => !have.has(id) && !(cur && cur.id === id)), body: { v: 1, plans, deals, shopping: sheetShopping(), settings } };
   }
   async function sheetSync(loud) {
     if (!sheetCfg) return false;
@@ -608,8 +608,10 @@ if (window.top !== window.self) {
     sheetBusy = true; sheetState = 'syncing';
     let ok = false;
     try {
-      const snap = await sheetSnapshot(), key = JSON.stringify(snap.body);
-      if (!loud && key === sheetLast) { sheetState = 'ok'; ok = true; return true; }   // nothing new since the last copy
+      const snap = await sheetSnapshot();
+      // (the plans that were only sent because they were new don't count when comparing with the last copy)
+      const cur = data.plan && data.plan.id, key = JSON.stringify(Object.assign({}, snap.body, { plans: snap.body.plans.filter(p => p.id === cur) }));
+      if (!loud && key === sheetLast && !snap.fresh && !snap.pending) { sheetState = 'ok'; ok = true; return true; }   // nothing new since the last copy
       let r, res;
       try {
         r = await fetch(sheetCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',

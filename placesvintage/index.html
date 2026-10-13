@@ -250,7 +250,7 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
   --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --sel-ink:#2B2522;
   --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B;
   --danger:#B8452B; --danger-text:#9E3A1A;
-  --star:#D99A1C; --want:#1F6F6B; --been:#E3A72F; --me:#1F6F6B;
+  --star:#B8780F; --want:#1F6F6B; --been:#E3A72F; --me:#1F6F6B;
   --glass:#FBF5E9; --gb-edge:rgba(43,37,34,.14); --gb-shine:none;
   --hair:rgba(43,37,34,.14); --fill:rgba(43,37,34,.06); --hi:transparent;
   --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22);
@@ -294,14 +294,16 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
 body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
 .glass,.iconbtn,.seg,.search,.chip,.maphint,.mapres,.sheet,.toast,.bizpop .leaflet-popup-content-wrapper,.bizpop .leaflet-popup-tip{-webkit-backdrop-filter:none;backdrop-filter:none}
 
-/* the atomic shapes behind the title: a mustard sun, a teal dot, an orange pill. They scroll away
-   with the list; on the map they sit over it, in the first 100px, which the map keeps clear of pins */
-.ambient{position:absolute;inset:0 0 auto 0;height:130px;z-index:0}
-.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+/* the atomic shapes behind the title: a mustard sun, a teal dot, an orange pill. They live in the
+   header (behind its controls), which stays put as the list scrolls, so in the list the header is
+   solid ground (the list slides under it, never through the title); on the map it is clear, and
+   the shapes sit over the map in the first 100px, which the map keeps clear of pins */
+body:not(.mapmode) .top{background:var(--bg)}
+.ambient{position:absolute;inset:0 0 auto 0;height:130px;z-index:-1;overflow:hidden}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:1;will-change:auto;aspect-ratio:auto}
 .ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--mc-mustard)}
 .ambient i:nth-child(2){width:44px;height:44px;left:auto;right:112px;top:58px;bottom:auto;background:var(--mc-teal)}
 .ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:66px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
-.mapmode .ambient{position:fixed;z-index:2}
 @media (max-width:359px){.ambient i:nth-child(1){width:150px;height:150px;top:-84px;right:-56px}.ambient i:nth-child(2){width:34px;height:34px;right:62px;top:56px}.ambient i:nth-child(3){right:-40px}}
 
 /* the title: big, tight, with the three little bars under it */
@@ -321,6 +323,9 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .fab{background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
 .search{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .search input::placeholder{color:var(--faint)}
+.search input[type="search"]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin:0 0 0 6px;background:var(--muted);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6L6 18' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6L6 18' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
 .btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);box-shadow:none}
 .btn:active{filter:brightness(.92)}
 .btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
@@ -394,9 +399,9 @@ path.osm-dot{stroke:#FBF5E9}
 </style>
 </head>
 <body>
-<div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="app" id="app">
   <header class="top">
+    <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="titlerow">
       <h1 class="title">Places<small id="sub"></small></h1>
       <div class="acts">

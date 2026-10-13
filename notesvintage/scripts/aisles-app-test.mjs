@@ -1,10 +1,10 @@
-// Drives Notes' grocery sections in headless Chromium: a Groceries list shown
+// Drives Notes Vintage's grocery sections in headless Chromium: a Groceries list shown
 // under store sections in supermarket order, moving an item to another
 // section (and the list remembering it for next time), the list editor's
 // "Sort into store sections" switch, and that other lists keep their dates.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node notes/scripts/aisles-app-test.mjs [repo root] [screenshot dir]
+//   node notesvintage/scripts/aisles-app-test.mjs [repo root] [screenshot dir]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -48,8 +48,8 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, time
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-await page.goto(BASE + '/notes/');
-await page.evaluate(seed => { localStorage.setItem('allison-notes-v1', JSON.stringify(seed)); localStorage.setItem('allison-notes-v1-tab', 'rem'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' })); }, seed);   // the walkthrough as seen, as on a phone in use
+await page.goto(BASE + '/notesvintage/');
+await page.evaluate(seed => { localStorage.setItem('allison-notesv-v1', JSON.stringify(seed)); localStorage.setItem('allison-notesv-v1-tab', 'rem'); localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' })); }, seed);   // the walkthrough as seen, as on a phone in use
 await page.reload();
 await page.waitForTimeout(800);
 const sections = () => page.evaluate(() => [...document.querySelectorAll('#remBody .rgroup')].map(g => g.querySelector('.sechead span').textContent + ': ' + [...g.querySelectorAll('.tbody .t')].map(x => x.textContent).join(', ')));
@@ -72,7 +72,7 @@ await page.click('#tdDone');
 await page.waitForTimeout(400);
 s = await sections();
 ok('it moves to Pantry', s.some(x => x === 'Pantry: Corn tortillas'), s.join(' | '));
-const learn = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notes-v1')).lists.find(l => l.id === 'l3').learn);
+const learn = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notesv-v1')).lists.find(l => l.id === 'l3').learn);
 ok('the list remembers it (and that syncs with the list)', learn && learn['corn tortilla'] === 'pantry', JSON.stringify(learn));
 await page.fill('#qa', '2 packs corn tortillas');
 await page.press('#qa', 'Enter');

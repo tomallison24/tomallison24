@@ -328,7 +328,7 @@ const SHEET_STEP = async () => {
     ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(reply || { ok: false, error: 'wrong-secret' }) })
     : route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, app, v: 1 }) }));
   await E.page.click('#setBtn'); await E.page.click('#sheetBtn');
-  const tryConnect = async re => { await E.page.fill('#syUrl', SHEET_URL); await E.page.fill('#sySecret', 'x'); await E.page.click('#syConnect'); await E.page.waitForFunction(r => new RegExp(r).test(document.getElementById('syStatus').textContent), re.source); };
+  const tryConnect = async re => { await E.page.evaluate(() => { document.getElementById('toast').hidden = true; }); await E.page.fill('#syUrl', SHEET_URL); await E.page.fill('#sySecret', 'x'); await E.page.click('#syConnect'); await E.page.waitForFunction(r => new RegExp(r).test(document.getElementById('syStatus').textContent), re.source); };
   await tryConnect(/another AllisonOS app/);
   app = 'allison-meals-sync'; await tryConnect(/old copy of the script/);
   reply = { ok: false, error: 'secret-not-set' }; await tryConnect(/still says SECRET/);
@@ -347,7 +347,7 @@ const SHEET_STEP = async () => {
   const S = await phone();
   await withSheet(S.ctx, sheet3, posts3);
   const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  await S.page.goto(BASE + '/meals/' + link);
+  await S.page.goto('about:blank'); await S.page.goto(BASE + '/meals/' + link);
   await S.page.waitForSelector('#syncSheet:not([hidden])');
   ok('Sheet: a setup link opens the form filled in', (await S.page.inputValue('#syUrl')) === SHEET_URL && (await S.page.inputValue('#sySecret')) === SHEET_SECRET && !(await S.page.evaluate(() => location.hash)));
   await S.page.click('#syConnect'); await S.page.waitForSelector('#syOn:not([hidden])', { timeout: 15000 });

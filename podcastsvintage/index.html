@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https: http:; media-src 'self' blob: https: http:; connect-src 'self' https:">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Podcasts</title>
+<meta name="description" content="Podcasts in a mid-century modern look: follow podcasts, play audio and video episodes, and pick up where you left off.">
+<meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#241E1A" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- default, not black-translucent: that one always draws the clock white, which vanishes on the cream theme. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Podcasts">
+<link rel="apple-touch-icon" href="icon-180.png?v=1">
+<link rel="icon" type="image/png" href="icon-512.png?v=1">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<!--
+  Podcasts Vintage - Podcasts in a mid-century modern look (the last block of the
+  style sheet), as its own app with its own storage. Follow shows and play their episodes, laid out like the
+  iPhone's Podcasts app: Home (Up Next and new episodes), Library (your
+  shows, saved episodes, history) and Search, a mini player above the tabs
+  and a Now Playing screen. Video episodes play in the player, with Picture
+  in Picture and full screen.
+
+  Data: what you follow, where you got to, Up Next and Saved live in this
+  browser's localStorage; each show's episode list is kept in IndexedDB so
+  the app opens with it. No accounts. Episodes stream from the podcast's own
+  servers; nothing is downloaded.
+
+  Feeds: podcast feeds don't let pages on other sites read them (CORS), so
+  the app asks ../functions/podcasts/api (Podcasts' Cloudflare Pages Function on this
+  same site, ../podcasts/api/ from here) to fetch them, and reads a feed directly where that isn't there
+  and the feed allows it.
+
+  Look: the same frosted glass over a drifting aurora, icons and Liquid
+  Glass buttons as Notes and Mail.
+-->
+<style>
+/* Allison OS family look, shared with Mail, Notes and News: frosted glass over a slow aurora. */
+:root{
+  --bg:#EEF2F0; --text:#111114; --muted:rgba(60,60,67,.80); --faint:rgba(60,60,67,.76);
+  --accent:#3B7366; --on-accent:#FFFFFF; --cta:linear-gradient(100deg,#6FA597 0%,#8193BC 34%,#BE918F 67%,#BC9C68 100%); --cta-ink:#10181A; --accent-ink:#2B5A4F; --sel-ink:#24493F; --danger:#E5281D; --danger-ink:#AE2117;
+  --glass:rgba(255,255,255,.58); --glass-2:rgba(255,255,255,.86); --sheet:rgba(248,250,249,.90); --toast:rgba(255,255,255,.84);
+  --gb-edge:rgba(255,255,255,.95); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 60%);
+  --hair:rgba(60,60,67,.14); --hair-2:rgba(60,60,67,.09); --fill:rgba(118,118,128,.11); --pill:rgba(255,255,255,.96);
+  --hi:rgba(255,255,255,.8); --lift:rgba(40,40,80,.08); --lift-strong:rgba(40,40,80,.16);
+  --scrim:rgba(0,0,0,.22); --grab:rgba(60,60,67,.30); --ring:rgba(60,60,67,.32);
+  --tint-mix:16%; --aurora:.40;
+  --blur:blur(30px) saturate(180%); --ease:cubic-bezier(.22,1,.36,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --icon:#3B7366; --accent-text:#3B7366; --danger-text:#AE2117;
+  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(247,249,248,.97);
+  --seg-thumb:rgba(255,255,255,.92); --gb-shadow:0 4px 14px rgba(40,40,80,.10);
+  --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
+  --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
+  --art-a:#BE918F; --art-b:#8193BC;
+  /* Cards: very faint tiles, the same in every AllisonOS app */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80); --toast:rgba(26,33,34,.62);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07); --pill:rgba(255,255,255,.13);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
+  --tint-mix:42%; --aurora:.72;
+  --icon:#A9D3C7; --accent-text:#A9D3C7; --danger-text:#FF453A;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-ink:#FFFFFF; --sel-ink:#FFFFFF; --danger:#FF453A; --danger-ink:#FFFFFF;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80); --toast:rgba(26,33,34,.62);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07); --pill:rgba(255,255,255,.13);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --ring:rgba(255,255,255,.32);
+  --tint-mix:42%; --aurora:.72;
+  --icon:#A9D3C7; --accent-text:#A9D3C7; --danger-text:#FF453A;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14); --gb-shadow:0 6px 18px rgba(0,0,0,.24);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+/* Laid out like Mail, News, Notes and Home: the page itself scrolls, and the
+   bottom bar is pinned above the home indicator. */
+html{background:var(--bg)}
+html.locked,html.locked body{overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:100%;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.b{stroke-width:2.2}
+svg.f{fill:currentColor;stroke:none}
+svg.fs{fill:currentColor}
+.grow{flex:1;min-width:0}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- glass ---- */
+.glass{background:var(--gb-shine),var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--gb-edge);box-shadow:inset 0 1px 0 var(--hi),0 16px 40px var(--lift)}
+.glass-strong{background:var(--sheet);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--hair);
+  box-shadow:0 -14px 44px var(--lift-strong),inset 0 1px 0 var(--hi)}
+
+/* ---- app shell + the light behind the glass ---- */
+.app{position:relative;width:100%;max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;overflow-x:clip;background:var(--bg);isolation:isolate}
+.ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.ambient i{position:absolute;display:block;border-radius:50%;filter:blur(58px);opacity:var(--aurora);will-change:transform}
+.ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#6FA597 0%,rgba(111,165,151,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
+.ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#BE918F 0%,rgba(190,145,143,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
+.ambient i:nth-child(3){width:120.4%;aspect-ratio:1;right:-20%;bottom:-6%;background:radial-gradient(circle,#8193BC 0%,rgba(129,147,188,0) 68%);animation:drift3 47s ease-in-out infinite alternate}
+.ambient i:nth-child(4){width:86.8%;aspect-ratio:1;left:-17.2%;bottom:13.6%;background:radial-gradient(circle,#BC9C68 0%,rgba(188,156,104,0) 68%);animation:drift4 38s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate3d(14%,10%,0) scale(1.18)}}
+@keyframes drift2{to{transform:translate3d(-12%,16%,0) scale(1.12)}}
+@keyframes drift3{to{transform:translate3d(-16%,-12%,0) scale(1.22)}}
+@keyframes drift4{to{transform:translate3d(18%,-14%,0) scale(1.15)}}
+
+.view{display:block}
+.top{padding:calc(env(safe-area-inset-top,0px) + 12px) max(14px,env(safe-area-inset-right,0px)) 4px max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;animation:fadeDown .5s var(--ease) both}
+.titlerow{display:flex;align-items:center;gap:10px;padding:2px 4px 0}
+.title{margin:0;flex:1;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.title small{display:block;font-size:12px;font-weight:400;letter-spacing:0;color:var(--faint);margin-top:3px;min-height:17px}
+.acts{display:flex;gap:8px;align-items:center}
+.search{display:flex;align-items:center;gap:8px;border-radius:999px;padding:0 14px;height:40px;color:var(--muted)}
+.search input{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;color:var(--text)}
+.search input::placeholder{color:var(--faint)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none}
+
+/* ---- filters: one scrolling row of glass capsules, as in Notes ---- */
+.chips{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;margin:-2px -14px 0;padding:3px 14px 5px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;
+  font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap;transition:color .25s,background .25s,border-color .25s,transform .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip .n{font-size:11px;color:inherit;opacity:.7;font-variant-numeric:tabular-nums}
+.chip svg{width:15px;height:15px;opacity:.7}
+.chip[aria-pressed="true"]{color:var(--sel-ink);font-weight:600;
+  background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);border-color:color-mix(in srgb,var(--accent) 40%,var(--gb-edge))}
+
+/* ---- content ---- */
+.list{padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.app.hasmini .list{padding-bottom:calc(176px + env(safe-area-inset-bottom,0px))}
+.list > section{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:6px 4px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sechead .linkbtn{text-transform:none;letter-spacing:0}
+.empty{text-align:center;color:var(--muted);padding:26px 20px 22px;border-radius:24px;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.empty strong{display:block;color:var(--text);font-size:17px;font-weight:600}
+.empty > svg{width:34px;height:34px;color:var(--icon);margin-bottom:4px}
+.empty .btn{margin-top:8px}
+.notice{border-radius:22px;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
+.notice span{flex:1}
+/* "Show more" and "Clear history": small clear glass pills, like the other buttons */
+.morebtn{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:9px 19px;border-radius:999px;font-size:13px;color:var(--muted);
+  background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s}
+.morebtn:active{transform:scale(.94);background:var(--glass-2)}
+.enter .ep,.enter .upcard,.enter .stile,.enter .srow{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 30ms)}
+/* Cards - the episode lists, Up Next, show notes, notices and empty states -
+   are very faint flat tiles, the same in every AllisonOS app: no blur, lit
+   rim or shadow. */
+.rgroup,.upcard,.notes,.notice,.empty{background:var(--tile);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+
+/* ---- artwork: the show's square picture, with a coloured tile until it loads ---- */
+.art{position:relative;flex:none;display:block;width:var(--s,56px);height:var(--s,56px);border-radius:min(calc(var(--s,56px) * .2),18px);overflow:hidden;
+  background:linear-gradient(135deg,var(--art-a),var(--art-b));box-shadow:inset 0 0 0 1px var(--hair)}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.art.fill{width:100%;height:auto;aspect-ratio:1;border-radius:16px}
+
+/* ---- episodes ---- */
+.rgroup{border-radius:22px;overflow:hidden}
+.ep{padding:13px 12px 10px 16px;border-top:1px solid var(--hair-2)}
+.ep:first-child{border-top:0}
+.epmain{display:flex;gap:12px;width:100%;text-align:left;align-items:flex-start}
+.eptx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.epm{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.epm svg{width:14px;height:14px;color:var(--icon);vertical-align:-3px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;display:inline-block;margin-right:6px;vertical-align:0}
+.ept{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.epd{font-size:14px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ep.played .ept{color:var(--muted)}
+.epbar{display:flex;align-items:center;gap:4px;margin-top:9px}
+.icbtn{width:36px;height:36px;border-radius:50%;display:inline-grid;place-items:center;color:var(--icon);transition:transform .18s var(--ease)}
+.icbtn:active{transform:scale(.88)}
+.icbtn svg{width:21px;height:21px}
+.icbtn[aria-pressed="true"]{color:var(--accent-text)}
+/* the play button on every episode: time left, a progress bar once started */
+.playpill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px 0 11px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap;
+  color:var(--accent-text);background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 42%,transparent),inset 0 1px 1px var(--hi);transition:transform .18s var(--ease)}
+.playpill:active{transform:scale(.93)}
+.playpill svg{width:13px;height:13px}
+.playpill .pbar{width:30px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--accent) 24%,transparent);overflow:hidden;flex:none}
+.playpill .pbar i{display:block;height:100%;background:currentColor;border-radius:2px}
+.playpill.done{color:var(--muted);box-shadow:var(--lg-rim)}
+.playpill.big{height:42px;padding:0 20px 0 16px;font-size:15px;gap:9px}
+.playpill.big svg{width:16px;height:16px}
+
+/* ---- Up Next: a row of cards, as in the iPhone's Podcasts ---- */
+.shelf{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -14px;padding:2px 14px 10px;scroll-padding:0 14px}
+.shelf::-webkit-scrollbar{display:none}
+.upcard{flex:none;width:min(80%,330px);scroll-snap-align:start;border-radius:22px;padding:12px 12px 11px;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.uptop{display:flex;gap:12px;text-align:left;align-items:flex-start;width:100%;min-width:0}
+.uptx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.upm{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upt{font-size:15px;font-weight:600;line-height:1.3;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.upbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.upd{font-size:12px;color:var(--faint);white-space:nowrap}
+
+/* ---- Library: shows as a grid of artwork ---- */
+.sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px;padding:2px 2px 0}
+@media (min-width:430px){.sgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.stile{display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0;transition:transform .18s var(--ease)}
+.stile:active{transform:scale(.96)}
+.stile .art{box-shadow:0 10px 26px var(--lift),inset 0 0 0 1px var(--hair)}
+.stile .sn{font-size:14px;font-weight:600;line-height:1.25;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.stile .sm{font-size:12px;color:var(--faint);margin-top:-3px}
+.stile .sm.err{color:var(--danger-text)}
+
+/* ---- Search: shows as rows ---- */
+.srow{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;border-top:1px solid var(--hair-2)}
+.srow:first-child{border-top:0}
+.sopen{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left}
+.rank{width:20px;text-align:center;font-size:15px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums;flex:none}
+.stx{min-width:0;display:flex;flex-direction:column;gap:2px}
+.stx b{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.stx span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbtn{width:36px;height:36px;border-radius:50%;display:inline-grid;place-items:center;flex:none;color:var(--accent-text);
+  background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 42%,transparent),inset 0 1px 1px var(--hi);transition:transform .18s var(--ease)}
+.fbtn:active{transform:scale(.88)}
+.fbtn svg{width:19px;height:19px}
+.fbtn[aria-pressed="true"]{color:var(--icon);box-shadow:var(--lg-rim)}
+.fbtn:disabled{opacity:.35}
+
+/* ---- a show: pushed in from the right, the tabs and player stay ---- */
+.pushhead{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+.pushhead::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .25s;background:var(--lg-bg);
+  -webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);box-shadow:0 1px 0 var(--hair-2)}
+.pushhead.scrolled::before{opacity:1}
+.pushhead .ptitle{flex:1;min-width:0;text-align:center;font-weight:600;font-size:16px;opacity:0;transition:opacity .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pushhead.scrolled .ptitle{opacity:1}
+#showView:not([hidden]){animation:pageIn .38s var(--ease) both}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:0 6px 4px}
+.hero .art{box-shadow:0 22px 50px var(--lift-strong),inset 0 0 0 1px var(--hair)}
+.hero h2{margin:12px 0 0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
+.hero .by{color:var(--muted);font-size:15px}
+.hero .hm{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.hero .follow{margin-top:8px}
+.desc{font-size:14px;color:var(--muted);line-height:1.5;text-align:left;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;cursor:pointer}
+.desc.open{display:block}
+.skel{height:92px;border-radius:22px;background:var(--fill);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}
+
+/* ---- episode page (sheet) ---- */
+.ephead{display:flex;gap:14px;align-items:center}
+.ephead .eptx{gap:4px}
+.epshow{color:var(--accent-text);font-weight:600;font-size:15px;text-align:left;align-self:flex-start}
+.eph{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
+.epacts{display:flex;align-items:center;gap:6px}
+.notes{font-size:15px;line-height:1.55;color:var(--text);overflow-wrap:anywhere;border-radius:22px;padding:14px 16px}
+.notes p,.notes div,.notes ul,.notes ol,.notes blockquote,.notes pre{margin:0 0 .75em}
+.notes > :last-child{margin-bottom:0}
+.notes ul,.notes ol{padding-left:1.3em}
+.notes blockquote{padding-left:12px;border-left:3px solid var(--hair);color:var(--muted)}
+.notes pre{white-space:pre-wrap;font-size:13px}
+.notes a{color:var(--accent-text)}
+.notes .nh{font-weight:700}
+.notes .ts{color:var(--accent-text);font-weight:600;font-variant-numeric:tabular-nums;font-size:inherit}
+.notes .quiet{color:var(--faint)}
+
+/* ---- mini player + tabs + search, floating above the home indicator ---- */
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
+.dock > *{pointer-events:auto}
+.tabs{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:999px}
+.tab{height:44px;border-radius:999px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted);transition:background .2s,color .2s,transform .18s var(--ease)}
+.tab:active{transform:scale(.94)}
+.fab{width:56px;height:56px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s var(--ease);animation:popIn .45s var(--ease) both}
+.fab:active{transform:scale(.9)}
+.fab[aria-pressed="true"]{color:var(--accent-text)}
+.mini{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + 60px + env(safe-area-inset-bottom,0px));padding:0 14px;z-index:6;pointer-events:none}
+.mbar{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;height:60px;padding:0 6px 0 8px;border-radius:999px;overflow:hidden;
+  background:var(--gb-shine),var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--lg-rim),0 10px 30px var(--lift-strong);animation:popIn .4s var(--ease) both}
+.mopen{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;height:100%}
+.mopen .art{border-radius:12px}
+.mtx{min-width:0;display:flex;flex-direction:column}
+.mt{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--text);flex:none;transition:transform .18s var(--ease)}
+.mbtn:active{transform:scale(.86)}
+.mbtn svg{width:26px;height:26px}
+.mprog{position:absolute;left:22px;right:22px;bottom:0;height:2px;border-radius:1px;background:var(--hair);overflow:hidden}
+.mprog i{display:block;height:100%;width:0;background:var(--accent)}
+
+/* ---- sheets, as in Notes ---- */
+.sheetwrap{position:fixed;inset:auto 0 auto 0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
+.scrim{position:absolute;inset:0;background:var(--scrim);animation:fadeIn .3s ease both}
+.sheet{position:relative;width:100%;max-width:560px;margin:0 auto;border-radius:28px 28px 0 0;border-bottom:0;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);display:flex;flex-direction:column;animation:sheetUp .46s var(--ease) both}
+.sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 24px)}
+.grab{width:38px;height:5px;border-radius:99px;background:var(--grab);margin:0 auto;padding:10px 60px 8px;background-clip:content-box;box-sizing:content-box;flex:none;cursor:grab}
+.grab,.sheethead{touch-action:none;-webkit-user-select:none;user-select:none}
+.sheet.dragging{animation:none;transition:none}
+.sheet.settling{transition:transform .28s var(--ease)}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px 8px 20px}
+.sheethead h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:8px}
+.label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 4px;display:flex;justify-content:space-between;align-items:center}
+.box{border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);background:var(--fill);border:1px solid var(--hair);transition:color .2s,background .2s,transform .18s var(--ease)}
+.opt:active{transform:scale(.93)}
+.opt[aria-checked="true"]{color:var(--sel-ink);font-weight:600;background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);border-color:color-mix(in srgb,var(--accent) 40%,var(--gb-edge))}
+.plain{border:0;background:none;outline:none;width:100%;padding:0;font-size:16px}
+.rowbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;font-size:15px;font-weight:600;border-top:1px solid var(--hair-2)}
+.rowbtn:first-child{border-top:0}
+.rowbtn:active{background:var(--fill)}
+.rowbtn > span:not(.ic):not(.tick){flex:1;min-width:0}
+.rowbtn .ic{width:26px;display:grid;place-items:center;flex:none;color:var(--icon)}
+.rowbtn .ic svg{width:22px;height:22px}
+.rowbtn .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.rowbtn .tick{color:var(--accent-text);display:grid}
+.rowbtn.danger,.rowbtn.danger .ic{color:var(--danger-text)}
+.hint{font-size:12px;line-height:1.55;color:var(--faint);margin:0 4px}
+.linkbtn{color:var(--accent-text);font-weight:600;font-size:14px;padding:4px 6px}
+.qrow{display:flex;align-items:center;gap:10px;padding:9px 8px 9px 12px;border-top:1px solid var(--hair-2)}
+.qrow:first-child{border-top:0}
+.qrow .sopen{gap:10px}
+.qrow .stx b{font-size:14px;-webkit-line-clamp:1}
+.qrow .stx span{font-size:12px}
+
+/* ---- Now Playing ---- */
+.sheet.np{height:calc(100% - env(safe-area-inset-top,0px) - 12px);overflow:hidden;background:var(--bg);box-shadow:0 -14px 44px var(--lift-strong)}
+.npbg{position:absolute;inset:-60px;z-index:0;background-size:cover;background-position:center;filter:blur(60px) saturate(1.6);opacity:calc(var(--aurora) * .8);pointer-events:none}
+.np > .grab,.np > .sheethead,.np > .sheetbody{position:relative;z-index:1}
+.npbody{gap:18px;padding-top:0}
+.npmedia{position:relative;align-self:center;width:min(100%,340px);aspect-ratio:1;border-radius:18px;overflow:hidden;flex:none;
+  background:linear-gradient(135deg,var(--art-a),var(--art-b));box-shadow:0 26px 60px var(--lift-strong);transition:transform .55s var(--ease)}
+.npmedia.paused{transform:scale(.86)}
+.npmedia img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.npmedia video{display:none;width:100%;height:100%;background:#000;object-fit:contain}
+.npmedia.isvideo{width:100%;aspect-ratio:16/9;transform:none;background:#000}
+.npmedia.isvideo img{display:none}
+.npmedia.isvideo video{display:block}
+.npinfo{display:flex;flex-direction:column;gap:3px;padding:0 4px}
+.npd{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.npt{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.25;overflow-wrap:anywhere}
+.npshow{align-self:flex-start;color:var(--muted);font-size:16px;font-weight:500;text-align:left}
+/* the scrubber, as iOS 26's: a clear capsule track that fills as it plays,
+   and a white pill knob that swells into a clear lens while it's dragged */
+.scrub{-webkit-appearance:none;appearance:none;width:100%;height:30px;margin:0;background:transparent;--p:0%;--scrub-rest:rgba(120,120,128,.24);touch-action:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .scrub{--scrub-rest:rgba(255,255,255,.18)}}
+:root[data-theme="dark"] .scrub{--scrub-rest:rgba(255,255,255,.18)}
+.scrub:focus{outline:none}
+.scrub::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--text) var(--p),var(--scrub-rest) var(--p));box-shadow:inset 0 0 0 .5px var(--hair)}
+.scrub::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:20px;margin-top:-7px;border:0;border-radius:999px;background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06);transition:transform .2s var(--ease),background .2s,box-shadow .2s}
+.scrub:not(:disabled):active::-webkit-slider-thumb{transform:scale(1.15);background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+.scrub:focus-visible::-webkit-slider-thumb{box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06),0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+.scrub::-moz-range-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--text) var(--p),var(--scrub-rest) var(--p));box-shadow:inset 0 0 0 .5px var(--hair)}
+.scrub::-moz-range-thumb{width:28px;height:20px;border:0;border-radius:999px;background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06);transition:transform .2s var(--ease),background .2s,box-shadow .2s}
+.scrub:not(:disabled):active::-moz-range-thumb{transform:scale(1.15);background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+.scrub:focus-visible::-moz-range-thumb{box-shadow:0 2px 8px rgba(0,0,0,.22),inset 0 0 0 .5px rgba(0,0,0,.06),0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+.scrub:disabled{opacity:.4}
+.nptimes{display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:var(--faint);font-variant-numeric:tabular-nums;margin-top:-14px;padding:0 2px}
+.npctrl{display:flex;align-items:center;justify-content:center;gap:30px;padding:2px 0}
+.ctl{width:62px;height:62px;display:grid;place-items:center;border-radius:50%;color:var(--text);transition:transform .18s var(--ease)}
+.ctl:active{transform:scale(.86)}
+.ctl svg{width:40px;height:40px;stroke-width:1.6}
+.ctl.main{width:82px;height:82px}
+.ctl.main svg{width:54px;height:54px}
+.nprow{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nprow .pillbtn{min-width:44px;justify-content:center}
+
+/* toast: the same clear glass as the sheets, with their lit rim */
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
+  display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));border:1px solid transparent;-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+.app.hasmini .toast{bottom:calc(152px + env(safe-area-inset-bottom,0px))}
+.toast span{min-width:0}
+.toast button{color:var(--accent);font-weight:600;flex:none;padding:3px 5px}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes rowIn{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes pageIn{from{transform:translateX(40%);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+}
+
+/* ---- "Updated" pill: once, the first time the app opens after an update ---- */
+.updpill{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:40;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 11px;border-radius:999px;
+  font-size:14px;font-weight:600;color:var(--accent-text);background:var(--lg-bg);-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter);
+  box-shadow:var(--lg-rim),0 8px 24px var(--lift);transform:translateX(-50%);animation:updIn .5s var(--ease) both;white-space:nowrap}
+.updpill svg{width:17px;height:17px;color:var(--icon)}
+.updpill.out{animation:updOut .45s ease both}
+@keyframes updIn{from{opacity:0;transform:translate(-50%,-14px) scale(.94)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes updOut{to{opacity:0;transform:translate(-50%,-10px) scale(.96)}}
+/* ---- "Checking" pill: pulses, with the arrows turning, while shows update ---- */
+.syncpill{pointer-events:none;animation:updIn .5s var(--ease) both,syncPulse 1.6s ease-in-out .5s infinite}
+.updpill:not([hidden]) + .syncpill{top:calc(env(safe-area-inset-top,0px) + 52px)}
+.syncpill .spin{animation:syncTurn 1.1s linear infinite}
+.syncpill .tick{display:none}
+.syncpill.done{animation:updIn .01s both}
+.syncpill.done .spin{display:none}
+.syncpill.done .tick{display:block;animation:popIn .3s var(--ease) both}
+.syncpill.out{animation:updOut .45s ease both}
+@keyframes syncTurn{to{transform:rotate(360deg)}}
+@keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:var(--lg-rim),0 8px 24px var(--lift),0 0 0 6px color-mix(in srgb,var(--accent) 22%,transparent)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.updpill,.toast{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.updpill,.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* ---- Icons and buttons: the same system as Mail and Notes ----
+   Line icons on a 24px grid, 1.7 stroke with round ends (2.2 for chevrons,
+   ticks and close); icons in a calm slate-teal, while text, dots and
+   switches keep the blue; every button and bar in the same clear Liquid
+   Glass. Last in the sheet so it wins. */
+.iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs{
+  background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter)}
+.iconbtn{width:36px;height:36px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s,color .2s;flex:none}
+.iconbtn svg{width:22px;height:22px}
+.iconbtn:active{transform:scale(.9);background:var(--glass-2);color:var(--text)}
+.iconbtn[aria-pressed="true"]{color:var(--accent)}
+.iconbtn.busy svg{animation:syncTurn 1.1s linear infinite}
+.pushhead .iconbtn{width:38px;height:38px}
+.pushhead .iconbtn svg{width:24px;height:24px}
+.textbtn{height:36px;padding:0 14px;border-radius:999px;font-size:15px;font-weight:600;color:var(--accent-text);box-shadow:var(--lg-rim);transition:transform .18s var(--ease)}
+.textbtn:active{transform:scale(.93)}
+.pillbtn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 15px;border-radius:999px;font-size:14px;font-weight:600;color:var(--text);box-shadow:var(--lg-rim);transition:transform .18s var(--ease);white-space:nowrap}
+.pillbtn svg{width:20px;height:20px;color:var(--icon)}
+.pillbtn:active{transform:scale(.93);background:var(--glass-2)}
+.pillbtn.bluec,.pillbtn.bluec svg{color:var(--accent-text)}
+.pillbtn.bluec{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 42%,transparent),inset 0 1px 1px var(--hi)}
+.pillbtn[aria-pressed="true"],.pillbtn[aria-pressed="true"] svg{color:var(--accent-text)}
+.btn{--tint:var(--accent);position:relative;min-height:38px;padding:8px 18px;border-radius:999px;font-weight:600;font-size:15px;color:var(--accent-text);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 42%,transparent),inset 0 1px 1px var(--hi),var(--gb-shadow);transition:transform .18s var(--ease),filter .2s}
+.btn:active{transform:scale(.975);filter:brightness(.9)}
+.btn.quiet{color:var(--text);font-weight:500;box-shadow:var(--lg-rim)}
+.fab{color:var(--icon);box-shadow:var(--lg-rim),0 8px 26px var(--lift)}
+.fab svg{width:27px;height:27px}
+.search{height:44px;padding:0 7px 0 15px;gap:9px;box-shadow:var(--lg-rim),0 6px 20px var(--lift);transition:box-shadow .25s}
+.search:focus-within{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 65%,var(--bar-rim)),inset 0 1px 1px var(--hi),0 0 0 4px rgba(111,165,151,.14),0 6px 20px var(--lift)}
+.search > svg{width:21px;height:21px;color:var(--icon)}
+.search .clear{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--fill)}
+.search .clear svg{width:14px;height:14px}
+.tabs{box-shadow:var(--lg-rim),0 10px 30px var(--lift-strong)}
+.tab svg{width:20px;height:20px;color:var(--icon)}
+.tab[aria-selected="true"]{color:var(--text);background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn,.morebtn{background:var(--bar-solid)}
+}
+@media (prefers-reduced-transparency:reduce){
+  .iconbtn,.textbtn,.pillbtn,.btn,.fab,.search,.tabs,.mbar,.playpill,.fbtn,.morebtn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+
+/* ---- switches with a sliding glass thumb ----
+   The tabs, the filter chips where one is chosen (Library, New Episodes, a
+   show's episodes) and Settings' choices: the options stay clear, and one
+   thumb under them glides to the chosen one, stretching as it goes, as iOS
+   26's do (home/slide.js). */
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--gb-edge),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease),background-color .3s}
+.slthumb.off{opacity:0;scale:.7}
+.tabs.slides .tab[aria-selected="true"]{background:none;box-shadow:none}
+.chips > .slthumb,.opts > .slthumb{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--glass-2));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
+.chips.slides .chip[aria-pressed="true"]{background:none;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.opts.slides .opt[aria-checked="true"]{background:none;border-color:transparent;box-shadow:none}
+
+/* ---- the sheets: Liquid Glass ----
+   An episode, Settings, the choices and Now Playing are each one sheet of
+   clear glass floating just inside the screen's edges: the app blurs and
+   brightens through it, a lit rim runs round it, the rows and notes sit on
+   it as the same faint tiles as the cards, and the buttons are lighter glass
+   on top. The rows don't blur again (the sheet already has), which keeps it
+   smooth on a phone. Now Playing keeps its glow from the artwork, over the
+   glass. */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet{width:auto;margin:0 8px 8px;border-radius:34px;border:0;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift)}
+.lg .sheet.full{height:calc(100% - env(safe-area-inset-top,0px) - 32px)}
+.lg .sheet.np{height:calc(100% - env(safe-area-inset-top,0px) - 20px);max-height:none}
+@media (min-width:576px){.lg .sheet{margin:0 auto 8px;max-width:544px}}
+.lg .sheethead{padding:6px 12px 10px}
+.lg .sheethead h2{font-size:17px;font-weight:600}
+#epLbl,#setLbl,#actLbl{padding-left:8px}
+.lg .sheethead .iconbtn{width:44px;height:44px}
+.lg .sheethead .iconbtn svg{width:22px;height:22px}
+.lg .okbtn{color:var(--cta-ink);background:var(--cta);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.lg .okbtn:active{color:var(--cta-ink);background:var(--cta);filter:brightness(.94)}
+.lg .sheetbody{padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.lg .npbody{padding-top:8px;gap:18px}
+.lg .rgroup,.lg .notes{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.lg .rowbtn:active,.lg .qrow:active{background:var(--lgs-field)}
+.lg .label{margin:0 8px}
+.lg .hint{text-align:center;margin:0 12px}
+.lg .ephead{padding:4px 4px 0}
+.lg .opt{border:0;background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 1px 3px var(--lift)}
+.lg .opt[aria-checked="true"]{background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),var(--lgs-field));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--lgs-edge))}
+.lg .opts.slides .opt[aria-checked="true"]{background:none;box-shadow:none}
+/* Now Playing's controls: lighter glass capsules, and a clear lens under a button while it's pressed */
+.lg .pillbtn{background:var(--lgs-field);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 2px 8px var(--lift)}
+.lg .pillbtn:active{background:var(--glass-2)}
+.lg .ctl{transition:transform .18s var(--ease),background .2s,box-shadow .2s}
+.lg .ctl:active{background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 4px 14px var(--lift)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* 44-point tap targets: the smaller controls take taps a little way round them
+   too, on an invisible layer (the look doesn't change). :where() keeps any
+   position they already have. */
+:where(.btn){position:relative}
+:where(.btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+
+/* ---- Google Sheet backup (Settings): the link and code form, and a disconnect button ---- */
+.stackform{display:flex;flex-direction:column;gap:14px}
+.frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
+.frow:first-child{border-top:0}
+.frow > label{flex:0 0 auto;white-space:nowrap}
+.frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
+.frow input.txt::placeholder{color:var(--faint)}
+.btn.danger{--tint:var(--danger);color:var(--danger-text);font-weight:500;width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+#epLbl,#setLbl,#actLbl,#syLbl{padding-left:8px}
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Podcasts' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+   shapes instead of glass; a cream ground (walnut in dark mode) with mustard,
+   teal, burnt orange and olive; atomic shapes behind the title that scroll
+   away; Futura (iOS's own, so nothing to download) for every word. Last in
+   the sheet so it wins over the glass above. Only colours, shapes and type
+   change: every button, sheet, player and swipe works as before.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-ink:#1F6F6B; --accent-text:#1F6F6B; --sel-ink:#2B2522;
+  --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B;
+  --danger:#B8452B; --danger-ink:#9E3A1A; --danger-text:#9E3A1A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9; --toast:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
+  --tint-mix:14%; --aurora:1; --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --art-a:#E3A72F; --art-b:#D8572A; --track:rgba(43,37,34,.16);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --art-a:#C58F25; --art-b:#B84A25; --track:rgba(244,236,221,.2);
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --art-a:#C58F25; --art-b:#B84A25; --track:rgba(244,236,221,.2);
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page) */
+.ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:220px;height:220px;left:auto;right:-70px;top:-60px;bottom:auto;background:var(--mc-mustard)}
+.ambient i:nth-child(2){width:56px;height:56px;left:auto;right:150px;top:56px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-30px;top:100px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;max-width:210px}
+.sechead,.label{font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--muted)}
+.epm,.upm,.npd,.hero .hm{font-weight:600;letter-spacing:.12em}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.textbtn,.pillbtn,.search,.chip,.fab,.tabs,.mbar,.playpill,.fbtn,.morebtn,.btn{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.iconbtn[aria-pressed="true"]{color:var(--accent-text)}
+.textbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600}
+.pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text);font-weight:600;letter-spacing:.02em}
+.pillbtn:active{background:var(--mc-card-2)}
+.pillbtn.bluec{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.pillbtn.bluec svg{color:var(--cta-ink)}
+.pillbtn.follow:not(.bluec){background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.pillbtn.follow:not(.bluec) svg{color:var(--accent-text)}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
+.btn::after{display:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);font-weight:600}
+.morebtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600;letter-spacing:.02em}
+.morebtn:active{background:var(--mc-card-2)}
+.linkbtn{font-weight:600}
+.search{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.search .clear{background:var(--fill)}
+
+/* the dock: a cream pill with a mustard thumb under the chosen section, and the search button beside it */
+.tabs{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 22px -12px var(--lift-strong)}
+.tab{color:var(--muted);letter-spacing:.02em}
+.tab svg{color:var(--icon)}
+.tabs > .slthumb,.tab[aria-selected="true"]{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.tabs.slides .tab[aria-selected="true"]{background:none}
+.tab[aria-selected="true"],.tab[aria-selected="true"] svg{color:var(--mc-on-mustard)}
+.fab{background:var(--mc-card);color:var(--icon);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 22px -12px var(--lift-strong)}
+.fab[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+
+/* the filters: cream pills, with a mustard thumb under the chosen one */
+.chip{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
+.chip svg{opacity:1;color:var(--icon)}
+.chip[aria-pressed="true"]{color:var(--mc-on-mustard);font-weight:600;background:var(--mc-mustard);border-color:transparent;box-shadow:none}
+.chip[aria-pressed="true"] svg{color:var(--mc-on-mustard)}
+.chips.slides .chip[aria-pressed="true"]{background:none}
+.chips > .slthumb,.opts > .slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* the cards: solid cream, round-cornered, no rim light */
+.rgroup,.upcard,.notes,.notice,.empty,.lg .rgroup,.lg .notes{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.empty{padding:26px 20px 22px}
+.empty strong{font-weight:600;letter-spacing:-.01em}
+.skel{border-radius:20px}
+.ept,.upt,.stx b,.stile .sn,.eph,.npt,.hero h2{font-weight:600}
+.ept,.upt,.stx b{letter-spacing:-.005em}
+.eph,.npt,.hero h2{letter-spacing:-.025em}
+.ep.played .ept{color:var(--muted)}
+.dot{background:var(--mc-orange)}
+.rank{font-weight:600;color:var(--mc-orange)}
+
+/* artwork: a flat mustard tile until the picture loads */
+.art{background:var(--art-a);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border-radius:min(calc(var(--s,56px) * .2),16px)}
+.art.fill{border-radius:16px}
+.stile .art,.hero .art{box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.mopen .art{border-radius:12px}
+
+/* the play button on every episode: outlined teal, with a teal bar for how far you got; the big one is solid orange */
+.playpill{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:600;letter-spacing:.02em}
+.playpill .pbar{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+.playpill.done{color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.playpill.big{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.playpill.big .pbar{background:color-mix(in srgb,var(--cta-ink) 30%,transparent)}
+.icbtn[aria-pressed="true"]{color:var(--mc-orange)}
+.fbtn{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.fbtn[aria-pressed="true"]{background:var(--mc-teal);color:#FFF8EC;box-shadow:none}
+
+/* the mini player: a flat cream pill above the dock */
+.mbar{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 24px -12px var(--lift-strong)}
+.mt{font-weight:600}
+.mbtn{color:var(--text)}
+#miniPlay{background:var(--cta);color:var(--cta-ink);width:42px;height:42px}
+#miniPlay svg{width:22px;height:22px}
+.mprog{background:var(--track)}
+.mprog i{background:var(--mc-teal)}
+
+/* the sheets: cream panels with round corners */
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet,.lg .sheet.glass-strong{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.lg .sheethead h2{font-weight:600;letter-spacing:-.01em}
+.lg .okbtn,.lg .okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.lg .rowbtn:active,.lg .qrow:active{background:var(--fill)}
+.rowbtn{font-weight:600}
+.rowbtn .ic,.rowbtn .tick{color:var(--icon)}
+.rowbtn .tick{color:var(--accent-text)}
+.lg .rgroup,.lg .notes{background:var(--fill)}
+.lg .label{letter-spacing:.2em}
+.lg .opt{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.02em;color:var(--text)}
+.lg .opt[aria-checked="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.lg .opts.slides .opt[aria-checked="true"]{background:none;box-shadow:none}
+.opt{font-weight:600}
+.notes a,.notes .ts,.epshow{color:var(--accent-text)}
+.notes blockquote{border-left-color:var(--mc-mustard)}
+.frow input.txt{font-family:inherit}
+.frow{border-top-color:var(--hair-2)}
+
+/* Now Playing: the ground colour, a mustard sun in the corner, flat artwork, a solid orange play button */
+.lg .sheet.np{background:var(--bg)}
+.lg .sheet.np::before{content:'';position:absolute;z-index:0;width:190px;height:190px;border-radius:50%;right:-60px;top:-110px;background:var(--mc-mustard);opacity:var(--aurora);pointer-events:none}
+.npbg{display:none}
+.npmedia{border-radius:20px;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.npmedia.isvideo{border-radius:16px}
+.npshow{font-weight:600;color:var(--accent-text)}
+.nptimes{font-weight:600}
+.ctl{color:var(--text)}
+.ctl.main{background:var(--cta);color:var(--cta-ink)}
+.lg .ctl:active{background:var(--fill);box-shadow:none}
+.lg .ctl.main:active{background:var(--cta);filter:brightness(.92)}
+.lg .pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .pillbtn:active{background:var(--mc-card-2)}
+.lg .pillbtn[aria-pressed="true"]{background:color-mix(in srgb,var(--mc-mustard) 26%,var(--mc-card));box-shadow:inset 0 0 0 1.5px var(--mc-mustard);color:var(--text)}
+.lg .pillbtn[aria-pressed="true"] svg{color:var(--icon)}
+/* the scrubber: a teal fill on a flat track, with a mustard pill for a knob that turns orange while it is dragged */
+.scrub::-webkit-slider-runnable-track{height:8px;background:linear-gradient(90deg,var(--mc-teal) var(--p),var(--track) var(--p));box-shadow:none}
+.scrub::-webkit-slider-thumb{width:30px;height:22px;margin-top:-7px;background:var(--mc-mustard);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:not(:disabled):active::-webkit-slider-thumb{transform:scale(1.15);background:var(--mc-orange);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:focus-visible::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #2B2522,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+.scrub::-moz-range-track{height:8px;background:linear-gradient(90deg,var(--mc-teal) var(--p),var(--track) var(--p));box-shadow:none}
+.scrub::-moz-range-thumb{width:30px;height:22px;background:var(--mc-mustard);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:not(:disabled):active::-moz-range-thumb{transform:scale(1.15);background:var(--mc-orange);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:focus-visible::-moz-range-thumb{box-shadow:inset 0 0 0 2px #2B2522,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+
+/* the toast and the pills at the top */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:18px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.toast button{color:var(--accent-text)}
+.updpill{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600}
+.updpill svg{color:var(--mc-mustard)}
+.syncpill svg{color:var(--icon)}
+@keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 0 0 6px color-mix(in srgb,var(--mc-mustard) 30%,transparent)}}
+.pushhead::before{box-shadow:0 1px 0 var(--hair)}
+</style>
+</head>
+<body>
+
+
+<div class="app" id="app">
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <!-- HOME -->
+  <section class="view" id="homeView" aria-label="Listen Now">
+    <header class="top">
+      <div class="titlerow">
+        <h1 class="title">Listen Now<small id="homeSub"></small></h1>
+        <div class="acts">
+          <button class="iconbtn glass" id="refreshBtn" type="button" aria-label="Check for new episodes">
+            <svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+    <main class="list" id="homeBody"></main>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="view" id="libView" aria-label="Library" hidden>
+    <header class="top">
+      <div class="titlerow">
+        <h1 class="title">Library<small id="libSub"></small></h1>
+        <div class="acts">
+          <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings">
+            <svg viewBox="0 0 24 24" style="stroke-width:1.6"><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="chips" id="libChips" role="toolbar" aria-label="Library"></div>
+    </header>
+    <main class="list" id="libBody"></main>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="view" id="searchView" aria-label="Search" hidden>
+    <header class="top">
+      <div class="titlerow"><h1 class="title">Search<small id="searchSub"></small></h1></div>
+      <form class="search glass" id="qForm" role="search" action="#">
+        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
+        <input id="q" type="search" placeholder="Shows, or paste a feed link" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search podcasts">
+        <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </form>
+    </header>
+    <main class="list" id="searchBody"></main>
+  </section>
+
+  <!-- A SHOW -->
+  <section class="view" id="showView" aria-label="Show" hidden>
+    <header class="pushhead" id="showHead">
+      <button class="iconbtn" id="showBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" class="b"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg></button>
+      <span class="ptitle" id="showBarTitle"></span>
+      <button class="iconbtn" id="showMore" type="button" aria-label="More for this show"><svg viewBox="0 0 24 24" class="f"><circle cx="5.4" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.6" cy="12" r="1.7"/></svg></button>
+    </header>
+    <main class="list" id="showBody"></main>
+  </section>
+
+  <!-- MINI PLAYER -->
+  <div class="mini" id="mini" hidden>
+    <div class="mbar">
+      <button class="mopen" id="miniOpen" type="button" aria-label="Open Now Playing">
+        <span class="art" id="miniArt" style="--s:44px"></span>
+        <span class="mtx"><span class="mt" id="miniTitle"></span><span class="ms" id="miniShow"></span></span>
+      </button>
+      <button class="mbtn" id="miniPlay" type="button" aria-label="Play"></button>
+      <button class="mbtn" id="miniFwd" type="button" aria-label="Skip forward"></button>
+      <span class="mprog" aria-hidden="true"><i id="miniProg"></i></span>
+    </div>
+  </div>
+
+  <!-- DOCK: tabs, and Search on its own, as on iOS 26 -->
+  <div class="dock">
+    <nav class="tabs glass" role="tablist" aria-label="Sections">
+      <button class="tab" type="button" role="tab" data-tab="home" aria-selected="true">
+        <svg viewBox="0 0 24 24"><path d="M3.6 10.4l7.5-6.3a1.4 1.4 0 0 1 1.8 0l7.5 6.3"/><path d="M5.8 8.8v9.4a2.4 2.4 0 0 0 2.4 2.4h7.6a2.4 2.4 0 0 0 2.4-2.4V8.8"/><path d="M10 20.6v-5a2 2 0 0 1 4 0v5"/></svg>Listen Now
+      </button>
+      <button class="tab" type="button" role="tab" data-tab="lib" aria-selected="false">
+        <svg viewBox="0 0 24 24"><rect x="3.4" y="9.4" width="17.2" height="11.2" rx="3"/><path d="M5.6 6.2h12.8M8 3.2h8"/></svg>Library
+      </button>
+    </nav>
+    <button class="fab glass" id="searchTab" type="button" data-tab="search" aria-pressed="false" aria-label="Search">
+      <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
+    </button>
+  </div>
+
+  <!-- An episode: its notes, and what you can do with it -->
+  <div class="sheetwrap lg" id="epSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet full glass-strong" role="dialog" aria-modal="true" aria-labelledby="epLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="epLbl">Episode</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
+      <div class="sheetbody" id="epBody"></div>
+    </div>
+  </div>
+
+  <!-- Now Playing -->
+  <div class="sheetwrap lg" id="np" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet np" role="dialog" aria-modal="true" aria-labelledby="npLbl">
+      <div class="npbg" id="npBg" aria-hidden="true"></div>
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead">
+        <button class="iconbtn" data-close type="button" aria-label="Close Now Playing"><svg viewBox="0 0 24 24" class="b"><path d="M4.8 8.8l6.5 6.6a1 1 0 0 0 1.4 0l6.5-6.6"/></svg></button>
+        <h2 id="npLbl" class="vh">Now Playing</h2>
+        <div class="acts">
+          <button class="iconbtn" id="npAir" type="button" aria-label="AirPlay" hidden><svg viewBox="0 0 24 24"><path d="M7 17.6H5.4a2.4 2.4 0 0 1-2.4-2.4V6.4A2.4 2.4 0 0 1 5.4 4h13.2A2.4 2.4 0 0 1 21 6.4v8.8a2.4 2.4 0 0 1-2.4 2.4H17"/><path d="M11.2 14.3a1 1 0 0 1 1.6 0l3.4 4.5a.8.8 0 0 1-.6 1.3H8.4a.8.8 0 0 1-.6-1.3z"/></svg></button>
+          <button class="iconbtn" id="npMore" type="button" aria-label="More for this episode"><svg viewBox="0 0 24 24" class="f"><circle cx="5.4" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.6" cy="12" r="1.7"/></svg></button>
+        </div>
+      </div>
+      <div class="sheetbody npbody">
+        <div class="npmedia paused" id="npMedia">
+          <img id="npArt" alt="" hidden>
+          <video id="video" playsinline webkit-playsinline x-webkit-airplay="allow" preload="metadata"></video>
+        </div>
+        <div class="npinfo">
+          <span class="npd" id="npDate"></span>
+          <p class="npt" id="npTitle"></p>
+          <button class="npshow" id="npShow" type="button"></button>
+        </div>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Position in episode">
+        <div class="nptimes"><span id="npAt">0:00</span><span id="npLeft">-0:00</span></div>
+        <div class="npctrl">
+          <button class="ctl" id="npBack" type="button"></button>
+          <button class="ctl main" id="npPlay" type="button" aria-label="Play"></button>
+          <button class="ctl" id="npFwd" type="button"></button>
+        </div>
+        <div class="nprow">
+          <button class="pillbtn" id="npSpeed" type="button" aria-label="Playback speed">1×</button>
+          <button class="pillbtn" id="npSleep" type="button" aria-label="Sleep timer"></button>
+          <button class="pillbtn" id="npPip" type="button" aria-label="Picture in Picture" hidden><svg viewBox="0 0 24 24"><rect x="2.8" y="4.4" width="18.4" height="15.2" rx="3"/><rect x="11.6" y="11.2" width="6.8" height="5.4" rx="1.4" class="fs"/></svg></button>
+          <button class="pillbtn" id="npFull" type="button" aria-label="Full screen" hidden><svg viewBox="0 0 24 24"><path d="M4 9.2V6.4A2.4 2.4 0 0 1 6.4 4h2.8M14.8 4h2.8A2.4 2.4 0 0 1 20 6.4v2.8M20 14.8v2.8a2.4 2.4 0 0 1-2.4 2.4h-2.8M9.2 20H6.4A2.4 2.4 0 0 1 4 17.6v-2.8"/></svg></button>
+        </div>
+        <div class="field" id="npQueueWrap">
+          <p class="label"><span>Up Next</span><button class="linkbtn" id="npQueueClear" type="button">Clear</button></p>
+          <div class="rgroup glass" id="npQueue"></div>
+        </div>
+        <div class="field">
+          <p class="label">Episode notes</p>
+          <div class="notes glass" id="npNotes"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="sheetwrap lg" id="setSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="setLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <div class="field"><p class="label">Skip back</p><div class="opts" id="setBack" role="radiogroup" aria-label="Skip back"></div></div>
+        <div class="field"><p class="label">Skip forward</p><div class="opts" id="setFwd" role="radiogroup" aria-label="Skip forward"></div></div>
+        <div class="field">
+          <p class="label">When an episode ends</p>
+          <div class="opts" id="setAuto" role="radiogroup" aria-label="When an episode ends"></div>
+        </div>
+        <div class="field"><p class="label">Top shows from</p><div class="opts" id="setCc" role="radiogroup" aria-label="Top shows from"></div></div>
+        <div class="field">
+          <p class="label">Your shows</p>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="setImport">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
+              <span>Import shows<span class="sub">An OPML file from another podcast app</span></span>
+            </button>
+            <button class="rowbtn" type="button" id="setExport">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
+              <span>Export shows<span class="sub">An OPML file any podcast app can import</span></span>
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <p class="label">Backup</p>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="setSheetBtn">
+              <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg></span>
+              <span>Google Sheet backup<span class="sub" id="sheetSub">Not connected</span></span>
+            </button>
+          </div>
+        </div>
+        <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. What you follow, where you got to, Up Next and Saved are kept on this phone. A Google Sheet backup of your shows, saved episodes and history is optional.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Sheet backup -->
+  <div class="sheetwrap lg" id="syncSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="syLbl">Google Sheet backup</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <p class="hint" id="syStatus"></p>
+        <form id="syForm" autocomplete="on" action="#" class="stackform">
+          <div class="rgroup glass">
+            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="Paste the link" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="Your phrase" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <button class="btn" id="syConnect" type="submit">Connect and back up</button>
+          <p class="hint">Set up the Sheet first (steps in the Podcasts README, “Google Sheet backup”; it is a Sheet of your own). On a second phone, open the setup link from the first instead. Several phones can back up to one Sheet.</p>
+        </form>
+        <div id="syOn" class="stackform" hidden>
+          <div class="rgroup glass">
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Back up now<span class="sub">Sends your shows, saved episodes and history to the Sheet</span></span></button>
+            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
+          </div>
+          <p class="hint">The Sheet has Shows, Saved and History tabs. History keeps every episode you play, even after the app trims its own list. Nothing is ever deleted there (an unfollowed show reads No), and nothing is read back, so edit nothing in it.</p>
+          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Choices: episode and show menus, speed, sleep timer -->
+  <div class="sheetwrap lg" id="actSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="actLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="actLbl"></h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody"><div class="rgroup glass" id="actRows"></div></div>
+    </div>
+  </div>
+
+  <audio id="audio" preload="metadata" x-webkit-airplay="allow"></audio>
+  <input type="file" id="opmlFile" accept=".opml,.xml,text/xml,application/xml,text/x-opml" hidden>
+
+  <!-- Shown once, the first time the app opens after an update -->
+  <div class="updpill" id="updPill" role="status" hidden><svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Updated</div>
+  <div class="updpill syncpill" id="syncPill" role="status" hidden><svg class="spin" viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg><svg class="tick b" viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg><span id="syncPillTxt">Checking for new episodes</span></div>
+
+  <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
+</div>
+
+<script src="../home/slide.js"></script>
+<script src="app.js"></script>
+<script src="../home/welcome.js" data-app="podcastsvintage" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
+</body>
+</html>

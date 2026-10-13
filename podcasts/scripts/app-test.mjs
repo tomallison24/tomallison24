@@ -210,7 +210,7 @@ await test('Google Sheet backup: this phone’s id is kept, and the link, code a
   const P = await newPage('light', {}, sheet), p = P.page;
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(500);
   await openSettings(p); await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])');
-  await p.fill('#sySecret', SHEET_SECRET); await p.click('#syConnect'); await connected(p);
+  await p.fill('#syUrl', SHEET_URL); await p.fill('#sySecret', SHEET_SECRET); await p.click('#syConnect'); await connected(p);
   const device = await p.evaluate(() => window.__podcasts.device());
   const idb = await p.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-podcasts' + (location.pathname.includes('vintage') ? 'v' : '') + '-sheet', 1); r.onsuccess = () => { const db = r.result, tx = db.transaction('kv'), a = tx.objectStore('kv').get('sheet'), b = tx.objectStore('kv').get('device'); tx.oncomplete = () => res({ sheet: a.result, device: b.result }); }; }));
   assert.deepEqual(idb.sheet, { url: SHEET_URL, secret: SHEET_SECRET }); assert.equal(idb.device, device);
@@ -249,7 +249,7 @@ await test('Google Sheet backup: a setup link fills in the form (and leaves the 
   const count = P.posts.length;
   await p.waitForTimeout(500);
   assert.equal(P.posts.length, count);
-  await p.ctx.route(/^https:\/\/script\.google\.com\/macros\/s\/DOWN\//, r => r.abort());
+  await P.ctx.route(/^https:\/\/script\.google\.com\/macros\/s\/DOWN\//, r => r.abort());
   await p.fill('#syUrl', 'https://script.google.com/macros/s/DOWN/exec'); await p.fill('#sySecret', 'x'); await p.click('#syConnect');
   await p.waitForFunction(() => /Couldn.t reach the Sheet/.test(document.getElementById('syStatus').textContent));
   await shot(p, '07-sheet-error-light');

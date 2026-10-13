@@ -1,9 +1,9 @@
-// Draws places/icon-512.png and places/icon-180.png from places/icon.svg (a white map pin on
-// sage, one of the Sea glass tints), by rendering the SVG in headless
+// Draws placesvintage/icon-512.png and placesvintage/icon-180.png from placesvintage/icon.svg (a cream map pin on
+// pine green, one of the Retro colours), by rendering the SVG in headless
 // Chromium, so icon.svg stays the single source of the picture.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node places/scripts/make-icons.mjs
+//   node placesvintage/scripts/make-icons.mjs
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
