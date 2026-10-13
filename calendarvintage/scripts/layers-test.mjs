@@ -102,7 +102,7 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
 
 await putJSON(db, 'layer:mail:O1', { at: Date.now(), data: { items: [{ id: 'th1', date: TOMORROW, subject: 'Book the vet', from: 'Sam' }] } });
 
-await test('Calendar Vintage, with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
+await test('Calendar, with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
   const { page, ctx } = await app('calendarvintage');
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
   await page.waitForTimeout(400);
@@ -112,11 +112,11 @@ await test('Calendar Vintage, with none of their data in its own storage, shows 
   const text = await page.textContent('#main');
   for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Workout', 'Remind: Book the vet']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
   assert.ok(!text.includes('Old hotel'));
-  assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar Vintage has no Notes data of its own');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar has no Notes data of its own');
   await ctx.close();
 });
 
-await test('signed out, Calendar Vintage asks to sign in, and shows none of it', async () => {
+await test('signed out, Calendar asks to sign in, and shows none of it', async () => {
   const { page, ctx } = await app('calendarvintage', { signedIn: false });
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'signin', null, { timeout: 8000 });
   await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');

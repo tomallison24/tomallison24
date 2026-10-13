@@ -144,7 +144,7 @@ await page.waitForTimeout(400);
 
 await test('light: drawn in the Retro look', async () => { await retroLook(page, 'light'); });
 
-await test('Notes, Travel Vintage’s and Fitness Vintage’s storage shows as layers', async () => {
+await test('Notes, Travel’s and Fitness’s storage shows as layers', async () => {
   const kinds = await page.evaluate(() => [...new Set(window.__calendar.st.occ.map(x => x.kind))]);
   for (const k of ['note', 'travel', 'fitness', 'holiday', 'family']) assert.ok(kinds.includes(k), k + ': ' + kinds);
 });
@@ -198,7 +198,7 @@ await test('the week view lays events out and Travel’s flight is on tomorrow',
   await page.click('.tev:has-text("UA 1234")');
   await page.waitForSelector('#evSheet:not([hidden])');
   assert.equal(await page.getAttribute('#evBody a.rowbtn', 'href'), '../travelvintage/');
-  assert.ok((await page.textContent('#evBody a.rowbtn')).includes('Open in Travel Vintage'));
+  assert.ok((await page.textContent('#evBody a.rowbtn')).includes('Open in Travel'));
   await page.click('#evSheet .iconbtn');
   await page.waitForFunction(() => document.getElementById('evSheet').hidden);
   await shot(page, '03-week');

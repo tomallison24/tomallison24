@@ -21,8 +21,8 @@
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
-  document.body.textContent = 'Calendar Vintage can’t be opened inside another page.';
-  throw new Error('Calendar Vintage refuses to run inside a frame');
+  document.body.textContent = 'Calendar can’t be opened inside another page.';
+  throw new Error('Calendar refuses to run inside a frame');
 }
 
 (function () {
@@ -149,7 +149,7 @@ if (window.top !== window.self) {
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
   };
   // The apps a layer item opens, by their Vintage names (Notes has none).
-  const OPEN_IN = { travel: 'Travel Vintage', mail: 'Mail Vintage', fitness: 'Fitness Vintage', drinks: 'Drinks Vintage' };
+  const OPEN_IN = { travel: 'Travel', mail: 'Mail', fitness: 'Fitness', drinks: 'Drinks' };
   // The Family calendar is drawn in Retro mustard (--cal), not the colour iCloud has for it
   // (Calendar uses that one): the layers' colours are Retro too, and all of them stay apart.
   const calColor = () => 'var(--cal)';
@@ -586,7 +586,7 @@ if (window.top !== window.self) {
   // at all; on Cloudflare, the status and page that came back say what's up.
   function offWords() {
     const d = st.apiDetail;
-    if (/github\.io$/i.test(location.hostname)) return 'This is the GitHub Pages copy of the site (' + location.hostname + '), which has no iCloud connection. Open Calendar Vintage from the Cloudflare address for the Family calendar; the layers still show here.';
+    if (/github\.io$/i.test(location.hostname)) return 'This is the GitHub Pages copy of the site (' + location.hostname + '), which has no iCloud connection. Open Calendar from the Cloudflare address for the Family calendar; the layers still show here.';
     let w = 'The iCloud connection isn’t answering at ' + location.hostname + '/calendar/api/.';
     if (d && d.ctype === 'json') return w + ' The function is running but answered with the error “' + d.text + '” (' + d.status + ')' + (d.text === 'not-found' ? ', which means the request reached it without the app’s own header, or a route it doesn’t know' : '') + '.';
     if (d) w += ' It answered ' + d.status + (d.ctype ? ' (' + d.ctype + ')' : '') + (d.text ? ': “' + d.text + '”' : '') + '.';
@@ -1365,7 +1365,7 @@ if (window.top !== window.self) {
       : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
     const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
     const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
-    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'If you use Mail or Mail Vintage, open it once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
+    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'If you use Mail or Mail, open it once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
