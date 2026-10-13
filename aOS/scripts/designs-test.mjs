@@ -190,5 +190,22 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   report('in the Vintage look every link goes to the Vintage app, a pick wins, and Sea glass goes back to Standard', pr); await ctx.close();
 }
 
+// 7. the Standard app already on the Home Screen does not hide the Vintage one: in the Vintage look Get still offers it
+{
+  const { ctx, p, errs } = await open({ weather: Date.now(), mail: Date.now() }, 'light', 'vintage'); const pr = [...errs];
+  await p.waitForTimeout(600);
+  for (const [base, v] of [['weather', 'weathervintage'], ['mail', 'mailvintage']]) {
+    const row = '#list .row[data-app="' + base + '"] [data-get]';
+    if (await attr(p, row, 'data-get') !== v) pr.push(base + ' is Installed, but its row does not offer ' + v + ': ' + await attr(p, row, 'data-get'));
+    if (!/^Get$/i.test((await text(p, row)).trim())) pr.push(v + ' says ' + (await text(p, row)).trim() + ', not Get');
+    if (!new RegExp('/' + v + '/\\?via=aos').test(await attr(p, row, 'href') || '')) pr.push('the link does not open ' + v);
+  }
+  // and the Standard one is one tap away in the Design menu, still Installed
+  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.dbtn'); await p.click('.dbtn');
+  const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
+  if (!/Installed/.test(opts[0] || '')) pr.push('the Design menu does not say Standard is Installed: ' + JSON.stringify(opts));
+  report('with the Standard app already installed, the Vintage look still offers Get on the Vintage app', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 process.exit(failed ? 1 : 0);

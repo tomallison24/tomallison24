@@ -67,10 +67,10 @@
   const DKEY = id => 'aos.design.' + id;
   const chosenDesign = id => {
     const ds = DESIGNS[id]; let want = null; try { want = localStorage.getItem(DKEY(id)); } catch {}
-    // a pick made here, else the design already added, else the one that goes with aOS's look: Vintage in the
-    // Vintage look (every link and Get in aOS then goes to the Vintage app), Standard in Sea glass
-    const byLook = ds.find(d => d.look === (window.aosLook && aosLook.get() === 'glass' ? 'glass' : 'vintage'));
-    return ds.find(d => d.id === want) || ds.find(d => INST.has(d.app)) || byLook || ds[0];
+    // a pick made here; else, in the Vintage look, the Vintage design, even when the Standard app is already on the
+    // Home Screen (so Get offers the Vintage app, and every link goes to it); else the design already added, else Standard
+    const vintage = ds.find(d => d.look === 'vintage'), glassLook = window.aosLook && aosLook.get() === 'glass';
+    return ds.find(d => d.id === want) || (!glassLook && vintage) || ds.find(d => INST.has(d.app)) || ds[0];
   };
   const appOf = id => hasDesigns(id) ? chosenDesign(id).app : id;
   const pickDesign = (id, did) => { try { localStorage.setItem(DKEY(id), did); } catch {} };
