@@ -140,6 +140,23 @@ for (const scheme of ['light', 'dark']) {
     });
     assert.ok(fits, 'the condition column is inside the disc');
   });
+  await step(scheme + ': every kind of weather: ink reads on its disc, and the text and footer read on its ground', async () => {
+    const got = await page.evaluate(groups => groups.map(g => {
+      const d = document.createElement('div'); d.dataset.c = g; d.style.background = 'var(--ground)'; d.style.color = 'var(--text)';
+      const m = document.createElement('div'); m.style.color = 'var(--muted)';
+      const p = document.createElement('div'); p.style.background = 'var(--disc)'; p.style.color = 'var(--wv-disc-ink)';
+      d.append(m, p); document.body.append(d);
+      const r = { g, ground: getComputedStyle(d).backgroundColor, text: getComputedStyle(d).color, muted: getComputedStyle(m).color, disc: getComputedStyle(p).backgroundColor, ink: getComputedStyle(p).color };
+      d.remove(); return r;
+    }), SKY_GROUPS);
+    for (const r of got) {
+      assert.ok(contrast(r.ink, r.disc) >= 4.5, `${r.g}: ink on its disc ${contrast(r.ink, r.disc).toFixed(2)}`);
+      assert.ok(contrast(r.text, r.ground) >= 4.5, `${r.g}: text on its ground ${contrast(r.text, r.ground).toFixed(2)}`);
+      assert.ok(contrast(r.muted, r.ground) >= 4.5, `${r.g}: muted text on its ground ${contrast(r.muted, r.ground).toFixed(2)}`);
+      assert.ok(contrast(r.disc, r.ground) >= 1.15, `${r.g}: the disc shows against its ground ${contrast(r.disc, r.ground).toFixed(2)}`);
+      assert.equal(r.disc, DISC(scheme)[r.g]);
+    }
+  });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'main-' + scheme + '.png') });
 
   await step(scheme + ': the five views of the timeline', async () => {
