@@ -277,7 +277,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
 }
 { // its own storage, the family's server route
   const { ctx, page } = await phone();
-  const calls = []; page.on('request', r => { if (/\/api\//.test(r.url())) calls.push(new URL(r.url()).pathname); });
+  const calls = []; page.on('request', r => { const u = new URL(r.url()); if (/\/api\//.test(u.pathname) && !u.pathname.startsWith('/aOS/api/')) calls.push(u.pathname); });   // aOS's own state call (welcome.js) is not the app's
   await page.reload(); await page.waitForTimeout(900);
   const keys = await page.evaluate(() => Object.keys(localStorage));
   ok('its own keys: allison-mealsv-…, never Meals\' allison-meals-…', keys.includes('allison-mealsv-v2') && keys.filter(k => !/^(allison-mealsv-|aos\.)/.test(k)).length === 0 && !keys.some(k => /^allison-meals-/.test(k)), keys.join());

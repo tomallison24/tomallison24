@@ -317,7 +317,7 @@ await test('its own storage and databases, and feeds through Podcasts’ route',
   const sheet = fakeSheet(GS, SHEET_SECRET);
   const P = await newPage('light', { [KEY]: seed().replace('"lastRefresh":' + NOW, '"lastRefresh":0') }, sheet), p = P.page;
   const reqs = [];
-  p.on('request', r => { const u = new URL(r.url()); if (u.pathname.includes('/api/')) reqs.push(u.pathname); });
+  p.on('request', r => { const u = new URL(r.url()); if (u.pathname.includes('/api/') && !u.pathname.startsWith('/aOS/api/')) reqs.push(u.pathname); });   // aOS's own state call (welcome.js) is not the app's
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
   await p.waitForTimeout(2200);
   assert.ok(reqs.length > 0 && reqs.every(x => x.startsWith('/podcasts/api/')), 'feed requests go to /podcasts/api/: ' + JSON.stringify(reqs));
