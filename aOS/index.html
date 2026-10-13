@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<!-- default, not black-translucent: that one always draws the clock white, which vanishes on the cream theme. -->
+<!-- default, not black-translucent: that one always draws the clock white, which vanishes on the cream of the Vintage look (it suits Sea glass too). -->
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="aOS">
 <meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
@@ -17,7 +17,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   aOS - the home of every AllisonOS app, as an app store, in a mid-century modern look
-  (the last block of the style sheet; the Sea glass styles above it are still there).
+  (Vintage, the second <style>) or, picked under the account, the original Sea glass
+  (the first <style>): look.js applies the choice before the page is drawn.
 
   - Today: the family card first - the family icon, "The Allison Family", a
     greeting by name and everyone in the family (signed in) - then postcards, as a bento (one tall, two halves, one wide): setting up
@@ -303,6 +304,8 @@
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
 :where(.get, button.avatar){position:relative}
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+</style>
+<style id="vintage">
   /* ======================================================================
      Mid-century modern, in the Retro colors
      ----------------------------------------------------------------------
@@ -314,6 +317,9 @@
      so it wins over the Sea glass styles above, which are still underneath. Only
      colors, shapes and type change: every tab, page, button and menu works as
      before. The app icons in the list keep their own look.
+
+     It is its own <style> so look.js can switch it off: the Look picker under the
+     account (Appearance) puts Sea glass back, kept on this phone (aos.look).
      ====================================================================== */
   :root { --mc-card: #FBF5E9; --mc-card-2: #F0E5D0; --mc-edge: rgba(43,37,34,.14); --mc-mustard: #E3A72F; --mc-teal: #1F6F6B; --mc-orange: #D8572A; --mc-walnut: #4A3426; --mc-on-mustard: #2B2522;
     --bg: #F4ECDD; --card: #FBF5E9; --solid: #FBF5E9; --text: #2B2522; --muted: #5B4A3F; --line: rgba(43,37,34,.12); --dot: rgba(43,37,34,.07);
@@ -424,6 +430,7 @@
   .hero .art { background: none; }
   .hero .art img { box-shadow: 0 0 0 8px rgba(255,248,236,.9); }
   .hero h2 { font-weight: 600; letter-spacing: -.02em; }
+  .hero .mk { font-weight: 600 !important; letter-spacing: -4px !important; }
   .body h3 { font-weight: 600; } .body h3::before { width: 8px; height: 8px; border-radius: 50%; background: var(--mc-mustard); flex-basis: 8px; }
 
   /* the family card and the account */
@@ -464,6 +471,7 @@
   .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .dsheet h1 { font-weight: 600; letter-spacing: -.03em; }
 </style>
+<script src="look.js"></script>   <!-- the picked look, before the first paint -->
 </head>
 <body>
 <div class="atoms" aria-hidden="true"><b></b><b></b><b></b></div>
