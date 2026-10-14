@@ -173,7 +173,7 @@ board, and last the AI:
   Claude without a press (not when Travel reads Gmail, not when it opens). A press
   reads the emails behind that trip's incomplete bookings from Gmail, and for each
   asks only about what is missing (a date is asked for only if the email has
-  one), at most 10 a press and 30 a month on a phone. It then also asks the flight
+  one), with no limit of its own (the cost is a fraction of a cent a check). It then also asks the flight
   board for a missing flight number, and says in a line what it did ("Filled in 2
   details", "The email doesn't say anything more", "didn't come from an email").
   The function (`extract`) scrubs the text (links, addresses, phone and long
