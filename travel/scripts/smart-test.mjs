@@ -143,7 +143,7 @@ const pick = (page, f) => page.evaluate(f);
 // =================== without the calendar: undated bookings, the backlog, the AI and the board ===================
 {
   const { ctx, page, seen, problems } = await open({ calendar: false });
-  await page.waitForFunction(() => window.__travel.bookings.some(b => b.flightNo === '2154' && b.filled), null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__travel.bookings.some(b => b.conf === 'TRZ4KD') && window.__travel.bookings.some(b => b.conf === 'OLDUND'), null, { timeout: 10000 });
 
   await step('an email with no day is kept and waits in "To check" with its times', async () => {
     const b = await pick(page, () => window.__travel.bookings.find(x => x.flightNo === '3073'));
@@ -172,7 +172,19 @@ const pick = (page, f) => page.evaluate(f);
     const old = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'OLD1AA'));
     assert.ok(old, 'but it is still kept as history');
   });
-  await step('a complete booking asks no one; one missing airports asks once, and the answer is marked', async () => {
+  await step('nothing is sent to the AI by itself: not when reading Gmail, not when opening', async () => {
+    assert.equal(seen.extract.length, 0, JSON.stringify(seen.extract.map(x => x.missing)));
+    await page.evaluate(() => window.__travel.smartPass());
+    assert.equal(seen.extract.length, 0);
+  });
+  await step('only a trip with something missing has a Check with AI button; pressing it asks once, for what is missing, and marks the answer', async () => {
+    await page.click('[data-when="upcoming"]');
+    const cards = await page.$$eval('.tripwrap', els => els.map(e => ({ name: e.querySelector('h3').textContent, ai: !!e.querySelector('[data-ai]') })));
+    assert.equal(cards.filter(c => c.ai).length, 1, JSON.stringify(cards));
+    assert.equal(cards.filter(c => !c.ai).length >= 1, true, 'the trip that has everything has no button: ' + JSON.stringify(cards));
+    if (SHOTS) { await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, APP + '-aicard.png') }); }
+    await page.click('.tripwrap [data-ai]');
+    await page.waitForFunction(() => /Filled in 2 details/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
     assert.equal(seen.extract.length, 1, JSON.stringify(seen.extract.map(x => x.missing)));
     assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
     assert.equal(seen.extract[0].type, 'flight');
@@ -183,11 +195,14 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(ua.guess, false); assert.equal(ua.filled, undefined);
     // the undated Cleveland email says no date anywhere, so there was nothing to ask the AI to read
     assert.ok(!seen.extract.some(x => /Cleveland/.test(x.text) || (x.missing || []).includes('date')));
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'nothing is missing any more, so the button is gone');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-aibutton.png') });
   });
-  await step('asking again later does not ask again', async () => {
-    const before = seen.extract.length;
-    await page.evaluate(() => window.__travel.smartPass([]));
-    assert.equal(seen.extract.length, before);
+  await step('the button follows what is missing: back when something is missing, gone when it is complete', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = ''; b.to = ''; delete b.filled; window.__travel.render(); });
+    assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is back while something is missing');
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = 'MCO'; b.to = 'PHL'; window.__travel.render(); });
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false);
   });
   await step('a flight with an airline, airports, day and time but no number gets it from the flight board; an edited one does not', async () => {
     await page.evaluate(day => {
@@ -302,11 +317,13 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
-    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /^On\./);
+    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Nothing is sent until you press it/);
+    assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
-    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.equal((await page.textContent('#stAiSub')).trim(), 'Off');
+    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No button/);
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'and gone when it is off');
     const before = { ev: seen.events, ex: seen.extract.length };
-    await page.evaluate(() => window.__travel.smartPass([{ bid: window.__travel.bookings[0].id, text: 'x', subject: '', date: Date.now(), msgId: 'zz' }]));
+    await page.evaluate(() => window.__travel.smartPass());
     assert.equal(seen.events, before.ev); assert.equal(seen.extract.length, before.ex);
   });
   await ctx.close();

@@ -133,7 +133,7 @@ airports); airline promotions with a flight number in them are still ignored.
 
 ## Smart help
 
-Two things, each switchable in Settings:
+Two things, each switchable in Settings (the AI one only ever runs when you press its button):
 
 **The Family calendar, both ways** (needs the Calendar app's function: the iCloud
 secrets in `calendar/README.md`). Each time Travel reads Gmail, opens (every 20
@@ -168,17 +168,22 @@ board, and last the AI:
   but no number: `functions/travel/api` `find` asks AeroDataBox's departure
   board for that airport in a window around the time. Only a single match is
   used.
-- *AI.* One email, only when a booking from it still lacks something Claude
-  could read (a date is asked for only if the email has one), at most 6 a scan
-  and 30 a month on a phone, never twice for the same email. The function
-  (`extract`) scrubs the text (links, addresses, phone and long numbers, and the
-  lines about points, payment and prices), sends it with what is already
-  known, and asks Claude for the missing fields as structured output with the
-  email's own words as a quote for each. An answer whose words are not in the
-  excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not
-  invent one. Claude keeps nothing from our side. It uses the repository's
-  `ANTHROPIC_API_KEY` secret (the same one Meals, News and Orders use) and
-  `claude-opus-5-5`; the optional `TRAVEL_AI_MODEL` secret names another model.
+- *AI, only when you press it.* A trip card (an upcoming trip with a booking that
+  still lacks something) has a **Check with AI** button; nothing is ever sent to
+  Claude without a press (not when Travel reads Gmail, not when it opens). A press
+  reads the emails behind that trip's incomplete bookings from Gmail, and for each
+  asks only about what is missing (a date is asked for only if the email has
+  one), at most 10 a press and 30 a month on a phone. It then also asks the flight
+  board for a missing flight number, and says in a line what it did ("Filled in 2
+  details", "The email doesn't say anything more", "didn't come from an email").
+  The function (`extract`) scrubs the text (links, addresses, phone and long
+  numbers, and the lines about points, payment and prices), sends it with what is
+  already known, and asks Claude for the missing fields as structured output with
+  the email's own words as a quote for each. An answer whose words are not in the
+  excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not invent
+  one. It uses the repository's `ANTHROPIC_API_KEY` secret (the same one Meals,
+  News and Orders use) and `claude-opus-5-5`; the optional `TRAVEL_AI_MODEL`
+  secret names another model. Settings has a switch that hides the button.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
