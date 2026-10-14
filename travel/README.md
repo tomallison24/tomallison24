@@ -10,7 +10,10 @@ with the details filled in.
   where you're going (tap the name to change it). **Next** at the top is the
   next thing to happen: the flight with its gate and live status, the hotel
   check-in or the car pick-up. **Upcoming**, **Past**, and **To check** for
-  bookings that need a look (below).
+  bookings that need a look (below): an email with no date in it, something
+  read from the words of an email, or something filled in by the calendar, the
+  flight board or the AI. Only what is still to come is listed there; a
+  booking whose date has passed is history, not a to-do.
 - **A trip** is a timeline, day by day: flights, check-in and check-out,
   pick-up and return. **Add to calendar** (top) puts the whole trip in the
   iCloud Family calendar (through the Calendar app's function, where the site
@@ -18,7 +21,7 @@ with the details filled in.
   the reminding. At the bottom,
   **Find more for this trip** opens Google Flights, Google Hotels, Marriott,
   Kayak rental cars and National with the trip's places and dates filled in.
-- **A booking**: every detail can be edited. A flight shows **live status**
+- **A booking**: every detail can be edited (an undated one has a Date field first). A flight shows **live status**
   (on time or delayed, gates, terminals, baggage belt) from 36 hours before
   take-off until it lands. Links to the email (in Mail, or Gmail on the web),
   a map, the calendar, **Mark as cancelled** and **Delete**.
@@ -114,8 +117,72 @@ Rules that keep it tidy:
 - **Deleted means deleted.** A booking you delete doesn't come back when the
   email is read again, on this phone or the other.
 
-Nothing about the emails is kept or sent anywhere: only the bookings found
-in them, on the phone and in your Google Sheet if you connect one.
+Nothing about the emails is kept: only the bookings found in them, on the
+phone and in your Google Sheet if you connect one. Nothing leaves the phone
+either, except what **Smart help** sends when a booking is missing something
+(next section).
+
+**An email with no date.** Some confirmations (Frontier's, at times) leave the
+day out altogether. The booking is not dropped: it is kept with its airports,
+flight number and times, shown in **To check** as *Needs a date*, and it gets
+its day from your Family calendar, from a later email about the same booking
+(a check-in email has it), or from you (open it, pick the day). The email's own
+print stamp ("10/13/26 06:54 PM" in a footer) is never taken for the day you
+fly. This is only done for plain reservations (a booking subject, both
+airports); airline promotions with a flight number in them are still ignored.
+
+## Smart help
+
+Two things, each switchable in Settings:
+
+**The Family calendar, both ways** (needs the Calendar app's function: the iCloud
+secrets in `calendar/README.md`). Each time Travel reads Gmail, opens (every 20
+minutes at most) or you change a booking:
+
+- *Calendar into Travel.* Events in the Family calendar that read as a flight
+  (a flight number, `RDU → CLE`, "Flight to Cleveland"), a hotel stay (a
+  hotel's name, several days) or a car rental are matched with the bookings
+  already here, by day plus what they share (flight number, airports, the time
+  they leave; a hotel's name; the pick-up day). One match: it is linked, and an
+  undated flight takes the event's day. No match: a booking is made from the
+  event (*Made from an event in your calendar*, in To check), for events from
+  today on. Two bookings fit: it is left alone. When the email about it
+  arrives, it takes the booking over, so nothing is listed twice. Events
+  Travel wrote itself (their ids end `@allison-travel`), repeating events and
+  everything else are ignored.
+- *Travel into the calendar.* A booking that is plainly right (not a guess, not
+  "To check") and still to come (a flight also needs its time and both
+  airports) is written to the Family calendar once, under its own id, and
+  written again if you change it; a cancelled or deleted one is taken out (only
+  events Travel itself wrote are ever removed). Nothing is written for a booking the calendar
+  already has an event for (yours or ours), so a trip is never in the calendar
+  twice. Calendar's Travel layer leaves out whatever the calendar already has.
+  The trip's **Add to calendar** button still works, with the same ids.
+
+**Filling in what is missing.** Nothing is looked up for a booking that has
+everything. When something is missing, in this order: another email about the
+booking (merged above), the Family calendar (above), the airport's flight
+board, and last the AI:
+
+- *Flight board.* A flight with an airline, both airports, the day and the time
+  but no number: `functions/travel/api` `find` asks AeroDataBox's departure
+  board for that airport in a window around the time. Only a single match is
+  used.
+- *AI.* One email, only when a booking from it still lacks something Claude
+  could read (a date is asked for only if the email has one), at most 6 a scan
+  and 30 a month on a phone, never twice for the same email. The function
+  (`extract`) scrubs the text (links, addresses, phone and long numbers, and the
+  lines about points, payment and prices), sends it with what is already
+  known, and asks Claude for the missing fields as structured output with the
+  email's own words as a quote for each. An answer whose words are not in the
+  excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not
+  invent one. Claude keeps nothing from our side. It uses the repository's
+  `ANTHROPIC_API_KEY` secret (the same one Meals, News and Orders use) and
+  `claude-opus-5-5`; the optional `TRAVEL_AI_MODEL` secret names another model.
+- Whatever is filled in this way is marked in the booking (*Filled in … from
+  your calendar / by AI / from the airport's flight board. Check these
+  details.*) and stays in **To check** until you tap **Looks right** or edit it.
+  It is not written to the calendar until then.
 
 ## Gmail
 
@@ -168,7 +235,9 @@ Keeping it free: each flight is looked up only from 36 hours before take-off
 until it lands, at most every 10 minutes in the last 6 hours and hourly
 before that; the server keeps each answer for 10 minutes so both phones share
 it; and each phone stops at 250 lookups a month. Sent to AeroDataBox: the
-flight number and date, nothing about who's flying.
+flight number and date, nothing about who's flying. The flight board lookup
+(Smart help) sends an airline, two airports, a day and a time, is capped at 30
+a month on a phone, and each answer is kept for an hour.
 
 ## Google Sheet sync
 
@@ -238,12 +307,29 @@ site.
 node travel/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts
 node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed
 node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed
+node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed
 node travel/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg
 ```
 
 The last two need Playwright with Chromium (`npm i -g playwright`).
 
 ## What I could not verify
+
+- **Smart help was built and tested without the real services.** The AI route
+  was never called against the real Claude API, and the flight board lookup
+  was never called against AeroDataBox: both are tested with stand-ins that
+  follow the documentation (`scripts/api-test.mjs`), and the departure board's
+  answer shape (`movement`, `scheduledTime`) is from memory of AeroDataBox's
+  documentation, read defensively. The first real use is the real test, and
+  the AeroDataBox plan may count a board lookup as more than one unit.
+- **The calendar side was never run against iCloud.** It uses Calendar's own
+  `events` and `import` routes, which have their own tests; Travel's side is
+  tested with a stand-in for them. Whether an event someone wrote by hand is
+  recognised depends on its words (a flight number, two airports or "Flight
+  to <city>" is enough; "Trip" is not).
+- **Whether an email with no date is always like that.** The one real
+  Frontier email this was built from had a blank where the date goes in its
+  HTML; other airlines' layouts have not been seen.
 
 This was built where Google, RapidAPI, AeroDataBox, Duffel and most travel
 sites were blocked by the network, and without a real inbox. So:

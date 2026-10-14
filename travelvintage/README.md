@@ -77,6 +77,13 @@ change independently and Travel is never touched.
   Both are separate Home Screen apps; whether iOS opens that address inside the
   installed Mail Vintage or in Safari is up to iOS, which treats a link outside
   an app's own folder as a web page (not checked on a phone).
+- **Smart help is the same** as Travel's (`travel/README.md`, "Smart help"): bookings
+  with no date wait in To check, the Family calendar is read and written
+  without listing a trip twice, and the flight board and the AI fill in what an
+  email left out. Each has its own switch in this app's Settings, its own
+  record of what was written (`calSig`) and asked, and it uses Travel's
+  function. The calendar events carry the same ids as Travel's, so having both
+  apps never doubles an event.
 - **The same email reader.** `parse.js` is the same file as Travel's (checked by
   `scripts/same-reader-test.mjs`), so an email reads the same in both. When
   `travel/parse.js` changes, copy it over: `cp travel/parse.js
@@ -92,6 +99,7 @@ kinds on a trip, the shapes behind the title; that it keeps only its own storage
 keys; that a fresh sign-in from Orders or Mail is used; and that it leaves
 Calendar's Travel layer to Travel (CI: `apps-check.yml`). `node
 travelvintage/scripts/same-reader-test.mjs` checks the reader is Travel's.
+`node travel/scripts/smart-test.mjs travelvintage` runs Travel's Smart help test on this app.
 `node travelvintage/scripts/make-icons.mjs` redraws the icons from `icon.svg` (a
 cream jet climbing away on walnut, with a mustard sun and a burnt-orange pill).
 The email reader's and the flight status function's tests (`parse-test.mjs`,
