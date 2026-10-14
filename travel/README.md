@@ -193,8 +193,10 @@ board, and last the AI:
   and Claude answers from that list alone, in a few sentences, and names the
   bookings it used, which are shown under the answer and open when tapped. If the
   list doesn't say, it says so. At most 300 characters a question and 60 questions
-  a month on a phone. Same key and model as above; the Settings switch hides the
-  bar along with the buttons.
+  a month on a phone (a guard on spend, kept on the phone; see the AI note
+  above). The bar shows even before there are any bookings: it then says there is
+  nothing to look through, without asking Claude or using up a question. Same key
+  and model as above; the Settings switch hides the bar along with the buttons.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
