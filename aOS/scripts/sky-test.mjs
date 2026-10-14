@@ -12,6 +12,8 @@
 //     when there is none, and can be held still (aos.sky: what the other tests do, so they work at any hour);
 //   - aOS in its Sea glass look has no sky; Home Vintage's other tones stay as picked.
 // Weather Vintage isn't here: it draws its own sky from the forecast (weathervintage/scripts/app-test.mjs).
+// The text-off-the-disc check holds on the widest fallback font too (the phone has Futura; CI's Linux and Android do not):
+// SKY_FONT="DejaVu Sans" node aOS/scripts/sky-test.mjs tries one.
 // Works on any day: the clock is pinned (September 30, the longest month name, which makes the widest headers).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -65,7 +67,9 @@ async function open(app, { at = NOON, scheme = 'light', theme = null, reduce = f
   }, { theme, look, seed, place, pin, at, PLACE });
   await ctx.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); if (u.pathname.includes('/api/')) return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }); return r.continue(); });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/' + app + '/'); await p.waitForTimeout(900);
+  await p.goto(BASE + '/' + app + '/');
+  if (process.env.SKY_FONT) await p.addStyleTag({ content: `*{font-family:"${process.env.SKY_FONT}",sans-serif !important}` });   // try another fallback font (the phone has Futura; another machine or Android doesn't)
+  await p.waitForTimeout(900);
   return { ctx, p, errs };
 }
 
