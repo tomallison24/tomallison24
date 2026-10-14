@@ -525,6 +525,14 @@ svg.fs{fill:currentColor}
 .trip .dates{font-size:14px;color:var(--muted)}
 .trip .icons{display:flex;flex-wrap:wrap;gap:6px}
 .trip.past{opacity:.82}
+.askbar{margin:10px 0 2px}
+.askbar[hidden]{display:none}
+.askout{border-radius:22px;padding:14px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+.askq{font-size:13px;color:var(--muted)}
+.aska{font-size:16px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
+.aska.err{color:var(--muted)}
+.askclear{align-self:flex-end}
+.askout .tl{margin:0}
 .tripwrap{position:relative}
 .trip.hasai{padding-bottom:54px}
 .aibtn{position:absolute;right:12px;bottom:10px}
@@ -896,6 +904,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         </div>
       </div>
       <div class="chips" id="whenChips" role="toolbar" aria-label="Which trips"></div>
+      <form class="search glass askbar" id="askForm" role="search" action="#" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>
+        <input id="askInput" type="search" placeholder="Ask AI about your trips" aria-label="Ask AI about your trips" enterkeyhint="send" maxlength="300" autocomplete="off" autocapitalize="sentences">
+      </form>
     </header>
     <main class="list" id="list"></main>
   </section>

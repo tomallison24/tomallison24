@@ -159,4 +159,59 @@ await test('extract: limits, refusals and garbage come back as plain answers', a
   globalThis.fetch = async () => { throw new Error('offline'); };
   assert.equal((await post({ type: 'flight', missing: ['date'], text: EMAIL })).body.error, 'unreachable');
 });
+// ---- ask: a question about your trips ----
+const postAsk = async (body, { key = 'sk-ant-test', header = true, raw } = {}) => {
+  const request = new Request('https://site.example/travel/api/ask', { method: 'POST', headers: header ? { 'X-Travel': '1', 'Content-Type': 'application/json' } : {}, body: raw || JSON.stringify(body) });
+  const res = await onRequestPost({ request, params: { route: ['ask'] }, env: key ? { ANTHROPIC_API_KEY: key } : {} });
+  return { status: res.status, body: await res.json() };
+};
+const TRIPS = [
+  { name: 'Cleveland', when: 'upcoming', items: [
+    { id: 'f-1', kind: 'flight', flight: 'F9 3073', from: 'RDU', to: 'CLE', dep: '2026-11-02T16:04', arr: '2026-11-02T17:51', conf: 'ZQ4RTE', traveller: 'Pat Example', seat: '19A', notes: 'window please', source: { from: 'x@y.z', subject: 'secret subject' } },
+    { id: 'h-1', kind: 'hotel', name: 'Courtyard Cleveland Beachwood', city: 'Beachwood', checkIn: '2026-11-02', checkOut: '2026-11-05', check: true, phone: '555-0100' }] },
+  { name: 'Boston', when: 'past', items: [{ id: 'f-2', kind: 'flight', flight: 'UA 110', from: 'DEN', to: 'BOS', dep: '2026-03-04T20:15', status: 'cancelled' }] },
+  { name: 'Needs a date', when: 'to check', items: [{ id: 'f-3', kind: 'flight', flight: 'F9 3074', from: 'CLE', to: 'RDU', check: true }, { id: 'bad id!', kind: 'flight' }] },
+];
+const asked = (answer, bookingIds) => () => new Response(JSON.stringify({ model: 'claude-opus-5-5', stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify({ answer, bookingIds }) }] }), { status: 200 });
+await test('ask: needs the header, the key and a question and a trip list', async () => {
+  calls = [];
+  assert.equal((await postAsk({}, { header: false })).status, 404);
+  assert.equal((await postAsk({ question: 'When do I fly?', today: '2026-10-14', trips: TRIPS }, { key: '' })).body.error, 'no-key');
+  assert.equal((await postAsk({ question: 'hi', today: '2026-10-14', trips: TRIPS })).status, 400, 'too short');
+  assert.equal((await postAsk({ question: 'When do I fly?', today: 'soon', trips: TRIPS })).status, 400);
+  assert.equal((await postAsk({ question: 'When do I fly?', today: '2026-10-14', trips: 'nope' })).status, 400);
+  assert.equal((await postAsk({}, { raw: '{nope' })).status, 400);
+  assert.equal(calls.length, 0);
+  assert.equal((await postAsk({ question: 'When do I fly?', today: '2026-10-14', trips: [] })).body.answer, 'There are no bookings to look through yet.');
+  assert.equal(calls.length, 0, 'no bookings: nothing to ask Claude');
+});
+await test('ask: sends only the allowed fields, asks for a structured answer, and returns it with the bookings it used', async () => {
+  calls = [];
+  let sent;
+  globalThis.fetch = async (url, init) => { calls.push({ url: String(url), headers: init.headers }); sent = JSON.parse(init.body); return asked('Your next flight is F9 3073 from RDU to CLE on Nov 2 at 4:04 PM.', ['f-1', 'not-sent', 'f-1'])(); };
+  const r = await postAsk({ question: 'When is my next flight?', today: '2026-10-14', trips: TRIPS });
+  assert.equal(r.status, 200); assert.match(r.body.answer, /F9 3073/); assert.deepEqual(r.body.bookingIds, ['f-1'], 'only bookings that were sent, once each');
+  assert.equal(calls[0].url, 'https://api.anthropic.com/v1/messages'); assert.equal(calls[0].headers['x-api-key'], 'sk-ant-test');
+  assert.equal(sent.model, 'claude-opus-5-5'); assert.equal(sent.output_config.format.type, 'json_schema'); assert.equal(sent.fallbacks, 'default');
+  assert.deepEqual(Object.keys(sent.output_config.format.schema.properties), ['answer', 'bookingIds']);
+  const prompt = sent.messages[0].content;
+  assert.match(prompt, /^Today is 2026-10-14\./); assert.match(prompt, /Question: When is my next flight\?$/);
+  for (const never of ['Pat Example', '19A', 'window please', 'x@y.z', 'secret subject', '555-0100', 'bad id']) assert.equal(prompt.includes(never), false, never + ' was sent');
+  for (const kept of ['F9 3073', 'ZQ4RTE', 'Courtyard Cleveland Beachwood', '"when":"to check"', '"check":true', '"status":"cancelled"']) assert.ok(prompt.includes(kept), kept + ' should be sent');
+});
+await test('ask: limits, refusals and garbage come back as plain answers', async () => {
+  const q = { question: 'When is my next flight?', today: '2026-10-14', trips: TRIPS };
+  globalThis.fetch = async () => new Response('', { status: 429 });
+  assert.equal((await postAsk(q)).body.error, 'limit');
+  globalThis.fetch = async () => new Response('', { status: 401 });
+  assert.equal((await postAsk(q)).body.error, 'key-refused');
+  globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'refusal', content: [] }), { status: 200 });
+  assert.equal((await postAsk(q)).body.refused, true);
+  globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { status: 200 });
+  assert.equal((await postAsk(q)).body.error, 'unreadable');
+  globalThis.fetch = async () => asked('   ', [])();
+  assert.equal((await postAsk(q)).body.error, 'unreadable');
+  globalThis.fetch = async () => { throw new Error('offline'); };
+  assert.equal((await postAsk(q)).body.error, 'unreachable');
+});
 console.log(n + ' passed');

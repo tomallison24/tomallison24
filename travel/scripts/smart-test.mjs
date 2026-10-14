@@ -98,7 +98,7 @@ async function open({ calendar = true, ai = true, board = true } = {}) {
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], find: [], imports: [], deletes: [], events: 0 };
+  const seen = { extract: [], find: [], ask: [], imports: [], deletes: [], events: 0 };
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
@@ -115,6 +115,12 @@ async function open({ calendar = true, ai = true, board = true } = {}) {
       seen.extract.push(body);
       // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote
       return route.fulfill({ json: { ok: true, fields: body.missing.includes('from') ? { from: 'MCO', to: 'PHL' } : {} } });
+    }
+    if (u.pathname.endsWith('/ask')) {
+      const body = JSON.parse(req.postData() || '{}');
+      seen.ask.push(body);
+      const first = body.trips.flatMap(t => t.items).find(i => i.kind === 'flight');
+      return route.fulfill({ json: { ok: true, answer: 'Your next flight is ' + (first && first.flight) + '.', bookingIds: first ? [first.id, 'not-a-booking'] : [] } });
     }
     if (u.pathname.endsWith('/find')) { seen.find.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, candidates: [{ number: '2154', to: 'PHL', local: '' }] } }); }
     return route.fulfill({ json: { ok: true, found: false } });
@@ -203,6 +209,33 @@ const pick = (page, f) => page.evaluate(f);
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is back while something is missing');
     await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = 'MCO'; b.to = 'PHL'; window.__travel.render(); });
     assert.equal(!!(await page.$('.tripwrap [data-ai]')), false);
+  });
+  await step('the Ask AI bar: nothing is sent until you ask; the question goes with the current, past and to-check trips (no names), and the answer names its bookings', async () => {
+    await page.click('[data-when="upcoming"]');
+    assert.equal(await page.$eval('#askForm', e => e.hidden), false, 'the bar is there');
+    await page.fill('#askInput', 'When is my next flight?');
+    await page.waitForTimeout(300);
+    assert.equal(seen.ask.length, 0, 'typing sends nothing');
+    await page.press('#askInput', 'Enter');
+    await page.waitForSelector('.askout .aska:not(.err)');
+    await page.waitForFunction(() => /Your next flight is/.test(document.querySelector('.askout .aska').textContent), null, { timeout: 8000 });
+    assert.equal(seen.ask.length, 1);
+    const sent = seen.ask[0];
+    assert.equal(sent.question, 'When is my next flight?'); assert.match(sent.today, /^\d{4}-\d\d-\d\d$/);
+    const whens = sent.trips.map(t => t.when);
+    assert.ok(whens.includes('upcoming') && whens.includes('past') && whens.includes('to check'), whens.join());
+    const items = sent.trips.flatMap(t => t.items);
+    assert.ok(items.some(i => i.flight === 'F9 3073' && i.check === true && i.conf === 'ZQ4RTE'), 'the undated Cleveland flight is in the to-check part');
+    const text = JSON.stringify(sent);
+    for (const never of ['Pat Example', 'pat@example.com', 'traveller', 'seat', 'notes', 'source']) assert.equal(text.includes(never), false, never + ' was sent');
+    if (SHOTS) { await page.waitForTimeout(900); await page.screenshot({ path: path.join(SHOTS, APP + '-ask.png') }); }
+    const rows = await page.$$eval('.askout .ev', els => els.length);
+    assert.equal(rows, 1, 'only the booking that was sent is shown');
+    await page.click('.askout .ev');
+    await page.waitForSelector('#bkSheet:not([hidden])');
+    await page.click('#bkDone');
+    await page.click('#askClear');
+    assert.equal(await page.$('.askout'), null);
   });
   await step('a flight with an airline, airports, day and time but no number gets it from the flight board; an edited one does not', async () => {
     await page.evaluate(day => {
@@ -317,11 +350,12 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
-    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Nothing is sent until you press it/);
+    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Nothing is sent until you press or ask/);
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
-    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No button/);
+    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No button and no bar/);
     assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'and gone when it is off');
+    assert.equal(await page.$eval('#askForm', e => e.hidden), true, 'the Ask AI bar goes with it');
     const before = { ev: seen.events, ex: seen.extract.length };
     await page.evaluate(() => window.__travel.smartPass());
     assert.equal(seen.events, before.ev); assert.equal(seen.extract.length, before.ex);

@@ -486,7 +486,8 @@ if (window.top !== window.self) {
       else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong>'
         + (st.when === 'past' ? 'Trips move here the day after they end.' : 'New bookings in Gmail show up here after the next check (the envelope, top right).') + '</div>';
     }
-    $('list').innerHTML = h;
+    $('askForm').hidden = !askShown();
+    $('list').innerHTML = askHTML() + h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
     if (!$('tripPage').hidden && st.trip) renderTrip();
@@ -1222,7 +1223,7 @@ if (window.top !== window.self) {
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null;
   const AI_A_MONTH = 30, FIND_A_MONTH = 30;               // per phone; each is a few cents at most
-  function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
+  function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ask: 0, ...o } : { m, ai: 0, find: 0, ask: 0, tried: o.tried || {} }; }
   const aiSave = o => ls.set(K.ai, JSON.stringify({ ...o, tried: Object.fromEntries(Object.entries(o.tried).slice(-300)) }));
   // What each kind of booking can be missing, as the function names the fields.
   const ASK = {
@@ -1334,6 +1335,63 @@ if (window.top !== window.self) {
       toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
     } finally { st.aiBusy = false; render(); }
   }
+  // -- Ask AI: a question about your trips (the bar under the filters on Trips) --
+  // Only when you ask. The question goes with your trip list (dates, places, flight numbers and confirmation codes; no
+  // names, seats, notes or emails) to the function, and Claude answers from that list alone, naming the bookings it used.
+  const ASK_A_MONTH = 60;                                  // questions a month on a phone
+  const askItem = b => {
+    const o = { id: b.id, kind: b.ride ? 'ride' : b.type };
+    if (b.status === 'cancelled') o.status = 'cancelled';
+    if (b.guess || !startOf(b) || b.fromCal) o.check = true;
+    if (b.type === 'flight') Object.assign(o, { flight: flightName(b), from: b.from, to: b.to, dep: b.dep || b.depTime, arr: b.arr, conf: b.conf });
+    else if (b.type === 'hotel') Object.assign(o, { name: b.name, city: b.city, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, conf: b.conf });
+    else if (b.type === 'car') Object.assign(o, { company: b.company, pickupPlace: b.pickupPlace, pickup: b.pickup, dropoff: b.dropoff, conf: b.conf });
+    else Object.assign(o, { title: b.title, place: b.place, start: b.start, end: b.end, conf: b.conf });
+    return o;
+  };
+  function askPayload(question) {
+    const groups = groupTrips();
+    const trips = groups.map(g => ({ name: g.name, when: g.past ? 'past' : 'upcoming', items: g.items.map(askItem) }));
+    const open = undated();
+    if (open.length) trips.push({ name: 'Needs a date', when: 'to check', items: open.map(askItem) });
+    return { question, today: todayStr(), trips };
+  }
+  const askShown = () => aiOn() && aiAvail !== false && bookings.length > 0;
+  function askHTML() {
+    const a = st.ask;
+    if (!a || !askShown()) return '';
+    let h = '<div class="askout glass"><div class="askq">' + esc(a.q) + '</div>';
+    if (a.busy) h += '<div class="aska">Looking through your trips…</div>';
+    else if (a.err) h += '<div class="aska err">' + esc(a.err) + '</div>';
+    else {
+      h += '<div class="aska">' + esc(a.a) + '</div>';
+      const used = (a.ids || []).map(id => bookings.find(b => b.id === id)).filter(Boolean);
+      if (used.length) h += '<div class="tl">' + used.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
+    }
+    return h + (a.busy ? '' : '<button class="textbtn askclear" type="button" id="askClear">Clear</button>') + '</div>';
+  }
+  async function askAI(question) {
+    question = String(question || '').trim().slice(0, 300);
+    if (question.length < 3 || st.askBusy) return;
+    st.askBusy = true;
+    st.ask = { q: question, busy: true }; render();
+    try {
+      if (aiAvail === null) await pingLive();
+      if (!aiAvail) { st.ask = { q: question, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
+      const use = aiUse();
+      if (use.ask >= ASK_A_MONTH) { st.ask = { q: question, err: 'That’s this month’s ' + ASK_A_MONTH + ' questions on this phone.' }; return; }
+      use.ask++; aiSave(use);
+      const r = await aosFetch(API + 'ask', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(question)) });
+      let d = null; try { d = await r.json(); } catch {}
+      if (d && d.ok) st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] };
+      else if (d && d.error === 'no-key') { aiAvail = false; st.ask = null; }
+      else st.ask = { q: question, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t get an answer just now. Try again in a moment.' };
+    } catch { st.ask = { q: question, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
+    finally { st.askBusy = false; render(); }
+  }
+  $('askForm').addEventListener('submit', e => { e.preventDefault(); const i = $('askInput'); const q = i.value; if (q.trim().length >= 3) { askAI(q); i.blur(); } });
+  $('list').addEventListener('click', e => { if (e.target.closest('#askClear')) { st.ask = null; $('askInput').value = ''; render(); } });
+
   // A flight with an airline, the airports, the day and the time but no number: the airport's departure board has it.
   async function findNumbers() {
     if (findAvail === null && liveAvail === null) await pingLive();
@@ -1427,7 +1485,7 @@ if (window.top !== window.self) {
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button. Nothing is sent until you press it: then a short excerpt of that one email (no names, numbers or prices) goes to Claude, and its answer is marked “Check”.' : 'Off. No button.';
+    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button, and Trips has an Ask AI bar. Nothing is sent until you press or ask. Check sends a short excerpt of that one email (no names, numbers or prices); Ask sends your trip list (dates, places, flight numbers, confirmation codes; no names, seats, notes or emails) with your question. Answers are marked “Check”.' : 'Off. No button and no bar.';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
       : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
@@ -1645,6 +1703,7 @@ if (window.top !== window.self) {
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
+  if (aiOn()) setTimeout(() => pingLive().then(render), 1500);
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
     if (syncCfg || !c || !c.url || !c.secret) return;

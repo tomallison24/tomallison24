@@ -184,6 +184,17 @@ board, and last the AI:
   one. It uses the repository's `ANTHROPIC_API_KEY` secret (the same one Meals,
   News and Orders use) and `claude-opus-5-5`; the optional `TRAVEL_AI_MODEL`
   secret names another model. Settings has a switch that hides the button.
+- *Ask AI.* Under the filters on Trips there is a bar: ask a question about your
+  trips ("when is my next flight?", "which hotels did I stay at in September?",
+  "what's still to check?") and press Enter. Nothing is sent while you type. The
+  question goes to the function (`ask`) with your trip list (current, past and to
+  check: dates, places, flight numbers, hotel and rental names, confirmation codes
+  and what is unconfirmed; never names, seats, notes, email addresses or subjects),
+  and Claude answers from that list alone, in a few sentences, and names the
+  bookings it used, which are shown under the answer and open when tapped. If the
+  list doesn't say, it says so. At most 300 characters a question and 60 questions
+  a month on a phone. Same key and model as above; the Settings switch hides the
+  bar along with the buttons.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
