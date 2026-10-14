@@ -33,6 +33,18 @@ It is the last block of the style sheet in `index.html`; the glass styles above
 it are still there underneath. Fitness Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Fitness
 
 It is a second copy of Fitness' page and script, not a setting, so the two can
@@ -41,7 +53,7 @@ change independently and Fitness is never touched.
 - **Own storage.** Every key is `allison-fitnessv-v1…` (Fitness' is
   `allison-fitness-v1…`) and the backup copy of the Sheet link is in the
   IndexedDB database `allison-fitnessv`; the offline cache is
-  `fitnessvintage-v1`. So each app has its own log and its own Sheet settings.
+  `fitnessvintage-v2`. So each app has its own log and its own Sheet settings.
   A workout logged in one is not in the other, unless both are connected to the
   same Sheet (below).
 - **The same Google Sheet, if you like.** Fitness and Fitness Vintage use the

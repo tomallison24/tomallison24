@@ -341,7 +341,7 @@
   /* the atomic shapes behind the title (they scroll away with the page) */
   .atoms { --ox: max(0px, calc(50% - 320px)); position: absolute; top: 0; left: 0; right: 0; z-index: 0; height: 270px; overflow: hidden; pointer-events: none; }   /* --ox: the shapes hang off the edge of the 640px column, on a wide screen too */
   .atoms b { position: absolute; display: block; opacity: var(--atom); }
-  .atoms b:nth-child(1) { width: 220px; height: 220px; right: calc(var(--ox) - 70px); top: -60px; border-radius: 50%; background: var(--mc-mustard); }
+  .atoms b:nth-child(1) { width: 220px; height: 220px; right: calc(var(--ox) - 70px); top: -60px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
   .atoms b:nth-child(2) { width: 64px; height: 64px; right: calc(var(--ox) + 74px); top: 98px; border-radius: 50%; background: var(--mc-teal); }
   .atoms b:nth-child(3) { width: 120px; height: 34px; right: calc(var(--ox) + 20px); top: 152px; border-radius: 17px; background: var(--mc-orange); transform: rotate(-18deg); }
 
@@ -407,7 +407,7 @@
 
   /* pages that slide in */
   .back, .close { border-radius: 50%; background: var(--mc-card); color: var(--accent); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
-  .apphead::before { top: -44px; width: 168px; height: 168px; margin-left: -84px; border-radius: 50%; background: var(--mc-mustard); }
+  .apphead::before { top: -44px; width: 168px; height: 168px; margin-left: -84px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
   .apphead::after { content: ''; position: absolute; left: 50%; top: 94px; width: 92px; height: 26px; margin-left: 66px; border-radius: 13px; background: var(--mc-orange); transform: rotate(-18deg); }
   .apphead img { border-radius: 30px; box-shadow: 0 0 0 7px var(--mc-card); }
   .apphead h1 { font-weight: 600; letter-spacing: -.02em; }
@@ -472,6 +472,7 @@
   .dsheet h1 { font-weight: 600; letter-spacing: -.03em; }
 </style>
 <script src="look.js"></script>   <!-- the picked look, before the first paint -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky (day and night backgrounds), when the look is Vintage -->
 </head>
 <body>
 <div class="atoms" aria-hidden="true"><b></b><b></b><b></b></div>

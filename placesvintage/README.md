@@ -43,6 +43,18 @@ it are still there underneath. Places Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built. It follows the phone's
 Light or Dark, or aOS's own choice, like every app.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Places
 
 It is a second copy of Places' page and script, not a setting, so the two can
@@ -51,7 +63,7 @@ change independently and Places is never touched.
 - **Own storage.** Every key is `allison-placesv-v1…` (Places' is
   `allison-places-v1…`: the places, their graves, the sort choice, the map's
   layers, the last known position, the Sheet link and the last sync time), and
-  the offline cache is `placesvintage-v1`. So each app has its own lists on the
+  the offline cache is `placesvintage-v2`. So each app has its own lists on the
   phone: a place added in one is not in the other, until they share a Sheet
   (below). Each Home Screen app on iOS has its own storage anyway.
 - **The same Google Sheet, if you like.** Places and Places Vintage use the
@@ -94,7 +106,7 @@ change independently and Places is never touched.
   block. `app.js`: Places' script with the storage key, the Sheet link lookup,
   the business colours and the map padding changed and nothing else. `parse.js`:
   the reader, as Places'. `vendor/`: Leaflet, as Places'.
-- `sw.js`: the offline shell (`placesvintage-v1`; network-first; `api/` is left
+- `sw.js`: the offline shell (`placesvintage-v2`; network-first; `api/` is left
   alone).
 - `icon.svg` → `icon-180.png`, `icon-512.png`: a cream map pin with its dot cut
   out, on pine green, with a mustard sun and an orange pill, drawn by

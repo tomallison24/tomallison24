@@ -1514,7 +1514,7 @@
   /* the atomic shapes behind the title (they scroll away with the page) */
   .aurora { position: absolute; inset: 0 0 auto 0; height: 270px; }
   .aurora b { filter: none; animation: none; opacity: var(--aurora); will-change: auto; }
-  .aurora b:nth-child(1) { width: 220px; height: 220px; left: auto; right: -70px; top: -60px; background: var(--mc-mustard); }
+  .aurora b:nth-child(1) { width: 220px; height: 220px; left: auto; right: -70px; top: -60px; background: var(--sky-disc,var(--mc-mustard)); }
   .aurora b:nth-child(2) { width: 64px; height: 64px; left: auto; right: 74px; top: 98px; bottom: auto; background: var(--mc-teal); }
   .aurora b:nth-child(3) { width: 120px; height: 34px; left: auto; right: 20px; top: 152px; bottom: auto; border-radius: 17px; background: var(--mc-orange); transform: rotate(-18deg); }
   .aurora b:nth-child(4) { display: none; }
@@ -1676,6 +1676,7 @@
   .panel input[type=text]:focus { border-color: transparent; }
   .rtext a { color: var(--accent-text); }
 </style>
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage app -->
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><b></b><b></b><b></b><b></b></div>

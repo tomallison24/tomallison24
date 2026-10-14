@@ -53,9 +53,11 @@ const BG = {
   set(id) { store.set('bg', id); this.start(id); },
   tone() { const v = store.get('tone'); return BG_TONES.find(t => t.id === v) || BG_TONES[0]; },   // Vintage, until another is picked
   setTone(id) { store.set('tone', id); this.paintTone(); },
+  // The Vintage tone is the sky's ground (home/sky.js: cream with mustard by day, walnut with teal by night); the others are as picked.
+  skyGround(t) { return t.id === 'vintage' && window.aosSky ? window.aosSky.ground() : null; },
   // The page's colour, and the phone's bar over it.
   paintTone() {
-    const t = this.tone(), c = t.temp ? this.tempColour(this.outsideF()) : this.light ? t.lite : t.hex;
+    const t = this.tone(), c = this.skyGround(t) || (t.temp ? this.tempColour(this.outsideF()) : this.light ? t.lite : t.hex);
     if (c === this.painted) return;
     this.painted = c;
     document.documentElement.style.setProperty('--bg', c);
@@ -81,7 +83,7 @@ const BG = {
     return /C/.test(w.attributes.temperature_unit || '') ? t * 9 / 5 + 32 : t;
   },
   swatch(t) {
-    if (!t.temp) return this.light ? t.lite : t.hex;
+    if (!t.temp) return this.skyGround(t) || (this.light ? t.lite : t.hex);
     const [c, m, w] = this.TEMP[this.light ? 'lite' : 'dark'];
     return `linear-gradient(135deg, ${c}, ${m} 50%, ${w})`;
   },
@@ -199,6 +201,7 @@ BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its liste
 BG.repaint = () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); };
 BG.scheme.addEventListener('change', BG.repaint);
 addEventListener('aos:theme', BG.repaint);   // Light, Dark or Automatic chosen in the app
+addEventListener('aos:sky', BG.repaint);     // day or night: the Vintage tone's ground changes with it
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.

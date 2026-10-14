@@ -83,7 +83,7 @@ const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' }))));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
@@ -121,7 +121,7 @@ for (const scheme of ['light', 'dark']) {
   });
   await step(scheme + ': drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/);
     assert.equal((await q('body', ['backgroundColor']))[0], ground);
     const [bg, shadow, backdrop, radius] = await q('.ocard', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
@@ -356,7 +356,7 @@ for (const scheme of ['light', 'dark']) {
 // Google Sheet: a "wrong secret" says which link it was.
 await step('another app’s Sheet link is recognised, and an old Orders script is named', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' })));
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' }))));
   const page = await ctx.newPage();
   let app = 'allison-travel-sync';
   await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
@@ -376,7 +376,7 @@ await step('another app’s Sheet link is recognised, and an old Orders script i
 // A working Sheet: orders go up, the other phone's come down, deleted ones are gone.
 await step('Sheet sync sends this phone’s orders and merges the other phone’s', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' })));
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' }))));
   const page = await ctx.newPage();
   const sent = [];
   await ctx.route('https://script.google.com/**', route => {
@@ -401,7 +401,7 @@ await step('Sheet sync sends this phone’s orders and merges the other phone’
 // The Log tab: whatever passes through goes to the Sheet, whatever the kinds in Settings say.
 await step('Sheet Log: every order added, every status change, deletion and left-out email is sent once and acknowledged', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' })));
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ ordersvintage: '999' }))));
   await ctx.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');

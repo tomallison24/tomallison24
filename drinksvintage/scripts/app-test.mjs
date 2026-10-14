@@ -78,7 +78,7 @@ async function newPage(scheme, extra = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US' });
   await ctx.route('**/drinks/api/**', api);
   // The walkthroughs (home/welcome.js) as already seen, as on a phone that has been using the apps.
-  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinksvintage: '999' }) }, extra);
+  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinksvintage: '999' }), 'aos.sky': 'day' }, extra);   // the sky held at day, so the colours don't depend on the hour
   await ctx.addInitScript(extra => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -504,7 +504,7 @@ await test('drawn in the Retro look, light and dark: Futura, flat cream or walnu
     const rp = R.page;
     await rp.goto(BASE + '/drinksvintage/'); await rp.waitForFunction(() => window.__drinks); await rp.waitForTimeout(1000);
     const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/, scheme + ': Futura');
     assert.equal((await q('body', ['backgroundColor']))[0], ground, scheme + ': the ground');

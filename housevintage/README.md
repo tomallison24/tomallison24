@@ -28,6 +28,18 @@ It is the last block of the style sheet in `index.html`; the glass styles
 above it are still there underneath. Home Vintage is drawn this way for
 everyone: the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Its Vintage tone (Settings > Customization) is the sky's ground; any other tone you pick stays as picked. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Home
 
 It is a second copy of Home's page and scripts, not a setting, so the two can
@@ -37,7 +49,7 @@ change there.)
 
 - **Own storage.** Every key is `housev.…` (Home's is `house.…`), so it has
   its own Home Assistant address and token, PIN, favorites, background and
-  schedules, and its own offline cache (`housevintage-v1`). **Connect it once**
+  schedules, and its own offline cache (`housevintage-v2`). **Connect it once**
   the way you did Home: the family address fills itself in when you are signed
   in to aOS, and the token is a long-lived access token (see
   `house/README.md`, "Connecting to Home Assistant"). Making a second token

@@ -84,7 +84,7 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' }))));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
@@ -163,7 +163,7 @@ for (const scheme of ['light', 'dark']) {
 
   await step(scheme + ': drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/);
     assert.equal((await q('body', ['backgroundColor']))[0], ground);
     const [bg, shadow, backdrop, radius] = await q('.trip', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
@@ -197,7 +197,7 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': the trip page: round teal, orange and olive kinds on a cream ground', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
     const light = scheme === 'light';
-    assert.equal((await q('#tripPage .sheet.page', ['backgroundColor']))[0], light ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)');
+    assert.equal((await q('#tripPage .sheet.page', ['backgroundColor']))[0], light ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)');
     assert.equal((await q('#tpBody .tl', ['backgroundColor']))[0], light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)');
     const [flight, hotel, car] = await Promise.all(['flight', 'hotel', 'car'].map(k => q('#tpBody .ev.' + k + ' .ic', ['backgroundColor', 'borderRadius'])));
     assert.equal(flight[0], light ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', 'a flight is teal'); assert.equal(flight[1], '50%');
@@ -318,7 +318,7 @@ for (const scheme of ['light', 'dark']) {
 // Google Sheet: a "wrong secret" says which link it was.
 await step('a Notes Sheet link is recognised, and an old Travel script is named', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' }))));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   let app = 'allison-notes-sync';
   await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
@@ -338,7 +338,7 @@ await step('a Notes Sheet link is recognised, and an old Travel script is named'
 // Without the server function (GitHub Pages): no lookups, a clear message.
 await step('without the flight status server, it says so', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' }))));   // no aOS walkthrough over the page
   const page = await ctx.newPage();
   await page.goto(BASE + '/travelvintage/');
   await page.click('#setBtn');
@@ -350,7 +350,7 @@ await step('without the flight status server, it says so', async () => {
 await step('a fresh sign-in from Orders or Mail is used', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await ctx.addInitScript(() => {
-    localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' }));
+    (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travelvintage: '999' })));
     localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
   });
   const page = await ctx.newPage();

@@ -24,6 +24,14 @@ and Orders Vintage (from the aOS Design Styles canvas):
 It is its own `<style id="vintage">` block in `index.html`, after the Sea glass
 styles, which are still there underneath.
 
+**The sky.** In the Vintage look the page behind the title has Weather Vintage's
+backgrounds with the real sun, as every Vintage design does (`../home/sky.js`): by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark), and the app's page for an app has a moon behind its
+icon at night. Sea glass has none of it (`sky.js` stands down while
+`data-look="glass"`). `scripts/sky-test.mjs` checks it.
+
 **Look picker.** Two places, the same choice. In Safari, the first install step
 (**Choose your look**, `home/welcome.js` `playInstall`) comes before the steps for
 adding aOS to the Home Screen, since iOS takes the icon, status bar style and

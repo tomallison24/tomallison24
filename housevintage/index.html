@@ -743,8 +743,9 @@
   button, input, textarea, select { font-family: inherit; }
 
   /* the atomic shapes behind the title (they scroll away with the page) */
-  body::before { content: ''; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px;   /* a sun, inside the screen's width so the page never grows sideways */
-    background: radial-gradient(circle 102px at calc(100% + 38px) -2px, var(--mc-mustard) 99%, transparent 100%); }
+  /* a sun (the moon at night: home/sky.js), a quarter of it showing in the corner */
+  .ambient { position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; }
+  .ambient i { position: absolute; display: block; width: 204px; height: 204px; right: -140px; top: -104px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
 
 
   /* the title, the sections */
@@ -813,8 +814,10 @@
 
 :where(#gear, #bannerBtn, .disc.sm)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage app -->
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><i></i></div>
 <div class="bgfx" aria-hidden="true"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="bgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16233A"/><stop offset=".55" stop-color="#3B4E6E"/><stop offset=".85" stop-color="#9C8BA0"/><stop offset="1" stop-color="#E2A982"/></linearGradient>

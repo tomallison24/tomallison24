@@ -33,6 +33,18 @@ it are still there underneath. Meals Vintage is drawn this way for everyone: the
 style picker in the design canvas is not built. It follows the phone's Light or
 Dark, or aOS's own choice, like every app.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Meals
 
 It is a second copy of Meals' page and script, not a setting, so the two can
@@ -42,7 +54,7 @@ change independently and Meals is never touched.
   the last plan and deals `allison-mealsv-v2`, ticks, the tab, the store, and the
   Google Sheet link and what was sent to it), the Dinners / Deals / List tab
   slide is `mealsv:tab`, the IndexedDB backup of the Sheet link is
-  `allison-mealsv`, and the offline cache is `mealsvintage-v1`. So each app has
+  `allison-mealsv`, and the offline cache is `mealsvintage-v2`. So each app has
   its own copy of the last plan on the phone, and its own ticks. Each Home
   Screen app on iOS has its own storage anyway.
 - **The same family plan, deals and settings.** Its calls go to Meals' route
@@ -85,7 +97,7 @@ change independently and Meals is never touched.
 - `index.html`: Meals' page and style sheet, with the Retro look as the last
   block. `app.js`: Meals' script with the storage keys and the route changed
   and nothing else. `logic.js`: the sums, as Meals'.
-- `sw.js`: the offline shell (`mealsvintage-v1`; network-first; `api/` is left
+- `sw.js`: the offline shell (`mealsvintage-v2`; network-first; `api/` is left
   alone, including `../meals/api/`).
 - `icon.svg` → `icon-180.png`, `icon-512.png`: a cream bowl with steam rising,
   a band cut out of it, on paprika red with a mustard sun and a teal pill,

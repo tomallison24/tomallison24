@@ -33,13 +33,25 @@ It is the last block of the style sheet in `index.html`; the glass styles above
 it are still there underneath. Calendar Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Calendar, and what is shared
 
 It is a second copy of Calendar's page and script, not a setting, so the two can
 change independently and Calendar is never touched.
 
 - **Own storage.** Every key is `allison-calendarv-v1-…` (Calendar's is
-  `allison-calendar-v1-…`) and the offline cache is `calendarvintage-v1`, so
+  `allison-calendar-v1-…`) and the offline cache is `calendarvintage-v2`, so
   each app has its own settings (layers, week start, clock), last-seen events,
   weather and view. A setting changed in one is not changed in the other.
 - **The same iCloud Family calendar, through Calendar's own server route.**

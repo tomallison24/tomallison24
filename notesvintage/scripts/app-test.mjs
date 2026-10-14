@@ -8,7 +8,7 @@
 // title, a note's colour and a list's colour in the Retro palette. And that it
 // keeps its own storage: every key is allison-notesv-v1* (Notes' is
 // allison-notes-v1*), its Sheet copy is in IndexedDB allison-notesv, its
-// Calendar layer is 'notesv' and its offline cache is notesvintage-v1.
+// Calendar layer is 'notesv' and its offline cache is notesvintage-v2.
 // (Notes' own tests of the notifications, the grocery sections and hostile data
 // are run on this app too: push-app-test, aisles-app-test and security-test.)
 //
@@ -74,7 +74,7 @@ const rgbOf = c => { const n = (c.match(/[\d.]+/g) || []).map(Number); return /^
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' }))));   // no aOS walkthrough over the page
   await ctx.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, json: {} }));
   const page = await ctx.newPage();
@@ -88,7 +88,7 @@ for (const scheme of ['light', 'dark']) {
   await page.waitForSelector('#list .ctile');
   await page.waitForTimeout(900);
   const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
   const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)';
   const orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
 
@@ -346,7 +346,7 @@ for (const scheme of ['light', 'dark']) {
 
   await step(scheme + ': the service worker and manifest are its own', async () => {
     const sw = fs.readFileSync(path.join(ROOT, 'notesvintage/sw.js'), 'utf8');
-    assert.match(sw, /const CACHE = 'notesvintage-v1'/);
+    assert.match(sw, /const CACHE = 'notesvintage-v2'/);
     assert.match(sw, /startsWith\('notesvintage-'\)/);
     for (const f of ['icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'manifest.webmanifest?v=1', 'app.js', 'index.html', '../home/slide.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js']) {
       assert.ok(fs.existsSync(path.join(ROOT, 'notesvintage', f.split('?')[0])), f + ' exists (the offline shell lists it)');

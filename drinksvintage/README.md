@@ -35,6 +35,18 @@ it are still there underneath. Drinks Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built. It follows the phone's
 Light or Dark, or aOS's own choice, like every app.
 
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## Google Sheet sync
 
 Drinks Vintage has the same **More → Google Sheet sync** as Drinks, with its Log tab that goes both ways (see
@@ -51,7 +63,7 @@ change independently and Drinks is never touched.
 - **Own storage.** Every key is `allison-drinksv-v1…` (Drinks' is
   `allison-drinks-v1…`: the log, its graves, the sync marker, the Analysis
   view, the week/month choice and the by name / by kind choice), and the
-  offline cache is `drinksvintage-v1`. So each app has its own copy of the log
+  offline cache is `drinksvintage-v2`. So each app has its own copy of the log
   on the phone. Signed in, the two copies are kept in step through the account
   (below); signed out, a drink logged in one is not in the other. Each Home
   Screen app on iOS has its own storage anyway.
@@ -89,7 +101,7 @@ change independently and Drinks is never touched.
 - `index.html`: Drinks' page and style sheet, with the Retro look as the last
   block. `app.js`: Drinks' script with the storage key and the route changed
   and nothing else. `calc.js`: the sums, as Drinks'.
-- `sw.js`: the offline shell (`drinksvintage-v1`; network-first; `api/` is left
+- `sw.js`: the offline shell (`drinksvintage-v2`; network-first; `api/` is left
   alone, including `../drinks/api/`).
 - `icon.svg` → `icon-180.png`, `icon-512.png`: a cream wine glass, the level of
   the wine cut out of it, on olive with a mustard sun and an orange pill, drawn

@@ -87,7 +87,7 @@ async function newPage(scheme, extra = {}, sheet = null) {
     if (req.method() === 'POST') { posts.push({ ct: req.headers()['content-type'], body: JSON.parse(req.postData()) }); return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.post(req.postData())) }); }
     return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.get()) });
   });
-  extra = Object.assign({ 'aos.seen': JSON.stringify({ [APP_ID]: '999' }), [KEY]: seed() }, extra);
+  extra = Object.assign({ 'aos.seen': JSON.stringify({ [APP_ID]: '999' }), 'aos.sky': 'day', [KEY]: seed() }, extra);   // the sky held at day, so the colours don't depend on the hour
   await ctx.addInitScript(extra => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -266,7 +266,7 @@ await test('drawn in the Retro look, light and dark: Futura, flat cream or walnu
     await rp.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
     await rp.goto(BASE + '/' + FOLDER + '/'); await rp.waitForFunction(() => window.__podcasts); await rp.waitForSelector('#homeBody .rgroup'); await rp.waitForTimeout(600);
     const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', MUSTARD = 'rgb(227, 167, 47)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/, scheme + ': Futura');
     assert.equal((await q('body', ['backgroundColor']))[0], ground, scheme + ': the ground');
