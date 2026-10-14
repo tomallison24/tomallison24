@@ -91,7 +91,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await ctx.addInitScript(id => localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' })), ID);
   const page = await ctx.newPage();
@@ -137,11 +137,13 @@ async function open({ calendar = true, ai = true, board = true } = {}) {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     const k = location.pathname.includes('travelvintage') ? 'travelv' : 'travel';
+    if (localStorage.getItem('test.nomail')) return;
     localStorage.setItem(k + '.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem(k + '.token.ever', '1');
   });
+  if (empty) await ctx.addInitScript(() => localStorage.setItem('test.nomail', '1'));
   await page.goto(BASE + '/' + APP + '/');
-  await page.waitForFunction(() => window.__travel && window.__travel.bookings.length >= 4, null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__travel && (window.__travel.bookings.length >= 4 || localStorage.getItem('test.nomail')), null, { timeout: 10000 });
   return { ctx, page, seen, problems };
 }
 const pick = (page, f) => page.evaluate(f);
@@ -340,6 +342,21 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(seen.deletes.length, 1);
   });
   CAL.splice(0, CAL.length, ...keep);
+  await ctx.close();
+}
+
+// =================== no bookings at all: the Ask AI bar is still there ===================
+{
+  const { ctx, page, seen } = await open({ empty: true });
+  await step('with no bookings the Ask AI bar still shows, and answers without asking Claude', async () => {
+    assert.equal(await page.evaluate(() => window.__travel.bookings.length), 0);
+    await page.waitForFunction(() => !document.getElementById('askForm').hidden, null, { timeout: 5000 });
+    await page.fill('#askInput', 'When is my next flight?');
+    await page.press('#askInput', 'Enter');
+    await page.waitForFunction(() => /no bookings to look through/.test(document.querySelector('.askout .aska').textContent), null, { timeout: 5000 });
+    assert.equal(seen.ask.length, 0, 'nothing to look through, so nothing is sent');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /-ai$/.test(k)) || 'x') || '{}').ask || 0), 0, 'and no question used up');
+  });
   await ctx.close();
 }
 

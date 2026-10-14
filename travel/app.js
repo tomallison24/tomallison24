@@ -1356,7 +1356,7 @@ if (window.top !== window.self) {
     if (open.length) trips.push({ name: 'Needs a date', when: 'to check', items: open.map(askItem) });
     return { question, today: todayStr(), trips };
   }
-  const askShown = () => aiOn() && aiAvail !== false && bookings.length > 0;
+  const askShown = () => aiOn() && aiAvail !== false;     // even with no bookings yet
   function askHTML() {
     const a = st.ask;
     if (!a || !askShown()) return '';
@@ -1373,6 +1373,8 @@ if (window.top !== window.self) {
   async function askAI(question) {
     question = String(question || '').trim().slice(0, 300);
     if (question.length < 3 || st.askBusy) return;
+    // Nothing to look through: answer here, without asking Claude (and without using up a question).
+    if (!bookings.length) { st.ask = { q: question, a: 'There are no bookings to look through yet. Connect Gmail or add one with the + button, and I can answer questions about your trips.', ids: [] }; render(); return; }
     st.askBusy = true;
     st.ask = { q: question, busy: true }; render();
     try {
