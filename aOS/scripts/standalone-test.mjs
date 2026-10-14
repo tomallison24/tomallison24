@@ -4,8 +4,9 @@
 // Drinks API code on an in-memory KV). Fails on any script error, and on any
 // request to another app's folder other than the shared pieces every app may use:
 // the accounts API (/aOS/api/), Drinks' summary for signed-in Fitness/Calendar
-// (/drinks/api/), Weather's forecast code for Home (/weather/data.js), and the app
-// icons aOS shows.
+// (/drinks/api/), Calendar's iCloud bridge for Travel (/calendar/api/: a server
+// function, not the Calendar app; Travel switches it off when the site has none),
+// Weather's forecast code for Home (/weather/data.js), and the app icons aOS shows.
 //   node aOS/scripts/standalone-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -36,7 +37,7 @@ await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom
 const tok = await issue(db, 'O1');
 const APPS = ['mail', 'calendar', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];
 const b = await chromium.launch();
-const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
+const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
 const out = [];
 for (const app of APPS) for (const signed of [false, true]) {

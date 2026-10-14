@@ -131,6 +131,7 @@ jobs:
       - run: node notesvintage/scripts/app-test.mjs
       - run: node places/scripts/app-test.mjs
       - run: node travel/scripts/app-test.mjs
+      - run: node travel/scripts/smart-test.mjs travel && node travel/scripts/smart-test.mjs travelvintage
       - run: node orders/scripts/app-test.mjs
       - run: node ordersvintage/scripts/app-test.mjs
       - run: node travelvintage/scripts/app-test.mjs
