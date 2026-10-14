@@ -133,7 +133,7 @@ airports); airline promotions with a flight number in them are still ignored.
 
 ## Smart help
 
-Two things, each switchable in Settings:
+Two things, each switchable in Settings (the AI one only ever runs when you press its button):
 
 **The Family calendar, both ways** (needs the Calendar app's function: the iCloud
 secrets in `calendar/README.md`). Each time Travel reads Gmail, opens (every 20
@@ -168,17 +168,39 @@ board, and last the AI:
   but no number: `functions/travel/api` `find` asks AeroDataBox's departure
   board for that airport in a window around the time. Only a single match is
   used.
-- *AI.* One email, only when a booking from it still lacks something Claude
-  could read (a date is asked for only if the email has one), at most 6 a scan
-  and 30 a month on a phone, never twice for the same email. The function
-  (`extract`) scrubs the text (links, addresses, phone and long numbers, and the
-  lines about points, payment and prices), sends it with what is already
-  known, and asks Claude for the missing fields as structured output with the
-  email's own words as a quote for each. An answer whose words are not in the
-  excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not
-  invent one. Claude keeps nothing from our side. It uses the repository's
-  `ANTHROPIC_API_KEY` secret (the same one Meals, News and Orders use) and
-  `claude-opus-5-5`; the optional `TRAVEL_AI_MODEL` secret names another model.
+- *AI, only when you press it.* A trip card (an upcoming trip with a booking that
+  still lacks something) has a **Check with AI** button; nothing is ever sent to
+  Claude without a press (not when Travel reads Gmail, not when it opens). A press
+  reads the emails behind that trip's incomplete bookings from Gmail, and for each
+  asks only about what is missing (a date is asked for only if the email has
+  one), at most 10 a press and 30 a month on a phone. It then also asks the flight
+  board for a missing flight number, and says in a line what it did ("Filled in 2
+  details", "The email doesn't say anything more", "didn't come from an email").
+  The function (`extract`) scrubs the text (links, addresses, phone and long
+  numbers, and the lines about points, payment and prices), sends it with what is
+  already known, and asks Claude for the missing fields as structured output with
+  the email's own words as a quote for each. An answer whose words are not in the
+  excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not invent
+  one. It uses the repository's `ANTHROPIC_API_KEY` secret (the same one Meals,
+  News and Orders use) and `claude-haiku-5-5` (a narrow reading job whose every
+  answer is checked); the optional `TRAVEL_AI_MODEL` secret names another model. Settings has a switch that hides the button.
+- *Ask AI.* Under the filters on Trips there is a bar: ask a question about your
+  trips ("when is my next flight?", "which hotels did I stay at in September?",
+  "what's still to check?") and press Enter. Nothing is sent while you type. The
+  question goes to the function (`ask`) with your trip list (current, past and to
+  check: dates, places, flight numbers, hotel and rental names, confirmation codes
+  and what is unconfirmed; never names, seats, notes, email addresses or subjects),
+  and Claude answers from that list alone, in a few sentences, and names the
+  bookings it used, which are shown under the answer and open when tapped. If the
+  list doesn't say, it says so. At most 300 characters a question, and no other
+  limit. The bar shows even before there are any bookings: it then says there is
+  nothing to look through, without asking Claude. Same key as above; it uses
+  `claude-sonnet-5-5` (it reasons over dates and counts), and the optional
+  `TRAVEL_ASK_MODEL` secret names another model. Claude Haiku 5.5 has no
+  server-side fallback for a declined request, so none is asked for when either
+  model is a Haiku. Each question costs a few cents at most (Sonnet 5.5 is $2 / $10
+  per million tokens in / out; Haiku 5.5, $0.10 / $0.50). The Settings switch hides the
+  bar along with the buttons.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.

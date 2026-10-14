@@ -79,8 +79,8 @@ change independently and Travel is never touched.
   an app's own folder as a web page (not checked on a phone).
 - **Smart help is the same** as Travel's (`travel/README.md`, "Smart help"): bookings
   with no date wait in To check, the Family calendar is read and written
-  without listing a trip twice, and the flight board and the AI fill in what an
-  email left out. Each has its own switch in this app's Settings, its own
+  without listing a trip twice, and the flight board fills in what an email left
+  out (the AI only when you press Check with AI on a trip card or ask in the Ask AI bar). Each has its own switch in this app's Settings, its own
   record of what was written (`calSig`) and asked, and it uses Travel's
   function. The calendar events carry the same ids as Travel's, so having both
   apps never doubles an event.
