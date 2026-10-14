@@ -1223,7 +1223,7 @@ if (window.top !== window.self) {
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null;
   const AI_A_MONTH = 30, FIND_A_MONTH = 30;               // per phone; each is a few cents at most
-  function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ask: 0, ...o } : { m, ai: 0, find: 0, ask: 0, tried: o.tried || {} }; }
+  function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
   const aiSave = o => ls.set(K.ai, JSON.stringify({ ...o, tried: Object.fromEntries(Object.entries(o.tried).slice(-300)) }));
   // What each kind of booking can be missing, as the function names the fields.
   const ASK = {
@@ -1338,7 +1338,6 @@ if (window.top !== window.self) {
   // -- Ask AI: a question about your trips (the bar under the filters on Trips) --
   // Only when you ask. The question goes with your trip list (dates, places, flight numbers and confirmation codes; no
   // names, seats, notes or emails) to the function, and Claude answers from that list alone, naming the bookings it used.
-  const ASK_A_MONTH = 60;                                  // questions a month on a phone
   const askItem = b => {
     const o = { id: b.id, kind: b.ride ? 'ride' : b.type };
     if (b.status === 'cancelled') o.status = 'cancelled';
@@ -1380,9 +1379,6 @@ if (window.top !== window.self) {
     try {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { st.ask = { q: question, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
-      const use = aiUse();
-      if (use.ask >= ASK_A_MONTH) { st.ask = { q: question, err: 'That’s this month’s ' + ASK_A_MONTH + ' questions on this phone.' }; return; }
-      use.ask++; aiSave(use);
       const r = await aosFetch(API + 'ask', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(question)) });
       let d = null; try { d = await r.json(); } catch {}
       if (d && d.ok) st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] };

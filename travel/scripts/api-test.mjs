@@ -129,8 +129,9 @@ await test('extract: sends only a scrubbed excerpt and asks only for the missing
   assert.equal(r.status, 200); assert.deepEqual(r.body.fields, { date: '2026-11-02' });
   assert.equal(calls[0].url, 'https://api.anthropic.com/v1/messages');
   assert.equal(calls[0].headers['x-api-key'], 'sk-ant-test');
-  assert.equal(sent.model, 'claude-opus-5-5'); assert.equal(sent.output_config.format.type, 'json_schema'); assert.equal(sent.fallbacks, 'default');
-  assert.equal(calls[0].headers['anthropic-beta'], 'server-side-fallback-2026-07-01');
+  assert.equal(sent.model, 'claude-haiku-5-5', 'reading an email for a missing detail is the small model'); assert.equal(sent.output_config.format.type, 'json_schema'); assert.equal(sent.output_config.effort, 'low');
+  assert.equal('fallbacks' in sent, false, 'Haiku 5.5 has no server-side fallback, so none is asked for');
+  assert.equal('anthropic-beta' in calls[0].headers, false);
   assert.deepEqual(Object.keys(sent.output_config.format.schema.properties.found.properties), ['date']);
   const prompt = sent.messages[0].content;
   assert.match(prompt, /Fields to fill in: date\n/); assert.match(prompt, /"flightNo":"3073"/); assert.equal(prompt.includes('evil'), false);
@@ -192,12 +193,28 @@ await test('ask: sends only the allowed fields, asks for a structured answer, an
   const r = await postAsk({ question: 'When is my next flight?', today: '2026-10-14', trips: TRIPS });
   assert.equal(r.status, 200); assert.match(r.body.answer, /F9 3073/); assert.deepEqual(r.body.bookingIds, ['f-1'], 'only bookings that were sent, once each');
   assert.equal(calls[0].url, 'https://api.anthropic.com/v1/messages'); assert.equal(calls[0].headers['x-api-key'], 'sk-ant-test');
-  assert.equal(sent.model, 'claude-opus-5-5'); assert.equal(sent.output_config.format.type, 'json_schema'); assert.equal(sent.fallbacks, 'default');
+  assert.equal(sent.model, 'claude-sonnet-5-5', 'a question about your trips is the mid-size model'); assert.equal(sent.output_config.format.type, 'json_schema'); assert.equal(sent.output_config.effort, 'medium');
+  assert.equal(sent.fallbacks, 'default'); assert.equal(calls[0].headers['anthropic-beta'], 'server-side-fallback-2026-07-01');
   assert.deepEqual(Object.keys(sent.output_config.format.schema.properties), ['answer', 'bookingIds']);
   const prompt = sent.messages[0].content;
   assert.match(prompt, /^Today is 2026-10-14\./); assert.match(prompt, /Question: When is my next flight\?$/);
   for (const never of ['Pat Example', '19A', 'window please', 'x@y.z', 'secret subject', '555-0100', 'bad id']) assert.equal(prompt.includes(never), false, never + ' was sent');
   for (const kept of ['F9 3073', 'ZQ4RTE', 'Courtyard Cleveland Beachwood', '"when":"to check"', '"check":true', '"status":"cancelled"']) assert.ok(prompt.includes(kept), kept + ' should be sent');
+});
+await test('the two models can each be changed (TRAVEL_AI_MODEL for reading an email, TRAVEL_ASK_MODEL for questions), and a Haiku never gets a fallback', async () => {
+  const seen = [];
+  globalThis.fetch = async (url, init) => { seen.push({ body: JSON.parse(init.body), headers: init.headers }); return seen.length % 2 ? claude({ date: '2026-11-02' }, [{ field: 'date', quote: 'Monday, Nov 2, 2026' }])() : asked('ok', [])(); };
+  const env = m => ({ ANTHROPIC_API_KEY: 'sk-ant-test', ...m });
+  const run = async (route, body, e) => (await onRequestPost({ request: new Request('https://site.example/travel/api/' + route, { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), params: { route: [route] }, env: e })).status;
+  const ex = { type: 'flight', missing: ['date'], text: EMAIL };
+  const qa = { question: 'When is my next flight?', today: '2026-10-14', trips: TRIPS };
+  await run('extract', ex, env({ TRAVEL_AI_MODEL: 'claude-sonnet-5-5' }));
+  await run('ask', qa, env({ TRAVEL_ASK_MODEL: 'claude-haiku-5-5' }));
+  await run('extract', ex, env({ TRAVEL_ASK_MODEL: 'claude-haiku-5-5' }));
+  await run('ask', qa, env({ TRAVEL_AI_MODEL: 'claude-haiku-5-5' }));
+  assert.equal(seen[0].body.model, 'claude-sonnet-5-5'); assert.equal(seen[0].body.fallbacks, 'default');
+  assert.equal(seen[1].body.model, 'claude-haiku-5-5'); assert.equal('fallbacks' in seen[1].body, false); assert.equal('anthropic-beta' in seen[1].headers, false);
+  assert.equal(seen[2].body.model, 'claude-haiku-5-5', 'the other secret does not change it'); assert.equal(seen[3].body.model, 'claude-sonnet-5-5');
 });
 await test('ask: limits, refusals and garbage come back as plain answers', async () => {
   const q = { question: 'When is my next flight?', today: '2026-10-14', trips: TRIPS };

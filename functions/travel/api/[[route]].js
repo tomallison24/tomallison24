@@ -42,7 +42,25 @@ const HOST = 'aerodatabox.p.rapidapi.com';
 const TIMEOUT_MS = 15000;
 const CACHE_S = 600;
 const AI_URL = 'https://api.anthropic.com/v1/messages';
-const AI_MODEL = 'claude-opus-5-5';       // one line to change; the TRAVEL_AI_MODEL variable overrides it
+// Reading an email for a missing detail is narrow and every answer is checked, so the small model does it;
+// answering a question about your trips reasons over dates and counts, so Ask gets the mid-size one.
+// TRAVEL_AI_MODEL and TRAVEL_ASK_MODEL (Pages secrets, optional) name others.
+const CHECK_MODEL = 'claude-haiku-5-5', ASK_MODEL = 'claude-sonnet-5-5';
+// The two requests are the same but for the model and what it is asked: Claude Haiku 5.5 has no server-side
+// fallback for a declined request (asking for one is refused), the others take it.
+function aiRequest(key, model, system, content, effort, schema) {
+  const fallback = !/haiku/i.test(model);
+  return {
+    method: 'POST',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', ...(fallback ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}), 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model, max_tokens: 4000, system, messages: [{ role: 'user', content }],
+      output_config: { effort, format: { type: 'json_schema', schema } },
+      ...(fallback ? { fallbacks: 'default' } : {}),
+    }),
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+  };
+}
 const AI_TIMEOUT_MS = 28000;
 const MAX_BODY = 24 * 1024;
 const MAX_TEXT = 9000;
@@ -246,17 +264,8 @@ async function ask(request, env, key) {
 
   let res;
   try {
-    res = await fetch(AI_URL, {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: String(env.TRAVEL_AI_MODEL || '').trim() || AI_MODEL, max_tokens: 4000, system: ASK_SYSTEM,
-        messages: [{ role: 'user', content: 'Today is ' + today + '.\n\nTrips:\n' + JSON.stringify(trips) + '\n\nQuestion: ' + question }],
-        output_config: { effort: 'medium', format: { type: 'json_schema', schema: ASK_SCHEMA } },
-        fallbacks: 'default',
-      }),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-    });
+    res = await fetch(AI_URL, aiRequest(key, String(env.TRAVEL_ASK_MODEL || '').trim() || ASK_MODEL, ASK_SYSTEM,
+      'Today is ' + today + '.\n\nTrips:\n' + JSON.stringify(trips) + '\n\nQuestion: ' + question, 'medium', ASK_SCHEMA));
   } catch { return reply({ error: 'unreachable' }, 502); }
   if (res.status === 429 || res.status === 529) return reply({ error: 'limit' }, 429);
   if (res.status === 401 || res.status === 403) return reply({ error: 'key-refused' }, 502);
@@ -310,17 +319,7 @@ export async function onRequestPost({ request, params, env }) {
 
   let res;
   try {
-    res = await fetch(AI_URL, {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: String(env.TRAVEL_AI_MODEL || '').trim() || AI_MODEL, max_tokens: 4000, system: SYSTEM,
-        messages: [{ role: 'user', content: prompt }],
-        output_config: { effort: 'low', format: { type: 'json_schema', schema: schemaFor(wanted) } },
-        fallbacks: 'default',
-      }),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-    });
+    res = await fetch(AI_URL, aiRequest(key, String(env.TRAVEL_AI_MODEL || '').trim() || CHECK_MODEL, SYSTEM, prompt, 'low', schemaFor(wanted)));
   } catch { return reply({ error: 'unreachable' }, 502); }
   if (res.status === 429 || res.status === 529) return reply({ error: 'limit' }, 429);
   if (res.status === 401 || res.status === 403) return reply({ error: 'key-refused' }, 502);
