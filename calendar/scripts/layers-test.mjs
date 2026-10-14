@@ -84,7 +84,7 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
     notes: [{ id: 'n9', title: 'Renew passports', body: 'Both of ours', tags: [], color: 'none', pinned: false, reminder: TOMORROW + 'T09:30', created: 1, updated: 1, archived: false, deletedAt: null }],
     lists: [{ id: 'l1', name: 'Home', color: '#F59E0B' }],
     todos: [{ id: 't1', list: 'l1', title: 'Call the plumber', notes: 'About the tap', date: TODAY, time: '09:00', prio: 0, flagged: false, done: false, tags: [] }] } } });
-  const travel = await app('travel', { seed: { 'allison-travel-v1': { bookings: [
+  const travel = await app('travel', { seed: { 'allison-travel-v1-cal-on': 0, 'allison-travel-v1': { bookings: [
     { id: 'bk1', type: 'flight', airlineCode: 'UA', flightNo: '1234', from: 'DEN', to: 'BOS', fromName: 'Denver', toName: 'Boston', dep: TOMORROW + 'T07:05', depIso: '', arr: TOMORROW + 'T13:50', arrIso: '', conf: 'KQ7T2M', updated: 1 },
     { id: 'bk2', type: 'hotel', status: 'cancelled', name: 'Old hotel', checkIn: TOMORROW, checkOut: TOMORROW, updated: 1 }], trips: [] } } });
   const fitness = await app('fitness', { seed: { 'allison-fitness-v1': { v: 2, logs: [{ id: 'f1', date: TODAY, exercise: 'Bench press', group: 'chest', sets: 3, reps: 8, weight: 135, updated: 1 }], exercises: [] } } });

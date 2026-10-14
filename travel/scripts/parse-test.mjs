@@ -286,4 +286,94 @@ test('other Uber and Lyft mail is never a booking', () => {
   ]) assert.equal(one({ subject, from, text }).r.bookings.length, 0, subject);
 });
 
+// ---- bookings with no date, and what is missing ----
+// A made-up email in the layout of one real Frontier confirmation that had no day anywhere in it.
+const NODATE = `Confirmation Email - Confirmed\n\n Miles# XXXXX01234 | Elite Silver Member | Points 100\n\n RDU\n\n CLE\n\n Raleigh/Durham to Cleveland\n\n Confirmation Code\n ZQ4RTE\n\n Your Itinerary\n\n Departing Flight:\n Departing Flight:\n\n Flight\n #3073\n\n Departs RDU\n 4:04 PM Raleigh/Durham Arrives CLE\n 5:51 PM Cleveland\n\n Passenger Details\n\n Pat Example\n\n Outbound Seats\n RDU-CLE 19A\n\n Total Cost\n\n Airfare $40.58\n Total 209.98\n Payment Type Visa\n Status Approved\n\nPrivacy Policy\n 4545 Airport Way, Denver, CO 80239\n 10/13/26 06:54 PM\n`;
+const NODATE_MSG = { text: NODATE, subject: '    Booking Confirmation: ZQ4RTE – Your Upcoming Trip to Cleveland', from: 'Frontier Airlines <flights@t.flyfrontier.com>', date: Date.parse('2026-10-13T18:54:05Z') };
+test('a flight with no day in the email is kept (not dropped) with its times, to be given a day', () => {
+  const { r, b } = one(NODATE_MSG, 'flight');
+  assert.equal(r.bookings.length, 1);
+  assert.equal(b.flightNo, '3073'); assert.equal(b.from, 'RDU'); assert.equal(b.to, 'CLE'); assert.equal(b.conf, 'ZQ4RTE');
+  assert.equal(b.dep, ''); assert.equal(b.depTime, '16:04'); assert.equal(b.arrTime, '17:51'); assert.equal(b.guess, true);
+  assert.deepEqual(P.missingFields(b), ['date']);
+});
+test("the email's own print stamp is never the day you fly, even a day off from the email's date", () => {
+  for (const date of ['2026-10-13T18:54:05Z', '2026-10-14T01:30:00Z', '2026-10-12T23:59:00Z']) assert.equal(one({ ...NODATE_MSG, date: Date.parse(date) }, 'flight').b.dep, '', date);
+  // but a date that is not a stamp still counts
+  assert.equal(P.realDates('Departs 10/20/2026 at 4:04 PM', Date.parse('2026-10-13T18:54:05Z')).length, 1);
+});
+test('applyDate gives an undated flight its day and keeps the times, across midnight too', () => {
+  const b = one(NODATE_MSG, 'flight').b;
+  P.applyDate(b, '2026-11-02');
+  assert.equal(b.dep, '2026-11-02T16:04'); assert.equal(b.arr, '2026-11-02T17:51'); assert.deepEqual(P.missingFields(b), []);
+  const red = { type: 'flight', dep: '', depTime: '23:30', arrTime: '06:10' };
+  P.applyDate(red, '2026-11-02'); assert.equal(red.arr, '2026-11-03T06:10');
+});
+test('only a plain reservation with no day is kept: marketing mail with a flight number is not', () => {
+  assert.equal(one({ text: 'Flight 3073 deals from RDU to CLE. Book now!', subject: 'Fares you will love', from: 'Frontier <deals@mkt.flyfrontier.com>', date: REF }, 'flight').list.length, 0, 'no booking subject');
+  assert.equal(one({ text: 'Flight 3073 on Frontier', subject: 'Your booking', from: 'Someone <a@example.com>', date: REF }, 'flight').list.length, 0, 'no airports');
+});
+test('a hotel or car confirmation with no dates is kept for "To check"', () => {
+  const hotel = one({ text: 'Thank you for booking.\nConfirmation number: 81234567\nCourtyard by Marriott Cleveland Beachwood', subject: 'Reservation Confirmation #81234567 for Courtyard by Marriott Cleveland Beachwood', from: 'Marriott <reservations@res-marriott.com>', date: REF }, 'hotel');
+  assert.equal(hotel.list.length, 1); assert.equal(hotel.b.conf, '81234567'); assert.equal(hotel.b.checkIn, ''); assert.ok(P.missingFields(hotel.b).includes('date'));
+  const car = one({ text: 'Your reservation is confirmed.\nConfirmation Number: 1234567890\nVehicle Class: Midsize', subject: 'National Car Rental Reservation Confirmation', from: 'National <nationalcar@nationalcar.com>', date: REF }, 'car');
+  assert.equal(car.list.length, 1); assert.equal(car.b.pickup, ''); assert.deepEqual(P.missingFields(car.b), ['date']);
+  P.applyDate(car.b, '2026-11-02'); assert.equal(car.b.pickup, '2026-11-02T10:00');
+});
+test('missingFields: a complete booking lacks nothing, so nothing is ever looked up for it', () => {
+  const full = { type: 'flight', airlineCode: 'UA', flightNo: '110', from: 'DEN', to: 'BOS', dep: '2026-11-02T20:15' };
+  assert.deepEqual(P.missingFields(full), []);
+  assert.deepEqual(P.missingFields({ ...full, flightNo: '', to: '' }), ['flightNo', 'to']);
+  assert.deepEqual(P.missingFields({ ...full, dep: '2026-11-02' }), ['time']);
+  assert.deepEqual(P.missingFields({ ...full, status: 'cancelled', flightNo: '' }), [], 'cancelled: nothing to fill');
+  assert.deepEqual(P.missingFields({ type: 'hotel', name: 'Courtyard', checkIn: '2026-11-02', checkOut: '2026-11-04' }), []);
+  assert.deepEqual(P.missingFields({ type: 'hotel', name: 'Hotel', checkIn: '', checkOut: '' }), ['name', 'date', 'checkOut']);
+});
+
+// ---- the Family calendar ----
+const vev = (uid, title, start, end, extra = '') => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:20261001T000000Z\r\n${start}\r\n${end ? end + '\r\n' : ''}SUMMARY:${title}\r\n${extra}BEGIN:VALARM\r\nTRIGGER:-PT3H\r\nACTION:DISPLAY\r\nDESCRIPTION:Reminder\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
+const ev1 = ics => P.eventsFromIcs(ics)[0];
+test('calendar events are read: zones, UTC, all-day, repeats, our own, alarms ignored', () => {
+  const a = ev1(vev('u1', 'Flight to Cleveland', 'DTSTART;TZID=America/New_York:20261102T160400', 'DTEND;TZID=America/New_York:20261102T175100'));
+  assert.equal(a.start, '2026-11-02T16:04'); assert.equal(a.end, '2026-11-02T17:51'); assert.equal(a.allDay, false); assert.equal(a.title, 'Flight to Cleveland');
+  const b = ev1(vev('u2', 'Hotel', 'DTSTART;VALUE=DATE:20261102', 'DTEND;VALUE=DATE:20261105'));
+  assert.equal(b.allDay, true); assert.equal(b.day, '2026-11-02'); assert.equal(b.endDay, '2026-11-05');
+  assert.equal(ev1(vev('u3', 'Class', 'DTSTART:20261102T160000', '', 'RRULE:FREQ=WEEKLY\r\n')).recurring, true);
+  assert.equal(ev1(vev('abc@allison-travel', 'x', 'DTSTART:20261102T160000')).own, true);
+  assert.equal(ev1(vev('u4', 'Escaped\\, name', 'DTSTART:20261102T160000', '', 'LOCATION:RDU\\nTerminal 2\r\n')).title, 'Escaped, name');
+  assert.equal(P.eventsFromIcs('BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n').length, 0);
+});
+test('travel events are recognised from their words; other events are not', () => {
+  const f = t => P.bookingFromEvent(ev1(vev('u', t, 'DTSTART;TZID=America/New_York:20261102T160400', 'DTEND;TZID=America/New_York:20261102T175100')));
+  const cle = f('Flight to Cleveland');
+  assert.equal(cle.type, 'flight'); assert.equal(cle.to, 'CLE'); assert.equal(cle.from, ''); assert.equal(cle.dep, '2026-11-02T16:04'); assert.equal(cle.arr, '2026-11-02T17:51'); assert.equal(cle.guess, true);
+  const full = f('✈ F9 3073 RDU → CLE');
+  assert.deepEqual([full.airlineCode, full.flightNo, full.from, full.to], ['F9', '3073', 'RDU', 'CLE']);
+  assert.deepEqual([f('Frontier flight RDU-CLE').airlineCode, f('Frontier flight RDU-CLE').from, f('Frontier flight RDU-CLE').to], ['F9', 'RDU', 'CLE']);
+  assert.equal(f('Frontier 3073 to Cleveland').flightNo, '3073');
+  for (const t of ['Dentist', 'Flight school lesson', 'Dinner with Pat', 'Flight club meeting', 'Team sync']) assert.equal(f(t), null, t);
+  assert.equal(P.bookingFromEvent(ev1(vev('abc@allison-travel', '✈ F9 3073 RDU → CLE', 'DTSTART:20261102T160000'))), null, 'our own events are not read back');
+  const hotel = P.bookingFromEvent(ev1(vev('h', 'Courtyard Cleveland Beachwood', 'DTSTART;VALUE=DATE:20261102', 'DTEND;VALUE=DATE:20261105')));
+  assert.equal(hotel.type, 'hotel'); assert.equal(hotel.checkIn, '2026-11-02'); assert.equal(hotel.checkOut, '2026-11-05');
+  const car = P.bookingFromEvent(ev1(vev('c', 'National car rental pickup', 'DTSTART;TZID=America/New_York:20261102T180000', 'DTEND;TZID=America/New_York:20261105T120000')));
+  assert.equal(car.type, 'car'); assert.equal(car.company, 'National'); assert.equal(car.pickup, '2026-11-02T18:00');
+});
+test('a city is an airport only when exactly one fits', () => {
+  assert.equal(P.cityToCode('Cleveland'), 'CLE'); assert.equal(P.cityToCode('Raleigh'), 'RDU'); assert.equal(P.cityToCode('Orlando'), 'MCO');
+  assert.equal(P.cityToCode('Washington'), ''); assert.equal(P.cityToCode('New York'), ''); assert.equal(P.cityToCode('Springfield'), '');
+});
+test('the same trip is recognised across email and calendar, and different trips are not', () => {
+  const email = one(NODATE_MSG, 'flight').b;                                    // no day, 4:04 PM, RDU -> CLE
+  const cal = P.bookingFromEvent(ev1(vev('u', 'Flight to Cleveland', 'DTSTART;TZID=America/New_York:20261102T160400')));
+  assert.equal(P.sameFlightish(email, cal), true, 'undated email + calendar event: the airports and the time agree');
+  assert.equal(P.sameFlightish({ ...email, depTime: '09:10' }, cal), false, 'another time');
+  assert.equal(P.sameFlightish({ ...email, to: 'MCO' }, cal), false, 'another place');
+  const dated = { ...email, dep: '2026-11-02T16:04' };
+  assert.equal(P.sameFlightish(dated, cal), true); assert.equal(P.sameFlightish({ ...dated, dep: '2026-11-03T16:04' }, cal), false, 'another day');
+  assert.equal(P.sameFlightish({ ...dated, flightNo: '3073' }, { ...cal, flightNo: '999', airlineCode: 'F9' }), false, 'another flight number');
+  assert.equal(P.sameStay({ type: 'hotel', name: 'Courtyard by Marriott Cleveland Beachwood', checkIn: '2026-11-02', checkOut: '2026-11-05' }, { type: 'hotel', name: 'Courtyard Cleveland Beachwood', checkIn: '2026-11-02', checkOut: '2026-11-05' }), true);
+  assert.equal(P.sameStay({ type: 'hotel', name: 'Courtyard Cleveland', checkIn: '2026-11-02', checkOut: '2026-11-05' }, { type: 'hotel', name: 'Hilton Boston', checkIn: '2026-11-02', checkOut: '2026-11-05' }), false);
+  assert.equal(P.sameRental({ type: 'car', company: 'National', pickup: '2026-11-02T18:00' }, { type: 'car', company: 'National', pickup: '2026-11-02T18:00' }), true);
+});
+
 console.log(n + ' passed');

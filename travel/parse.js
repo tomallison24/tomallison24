@@ -187,6 +187,13 @@
     }
     return out.sort((a, b) => a.i - b.i);
   }
+  // Every date in the text except the email's own print stamp ("10/13/26 06:54 PM", Frontier's footer): that is
+  // when it was sent (its clock may be a day off from yours), not when anything happens.
+  function realDates(text, ref) {
+    const r = new Date(ref), stampDay = Date.UTC(r.getFullYear(), r.getMonth(), r.getDate());
+    const isStamp = d => /^\d{1,2}\/\d{1,2}\/\d\d$/.test(text.slice(d.i, d.end)) && /^\s*\d{1,2}:\d\d\s*[ap]m/i.test(text.slice(d.end, d.end + 12)) && Math.abs(Date.parse(d.date + 'T00:00:00Z') - stampDay) <= 864e5;
+    return findDates(text, ref).filter(d => !isStamp(d));
+  }
   const TIME_RE = /\b([01]?\d|2[0-3])(?::([0-5]\d))?\s*([ap])\.?\s?m\.?(?![a-z])|\b([01]?\d|2[0-3]):([0-5]\d)(?!\s*[ap]\.?\s?m)(?![\d:])/gi;
   function findTimes(text) {
     const out = [];
@@ -213,6 +220,7 @@
     // trusted: American Airlines, for one, writes local times and adds a Z.
     return { at: m[1] + (m[2] ? 'T' + m[2] : ''), iso: /[T ]\d\d:\d\d(:\d\d(\.\d+)?)?[+-]\d\d:?\d\d$/.test(s) ? s.replace(' ', 'T') : '' };
   }
+  const BOOKINGISH = /confirm|itinerar|reservation|booking|e-?ticket|receipt|your (?:trip|flight|stay)/i;
   const addDays = (date, n) => { const d = new Date(date + 'T12:00'); d.setDate(d.getDate() + n); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
 
   // ---------------------------------------------------------------------
@@ -344,7 +352,7 @@
     for (let k = hits.length - 1; k >= 0; k--) hits[k].key = hits[k].code + hits[k].no.replace(/^0+(?=\d)/, '');
     const firsts = hits.filter(h => !seenNo.has(h.key) && seenNo.add(h.key));
     const conf = findConf(text);
-    const dates = findDates(text, ref);
+    const dates = realDates(text, ref);
     const inDate = i => dates.some(d => i >= d.i && i < d.end);
     const timesIn = (a, b) => findTimes(text.slice(a, b)).map(t => ({ ...t, i: a + t.i, end: a + t.end })).filter(t => !inDate(t.i));
     // Which way round the email is written: details after each flight number
@@ -408,7 +416,13 @@
         dep: date ? date + (depT ? 'T' + depT : '') : '', depIso: '', arr: date && arrT ? arrDate + 'T' + arrT : '', arrIso: '',
         terminal: term ? term[1] : '', gate: gate ? gate[1].toUpperCase() : '', seat: '', guess: true,
       };
-      if (!b.dep) return;                                   // no date: not enough to be useful
+      if (!b.dep) {
+        // No date in the email (Frontier sometimes leaves it out). Keep it, with the
+        // times, so the app can ask for the day or take it from the calendar. Only when it
+        // is plainly a booking: both airports and a booking subject (airline promotions are not).
+        if (!(b.from && b.to) || !BOOKINGISH.test(subject)) return;
+        b.depTime = depT; b.arrTime = arrT;
+      }
       if (out.some(o => o.airlineCode === b.airlineCode && o.flightNo === b.flightNo && o.dep.slice(0, 10) === b.dep.slice(0, 10))) return;
       out.push(b);
     });
@@ -436,6 +450,19 @@
     return '';
   }
 
+  // Name: a brand name in the subject or the first lines, else the subject after "at"/"for".
+  function hotelName(text, subject, from) {
+    const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+    const brand = new RegExp('(' + MARRIOTT_BRANDS.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'i');
+    let name = '';
+    const subj = String(subject || '').replace(/\s+on\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b.*$/i, '');
+    const subjAt = /\bstay\s+at\s+(?:the\s+)?(.{4,90})$/i.exec(subj) || /\b(?:at|for)\s+(?!your\b)(?:the\s+)?(.{4,90}?)(?:\s*[|(–]|$)/i.exec(subj);
+    if (subjAt && !/\d{5,}|\byour\b|reservation|\bstay\b|\btrip\b/i.test(subjAt[1])) name = subjAt[1].trim();
+    if (!name) name = (lines.slice(0, 40).find(l => brand.test(l) && l.length < 90 && !/reward|bonvoy account|member|points|app/i.test(l)) || '').trim();
+    if (!name) name = /marriott/i.test(from) ? 'Marriott' : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Hotel').trim();
+    return name;
+  }
+
   function hotelFromText(text, subject, from, ref) {
     const hotelish = /marriott|bonvoy|hotel|resort|suites|inn\b|lodge|stay|booking\.com|expedia|hotels\.com|airbnb|hilton|hyatt|ihg/i;
     if (!hotelish.test(from + ' ' + subject + ' ' + text.slice(0, 2000))) return [];
@@ -445,20 +472,18 @@
       const a = dateAfter(text, /arriv(?:al|ing)(?:\s+date)?\s*[:\-]?/i, ref), d = dateAfter(text, /depart(?:ure|ing)(?:\s+date)?\s*[:\-]?/i, ref);
       checkIn = a && a.date; checkOut = d && d.date;
     }
-    if (!checkIn) return [];
+    if (!checkIn) {
+      // No dates in the email: keep it for "To check" when it is plainly a reservation.
+      const conf0 = findConf(text) || ((/confirmation\s*(?:number|#|no\.?)?\s*[:#]?\s*(\d{6,12})/i.exec(text) || [])[1] || '');
+      if (!conf0 || !BOOKINGISH.test(subject)) return [];
+      return [{ type: 'hotel', status: 'confirmed', conf: conf0, traveller: '', name: hotelName(text, subject, from), address: '', city: '', phone: '', checkIn: '', checkInTime: '', checkOut: '', checkOutTime: '', guess: true }];
+    }
     if (!checkOut || checkOut <= checkIn) {
       const n = /(\d{1,2})\s+nights?/i.exec(text);
       checkOut = n ? addDays(checkIn, +n[1]) : checkOut || addDays(checkIn, 1);
     }
-    // Name: a brand name in the subject or the first lines, else the subject after "at"/"for".
     const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
-    const brand = new RegExp('(' + MARRIOTT_BRANDS.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'i');
-    let name = '';
-    const subj = String(subject || '').replace(/\s+on\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b.*$/i, '');
-    const subjAt = /\bstay\s+at\s+(?:the\s+)?(.{4,90})$/i.exec(subj) || /\b(?:at|for)\s+(?!your\b)(?:the\s+)?(.{4,90}?)(?:\s*[|(–]|$)/i.exec(subj);
-    if (subjAt && !/\d{5,}|\byour\b|reservation|\bstay\b|\btrip\b/i.test(subjAt[1])) name = subjAt[1].trim();
-    if (!name) name = (lines.slice(0, 40).find(l => brand.test(l) && l.length < 90 && !/reward|bonvoy account|member|points|app/i.test(l)) || '').trim();
-    if (!name) name = /marriott/i.test(from) ? 'Marriott' : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Hotel').trim();
+    const name = hotelName(text, subject, from);
     const nameAt = lines.findIndex(l => l === name || l.includes(name));
     let address = '';
     if (nameAt >= 0) { const next = lines.slice(nameAt + 1, nameAt + 4).find(l => /\d/.test(l) && /,|\b(st|street|ave|avenue|rd|road|blvd|boulevard|way|drive|dr|lane|ln)\b/i.test(l) && !findDates(l).length); if (next) address = next; }
@@ -494,7 +519,8 @@
     if (!carish.test(from + ' ' + subject + ' ' + text.slice(0, 1500))) return [];
     const pu = dateAfter(text, /pick[- ]?up(?:\s+(?:date|time|date\s*&\s*time|details))?\s*[:\-]?/i, ref, 200);
     const dr = dateAfter(text, /(?:return|drop[- ]?off)(?:\s+(?:date|time|date\s*&\s*time|details))?\s*[:\-]?/i, ref, 200);
-    if (!pu) return [];
+    const confC = findConf(text) || ((/(?:confirmation|reservation)\s*(?:number|#|no\.?)?\s*[:#]?\s*(\d{6,12}|[A-Z0-9]{8,12})/i.exec(text) || [])[1] || '');
+    if (!pu && !(confC && BOOKINGISH.test(subject))) return [];       // no pick-up date: kept for "To check" only when plainly a reservation
     const company = /national/i.test(from + subject) ? 'National' : /enterprise/i.test(from + subject) ? 'Enterprise' : /alamo/i.test(from + subject) ? 'Alamo'
       : /hertz/i.test(from + subject) ? 'Hertz' : /avis/i.test(from + subject) ? 'Avis' : /budget/i.test(from + subject) ? 'Budget' : /sixt/i.test(from + subject) ? 'Sixt'
       : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Rental car').trim();
@@ -503,12 +529,12 @@
       const l = s.split('\n').map(x => x.replace(/^[\s:–-]+/, '').trim()).filter(x => x && !findDates(x).length && !findTimes(x).length && x.length > 3 && x.length < 120);
       return l[0] || '';
     };
-    const airport = /\(([A-Z]{3})\)|\b([A-Z]{3})\s+airport/i.exec(pu.rest || '');
+    const airport = /\(([A-Z]{3})\)|\b([A-Z]{3})\s+airport/i.exec((pu && pu.rest) || '');
     return [{
-      type: 'car', status: 'confirmed', conf: findConf(text) || ((/(?:confirmation|reservation)\s*(?:number|#|no\.?)?\s*[:#]?\s*(\d{6,12}|[A-Z0-9]{8,12})/i.exec(text) || [])[1] || ''),
+      type: 'car', status: 'confirmed', conf: confC,
       traveller: '', company, carClass: carClassIn(text),
-      pickupPlace: place(pu.rest) || lineAfter(text, /pick[- ]?up\s+location\s*[:\-]?/i), city: airport ? (AIRPORTS[(airport[1] || airport[2]).toUpperCase()] || '') : '',
-      pickup: pu.date + (pu.time ? 'T' + pu.time : ''), pickupIso: '',
+      pickupPlace: (pu && place(pu.rest)) || lineAfter(text, /pick[- ]?up\s+location\s*[:\-]?/i), city: airport ? (AIRPORTS[(airport[1] || airport[2]).toUpperCase()] || '') : '',
+      pickup: pu ? pu.date + (pu.time ? 'T' + pu.time : '') : '', pickupIso: '',
       dropPlace: dr ? place(dr.rest) : '', dropoff: dr ? dr.date + (dr.time ? 'T' + dr.time : '') : '', dropoffIso: '', guess: true,
     }];
   }
@@ -589,10 +615,194 @@
     return { bookings: found, cancelled };
   }
 
+  // What a booking still lacks, by name. Drives "To check" and, when something
+  // is missing, the AI / flight database / calendar lookups (nothing is looked up for a complete booking).
+  const isDay = v => /^20\d\d-\d\d-\d\d/.test(String(v || ''));
+  function missingFields(b) {
+    const m = [];
+    if (!b || b.ride || b.status === 'cancelled') return m;
+    if (b.type === 'flight') {
+      if (!b.airlineCode) m.push('airline');
+      if (!b.flightNo) m.push('flightNo');
+      if (!b.from) m.push('from');
+      if (!b.to) m.push('to');
+      if (!isDay(b.dep)) m.push('date');
+      else if (String(b.dep).length < 16) m.push('time');
+    } else if (b.type === 'hotel') {
+      if (!b.name || b.name === 'Hotel') m.push('name');
+      if (!isDay(b.checkIn)) m.push('date');
+      if (!isDay(b.checkOut)) m.push('checkOut');
+    } else if (b.type === 'car') {
+      if (!b.company) m.push('company');
+      if (!isDay(b.pickup)) m.push('date');
+      else if (String(b.pickup).length < 16) m.push('time');
+    } else if (b.type === 'other') {
+      if (!isDay(b.start)) m.push('date');
+    }
+    return m;
+  }
+  // Gives an undated booking its day (from the calendar, the AI or the person), keeping the times the email had.
+  function applyDate(b, date) {
+    if (!isDay(date)) return b;
+    date = String(date).slice(0, 10);
+    if (b.type === 'flight') {
+      const t = b.depTime || (String(b.dep || '').slice(11, 16)) || '';
+      b.dep = date + (t ? 'T' + t : '');
+      if (b.arrTime) b.arr = (t && b.arrTime < t ? addDays(date, 1) : date) + 'T' + b.arrTime;
+      b.depIso = ''; b.arrIso = '';
+    } else if (b.type === 'hotel') {
+      b.checkIn = date;
+      if (!isDay(b.checkOut) || b.checkOut <= date) b.checkOut = addDays(date, 1);
+    } else if (b.type === 'car') {
+      b.pickup = date + (b.pickup && b.pickup.length >= 16 ? b.pickup.slice(10) : 'T10:00'); b.pickupIso = '';
+    } else b.start = date + (b.start && b.start.length >= 16 ? b.start.slice(10) : 'T09:00');
+    return b;
+  }
+
+  // ---------------------------------------------------------------------
+  // The Family calendar. An event is read from its .ics text, recognised as a
+  // flight, hotel stay or car rental from its words, and matched with the
+  // bookings already here, so the same trip is never listed twice.
+  // ---------------------------------------------------------------------
+  const unfoldIcs = t => String(t || '').replace(/\r\n[ \t]|\n[ \t]|\r[ \t]/g, '').split(/\r\n|\n|\r/);
+  const unescIcs = v => String(v || '').replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1');
+  // 20261102T160400Z / 20261102T160400 (a zone's or floating wall time) / 20261102 (all day)
+  function icsTime(value) {
+    const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/.exec(String(value || '').trim());
+    if (!m) return null;
+    const day = m[1] + '-' + m[2] + '-' + m[3];
+    if (m[4] === undefined) return { day, allDay: true };
+    if (m[7]) {                                            // UTC: shown on this phone's clock
+      const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
+      const dd = ymd(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      return { day: dd, at: dd + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) };
+    }
+    return { day, at: day + 'T' + m[4] + ':' + m[5] };
+  }
+  function eventsFromIcs(ics) {
+    const out = [];
+    let cur = null, alarm = false;
+    for (const line of unfoldIcs(ics)) {
+      if (/^BEGIN:VEVENT\s*$/i.test(line)) { cur = {}; alarm = false; continue; }
+      if (/^END:VEVENT\s*$/i.test(line)) {
+        if (cur && cur.UID && cur.DTSTART) {
+          const st = icsTime(cur.DTSTART), en = cur.DTEND ? icsTime(cur.DTEND) : null;
+          if (st) out.push({
+            uid: unescIcs(cur.UID).trim(), title: unescIcs(cur.SUMMARY || '').trim(), loc: unescIcs(cur.LOCATION || '').trim(), desc: unescIcs(cur.DESCRIPTION || '').trim(),
+            day: st.day, start: st.at || st.day, allDay: !!st.allDay, end: en ? (en.at || en.day) : '', endDay: en ? en.day : '',
+            recurring: 'RRULE' in cur || 'RECURRENCE-ID' in cur, cancelled: /^CANCELLED$/i.test(cur.STATUS || ''), own: /@allison-travel$/i.test(String(cur.UID).trim()),
+          });
+        }
+        cur = null; continue;
+      }
+      if (!cur) continue;
+      if (/^BEGIN:VALARM/i.test(line)) { alarm = true; continue; }
+      if (/^END:VALARM/i.test(line)) { alarm = false; continue; }
+      if (alarm) continue;
+      const i = line.indexOf(':');
+      if (i < 0) continue;
+      const name = line.slice(0, i).split(';')[0].toUpperCase();
+      if (!(name in cur)) cur[name] = line.slice(i + 1);
+    }
+    return out;
+  }
+  // "Cleveland" -> CLE, only when exactly one airport in the list fits.
+  function cityToCode(name) {
+    const n = String(name || '').toLowerCase().replace(/[^a-z .'-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (n.length < 3) return '';
+    const first = x => x.split(/[-/, ]+/)[0];
+    const all = Object.entries(AIRPORTS).map(([k, c]) => [k, c.toLowerCase()]);
+    const exact = all.filter(([, l]) => l === n);
+    if (exact.length === 1) return exact[0][0];
+    const near = all.filter(([, l]) => first(l).length >= 4 && first(l) === first(n));
+    return near.length === 1 ? near[0][0] : '';
+  }
+  const AIRLINE_CODES = Object.keys(AIRLINES).join('|');
+  const HOTEL_EV = /\bhotel\b|\binn\b|\bsuites?\b|\bresort\b|\blodge\b|marriott|hilton|hyatt|courtyard|hampton|holiday inn|sheraton|westin|residence inn|fairfield|springhill|embassy suites|airbnb|\bstay(?:ing)?\s+at\b|check[- ]?in\b/i;
+  const CAR_EV = /(?:car|vehicle) rental|rental car|rent(?:ing)? a car|\b(?:hertz|avis|alamo|enterprise rent|national car|sixt)\b/i;
+  const FLIGHT_EV = /✈|\bflight\b|\bfly(?:ing)?\b|\bfly to\b/i;
+  const knownAirports = text => [...new Set((String(text).match(/\b[A-Z]{3}\b/g) || []).filter(c => AIRPORTS[c]))];
+  // A calendar event as a booking (or null): {type, ...} with the day and times it has.
+  function bookingFromEvent(ev) {
+    if (!ev || ev.own || ev.recurring || ev.cancelled || !ev.day) return null;
+    const title = ev.title || '', all = [title, ev.loc, ev.desc].join('\n');
+    const ref = new RegExp('\\b(' + AIRLINE_CODES + ')\\s?(\\d{1,4})\\b').exec(all);
+    const airlineWord = Object.entries(AIRLINES).find(([, n]) => new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b\\s?#?(\\d{1,4})\\b', 'i').test(title));
+    const wordNo = airlineWord ? new RegExp('\\b' + airlineWord[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b\\s?#?(\\d{1,4})\\b', 'i').exec(title) : null;
+    const nameOnly = Object.entries(AIRLINES).find(([, n]) => new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(title));
+    const codes = knownAirports(all);
+    const pair = /\b([A-Z]{3})\b\s*(?:to|→|->|–|—|-|>|➝)\s*\b([A-Z]{3})\b/.exec(all);
+    const toCity = /\b(?:to|→|->)\s+([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*)?)/.exec(title);
+    const fromCity = /\bfrom\s+([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*)?)/.exec(title);
+    const base = { status: 'confirmed', conf: findConf(all) || '', traveller: '', guess: true };
+    const looksFlight = !!(ref || wordNo) || (FLIGHT_EV.test(title) && (codes.length || (toCity && cityToCode(toCity[1])) || /airport/i.test(ev.loc)));
+    if (looksFlight) {
+      let from = '', to = '';
+      if (pair && AIRPORTS[pair[1]] && AIRPORTS[pair[2]]) { from = pair[1]; to = pair[2]; }
+      else {
+        if (toCity) to = cityToCode(toCity[1]);
+        if (fromCity) from = cityToCode(fromCity[1]);
+        if (!to && !from && codes.length === 2) { from = codes[0]; to = codes[1]; }
+        else if (!to && !from && codes.length === 1) { if (new RegExp('(?:to|→|->)\\s*' + codes[0]).test(title)) to = codes[0]; else from = codes[0]; }
+      }
+      const code = ref ? ref[1] : airlineWord ? airlineWord[0] : nameOnly ? nameOnly[0] : '';
+      const no = ref ? ref[2] : wordNo ? wordNo[1] : '';
+      return {
+        ...base, type: 'flight', airline: AIRLINES[code] || '', airlineCode: code, flightNo: num0(no), from, fromName: AIRPORTS[from] || '', to, toName: AIRPORTS[to] || '',
+        dep: ev.allDay ? ev.day : ev.start, depIso: '', arr: !ev.allDay && ev.end && ev.end.length >= 16 && ev.end.slice(0, 10) >= ev.day ? ev.end : '', arrIso: '', terminal: '', gate: '', seat: '',
+      };
+    }
+    if (CAR_EV.test(title)) {
+      const co = (/\b(hertz|avis|alamo|enterprise|national|sixt|budget)\b/i.exec(all) || [])[1] || '';
+      return { ...base, type: 'car', company: co ? co[0].toUpperCase() + co.slice(1).toLowerCase() : '', carClass: '', pickupPlace: ev.loc.split('\n')[0] || '', city: '', pickup: ev.start, pickupIso: '', dropPlace: '', dropoff: ev.end || '', dropoffIso: '' };
+    }
+    if (HOTEL_EV.test(title) && (ev.allDay || (ev.endDay && ev.endDay > ev.day))) {
+      const last = ev.allDay && ev.endDay && ev.endDay > ev.day ? ev.endDay : (ev.endDay && ev.endDay > ev.day ? ev.endDay : addDays(ev.day, 1));
+      return { ...base, type: 'hotel', name: title.replace(/^\W*(?:hotel|stay|check[- ]?in)\s*[:\-–—]?\s*/i, '').trim() || title, address: ev.loc.split('\n').slice(1).join(', ') || ev.loc, city: '', phone: '', checkIn: ev.day, checkInTime: '', checkOut: last, checkOutTime: '' };
+    }
+    return null;
+  }
+  const num0 = n => String(n || '').replace(/^0+(?=\d)/, '');
+  const hm = at => (String(at || '').length >= 16 ? String(at).slice(11, 16) : '');
+  const minutes = t => (t ? +t.slice(0, 2) * 60 + +t.slice(3, 5) : NaN);
+  // Whether two flights are plainly the same one, when at least one came from the calendar or has no day yet.
+  // Both days (when both have one) and any flight numbers and airports they both give must agree, and something has
+  // to positively say they are the same: the flight number, the airports or (for a flight with no day) the leaving time.
+  function sameFlightish(a, b) {
+    if (!a || !b || a.type !== 'flight' || b.type !== 'flight') return false;
+    const da = String(a.dep || '').slice(0, 10), db = String(b.dep || '').slice(0, 10);
+    if (da && db && da !== db) return false;
+    if (a.flightNo && b.flightNo && (a.airlineCode !== b.airlineCode || num0(a.flightNo) !== num0(b.flightNo))) return false;
+    if (a.to && b.to && a.to !== b.to) return false;
+    if (a.from && b.from && a.from !== b.from) return false;
+    const ta = minutes(hm(a.dep) || a.depTime), tb = minutes(hm(b.dep) || b.depTime);
+    const timesAgree = !isNaN(ta) && !isNaN(tb) && Math.abs(ta - tb) <= 30;
+    if (!isNaN(ta) && !isNaN(tb) && Math.abs(ta - tb) > 90) return false;
+    const named = (a.flightNo && b.flightNo) || (a.to && b.to) || (a.from && b.from);
+    if (da && db) return !!named || timesAgree;                    // same day: one more thing agreeing is enough
+    return !!(a.flightNo && b.flightNo) || (!!named && timesAgree);     // a day is missing: it takes the flight number, or the airports and the time
+  }
+  const words = s => new Set(String(s || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length >= 4 && !/^(hotel|suites?|inn|resort|stay|check|marriott|hilton|hyatt)$/.test(w)));
+  function sameStay(a, b) {
+    if (!a || !b || a.type !== 'hotel' || b.type !== 'hotel') return false;
+    if (a.conf && b.conf && a.conf === b.conf) return true;
+    if (!a.checkIn || !b.checkIn) return false;
+    const overlap = a.checkIn < (b.checkOut || addDays(b.checkIn, 1)) && b.checkIn < (a.checkOut || addDays(a.checkIn, 1));
+    if (!overlap) return false;
+    const wa = words(a.name), wb = words(b.name);
+    return [...wa].some(w => wb.has(w));
+  }
+  function sameRental(a, b) {
+    if (!a || !b || a.type !== 'car' || b.type !== 'car') return false;
+    if (a.conf && b.conf && a.conf === b.conf) return true;
+    return String(a.pickup || '').slice(0, 10) === String(b.pickup || '').slice(0, 10) && !!a.pickup && (!a.company || !b.company || a.company.toLowerCase() === b.company.toLowerCase());
+  }
+  const sameThing = (a, b) => sameFlightish(a, b) || sameStay(a, b) || sameRental(a, b);
+
   // Parses text pasted by hand (a forwarded confirmation, say).
   const parseText = (text, ref) => parseEmail({ text, subject: '', from: '', date: ref || Date.now() });
 
-  const api = { parseEmail, parseText, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
+  const api = { parseEmail, parseText, realDates, missingFields, applyDate, eventsFromIcs, bookingFromEvent, cityToCode, sameFlightish, sameStay, sameRental, sameThing, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
