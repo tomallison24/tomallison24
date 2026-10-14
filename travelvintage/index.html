@@ -493,7 +493,7 @@ svg.fs{fill:currentColor}
 :root{--ok:#1F9D55;--ok-ink:#157A40;--warn:#D97706;--warn-ink:#8A4B06;--bad:#E5281D;--bad-ink:#AE2117;--fl:#0A84FF;--ho:#AF52DE;--ca:#18A58A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ok:#30D158;--ok-ink:#7EE2A0;--warn:#FF9F0A;--warn-ink:#FFCB7A;--bad:#FF453A;--bad-ink:#FF9E97}}
 :root[data-theme="dark"]{--ok:#30D158;--ok-ink:#7EE2A0;--warn:#FF9F0A;--warn-ink:#FFCB7A;--bad:#FF453A;--bad-ink:#FF9E97}
-.enter .trip,.enter .hero,.enter .dayblock{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+.enter .trip,.enter .aibtn,.enter .hero,.enter .dayblock{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
 /* Cards - the trips, a trip's timeline, the lists, boxes, the Explore form
    and empty states - are very faint flat tiles, the same in every AllisonOS
    app: no blur, lit rim or shadow. (The next-up hero keeps its colour.) */
@@ -525,6 +525,18 @@ svg.fs{fill:currentColor}
 .trip .dates{font-size:14px;color:var(--muted)}
 .trip .icons{display:flex;flex-wrap:wrap;gap:6px}
 .trip.past{opacity:.82}
+.askbar{margin:10px 0 2px}
+.askbar[hidden]{display:none}
+.askout{border-radius:22px;padding:14px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+.askq{font-size:13px;color:var(--muted)}
+.aska{font-size:16px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
+.aska.err{color:var(--muted)}
+.askclear{align-self:flex-end}
+.askout .tl{margin:0}
+.tripwrap{position:relative}
+.trip.hasai{padding-bottom:54px}
+.aibtn{position:absolute;right:12px;bottom:10px}
+.aibtn:disabled{opacity:.6}
 .count{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600;color:var(--muted);background:var(--fill);border:1px solid var(--hair)}
 .count svg{width:15px;height:15px;color:var(--icon)}
 .soon{font-size:12px;font-weight:700;color:var(--accent-text);white-space:nowrap}
@@ -893,6 +905,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         </div>
       </div>
       <div class="chips" id="whenChips" role="toolbar" aria-label="Which trips"></div>
+      <form class="search glass askbar" id="askForm" role="search" action="#" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>
+        <input id="askInput" type="search" placeholder="Ask AI about your trips" aria-label="Ask AI about your trips" enterkeyhint="send" maxlength="300" autocomplete="off" autocapitalize="sentences">
+      </form>
     </header>
     <main class="list" id="list"></main>
   </section>
@@ -1008,7 +1024,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
           <button class="rowbtn" type="button" id="stAiOpt">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg></span>
-            <span>Fill in gaps with AI<span class="sub" id="stAiSub"></span></span>
+            <span>Check with AI<span class="sub" id="stAiSub"></span></span>
           </button>
         </div>
         <p class="label">Backup Log</p>

@@ -91,14 +91,14 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await ctx.addInitScript(id => localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' })), ID);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], find: [], imports: [], deletes: [], events: 0 };
+  const seen = { extract: [], find: [], ask: [], imports: [], deletes: [], events: 0 };
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
@@ -116,6 +116,12 @@ async function open({ calendar = true, ai = true, board = true } = {}) {
       // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote
       return route.fulfill({ json: { ok: true, fields: body.missing.includes('from') ? { from: 'MCO', to: 'PHL' } : {} } });
     }
+    if (u.pathname.endsWith('/ask')) {
+      const body = JSON.parse(req.postData() || '{}');
+      seen.ask.push(body);
+      const first = body.trips.flatMap(t => t.items).find(i => i.kind === 'flight');
+      return route.fulfill({ json: { ok: true, answer: 'Your next flight is ' + (first && first.flight) + '.', bookingIds: first ? [first.id, 'not-a-booking'] : [] } });
+    }
     if (u.pathname.endsWith('/find')) { seen.find.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, candidates: [{ number: '2154', to: 'PHL', local: '' }] } }); }
     return route.fulfill({ json: { ok: true, found: false } });
   });
@@ -131,11 +137,13 @@ async function open({ calendar = true, ai = true, board = true } = {}) {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     const k = location.pathname.includes('travelvintage') ? 'travelv' : 'travel';
+    if (localStorage.getItem('test.nomail')) return;
     localStorage.setItem(k + '.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem(k + '.token.ever', '1');
   });
+  if (empty) await ctx.addInitScript(() => localStorage.setItem('test.nomail', '1'));
   await page.goto(BASE + '/' + APP + '/');
-  await page.waitForFunction(() => window.__travel && window.__travel.bookings.length >= 4, null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__travel && (window.__travel.bookings.length >= 4 || localStorage.getItem('test.nomail')), null, { timeout: 10000 });
   return { ctx, page, seen, problems };
 }
 const pick = (page, f) => page.evaluate(f);
@@ -143,7 +151,7 @@ const pick = (page, f) => page.evaluate(f);
 // =================== without the calendar: undated bookings, the backlog, the AI and the board ===================
 {
   const { ctx, page, seen, problems } = await open({ calendar: false });
-  await page.waitForFunction(() => window.__travel.bookings.some(b => b.flightNo === '2154' && b.filled), null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__travel.bookings.some(b => b.conf === 'TRZ4KD') && window.__travel.bookings.some(b => b.conf === 'OLDUND'), null, { timeout: 10000 });
 
   await step('an email with no day is kept and waits in "To check" with its times', async () => {
     const b = await pick(page, () => window.__travel.bookings.find(x => x.flightNo === '3073'));
@@ -172,7 +180,19 @@ const pick = (page, f) => page.evaluate(f);
     const old = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'OLD1AA'));
     assert.ok(old, 'but it is still kept as history');
   });
-  await step('a complete booking asks no one; one missing airports asks once, and the answer is marked', async () => {
+  await step('nothing is sent to the AI by itself: not when reading Gmail, not when opening', async () => {
+    assert.equal(seen.extract.length, 0, JSON.stringify(seen.extract.map(x => x.missing)));
+    await page.evaluate(() => window.__travel.smartPass());
+    assert.equal(seen.extract.length, 0);
+  });
+  await step('only a trip with something missing has a Check with AI button; pressing it asks once, for what is missing, and marks the answer', async () => {
+    await page.click('[data-when="upcoming"]');
+    const cards = await page.$$eval('.tripwrap', els => els.map(e => ({ name: e.querySelector('h3').textContent, ai: !!e.querySelector('[data-ai]') })));
+    assert.equal(cards.filter(c => c.ai).length, 1, JSON.stringify(cards));
+    assert.equal(cards.filter(c => !c.ai).length >= 1, true, 'the trip that has everything has no button: ' + JSON.stringify(cards));
+    if (SHOTS) { await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, APP + '-aicard.png') }); }
+    await page.click('.tripwrap [data-ai]');
+    await page.waitForFunction(() => /Filled in 2 details/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
     assert.equal(seen.extract.length, 1, JSON.stringify(seen.extract.map(x => x.missing)));
     assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
     assert.equal(seen.extract[0].type, 'flight');
@@ -183,11 +203,41 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(ua.guess, false); assert.equal(ua.filled, undefined);
     // the undated Cleveland email says no date anywhere, so there was nothing to ask the AI to read
     assert.ok(!seen.extract.some(x => /Cleveland/.test(x.text) || (x.missing || []).includes('date')));
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'nothing is missing any more, so the button is gone');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-aibutton.png') });
   });
-  await step('asking again later does not ask again', async () => {
-    const before = seen.extract.length;
-    await page.evaluate(() => window.__travel.smartPass([]));
-    assert.equal(seen.extract.length, before);
+  await step('the button follows what is missing: back when something is missing, gone when it is complete', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = ''; b.to = ''; delete b.filled; window.__travel.render(); });
+    assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is back while something is missing');
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = 'MCO'; b.to = 'PHL'; window.__travel.render(); });
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false);
+  });
+  await step('the Ask AI bar: nothing is sent until you ask; the question goes with the current, past and to-check trips (no names), and the answer names its bookings', async () => {
+    await page.click('[data-when="upcoming"]');
+    assert.equal(await page.$eval('#askForm', e => e.hidden), false, 'the bar is there');
+    await page.fill('#askInput', 'When is my next flight?');
+    await page.waitForTimeout(300);
+    assert.equal(seen.ask.length, 0, 'typing sends nothing');
+    await page.press('#askInput', 'Enter');
+    await page.waitForSelector('.askout .aska:not(.err)');
+    await page.waitForFunction(() => /Your next flight is/.test(document.querySelector('.askout .aska').textContent), null, { timeout: 8000 });
+    assert.equal(seen.ask.length, 1);
+    const sent = seen.ask[0];
+    assert.equal(sent.question, 'When is my next flight?'); assert.match(sent.today, /^\d{4}-\d\d-\d\d$/);
+    const whens = sent.trips.map(t => t.when);
+    assert.ok(whens.includes('upcoming') && whens.includes('past') && whens.includes('to check'), whens.join());
+    const items = sent.trips.flatMap(t => t.items);
+    assert.ok(items.some(i => i.flight === 'F9 3073' && i.check === true && i.conf === 'ZQ4RTE'), 'the undated Cleveland flight is in the to-check part');
+    const text = JSON.stringify(sent);
+    for (const never of ['Pat Example', 'pat@example.com', 'traveller', 'seat', 'notes', 'source']) assert.equal(text.includes(never), false, never + ' was sent');
+    if (SHOTS) { await page.waitForTimeout(900); await page.screenshot({ path: path.join(SHOTS, APP + '-ask.png') }); }
+    const rows = await page.$$eval('.askout .ev', els => els.length);
+    assert.equal(rows, 1, 'only the booking that was sent is shown');
+    await page.click('.askout .ev');
+    await page.waitForSelector('#bkSheet:not([hidden])');
+    await page.click('#bkDone');
+    await page.click('#askClear');
+    assert.equal(await page.$('.askout'), null);
   });
   await step('a flight with an airline, airports, day and time but no number gets it from the flight board; an edited one does not', async () => {
     await page.evaluate(day => {
@@ -295,6 +345,21 @@ const pick = (page, f) => page.evaluate(f);
   await ctx.close();
 }
 
+// =================== no bookings at all: the Ask AI bar is still there ===================
+{
+  const { ctx, page, seen } = await open({ empty: true });
+  await step('with no bookings the Ask AI bar still shows, and answers without asking Claude', async () => {
+    assert.equal(await page.evaluate(() => window.__travel.bookings.length), 0);
+    await page.waitForFunction(() => !document.getElementById('askForm').hidden, null, { timeout: 5000 });
+    await page.fill('#askInput', 'When is my next flight?');
+    await page.press('#askInput', 'Enter');
+    await page.waitForFunction(() => /no bookings to look through/.test(document.querySelector('.askout .aska').textContent), null, { timeout: 5000 });
+    assert.equal(seen.ask.length, 0, 'nothing to look through, so nothing is sent');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /-ai$/.test(k)) || 'x') || '{}').ask || 0), 0, 'and no question used up');
+  });
+  await ctx.close();
+}
+
 // =================== the settings switches ===================
 {
   const { ctx, page, seen } = await open({ calendar: true });
@@ -302,11 +367,14 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
-    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /^On\./);
+    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Nothing is sent until you press or ask/);
+    assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
-    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.equal((await page.textContent('#stAiSub')).trim(), 'Off');
+    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No button and no bar/);
+    assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'and gone when it is off');
+    assert.equal(await page.$eval('#askForm', e => e.hidden), true, 'the Ask AI bar goes with it');
     const before = { ev: seen.events, ex: seen.extract.length };
-    await page.evaluate(() => window.__travel.smartPass([{ bid: window.__travel.bookings[0].id, text: 'x', subject: '', date: Date.now(), msgId: 'zz' }]));
+    await page.evaluate(() => window.__travel.smartPass());
     assert.equal(seen.events, before.ev); assert.equal(seen.extract.length, before.ex);
   });
   await ctx.close();
