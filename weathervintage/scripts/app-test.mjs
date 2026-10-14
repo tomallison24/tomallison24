@@ -181,7 +181,7 @@ for (const scheme of ['light', 'dark']) {
   });
 
   await step(scheme + ': tap an hour: a sheet with its weather, stepping through the hours', async () => {
-    await page.click('#hxTray .hx-col[data-hour]:nth-child(3)');
+    await page.locator('#hxTray .hx-col[data-hour]').nth(2).click();
     await page.waitForSelector('#hourWrap.open .hd-hero');
     const t0 = await text(page, '#hourTitle');
     assert.match(await text(page, '#hourBody .hd-temp'), /^-?\d+°$/);

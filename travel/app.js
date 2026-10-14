@@ -1222,7 +1222,7 @@ if (window.top !== window.self) {
   // -- the AI and the flight board --
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null;
-  const AI_A_MONTH = 30, FIND_A_MONTH = 30;               // per phone; each is a few cents at most
+  const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
   const aiSave = o => ls.set(K.ai, JSON.stringify({ ...o, tried: Object.fromEntries(Object.entries(o.tried).slice(-300)) }));
   // What each kind of booking can be missing, as the function names the fields.
@@ -1258,18 +1258,16 @@ if (window.top !== window.self) {
     return any;
   }
   // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. Only a press of
-  // Check with AI gets here (nothing runs this by itself). Returns {asked, filled, nothing, limit}: calls made, details
-  // filled in, bookings whose email does not state what is missing, and whether this month's limit stopped it.
+  // Check with AI gets here (nothing runs this by itself). Returns {asked, filled, nothing}: calls made, details
+  // filled in, and bookings whose email does not state what is missing.
   async function aiPass(queue) {
-    const out = { asked: 0, filled: 0, nothing: 0, limit: false };
+    const out = { asked: 0, filled: 0, nothing: 0 };
     if (!aiOn() || !queue.length) return out;
     if (aiAvail === null) await pingLive();
     if (!aiAvail) return out;
     const use = aiUse();
     let changed = false;
     for (const q of queue) {
-      if (use.ai >= AI_A_MONTH) { out.limit = true; break; }
-      if (out.asked >= 10) break;
       const b = bookings.find(x => x.id === q.bid);
       if (!b || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) continue;     // history isn't looked up
       const map = ASK[b.type]; if (!map) continue;
@@ -1279,7 +1277,7 @@ if (window.top !== window.self) {
       if (!P.realDates(q.text, q.date).length) miss = miss.filter(m => m !== 'date' && m !== 'checkOut');
       const ask = [...new Set(miss.map(m => map[m]).filter(Boolean))];
       if (!ask.length) { out.nothing++; continue; }
-      use.ai++; out.asked++; aiSave(use);
+      out.asked++;
       let res, d = null;
       try {
         res = await aosFetch(API + 'extract', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
@@ -1328,7 +1326,6 @@ if (window.top !== window.self) {
       if (r.filled) bits.push('Filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
       else if (r.asked) bits.push('Asked AI. The email doesn’t say anything more.');
       else if (r.nothing) bits.push('The email doesn’t state what’s missing, so AI has nothing to read. Your calendar, or you, can add it.');
-      if (r.limit) bits.push('That’s this month’s ' + AI_A_MONTH + ' AI checks on this phone.');
       if (noMail) bits.push(plural(noMail, 'booking') + ' didn’t come from an email.');
       toast(bits.join(' ') || 'Nothing is missing.');
     } catch (e) {
