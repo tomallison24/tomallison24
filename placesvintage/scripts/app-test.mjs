@@ -89,7 +89,7 @@ const stub = async route => {
 };
 await ctx.route(/^https?:\/\/(?!localhost)/, stub);
 await ctx.addInitScript(() => {
-  localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));   // the walkthrough as seen, as on a phone in use
+  (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' })));   // the walkthrough as seen, as on a phone in use
   window.__clip = '';
   Object.defineProperty(navigator, 'clipboard', { value: { readText: async () => window.__clip, writeText: async () => {} }, configurable: true });
 });
@@ -280,7 +280,7 @@ for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes
   const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
   await c2.route(/^https?:\/\/(?!localhost)/, stub);
   await c2.addInitScript(([key, sheet]) => {
-    localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));
+    (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' })));
     localStorage.setItem(key, JSON.stringify({ url: sheet, secret: 'maple-otter' }));
   }, [key, SHEET]);
   const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
@@ -296,7 +296,7 @@ for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes
 {
   const c3 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
   await c3.route(/^https?:\/\/(?!localhost)/, stub);
-  await c3.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' })));
+  await c3.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }))));
   const p3 = await c3.newPage(); await p3.goto(BASE + '/placesvintage/'); await p3.waitForTimeout(400);
   await p3.click('#syncBtn'); await p3.waitForTimeout(200);
   ok('no Notes Sheet in this browser: no one-tap button, and the owner’s link is filled in for the secret to be typed', await p3.isHidden('#syNotes') && (await p3.inputValue('#syUrl')).startsWith('https://script.google.com/macros/s/') && (await p3.inputValue('#sySecret')) === '');
@@ -307,13 +307,13 @@ for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes
 const q = (pg, sel, props, pseudo) => pg.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
 const soonStr2 = soonStr;
 for (const scheme of ['light', 'dark']) {
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
   const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orangeBtn = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
   const MUSTARD = 'rgb(227, 167, 47)', ORANGE = 'rgb(216, 87, 42)';
   const rc = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
   await rc.route(/^https?:\/\/(?!localhost)/, stub);
   await rc.addInitScript(([planned, today]) => {
-    localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' }));
+    (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ placesvintage: '999' })));
     const mk = (id, name, status, lat, lon, extra) => Object.assign({ id, name, status, lat, lon, category: 'Restaurant', city: 'Denver', emoji: '🍽️', tags: [], notes: '', created: 1, updated: 1 }, extra);
     localStorage.setItem('allison-placesv-v1', JSON.stringify([
       mk('r1', 'Rioja', 'want', 39.7432, -104.9950, { planned, price: 3, notes: 'Dinner #date-night', tags: ['date-night'] }),
@@ -329,7 +329,7 @@ for (const scheme of ['light', 'dark']) {
   const lbl = s => scheme + ': ' + s;
   // the map, which Places opens on
   ok(lbl('Retro: Futura, and the ' + (scheme === 'light' ? 'cream' : 'walnut') + ' ground'), /Futura/.test((await q(rp, 'body', ['fontFamily']))[0]) && (await q(rp, 'body', ['backgroundColor']))[0] === ground);
-  ok(lbl('Retro: a mustard sun, a teal dot and an orange pill behind the title'), (await q(rp, '.ambient i:nth-child(1)', ['backgroundColor']))[0] === (scheme === 'light' ? MUSTARD : 'rgb(233, 221, 196)') && (await q(rp, '.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q(rp, '.ambient i:nth-child(3)', ['backgroundColor']))[0] === ORANGE);
+  ok(lbl('Retro: a mustard sun, a teal dot and an orange pill behind the title'), (await q(rp, '.ambient i:nth-child(1)', ['backgroundColor']))[0] === (MUSTARD) && (await q(rp, '.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q(rp, '.ambient i:nth-child(3)', ['backgroundColor']))[0] === ORANGE);
   ok(lbl('Retro: on the map the header is clear and the shapes (in it, behind the controls) sit over the map'), (await q(rp, '.top', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && await rp.evaluate(() => { const a = document.querySelector('.ambient'); return !!a.closest('.top') && +getComputedStyle(a.closest('.top')).zIndex > +getComputedStyle(document.getElementById('map')).zIndex; }));
   ok(lbl('Retro: a 44px title with the three little bars under it'), (await q(rp, '.title', ['fontSize']))[0] === '44px' && (await q(rp, '.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
   ok(lbl('Retro: the add button is solid orange'), (await q(rp, '#fab', ['backgroundColor']))[0] === orangeBtn);

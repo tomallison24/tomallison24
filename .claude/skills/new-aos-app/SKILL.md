@@ -77,11 +77,12 @@ first is the standard one). aOS then shows one row for the app and a Design menu
 the design's folder gets no row of its own (`VARIANTS`) and is not in the Allison family
 count. Give it its own storage keys and cache name (never the base app's), and note in its
 README anything it needs that the base app doesn't (a sign-in address, a token).
-It wears the shared day and night sky (Weather Vintage's backgrounds, `home/sky.js`):
+It wears the shared day and night sky (Weather Vintage's backgrounds with the real sun, `home/sky.js`):
 load `<script src="../home/sky.js"></script>` in `<head>` after the styles, list
 `'../home/sky.js'` in `sw.js` SHELL, and colour the disc (the first shape of its
 `.ambient` box) `var(--sky-disc, var(--mc-mustard))`; keep any text off the disc, since at
-night it is cream. `check-apps.mjs` and `aOS/scripts/sky-test.mjs` (add the app to its
+night it is cream. A test that checks its colours holds the sky still with
+`localStorage['aos.sky'] = 'day'`. `check-apps.mjs` and `aOS/scripts/sky-test.mjs` (add the app to its
 list) check it. Weather Vintage is the exception: it draws its own sky.
 
 Server side, if it needs one: `functions/<id>/api/[[route]].js`, guarded by an

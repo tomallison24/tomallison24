@@ -49,6 +49,7 @@ async function newPage(scheme, store = {}) {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem('aos.sky', 'day');   // the sky held at day, so the colours don't depend on the hour
   }, seed);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
@@ -65,12 +66,12 @@ const shot = async (page, name) => SHOTS ? (await page.waitForTimeout(400), page
 async function retroLook(page, scheme) {
   const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
   const light = scheme === 'light';
-  const cream = light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = light ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
+  const cream = light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = light ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
   assert.match((await q('body', ['fontFamily']))[0], /Futura/);
   assert.equal((await q('html', ['backgroundColor']))[0], ground, 'the ground');
   const [bg, shadow, backdrop, radius] = await q('.card.scores', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
   assert.equal(bg, cream, 'a flat cream (walnut) card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], light ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
   assert.equal((await q('.ambient i:nth-child(2)', ['backgroundColor']))[0], light ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', 'a teal dot');
   assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
   assert.equal((await q('.backdrop', ['display']))[0], 'none', 'no drifting glass colour fields');

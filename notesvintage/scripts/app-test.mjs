@@ -74,7 +74,7 @@ const rgbOf = c => { const n = (c.match(/[\d.]+/g) || []).map(Number); return /^
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ notesvintage: '999' }))));   // no aOS walkthrough over the page
   await ctx.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, json: {} }));
   const page = await ctx.newPage();
@@ -88,7 +88,7 @@ for (const scheme of ['light', 'dark']) {
   await page.waitForSelector('#list .ctile');
   await page.waitForTimeout(900);
   const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
   const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)';
   const orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
 
@@ -106,7 +106,7 @@ for (const scheme of ['light', 'dark']) {
     assert.equal((await q('body', ['backgroundColor']))[0], ground);
     const [bg, shadow, backdrop, radius] = await q('#list .ctile', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
     assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
     assert.equal((await q('.ambient i:nth-child(2)', ['backgroundColor']))[0], teal, 'a teal dot');
     assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
     assert.equal((await q('#fab', ['backgroundColor']))[0], orange, 'the new-note button is solid orange');

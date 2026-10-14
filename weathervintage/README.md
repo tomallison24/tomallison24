@@ -46,10 +46,10 @@ in Mail Vintage, Home Vintage and Orders Vintage:
   downloaded.
 
 These colour groups are where the day and night backgrounds of the other Vintage
-designs and aOS come from: `../home/sky.js` gives them the `sun` ground and disc
-in Light and the `night` ones in Dark, the same colours, with the same slowly
-turning rays and twinkling stars. Weather Vintage doesn't load it: it chooses its
-sky from the forecast and the sun, not from Light or Dark.
+designs and aOS come from: `../home/sky.js` gives them the `sun` and `night` ground
+and disc, the same colours, with the same slowly turning rays and twinkling stars,
+for the real sunrise and sunset where the phone is (the same equation). Weather
+Vintage doesn't load it: it chooses its sky from the forecast for the place on screen.
 
 It is the last block of the style sheet in `index.html`, and `app.js` puts the
 colour groups and palette colours where Weather has gradients and white; the

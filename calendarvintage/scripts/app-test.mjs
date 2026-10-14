@@ -62,7 +62,7 @@ const browser = await chromium.launch();
 const violations = [], errors = [];
 async function newPage(scheme, { vintageKeys = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US', geolocation: { latitude: 39.74, longitude: -104.99 }, permissions: ['geolocation'] });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ calendarvintage: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ calendarvintage: '999' }))));   // no aOS walkthrough over the page
   await ctx.route('**/calendar/api/**', async route => {
     const req = route.request(), u = new URL(req.url()), r = u.pathname.split('/api/')[1];
     const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
@@ -114,13 +114,13 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
 // Calendar Vintage is drawn in the Retro look: Futura, flat cream (walnut) cards, mustard, burnt orange.
 async function retroLook(page, scheme) {
   const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
   const orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
   assert.match((await q('body', ['fontFamily']))[0], /Futura/);
   assert.equal((await q('body', ['backgroundColor']))[0], ground);
   const [bg, shadow, backdrop, radius] = await q('#mgrid', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
   assert.equal(bg, cream, 'a flat cream (walnut) card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
   assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
   assert.equal((await q('#fab', ['backgroundColor']))[0], orange, 'the new-event button is solid orange');
   assert.equal((await q('#tabThumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the chosen view');

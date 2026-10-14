@@ -32,10 +32,13 @@ style picker in the design canvas is not built. Football's yellow and red
 cards, and the colours ESPN gives a table's zones (Champions League,
 relegation), stay as they are: they say something.
 
-**The sky.** The page behind the title is Weather Vintage's: by day (Light) a cream
-ground washed with mustard, with the sun and rays that turn very slowly; by night
-(Dark) a walnut ground washed with deep teal, with the moon and twinkling stars.
-It follows Light or Dark (the phone's, or the choice in aOS) and holds still with
+**The sky.** The page behind the title is Weather Vintage's, with the real sun: by
+day a ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset come from the same equation as
+Weather Vintage's, for the phone's place (kept on the phone, to a tenth of a degree,
+and only if the app already has location permission: it never asks), else from the
+time zone, and the sky changes by itself while the app is open. It holds still with
 reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
 `<head>`, listed in `sw.js`); this app only gives its disc its colour
 (`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its

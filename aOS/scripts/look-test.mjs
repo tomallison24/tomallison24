@@ -23,7 +23,7 @@ async function open(scheme = 'light', seed = {}, o = {}) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mobile/15E148 Safari/604.1' });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
-  await ctx.addInitScript(s => { try { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); if (!s.__install) sessionStorage.setItem('aos.later.aos', '1');
+  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); if (!s.__install) sessionStorage.setItem('aos.later.aos', '1');
     for (const k in s) if (!sessionStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); sessionStorage.setItem('seeded.' + k, '1'); } } catch {} }, seed);
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
@@ -88,7 +88,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await ctx.close();
   const o = await open('dark', { 'aos.look': 'neon' });
   if (await o.p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('an unknown look did not fall back to Vintage');
-  if (!/#223B37/i.test(await tint(o.p))) pr.push('the dark Vintage tint is not the night sky\'s walnut and teal (home/sky.js): ' + await tint(o.p));
+  if (!/#4A391E/i.test(await tint(o.p))) pr.push('the dark Vintage tint is not the day sky\'s walnut and mustard (home/sky.js): ' + await tint(o.p));
   await o.ctx.close();
   report('Sea glass in dark mode; an unknown stored look falls back to Vintage', pr);
 }
