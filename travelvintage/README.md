@@ -53,7 +53,7 @@ change independently and Travel is never touched.
 
 - **Own storage.** Every key is `travelv.…` or `allison-travelv-…` (Travel's is
   `travel.…` / `allison-travel-…`), the Sheet link's IndexedDB copy is
-  `allison-travelv`, and the offline cache is `travelvintage-v7`, so each app
+  `allison-travelv`, and the offline cache is `travelvintage-v8`, so each app
   has its own bookings, trip names, settings and cache. A booking edited in one
   is not edited in the other. A backup file from one can be imported into the
   other (the file keeps Travel's `allison-travel` marker for that reason).
