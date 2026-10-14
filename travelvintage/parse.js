@@ -78,6 +78,9 @@
     'TownePlace Suites', 'Sheraton', 'Westin', 'W Hotel', 'Renaissance', 'Ritz-Carlton', 'AC Hotel', 'Moxy',
     'Aloft', 'Element', 'Four Points', 'Le Méridien', 'Le Meridien', 'St. Regis', 'Delta Hotels',
     'Autograph Collection', 'Tribute Portfolio', 'Gaylord', 'Westin', 'EDITION', 'Luxury Collection', 'Design Hotels'];
+  // Hotel names are looked for among these brands as well (Marriott's own first).
+  const HOTEL_BRANDS = MARRIOTT_BRANDS.concat(['Hilton', 'DoubleTree', 'Embassy Suites', 'Hampton Inn', 'Homewood Suites', 'Home2 Suites', 'Hyatt', 'Holiday Inn',
+    'Crowne Plaza', 'InterContinental', 'Kimpton', 'Best Western', 'Wyndham', 'Radisson', 'Four Seasons', 'Omni', 'Loews', 'Fairmont', 'Staybridge']);
   const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
   // ---------------------------------------------------------------------
@@ -453,12 +456,16 @@
   // Name: a brand name in the subject or the first lines, else the subject after "at"/"for".
   function hotelName(text, subject, from) {
     const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
-    const brand = new RegExp('(' + MARRIOTT_BRANDS.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'i');
+    const brand = new RegExp('(' + HOTEL_BRANDS.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'i');
     let name = '';
     const subj = String(subject || '').replace(/\s+on\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b.*$/i, '');
     const subjAt = /\bstay\s+at\s+(?:the\s+)?(.{4,90})$/i.exec(subj) || /\b(?:at|for)\s+(?!your\b)(?:the\s+)?(.{4,90}?)(?:\s*[|(–]|$)/i.exec(subj);
     if (subjAt && !/\d{5,}|\byour\b|reservation|\bstay\b|\btrip\b/i.test(subjAt[1])) name = subjAt[1].trim();
-    if (!name) name = (lines.slice(0, 40).find(l => brand.test(l) && l.length < 90 && !/reward|bonvoy account|member|points|app/i.test(l)) || '').trim();
+    // "Hilton San Diego Bayfront Reservation Confirmation": the name leads the subject.
+    if (!name) { const lead = /^(.{4,80}?)\s+(?:reservation|booking|stay)?\s*(?:confirmation|confirmed|itinerary)\b/i.exec(subj); if (lead && brand.test(lead[1]) && !/\byour\b/i.test(lead[1])) name = lead[1].trim(); }
+    // "your reservation at Hilton San Diego Bayfront."
+    if (!name) { const at = /\b(?:reservation|booking|stay)\s+at\s+(?:the\s+)?([A-Z][^.\n|]{3,80}?)\s*(?:\.|,|\n|$)/.exec(text); if (at && brand.test(at[1])) name = at[1].trim(); }
+    if (!name) name = (lines.slice(0, 40).find(l => brand.test(l) && l.length < 90 && !/reward|honors|bonvoy account|member|points|app/i.test(l)) || '').trim();
     if (!name) name = /marriott/i.test(from) ? 'Marriott' : ((/^"?([^"<]+?)"?\s*</.exec(from || '') || [])[1] || 'Hotel').trim();
     return name;
   }
@@ -487,9 +494,12 @@
     const nameAt = lines.findIndex(l => l === name || l.includes(name));
     let address = '';
     if (nameAt >= 0) { const next = lines.slice(nameAt + 1, nameAt + 4).find(l => /\d/.test(l) && /,|\b(st|street|ave|avenue|rd|road|blvd|boulevard|way|drive|dr|lane|ln)\b/i.test(l) && !findDates(l).length); if (next) address = next; }
+    // "1 Park Boulevard" then "San Diego, CA, 92101": the city is the start of the line after the street.
+    let city = '';
+    if (address) { const at = lines.indexOf(address), cl = at >= 0 ? lines[at + 1] : ''; const m = cl && /^([A-Z][A-Za-z .'-]{1,40}),\s*[A-Z]{2}\b/.exec(cl); if (m) { city = m[1].trim(); address += ', ' + cl; } }
     const conf = findConf(text) || ((/confirmation\s*(?:number|#|no\.?)?\s*[:#]?\s*(\d{6,12})/i.exec(text) || [])[1] || '');
     return [{
-      type: 'hotel', status: 'confirmed', conf, traveller: '', name, address, city: '', phone: '',
+      type: 'hotel', status: 'confirmed', conf, traveller: '', name, address, city, phone: '',
       checkIn, checkInTime: ci && ci.time || '', checkOut, checkOutTime: co && co.time || '', guess: true,
     }];
   }

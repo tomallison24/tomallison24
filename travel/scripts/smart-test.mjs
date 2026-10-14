@@ -360,6 +360,49 @@ const pick = (page, f) => page.evaluate(f);
   await ctx.close();
 }
 
+// =================== one reservation is one trip; a hotel's pending and confirmed emails are one stay ===================
+{
+  const { ctx, page } = await open({ empty: true, calendar: false });
+  const OUT = day(70), HOME = day(74), HOP = day(80), FAR = day(140);
+  const flightJson = (no, from, to, d, conf) => ({ '@context': 'http://schema.org', '@type': 'FlightReservation', reservationNumber: conf,
+    reservationFor: { '@type': 'Flight', flightNumber: no, airline: { '@type': 'Airline', name: 'Alaska Airlines', iataCode: 'AS' },
+      departureAirport: { iataCode: from }, departureTime: iso(d) + 'T17:10:00-05:00', arrivalAirport: { iataCode: to }, arrivalTime: iso(d) + 'T20:01:00-07:00' } });
+  const hotelText = conf => `ISSCR SYMPOSIUM\n${long(day(71))}\nHilton San Diego Bayfront\n1 Park Boulevard\nSan Diego, CA, 92101\nRESERVATION CONFIRMATION\nWe are pleased to confirm your reservation at Hilton San Diego Bayfront. Below you will find details of your reservation.\nHotel confirmation:\n${conf}\nDate booked:\n${long(day(-1))}\nArrival date:\n${long(OUT)}\nDeparture date:\n${long(day(73))}\nRoom type:\nSkyline Bay City View 1 King Bed\n`;
+  const feed = emails => page.evaluate(emails => {
+    const T = window.__travel;
+    emails.forEach(m => { const r = T.P.parseEmail({ ...m, date: Date.now(), id: m.id, threadId: m.id }); r.bookings.forEach(b => T.upsert(b)); });
+    return T.groupTrips().map(g => ({ n: g.items.length, kinds: g.items.map(b => b.type).join(','), name: g.name }));
+  }, emails);
+
+  await step('the flights out and home of one booking are one trip, even with no hotel yet', async () => {
+    const groups = await feed([
+      { id: 'a1', from: 'Alaska Airlines <reservation@email.alaskaair.com>', subject: 'Your flight is booked: YAVUUB',
+        html: `<html><head><script type="application/ld+json">${JSON.stringify([flightJson('474', 'RDU', 'SAN', OUT, 'YAVUUB'), flightJson('434', 'SAN', 'RDU', HOME, 'YAVUUB')])}</script></head><body>booked</body></html>` }]);
+    assert.equal(groups.length, 1, JSON.stringify(groups));
+    assert.equal(groups[0].n, 2);
+  });
+  await step('a flight on from where the last one landed, away from home, joins that trip; a trip months later does not', async () => {
+    const groups = await feed([
+      { id: 'a2', from: 'Alaska Airlines <reservation@email.alaskaair.com>', subject: 'Your flight is booked: ZZ9PLU',
+        html: `<html><head><script type="application/ld+json">${JSON.stringify(flightJson('900', 'RDU', 'DEN', FAR, 'ZZ9PLU'))}</script></head><body>booked</body></html>` },
+      { id: 'a3', from: 'Alaska Airlines <reservation@email.alaskaair.com>', subject: 'Your flight is booked: HOP22X',
+        html: `<html><head><script type="application/ld+json">${JSON.stringify(flightJson('120', 'RDU', 'PDX', HOP, 'HOP22X'))}</script></head><body>booked</body></html>` }]);
+    // RDU→SAN d70, SAN→RDU d74 are one trip; RDU→PDX d80 leaves from home, so it is its own trip; RDU→DEN d140 too
+    assert.deepEqual(groups.map(g => g.n), [2, 1, 1], JSON.stringify(groups));
+  });
+  await step('the hotel email that says "pending" and the one with its number are one stay, named and placed from the email', async () => {
+    const groups = await feed([
+      { id: 'h1', from: 'Hilton Reservations <info@cvent.com>', subject: 'Hilton San Diego Bayfront Reservation Confirmation', text: hotelText('Pending. Another email will be sent with your hotel number.') },
+      { id: 'h2', from: 'Hilton Reservations <info@cvent.com>', subject: 'Hilton San Diego Bayfront Reservation Confirmation', text: hotelText('3115096800') }]);
+    const hotels = await page.evaluate(() => window.__travel.bookings.filter(b => b.type === 'hotel').map(b => ({ name: b.name, city: b.city, conf: b.conf })));
+    assert.deepEqual(hotels, [{ name: 'Hilton San Diego Bayfront', city: 'San Diego', conf: '3115096800' }], JSON.stringify(hotels));
+    assert.equal(groups[0].kinds.split(',').filter(k => k === 'hotel').length, 1);
+    assert.equal(groups[0].n, 3, 'the hotel sits in the same trip as the flights: ' + JSON.stringify(groups));
+    assert.equal(groups[0].name, 'San Diego');
+  });
+  await ctx.close();
+}
+
 // =================== the settings switches ===================
 {
   const { ctx, page, seen } = await open({ calendar: true });

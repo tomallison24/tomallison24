@@ -221,6 +221,23 @@ if (window.top !== window.self) {
       if (cur && (dOf(s) - dOf(cur.end)) / D <= 1) { cur.items.push(b); if (e > cur.end) cur.end = e; }
       else { cur = { items: [b], start: s, end: e }; groups.push(cur); }
     }
+    // One reservation is one trip: neighbouring groups that share a confirmation code (an Alaska booking with a flight out and a
+    // flight home), or where the next one leaves from the place the last one flew to (away from home, within two weeks), join up.
+    const out = {}; list.forEach(b => { if (b.type === 'flight' && b.from) out[b.from] = (out[b.from] || 0) + 1; });
+    const home0 = Object.entries(out).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const fl = g => g.items.filter(b => b.type === 'flight' && b.status !== 'cancelled');
+    for (let i = 0; i < groups.length - 1;) {
+      const a = groups[i], c = groups[i + 1];
+      const ca = new Set(a.items.map(b => b.conf).filter(Boolean)), shared = c.items.some(b => b.conf && ca.has(b.conf));
+      const last = fl(a).pop(), first = fl(c)[0];
+      const chain = !!(last && first && last.to && last.to === first.from && last.to !== home0 && (dOf(c.start) - dOf(a.end)) / D <= 14);
+      if (shared || chain) {
+        a.ids = (a.ids || [a.items[0].id]).concat(c.ids || [c.items[0].id]);
+        a.items = a.items.concat(c.items).sort((x, y) => startOf(x).localeCompare(startOf(y)));
+        if (c.end > a.end) a.end = c.end;
+        groups.splice(i + 1, 1);
+      } else i++;
+    }
     // An Uber or Lyft ride joins the trip it was taken on (a day either side,
     // for the ride to the airport); a ride at home isn't a trip, so it isn't shown.
     for (const r of alive().filter(b => b.ride)) {
@@ -234,7 +251,7 @@ if (window.top !== window.self) {
     groups.forEach(g => {
       g.id = g.items[0].id;
       g.auto = autoName(g);
-      g.name = names.get(g.id)?.name || g.auto;
+      g.name = names.get(g.id)?.name || (g.ids || []).map(i => names.get(i)?.name).find(Boolean) || g.auto;
       g.live = g.items.filter(b => b.status !== 'cancelled');
       g.startT = Math.min(...g.items.map(startT).filter(x => !isNaN(x)));
       g.endT = Math.max(...g.items.map(endT).filter(x => !isNaN(x)));
@@ -772,6 +789,8 @@ if (window.top !== window.self) {
     let cur = bookings.find(x => x.id === b.id);
     // The same flight on the same day, whatever id it was given (a gate or time update that doesn't name the airports, a flight whose day you typed).
     if (!cur && b.type === 'flight') cur = bookings.find(x => sameFlight(x, b) && (!x.from || !b.from || x.from === b.from) && (!x.conf || !b.conf || x.conf === b.conf));
+    // The same stay in two emails (one says the confirmation number is pending, the next has it).
+    if (!cur && b.type === 'hotel') cur = bookings.find(x => x.type === 'hotel' && !x.fromCal && P.sameStay(x, b) && (!x.conf || !b.conf || x.conf === b.conf));
     // The same booking with and without its date (Frontier's confirmation has none; its check-in email does).
     if (!cur) cur = bookings.find(x => sameBooking(x, b));
     // A booking made from a calendar event: the email about the same trip takes it over (nothing is listed twice).

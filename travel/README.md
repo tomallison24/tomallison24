@@ -150,6 +150,14 @@ minutes at most) or you change a booking:
   arrives, it takes the booking over, so nothing is listed twice. Events
   Travel wrote itself (their ids end `@allison-travel`), repeating events and
   everything else are ignored.
+- *Trips follow the reservation.* Bookings within a day of each other are one
+  trip; so are neighbouring trips that share a confirmation code (one Alaska
+  booking with a flight out and a flight home), and a flight that leaves from
+  where the last one landed, away from home (the most common departure airport),
+  within two weeks. Only neighbouring trips are joined. A hotel email from a
+  booking site (Hilton's come from Cvent) is named from its subject or its
+  "reservation at ..." line, and its city is read from the address; the email that
+  says the confirmation number is pending and the one that has it are one stay.
 - *Travel into the calendar.* A booking that is plainly right (not a guess, not
   "To check") and still to come (a flight also needs its time and both
   airports) is written to the Family calendar once, under its own id, and

@@ -376,4 +376,20 @@ test('the same trip is recognised across email and calendar, and different trips
   assert.equal(P.sameRental({ type: 'car', company: 'National', pickup: '2026-11-02T18:00' }, { type: 'car', company: 'National', pickup: '2026-11-02T18:00' }), true);
 });
 
+test('a hotel email from a booking platform is named and placed from its own words (Hilton via Cvent)', () => {
+  const text = conf => ['ISSCR SYMPOSIUM', 'Dec 16, 2026 to Dec 18, 2026', 'Hilton San Diego Bayfront', '1 Park Boulevard', 'San Diego, CA, 92101', 'RESERVATION CONFIRMATION',
+    'We are pleased to confirm your reservation at Hilton San Diego Bayfront. Below you will find details of your reservation.', 'Hotel confirmation:', conf, 'Date booked:', 'Oct 14, 2026',
+    'Arrival date:', 'Dec 15, 2026', 'Departure date:', 'Dec 18, 2026', 'Rewards:', 'Hilton Honors 1234567890', 'Cancel Policy:', 'Upon checkin, an incidental deposit of $125 per night will be required.'].join('\n');
+  for (const conf of ['Pending. Another email will be sent with your hotel number.', '3115096800']) {
+    const r = P.parseEmail({ text: text(conf), subject: 'Hilton San Diego Bayfront Reservation Confirmation', from: 'Hilton Reservations <info@cvent.com>', date: Date.parse('2026-10-14T14:00:00Z'), id: 'h', threadId: 't' });
+    assert.equal(r.bookings.length, 1);
+    const b = r.bookings[0];
+    assert.deepEqual([b.type, b.name, b.city, b.checkIn, b.checkOut], ['hotel', 'Hilton San Diego Bayfront', 'San Diego', '2026-12-15', '2026-12-18']);
+    assert.equal(b.conf, /^\d+$/.test(conf) ? conf : '');
+  }
+  // the name comes from the subject when the body has no line for it
+  const r2 = P.parseEmail({ text: 'Arrival date: Dec 15, 2026\nDeparture date: Dec 18, 2026\nHotel confirmation: 3115096800', subject: 'Hyatt Regency Boston Reservation Confirmation', from: 'noreply@cvent.com', date: Date.parse('2026-10-14T14:00:00Z'), id: 'h2', threadId: 't2' });
+  assert.equal(r2.bookings[0].name, 'Hyatt Regency Boston');
+});
+
 console.log(n + ' passed');
