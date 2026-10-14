@@ -266,11 +266,11 @@ await test('drawn in the Retro look, light and dark: Futura, flat cream or walnu
     await rp.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
     await rp.goto(BASE + '/' + FOLDER + '/'); await rp.waitForFunction(() => window.__podcasts); await rp.waitForSelector('#homeBody .rgroup'); await rp.waitForTimeout(600);
     const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', MUSTARD = 'rgb(227, 167, 47)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/, scheme + ': Futura');
     assert.equal((await q('body', ['backgroundColor']))[0], ground, scheme + ': the ground');
-    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], MUSTARD, 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? MUSTARD : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
     assert.equal((await q('.ambient i:nth-child(2)', ['backgroundColor']))[0], teal, 'a teal dot');
     assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
     assert.equal((await q('.title', ['fontSize']))[0], '44px');

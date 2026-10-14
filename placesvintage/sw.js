@@ -2,9 +2,9 @@
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Your places live in localStorage, never in this cache, and search,
 // place details and map tiles (other sites) are never cached here.
-const CACHE = 'placesvintage-v1';
+const CACHE = 'placesvintage-v2';
 // slide.js is shared by every app, from home/.
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/welcome.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/sky.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

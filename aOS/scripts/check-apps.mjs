@@ -73,6 +73,9 @@ const APPS = constant(W, 'APPS', 'home/welcome.js') || [];
 const NAMES = constant(W, 'NAMES', 'home/welcome.js') || {};
 const TOURS = constant(W, 'TOURS', 'home/welcome.js') || {};
 const DARK_ONLY = constant(W, 'DARK_ONLY', 'home/welcome.js') || [];
+const DESIGNS = constant(W, 'DESIGNS', 'home/welcome.js') || {};
+// aOS and every Vintage design show the day and night sky (home/sky.js); Weather Vintage draws its own from the forecast
+const SKY = new Set(['aos', ...Object.values(DESIGNS).flatMap(d => d.slice(1).filter(x => x.look === 'vintage').map(x => x.app))].filter(id => id !== 'weathervintage'));
 const LINEsrc = (/const LINE = \{/.exec(W) || {}).index;
 const LINE = LINEsrc === undefined ? new Set() : new Set([...literal(W, LINEsrc + 'const LINE = '.length).matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]));
 const S = (read('aOS/app.js') || '') + (read('aOS/index.html') || '');   // aOS's script is app.js (it was inline in index.html)
@@ -134,8 +137,9 @@ for (const id of ids) {
   const sw = read(dir + '/sw.js') || '';
   if (/back\.js/.test(sw)) err(id, 'sw.js lists ../home/back.js, which is gone: its install fails');
   const shell = (/const SHELL = (\[[^\]]*\])/.exec(sw) || [])[1];
+  let list = [];
   if (shell) {
-    let list = []; try { list = Function('return ' + shell)(); } catch { err(id, 'sw.js SHELL couldn’t be read'); }
+    try { list = Function('return ' + shell)(); } catch { err(id, 'sw.js SHELL couldn’t be read'); }
     for (const f of list) {
       const p = f.split('?')[0]; if (p === './' || p === '') continue;
       if (!exists(path.join(dir, p))) err(id, 'sw.js SHELL lists ' + f + ', which doesn’t exist: the offline shell won’t install');
@@ -168,6 +172,10 @@ for (const id of ids) {
   rule(/name="theme-color"/.test(html), 'no theme-color meta');
   rule(DARK_ONLY.includes(id) || /prefers-color-scheme:\s*(dark|light)/.test(html), 'no light and dark: every app follows the phone (prefers-color-scheme), or is listed in DARK_ONLY');
   rule(/prefers-reduced-motion/.test(html), 'doesn’t honour prefers-reduced-motion');
+  if (SKY.has(id)) {
+    rule(/<script\s+src="\.\.\/home\/sky\.js"/.test(html), 'a Vintage design loads ../home/sky.js (in <head>): the day and night sky every Vintage app shares');
+    rule(list.includes('../home/sky.js'), 'sw.js SHELL should list ../home/sky.js, so the sky works offline');
+  }
   rule(!/fonts\.(googleapis|gstatic)\.com|<link[^>]+rel="stylesheet"[^>]+href="https?:/i.test(html), 'loads a web font or stylesheet from another site: AllisonOS uses the system font, and nothing from elsewhere');
   if (store) rule(/--tile:/.test(html), 'doesn’t use the faint cards every app shares (--tile / --tile-edge)');
   // Visible text only: strip scripts, styles and tags, then look for an uppercase AOS.

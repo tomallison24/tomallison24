@@ -49,7 +49,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const { ctx, p, errs } = await open(); const pr = [...errs];
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('not Vintage to begin with');
   if (await css(p, '.tabs', 'backgroundColor') !== WALNUT) pr.push('the tab pill is not walnut: ' + await css(p, '.tabs', 'backgroundColor'));
-  if (!/#F4ECDD/i.test(await tint(p))) pr.push('the status bar tint is not cream: ' + await tint(p));
+  if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allInnerTexts();
   if (names.join() !== 'Vintage,Sea glass') pr.push('the picker offers ' + names.join());
@@ -88,7 +88,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await ctx.close();
   const o = await open('dark', { 'aos.look': 'neon' });
   if (await o.p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('an unknown look did not fall back to Vintage');
-  if (!/#241E1A/i.test(await tint(o.p))) pr.push('the dark Vintage tint is not walnut: ' + await tint(o.p));
+  if (!/#223B37/i.test(await tint(o.p))) pr.push('the dark Vintage tint is not the night sky\'s walnut and teal (home/sky.js): ' + await tint(o.p));
   await o.ctx.close();
   report('Sea glass in dark mode; an unknown stored look falls back to Vintage', pr);
 }

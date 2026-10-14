@@ -43,6 +43,15 @@ the style picker in the design canvas is not built. It follows the phone's
 Light or Dark, or aOS's own choice, like every app. The status bar is `default`
 (dark text), not `black-translucent`, which would draw the clock white on cream.
 
+**The sky.** The page behind the title is Weather Vintage's: by day (Light) a cream
+ground washed with mustard, with the sun and rays that turn very slowly; by night
+(Dark) a walnut ground washed with deep teal, with the moon and twinkling stars.
+It follows Light or Dark (the phone's, or the choice in aOS) and holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Notes
 
 It is a second copy of Notes' page and script, not a setting, so the two can
@@ -53,7 +62,7 @@ change independently and Notes is never touched.
   Sheet link and its time, the notification choices, the view and the tab, the
   last backup and the version), the Sheet link and code's second copy is in
   IndexedDB `allison-notesv` (Notes': `allison-notes`), and the offline cache
-  is `notesvintage-v1`. So each app has its own notes and settings on the
+  is `notesvintage-v2`. So each app has its own notes and settings on the
   phone: a note written in one is not in the other, until both are connected to
   the same Sheet (below). Each Home Screen app on iOS has its own storage anyway.
   A backup file from one can be imported into the other (it is saved as

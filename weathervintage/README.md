@@ -45,6 +45,12 @@ in Mail Vintage, Home Vintage and Orders Vintage:
   under the place name; Futura, which iOS has built in, so no font is
   downloaded.
 
+These colour groups are where the day and night backgrounds of the other Vintage
+designs and aOS come from: `../home/sky.js` gives them the `sun` ground and disc
+in Light and the `night` ones in Dark, the same colours, with the same slowly
+turning rays and twinkling stars. Weather Vintage doesn't load it: it chooses its
+sky from the forecast and the sun, not from Light or Dark.
+
 It is the last block of the style sheet in `index.html`, and `app.js` puts the
 colour groups and palette colours where Weather has gradients and white; the
 glass styles above it in the sheet are still there underneath. Weather Vintage

@@ -114,13 +114,13 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
 // Calendar Vintage is drawn in the Retro look: Futura, flat cream (walnut) cards, mustard, burnt orange.
 async function retroLook(page, scheme) {
   const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
   const orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
   assert.match((await q('body', ['fontFamily']))[0], /Futura/);
   assert.equal((await q('body', ['backgroundColor']))[0], ground);
   const [bg, shadow, backdrop, radius] = await q('#mgrid', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
   assert.equal(bg, cream, 'a flat cream (walnut) card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
   assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
   assert.equal((await q('#fab', ['backgroundColor']))[0], orange, 'the new-event button is solid orange');
   assert.equal((await q('#tabThumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the chosen view');
@@ -375,7 +375,7 @@ await test('it keeps its own storage and cache, and talks to Calendar’s server
   assert.deepEqual([...apis].sort(), ['/aOS/api/', '/calendar/api/'], 'the iCloud connection is Calendar’s: ' + [...apis]);
   await page.evaluate(() => navigator.serviceWorker.ready);
   const caches = await page.evaluate(async () => { for (let i = 0; i < 40; i++) { const k = await window.caches.keys(); if (k.length) return k; await new Promise(r => setTimeout(r, 100)); } return []; });
-  assert.deepEqual(caches, ['calendarvintage-v1']);
+  assert.deepEqual(caches, ['calendarvintage-v2']);
 });
 
 await test('with only the standard Travel and Fitness in storage (as on a computer), their layers show too', async () => {

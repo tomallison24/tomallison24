@@ -2,8 +2,8 @@
 // new deploy shows up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mailvintage-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/welcome.js'];
+const CACHE = 'mailvintage-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/welcome.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

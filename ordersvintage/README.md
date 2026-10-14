@@ -27,6 +27,15 @@ It is the last block of the style sheet in `index.html`; the glass styles above
 it are still there underneath. Orders Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's: by day (Light) a cream
+ground washed with mustard, with the sun and rays that turn very slowly; by night
+(Dark) a walnut ground washed with deep teal, with the moon and twinkling stars.
+It follows Light or Dark (the phone's, or the choice in aOS) and holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Orders
 
 It is a second copy of Orders' page and script, not a setting, so the two can
@@ -41,7 +50,7 @@ change independently and Orders is never touched.
   own folder as a web page (not checked on a phone).
 - **Own storage.** Every key is `ordersv.…` or `allison-ordersv-…` (Orders' is
   `orders.…` / `allison-orders-…`), so each app has its own orders, settings
-  and offline cache (`ordersvintage-v1`). An order edited in one is not edited
+  and offline cache (`ordersvintage-v2`). An order edited in one is not edited
   in the other. A backup file from one can be imported into the other.
 - **Own sign-in address.** Google's sign-in returns to the page it started
   from, so the OAuth client needs this redirect URI added **once**, next to

@@ -307,7 +307,7 @@ for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes
 const q = (pg, sel, props, pseudo) => pg.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
 const soonStr2 = soonStr;
 for (const scheme of ['light', 'dark']) {
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
   const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orangeBtn = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
   const MUSTARD = 'rgb(227, 167, 47)', ORANGE = 'rgb(216, 87, 42)';
   const rc = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
@@ -329,7 +329,7 @@ for (const scheme of ['light', 'dark']) {
   const lbl = s => scheme + ': ' + s;
   // the map, which Places opens on
   ok(lbl('Retro: Futura, and the ' + (scheme === 'light' ? 'cream' : 'walnut') + ' ground'), /Futura/.test((await q(rp, 'body', ['fontFamily']))[0]) && (await q(rp, 'body', ['backgroundColor']))[0] === ground);
-  ok(lbl('Retro: a mustard sun, a teal dot and an orange pill behind the title'), (await q(rp, '.ambient i:nth-child(1)', ['backgroundColor']))[0] === MUSTARD && (await q(rp, '.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q(rp, '.ambient i:nth-child(3)', ['backgroundColor']))[0] === ORANGE);
+  ok(lbl('Retro: a mustard sun, a teal dot and an orange pill behind the title'), (await q(rp, '.ambient i:nth-child(1)', ['backgroundColor']))[0] === (scheme === 'light' ? MUSTARD : 'rgb(233, 221, 196)') && (await q(rp, '.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q(rp, '.ambient i:nth-child(3)', ['backgroundColor']))[0] === ORANGE);
   ok(lbl('Retro: on the map the header is clear and the shapes (in it, behind the controls) sit over the map'), (await q(rp, '.top', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && await rp.evaluate(() => { const a = document.querySelector('.ambient'); return !!a.closest('.top') && +getComputedStyle(a.closest('.top')).zIndex > +getComputedStyle(document.getElementById('map')).zIndex; }));
   ok(lbl('Retro: a 44px title with the three little bars under it'), (await q(rp, '.title', ['fontSize']))[0] === '44px' && (await q(rp, '.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
   ok(lbl('Retro: the add button is solid orange'), (await q(rp, '#fab', ['backgroundColor']))[0] === orangeBtn);

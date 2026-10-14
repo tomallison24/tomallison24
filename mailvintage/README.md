@@ -23,6 +23,15 @@ it are still there underneath, so where `mail/README.md` says "glass" it means
 the place and shape of a control, not its surface. Mail Vintage is drawn this
 way for everyone: the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's: by day (Light) a cream
+ground washed with mustard, with the sun and rays that turn very slowly; by night
+(Dark) a walnut ground washed with deep teal, with the moon and twinkling stars.
+It follows Light or Dark (the phone's, or the choice in aOS) and holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Mail
 
 It is a second copy of Mail's page and script, not a setting, so the two can
@@ -30,7 +39,7 @@ change independently and Mail is never touched.
 
 - **Own storage.** Every key is `mailv.…` (Mail's is `mail.…`), so each app
   has its own sign-in, settings, tags, Tidy and Marketing state, and offline
-  cache (`mailvintage-v1`). Signing in to one does not sign in the other.
+  cache (`mailvintage-v2`). Signing in to one does not sign in the other.
 - **Own sign-in address.** Google's sign-in returns to the page it started
   from, so the OAuth client needs this redirect URI added **once**, next to
   Mail's (Google Cloud console → Credentials → the web client):

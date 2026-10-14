@@ -301,7 +301,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 body:not(.mapmode) .top{background:var(--bg)}
 .ambient{position:absolute;inset:0 0 auto 0;height:130px;z-index:-1;overflow:hidden}
 .ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:1;will-change:auto;aspect-ratio:auto}
-.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--mc-mustard)}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
 .ambient i:nth-child(2){width:44px;height:44px;left:auto;right:112px;top:58px;bottom:auto;background:var(--mc-teal)}
 .ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:66px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
 @media (max-width:359px){.ambient i:nth-child(1){width:150px;height:150px;top:-84px;right:-56px}.ambient i:nth-child(2){width:34px;height:34px;right:62px;top:56px}.ambient i:nth-child(3){right:-40px}}
@@ -397,6 +397,7 @@ path.osm-dot{stroke:#FBF5E9}
 .bizacts button:first-child{background:var(--cta);color:var(--cta-ink);box-shadow:none}
 .bizacts button:first-child:active{background:var(--cta)}
 </style>
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage app -->
 </head>
 <body>
 <div class="app" id="app">

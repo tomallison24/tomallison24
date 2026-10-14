@@ -238,7 +238,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   for (const scheme of ['light', 'dark']) {
     const { ctx, page, errs } = await phone(scheme);
     const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
     const flat = v => v === 'none' || v === '';
     await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
@@ -246,12 +246,12 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
     ok(scheme + ': the ground is cream / walnut', (await q('body', ['backgroundColor']))[0] === ground);
     const [bg, shadow, backdrop, radius] = await q('#main [data-meal]', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
     ok(scheme + ': a night is a flat cream / walnut card, 20px round', bg === cream && shadow === 'none' && flat(backdrop) && radius === '20px', [bg, shadow, backdrop, radius].join(' | '));
-    ok(scheme + ': a mustard sun, a teal dot and a burnt-orange pill behind the title', (await q('.ambient i:nth-child(1)', ['backgroundColor']))[0] === 'rgb(227, 167, 47)'
+    ok(scheme + ': a mustard sun, a teal dot and a burnt-orange pill behind the title', (await q('.ambient i:nth-child(1)', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)')
       && (await q('.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q('.ambient i:nth-child(3)', ['backgroundColor']))[0] === 'rgb(216, 87, 42)');
     ok(scheme + ': the title is big, with the three little bars under it', (await q('.title', ['fontSize']))[0] === '44px' && (await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
     ok(scheme + ': the tabs have a mustard thumb', (await q('#tabs .slthumb', ['backgroundColor']))[0] === 'rgb(227, 167, 47)' && (await q('#tabs', ['backgroundColor']))[0] === cream);
     ok(scheme + ': + is solid orange', (await q('#fab', ['backgroundColor']))[0] === orange);
-    ok(scheme + ': the theme colour is cream / walnut and the status bar is not translucent', (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#F4ECDD' : '#241E1A')
+    ok(scheme + ': the theme colour is the sky\'s ground (home/sky.js) and the status bar is not translucent', (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#F1DFBB' : '#223B37')
       && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'default');
     await page.click('#fab'); await page.waitForTimeout(700);
     const [sbg, sradius, sfilter] = await q('#planSheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);

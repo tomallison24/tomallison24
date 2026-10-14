@@ -504,14 +504,14 @@ await test('drawn in the Retro look, light and dark: Futura, flat cream or walnu
     const rp = R.page;
     await rp.goto(BASE + '/drinksvintage/'); await rp.waitForFunction(() => window.__drinks); await rp.waitForTimeout(1000);
     const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/, scheme + ': Futura');
     assert.equal((await q('body', ['backgroundColor']))[0], ground, scheme + ': the ground');
     const [bg, shadow, backdrop, radius] = await q('.rgroup.week', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
     assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
     assert.equal((await q('.sum', ['backgroundColor']))[0], cream, 'the week’s number is a flat card too');
-    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
     assert.equal((await q('.ambient i:nth-child(2)', ['backgroundColor']))[0], teal, 'a teal dot');
     assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
     assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the + button is solid orange');

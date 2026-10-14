@@ -509,7 +509,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 /* the atomic shapes behind the title (they scroll away with the page); kept in the first 90px, right of the title, so nothing under it is hard to read */
 .ambient{position:absolute;inset:0 0 auto 0;height:120px;z-index:-1}
 .ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
-.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--mc-mustard)}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
 .ambient i:nth-child(2){width:44px;height:44px;left:auto;right:96px;top:44px;bottom:auto;background:var(--mc-teal)}
 .ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:58px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
 .ambient i:nth-child(4){display:none}
@@ -621,6 +621,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .viewmenu button:nth-child(3n) .ic{background:color-mix(in srgb,var(--mc-orange) 26%,transparent)}
 .viewmenu small{color:var(--muted)}
 </style>
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage app -->
 </head>
 <body>
 

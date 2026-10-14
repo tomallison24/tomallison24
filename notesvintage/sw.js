@@ -1,8 +1,8 @@
 // Offline shell for the Notes Vintage app. Same-origin files load network-first so a
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Notes themselves live in localStorage, never in this cache.
-const CACHE = 'notesvintage-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=1', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js'];
+const CACHE = 'notesvintage-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=1', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

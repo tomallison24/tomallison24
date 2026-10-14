@@ -33,6 +33,15 @@ It is the last block of the style sheet in `index.html`; the glass styles above
 it are still there underneath. Podcasts Vintage is drawn this way for everyone:
 the style picker in the design canvas is not built.
 
+**The sky.** The page behind the title is Weather Vintage's: by day (Light) a cream
+ground washed with mustard, with the sun and rays that turn very slowly; by night
+(Dark) a walnut ground washed with deep teal, with the moon and twinkling stars.
+It follows Light or Dark (the phone's, or the choice in aOS) and holds still with
+reduced motion. `../home/sky.js` does it for every Vintage design and aOS (loaded in
+`<head>`, listed in `sw.js`); this app only gives its disc its colour
+(`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to its
+header. Checked by `aOS/scripts/sky-test.mjs`.
+
 ## What is separate from Podcasts
 
 It is a second copy of Podcasts' page and script, not a setting, so the two can
@@ -42,7 +51,7 @@ change independently and Podcasts is never touched.
   settings are in `localStorage` under `allison-podcastsv-v1` (Podcasts' is
   `allison-podcasts-v1`), the episode lists in the IndexedDB `allison-podcastsv`,
   and the Sheet link, code and phone id in `allison-podcastsv-sheet`. The
-  offline cache is `podcastsvintage-v1`. **It starts empty**: Podcasts keeps its
+  offline cache is `podcastsvintage-v2`. **It starts empty**: Podcasts keeps its
   state per app, so nothing carries over by itself. To bring your shows over,
   **Settings → Export shows** in Podcasts, then **Settings → Import shows** here
   (the OPML file; where you got to and what you saved don't come with it).

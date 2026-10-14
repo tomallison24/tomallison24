@@ -91,11 +91,11 @@ const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); }
 // burnt orange, the shapes behind the title; a mustard thumb under the chosen of Week / Month in Analysis.
 async function retroLook(page, scheme, { thumb = false } = {}) {
   const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
   assert.match((await q('body', ['fontFamily']))[0], /Futura/);
   assert.equal((await q('body', ['backgroundColor']))[0], ground);
   assert.equal((await q('.title', ['fontSize']))[0], '44px');
-  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
   assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
   assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the + button is solid orange');
   assert.equal((await q('#vbar > button', ['fontFamily']))[0].includes('Futura'), true);

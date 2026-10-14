@@ -163,12 +163,12 @@ for (const scheme of ['light', 'dark']) {
 
   await step(scheme + ': drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
-    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)';
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)';
     assert.match((await q('body', ['fontFamily']))[0], /Futura/);
     assert.equal((await q('body', ['backgroundColor']))[0], ground);
     const [bg, shadow, backdrop, radius] = await q('.trip', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
     assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(227, 167, 47)' : 'rgb(233, 221, 196)', 'the sun by day, the moon by night (home/sky.js)');
     assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
     assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the add button is solid orange');
     assert.equal((await q('#whenChips .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the filter');
@@ -197,7 +197,7 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': the trip page: round teal, orange and olive kinds on a cream ground', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
     const light = scheme === 'light';
-    assert.equal((await q('#tripPage .sheet.page', ['backgroundColor']))[0], light ? 'rgb(244, 236, 221)' : 'rgb(36, 30, 26)');
+    assert.equal((await q('#tripPage .sheet.page', ['backgroundColor']))[0], light ? 'rgb(241, 223, 187)' : 'rgb(34, 59, 55)');
     assert.equal((await q('#tpBody .tl', ['backgroundColor']))[0], light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)');
     const [flight, hotel, car] = await Promise.all(['flight', 'hotel', 'car'].map(k => q('#tpBody .ev.' + k + ' .ic', ['backgroundColor', 'borderRadius'])));
     assert.equal(flight[0], light ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', 'a flight is teal'); assert.equal(flight[1], '50%');
