@@ -604,17 +604,23 @@
     const ref = msg.date || Date.now();
     const cancelled = /\bcancel(?:l?ed|lation)\b/i.test(subject) || /your (?:reservation|booking|flight|trip) (?:has been|is|was) cancel/i.test(full.slice(0, 1500));
     const company = rideCompany(from);
-    let found = company ? rideFromText(full.length > text.length ? full : text, subject, company, ref)
+    const bare = text.replace(/https?:\/\/\S+/g, ' ');   // what the plain-text part says without its links
+    let found = company ? rideFromText(full.length > bare.length ? full : text, subject, company, ref)
       : fromSchema([...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])]);
     if (!found.length && !company) {
-      const body = full.length > text.length ? full : text;
-      const parking = parkingFromText(body, subject, from, ref);
-      found = parking.length ? parking : [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
-      // A hotel or car email that mentions a flight number (e.g. "for your
-      // arrival on UA123") shouldn't also make a flight, and vice versa.
-      const sender = airlineFromSender(from);
-      if (found.some(b => b.type !== 'flight') && !sender) found = found.filter(b => b.type !== 'flight');
-      if (sender) found = found.filter(b => b.type === 'flight');
+      // The longer of the two readings goes first, and when it finds nothing the other is tried: some senders (Cvent, for Hilton) make
+      // the plain-text part out of tracking links, where every date and name is a long URL, so the html is the one with the words.
+      const bodies = full.length > bare.length ? [full, text] : [text, full];
+      for (const body of bodies) {
+        const parking = parkingFromText(body, subject, from, ref);
+        found = parking.length ? parking : [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
+        // A hotel or car email that mentions a flight number (e.g. "for your
+        // arrival on UA123") shouldn't also make a flight, and vice versa.
+        const sender = airlineFromSender(from);
+        if (found.some(b => b.type !== 'flight') && !sender) found = found.filter(b => b.type !== 'flight');
+        if (sender) found = found.filter(b => b.type === 'flight');
+        if (found.length || body === bodies[1] || bodies[0] === bodies[1]) break;
+      }
     }
     const source = { msgId: msg.id || '', threadId: msg.threadId || '', subject: subject.slice(0, 200), from: from.slice(0, 200), date: ref };
     for (const b of found) {

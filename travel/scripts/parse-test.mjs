@@ -392,4 +392,19 @@ test('a hotel email from a booking platform is named and placed from its own wor
   assert.equal(r2.bookings[0].name, 'Hyatt Regency Boston');
 });
 
+test('an email whose plain-text part is only tracking links is read from its html (Cvent, for Hilton)', () => {
+  const link = v => 'http://rlm.passkey.com/Tracking/track.do?token=' + Buffer.from('trkid=624088384~~~url=' + v).toString('base64') + '&hash=5A9787681ED76AA41C92F9A7B7F9E453';
+  const rows = conf => [['Hotel confirmation:', conf], ['Date booked:', 'Oct 14, 2026'], ['Arrival date:', 'Dec 15, 2026'], ['Departure date:', 'Dec 18, 2026'], ['Room type:', 'Skyline Bay City View 1 King Bed']];
+  const html = conf => `<html><body><table><tr><td><strong>Hilton San Diego Bayfront</strong><br/><span>1 Park Boulevard</span><br/><span>San Diego, CA, 92101</span></td></tr><tr><td><strong>RESERVATION CONFIRMATION</strong></td></tr><tr><td><table>${rows(conf).map(([a, b]) => `<tr><td><span>${a}</span></td><td><span>&nbsp;${b}</span></td></tr>`).join('')}</table></td></tr></table></body></html>`;
+  const text = conf => `RESERVATION CONFIRMATION\n\nWe are pleased to confirm your reservation at ${link('Hilton San Diego Bayfront')}. Below you will find details of your reservation. If your travel plans change, please click here (https://book.passkey.com/entry?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoieXYwYWEwU0IrQVhrVG8xWXhhWm84SkpiRU4v&utm_source=71485).\n\n` + rows(conf).map(([a, b]) => `${a}\t ${link(b)}`).join('\n') + '\n';
+  for (const conf of ['Pending. Another email will be sent with your hotel number.', '3115096800']) {
+    const r = P.parseEmail({ html: html(conf), text: text(conf), subject: 'Hilton San Diego Bayfront Reservation Confirmation', from: 'Hilton Reservations <info@cvent.com>', date: Date.parse('2026-10-14T14:18:00Z'), id: 'c', threadId: 'c' });
+    assert.equal(r.bookings.length, 1, 'the html has what the links hide');
+    assert.deepEqual([r.bookings[0].name, r.bookings[0].checkIn, r.bookings[0].checkOut], ['Hilton San Diego Bayfront', '2026-12-15', '2026-12-18']);
+  }
+  // a plain-text part with real words in it still wins over a thinner html part
+  const r2 = P.parseEmail({ html: '<p>Your hotel is booked</p>', text: 'Hotel reservation confirmation\nHilton San Diego Bayfront\nCheck-in: Dec 15, 2026\nCheck-out: Dec 18, 2026\nConfirmation number: 3115096800', subject: 'Your reservation confirmation', from: 'Hilton <noreply@hilton.com>', date: Date.parse('2026-10-14T14:18:00Z'), id: 'd', threadId: 'd' });
+  assert.equal(r2.bookings[0].checkIn, '2026-12-15');
+});
+
 console.log(n + ' passed');
