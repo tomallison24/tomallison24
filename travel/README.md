@@ -110,6 +110,12 @@ Rules that keep it tidy:
   phones reading their own Gmail) is one booking: flights are matched on
   airline, number, date and airport; hotels and cars on the confirmation
   number.
+- **A flight number is not an identity.** Airlines use one number every day
+  (Frontier's 3073 is every day's), so a flight with no day in its email is
+  taken for an earlier booking of the same number and airports only when
+  their confirmation codes do not differ; two codes are two bookings. Trips
+  that share a confirmation code (a flight out, a flight home) are one trip
+  only when they are within 30 days of each other.
 - A later email updates a booking (a new time, a gate); a **cancellation**
   email marks it cancelled.
 - **What you typed wins.** A booking you edited is never overwritten by an
@@ -209,31 +215,70 @@ board, and last the AI:
   model is a Haiku. Each question costs a few cents at most (Sonnet 5.5 is $2 / $10
   per million tokens in / out; Haiku 5.5, $0.10 / $0.50). The Settings switch hides the
   bar along with the buttons.
-- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel what
-  to change ("delete the Sheraton", "move my flight home to the 20th", "put the hotel in
-  the San Diego trip", "call this trip December in San Diego") and press Enter. The
-  function (`edit`) gets the instruction and the same trip list as Ask AI, with each
-  trip's id, and Claude can only answer with changes from a short list: set one field
-  of a booking (flights: number, airline, airports, departure and arrival; hotels:
-  name, city, check-in and check-out; cars: company, pick-up and drop-off; other
-  bookings: title, start and end), delete a booking, put a booking in the same trip
-  as another, rename a trip. At most twelve at a time. Every change is checked in the
-  function (the booking exists, the field belongs to its kind, the value has the right
-  shape: airports are three letters, days are real days) and again in the app, and
-  the ones that don't check out are left out and counted. What is left comes up as a
-  **preview**, a line each, deletes in red, and **nothing changes until you tap
-  Apply**. Apply marks what it touched as yours (an email never overwrites it
-  again), a deleted booking stays deleted (and comes out of the calendar if Travel
-  wrote it there), and **Undo** in the toast puts everything back, deletes
-  included. A day on its own keeps the booking's time. If the instruction is
-  unclear it asks one short question instead. Joining trips by hand is stored as
-  `tripWith` on the booking; trips also join by themselves when they share a
-  confirmation code or the next flight leaves from where the last one landed
-  (above). Same key, model and cost as Ask AI, no limit of its own.
+- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel
+  what to change ("delete the Sheraton", "move my flight home to the 20th", "put the
+  hotel in the San Diego trip", "add dinner with Pat on the 16th at 7 in Old Town",
+  "cancel the Portland flight", "no seat on that flight", "call this trip December in
+  San Diego") and press Enter. The function (`edit`) gets the instruction and the same
+  trip list as Ask AI, with each trip's id, and Claude answers with changes from this
+  list, at most thirty at a time:
+  - **set** any field of a booking that you can edit by hand (flights: airline, number,
+    airports, departure and arrival, terminal, gate, confirmation, seat, traveler,
+    notes; hotels: name, address, city, confirmation, check-in and check-out with their
+    times, phone, notes; cars: company, confirmation, places, pick-up and drop-off, car,
+    city, notes; other bookings: title, place, start, end, confirmation, notes), or clear
+    it with an empty value (a booking keeps its first date and its identifying names);
+  - **add** a booking (flight, hotel, car or other), which needs its first date and what
+    identifies it (a flight: airline, number, both airports; a hotel: name and check-out;
+    a car: company; other: title);
+  - **delete** a booking; **cancel** it or bring a cancelled one back; mark it **checked**
+    ("looks right");
+  - **join** a booking to another's trip, or **take it out** of its trip (a trip of its own);
+  - **rename** a trip.
+  Every change is checked in the function (the booking exists, the field belongs to its
+  kind, the value has the right shape: airports are three letters, days are real days)
+  and again in the app, and the ones that don't check out are left out and counted.
+  What is left comes up as a **preview**, a line each, deletes in red, and **nothing
+  changes until you tap Apply**. Apply marks what it touched as yours (an email never
+  overwrites it again), a deleted booking stays deleted (and comes out of the calendar if
+  Travel wrote it there), and **Undo** in the toast puts everything back, adds and
+  deletes included. A day on its own keeps the booking's time. If the instruction is
+  unclear it asks one short question instead. Joining and separating trips by hand is
+  stored as `tripWith` and `tripApart` on the booking; trips also join by themselves when
+  they share a confirmation code or the next flight leaves from where the last one
+  landed (above). It sees what Ask AI sees, so names, seats, notes and emails are never
+  sent from your trips; what you say in the instruction itself is sent, so if you tell
+  it a seat or a traveler's name, that goes. Same key, model and cost as Ask AI, no limit
+  of its own.
+- *Which model answers.* Settings, under Smart help, says which models the function
+  is set to use (Check: Haiku 5.5, Ask and Change: Sonnet 5.5, unless the
+  `TRAVEL_AI_MODEL` and `TRAVEL_ASK_MODEL` secrets name others; `ping` reports them),
+  and what the last answer on this phone said it came from, which is the function's
+  own report of the model that answered. If a request was declined and a fallback
+  model answered instead, it says so.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
   It is not written to the calendar until then.
+
+## What Travel searches for, and re-reading
+
+Each scan asks Gmail for the last year (then only what is new) of mail that is
+not in Promotions and either has the Travel label, or has *confirmation*,
+*confirmed*, *itinerary*, *reservation*, *booking*, *e-ticket*, *receipt*,
+*your trip / flight / stay*, *check in*, *cancelled* in its subject, or comes
+from one of the airlines, hotel groups (Hilton's group blocks come through
+Cvent and Passkey), rental car companies, trains and booking sites listed at
+the top of `app.js` (`SENDERS`). Travel remembers which emails it has read
+(the *seen* list) and does not read one twice, so **when the reader
+(`parse.js`) or that search improves, `QUERY_V` in `app.js` is bumped**: the
+next scan on each phone then reads the last year again once, and what the old
+reader made of those emails is made again by the new one. What you edited,
+checked or deleted, what was filled in by AI, and what came from the calendar
+stays as it is (the same as Settings, *Read the last year again*, which does it
+on demand). If the scan fails partway, the bookings it was rebuilding are kept
+as "to come back", not lost. `travel/scripts/reader-version-test.mjs` fails when
+`parse.js` or the search changes and `QUERY_V` does not.
 
 ## Gmail
 

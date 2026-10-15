@@ -46,21 +46,32 @@ if (window.top !== window.self) {
     token: 'travel.token', state: 'travel.state', silent: 'travel.silent', silentFail: 'travel.silentFail', lastAuth: 'travel.lastAuth', hint: 'travel.hint', me: 'travel.me',
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
-    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', smartAt: KEY + '-smart-at',
+    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', smartAt: KEY + '-smart-at',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 400;              // messages read in one go at most
   const LOOKUPS_A_MONTH = 250;       // per phone; meant to stay inside AeroDataBox's free plan (README, "What I could not verify")
   // Booking emails: the subjects they use, and the senders you book with.
-  const SENDERS = ['united.com', 'delta.com', 'aa.com', 'southwest.com', 'alaskaair.com', 'jetblue.com', 'flyfrontier.com',
-    'flybreeze.com', 'spirit.com', 'hawaiianairlines.com', 'allegiantair.com', 'suncountry.com', 'aircanada.com', 'westjet.com',
-    'britishairways.com', 'virginatlantic.com', 'marriott.com', 'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com'];
+  const SENDERS = [
+    // airlines
+    'united.com', 'delta.com', 'aa.com', 'southwest.com', 'alaskaair.com', 'jetblue.com', 'flyfrontier.com', 'flybreeze.com', 'spirit.com', 'hawaiianairlines.com',
+    'allegiantair.com', 'suncountry.com', 'aveloair.com', 'aircanada.com', 'westjet.com', 'britishairways.com', 'virginatlantic.com', 'lufthansa.com', 'klm.com',
+    'airfrance.com', 'iberia.com', 'emirates.com', 'qatarairways.com', 'etihad.com', 'turkishairlines.com', 'singaporeair.com', 'cathaypacific.com', 'qantas.com',
+    'aeromexico.com', 'copaair.com', 'latam.com', 'icelandair.com', 'norwegian.com', 'ryanair.com', 'easyjet.com', 'volaris.com',
+    // hotels (Hilton's group blocks come through Cvent and Passkey)
+    'marriott.com', 'res-marriott.com', 'hilton.com', 'hyatt.com', 'ihg.com', 'wyndhamhotels.com', 'choicehotels.com', 'bestwestern.com', 'radissonhotels.com',
+    'accor.com', 'omnihotels.com', 'fourseasons.com', 'sonesta.com', 'cvent.com', 'passkey.com',
+    // rental cars, trains, and the sites that book all of it
+    'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com', 'budget.com', 'dollar.com', 'thrifty.com', 'sixt.com', 'turo.com', 'amtrak.com',
+    'booking.com', 'expedia.com', 'hotels.com', 'airbnb.com', 'vrbo.com', 'priceline.com', 'kayak.com', 'orbitz.com', 'travelocity.com', 'hopper.com'];
   const SUBJECTS = ['confirmation', 'confirmed', 'itinerary', 'reservation', 'booking', 'eticket', '"e-ticket"', 'receipt', '"your trip"',
     '"your flight"', '"your stay"', '"check in"', 'cancelled', 'canceled', 'cancellation'];
   // Plus anything Mail's Travel auto-tag has labelled (rides, Hopper, gate and
   // delay notices): Gmail keeps that label up to date as mail arrives.
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
-  const QUERY_V = '3';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
+  // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
+  // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
+  const QUERY_V = '4';
 
   const I = {
     spark: '<svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
@@ -218,8 +229,8 @@ if (window.top !== window.self) {
     let cur = null;
     for (const b of list) {
       const s = startOf(b), e = endOf(b);
-      if (cur && (dOf(s) - dOf(cur.end)) / D <= 1) { cur.items.push(b); if (e > cur.end) cur.end = e; }
-      else { cur = { items: [b], start: s, end: e }; groups.push(cur); }
+      if (cur && !b.tripApart && !cur.solo && (dOf(s) - dOf(cur.end)) / D <= 1) { cur.items.push(b); if (e > cur.end) cur.end = e; }
+      else { cur = { items: [b], start: s, end: e, solo: !!b.tripApart }; groups.push(cur); }     // a booking taken out of its trip stands alone
     }
     // One reservation is one trip: neighbouring groups that share a confirmation code (an Alaska booking with a flight out and a
     // flight home), or where the next one leaves from the place the last one flew to (away from home, within two weeks), join up.
@@ -228,6 +239,7 @@ if (window.top !== window.self) {
     const fl = g => g.items.filter(b => b.type === 'flight' && b.status !== 'cancelled');
     const joinGroups = (a, c) => {
       a.ids = (a.ids || [a.items[0].id]).concat(c.ids || [c.items[0].id]);
+      a.solo = false;
       a.items = a.items.concat(c.items).sort((x, y) => startOf(x).localeCompare(startOf(y)));
       if (c.start < a.start) a.start = c.start;
       if (c.end > a.end) a.end = c.end;
@@ -235,10 +247,11 @@ if (window.top !== window.self) {
     };
     for (let i = 0; i < groups.length - 1;) {
       const a = groups[i], c = groups[i + 1];
-      const ca = new Set(a.items.map(b => b.conf).filter(Boolean)), shared = c.items.some(b => b.conf && ca.has(b.conf));
+      // a code shared by two trips joins them when they are close in time (a flight out and one home); months apart is another trip
+      const ca = new Set(a.items.map(b => b.conf).filter(Boolean)), shared = (dOf(c.start) - dOf(a.end)) / D <= 30 && c.items.some(b => b.conf && ca.has(b.conf));
       const last = fl(a).pop(), first = fl(c)[0];
       const chain = !!(last && first && last.to && last.to === first.from && last.to !== home0 && (dOf(c.start) - dOf(a.end)) / D <= 14);
-      if (shared || chain) joinGroups(a, c); else i++;
+      if (!a.solo && !c.solo && (shared || chain)) joinGroups(a, c); else i++;
     }
     // Bookings you put in a trip by hand ("put the hotel in the San Diego trip") point at one in the other trip.
     for (let again = true; again;) {
@@ -787,12 +800,14 @@ if (window.top !== window.self) {
   // or the same hotel or car confirmation.
   function sameBooking(x, b) {
     if (x.type !== b.type || (startOf(x) && startOf(b))) return false;
-    if (b.type === 'flight') return x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && !!x.flightNo
+    // The airline numbers a flight every day (Frontier's 3073 is every day's), so the same number is not enough: two different
+    // confirmation codes are two different bookings, however alike.
+    if (b.type === 'flight') return x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && !!x.flightNo && !(x.conf && b.conf && x.conf !== b.conf)
       && ((b.conf && x.conf === b.conf) || (x.from && x.from === b.from && x.to && x.to === b.to));
     if (b.type === 'hotel' || b.type === 'car') return !!b.conf && x.conf === b.conf;
     return false;
   }
-  let revive = new Set();   // ids "Read the last year again" cleared, which may come back
+  let revive = new Set(ls.json(K.revive, []));   // ids "Read the last year again" cleared, which may come back (kept until a scan finishes)
   function upsert(b, byHand) {
     upsert.id = b.id;
     if (graves['bookings:' + b.id] && !revive.has(b.id)) return 'gone';  // deleted on purpose: stays deleted
@@ -941,7 +956,8 @@ if (window.top !== window.self) {
     st.scanning = true; scanErr = ''; render();
     busyPill('Reading Gmail');
     const startedAt = Date.now();
-    if (ls.get(K.queryV, '') !== QUERY_V) { seen = new Set(); saveSeen(); }   // the reader changed: read the mail again once
+    const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and rebuild what the old reader made of it
+    if (rebuild) { seen = new Set(); saveSeen(); }
     const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
     let added = 0, changed = 0, cancelled = 0, read = 0;
@@ -954,6 +970,14 @@ if (window.top !== window.self) {
         (r.messages || []).forEach(m => ids.push(m));
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < MAX_SCAN);
+      if (rebuild) {
+        // Only now that the list came back (a failed look leaves everything as it was). What you edited, checked or deleted, and what was
+        // filled in by AI or came from the calendar, stays; the rest was made by the old reader and is made again by the new one.
+        const old = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked && !b.filled && !b.fromCal);
+        old.forEach(b => revive.add(b.id));
+        ls.set(K.revive, JSON.stringify([...revive]));
+        bookings = bookings.filter(b => !revive.has(b.id));
+      }
       const todo = ids.filter(m => !seen.has(m.id)).slice(0, MAX_SCAN);
       st.scanTotal = todo.length; st.scanDone = 0;
       await pool(todo, 4, async m => {
@@ -976,7 +1000,8 @@ if (window.top !== window.self) {
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      saveSeen(); save(); revive = new Set();
+      saveSeen(); save();
+      if (!scanErr) { revive = new Set(); ls.del(K.revive); }
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -1250,7 +1275,16 @@ if (window.top !== window.self) {
 
   // -- the AI and the flight board --
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
-  let aiAvail = null, findAvail = null;
+  let aiAvail = null, findAvail = null, aiModels = null;
+  // Which models answer: what the function says it is set to use, and what the last answer said it came from (kept on this phone).
+  const modelName = id => { const m = /claude-(haiku|sonnet|opus|fable)-(\d+)-(\d+)/i.exec(String(id || '')); return m ? m[1][0].toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2] + '.' + m[3] : String(id || '').slice(0, 40); };
+  function noteModel(which, id) { if (!id) return; const o = ls.json(K.aiLast, {}); o[which] = String(id).slice(0, 60); ls.set(K.aiLast, JSON.stringify(o)); }
+  function modelsLine() {
+    if (!aiModels) return '';
+    const last = ls.json(K.aiLast, {});
+    const bit = (label, cfg, served) => label + ' ' + modelName(cfg) + (served ? (modelName(served) === modelName(cfg) ? ' (the last answer came from it)' : ' (but the last answer came from ' + modelName(served) + ')') : '');
+    return '\nModels: ' + bit('Check', aiModels.check, last.check) + '; ' + bit('Ask and Change', aiModels.ask, last.ask) + '.';
+  }
   const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
   const aiSave = o => ls.set(K.ai, JSON.stringify({ ...o, tried: Object.fromEntries(Object.entries(o.tried).slice(-300)) }));
@@ -1316,6 +1350,7 @@ if (window.top !== window.self) {
       if (d && d.error === 'no-key') { aiAvail = false; break; }
       if (!d || d.error === 'limit') break;
       const before = Object.keys(b.filled || {}).length;
+      if (d.ok) noteModel('check', d.model);
       if (d.ok && applyAi(b, d.fields || {})) { changed = true; out.filled += Math.max(1, Object.keys(b.filled || {}).length - before); }
     }
     if (changed) { save(); render(); }
@@ -1407,55 +1442,63 @@ if (window.top !== window.self) {
       if (!aiAvail) { st.ask = { q: question, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
       const r = await aosFetch(API + 'ask', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(question)) });
       let d = null; try { d = await r.json(); } catch {}
-      if (d && d.ok) st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] };
+      if (d && d.ok) { noteModel('ask', d.model); st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] }; }
       else if (d && d.error === 'no-key') { aiAvail = false; st.ask = null; }
       else st.ask = { q: question, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t get an answer just now. Try again in a moment.' };
     } catch { st.ask = { q: question, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
     finally { st.askBusy = false; render(); }
   }
-  // -- Change by asking: "delete the Sheraton", "put the hotel in the San Diego trip" --
-  // The same bar, in Change mode. Claude proposes changes from a short list (set one field, delete a booking, put two bookings in
-  // one trip, rename a trip); every one is checked again here and shown as a preview, and nothing changes until you tap Apply.
+  // -- Change by asking: "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
+  // The same bar, in Change mode. Claude proposes changes from a list (set or clear a field, add a booking, delete, cancel or bring
+  // back, mark checked, join trips, take a booking out of its trip, rename a trip); every one is checked again here and shown as a
+  // preview, and nothing changes until you tap Apply. Undo puts it all back.
   // The trip list that goes is the one Ask AI sends (dates, places, flight numbers, codes; no names, seats, notes or emails).
-  const DT = /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, D8 = /^20\d\d-\d\d-\d\d$/;
+  const DT = /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, D8 = /^20\d\d-\d\d-\d\d$/, HM = /^\d\d:\d\d$/, CONFRE = /^[A-Za-z0-9]{0,12}$/;
+  const tx = n => new RegExp('^.{0,' + n + '}$'), wd = (lo, hi) => new RegExp('^.{' + lo + ',' + hi + '}$');
+  // Every field you can edit by hand, by kind, and the shape its value must have; an empty value clears it, except the ones in EDIT_NEEDED.
   const EDIT_FIELDS = {
-    flight: { flightNo: /^\d{1,4}[A-Z]?$/, airlineCode: /^[A-Z0-9]{2}$/, from: /^[A-Z]{3}$/, to: /^[A-Z]{3}$/, dep: DT, arr: DT },
-    hotel: { name: /^.{2,80}$/, city: /^.{2,60}$/, checkIn: D8, checkOut: D8 },
-    car: { company: /^.{2,60}$/, pickup: DT, dropoff: DT },
-    other: { title: /^.{2,80}$/, start: DT, end: DT },
+    flight: { airlineCode: /^[A-Z0-9]{2}$/, flightNo: /^\d{1,4}[A-Z]?$/, from: /^[A-Z]{3}$/, to: /^[A-Z]{3}$/, dep: DT, arr: DT, terminal: tx(10), gate: tx(10), conf: CONFRE, seat: tx(8), traveller: tx(60), notes: tx(300) },
+    hotel: { name: wd(2, 80), address: tx(140), city: tx(60), conf: CONFRE, checkIn: D8, checkInTime: HM, checkOut: D8, checkOutTime: HM, phone: tx(30), notes: tx(300) },
+    car: { company: wd(2, 60), conf: CONFRE, pickupPlace: tx(120), pickup: DT, dropoff: DT, dropPlace: tx(120), carClass: tx(40), city: tx(60), notes: tx(300) },
+    other: { title: wd(2, 80), place: tx(120), start: DT, end: DT, conf: CONFRE, notes: tx(300) },
   };
-  const EDIT_LABEL = { flightNo: 'flight number', airlineCode: 'airline', from: 'from', to: 'to', dep: 'departs', arr: 'arrives', name: 'name', city: 'city', checkIn: 'check-in', checkOut: 'check-out',
-    company: 'company', pickup: 'pick-up', dropoff: 'drop-off', title: 'title', start: 'starts', end: 'ends' };
+  const EDIT_NEEDED = { flight: ['dep', 'airlineCode', 'flightNo', 'from', 'to'], hotel: ['checkIn', 'name', 'checkOut'], car: ['pickup', 'company'], other: ['start', 'title'] };
+  const EDIT_LABEL = { flightNo: 'flight number', airlineCode: 'airline', from: 'from', to: 'to', dep: 'departs', arr: 'arrives', terminal: 'terminal', gate: 'gate', conf: 'confirmation', seat: 'seat', traveller: 'traveler', notes: 'notes',
+    name: 'name', address: 'address', city: 'city', checkIn: 'check-in', checkInTime: 'check-in time', checkOut: 'check-out', checkOutTime: 'check-out time', phone: 'phone',
+    company: 'company', pickupPlace: 'pick-up place', pickup: 'pick-up', dropoff: 'drop-off', dropPlace: 'drop-off place', carClass: 'car', title: 'title', place: 'place', start: 'starts', end: 'ends' };
   const clipS = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, n);
+  // One field and value of a kind, normalised, or null when it is not allowed.
+  function checkField(kind, field, value) {
+    const re = EDIT_FIELDS[kind] && EDIT_FIELDS[kind][field];
+    if (!re) return null;
+    let v = clipS(value, 300);
+    if (/^(airlineCode|from|to|conf)$/.test(field)) v = v.toUpperCase();
+    if (v === '') return EDIT_NEEDED[kind].includes(field) ? null : { field, value: '' };
+    return re.test(v) ? { field, value: v } : null;
+  }
   // One proposed change, or null when it does not check out against what is here.
   function checkEdit(o, tids = new Set()) {
     if (!o || typeof o !== 'object') return null;
     const id = clipS(o.id, 48), b = bookings.find(x => x.id === id);
-    if (o.op === 'set') {
-      const field = clipS(o.field, 20), value = clipS(o.value, 80), re = b && EDIT_FIELDS[b.type] && EDIT_FIELDS[b.type][field];
-      return re && re.test(value) ? { op: 'set', id, field, value } : null;
+    if (o.op === 'set') { const f = b && checkField(b.type, clipS(o.field, 20), o.value); return f ? { op: 'set', id, field: f.field, value: f.value } : null; }
+    if (o.op === 'add') {
+      const kind = clipS(o.kind, 10);
+      if (!EDIT_FIELDS[kind] || !Array.isArray(o.pairs)) return null;
+      const fields = {};
+      for (const p of o.pairs.slice(0, 20)) { const f = p && checkField(kind, clipS(p.field, 20), p.value); if (!f) return null; if (f.value) fields[f.field] = f.value; }
+      return EDIT_NEEDED[kind].every(k => fields[k]) ? { op: 'add', kind, pairs: Object.entries(fields).map(([field, value]) => ({ field, value })) } : null;
     }
-    if (o.op === 'delete') return b ? { op: 'delete', id } : null;
+    if (o.op === 'delete' || o.op === 'check' || o.op === 'detach') return b ? { op: o.op, id } : null;
+    if (o.op === 'status') { const v = clipS(o.value, 12); return b && (v === 'cancelled' || v === 'confirmed') ? { op: 'status', id, value: v } : null; }
     if (o.op === 'join') { const w = clipS(o.with, 48); return b && w !== id && bookings.some(x => x.id === w) ? { op: 'join', id, with: w } : null; }
     if (o.op === 'rename') { const name = clipS(o.name, 60); return tids.has(id) && name.length >= 2 ? { op: 'rename', id, name } : null; }
     return null;
   }
   const dayWords = v => v ? (String(v).length > 10 ? v.replace('T', ' ') : v) : 'nothing';
-  function editText(o) {
-    const b = bookings.find(x => x.id === o.id), w = o.with && bookings.find(x => x.id === o.with);
-    const nm = x => titleOf(x) + (startOf(x) ? ' (' + startOf(x).slice(0, 10) + ')' : '');
-    if (o.op === 'set') {
-      const old = String(b[o.field] || ''), to = /^(dep|arr|pickup|dropoff|start|end)$/.test(o.field) && o.value.length === 10 && old.length > 10 ? o.value + old.slice(10) : o.value;   // a day alone keeps the time
-      return 'Change ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(old) + ' to ' + dayWords(to);
-    }
-    if (o.op === 'delete') return 'Delete ' + nm(b);
-    if (o.op === 'join') return 'Put ' + titleOf(b) + ' in the same trip as ' + titleOf(w);
-    const g = tripById(o.id);
-    return 'Rename the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
-  }
+  // A day alone keeps the time the booking has.
+  const keepTime = (field, value, old) => /^(dep|arr|pickup|dropoff|start|end)$/.test(field) && value.length === 10 && String(old).length > 10 ? value + String(old).slice(10) : value;
   function setField(b, field, value) {
-    const old = String(b[field] || '');
-    if (/^(dep|arr|pickup|dropoff|start|end)$/.test(field) && value.length === 10 && old.length > 10) value += old.slice(10);   // a day alone keeps the time
+    value = keepTime(field, value, b[field] || '');
     b[field] = value; b.edited = true; b.guess = false; delete b.filled;
     if (field === 'dep' || field === 'arr' || field === 'pickup' || field === 'dropoff') delete b[field + 'Iso'];
     if (field === 'dep') delete b.depTime;
@@ -1464,15 +1507,39 @@ if (window.top !== window.self) {
     if (field === 'to') b.toName = P.AIRPORTS[value] || '';
     if (b.type === 'flight') delete live[b.id];
   }
+  function newBooking(kind, pairs) {
+    const b = { type: kind, status: 'confirmed', guess: false, conf: '', notes: '', edited: true, created: Date.now() };
+    pairs.forEach(p => setField(b, p.field, p.value));
+    b.id = P.idFor(b);
+    if (bookings.some(x => x.id === b.id)) b.id += '-' + Date.now().toString(36);
+    return b;
+  }
+  function editText(o) {
+    const b = bookings.find(x => x.id === o.id), w = o.with && bookings.find(x => x.id === o.with);
+    const nm = x => titleOf(x) + (startOf(x) ? ' (' + startOf(x).slice(0, 10) + ')' : '');
+    if (o.op === 'set') return 'Change ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(b[o.field]) + ' to ' + dayWords(keepTime(o.field, o.value, b[o.field] || ''));
+    if (o.op === 'add') { const t = { type: o.kind }; o.pairs.forEach(p => { t[p.field] = p.value; }); return 'Add ' + TYPE_NAME[o.kind].toLowerCase() + ': ' + nm(t) + (t.checkOut ? ' to ' + t.checkOut : ''); }
+    if (o.op === 'delete') return 'Delete ' + nm(b);
+    if (o.op === 'status') return (o.value === 'cancelled' ? 'Cancel ' : 'Bring back ') + nm(b);
+    if (o.op === 'check') return 'Mark ' + titleOf(b) + ' as checked';
+    if (o.op === 'detach') return 'Take ' + titleOf(b) + ' out of its trip, into a trip of its own';
+    if (o.op === 'join') return 'Put ' + titleOf(b) + ' in the same trip as ' + titleOf(w);
+    const g = tripById(o.id);
+    return 'Rename the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
+  }
   function applyEdits(ops) {
     const snap = { bookings: JSON.parse(JSON.stringify(bookings)), trips: JSON.parse(JSON.stringify(trips)) };
     const gone = [];
     let n = 0;
     for (const o of ops) {
       const b = bookings.find(x => x.id === o.id);
-      if (o.op === 'set' && b) { setField(b, o.field, o.value); n++; }
+      if (o.op === 'add') { bookings.push(newBooking(o.kind, o.pairs)); n++; }
+      else if (o.op === 'set' && b) { setField(b, o.field, o.value); n++; }
       else if (o.op === 'delete' && b) { bookings = bookings.filter(x => x !== b); gone.push(b); n++; }
-      else if (o.op === 'join' && b) { b.tripWith = o.with; n++; }
+      else if (o.op === 'status' && b) { b.status = o.value; b.edited = true; n++; }
+      else if (o.op === 'check' && b) { b.guess = false; b.checked = true; delete b.filled; n++; }
+      else if (o.op === 'join' && b) { b.tripWith = o.with; delete b.tripApart; n++; }
+      else if (o.op === 'detach' && b) { b.tripApart = true; delete b.tripWith; n++; }
       else if (o.op === 'rename') {
         const g = tripById(o.id);
         if (g) { const cur = trips.find(t => t.id === g.id); if (cur) cur.name = o.name; else trips.push({ id: g.id, name: o.name }); n++; }
@@ -1505,7 +1572,7 @@ if (window.top !== window.self) {
     instruction = String(instruction || '').trim().slice(0, 300);
     if (instruction.length < 3 || st.askBusy) return;
     st.ask = null;
-    if (!bookings.length) { st.edit = { q: instruction, ops: [], question: 'There are no bookings to change yet.' }; render(); return; }
+    if (!bookings.length) { st.edit = { q: instruction, ops: [], question: 'There are no bookings to change yet. To add one, switch to Change and say what it is, or use the + button.' }; render(); return; }
     st.askBusy = true;
     st.edit = { q: instruction, busy: true }; render();
     try {
@@ -1514,8 +1581,9 @@ if (window.top !== window.self) {
       const r = await aosFetch(API + 'edit', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(instruction)) });
       let d = null; try { d = await r.json(); } catch {}
       if (d && d.ok) {
+        noteModel('ask', d.model);
         const tids = new Set(groupTrips().map(g => g.id)), got = Array.isArray(d.ops) ? d.ops : [];
-        const ops = got.map(o => checkEdit(o, tids)).filter(Boolean).slice(0, 12);
+        const ops = got.map(o => checkEdit(o, tids)).filter(Boolean).slice(0, 30);
         st.edit = { q: instruction, ops, summary: clipS(d.summary, 300), question: clipS(d.question, 300), dropped: Math.max(0, got.length - ops.length) + (+d.dropped || 0) };
       } else if (d && d.error === 'no-key') { aiAvail = false; st.edit = null; }
       else st.edit = { q: instruction, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t work that out just now. Try again in a moment.' };
@@ -1631,7 +1699,7 @@ if (window.top !== window.self) {
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button, and Trips has an Ask AI bar. Nothing is sent until you press or ask. Check sends a short excerpt of that one email (no names, numbers or prices); Ask sends your trip list (dates, places, flight numbers, confirmation codes; no names, seats, notes or emails) with your question. Answers are marked “Check”.' : 'Off. No button and no bar.';
+    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button, and Trips has an Ask AI bar that can also change your trips (you see what it would change and tap Apply). Nothing is sent until you press or ask. Check sends a short excerpt of that one email (no names, numbers or prices); Ask and Change send your trip list (dates, places, flight numbers, confirmation codes; no names, seats, notes or emails) with your question. Answers are marked “Check”.' + modelsLine() : 'Off. No button and no bar.';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
       : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
@@ -1645,7 +1713,7 @@ if (window.top !== window.self) {
     try {
       const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
       const d = await r.json();
-      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find;
+      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.ask ? d.models : null;
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
@@ -1659,7 +1727,7 @@ if (window.top !== window.self) {
       // you) are cleared and read again, so an improved reader replaces its
       // old mistakes. Anything not found again stays gone, on both phones.
       const auto = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked);
-      revive = new Set(auto.map(b => b.id));
+      revive = new Set(auto.map(b => b.id)); ls.set(K.revive, JSON.stringify([...revive]));
       bookings = bookings.filter(b => !revive.has(b.id));
       save();
       seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });
