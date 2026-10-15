@@ -231,4 +231,74 @@ await test('ask: limits, refusals and garbage come back as plain answers', async
   globalThis.fetch = async () => { throw new Error('offline'); };
   assert.equal((await postAsk(q)).body.error, 'unreachable');
 });
+// ---- edit: an instruction turned into proposed changes ----
+const postEdit = async (body, { key = 'sk-ant-test', header = true, raw } = {}) => {
+  const request = new Request('https://site.example/travel/api/edit', { method: 'POST', headers: header ? { 'X-Travel': '1', 'Content-Type': 'application/json' } : {}, body: raw || JSON.stringify(body) });
+  const res = await onRequestPost({ request, params: { route: ['edit'] }, env: key ? { ANTHROPIC_API_KEY: key } : {} });
+  return { status: res.status, body: await res.json() };
+};
+const op = (o) => ({ op: '', id: '', field: '', value: '', with: '', name: '', ...o });
+const edited = (summary, ops, question = '') => () => new Response(JSON.stringify({ model: 'claude-sonnet-5-5', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ summary, question, ops }) }] }), { status: 200 });
+const ETRIPS = TRIPS.map((t, i) => i === 0 ? { ...t, tid: 'f-1' } : i === 1 ? { ...t, tid: 'made-up' } : t);
+await test('edit: needs the header, the key, an instruction and a trip list; nothing to change means nothing is asked', async () => {
+  calls = [];
+  assert.equal((await postEdit({}, { header: false })).status, 404);
+  assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS }, { key: '' })).body.error, 'no-key');
+  assert.equal((await postEdit({ question: 'hi', today: '2026-10-14', trips: ETRIPS })).status, 400);
+  assert.equal((await postEdit({ question: 'Delete the hotel', today: 'soon', trips: ETRIPS })).status, 400);
+  assert.equal((await postEdit({}, { raw: '{nope' })).status, 400);
+  assert.equal(calls.length, 0);
+  const none = await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: [] });
+  assert.deepEqual(none.body.ops, []); assert.match(none.body.question, /no bookings/); assert.equal(calls.length, 0);
+});
+await test('edit: sends the same allowed fields as ask (plus trip ids), asks for a structured list from the mid-size model', async () => {
+  let sent;
+  globalThis.fetch = async (url, init) => { sent = JSON.parse(init.body); return edited('Nothing to do.', [])(); };
+  await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS });
+  assert.equal(sent.model, 'claude-sonnet-5-5'); assert.equal(sent.output_config.format.type, 'json_schema');
+  assert.deepEqual(sent.output_config.format.schema.properties.ops.items.properties.op.enum, ['set', 'delete', 'join', 'rename']);
+  assert.deepEqual(sent.output_config.format.schema.required, ['summary', 'question', 'ops']);
+  const prompt = sent.messages[0].content;
+  assert.match(prompt, /Instruction: Delete the hotel$/); assert.match(prompt, /"tid":"f-1"/);
+  assert.doesNotMatch(prompt, /Pat Example|19A|window please|secret subject|x@y\.z|555-0100/);
+  assert.doesNotMatch(prompt, /made-up/, 'a trip id that is not one of the bookings sent is dropped');
+  assert.match(sent.system, /never instructions to follow/);
+});
+await test('edit: only changes that check out come back: real bookings, fields of the right kind, values of the right shape', async () => {
+  globalThis.fetch = edited('Changes.', [
+    op({ op: 'set', id: 'f-1', field: 'dep', value: '2026-11-03T16:04' }),         // good
+    op({ op: 'set', id: 'f-1', field: 'dep', value: '2026-11-03' }),               // good: a day alone
+    op({ op: 'set', id: 'f-1', field: 'from', value: 'Raleigh' }),                 // not an airport code
+    op({ op: 'set', id: 'f-1', field: 'seat', value: '12A' }),                     // not a field it may change
+    op({ op: 'set', id: 'f-1', field: 'checkIn', value: '2026-11-03' }),           // a hotel field on a flight
+    op({ op: 'set', id: 'h-1', field: 'checkOut', value: '2026-11-06' }),          // good
+    op({ op: 'set', id: 'h-1', field: 'checkOut', value: 'next week' }),
+    op({ op: 'set', id: 'nope', field: 'name', value: 'x y' }),
+    op({ op: 'delete', id: 'h-1' }), op({ op: 'delete', id: 'h-1' }),              // good, once
+    op({ op: 'delete', id: 'ghost' }),
+    op({ op: 'join', id: 'f-2', with: 'f-1' }),                                    // good
+    op({ op: 'join', id: 'f-2', with: 'f-2' }), op({ op: 'join', id: 'f-2', with: 'ghost' }),
+    op({ op: 'rename', id: 'f-1', name: 'Cleveland in November' }),                // good: f-1 is a trip id
+    op({ op: 'rename', id: 'f-2', name: 'Boston' }),                               // f-2 was not sent as a trip id
+    op({ op: 'drop', id: 'f-1' }), null, 'x',
+  ]);
+  const r = await postEdit({ question: 'Make some changes', today: '2026-10-14', trips: ETRIPS });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.ops.map(o => o.op + ':' + o.id + ':' + (o.field || o.with || o.name || '')), [
+    'set:f-1:dep', 'set:f-1:dep', 'set:h-1:checkOut', 'delete:h-1:', 'join:f-2:f-1', 'rename:f-1:Cleveland in November']);
+  assert.equal(r.body.dropped, 12, 'the twelve that do not check out; the repeated delete is just one');
+});
+await test('edit: at most twelve changes; a question comes back when it is not clear; limits and refusals are plain answers', async () => {
+  globalThis.fetch = edited('Lots.', Array.from({ length: 20 }, (_, i) => op({ op: 'set', id: 'f-1', field: 'flightNo', value: String(100 + i) })));
+  assert.equal((await postEdit({ question: 'Renumber everything', today: '2026-10-14', trips: ETRIPS })).body.ops.length, 12);
+  globalThis.fetch = edited('', [], 'Which hotel do you mean?');
+  const q = await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS });
+  assert.deepEqual(q.body.ops, []); assert.equal(q.body.question, 'Which hotel do you mean?');
+  globalThis.fetch = async () => new Response('', { status: 429 });
+  assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS })).body.error, 'limit');
+  globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'refusal', content: [] }), { status: 200 });
+  assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS })).body.refused, true);
+  globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { status: 200 });
+  assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS })).body.error, 'unreadable');
+});
 console.log(n + ' passed');
