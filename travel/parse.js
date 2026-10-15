@@ -50,7 +50,7 @@
     JFK: 'New York JFK', LAS: 'Las Vegas', LAX: 'Los Angeles', LGA: 'New York LaGuardia', MCI: 'Kansas City',
     MCO: 'Orlando', MDW: 'Chicago Midway', MEM: 'Memphis', MIA: 'Miami', MKE: 'Milwaukee', MSP: 'Minneapolis',
     MSY: 'New Orleans', OAK: 'Oakland', OGG: 'Maui', OKC: 'Oklahoma City', OMA: 'Omaha', ONT: 'Ontario',
-    ORD: "Chicago O'Hare", ORF: 'Norfolk', PBI: 'West Palm Beach', PDX: 'Portland', PHL: 'Philadelphia',
+    ORD: "Chicago O'Hare", ORF: 'Norfolk', DJT: 'West Palm Beach', PBI: 'West Palm Beach', PDX: 'Portland', PHL: 'Philadelphia',
     PHX: 'Phoenix', PIT: 'Pittsburgh', PVD: 'Providence', RDU: 'Raleigh-Durham', RIC: 'Richmond', RSW: 'Fort Myers',
     SAN: 'San Diego', SAT: 'San Antonio', SAV: 'Savannah', SDF: 'Louisville', SEA: 'Seattle', SFO: 'San Francisco',
     SJC: 'San Jose', SJU: 'San Juan', SLC: 'Salt Lake City', SMF: 'Sacramento', SNA: 'Orange County',
@@ -722,12 +722,13 @@
     }
     return out;
   }
+  const AIRPORT_ALIAS = new Set(['DJT']);   // West Palm Beach's other code (PBI is the one a city name means)
   // "Cleveland" -> CLE, only when exactly one airport in the list fits.
   function cityToCode(name) {
     const n = String(name || '').toLowerCase().replace(/[^a-z .'-]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (n.length < 3) return '';
     const first = x => x.split(/[-/, ]+/)[0];
-    const all = Object.entries(AIRPORTS).map(([k, c]) => [k, c.toLowerCase()]);
+    const all = Object.entries(AIRPORTS).filter(([k]) => !AIRPORT_ALIAS.has(k)).map(([k, c]) => [k, c.toLowerCase()]);   // a second code for one airport is not a second airport
     const exact = all.filter(([, l]) => l === n);
     if (exact.length === 1) return exact[0][0];
     const near = all.filter(([, l]) => first(l).length >= 4 && first(l) === first(n));

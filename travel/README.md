@@ -276,8 +276,18 @@ next scan on each phone then reads the last year again once, and what the old
 reader made of those emails is made again by the new one. What you edited,
 checked or deleted, what was filled in by AI, and what came from the calendar
 stays as it is (the same as Settings, *Read the last year again*, which does it
-on demand). If the scan fails partway, the bookings it was rebuilding are kept
-as "to come back", not lost. `travel/scripts/reader-version-test.mjs` fails when
+on demand). The re-reading counts as done when (nearly) all the mail came down;
+if the look stops partway, or more than three emails could not be downloaded,
+what it had cleared is put back and the whole re-reading is tried again next time,
+so an interrupted update never leaves holes.
+
+**Settings > What Travel read** lists the emails the last look went through (up to
+200, newest first): the subject, who from, the day, and what Travel made of each
+("2 flights", "hotel", "no booking found in it", "couldn't be downloaded"), with a
+line on how the look went. It answers "why is this booking missing?": an email
+that is in the list but made no booking is a reader problem; an email that is not
+in it was not matched by the search (or the look stopped before it); a look that
+stopped says why. `travel/scripts/reader-version-test.mjs` fails when
 `parse.js` or the search changes and `QUERY_V` does not.
 
 ## Gmail

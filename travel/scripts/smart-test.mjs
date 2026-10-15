@@ -92,7 +92,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true, empty = false, stored = null } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await ctx.addInitScript(id => localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' })), ID);
   const page = await ctx.newPage();
@@ -104,6 +104,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
     if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: (empty ? [] : EMAILS).map(m => ({ id: m.id, threadId: m.threadId })) } });
+    if (failGets) return route.fulfill({ status: 500, body: 'down' });
     const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: {} });
   });
@@ -172,7 +173,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   if (empty) await ctx.addInitScript(() => localStorage.setItem('test.nomail', '1'));
   if (stored) await ctx.addInitScript(st => { if (!sessionStorage.getItem('stored')) { sessionStorage.setItem('stored', '1'); Object.entries(st).forEach(([k, v]) => localStorage.setItem(k, v)); } }, stored);
   await page.goto(BASE + '/' + APP + '/');
-  await page.waitForFunction(() => window.__travel && (window.__travel.bookings.length >= 4 || localStorage.getItem('test.nomail')), null, { timeout: 10000 });
+  await page.waitForFunction(fg => window.__travel && (window.__travel.bookings.length >= 4 || localStorage.getItem('test.nomail') || fg), failGets, { timeout: 10000 });
   return { ctx, page, seen, problems };
 }
 const pick = (page, f) => page.evaluate(f);
@@ -464,6 +465,23 @@ const pick = (page, f) => page.evaluate(f);
   EMAILS.pop();
 }
 
+// =================== a re-read that cannot download the mail puts back what it cleared, and tries again ===================
+{
+  const KEY = APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1';
+  const old = { type: 'flight', status: 'confirmed', conf: 'OLD123', airlineCode: 'F9', flightNo: '3073', from: 'RDU', to: 'CLE', dep: iso(day(30)) + 'T10:00', guess: true, id: 'f-old', created: 1, notes: '', source: { msgId: 'e1', date: 1 } };
+  const { ctx, page } = await open({ calendar: false, failGets: true, stored: { [KEY]: JSON.stringify({ bookings: [old], trips: [] }), [KEY + '-query-v']: '3', [KEY + '-seen']: JSON.stringify(['e1', 'e2']), [KEY + '-scan']: String(Date.now() - 3600e3) } });
+  await step('when the mail cannot be downloaded, nothing the old reader made is lost, the re-read is tried again, and Settings says what happened', async () => {
+    await page.waitForFunction(KEY => JSON.parse(localStorage.getItem(KEY + '-scan-info') || 'null'), KEY, { timeout: 15000 });
+    const r = await page.evaluate(KEY => ({ have: window.__travel.bookings.map(b => b.id), v: localStorage.getItem(KEY + '-query-v'), seen: JSON.parse(localStorage.getItem(KEY + '-seen') || '[]').length, info: JSON.parse(localStorage.getItem(KEY + '-scan-info')) }), KEY);
+    assert.deepEqual(r.have, ['f-old'], 'the booking is still there'); assert.equal(r.v, '3', 'the update is not marked done'); assert.equal(r.seen, 0, 'so the next look reads everything again');
+    assert.equal(r.info.ok, false); assert.match(r.info.err, /could not be downloaded/);
+    await page.click('#setBtn');
+    await page.waitForSelector('#setSheet:not([hidden]) #stLog');
+    assert.match(await page.textContent('#stLog'), /stopped: \d+ emails? could not be downloaded\. It tries again next time\./);
+  });
+  await ctx.close();
+}
+
 // =================== two trips to the same place, on the same flight number, stay two trips ===================
 {
   const { ctx, page } = await open({ empty: true, calendar: false });
@@ -626,6 +644,20 @@ const pick = (page, f) => page.evaluate(f);
 // =================== the settings switches ===================
 {
   const { ctx, page, seen } = await open({ calendar: true });
+  await step('Settings lists what Travel read: each email, and what it made of it', async () => {
+    await page.click('#setBtn');
+    await page.waitForSelector('#setSheet:not([hidden]) #stLog');
+    assert.match(await page.textContent('#stLog'), /Last look .*: \d+ emails? read, \d+ bookings? found/);
+    await page.click('#stLog');
+    await page.waitForSelector('#logSheet:not([hidden]) .logrow');
+    const rows = await page.$$eval('#logSheet .logrow', els => els.map(e => [e.querySelector('b').textContent.trim(), e.querySelector('.lgo').textContent.trim()]));
+    assert.equal(rows.length, EMAILS.length, JSON.stringify(rows));
+    const by = s => rows.find(([t]) => t.includes(s));
+    assert.match(by('KQ7T2M')[1], /^1 flight$/); assert.match(by('Cleveland')[1], /flight/);
+    assert.match(await page.textContent('#lgHint'), /was not matched/);
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-log.png') });
+    await page.evaluate(() => document.querySelectorAll('.sheetwrap').forEach(w => { if (!w.hidden) w.querySelector('[data-close]').click(); }));
+  });
   await step('the Family calendar and AI switches are in Settings, and off means off', async () => {
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');

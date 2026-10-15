@@ -50,7 +50,7 @@ if (window.top !== window.self) {
     token: 'travelv.token', state: 'travelv.state', silent: 'travelv.silent', silentFail: 'travelv.silentFail', lastAuth: 'travelv.lastAuth', hint: 'travelv.hint', me: 'travelv.me',
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
-    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', smartAt: KEY + '-smart-at',
+    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 400;              // messages read in one go at most
@@ -75,7 +75,7 @@ if (window.top !== window.self) {
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
   // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
   // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
-  const QUERY_V = '4';
+  const QUERY_V = '5';
 
   const I = {
     spark: '<svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
@@ -953,6 +953,15 @@ if (window.top !== window.self) {
   const header = (m, name) => ((m.payload && m.payload.headers) || []).find(h => h.name.toLowerCase() === name)?.value || '';
 
   let scanErr = '';
+  // -- what the last look at Gmail read: one line per email, and what became of it (Settings > What Travel read) --
+  const senderName = f => (/^"?([^"<]+?)"?\s*</.exec(f || '') || [])[1] || String(f || '').replace(/^.*@/, '').replace(/>$/, '');
+  const kindsText = bs => { const n = {}; bs.forEach(b => { const k = b.ride ? 'ride' : b.type === 'flight' ? 'flight' : b.type === 'hotel' ? 'hotel' : b.type === 'car' ? 'rental car' : 'booking'; n[k] = (n[k] || 0) + 1; }); return Object.entries(n).map(([k, c]) => plural(c, k)).join(', '); };
+  function saveScanLog(notes, info) {
+    const old = ls.json(K.scanLog, []), byId = new Map(old.map(e => [e.id, e]));
+    notes.forEach((e, id) => byId.set(id, { ...(byId.get(id) || {}), ...Object.fromEntries(Object.entries(e).filter(([k, v]) => v || k === 'out')) }));
+    ls.set(K.scanLog, JSON.stringify([...byId.values()].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 200)));
+    ls.set(K.scanInfo, JSON.stringify(info));
+  }
   async function scan({ loud } = {}) {
     if (st.scanning) return;
     if (!getToken()) {
@@ -967,7 +976,10 @@ if (window.top !== window.self) {
     if (rebuild) { seen = new Set(); saveSeen(); }
     const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
-    let added = 0, changed = 0, cancelled = 0, read = 0;
+    let added = 0, changed = 0, cancelled = 0, read = 0, failed = 0, listed = 0, found = 0, dropped = [];
+    const failedIds = new Set();
+    const notes = new Map();   // what each email came to, for Settings > What Travel read
+    const note = (m, msg, out) => notes.set(m.id, { id: m.id, at: +(msg && msg.internalDate) || 0, from: msg ? senderName(header(msg, 'from')) : '', subj: msg ? header(msg, 'subject').trim().slice(0, 100) : '', out });
     try {
       if (!ls.get(K.me, '')) gmail('/profile').then(p => { if (p && p.emailAddress) { ls.set(K.me, p.emailAddress); ls.set(K.hint, p.emailAddress); } }).catch(() => {});
       const ids = [];
@@ -977,12 +989,14 @@ if (window.top !== window.self) {
         (r.messages || []).forEach(m => ids.push(m));
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < MAX_SCAN);
+      listed = ids.length;
       if (rebuild) {
         // Only now that the list came back (a failed look leaves everything as it was). What you edited, checked or deleted, and what was
         // filled in by AI or came from the calendar, stays; the rest was made by the old reader and is made again by the new one.
         const old = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked && !b.filled && !b.fromCal);
         old.forEach(b => revive.add(b.id));
         ls.set(K.revive, JSON.stringify([...revive]));
+        dropped = old;
         bookings = bookings.filter(b => !revive.has(b.id));
       }
       const todo = ids.filter(m => !seen.has(m.id)).slice(0, MAX_SCAN);
@@ -990,7 +1004,7 @@ if (window.top !== window.self) {
       await pool(todo, 4, async m => {
         let msg;
         try { msg = await gmail('/messages/' + m.id, { format: 'full' }); }
-        catch (e) { if (e instanceof AuthError) throw e; return; }        // one bad message doesn't stop the rest
+        catch (e) { if (e instanceof AuthError) throw e; failed++; failedIds.add(m.id); note(m, null, 'couldn’t be downloaded'); return; }        // one bad message doesn't stop the rest
         const { html, text } = bodies(msg.payload);
         let doc = null;
         if (html && /itemscope/i.test(html) && window.DOMParser) { try { doc = new DOMParser().parseFromString(html, 'text/html'); } catch {} }
@@ -999,16 +1013,24 @@ if (window.top !== window.self) {
           const x = upsert(b); if (x === 'new') added++; else if (x === 'changed') changed++;
         });
         if (r.cancelled && !r.bookings.length) cancelled += cancelByConf(P.findConf(P.htmlToText(html) || text));
+        found += r.bookings.length;
+        note(m, msg, r.bookings.length ? kindsText(r.bookings) : r.cancelled ? 'cancellation' : 'no booking found in it');
         seen.add(m.id); read++;
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
       });
-      ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V);
+      // A look that read the mail again after an update counts as done when (nearly) all of it came down; otherwise it is tried again.
+      if (rebuild && failed > 3) scanErr = plural(failed, 'email') + ' could not be downloaded';
+      else { ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V); }
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
+      // A rebuild that stopped partway puts back what it had not made again (the old reader's version is better than a hole).
+      if (dropped.length) { const have = new Set(bookings.map(b => b.id)); dropped.forEach(b => { if (!have.has(b.id) && (scanErr || failedIds.has(b.source.msgId))) bookings.push(b); }); }
+      if (scanErr && rebuild) seen = new Set();     // the next look starts the re-reading afresh
       saveSeen(); save();
       if (!scanErr) { revive = new Set(); ls.del(K.revive); }
+      saveScanLog(notes, { at: startedAt, ok: !scanErr, err: scanErr === 'auth' ? 'signed out' : scanErr, listed, read, failed, found, rebuilt: rebuild });
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -1689,6 +1711,21 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------
+  function scanSummary() {
+    const i = ls.json(K.scanInfo, null);
+    if (!i) return 'Nothing yet. The emails Travel looks at, and what it made of each, will be listed here.';
+    return (i.ok ? 'Last look ' + ago(i.at) + ': ' + plural(i.read, 'email') + ' read, ' + plural(i.found, 'booking') + ' found' + (i.failed ? ', ' + i.failed + ' not downloaded' : '') + (i.rebuilt ? ' (the mail was read again after an update)' : '') + '.'
+      : 'Last look ' + ago(i.at) + ' stopped: ' + (i.err || 'something went wrong') + '. It tries again next time.') + ' Tap to see them.';
+  }
+  function openLog() {
+    const list = ls.json(K.scanLog, []), i = ls.json(K.scanInfo, null);
+    let h = '';
+    if (!list.length) h = '<div class="box glass"><span class="hint" style="margin:0">No emails read yet.</span></div>';
+    else h = '<div class="rgroup glass">' + list.map(e => '<div class="logrow"><div class="lgt"><b>' + esc(e.subj || '(no subject)') + '</b><span>' + esc([e.from, e.at ? new Date(e.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''].filter(Boolean).join(' · ')) + '</span></div><span class="lgo' + (/^(no booking|couldn)/.test(e.out || '') ? ' no' : '') + '">' + esc(e.out || '') + '</span></div>').join('') + '</div>';
+    $('lgBody').innerHTML = h;
+    $('lgHint').textContent = (i ? plural(i.listed, 'email') + ' matched Travel’s search in the last look. ' : '') + 'An email that is not here was not matched: Travel only looks at mail that is not in Promotions and has the Travel label, a word like confirmation or reservation in its subject, or comes from a known airline, hotel group, rental car company or booking site.';
+    closeSheet('setSheet'); openSheet('logSheet');
+  }
   function renderSettings() {
     const own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
     const me = ls.get(K.me, '');
@@ -1696,6 +1733,7 @@ if (window.top !== window.self) {
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
         + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' : 'Not checked yet.') + ' It also checks each time Travel opens.</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stLog"><span class="ic">' + I.mail + '</span><span>What Travel read<span class="sub">' + esc(scanSummary()) + '</span></span></button>';
       rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Reads every booking email afresh and replaces what was read before. Bookings you edited, checked or deleted stay as they are.</span></span></button>';
       if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
@@ -1729,6 +1767,7 @@ if (window.top !== window.self) {
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
     else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
+    else if (e.target.closest('#stLog')) openLog();
     else if (e.target.closest('#stRescan')) {
       // Start over: bookings read from email (and not edited or checked by
       // you) are cleared and read again, so an improved reader replaces its

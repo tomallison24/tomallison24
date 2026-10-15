@@ -407,4 +407,17 @@ test('an email whose plain-text part is only tracking links is read from its htm
   assert.equal(r2.bookings[0].checkIn, '2026-12-15');
 });
 
+test('a Breeze confirmation: two flights, the airport by its new code, and a city name still means the old code', () => {
+  const leg = (day, no, a, b, an, bn, t1, t2, from, to) => `<tr><td><p>Trip Details</p><p>Fare: Nicer</p><p>${day}</p><p>Flight ${no}</p><p>2h 10m</p><p>${a}</p><p>${b}</p><p>${an} (${from})</p><p>${bn} (${to})</p><p>${t1}</p><p>${t2}</p><p>${from}</p><p>${to}</p></td></tr>`;
+  const html = `<html><body><table><tr><td><h2>Nicely done!</h2><p>Your flight reservation is confirmed.</p><p>Confirmation Number: ABCDEF</p></td></tr>`
+    + leg('Nov 22, 2026', 'MX606', 'Raleigh/Durham', 'West Palm Beach', 'Raleigh-Durham International Airport', 'President Donald J. Trump International Airport', '02:46 pm', '04:56 pm', 'RDU', 'DJT')
+    + leg('Nov 27, 2026', 'MX1550', 'West Palm Beach', 'Raleigh/Durham', 'President Donald J. Trump International Airport', 'Raleigh-Durham International Airport', '07:32 pm', '09:40 pm', 'DJT', 'RDU')
+    + `<tr><td><p>Guest List</p><p>Pat Example</p><p>Seat:</p><p>12A</p></td></tr></table></body></html>`;
+  const r = P.parseEmail({ html, text: '', subject: 'Nice! Your Breeze booking is confirmed. ABCDEF', from: 'Breeze Airways <noreply@flybreeze.com>', date: Date.parse('2026-10-14T13:23:00Z'), id: 'br', threadId: 'br' });
+  assert.deepEqual(r.bookings.map(b => [b.airlineCode, b.flightNo, b.from, b.to, b.dep, b.arr, b.conf]), [
+    ['MX', '606', 'RDU', 'DJT', '2026-11-22T14:46', '2026-11-22T16:56', 'ABCDEF'], ['MX', '1550', 'DJT', 'RDU', '2026-11-27T19:32', '2026-11-27T21:40', 'ABCDEF']]);
+  assert.equal(P.AIRPORTS.DJT, 'West Palm Beach');
+  assert.equal(P.cityToCode('West Palm Beach'), 'PBI', 'a city still means the one code it always meant');
+});
+
 console.log(n + ' passed');
