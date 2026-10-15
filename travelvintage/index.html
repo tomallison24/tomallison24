@@ -532,6 +532,14 @@ svg.fs{fill:currentColor}
 .aska{font-size:16px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
 .aska.err{color:var(--muted)}
 .askclear{align-self:flex-end}
+.askmode{flex:none;height:32px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:700;color:var(--accent-text);background:var(--fill);box-shadow:var(--lg-rim)}
+.askmode:active{transform:scale(.94)}
+.editlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.35}
+.editlist li{padding-left:14px;position:relative;overflow-wrap:anywhere}
+.editlist li:before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.editlist li.del{color:var(--danger-text)}
+.editlist li.del:before{background:var(--danger)}
+.editbtns{display:flex;justify-content:flex-end;gap:10px;align-items:center}
 .askout .tl{margin:0}
 .tripwrap{position:relative}
 .trip.hasai{padding-bottom:54px}
@@ -908,6 +916,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <form class="search glass askbar" id="askForm" role="search" action="#" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>
         <input id="askInput" type="search" placeholder="Ask AI about your trips" aria-label="Ask AI about your trips" enterkeyhint="send" maxlength="300" autocomplete="off" autocapitalize="sentences">
+        <button class="askmode" type="button" id="askMode" aria-label="Asking questions. Switch to changing trips">Ask</button>
       </form>
     </header>
     <main class="list" id="list"></main>

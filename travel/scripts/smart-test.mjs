@@ -98,11 +98,11 @@ async function open({ calendar = true, ai = true, board = true, empty = false } 
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], find: [], ask: [], imports: [], deletes: [], events: 0 };
+  const seen = { extract: [], find: [], ask: [], edit: [], imports: [], deletes: [], events: 0 };
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
-    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: EMAILS.map(m => ({ id: m.id, threadId: m.threadId })) } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: (empty ? [] : EMAILS).map(m => ({ id: m.id, threadId: m.threadId })) } });
     const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: {} });
   });
@@ -121,6 +121,21 @@ async function open({ calendar = true, ai = true, board = true, empty = false } 
       seen.ask.push(body);
       const first = body.trips.flatMap(t => t.items).find(i => i.kind === 'flight');
       return route.fulfill({ json: { ok: true, answer: 'Your next flight is ' + (first && first.flight) + '.', bookingIds: first ? [first.id, 'not-a-booking'] : [] } });
+    }
+    if (u.pathname.endsWith('/edit')) {
+      const body = JSON.parse(req.postData() || '{}');
+      seen.edit.push(body);
+      const items = body.trips.flatMap(t => t.items), flights = items.filter(i => i.kind === 'flight'), hotel = items.find(i => i.kind === 'hotel');
+      const first = flights[0], pdx = flights.find(i => i.to === 'PDX'), den = flights.find(i => i.to === 'DEN');
+      // the made-up AI: a good list, with two changes the checks must throw out (a bad value, an id that is not there)
+      return route.fulfill({ json: { ok: true, summary: 'Move the flight, drop the hotel, join the two later flights and rename the trip.', question: '', dropped: 0, ops: [
+        { op: 'set', id: first.id, field: 'dep', value: iso(day(71)), with: '', name: '' },
+        { op: 'delete', id: hotel.id, field: '', value: '', with: '', name: '' },
+        { op: 'join', id: pdx.id, field: '', value: '', with: den.id, name: '' },
+        { op: 'rename', id: body.trips[0].tid, field: '', value: '', with: '', name: 'December in San Diego' },
+        { op: 'set', id: hotel.id, field: 'checkIn', value: 'next tuesday', with: '', name: '' },
+        { op: 'delete', id: 'not-a-booking', field: '', value: '', with: '', name: '' },
+        { op: 'set', id: first.id, field: 'seat', value: '12A', with: '', name: '' }] } });
     }
     if (u.pathname.endsWith('/find')) { seen.find.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, candidates: [{ number: '2154', to: 'PHL', local: '' }] } }); }
     return route.fulfill({ json: { ok: true, found: false } });
@@ -399,6 +414,78 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(groups[0].kinds.split(',').filter(k => k === 'hotel').length, 1);
     assert.equal(groups[0].n, 3, 'the hotel sits in the same trip as the flights: ' + JSON.stringify(groups));
     assert.equal(groups[0].name, 'San Diego');
+  });
+  await ctx.close();
+}
+
+// =================== change by asking: a preview first, nothing until Apply, and Undo ===================
+{
+  const { ctx, page, seen } = await open({ empty: true, calendar: false });
+  const OUT = day(70), HOME = day(74), HOP = day(80), FAR = day(140);
+  const flightJson = (no, from, to, d, conf) => ({ '@context': 'http://schema.org', '@type': 'FlightReservation', reservationNumber: conf,
+    reservationFor: { '@type': 'Flight', flightNumber: no, airline: { '@type': 'Airline', name: 'Alaska Airlines', iataCode: 'AS' },
+      departureAirport: { iataCode: from }, departureTime: iso(d) + 'T17:10:00-05:00', arrivalAirport: { iataCode: to }, arrivalTime: iso(d) + 'T20:01:00-07:00' } });
+  const mail = (id, subject, jsonld) => ({ id, from: 'Alaska Airlines <reservation@email.alaskaair.com>', subject, html: `<html><head><script type="application/ld+json">${JSON.stringify(jsonld)}</script></head><body>booked</body></html>` });
+  const hotel = { id: 'hx', from: 'Hilton Reservations <info@cvent.com>', subject: 'Hilton San Diego Bayfront Reservation Confirmation',
+    text: `Hilton San Diego Bayfront\n1 Park Boulevard\nSan Diego, CA, 92101\nRESERVATION CONFIRMATION\nHotel confirmation:\n3115096800\nArrival date:\n${long(OUT)}\nDeparture date:\n${long(day(73))}\n` };
+  await page.evaluate(emails => { const T = window.__travel; T.bookings.splice(0); emails.forEach(m => T.P.parseEmail({ ...m, date: Date.now(), threadId: m.id }).bookings.forEach(b => T.upsert(b))); }, [
+    mail('f1', 'Your flight is booked: YAVUUB', [flightJson('474', 'RDU', 'SAN', OUT, 'YAVUUB'), flightJson('434', 'SAN', 'RDU', HOME, 'YAVUUB')]),
+    mail('f2', 'Your flight is booked: HOP22X', flightJson('120', 'RDU', 'PDX', HOP, 'HOP22X')),
+    mail('f3', 'Your flight is booked: ZZ9PLU', flightJson('900', 'RDU', 'DEN', FAR, 'ZZ9PLU')), hotel]);
+  const snapshot = () => page.evaluate(() => { const T = window.__travel; return { bookings: JSON.stringify(T.bookings.map(({ updated, ...rest }) => rest)), trips: T.groupTrips().map(g => g.name + ':' + g.items.length) }; });
+  const before = await snapshot();
+  assert.equal(before.trips.length, 3, 'the San Diego trip, Portland and Denver: ' + before.trips);
+
+  await step('Change mode: the instruction goes with the trip list (and trip ids, no names), and the changes come back as a preview that changes nothing', async () => {
+    await page.waitForFunction(() => !document.getElementById('askForm').hidden, null, { timeout: 5000 });
+    assert.equal(await page.textContent('#askMode'), 'Ask');
+    await page.click('#askMode');
+    assert.equal(await page.textContent('#askMode'), 'Change');
+    assert.equal(await page.getAttribute('#askInput', 'placeholder'), 'Tell Travel what to change');
+    await page.fill('#askInput', 'Delete the Hilton, move my first flight a day later, join Portland and Denver, and call it December in San Diego');
+    await page.press('#askInput', 'Enter');
+    await page.waitForSelector('#editYes', { timeout: 5000 });
+    assert.equal(seen.edit.length, 1); assert.equal(seen.ask.length, 0, 'it is not a question');
+    const sent = JSON.stringify(seen.edit[0]);
+    assert.ok(seen.edit[0].trips.every(t => t.tid), 'each trip has an id to rename it by');
+    assert.ok(!/Tom|Allison|Pat Example|seat/i.test(sent), 'no names or seats go: ' + sent.slice(0, 200));
+    const lines = await page.$$eval('.editlist li', els => els.map(e => e.textContent));
+    assert.equal(lines.length, 4, 'the bad value, the unknown booking and the seat are thrown out: ' + JSON.stringify(lines));
+    assert.ok(lines.some(l => /^Delete Hilton San Diego Bayfront/.test(l)), JSON.stringify(lines));
+    assert.equal(await page.$eval('.editlist li.del', e => e.textContent.startsWith('Delete')), true, 'a delete is marked');
+    assert.match(await page.textContent('.askout'), /left out because they didn’t check out/);
+    assert.deepEqual(await snapshot(), before, 'nothing has changed yet');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-edit-preview.png') });
+  });
+  await step('Cancel changes nothing; Apply makes exactly the listed changes, keeping the time of a moved flight', async () => {
+    await page.click('#askClear');
+    assert.equal(await page.$('#editYes'), null); assert.deepEqual(await snapshot(), before);
+    await page.fill('#askInput', 'Delete the Hilton, move my first flight a day later, join Portland and Denver, and call it December in San Diego');
+    await page.press('#askInput', 'Enter');
+    await page.waitForSelector('#editYes', { timeout: 5000 });
+    await page.click('#editYes');
+    await page.waitForFunction(() => !document.querySelector('#editYes'));
+    const after = await page.evaluate(() => { const T = window.__travel; return { hotels: T.bookings.filter(b => b.type === 'hotel').length, first: T.bookings.find(b => b.flightNo === '474'), trips: T.groupTrips().map(g => g.name) }; });
+    assert.equal(after.hotels, 0, 'the hotel is gone');
+    assert.equal(after.first.dep, iso(day(71)) + 'T17:10', 'a day later, same time: ' + after.first.dep);
+    assert.equal(after.first.edited, true);
+    assert.equal(after.trips.length, 2, 'Portland and Denver are one trip now: ' + after.trips);
+    assert.ok(after.trips.includes('December in San Diego'), 'and the trip has its new name: ' + after.trips);
+    assert.match(await page.textContent('#toastMsg'), /^Done: 4 changes\./);
+  });
+  await step('Undo puts everything back', async () => {
+    assert.equal(await page.$eval('#toastAct', e => !e.hidden), true);
+    await page.click('#toastAct');
+    const back = await snapshot();
+    assert.deepEqual(back.trips, before.trips); assert.equal(back.bookings, before.bookings);
+  });
+  await step('a change that checks out nowhere is never offered; the app checks again whatever the server says', async () => {
+    const bad = await page.evaluate(() => {
+      const T = window.__travel, b = T.bookings.find(x => x.type === 'flight');
+      return [T.checkEdit({ op: 'set', id: b.id, field: 'from', value: 'Raleigh' }), T.checkEdit({ op: 'set', id: b.id, field: 'checkIn', value: '2026-12-01' }),
+        T.checkEdit({ op: 'delete', id: 'nope' }), T.checkEdit({ op: 'join', id: b.id, with: b.id }), T.checkEdit({ op: 'rename', id: 'nope', name: 'x y' }), T.checkEdit({ op: 'drop table' })];
+    });
+    assert.deepEqual(bad, [null, null, null, null, null, null]);
   });
   await ctx.close();
 }

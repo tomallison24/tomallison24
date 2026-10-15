@@ -209,6 +209,27 @@ board, and last the AI:
   model is a Haiku. Each question costs a few cents at most (Sonnet 5.5 is $2 / $10
   per million tokens in / out; Haiku 5.5, $0.10 / $0.50). The Settings switch hides the
   bar along with the buttons.
+- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel what
+  to change ("delete the Sheraton", "move my flight home to the 20th", "put the hotel in
+  the San Diego trip", "call this trip December in San Diego") and press Enter. The
+  function (`edit`) gets the instruction and the same trip list as Ask AI, with each
+  trip's id, and Claude can only answer with changes from a short list: set one field
+  of a booking (flights: number, airline, airports, departure and arrival; hotels:
+  name, city, check-in and check-out; cars: company, pick-up and drop-off; other
+  bookings: title, start and end), delete a booking, put a booking in the same trip
+  as another, rename a trip. At most twelve at a time. Every change is checked in the
+  function (the booking exists, the field belongs to its kind, the value has the right
+  shape: airports are three letters, days are real days) and again in the app, and
+  the ones that don't check out are left out and counted. What is left comes up as a
+  **preview**, a line each, deletes in red, and **nothing changes until you tap
+  Apply**. Apply marks what it touched as yours (an email never overwrites it
+  again), a deleted booking stays deleted (and comes out of the calendar if Travel
+  wrote it there), and **Undo** in the toast puts everything back, deletes
+  included. A day on its own keeps the booking's time. If the instruction is
+  unclear it asks one short question instead. Joining trips by hand is stored as
+  `tripWith` on the booking; trips also join by themselves when they share a
+  confirmation code or the next flight leaves from where the last one landed
+  (above). Same key, model and cost as Ask AI, no limit of its own.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
