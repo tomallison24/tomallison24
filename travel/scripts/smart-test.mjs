@@ -109,7 +109,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false } 
   await ctx.route(BASE + '/travel/api/**', route => {
     const req = route.request(), u = new URL(req.url());
     if (req.headers()['x-travel'] !== '1') return route.fulfill({ status: 404, json: { error: 'not-found' } });
-    if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true, find: board, ai } });
+    if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true, find: board, ai, models: { check: 'claude-haiku-5-5', ask: 'claude-sonnet-5-5' } } });
     if (u.pathname.endsWith('/extract')) {
       const body = JSON.parse(req.postData() || '{}');
       seen.extract.push(body);
@@ -120,22 +120,32 @@ async function open({ calendar = true, ai = true, board = true, empty = false } 
       const body = JSON.parse(req.postData() || '{}');
       seen.ask.push(body);
       const first = body.trips.flatMap(t => t.items).find(i => i.kind === 'flight');
-      return route.fulfill({ json: { ok: true, answer: 'Your next flight is ' + (first && first.flight) + '.', bookingIds: first ? [first.id, 'not-a-booking'] : [] } });
+      return route.fulfill({ json: { ok: true, model: 'claude-sonnet-5-5', answer: 'Your next flight is ' + (first && first.flight) + '.', bookingIds: first ? [first.id, 'not-a-booking'] : [] } });
     }
     if (u.pathname.endsWith('/edit')) {
       const body = JSON.parse(req.postData() || '{}');
       seen.edit.push(body);
       const items = body.trips.flatMap(t => t.items), flights = items.filter(i => i.kind === 'flight'), hotel = items.find(i => i.kind === 'hotel');
       const first = flights[0], pdx = flights.find(i => i.to === 'PDX'), den = flights.find(i => i.to === 'DEN');
+      const O = o => ({ op: '', id: '', field: '', value: '', with: '', name: '', kind: '', pairs: [], ...o });
+      if (/WIDER/.test(body.question)) {
+        // the whole vocabulary: set and clear, add, cancel, bring back, mark checked, take out of a trip
+        return route.fulfill({ json: { ok: true, model: 'claude-sonnet-5-5', summary: 'A little of everything.', question: '', dropped: 0, ops: [
+          O({ op: 'set', id: first.id, field: 'seat', value: '12A' }), O({ op: 'set', id: first.id, field: 'gate', value: '' }),
+          O({ op: 'set', id: hotel.id, field: 'checkInTime', value: '15:00' }),
+          O({ op: 'add', kind: 'other', pairs: [{ field: 'title', value: 'Dinner with Pat' }, { field: 'start', value: iso(day(72)) + 'T19:00' }, { field: 'place', value: 'Old Town' }] }),
+          O({ op: 'add', kind: 'hotel', pairs: [{ field: 'name', value: 'No dates' }] }),
+          O({ op: 'status', id: pdx.id, value: 'cancelled' }), O({ op: 'check', id: hotel.id }), O({ op: 'detach', id: den.id })] } });
+      }
       // the made-up AI: a good list, with two changes the checks must throw out (a bad value, an id that is not there)
-      return route.fulfill({ json: { ok: true, summary: 'Move the flight, drop the hotel, join the two later flights and rename the trip.', question: '', dropped: 0, ops: [
+      return route.fulfill({ json: { ok: true, model: 'claude-sonnet-5-5', summary: 'Move the flight, drop the hotel, join the two later flights and rename the trip.', question: '', dropped: 0, ops: [
         { op: 'set', id: first.id, field: 'dep', value: iso(day(71)), with: '', name: '' },
         { op: 'delete', id: hotel.id, field: '', value: '', with: '', name: '' },
         { op: 'join', id: pdx.id, field: '', value: '', with: den.id, name: '' },
         { op: 'rename', id: body.trips[0].tid, field: '', value: '', with: '', name: 'December in San Diego' },
         { op: 'set', id: hotel.id, field: 'checkIn', value: 'next tuesday', with: '', name: '' },
         { op: 'delete', id: 'not-a-booking', field: '', value: '', with: '', name: '' },
-        { op: 'set', id: first.id, field: 'seat', value: '12A', with: '', name: '' }] } });
+        { op: 'set', id: first.id, field: 'airline', value: 'Alaska', with: '', name: '' }] } });
     }
     if (u.pathname.endsWith('/find')) { seen.find.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, candidates: [{ number: '2154', to: 'PHL', local: '' }] } }); }
     return route.fulfill({ json: { ok: true, found: false } });
@@ -478,6 +488,45 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#toastAct');
     const back = await snapshot();
     assert.deepEqual(back.trips, before.trips); assert.equal(back.bookings, before.bookings);
+  });
+  await step('the wider list: set and clear fields, add a booking, cancel, mark checked, take out of a trip; Undo puts it all back', async () => {
+    await page.fill('#askInput', 'WIDER: seat 12A, no gate, hotel from 3pm, add dinner with Pat, cancel Portland, looks right, Denver on its own');
+    await page.press('#askInput', 'Enter');
+    await page.waitForSelector('#editYes', { timeout: 5000 });
+    const lines = await page.$$eval('.editlist li', els => els.map(e => e.textContent));
+    assert.equal(lines.length, 7, JSON.stringify(lines));
+    assert.ok(lines.some(l => /^Add other: Dinner with Pat \(20\d\d-\d\d-\d\d\)$/.test(l)), JSON.stringify(lines));
+    assert.ok(lines.some(l => /^Cancel AS 120/.test(l)) && lines.some(l => /^Mark Hilton San Diego Bayfront as checked$/.test(l)) && lines.some(l => /^Take AS 900.* out of its trip/.test(l)), JSON.stringify(lines));
+    assert.match(await page.textContent('.askout'), /1 change left out because it didn’t check out/);
+    await page.click('#editYes');
+    await page.waitForFunction(() => !document.querySelector('#editYes'));
+    const after = await page.evaluate(() => { const T = window.__travel, by = n => T.bookings.find(b => b.flightNo === n);
+      return { seat: by('474').seat, gate: by('474').gate, hotel: T.bookings.find(b => b.type === 'hotel'), dinner: T.bookings.find(b => b.title === 'Dinner with Pat'), pdx: by('120').status, den: by('900').tripApart, count: T.bookings.length }; });
+    assert.equal(after.seat, '12A'); assert.equal(after.gate, '');
+    assert.equal(after.hotel.checkInTime, '15:00'); assert.equal(after.hotel.checked, true); assert.equal(after.hotel.guess, false);
+    assert.deepEqual([after.dinner.type, after.dinner.place, after.dinner.edited, after.dinner.guess], ['other', 'Old Town', true, false]);
+    assert.equal(after.pdx, 'cancelled'); assert.equal(after.den, true);
+    assert.equal(after.count, JSON.parse(before.bookings).length + 1, 'one booking added');
+    assert.match(await page.textContent('#toastMsg'), /^Done: 7 changes\./);
+    await page.click('#toastAct');
+    const back = await snapshot();
+    assert.equal(back.bookings, before.bookings); assert.deepEqual(back.trips, before.trips);
+  });
+  await step('Settings says which models answer, and what the last answer came from', async () => {
+    await page.click('#setBtn');
+    await page.waitForSelector('#setSheet:not([hidden]) #stAiSub');
+    await page.waitForFunction(() => /Models:/.test(document.getElementById('stAiSub').textContent), null, { timeout: 5000 });
+    let sub = await page.textContent('#stAiSub');
+    assert.match(sub, /Models: Check Haiku 5\.5; Ask and Change Sonnet 5\.5 \(the last answer came from it\)\./, sub);
+    // a different model answering (a fallback, say) is said out loud
+    await page.evaluate(() => { const k = Object.keys(localStorage).find(x => /-ai-last$/.test(x)); localStorage.setItem(k, JSON.stringify({ ask: 'claude-opus-5-5-20261001', check: 'claude-haiku-5-5' })); });
+    await page.click('#stCalOpt'); await page.click('#stCalOpt');     // any redraw of Settings
+    sub = await page.textContent('#stAiSub');
+    assert.match(sub, /Check Haiku 5\.5 \(the last answer came from it\); Ask and Change Sonnet 5\.5 \(but the last answer came from Opus 5\.5\)\./, sub);
+    await page.$eval('#stAiSub', e => e.scrollIntoView({ block: 'center' }));
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-models.png') });
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => { document.querySelectorAll('.sheetwrap').forEach(w => { if (!w.hidden && w.querySelector('[data-close]')) w.querySelector('[data-close]').click(); }); });
   });
   await step('a change that checks out nowhere is never offered; the app checks again whatever the server says', async () => {
     const bad = await page.evaluate(() => {

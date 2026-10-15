@@ -36,8 +36,15 @@ await test('refuses requests without the app header', async () => {
   assert.equal(r.status, 404); assert.equal(calls.length, 0);
 });
 await test('ping says whether the key is set', async () => {
-  assert.deepEqual((await call('ping')).body, { ok: true, status: true, find: true, ai: false });
-  assert.deepEqual((await call('ping', { key: '' })).body, { ok: true, status: false, find: false, ai: false });
+  const models = { check: 'claude-haiku-5-5', ask: 'claude-sonnet-5-5' };
+  assert.deepEqual((await call('ping')).body, { ok: true, status: true, find: true, ai: false, models });
+  assert.deepEqual((await call('ping', { key: '' })).body, { ok: true, status: false, find: false, ai: false, models });
+});
+await test('ping names the models in use: the defaults, or what the secrets say', async () => {
+  const run = async env => { const res = await onRequestGet({ request: new Request('https://site.example/travel/api/ping', { headers: { 'X-Travel': '1' } }), params: { route: ['ping'] }, env, waitUntil() {} }); return (await res.json()).models; };
+  assert.deepEqual(await run({}), { check: 'claude-haiku-5-5', ask: 'claude-sonnet-5-5' });
+  assert.deepEqual(await run({ TRAVEL_AI_MODEL: ' claude-sonnet-5-5 ', TRAVEL_ASK_MODEL: 'claude-opus-5-5' }), { check: 'claude-sonnet-5-5', ask: 'claude-opus-5-5' });
+  assert.deepEqual(await run({ TRAVEL_AI_MODEL: '  ', TRAVEL_ASK_MODEL: '' }), { check: 'claude-haiku-5-5', ask: 'claude-sonnet-5-5' }, 'an empty secret is the default');
 });
 await test('no key: says so, calls nothing', async () => {
   const r = await call('flight?no=UA1234&date=2026-10-16', { key: '' });
@@ -237,7 +244,7 @@ const postEdit = async (body, { key = 'sk-ant-test', header = true, raw } = {}) 
   const res = await onRequestPost({ request, params: { route: ['edit'] }, env: key ? { ANTHROPIC_API_KEY: key } : {} });
   return { status: res.status, body: await res.json() };
 };
-const op = (o) => ({ op: '', id: '', field: '', value: '', with: '', name: '', ...o });
+const op = (o) => ({ op: '', id: '', field: '', value: '', with: '', name: '', kind: '', pairs: [], ...o });
 const edited = (summary, ops, question = '') => () => new Response(JSON.stringify({ model: 'claude-sonnet-5-5', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ summary, question, ops }) }] }), { status: 200 });
 const ETRIPS = TRIPS.map((t, i) => i === 0 ? { ...t, tid: 'f-1' } : i === 1 ? { ...t, tid: 'made-up' } : t);
 await test('edit: needs the header, the key, an instruction and a trip list; nothing to change means nothing is asked', async () => {
@@ -256,7 +263,7 @@ await test('edit: sends the same allowed fields as ask (plus trip ids), asks for
   globalThis.fetch = async (url, init) => { sent = JSON.parse(init.body); return edited('Nothing to do.', [])(); };
   await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS });
   assert.equal(sent.model, 'claude-sonnet-5-5'); assert.equal(sent.output_config.format.type, 'json_schema');
-  assert.deepEqual(sent.output_config.format.schema.properties.ops.items.properties.op.enum, ['set', 'delete', 'join', 'rename']);
+  assert.deepEqual(sent.output_config.format.schema.properties.ops.items.properties.op.enum, ['set', 'add', 'delete', 'status', 'check', 'join', 'detach', 'rename']);
   assert.deepEqual(sent.output_config.format.schema.required, ['summary', 'question', 'ops']);
   const prompt = sent.messages[0].content;
   assert.match(prompt, /Instruction: Delete the hotel$/); assert.match(prompt, /"tid":"f-1"/);
@@ -269,7 +276,7 @@ await test('edit: only changes that check out come back: real bookings, fields o
     op({ op: 'set', id: 'f-1', field: 'dep', value: '2026-11-03T16:04' }),         // good
     op({ op: 'set', id: 'f-1', field: 'dep', value: '2026-11-03' }),               // good: a day alone
     op({ op: 'set', id: 'f-1', field: 'from', value: 'Raleigh' }),                 // not an airport code
-    op({ op: 'set', id: 'f-1', field: 'seat', value: '12A' }),                     // not a field it may change
+    op({ op: 'set', id: 'f-1', field: 'airline', value: 'Alaska' }),               // not a field it may change
     op({ op: 'set', id: 'f-1', field: 'checkIn', value: '2026-11-03' }),           // a hotel field on a flight
     op({ op: 'set', id: 'h-1', field: 'checkOut', value: '2026-11-06' }),          // good
     op({ op: 'set', id: 'h-1', field: 'checkOut', value: 'next week' }),
@@ -288,9 +295,9 @@ await test('edit: only changes that check out come back: real bookings, fields o
     'set:f-1:dep', 'set:f-1:dep', 'set:h-1:checkOut', 'delete:h-1:', 'join:f-2:f-1', 'rename:f-1:Cleveland in November']);
   assert.equal(r.body.dropped, 12, 'the twelve that do not check out; the repeated delete is just one');
 });
-await test('edit: at most twelve changes; a question comes back when it is not clear; limits and refusals are plain answers', async () => {
-  globalThis.fetch = edited('Lots.', Array.from({ length: 20 }, (_, i) => op({ op: 'set', id: 'f-1', field: 'flightNo', value: String(100 + i) })));
-  assert.equal((await postEdit({ question: 'Renumber everything', today: '2026-10-14', trips: ETRIPS })).body.ops.length, 12);
+await test('edit: at most thirty changes; a question comes back when it is not clear; limits and refusals are plain answers', async () => {
+  globalThis.fetch = edited('Lots.', Array.from({ length: 40 }, (_, i) => op({ op: 'set', id: 'f-1', field: 'flightNo', value: String(100 + i) })));
+  assert.equal((await postEdit({ question: 'Renumber everything', today: '2026-10-14', trips: ETRIPS })).body.ops.length, 30);
   globalThis.fetch = edited('', [], 'Which hotel do you mean?');
   const q = await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS });
   assert.deepEqual(q.body.ops, []); assert.equal(q.body.question, 'Which hotel do you mean?');
@@ -300,5 +307,32 @@ await test('edit: at most twelve changes; a question comes back when it is not c
   assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS })).body.refused, true);
   globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { status: 200 });
   assert.equal((await postEdit({ question: 'Delete the hotel', today: '2026-10-14', trips: ETRIPS })).body.error, 'unreadable');
+});
+await test('edit: the wider list: any field of a kind (or cleared), new bookings, cancel, mark checked, take out of a trip', async () => {
+  globalThis.fetch = edited('Lots.', [
+    op({ op: 'set', id: 'f-1', field: 'seat', value: '12a' }),                       // good: a seat
+    op({ op: 'set', id: 'f-1', field: 'conf', value: 'zq4rte' }),                    // good, upper-cased
+    op({ op: 'set', id: 'f-1', field: 'gate', value: '' }),                          // good: cleared
+    op({ op: 'set', id: 'f-1', field: 'dep', value: '' }),                           // a flight cannot lose its day
+    op({ op: 'set', id: 'h-1', field: 'checkInTime', value: '15:00' }),              // good
+    op({ op: 'set', id: 'h-1', field: 'checkInTime', value: '3pm' }),
+    op({ op: 'set', id: 'h-1', field: 'phone', value: '555-0100' }),                 // good
+    op({ op: 'set', id: 'h-1', field: 'name', value: '' }),                          // a hotel keeps its name
+    op({ op: 'status', id: 'f-2', value: 'cancelled' }), op({ op: 'status', id: 'f-2', value: 'confirmed' }), op({ op: 'status', id: 'f-2', value: 'maybe' }),
+    op({ op: 'check', id: 'h-1' }), op({ op: 'check', id: 'ghost' }),
+    op({ op: 'detach', id: 'h-1' }), op({ op: 'detach', id: 'ghost' }),
+    op({ op: 'add', kind: 'hotel', pairs: [{ field: 'name', value: 'Hilton Garden Inn' }, { field: 'checkIn', value: '2026-12-15' }, { field: 'checkOut', value: '2026-12-18' }, { field: 'city', value: 'San Diego' }] }),   // good
+    op({ op: 'add', kind: 'flight', pairs: [{ field: 'airlineCode', value: 'as' }, { field: 'flightNo', value: '474' }, { field: 'from', value: 'rdu' }, { field: 'to', value: 'san' }, { field: 'dep', value: '2026-12-15T17:10' }] }),   // good, codes upper-cased
+    op({ op: 'add', kind: 'hotel', pairs: [{ field: 'name', value: 'No dates' }] }),                    // no day
+    op({ op: 'add', kind: 'hotel', pairs: [{ field: 'name', value: 'Bad' }, { field: 'checkIn', value: 'soon' }, { field: 'checkOut', value: '2026-12-18' }] }),
+    op({ op: 'add', kind: 'hotel', pairs: [{ field: 'nope', value: 'x' }, { field: 'checkIn', value: '2026-12-15' }] }),
+    op({ op: 'add', kind: 'spaceship', pairs: [] }), op({ op: 'add', kind: 'car', pairs: 'x' }),
+  ]);
+  const r = await postEdit({ question: 'Do lots of things', today: '2026-10-14', trips: ETRIPS });
+  assert.deepEqual(r.body.ops.map(o => o.op + ':' + (o.id || o.kind) + ':' + (o.field || o.value || '') + (o.field ? '=' + o.value : '')), [
+    'set:f-1:seat=12a', 'set:f-1:conf=ZQ4RTE', 'set:f-1:gate=', 'set:h-1:checkInTime=15:00', 'set:h-1:phone=555-0100',
+    'status:f-2:cancelled', 'status:f-2:confirmed', 'check:h-1:', 'detach:h-1:', 'add:hotel:', 'add:flight:']);
+  assert.deepEqual(r.body.ops.find(o => o.op === 'add' && o.kind === 'flight').pairs.map(p => p.field + '=' + p.value), ['airlineCode=AS', 'flightNo=474', 'from=RDU', 'to=SAN', 'dep=2026-12-15T17:10']);
+  assert.equal(r.body.dropped, 11);
 });
 console.log(n + ' passed');

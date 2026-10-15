@@ -209,27 +209,47 @@ board, and last the AI:
   model is a Haiku. Each question costs a few cents at most (Sonnet 5.5 is $2 / $10
   per million tokens in / out; Haiku 5.5, $0.10 / $0.50). The Settings switch hides the
   bar along with the buttons.
-- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel what
-  to change ("delete the Sheraton", "move my flight home to the 20th", "put the hotel in
-  the San Diego trip", "call this trip December in San Diego") and press Enter. The
-  function (`edit`) gets the instruction and the same trip list as Ask AI, with each
-  trip's id, and Claude can only answer with changes from a short list: set one field
-  of a booking (flights: number, airline, airports, departure and arrival; hotels:
-  name, city, check-in and check-out; cars: company, pick-up and drop-off; other
-  bookings: title, start and end), delete a booking, put a booking in the same trip
-  as another, rename a trip. At most twelve at a time. Every change is checked in the
-  function (the booking exists, the field belongs to its kind, the value has the right
-  shape: airports are three letters, days are real days) and again in the app, and
-  the ones that don't check out are left out and counted. What is left comes up as a
-  **preview**, a line each, deletes in red, and **nothing changes until you tap
-  Apply**. Apply marks what it touched as yours (an email never overwrites it
-  again), a deleted booking stays deleted (and comes out of the calendar if Travel
-  wrote it there), and **Undo** in the toast puts everything back, deletes
-  included. A day on its own keeps the booking's time. If the instruction is
-  unclear it asks one short question instead. Joining trips by hand is stored as
-  `tripWith` on the booking; trips also join by themselves when they share a
-  confirmation code or the next flight leaves from where the last one landed
-  (above). Same key, model and cost as Ask AI, no limit of its own.
+- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel
+  what to change ("delete the Sheraton", "move my flight home to the 20th", "put the
+  hotel in the San Diego trip", "add dinner with Pat on the 16th at 7 in Old Town",
+  "cancel the Portland flight", "no seat on that flight", "call this trip December in
+  San Diego") and press Enter. The function (`edit`) gets the instruction and the same
+  trip list as Ask AI, with each trip's id, and Claude answers with changes from this
+  list, at most thirty at a time:
+  - **set** any field of a booking that you can edit by hand (flights: airline, number,
+    airports, departure and arrival, terminal, gate, confirmation, seat, traveler,
+    notes; hotels: name, address, city, confirmation, check-in and check-out with their
+    times, phone, notes; cars: company, confirmation, places, pick-up and drop-off, car,
+    city, notes; other bookings: title, place, start, end, confirmation, notes), or clear
+    it with an empty value (a booking keeps its first date and its identifying names);
+  - **add** a booking (flight, hotel, car or other), which needs its first date and what
+    identifies it (a flight: airline, number, both airports; a hotel: name and check-out;
+    a car: company; other: title);
+  - **delete** a booking; **cancel** it or bring a cancelled one back; mark it **checked**
+    ("looks right");
+  - **join** a booking to another's trip, or **take it out** of its trip (a trip of its own);
+  - **rename** a trip.
+  Every change is checked in the function (the booking exists, the field belongs to its
+  kind, the value has the right shape: airports are three letters, days are real days)
+  and again in the app, and the ones that don't check out are left out and counted.
+  What is left comes up as a **preview**, a line each, deletes in red, and **nothing
+  changes until you tap Apply**. Apply marks what it touched as yours (an email never
+  overwrites it again), a deleted booking stays deleted (and comes out of the calendar if
+  Travel wrote it there), and **Undo** in the toast puts everything back, adds and
+  deletes included. A day on its own keeps the booking's time. If the instruction is
+  unclear it asks one short question instead. Joining and separating trips by hand is
+  stored as `tripWith` and `tripApart` on the booking; trips also join by themselves when
+  they share a confirmation code or the next flight leaves from where the last one
+  landed (above). It sees what Ask AI sees, so names, seats, notes and emails are never
+  sent from your trips; what you say in the instruction itself is sent, so if you tell
+  it a seat or a traveler's name, that goes. Same key, model and cost as Ask AI, no limit
+  of its own.
+- *Which model answers.* Settings, under Smart help, says which models the function
+  is set to use (Check: Haiku 5.5, Ask and Change: Sonnet 5.5, unless the
+  `TRAVEL_AI_MODEL` and `TRAVEL_ASK_MODEL` secrets name others; `ping` reports them),
+  and what the last answer on this phone said it came from, which is the function's
+  own report of the model that answered. If a request was declined and a fallback
+  model answered instead, it says so.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.

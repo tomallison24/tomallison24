@@ -11,7 +11,7 @@
 //   POST /travel/api/edit                              Claude turns an instruction ("delete the Sheraton", "put the hotel in the San
 //                                                       Diego trip") into proposed changes to the trip list, which the app shows
 //                                                       as a preview; nothing changes until the person taps Apply
-//   GET  /travel/api/ping                               {ok, status, find, ai} - what is set up?
+//   GET  /travel/api/ping                               {ok, status, find, ai, models} - what is set up, and which models answer?
 //
 // It asks AeroDataBox (through RapidAPI) and keeps the key here, as a Pages
 // secret, so it never reaches a phone. Set it once (travel/README.md, "Live
@@ -75,7 +75,8 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
   const q = new URL(request.url).searchParams;
   const key = String(env.AERODATABOX_KEY || '').trim();
 
-  if (route === 'ping') return reply({ ok: true, status: !!key, find: !!key, ai: !!String(env.ANTHROPIC_API_KEY || '').trim() });
+  if (route === 'ping') return reply({ ok: true, status: !!key, find: !!key, ai: !!String(env.ANTHROPIC_API_KEY || '').trim(),
+    models: { check: String(env.TRAVEL_AI_MODEL || '').trim() || CHECK_MODEL, ask: String(env.TRAVEL_ASK_MODEL || '').trim() || ASK_MODEL } });
   if (route === 'find') return find(q, key, waitUntil);
   if (route !== 'flight') return reply({ error: 'not-found' }, 404);
   if (!key) return reply({ error: 'no-key' }, 503);
@@ -298,21 +299,37 @@ async function ask(request, env, key) {
 // Claude gets the instruction and the same trip list as ask (with each trip's id) and can only answer with changes from
 // a short list. Every change is checked here (the booking exists, the field fits its kind, the value has the right shape)
 // and again in the app, which shows them as a preview; nothing changes until the person taps Apply.
+const EDT = /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, ED8 = /^20\d\d-\d\d-\d\d$/, EHM = /^\d\d:\d\d$/;
+const etx = n => new RegExp('^.{0,' + n + '}$'), ewd = (lo, hi) => new RegExp('^.{' + lo + ',' + hi + '}$');
+const ECONF = /^[A-Za-z0-9]{0,12}$/;
+// Every field a person can edit by hand, by kind, with the shape its value must have. An empty value clears the field, except a booking's
+// first date and the names that identify it.
 const EDIT_FIELDS = {
-  flight: { flightNo: /^\d{1,4}[A-Z]?$/, airlineCode: /^[A-Z0-9]{2}$/, from: /^[A-Z]{3}$/, to: /^[A-Z]{3}$/, dep: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, arr: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/ },
-  hotel: { name: /^.{2,80}$/, city: /^.{2,60}$/, checkIn: /^20\d\d-\d\d-\d\d$/, checkOut: /^20\d\d-\d\d-\d\d$/ },
-  car: { company: /^.{2,60}$/, pickup: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, dropoff: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/ },
-  other: { title: /^.{2,80}$/, start: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, end: /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/ },
+  flight: { airlineCode: /^[A-Z0-9]{2}$/, flightNo: /^\d{1,4}[A-Z]?$/, from: /^[A-Z]{3}$/, to: /^[A-Z]{3}$/, dep: EDT, arr: EDT, terminal: etx(10), gate: etx(10), conf: ECONF, seat: etx(8), traveller: etx(60), notes: etx(300) },
+  hotel: { name: ewd(2, 80), address: etx(140), city: etx(60), conf: ECONF, checkIn: ED8, checkInTime: EHM, checkOut: ED8, checkOutTime: EHM, phone: etx(30), notes: etx(300) },
+  car: { company: ewd(2, 60), conf: ECONF, pickupPlace: etx(120), pickup: EDT, dropoff: EDT, dropPlace: etx(120), carClass: etx(40), city: etx(60), notes: etx(300) },
+  other: { title: ewd(2, 80), place: etx(120), start: EDT, end: EDT, conf: ECONF, notes: etx(300) },
 };
+const EDIT_FIRST = { flight: 'dep', hotel: 'checkIn', car: 'pickup', other: 'start' };   // the date a booking cannot be without
+const EDIT_NEEDED = { flight: ['dep', 'airlineCode', 'flightNo', 'from', 'to'], hotel: ['checkIn', 'name', 'checkOut'], car: ['pickup', 'company'], other: ['start', 'title'] };   // not cleared, never empty
 const EDIT_SYSTEM = [
-  'You turn one instruction about one person\'s trips into a short list of proposed changes to their trip data. The person will see your list as a preview and decide whether to apply it.',
-  'You may only propose these changes, one object each (leave the fields an op does not use as empty strings):',
-  '- set: change one field of one booking. id is the booking, field is one of: flights flightNo, airlineCode (2 letters), from, to (3-letter airport codes), dep, arr; hotels name, city, checkIn, checkOut (YYYY-MM-DD); rental cars company, pickup, dropoff; other bookings title, start, end. A date-time is YYYY-MM-DDTHH:MM in the local time of the place; a date alone (YYYY-MM-DD) keeps the time the booking already has.',
-  '- delete: remove one booking (id). Only when the person clearly asks to delete, remove or get rid of it.',
+  'You turn one instruction about one person\'s trips into a list of proposed changes to their trip data. The person will see your list as a preview and decide whether to apply it, and can undo it, so make the changes they ask for; do not hold back on what is allowed.',
+  'You may propose these changes, one object each (leave the fields an op does not use as empty strings, and pairs empty):',
+  '- set: change one field of one booking: id is the booking, field one of the names below, value the new value. An empty value clears the field.',
+  '    flights: airlineCode (2 letters), flightNo (digits), from, to (3-letter airport codes), dep, arr, terminal, gate, conf, seat, traveller, notes',
+  '    hotels: name, address, city, conf, checkIn, checkOut (YYYY-MM-DD), checkInTime, checkOutTime (HH:MM), phone, notes',
+  '    rental cars: company, conf, pickupPlace, pickup, dropoff, dropPlace, carClass, city, notes',
+  '    other bookings (trains, tours, dinners, rides): title, place, start, end, conf, notes',
+  '  A date-time is YYYY-MM-DDTHH:MM in the local time of the place; a date alone (YYYY-MM-DD) keeps the time the booking already has.',
+  '- add: a new booking. kind is flight, hotel, car or other; pairs is the list of {field, value} for it, using the same field names. It must have its first date (flights dep, hotels checkIn, cars pickup, other start), and a flight also its airline code, number and both airports, a hotel its name and checkOut, a car its company, other its title.',
+  '- delete: remove one booking (id). Only when the person clearly asks to delete or remove it. If they say cancelled, use status instead.',
+  '- status: value "cancelled" or "confirmed" for the booking id (cancel a booking, or bring a cancelled one back).',
+  '- check: mark the booking id as checked ("looks right"), which clears its "to check" flag.',
   '- join: put the booking id in the same trip as the booking in "with".',
+  '- detach: take the booking id out of the trip it is in, into a trip of its own.',
   '- rename: give the trip whose tid is in id the name in "name".',
   'Rules:',
-  '- Propose only what was asked, nothing extra, and only for bookings and trips in the data. Use the ids exactly as given.',
+  '- Propose only what was asked, and only for bookings and trips in the data. Use the ids exactly as given. Several changes may be needed for one instruction (move a whole trip: every booking).',
   '- Never invent a value. Dates, times, codes and names must come from the instruction (or from the data when the instruction points at it, like "the day after the hotel check-in").',
   '- If the instruction is unclear, matches more than one booking, or asks for something outside this list, propose nothing and put one short question in "question".',
   '- "summary" is one short plain sentence of what you propose (US English, no markdown).',
@@ -322,11 +339,13 @@ const EDIT_SCHEMA = {
   type: 'object', additionalProperties: false, required: ['summary', 'question', 'ops'],
   properties: {
     summary: { type: 'string' }, question: { type: 'string' },
-    ops: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['op', 'id', 'field', 'value', 'with', 'name'],
-      properties: { op: { type: 'string', enum: ['set', 'delete', 'join', 'rename'] }, id: { type: 'string' }, field: { type: 'string' }, value: { type: 'string' }, with: { type: 'string' }, name: { type: 'string' } } } },
+    ops: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['op', 'id', 'field', 'value', 'with', 'name', 'kind', 'pairs'],
+      properties: { op: { type: 'string', enum: ['set', 'add', 'delete', 'status', 'check', 'join', 'detach', 'rename'] }, id: { type: 'string' }, field: { type: 'string' }, value: { type: 'string' }, with: { type: 'string' }, name: { type: 'string' },
+        kind: { type: 'string' },
+        pairs: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['field', 'value'], properties: { field: { type: 'string' }, value: { type: 'string' } } } } } } },
   },
 };
-const MAX_OPS = 12;
+const MAX_OPS = 30;
 
 async function edit(request, env, key) {
   const len = +request.headers.get('Content-Length');
@@ -338,7 +357,7 @@ async function edit(request, env, key) {
   if (instruction.length < 3 || !today || !Array.isArray(body.trips)) return reply({ error: 'bad-request' }, 400);
   const { ids, trips } = cleanTrips(body);
   if (!trips.length) return reply({ ok: true, summary: '', question: 'There are no bookings to change yet.', ops: [], dropped: 0 });
-  const kinds = new Map(); trips.forEach(t => t.items.forEach(i => kinds.set(i.id, i.kind)));
+  const kinds = new Map(); trips.forEach(t => t.items.forEach(i => kinds.set(i.id, i.kind === 'ride' ? 'other' : i.kind)));
   const tids = new Set(trips.map(t => t.tid).filter(Boolean));
 
   let res;
@@ -367,16 +386,35 @@ async function edit(request, env, key) {
   const uniq = ops.filter(o => { const k = JSON.stringify(o); if (seen.has(k)) return false; seen.add(k); return true; });
   return reply({ ok: true, summary: clip(out && out.summary, 300), question: clip(out && out.question, 300), ops: uniq, dropped, model: data.model || '' });
 }
+// One field and value of a kind, normalised, or null when it is not allowed.
+function checkField(kind, field, value) {
+  const re = EDIT_FIELDS[kind] && EDIT_FIELDS[kind][field];
+  if (!re) return null;
+  let v = clip(value, 300);
+  if (/^(airlineCode|from|to|conf)$/.test(field)) v = v.toUpperCase();
+  if (v === '') return EDIT_NEEDED[kind].includes(field) ? null : { field, value: '' };
+  return re.test(v) ? { field, value: v } : null;
+}
 // One proposed change, or null when it is not allowed.
 function checkOp(o, kinds, tids) {
   if (!o || typeof o !== 'object') return null;
   const id = clip(o.id, 48);
   if (o.op === 'set') {
-    const kind = kinds.get(id), re = kind && EDIT_FIELDS[kind] && EDIT_FIELDS[kind][clip(o.field, 20)];
-    const field = clip(o.field, 20), value = clip(o.value, 80);
-    return re && re.test(value) ? { op: 'set', id, field, value } : null;
+    const kind = kinds.get(id), f = kind && checkField(kind, clip(o.field, 20), o.value);
+    return f ? { op: 'set', id, field: f.field, value: f.value } : null;
+  }
+  if (o.op === 'add') {
+    const kind = clip(o.kind, 10);
+    if (!EDIT_FIELDS[kind] || !Array.isArray(o.pairs)) return null;
+    const fields = {};
+    for (const p of o.pairs.slice(0, 20)) { const f = p && checkField(kind, clip(p.field, 20), p.value); if (!f) return null; if (f.value) fields[f.field] = f.value; }
+    if (!EDIT_NEEDED[kind].every(k => fields[k])) return null;
+    return { op: 'add', kind, pairs: Object.entries(fields).map(([field, value]) => ({ field, value })) };
   }
   if (o.op === 'delete') return kinds.has(id) ? { op: 'delete', id } : null;
+  if (o.op === 'status') { const v = clip(o.value, 12); return kinds.has(id) && (v === 'cancelled' || v === 'confirmed') ? { op: 'status', id, value: v } : null; }
+  if (o.op === 'check') return kinds.has(id) ? { op: 'check', id } : null;
+  if (o.op === 'detach') return kinds.has(id) ? { op: 'detach', id } : null;
   if (o.op === 'join') { const w = clip(o.with, 48); return kinds.has(id) && kinds.has(w) && w !== id ? { op: 'join', id, with: w } : null; }
   if (o.op === 'rename') { const name = clip(o.name, 60); return tids.has(id) && name.length >= 2 ? { op: 'rename', id, name } : null; }
   return null;
