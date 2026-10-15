@@ -110,6 +110,12 @@ Rules that keep it tidy:
   phones reading their own Gmail) is one booking: flights are matched on
   airline, number, date and airport; hotels and cars on the confirmation
   number.
+- **A flight number is not an identity.** Airlines use one number every day
+  (Frontier's 3073 is every day's), so a flight with no day in its email is
+  taken for an earlier booking of the same number and airports only when
+  their confirmation codes do not differ; two codes are two bookings. Trips
+  that share a confirmation code (a flight out, a flight home) are one trip
+  only when they are within 30 days of each other.
 - A later email updates a booking (a new time, a gate); a **cancellation**
   email marks it cancelled.
 - **What you typed wins.** A booking you edited is never overwritten by an
@@ -254,6 +260,25 @@ board, and last the AI:
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
   It is not written to the calendar until then.
+
+## What Travel searches for, and re-reading
+
+Each scan asks Gmail for the last year (then only what is new) of mail that is
+not in Promotions and either has the Travel label, or has *confirmation*,
+*confirmed*, *itinerary*, *reservation*, *booking*, *e-ticket*, *receipt*,
+*your trip / flight / stay*, *check in*, *cancelled* in its subject, or comes
+from one of the airlines, hotel groups (Hilton's group blocks come through
+Cvent and Passkey), rental car companies, trains and booking sites listed at
+the top of `app.js` (`SENDERS`). Travel remembers which emails it has read
+(the *seen* list) and does not read one twice, so **when the reader
+(`parse.js`) or that search improves, `QUERY_V` in `app.js` is bumped**: the
+next scan on each phone then reads the last year again once, and what the old
+reader made of those emails is made again by the new one. What you edited,
+checked or deleted, what was filled in by AI, and what came from the calendar
+stays as it is (the same as Settings, *Read the last year again*, which does it
+on demand). If the scan fails partway, the bookings it was rebuilding are kept
+as "to come back", not lost. `travel/scripts/reader-version-test.mjs` fails when
+`parse.js` or the search changes and `QUERY_V` does not.
 
 ## Gmail
 

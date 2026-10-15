@@ -50,21 +50,32 @@ if (window.top !== window.self) {
     token: 'travelv.token', state: 'travelv.state', silent: 'travelv.silent', silentFail: 'travelv.silentFail', lastAuth: 'travelv.lastAuth', hint: 'travelv.hint', me: 'travelv.me',
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
-    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', smartAt: KEY + '-smart-at',
+    calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', smartAt: KEY + '-smart-at',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 400;              // messages read in one go at most
   const LOOKUPS_A_MONTH = 250;       // per phone; meant to stay inside AeroDataBox's free plan (README, "What I could not verify")
   // Booking emails: the subjects they use, and the senders you book with.
-  const SENDERS = ['united.com', 'delta.com', 'aa.com', 'southwest.com', 'alaskaair.com', 'jetblue.com', 'flyfrontier.com',
-    'flybreeze.com', 'spirit.com', 'hawaiianairlines.com', 'allegiantair.com', 'suncountry.com', 'aircanada.com', 'westjet.com',
-    'britishairways.com', 'virginatlantic.com', 'marriott.com', 'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com'];
+  const SENDERS = [
+    // airlines
+    'united.com', 'delta.com', 'aa.com', 'southwest.com', 'alaskaair.com', 'jetblue.com', 'flyfrontier.com', 'flybreeze.com', 'spirit.com', 'hawaiianairlines.com',
+    'allegiantair.com', 'suncountry.com', 'aveloair.com', 'aircanada.com', 'westjet.com', 'britishairways.com', 'virginatlantic.com', 'lufthansa.com', 'klm.com',
+    'airfrance.com', 'iberia.com', 'emirates.com', 'qatarairways.com', 'etihad.com', 'turkishairlines.com', 'singaporeair.com', 'cathaypacific.com', 'qantas.com',
+    'aeromexico.com', 'copaair.com', 'latam.com', 'icelandair.com', 'norwegian.com', 'ryanair.com', 'easyjet.com', 'volaris.com',
+    // hotels (Hilton's group blocks come through Cvent and Passkey)
+    'marriott.com', 'res-marriott.com', 'hilton.com', 'hyatt.com', 'ihg.com', 'wyndhamhotels.com', 'choicehotels.com', 'bestwestern.com', 'radissonhotels.com',
+    'accor.com', 'omnihotels.com', 'fourseasons.com', 'sonesta.com', 'cvent.com', 'passkey.com',
+    // rental cars, trains, and the sites that book all of it
+    'nationalcar.com', 'enterprise.com', 'alamo.com', 'hertz.com', 'avis.com', 'budget.com', 'dollar.com', 'thrifty.com', 'sixt.com', 'turo.com', 'amtrak.com',
+    'booking.com', 'expedia.com', 'hotels.com', 'airbnb.com', 'vrbo.com', 'priceline.com', 'kayak.com', 'orbitz.com', 'travelocity.com', 'hopper.com'];
   const SUBJECTS = ['confirmation', 'confirmed', 'itinerary', 'reservation', 'booking', 'eticket', '"e-ticket"', 'receipt', '"your trip"',
     '"your flight"', '"your stay"', '"check in"', 'cancelled', 'canceled', 'cancellation'];
   // Plus anything Mail's Travel auto-tag has labelled (rides, Hopper, gate and
   // delay notices): Gmail keeps that label up to date as mail arrives.
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
-  const QUERY_V = '3';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
+  // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
+  // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
+  const QUERY_V = '4';
 
   const I = {
     spark: '<svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
@@ -241,7 +252,8 @@ if (window.top !== window.self) {
     };
     for (let i = 0; i < groups.length - 1;) {
       const a = groups[i], c = groups[i + 1];
-      const ca = new Set(a.items.map(b => b.conf).filter(Boolean)), shared = c.items.some(b => b.conf && ca.has(b.conf));
+      // a code shared by two trips joins them when they are close in time (a flight out and one home); months apart is another trip
+      const ca = new Set(a.items.map(b => b.conf).filter(Boolean)), shared = (dOf(c.start) - dOf(a.end)) / D <= 30 && c.items.some(b => b.conf && ca.has(b.conf));
       const last = fl(a).pop(), first = fl(c)[0];
       const chain = !!(last && first && last.to && last.to === first.from && last.to !== home0 && (dOf(c.start) - dOf(a.end)) / D <= 14);
       if (!a.solo && !c.solo && (shared || chain)) joinGroups(a, c); else i++;
@@ -793,12 +805,14 @@ if (window.top !== window.self) {
   // or the same hotel or car confirmation.
   function sameBooking(x, b) {
     if (x.type !== b.type || (startOf(x) && startOf(b))) return false;
-    if (b.type === 'flight') return x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && !!x.flightNo
+    // The airline numbers a flight every day (Frontier's 3073 is every day's), so the same number is not enough: two different
+    // confirmation codes are two different bookings, however alike.
+    if (b.type === 'flight') return x.airlineCode === b.airlineCode && num(x.flightNo) === num(b.flightNo) && !!x.flightNo && !(x.conf && b.conf && x.conf !== b.conf)
       && ((b.conf && x.conf === b.conf) || (x.from && x.from === b.from && x.to && x.to === b.to));
     if (b.type === 'hotel' || b.type === 'car') return !!b.conf && x.conf === b.conf;
     return false;
   }
-  let revive = new Set();   // ids "Read the last year again" cleared, which may come back
+  let revive = new Set(ls.json(K.revive, []));   // ids "Read the last year again" cleared, which may come back (kept until a scan finishes)
   function upsert(b, byHand) {
     upsert.id = b.id;
     if (graves['bookings:' + b.id] && !revive.has(b.id)) return 'gone';  // deleted on purpose: stays deleted
@@ -949,7 +963,8 @@ if (window.top !== window.self) {
     st.scanning = true; scanErr = ''; render();
     busyPill('Reading Gmail');
     const startedAt = Date.now();
-    if (ls.get(K.queryV, '') !== QUERY_V) { seen = new Set(); saveSeen(); }   // the reader changed: read the mail again once
+    const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and rebuild what the old reader made of it
+    if (rebuild) { seen = new Set(); saveSeen(); }
     const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
     let added = 0, changed = 0, cancelled = 0, read = 0;
@@ -962,6 +977,14 @@ if (window.top !== window.self) {
         (r.messages || []).forEach(m => ids.push(m));
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < MAX_SCAN);
+      if (rebuild) {
+        // Only now that the list came back (a failed look leaves everything as it was). What you edited, checked or deleted, and what was
+        // filled in by AI or came from the calendar, stays; the rest was made by the old reader and is made again by the new one.
+        const old = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked && !b.filled && !b.fromCal);
+        old.forEach(b => revive.add(b.id));
+        ls.set(K.revive, JSON.stringify([...revive]));
+        bookings = bookings.filter(b => !revive.has(b.id));
+      }
       const todo = ids.filter(m => !seen.has(m.id)).slice(0, MAX_SCAN);
       st.scanTotal = todo.length; st.scanDone = 0;
       await pool(todo, 4, async m => {
@@ -984,7 +1007,8 @@ if (window.top !== window.self) {
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      saveSeen(); save(); revive = new Set();
+      saveSeen(); save();
+      if (!scanErr) { revive = new Set(); ls.del(K.revive); }
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -1710,7 +1734,7 @@ if (window.top !== window.self) {
       // you) are cleared and read again, so an improved reader replaces its
       // old mistakes. Anything not found again stays gone, on both phones.
       const auto = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked);
-      revive = new Set(auto.map(b => b.id));
+      revive = new Set(auto.map(b => b.id)); ls.set(K.revive, JSON.stringify([...revive]));
       bookings = bookings.filter(b => !revive.has(b.id));
       save();
       seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });

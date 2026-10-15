@@ -28,6 +28,7 @@ const { chromium } = require('playwright');
 const APP = process.argv[2] || 'travel';
 const ROOT = path.resolve(process.argv[3] || new URL('../..', import.meta.url).pathname);
 const ID = APP;   // the aOS id (data-app)
+const QUERY_V = (/const QUERY_V = '([^']+)'/.exec(fs.readFileSync(path.join(ROOT, APP, 'app.js'), 'utf8')) || [])[1];
 const SHOTS = process.env.SHOTS || '';   // a folder for screenshots (optional)
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -73,8 +74,8 @@ const b64 = s => Buffer.from(s, 'utf8').toString('base64url');
 const gmailMessage = m => ({
   id: m.id, threadId: m.threadId, internalDate: String(Date.now() - (m.age || 1) * 86400e3),
   payload: { mimeType: 'multipart/alternative', headers: [{ name: 'Subject', value: m.subject }, { name: 'From', value: m.from }],
-    parts: [m.html ? { mimeType: 'text/html', headers: [{ name: 'Content-Type', value: 'text/html; charset="UTF-8"' }], body: { data: b64(m.html) } }
-      : { mimeType: 'text/plain', headers: [{ name: 'Content-Type', value: 'text/plain; charset=UTF-8' }], body: { data: b64(m.text) } }] },
+    parts: [m.text && { mimeType: 'text/plain', headers: [{ name: 'Content-Type', value: 'text/plain; charset=UTF-8' }], body: { data: b64(m.text) } },
+      m.html && { mimeType: 'text/html', headers: [{ name: 'Content-Type', value: 'text/html; charset="UTF-8"' }], body: { data: b64(m.html) } }].filter(Boolean) },
 });
 
 // ---- the Family calendar: made-up events ----
@@ -91,7 +92,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true, empty = false } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false, stored = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await ctx.addInitScript(id => localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' })), ID);
   const page = await ctx.newPage();
@@ -166,7 +167,10 @@ async function open({ calendar = true, ai = true, board = true, empty = false } 
     localStorage.setItem(k + '.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem(k + '.token.ever', '1');
   });
+  // the reader is at the current version unless a test says an update is due (a scan after an update rebuilds what the old reader made)
+  await ctx.addInitScript(([key, v]) => { if (!sessionStorage.getItem('qv')) { sessionStorage.setItem('qv', '1'); localStorage.setItem(key + '-query-v', v); } }, [APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1', QUERY_V]);
   if (empty) await ctx.addInitScript(() => localStorage.setItem('test.nomail', '1'));
+  if (stored) await ctx.addInitScript(st => { if (!sessionStorage.getItem('stored')) { sessionStorage.setItem('stored', '1'); Object.entries(st).forEach(([k, v]) => localStorage.setItem(k, v)); } }, stored);
   await page.goto(BASE + '/' + APP + '/');
   await page.waitForFunction(() => window.__travel && (window.__travel.bookings.length >= 4 || localStorage.getItem('test.nomail')), null, { timeout: 10000 });
   return { ctx, page, seen, problems };
@@ -424,6 +428,86 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(groups[0].kinds.split(',').filter(k => k === 'hotel').length, 1);
     assert.equal(groups[0].n, 3, 'the hotel sits in the same trip as the flights: ' + JSON.stringify(groups));
     assert.equal(groups[0].name, 'San Diego');
+  });
+  await ctx.close();
+}
+
+// =================== an improved reader reads the mail again once, and rebuilds what the old one made ===================
+{
+  const KEY = APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1';
+  const P = require(path.join(ROOT, 'travel/parse.js'));
+  const link = v => 'http://rlm.passkey.com/Tracking/track.do?token=' + Buffer.from('trkid=1~~~url=' + v).toString('base64') + '&hash=5A9787681ED76AA41C92F9A7B7F9E453';
+  const sd = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const rows = [['Hotel confirmation:', '3115096800'], ['Arrival date:', sd(day(60))], ['Departure date:', sd(day(63))]];
+  const hilton = { id: 'hx', from: 'Hilton Reservations <info@cvent.com>', subject: 'Hilton San Diego Bayfront Reservation Confirmation',
+    html: `<html><body><table><tr><td><strong>Hilton San Diego Bayfront</strong><br/><span>1 Park Boulevard</span><br/><span>San Diego, CA, 92101</span></td></tr><tr><td><strong>RESERVATION CONFIRMATION</strong></td></tr><tr><td><table>${rows.map(([a, b]) => `<tr><td><span>${a}</span></td><td><span>&nbsp;${b}</span></td></tr>`).join('')}</table></td></tr></table></body></html>`,
+    text: `RESERVATION CONFIRMATION\n\nWe are pleased to confirm your reservation at ${link('Hilton San Diego Bayfront')}. Below you will find details of your reservation. If your travel plans change, please click here (https://book.passkey.com/entry?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoieXYwYWEwU0IrQVhrVG8xWXhhWm84SkpiRU4v&utm_source=71485).\n\n` + rows.map(([a, b]) => `${a}\t ${link(b)}`).join('\n') + '\n' };
+  EMAILS.push(hilton);
+  const e2 = P.parseEmail({ ...EMAILS[1], date: Date.now(), threadId: 'x' }).bookings[0];
+  const old = id => ({ type: 'flight', status: 'confirmed', conf: 'WRONG1', airlineCode: 'F9', flightNo: '3073', from: 'RDU', to: 'CLE', dep: iso(day(30)) + 'T10:00', guess: true, id, created: 1, notes: '', source: { msgId: 'e1', date: 1 } });
+  const mine = { type: 'hotel', status: 'confirmed', conf: 'MINE1', name: 'My own hotel', checkIn: iso(day(40)), checkOut: iso(day(42)), guess: false, edited: true, id: 'h-mine', created: 1, notes: '', source: { msgId: 'zz', date: 1 } };
+  const { ctx, page } = await open({ calendar: false, stored: {
+    [KEY]: JSON.stringify({ bookings: [old('f-stale'), mine], trips: [] }),
+    [KEY + '-query-v']: '3', [KEY + '-seen']: JSON.stringify(['e1', 'e2', 'e3', 'e4', 'e5', 'hx']), [KEY + '-scan']: String(Date.now() - 60000),
+    [KEY + '-graves']: JSON.stringify({ ['bookings:' + e2.id]: Date.now() }) } });
+  await step('the first scan after an update rebuilds what the old reader made, keeps what you edited, and keeps deleted bookings deleted', async () => {
+    await page.waitForFunction(() => window.__travel.bookings.some(b => b.type === 'hotel' && /Hilton/.test(b.name)), null, { timeout: 10000 });
+    const r = await page.evaluate(KEY => { const T = window.__travel; return { stale: T.bookings.some(b => b.conf === 'WRONG1'), rebuilt: T.bookings.some(b => b.conf === 'ZQ4RTE'), mine: T.bookings.some(b => b.id === 'h-mine' && b.edited),
+      hilton: T.bookings.find(b => b.type === 'hotel' && /Hilton/.test(b.name)), united: T.bookings.some(b => b.conf === 'KQ7T2M'), v: localStorage.getItem(KEY + '-query-v'), revive: localStorage.getItem(KEY + '-revive') }; }, KEY);
+    assert.equal(r.stale, false, 'the old reader\'s booking is gone'); assert.equal(r.rebuilt, true, 'and the new reader made it again');
+    assert.equal(r.mine, true, 'what you edited stays'); assert.equal(r.united, false, 'a booking you deleted stays deleted');
+    assert.deepEqual([r.hilton.name, r.hilton.checkIn, r.hilton.checkOut, r.hilton.conf], ['Hilton San Diego Bayfront', iso(day(60)), iso(day(63)), '3115096800'], 'Hilton\'s email, marked read by the old reader, is read again');
+    assert.equal(r.v, QUERY_V, 'and the reader is at the current version');
+    assert.equal(r.revive, null, 'nothing is left to revive once the scan finished');
+  });
+  await ctx.close();
+  EMAILS.pop();
+}
+
+// =================== two trips to the same place, on the same flight number, stay two trips ===================
+{
+  const { ctx, page } = await open({ empty: true, calendar: false });
+  // Frontier flies 3073 every day: a September trip and a November trip, as the real emails look (made-up people and codes)
+  const SEPT = day(-38), SEPT_BACK = day(-34), NOV = day(20), NOV_BACK = day(24);
+  const L = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const stamp = `${pad(day(0).getMonth() + 1)}/${pad(day(0).getDate())}/${String(day(0).getFullYear()).slice(2)} 06:54 PM`;   // the print stamp at the foot of a Frontier email: the day it was sent
+  const M = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' }).replace(/^(\w+), (\w+) (\d+), /, '$1, $2 $3, ').replace(/(\w+ \d\d),? (\d{4})$/, '$1, $2');
+  const frontierSept = { id: 'fs', from: 'Frontier Airlines <flights@t.flyfrontier.com>', subject: 'Booking Confirmation: QJI23A. Your Upcoming Trip to CLE', text:
+    `Confirmation Email - Confirmed\n\n ${L(SEPT)}\n RDU\n ${L(SEPT)}\n CLE\n\n Raleigh/Durham to Cleveland\n\n Confirmation Code\n QJI23A\n\n Your Itinerary\n\n Outbound Trip: ${L(SEPT)}\n Departing Flight: ${L(SEPT)}\n\n Flight\n#3073\n\n Departs RDU\n 3:32 PM Raleigh/Durham Arrives CLE\n 5:15 PM Cleveland\n\n Return Trip: ${L(SEPT_BACK)}\n Return Trip: ${L(SEPT_BACK)}\n\n Flight\n #3074\n Departs CLE\n 1:34 PM Cleveland Arrives RDU\n 3:09 PM Raleigh/Durham\n\n Passenger Details\n\n Pat Example\n\n Total 392.96\n ${stamp}\n` };
+  const frontierNov = { id: 'fn', from: 'Frontier Airlines <flights@t.flyfrontier.com>', subject: '    Booking Confirmation: ELM7JX – Your Upcoming Trip to Cleveland', text:
+    `Confirmation Email - Confirmed\n\n RDU\n\n CLE\n\n Raleigh/Durham to Cleveland\n\n Confirmation Code\n ELM7JX\n\n Your Itinerary\n\n Departing Flight:\n Departing Flight:\n\n Flight\n #3073\n\n Departs RDU\n 4:04 PM Raleigh/Durham Arrives CLE\n 5:51 PM Cleveland\n\n Passenger Details\n\n Pat Example\n\n Total 209.98\n ${stamp}\n` };
+  const courtyard = (id, conf, a, b) => ({ id, from: 'Marriott Reservations <reservations@res-marriott.com>', subject: `Reservation Confirmation #${conf} for Courtyard by Marriott Cleveland Beachwood`, text:
+    `Reservation Confirmation #${conf} for Courtyard by Marriott Cleveland Beachwood\nYour reservation details and tips to make the most of your trip.\n\n| Courtyard by Marriott Cleveland Beachwood |\n| 3695 Orange Place Beachwood, Ohio 44122 USA |\n| Thank you for booking with us, Pat Example. |\n\n| Check-In |\n| ${M(a)} |\n| 03:00 PM |\n\n| Check-Out |\n| ${M(b)} |\n| 12:00 PM |\n\n| Room 1 | Confirmation Number: ${conf} |\n| Total for Stay | 709.33 USD |\n` });
+  const feed = emails => page.evaluate(emails => { const T = window.__travel; T.bookings.splice(0);
+    emails.forEach(m => T.P.parseEmail({ ...m, date: Date.now(), threadId: m.id }).bookings.forEach(b => T.upsert(b)));
+    const g = T.groupTrips();
+    return { flights: T.bookings.filter(b => b.type === 'flight').map(b => b.flightNo + ':' + b.conf + ':' + (b.dep || 'undated').slice(0, 10)), hotels: T.bookings.filter(b => b.type === 'hotel').map(b => b.conf + ':' + b.checkIn),
+      trips: g.map(x => ({ n: x.items.length, past: x.past, start: x.start.slice(0, 10), end: x.end.slice(0, 10) })), undated: T.undated().length }; }, emails);
+
+  await step('a November flight with no day in its email is not taken for the September flight with the same number', async () => {
+    // newest first, as Gmail lists them
+    const r = await feed([courtyard('hn', '8DOFD0OCPE', NOV, NOV_BACK), frontierNov, courtyard('hs', '0WY2X7WBI2', SEPT, SEPT_BACK), frontierSept]);
+    assert.deepEqual(r.flights.sort(), ['3073:ELM7JX:undated', '3073:QJI23A:' + iso(SEPT), '3074:QJI23A:' + iso(SEPT_BACK)].sort(), 'three flights, each with its own code: ' + JSON.stringify(r.flights));
+    assert.deepEqual(r.hotels.sort(), ['0WY2X7WBI2:' + iso(SEPT), '8DOFD0OCPE:' + iso(NOV)].sort());
+    assert.equal(r.trips.length, 2, JSON.stringify(r.trips));
+    assert.equal(r.trips[0].past, true, 'September is in the past: ' + JSON.stringify(r.trips[0])); assert.equal(r.trips[1].past, false);
+    assert.equal(r.undated, 1, 'the November flight waits in To check');
+  });
+  await step('the same, whichever email is read first', async () => {
+    const r = await feed([frontierSept, courtyard('hs', '0WY2X7WBI2', SEPT, SEPT_BACK), frontierNov, courtyard('hn', '8DOFD0OCPE', NOV, NOV_BACK)]);
+    assert.equal(r.flights.length, 3, JSON.stringify(r.flights)); assert.equal(r.trips.length, 2, JSON.stringify(r.trips)); assert.equal(r.trips[0].past, true);
+  });
+  await step('trips that share a confirmation code join only when they are close in time', async () => {
+    const r = await page.evaluate(() => {
+      const T = window.__travel; T.bookings.splice(0);
+      const mk = (no, from, to, d, conf) => ({ type: 'flight', status: 'confirmed', conf, airlineCode: 'F9', flightNo: no, from, to, dep: d + 'T10:00', arr: d + 'T12:00', guess: false, id: 'x' + no + d });
+      const add = b => T.bookings.push(b);
+      const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+      add(mk('1', 'RDU', 'CLE', d(10), 'SAME1')); add(mk('2', 'CLE', 'RDU', d(14), 'SAME1'));       // a round trip on one code: one trip
+      add(mk('3', 'RDU', 'BOS', d(100), 'SAME2')); add(mk('4', 'BOS', 'RDU', d(160), 'SAME2'));    // the same code two months apart: two trips
+      return T.groupTrips().map(g => g.items.length);
+    });
+    assert.deepEqual(r, [2, 1, 1], JSON.stringify(r));
   });
   await ctx.close();
 }
