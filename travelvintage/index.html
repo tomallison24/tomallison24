@@ -533,6 +533,13 @@ svg.fs{fill:currentColor}
 .aska.err{color:var(--muted)}
 .askclear{align-self:flex-end}
 #stAiSub{white-space:pre-line}
+.logrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:11px 14px}
+.logrow + .logrow{border-top:1px solid var(--hair)}
+.logrow .lgt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.logrow .lgt b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.logrow .lgt span{font-size:12px;color:var(--muted)}
+.logrow .lgo{flex:none;max-width:42%;text-align:right;font-size:13px;font-weight:600;color:var(--accent-text)}
+.logrow .lgo.no{color:var(--muted);font-weight:500}
 .askmode{flex:none;height:32px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:700;color:var(--accent-text);background:var(--fill);box-shadow:var(--lg-rim)}
 .askmode:active{transform:scale(.94)}
 .editlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.35}
@@ -1092,6 +1099,19 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </div>
           <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What the last look at Gmail read -->
+  <div class="sheetwrap lg" id="logSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="lgLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="lgLbl">What Travel read</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
+      <div class="sheetbody">
+        <div id="lgBody"></div>
+        <p class="hint" id="lgHint"></p>
       </div>
     </div>
   </div>
