@@ -386,7 +386,7 @@
       const done = () => {
         wrap.hidden = true; wrap.classList.remove('ipsy-closing'); btn.style.visibility = '';
         peek.live = false; kick();
-        if (![...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');
+        if (![...document.querySelectorAll('.sheetwrap, .sheet-wrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');   // an app's own sheet still open keeps the page dimmed
         if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
       };
       if (still()) done(); else shut = setTimeout(done, 220);

@@ -125,6 +125,7 @@ jobs:
             tests: |
               orders/scripts/app-test.mjs
               orders/scripts/ipsy-test.mjs
+              news/scripts/ipsy-test.mjs
               mail/scripts/security-test.mjs
               mail/scripts/design-test.mjs
     steps:
