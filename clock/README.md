@@ -7,7 +7,10 @@ its own **Settings → Design**: **Vintage** (mid-century modern, the default) a
 
 ## What it does
 
-- **World Clock.** Your own time on a big face (with the date), then the
+- **World Clock.** The main clock on a big face (with the date): this
+  phone's time, or a city picked in **Settings → Main Clock** (it then says
+  how far ahead or behind this phone it is; alarms and Nightstand keep the
+  phone's time, and "This phone's time zone" goes back). Then the
   cities you add with **+**: each shows its time, a small face (dark at night
   there), its day and how far ahead or behind you it is ("Tomorrow, 5 hr
   ahead"). Search by city, country or state (`logic.js` `CITIES`, about 190
@@ -44,8 +47,8 @@ its own **Settings → Design**: **Vintage** (mid-century modern, the default) a
   fading away after a few seconds (tap to bring them back). It asks the phone
   to keep the screen on (the Screen Wake Lock API); if the phone says no, it
   says so, and how to set Auto-Lock to Never.
-- **Settings**: the design; 24-hour time; Nightstand's seconds and face; Test
-  the sound.
+- **Settings**: the design; the main clock's city; 24-hour time;
+  Nightstand's seconds and face; Test the sound.
 
 ## What a web app can't do
 
