@@ -535,8 +535,7 @@ if (window.top !== window.self) {
       else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong>'
         + (st.when === 'past' ? 'Trips move here the day after they end.' : 'New bookings in Gmail show up here after the next check (the envelope, top right).') + '</div>';
     }
-    $('askForm').hidden = !askShown();
-    $('list').innerHTML = askHTML() + editHTML() + h;
+    $('list').innerHTML = h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
     if (!$('tripPage').hidden && st.trip) renderTrip();
@@ -1078,22 +1077,42 @@ if (window.top !== window.self) {
     if (!force && lookupsThisMonth() >= LOOKUPS_A_MONTH) return Promise.resolve();
     if (inflight.has(b.id)) return inflight.get(b.id);
     const p = (async () => {
-      let r, data;
-      try {
-        r = await aosFetch(API + 'flight?' + new URLSearchParams({ no: b.airlineCode + b.flightNo, date: b.dep.slice(0, 10) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
-        data = await r.json();
-      } catch { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; return; }   // no server here (e.g. GitHub Pages)
-      liveAvail = true;
-      if (data.error === 'no-key') { liveAvail = false; return; }
+      let data;
+      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10)); } catch { return; }
+      if (data.error === 'no-key') return;
       countLookup();
-      if (data.error) { live[b.id] = { at: Date.now(), error: data.error }; saveLive(); return; }
-      const legs = (data.legs || []).filter(l => !l.cargo);
-      const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
-      live[b.id] = { at: Date.now(), leg, found: !!leg };
-      saveLive();
+      keepLive(b, data);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
     inflight.set(b.id, p);
     return p;
+  }
+  // One flight on one day, from travel/api/flight: {ok, found, legs} or {error}. Throws when nothing answers; no server here
+  // at all (e.g. GitHub Pages), or no key there, turns live status off. Used by refreshLive, and by Ipsy (ipsy-tools.js).
+  async function flightData(no, date) {
+    let r, data;
+    try {
+      r = await aosFetch(API + 'flight?' + new URLSearchParams({ no, date }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+      data = await r.json();
+    } catch (e) { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; throw e; }
+    if (!data || typeof data !== 'object') throw new Error('bad answer');
+    liveAvail = data.error !== 'no-key';
+    return data;
+  }
+  // What came back for a booking's flight, kept for the app to show (its leg: the one from or to the booking's airports).
+  function keepLive(b, data) {
+    if (data.error) live[b.id] = { at: Date.now(), error: data.error };
+    else {
+      const legs = (data.legs || []).filter(l => !l.cargo);
+      const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
+      live[b.id] = { at: Date.now(), leg, found: !!leg };
+    }
+    saveLive();
+  }
+  // The airport's departure board, from travel/api/find: {ok, candidates: [{number, to, local}]} or {error}. Used by
+  // findNumbers, and by Ipsy.
+  async function boardData(q) {
+    const r = await aosFetch(API + 'find?' + new URLSearchParams(q), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+    return r.json();
   }
   const utc = s => { const t = Date.parse(String(s || '').replace(' ', 'T').replace(/Z$/, ':00Z').replace(/:(\d\d):00Z$/, ':$1:00Z')); return isNaN(t) ? Date.parse(String(s || '').replace(' ', 'T')) : t; };
   const localHM = s => { const m = /\d\d:\d\d/.exec(String(s || '')); if (!m) return ''; const [h, mi] = m[0].split(':').map(Number); return new Date(2000, 0, 1, h, mi).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
@@ -1309,14 +1328,15 @@ if (window.top !== window.self) {
   // -- the AI and the flight board --
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
-  // Which models answer: what the function says it is set to use, and what the last answer said it came from (kept on this phone).
+  // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
+  // on this phone). Ipsy's answers go to the chat as they come, so only the model it is set to use is named.
   const modelName = id => { const m = /claude-(haiku|sonnet|opus|fable)-(\d+)-(\d+)/i.exec(String(id || '')); return m ? m[1][0].toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2] + '.' + m[3] : String(id || '').slice(0, 40); };
   function noteModel(which, id) { if (!id) return; const o = ls.json(K.aiLast, {}); o[which] = String(id).slice(0, 60); ls.set(K.aiLast, JSON.stringify(o)); }
   function modelsLine() {
     if (!aiModels) return '';
     const last = ls.json(K.aiLast, {});
     const bit = (label, cfg, served) => label + ' ' + modelName(cfg) + (served ? (modelName(served) === modelName(cfg) ? ' (the last answer came from it)' : ' (but the last answer came from ' + modelName(served) + ')') : '');
-    return '\nModels: ' + bit('Check', aiModels.check, last.check) + '; ' + bit('Ask and Change', aiModels.ask, last.ask) + '.';
+    return '\nModels: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
   }
   const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
@@ -1429,63 +1449,10 @@ if (window.top !== window.self) {
       toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
     } finally { st.aiBusy = false; render(); }
   }
-  // -- Ask AI: a question about your trips (the bar under the filters on Trips) --
-  // Only when you ask. The question goes with your trip list (dates, places, flight numbers and confirmation codes; no
-  // names, seats, notes or emails) to the function, and Claude answers from that list alone, naming the bookings it used.
-  const askItem = b => {
-    const o = { id: b.id, kind: b.ride ? 'ride' : b.type };
-    if (b.status === 'cancelled') o.status = 'cancelled';
-    if (b.guess || !startOf(b) || b.fromCal) o.check = true;
-    if (b.type === 'flight') Object.assign(o, { flight: flightName(b), from: b.from, to: b.to, dep: b.dep || b.depTime, arr: b.arr, conf: b.conf });
-    else if (b.type === 'hotel') Object.assign(o, { name: b.name, city: b.city, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, conf: b.conf });
-    else if (b.type === 'car') Object.assign(o, { company: b.company, pickupPlace: b.pickupPlace, pickup: b.pickup, dropoff: b.dropoff, conf: b.conf });
-    else Object.assign(o, { title: b.title, place: b.place, start: b.start, end: b.end, conf: b.conf });
-    return o;
-  };
-  function askPayload(question) {
-    const groups = groupTrips();
-    const trips = groups.map(g => ({ name: g.name, tid: g.id, when: g.past ? 'past' : 'upcoming', items: g.items.map(askItem) }));
-    const open = undated();
-    if (open.length) trips.push({ name: 'Needs a date', when: 'to check', items: open.map(askItem) });
-    return { question, today: todayStr(), trips };
-  }
-  const askShown = () => aiOn() && aiAvail !== false;     // even with no bookings yet
-  function askHTML() {
-    const a = st.ask;
-    if (!a || !askShown()) return '';
-    let h = '<div class="askout glass"><div class="askq">' + esc(a.q) + '</div>';
-    if (a.busy) h += '<div class="aska">Looking through your trips…</div>';
-    else if (a.err) h += '<div class="aska err">' + esc(a.err) + '</div>';
-    else {
-      h += '<div class="aska">' + esc(a.a) + '</div>';
-      const used = (a.ids || []).map(id => bookings.find(b => b.id === id)).filter(Boolean);
-      if (used.length) h += '<div class="tl">' + used.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
-    }
-    return h + (a.busy ? '' : '<button class="textbtn askclear" type="button" id="askClear">Clear</button>') + '</div>';
-  }
-  async function askAI(question) {
-    question = String(question || '').trim().slice(0, 300);
-    if (question.length < 3 || st.askBusy) return;
-    // Nothing to look through: answer here, without asking Claude (and without using up a question).
-    if (!bookings.length) { st.ask = { q: question, a: 'There are no bookings to look through yet. Connect Gmail or add one with the + button, and I can answer questions about your trips.', ids: [] }; render(); return; }
-    st.askBusy = true;
-    st.ask = { q: question, busy: true }; render();
-    try {
-      if (aiAvail === null) await pingLive();
-      if (!aiAvail) { st.ask = { q: question, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
-      const r = await aosFetch(API + 'ask', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(question)) });
-      let d = null; try { d = await r.json(); } catch {}
-      if (d && d.ok) { noteModel('ask', d.model); st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] }; }
-      else if (d && d.error === 'no-key') { aiAvail = false; st.ask = null; }
-      else st.ask = { q: question, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t get an answer just now. Try again in a moment.' };
-    } catch { st.ask = { q: question, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
-    finally { st.askBusy = false; render(); }
-  }
-  // -- Change by asking: "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
-  // The same bar, in Change mode. Claude proposes changes from a list (set or clear a field, add a booking, delete, cancel or bring
-  // back, mark checked, join trips, take a booking out of its trip, rename a trip); every one is checked again here and shown as a
-  // preview, and nothing changes until you tap Apply. Undo puts it all back.
-  // The trip list that goes is the one Ask AI sends (dates, places, flight numbers, codes; no names, seats, notes or emails).
+  // -- Changes Ipsy makes (ipsy-tools.js): "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
+  // A short list of changes (set or clear a field, add a booking, delete, cancel or bring back, mark checked, join trips, take a
+  // booking out of its trip, rename a trip), each checked here against what is in the app, and made the way the booking sheet
+  // makes them: what is changed is yours (an email never overwrites it again), and a deleted booking stays deleted.
   const DT = /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, D8 = /^20\d\d-\d\d-\d\d$/, HM = /^\d\d:\d\d$/, CONFRE = /^[A-Za-z0-9]{0,12}$/;
   const tx = n => new RegExp('^.{0,' + n + '}$'), wd = (lo, hi) => new RegExp('^.{' + lo + ',' + hi + '}$');
   // Every field you can edit by hand, by kind, and the shape its value must have; an empty value clears it, except the ones in EDIT_NEEDED.
@@ -1547,26 +1514,30 @@ if (window.top !== window.self) {
     if (bookings.some(x => x.id === b.id)) b.id += '-' + Date.now().toString(36);
     return b;
   }
+  // A change in words, for Ipsy's chat (worked out before it is made).
   function editText(o) {
     const b = bookings.find(x => x.id === o.id), w = o.with && bookings.find(x => x.id === o.with);
     const nm = x => titleOf(x) + (startOf(x) ? ' (' + startOf(x).slice(0, 10) + ')' : '');
-    if (o.op === 'set') return 'Change ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(b[o.field]) + ' to ' + dayWords(keepTime(o.field, o.value, b[o.field] || ''));
-    if (o.op === 'add') { const t = { type: o.kind }; o.pairs.forEach(p => { t[p.field] = p.value; }); return 'Add ' + TYPE_NAME[o.kind].toLowerCase() + ': ' + nm(t) + (t.checkOut ? ' to ' + t.checkOut : ''); }
-    if (o.op === 'delete') return 'Delete ' + nm(b);
-    if (o.op === 'status') return (o.value === 'cancelled' ? 'Cancel ' : 'Bring back ') + nm(b);
-    if (o.op === 'check') return 'Mark ' + titleOf(b) + ' as checked';
-    if (o.op === 'detach') return 'Take ' + titleOf(b) + ' out of its trip, into a trip of its own';
+    if (o.op === 'set') return 'Changed ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(b[o.field]) + ' to ' + dayWords(keepTime(o.field, o.value, b[o.field] || ''));
+    if (o.op === 'add') { const t = { type: o.kind }; o.pairs.forEach(p => { t[p.field] = p.value; }); return 'Added ' + nm(t) + (t.checkOut ? ' to ' + t.checkOut : ''); }
+    if (o.op === 'delete') return 'Deleted ' + nm(b);
+    if (o.op === 'status') return (o.value === 'cancelled' ? 'Marked ' + nm(b) + ' as canceled' : 'Brought back ' + nm(b));
+    if (o.op === 'check') return 'Marked ' + titleOf(b) + ' as checked';
+    if (o.op === 'detach') return 'Took ' + titleOf(b) + ' out of its trip, into a trip of its own';
     if (o.op === 'join') return 'Put ' + titleOf(b) + ' in the same trip as ' + titleOf(w);
     const g = tripById(o.id);
-    return 'Rename the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
+    return 'Renamed the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
   }
+  // Makes changes that checked out (checkEdit). Returns how many, the ids of bookings it added, and an undo that puts back just
+  // the bookings and trip names these changes touched (Ipsy shows each change in its chat with Undo).
   function applyEdits(ops) {
-    const snap = { bookings: JSON.parse(JSON.stringify(bookings)), trips: JSON.parse(JSON.stringify(trips)) };
-    const gone = [];
+    const copy = x => JSON.parse(JSON.stringify(x));
+    const before = new Map(), names = new Map(), added = [], gone = [];
     let n = 0;
     for (const o of ops) {
-      const b = bookings.find(x => x.id === o.id);
-      if (o.op === 'add') { bookings.push(newBooking(o.kind, o.pairs)); n++; }
+      const b = o.op === 'add' || o.op === 'rename' ? null : bookings.find(x => x.id === o.id);
+      if (b && !before.has(b.id)) before.set(b.id, copy(b));
+      if (o.op === 'add') { const nb = newBooking(o.kind, o.pairs); bookings.push(nb); added.push(nb.id); n++; }
       else if (o.op === 'set' && b) { setField(b, o.field, o.value); n++; }
       else if (o.op === 'delete' && b) { bookings = bookings.filter(x => x !== b); gone.push(b); n++; }
       else if (o.op === 'status' && b) { b.status = o.value; b.edited = true; n++; }
@@ -1575,69 +1546,36 @@ if (window.top !== window.self) {
       else if (o.op === 'detach' && b) { b.tripApart = true; delete b.tripWith; n++; }
       else if (o.op === 'rename') {
         const g = tripById(o.id);
-        if (g) { const cur = trips.find(t => t.id === g.id); if (cur) cur.name = o.name; else trips.push({ id: g.id, name: o.name }); n++; }
+        if (g) {
+          const cur = trips.find(t => t.id === g.id);
+          if (!names.has(g.id)) names.set(g.id, cur ? copy(cur) : null);
+          if (cur) cur.name = o.name; else trips.push({ id: g.id, name: o.name });
+          n++;
+        }
       }
     }
-    save(); smartSoon(); gone.forEach(dropFromCalendar); render();
-    toast('Done: ' + plural(n, 'change') + '.', () => {
-      bookings = snap.bookings; trips = snap.trips;
-      gone.forEach(g => { const r = bookings.find(x => x.id === g.id); if (r) delete r.calSig; });   // back in the calendar on the next sync
-      save(); smartSoon(); render();
-    }, 9000);
+    save(); smartSoon(); gone.forEach(dropFromCalendar); render(); refreshOpen();
+    const undo = () => {
+      bookings = bookings.filter(x => !added.includes(x.id));
+      before.forEach((was, id) => {
+        const i = bookings.findIndex(x => x.id === id), b = copy(was);
+        // the calendar as it is now: one taken out of it (deleted or canceled) is written to it again on the next sync
+        if (i >= 0 && bookings[i].calSig) b.calSig = bookings[i].calSig; else delete b.calSig;
+        if (i >= 0) bookings[i] = b; else bookings.push(b);
+      });
+      names.forEach((was, id) => { trips = trips.filter(t => t.id !== id); if (was) trips.push(was); });
+      save(); smartSoon(); render(); refreshOpen();
+    };
+    return { n, added, undo };
   }
-  function editHTML() {
-    const e = st.edit;
-    if (!e || !askShown()) return '';
-    let h = '<div class="askout glass"><div class="askq">' + esc(e.q) + '</div>';
-    if (e.busy) h += '<div class="aska">Working out the changes…</div>';
-    else if (e.err) h += '<div class="aska err">' + esc(e.err) + '</div>';
-    else if (!e.ops.length) h += '<div class="aska">' + esc(e.question || 'I couldn’t find a change to make for that. Try naming the booking and what to change.') + '</div>';
-    else {
-      h += '<div class="aska">' + esc(e.summary || 'Here is what I would change:') + '</div><ul class="editlist">'
-        + e.ops.map(o => '<li' + (o.op === 'delete' ? ' class="del"' : '') + '>' + esc(editText(o)) + '</li>').join('') + '</ul>';
-      if (e.dropped) h += '<div class="askq">' + plural(e.dropped, 'change') + ' left out because ' + (e.dropped === 1 ? 'it' : 'they') + ' didn’t check out.</div>';
-      h += '<div class="editbtns"><button class="textbtn" type="button" id="askClear">Cancel</button><button class="btn" type="button" id="editYes">Apply</button></div>';
-      return h + '</div>';
-    }
-    return h + (e.busy ? '' : '<button class="textbtn askclear" type="button" id="askClear">Clear</button>') + '</div>';
+  // The booking sheet edits its own copy: after a change made from the chat, it shows the booking as it is now (or
+  // closes, if it was deleted), so closing it can't write the old copy back.
+  function refreshOpen() {
+    if ($('bkSheet').hidden || !st.booking || st.isNew) return;
+    const b = bookings.find(x => x.id === st.booking.id);
+    if (b) { st.booking = JSON.parse(JSON.stringify(b)); renderBooking(); }
+    else { st.booking = null; closeSheet('bkSheet'); }
   }
-  async function editAI(instruction) {
-    instruction = String(instruction || '').trim().slice(0, 300);
-    if (instruction.length < 3 || st.askBusy) return;
-    st.ask = null;
-    if (!bookings.length) { st.edit = { q: instruction, ops: [], question: 'There are no bookings to change yet. To add one, switch to Change and say what it is, or use the + button.' }; render(); return; }
-    st.askBusy = true;
-    st.edit = { q: instruction, busy: true }; render();
-    try {
-      if (aiAvail === null) await pingLive();
-      if (!aiAvail) { st.edit = { q: instruction, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
-      const r = await aosFetch(API + 'edit', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(instruction)) });
-      let d = null; try { d = await r.json(); } catch {}
-      if (d && d.ok) {
-        noteModel('ask', d.model);
-        const tids = new Set(groupTrips().map(g => g.id)), got = Array.isArray(d.ops) ? d.ops : [];
-        const ops = got.map(o => checkEdit(o, tids)).filter(Boolean).slice(0, 30);
-        st.edit = { q: instruction, ops, summary: clipS(d.summary, 300), question: clipS(d.question, 300), dropped: Math.max(0, got.length - ops.length) + (+d.dropped || 0) };
-      } else if (d && d.error === 'no-key') { aiAvail = false; st.edit = null; }
-      else st.edit = { q: instruction, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t work that out just now. Try again in a moment.' };
-    } catch { st.edit = { q: instruction, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
-    finally { st.askBusy = false; render(); }
-  }
-  const setMode = mode => {
-    st.mode = mode === 'edit' ? 'edit' : 'ask'; st.ask = null; st.edit = null;
-    const i = $('askInput'), m = $('askMode');
-    i.placeholder = st.mode === 'edit' ? 'Tell Travel what to change' : 'Ask AI about your trips';
-    i.setAttribute('aria-label', i.placeholder);
-    m.textContent = st.mode === 'edit' ? 'Change' : 'Ask';
-    m.setAttribute('aria-label', st.mode === 'edit' ? 'Changing trips by asking. Switch to asking questions' : 'Asking questions. Switch to changing trips');
-    i.value = ''; render();
-  };
-  $('askMode').addEventListener('click', () => setMode(st.mode === 'edit' ? 'ask' : 'edit'));
-  $('askForm').addEventListener('submit', e => { e.preventDefault(); const i = $('askInput'); const q = i.value; if (q.trim().length >= 3) { (st.mode === 'edit' ? editAI : askAI)(q); i.blur(); } });
-  $('list').addEventListener('click', e => {
-    if (e.target.closest('#askClear')) { st.ask = null; st.edit = null; $('askInput').value = ''; render(); }
-    else if (e.target.closest('#editYes') && st.edit && st.edit.ops && st.edit.ops.length) { const ops = st.edit.ops; st.edit = null; $('askInput').value = ''; applyEdits(ops); }
-  });
 
   // A flight with an airline, the airports, the day and the time but no number: the airport's departure board has it.
   async function findNumbers() {
@@ -1652,8 +1590,7 @@ if (window.top !== window.self) {
       if (use.find >= FIND_A_MONTH) break;
       use.tried[tried] = Date.now(); use.find++; aiSave(use);
       try {
-        const r = await aosFetch(API + 'find?' + new URLSearchParams({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
-        const d = await r.json();
+        const d = await boardData({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) });
         if (d && d.error === 'no-key') { findAvail = false; break; }
         if (d && d.error === 'limit') break;
         if (d && d.ok && d.candidates && d.candidates.length === 1 && /^\d{1,4}[A-Z]?$/.test(d.candidates[0].number)) { b.flightNo = d.candidates[0].number; fill(b, 'flightNo', 'board'); changed = true; }
@@ -1748,7 +1685,7 @@ if (window.top !== window.self) {
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button, and Trips has an Ask AI bar that can also change your trips (you see what it would change and tap Apply). Nothing is sent until you press or ask. Check sends a short excerpt of that one email (no names, numbers or prices); Ask and Change send your trip list (dates, places, flight numbers, confirmation codes; no names, seats, notes or emails) with your question. Answers are marked “Check”.' + modelsLine() : 'Off. No button and no bar.';
+    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button. Nothing is sent until you press it, and then only a short excerpt of that one email (no names, numbers or prices). What it fills in is marked “Check”. To ask about your trips or change them, chat with Ipsy, the little stem cell at the bottom left.' + modelsLine() : 'Off. No Check with AI button. Ipsy, at the bottom left, is still there to chat with.';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
       : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
@@ -1762,7 +1699,7 @@ if (window.top !== window.self) {
     try {
       const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
       const d = await r.json();
-      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.ask ? d.models : null;
+      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.check ? d.models : null;
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
@@ -1995,6 +1932,31 @@ if (window.top !== window.self) {
   })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with, above the tabs at the bottom left: its tools (ipsy-tools.js) work on
+  // these same bookings, through the same checks and saves, this same Gmail sign-in and this app's own flight look-ups;
+  // Claude answers through functions/travel/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.TravelIpsy) {
+    const WHEN_NAMES = { upcoming: 'the Upcoming trips', past: 'the Past trips', check: 'the To check list' };
+    window.AllisonOS.ipsy.mount({
+      app: 'travel', name: 'Travel', endpoint: '../travel/api/ipsy', headers: { 'X-Travel': '1' }, slot: $('ipsySlot'),
+      ...window.TravelIpsy({
+        P, get bookings() { return bookings; }, groupTrips, checkList, tripById, startOf, endOf, isPast, titleOf, fillText, liveView, liveWindow,
+        checkField, checkEdit, applyEdits, editText, EDIT_FIELDS, EDIT_NEEDED, EDIT_LABEL, render, openTrip, openBooking,
+        flightData, keepLive, boardData,
+        // the same monthly allowances on this phone as the app's own look-ups
+        allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
+        gmail, bodies, header, getToken, AuthError,
+        screen() {
+          if (!$('bkSheet').hidden && st.booking && !st.isNew) return 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
+          const g = !$('tripPage').hidden && st.trip && tripById(st.trip);
+          if (g) return 'the trip ' + g.id + ' ("' + g.name + '")';
+          if (st.tab === 'explore') return 'Explore, which opens Google Flights, Google Hotels and others with a search filled in';
+          return WHEN_NAMES[st.when] || 'the trips';
+        },
+      }),
+    });
+  }
 
   // For the tests (travel/scripts/app-test.mjs) only.
   window.__travel = { layer: LAYER, get bookings() { return bookings; }, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
