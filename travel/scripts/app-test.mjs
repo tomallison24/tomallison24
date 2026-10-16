@@ -4,6 +4,11 @@
 // live status, the calendar file, Explore's links, and that nothing trips
 // the page's Content Security Policy. Screenshots go to the folder given as
 // the second argument (default: none).
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (the sky held at day,
+// aos.sky): Futura, flat cream (walnut) cards, a mustard thumb, an orange add button, atomic shapes
+// behind the title; and Standard (Sea glass). Settings > Design switches between them at once and
+// keeps the choice; and the old Travel Vintage address (served from travel/, as the deploy does)
+// moves that app's data on the phone over to Travel's names, and still reaches Travel's route.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node travel/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -24,6 +29,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/travelvintage\//, '/travel/');   // the old Travel Vintage address: the deploy copies travel/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -82,7 +88,7 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' }))));   // no aOS walkthrough over the page; the sky held at day
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
@@ -158,6 +164,27 @@ for (const scheme of ['light', 'dark']) {
     }
   });
 
+  await step(scheme + ': drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes', async () => {
+    const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+    assert.match((await q('body', ['fontFamily']))[0], /Futura/);
+    assert.equal((await q('body', ['backgroundColor']))[0], ground);
+    const [bg, shadow, backdrop, radius] = await q('.trip', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+    assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the add button is solid orange');
+    assert.equal((await q('#whenChips .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the filter');
+    assert.equal((await q('.tabs .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the sections');
+    assert.equal((await q('.title', ['fontSize']))[0], '44px');
+    const hero = await q('.hero', ['backgroundColor', 'borderRadius']);
+    assert.equal(hero[1], '20px'); assert.notEqual(hero[0], cream, 'the next-up card is tinted by the kind of booking');
+    assert.equal((await q('.hero .line', ['borderTopStyle']))[0], 'dashed', 'a dashed flight path');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#F1DFBB' : '#4A391E', 'the theme colour is the sky\'s ground (home/sky.js)');
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default', 'the status bar is not translucent on the cream');
+    assert.ok(await page.evaluate(() => document.documentElement.dataset.look === 'vintage' && document.getElementById('vintage').media === 'all'), 'Vintage by default');
+  });
+
   await step(scheme + ': a trip page is a day-by-day timeline with search links', async () => {
     await page.click('.trip');
     await page.waitForSelector('#tripPage:not([hidden]) .ev');
@@ -173,6 +200,17 @@ for (const scheme of ['light', 'dark']) {
     assert.ok(links.some(h => h.startsWith('https://www.google.com/travel/flights?q=')));
     assert.ok(links.some(h => h.startsWith('https://www.marriott.com/search/findHotels.mi?') && h.includes('Boston')));
   });
+  await step(scheme + ': the trip page: round teal, orange and olive kinds on a cream ground', async () => {
+    const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    const light = scheme === 'light';
+    assert.equal((await q('#tripPage .sheet.page', ['backgroundColor']))[0], light ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)');
+    assert.equal((await q('#tpBody .tl', ['backgroundColor']))[0], light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)');
+    const [flight, hotel, car] = await Promise.all(['flight', 'hotel', 'car'].map(k => q('#tpBody .ev.' + k + ' .ic', ['backgroundColor', 'borderRadius'])));
+    assert.equal(flight[0], light ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', 'a flight is teal'); assert.equal(flight[1], '50%');
+    assert.equal(hotel[0], light ? 'rgb(216, 87, 42)' : 'rgb(232, 104, 74)', 'a hotel is burnt orange');
+    assert.equal(car[0], light ? 'rgb(126, 140, 52)' : 'rgb(163, 176, 74)', 'a rental car is olive');
+    assert.equal((await q('#tpDone', ['backgroundColor']))[0], light ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'Done is solid orange');
+  });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trip-' + scheme + '.png') });
 
   await step(scheme + ': a flight shows live gates and times; a text-read one asks to be checked', async () => {
@@ -181,6 +219,7 @@ for (const scheme of ['light', 'dark']) {
     const t = await page.textContent('#bkLive');
     assert.match(t, /Gate B32/); assert.match(t, /Bags: belt 4/);
     assert.ok(await page.$('#bkBody .verify'), 'guess banner');
+    assert.ok(await page.$('#bkBody a[href^="../mail/?thread="]'), 'a link to the email in Mail');
     assert.equal(await page.inputValue('#bf_conf'), 'KQ7T2M');
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'booking-' + scheme + '.png') });
@@ -279,7 +318,7 @@ for (const scheme of ['light', 'dark']) {
 // Google Sheet: a "wrong secret" says which link it was.
 await step('a Notes Sheet link is recognised, and an old Travel script is named', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' }))));   // no aOS walkthrough over the page; the sky held at day
   const page = await ctx.newPage();
   let app = 'allison-notes-sync';
   await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
@@ -299,11 +338,154 @@ await step('a Notes Sheet link is recognised, and an old Travel script is named'
 // Without the server function (GitHub Pages): no lookups, a clear message.
 await step('without the flight status server, it says so', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' }))));   // no aOS walkthrough over the page; the sky held at day
   const page = await ctx.newPage();
   await page.goto(BASE + '/travel/');
   await page.click('#setBtn');
   await page.waitForFunction(() => /Not available/.test(document.getElementById('stLive').textContent));
+  await ctx.close();
+});
+
+// ---- the two designs ----
+// A phone: Gmail and Travel's route stubbed (the route only at /travel/api/, where Pages Functions are), nothing else
+// outside reachable. `design` seeds design.travel; `seed` is localStorage written before the first open (else the
+// aOS walkthrough is marked seen); `before` runs on a page at that address that runs no app script (storage there is
+// the app's), e.g. to make an IndexedDB database.
+const apiCalls = [];
+async function phone(scheme = 'light', { design = null, seed = null, at = '/travel/', before = null } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
+  await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: EMAILS.slice(0, 3).map(m => ({ id: m.id, threadId: m.threadId })) } });
+    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  await ctx.route(BASE + '/**/api/**', route => {
+    const u = new URL(route.request().url());
+    apiCalls.push(u.pathname);
+    if (!u.pathname.startsWith('/travel/api/') || route.request().headers()['x-travel'] !== '1') return route.fulfill({ status: 404, json: { error: 'not-found' } });
+    if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true } });
+    return route.fulfill({ json: { ok: true, found: false } });
+  });
+  if (before) { const p0 = await ctx.newPage(); await p0.goto(BASE + at + 'manifest.webmanifest'); await p0.evaluate(before); await p0.close(); }
+  await ctx.addInitScript(([design, seed]) => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    if (seed) for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+    else localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' }));
+    localStorage.setItem('aos.sky', 'day');
+    if (design) localStorage.setItem('design.travel', design);
+  }, [design, seed]);
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|net::ERR/.test(m.text())) errs.push(m.text()); });
+  await page.goto(BASE + at);
+  await page.waitForFunction(() => window.__travel, null, { timeout: 5000 });
+  await page.waitForTimeout(600);
+  return { ctx, page, errs };
+}
+const css = (page, sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+const thumbUnder = page => page.evaluate(() => [['.tabs', '.tab[aria-selected="true"]'], ['#whenChips', '[aria-pressed="true"]']].every(([box, chosen]) => {
+  const b = document.querySelector(box), t = b && b.querySelector(':scope > .slthumb'), c = b && b.querySelector(chosen); if (!t || !c) return false;
+  const q = c.getBoundingClientRect(), r = t.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1;
+}));
+const token = JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' });
+const mine = (id, name) => ({ type: 'hotel', status: 'confirmed', conf: id.toUpperCase(), name, city: 'Boston', checkIn: iso(day(20)), checkOut: iso(day(22)), guess: false, edited: true, id, created: 1, updated: 1, notes: '' });   // typed in, so a re-read of Gmail leaves it alone
+
+// Standard: Sea glass, the Vintage block switched off, no sky; the icon and status bar follow
+for (const scheme of ['light', 'dark']) {
+  await step(scheme + ' Standard: Sea glass, no Vintage styles, no sky, the glass icon and a translucent status bar', async () => {
+    const { ctx, page, errs } = await phone(scheme, { design: 'glass', seed: { 'aos.seen': JSON.stringify({ travel: '999' }), 'allison-travel-v1': JSON.stringify({ bookings: [mine('h-std', 'Courtyard Boston Downtown')], trips: [] }) } });
+    await page.waitForSelector('.trip');
+    assert.ok(await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), 'data-look glass, #vintage off, no data-sky');
+    assert.equal((await css(page, 'body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', 'the Sea glass ground');
+    assert.doesNotMatch((await css(page, 'body', ['fontFamily']))[0], /Futura/);
+    assert.notEqual((await css(page, '.trip', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', 'no cream card');
+    assert.notEqual((await css(page, '.tabs .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'no mustard thumb');
+    assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/);
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'glass-trips-' + scheme + '.png') });
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
+}
+
+// Settings > Design: the first section; Vintage, then Standard and back, at once, kept across a reload
+await step('Settings > Design switches both ways at once and is kept', async () => {
+  const { ctx, page, errs } = await phone('light');
+  const look = () => page.evaluate(() => document.documentElement.dataset.look);
+  assert.equal(await look(), 'vintage', 'Vintage by default');
+  assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-180\.png/, 'with the Vintage icon');
+  await page.click('#setBtn'); await page.waitForTimeout(400);
+  assert.equal(await page.$eval('#setSheet .sheetbody', b => b.firstElementChild.textContent), 'Design', 'Design is the first section');
+  assert.ok(await page.isVisible('#stDesign [data-design="glass"]'));
+  assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
+  await page.click('#stDesign [data-design="glass"]'); await page.waitForTimeout(250);
+  assert.equal(await look(), 'glass', 'Standard at once');
+  assert.equal(await page.getAttribute('#stDesign [data-design="glass"]', 'aria-checked'), 'true');
+  assert.ok(await page.isVisible('#setSheet'), 'Settings stays open');
+  await page.click('#setSheet [data-close].okbtn'); await page.waitForTimeout(400);
+  assert.ok(await thumbUnder(page), 'the thumbs are measured again for the system font');
+  await page.reload(); await page.waitForFunction(() => window.__travel);
+  assert.equal(await look(), 'glass', 'Standard is kept');
+  assert.equal(await page.evaluate(() => localStorage.getItem('design.travel')), 'glass');
+  await page.click('#setBtn'); await page.waitForTimeout(400);
+  await page.click('#stDesign [data-design="vintage"]'); await page.waitForTimeout(250);
+  assert.equal(await look(), 'vintage', 'Vintage at once');
+  await page.click('#setSheet [data-close].okbtn'); await page.waitForTimeout(400);
+  assert.ok(await thumbUnder(page), 'the thumbs are measured again for Futura');
+  await page.reload(); await page.waitForFunction(() => window.__travel);
+  assert.equal(await look(), 'vintage', 'back to Vintage, kept');
+  assert.equal(await page.evaluate(() => window.__travel.layer), 'travel', 'at Travel\'s own address, Calendar\'s layer is Travel\'s');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+// The old Travel Vintage app, on a phone that added it: its address opens Travel, with its data moved over once
+await step('the old Travel Vintage address: its bookings, Gmail sign-in, Sheet backup copy and what it had seen move over, once', async () => {
+  apiCalls.length = 0;
+  const seed = { 'aos.seen': JSON.stringify({ travelvintage: '999' }), 'allison-travelv-v1': JSON.stringify({ bookings: [mine('h-old', 'Hotel From Vintage')], trips: [] }),
+    'allison-travelv-v1-tab': 'trips', 'travelv.token': token, 'travelv.token.ever': '1', 'travelv.me': 'tom@example.com' };
+  const before = () => new Promise((res, rej) => {   // the old app's IndexedDB copy of the Sheet link
+    const r = indexedDB.open('allison-travelv', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: 'https://script.google.com/macros/s/old/exec', secret: 'maple-otter' }, 'sync'); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = () => rej(t.error); };
+    r.onerror = () => rej(r.error);
+  });
+  const { ctx, page, errs } = await phone('light', { seed, at: '/travelvintage/', before });
+  await page.waitForSelector('.trip');
+  const got = await page.evaluate(() => ({ look: document.documentElement.dataset.look, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), own: localStorage.getItem('allison-travel-v1'), tok: localStorage.getItem('travel.token'),
+    old: localStorage.getItem('allison-travelv-v1'), oldTok: localStorage.getItem('travelv.token'), names: window.__travel.bookings.map(b => b.name), layer: window.__travel.layer }));
+  assert.ok(got.names.includes('Hotel From Vintage'), 'its booking is in Travel: ' + JSON.stringify(got.names));
+  assert.match(await page.textContent('#tripsView'), /Boston/);
+  assert.ok(got.own && got.tok, 'under Travel\'s names (allison-travel-v1, travel.token)');
+  assert.equal(got.seen.travel, '999', 'what it had seen carries over (no walkthrough again)');
+  assert.ok(got.old && got.oldTok, 'nothing old is deleted');
+  assert.equal(got.look, 'vintage');
+  assert.equal(got.layer, 'travelv', 'Calendar\'s layer keeps the old app\'s own name there, so neither copy overwrites the other');
+  await page.waitForFunction(() => /script\.google\.com\/macros\/s\/old/.test(localStorage.getItem('allison-travel-v1-sync') || ''), null, { timeout: 5000 });
+  assert.ok(await page.evaluate(() => indexedDB.databases().then(d => d.some(x => x.name === 'allison-travel'))), 'the Sheet backup copy moved to Travel\'s database');
+  await page.click('#setBtn');
+  await page.waitForFunction(() => /Working/.test(document.getElementById('stLive').textContent), null, { timeout: 5000 });
+  assert.match(await page.textContent('#stGmail'), /Look for new bookings now/, 'still signed in to Gmail');
+  assert.ok(apiCalls.some(p => p.startsWith('/travel/api/')) && !apiCalls.some(p => p.startsWith('/travelvintage/')), 'it asks Travel\'s route, never one at the old address: ' + apiCalls.join(' '));
+  // once only: a later change to the old keys is not copied again
+  await page.evaluate(() => localStorage.setItem('allison-travelv-v1', JSON.stringify({ bookings: [], trips: [] })));
+  await page.reload(); await page.waitForFunction(() => window.__travel);
+  assert.ok(await page.evaluate(() => window.__travel.bookings.some(b => b.name === 'Hotel From Vintage')), 'moved once only');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+await step('a phone with both: Travel\'s own data is kept, the old app\'s is not copied over it', async () => {
+  const seed = { 'aos.seen': JSON.stringify({ travel: '999', travelvintage: '999' }), 'allison-travel-v1': JSON.stringify({ bookings: [mine('h-new', 'Travel Own Hotel')], trips: [] }),
+    'allison-travelv-v1': JSON.stringify({ bookings: [mine('h-old', 'Hotel From Vintage')], trips: [] }) };
+  const { ctx, page } = await phone('light', { seed, at: '/travelvintage/' });
+  const names = await page.evaluate(() => window.__travel.bookings.map(b => b.name));
+  assert.deepEqual(names, ['Travel Own Hotel']);
   await ctx.close();
 });
 

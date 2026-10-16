@@ -10,6 +10,8 @@
 // - A Google Sheet keeps both phones in step, as in Notes.
 // - Explore and each trip link out to Google Flights, Google Hotels,
 //   Marriott and rental car searches, filled in.
+// - Two designs, picked in Settings > Design: Vintage (the default) and Standard
+//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -108,14 +110,15 @@ if (window.top !== window.self) {
   const st = { tab: ls.get(K.tab, 'trips'), when: ls.get(K.when, 'upcoming'), trip: null, booking: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
   // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
-  // or cleared localStorage (every AllisonOS app shares its space).
+  // or cleared localStorage (every AllisonOS app shares its space). Opened once
+  // the old Travel Vintage app's copy is moved over, at its address (../home/design.js).
   const keep = (() => {
     let db = null;
-    const open = () => db || (db = new Promise((res, rej) => {
+    const open = () => db || (db = Promise.resolve(window.aosDesign && aosDesign.moved).catch(() => {}).then(() => new Promise((res, rej) => {
       const r = indexedDB.open('allison-travel', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
@@ -156,9 +159,14 @@ if (window.top !== window.self) {
   // own family account (home/welcome.js AllisonOS.layer), since Calendar can't read
   // this app's storage on an iPhone.
   const CAL_FIELDS = ['type', 'status', 'id', 'conf', 'notes', 'dep', 'depIso', 'arr', 'arrIso', 'airlineCode', 'flightNo', 'airline', 'from', 'to', 'fromName', 'toName', 'checkIn', 'checkOut', 'name', 'address', 'city', 'pickup', 'pickupIso', 'company', 'pickupPlace', 'dropoff', 'dropoffIso', 'dropPlace', 'start', 'end', 'title', 'place'];
+  // The layer's name: 'travelv' at the old Travel Vintage address (it opens this same app, ../home/design.js),
+  // 'travel' everywhere else, as the two apps did. On a phone with both on the Home Screen, each keeps its own
+  // copy up to date and neither overwrites the other's; the server shows the two together as Travel
+  // (functions/aOS/api, GET layer).
+  const LAYER = /^\/travelvintage\//.test(location.pathname) ? 'travelv' : 'travel';
   function shareCal() {
     const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
-    L.share('travel', { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]]))) });
+    L.share(LAYER, { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]]))) });
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (syncCfg) scheduleSync(); }
@@ -362,6 +370,7 @@ if (window.top !== window.self) {
   const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
   const slideWhen = jump => slide(whenBox, whenBox.querySelector('[aria-pressed="true"]'), 'when', { jump });
   window.addEventListener('resize', () => { slideTabs(true); slideWhen(true); });
+  addEventListener('aos:design', () => requestAnimationFrame(() => { slideTabs(true); slideWhen(true); }));   // Futura and the system font are different widths
   let toastTimer;
   function toast(msg, undo, ms) {
     $('toastMsg').textContent = msg;
@@ -1045,10 +1054,12 @@ if (window.top !== window.self) {
   const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
-  // Live flight status (travel/api/flight, a Cloudflare Pages Function)
+  // Live flight status (travel/api/flight, a Cloudflare Pages Function). Travel's route, named from
+  // the site root's side so it is the same from the old Travel Vintage address, which opens this same
+  // app (../home/design.js).
   // ---------------------------------------------------------------------
   let liveAvail = null;   // null: not asked yet; true/false once the server has answered
-  const API = new URL('api/', location.href).href;
+  const API = new URL('../travel/api/', location.href).href;
   // calls to the locked server routes go signed in (home/account.js), once accounts are on
   const aosFetch = (u, o) => window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch(u, o) : fetch(u, o);
   function lookupsThisMonth() { const o = ls.json(K.lookups, {}); const m = todayStr().slice(0, 7); return o.m === m ? o.n || 0 : 0; }
@@ -1755,6 +1766,11 @@ if (window.top !== window.self) {
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
+  // Design: Vintage or Standard, at once, the first section of Settings (../home/design.js)
+  if (window.aosDesign) {
+    $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign'));
+    document.querySelectorAll('#setSheet [data-design-row]').forEach(e => { e.hidden = false; });
+  }
   $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
   $('stAiOpt').onclick = () => { ls.set(K.aiOn, aiOn() ? '0' : '1'); renderSettings(); render(); };
   $('stGmail').addEventListener('click', e => {
@@ -1981,5 +1997,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { get bookings() { return bookings; }, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
 })();

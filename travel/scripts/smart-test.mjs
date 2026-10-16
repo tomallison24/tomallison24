@@ -1,4 +1,4 @@
-// Drives Travel (or Travel Vintage) in headless Chromium for the "smart" parts, with
+// Drives Travel in headless Chromium for the "smart" parts, with
 // Gmail, the Family calendar, the flight board and the AI all stubbed:
 //
 //  - an email with no date goes to "To check" instead of being dropped, and you can give it its day;
@@ -15,7 +15,9 @@
 // Every email and event here is made up.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node travel/scripts/smart-test.mjs [app folder: travel | travelvintage] [repo root]
+//   node travel/scripts/smart-test.mjs [address: travel | travelvintage] [repo root]
+// travelvintage is the old Travel Vintage address, which opens this same app (the deploy copies travel/
+// there, news.yml; this test's server does the same): everything must work from there too.
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -25,16 +27,17 @@ import assert from 'assert/strict';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
-const APP = process.argv[2] || 'travel';
+const APP = process.argv[2] || 'travel';   // the address it is opened at
 const ROOT = path.resolve(process.argv[3] || new URL('../..', import.meta.url).pathname);
-const ID = APP;   // the aOS id (data-app)
-const QUERY_V = (/const QUERY_V = '([^']+)'/.exec(fs.readFileSync(path.join(ROOT, APP, 'app.js'), 'utf8')) || [])[1];
+const ID = 'travel';   // the aOS id (data-app), at either address
+const QUERY_V = (/const QUERY_V = '([^']+)'/.exec(fs.readFileSync(path.join(ROOT, 'travel/app.js'), 'utf8')) || [])[1];
 const SHOTS = process.env.SHOTS || '';   // a folder for screenshots (optional)
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/travelvintage\//, '/travel/');   // the old Travel Vintage address: the deploy copies travel/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -94,7 +97,7 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(id => localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' })), ID);
+  await ctx.addInitScript(id => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
@@ -163,13 +166,12 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   await ctx.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    const k = location.pathname.includes('travelvintage') ? 'travelv' : 'travel';
     if (localStorage.getItem('test.nomail')) return;
-    localStorage.setItem(k + '.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
-    localStorage.setItem(k + '.token.ever', '1');
+    localStorage.setItem('travel.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
+    localStorage.setItem('travel.token.ever', '1');
   });
   // the reader is at the current version unless a test says an update is due (a scan after an update rebuilds what the old reader made)
-  await ctx.addInitScript(([key, v]) => { if (!sessionStorage.getItem('qv')) { sessionStorage.setItem('qv', '1'); localStorage.setItem(key + '-query-v', v); } }, [APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1', QUERY_V]);
+  await ctx.addInitScript(([key, v]) => { if (!sessionStorage.getItem('qv')) { sessionStorage.setItem('qv', '1'); localStorage.setItem(key + '-query-v', v); } }, ['allison-travel-v1', QUERY_V]);
   if (empty) await ctx.addInitScript(() => localStorage.setItem('test.nomail', '1'));
   if (stored) await ctx.addInitScript(st => { if (!sessionStorage.getItem('stored')) { sessionStorage.setItem('stored', '1'); Object.entries(st).forEach(([k, v]) => localStorage.setItem(k, v)); } }, stored);
   await page.goto(BASE + '/' + APP + '/');
@@ -339,6 +341,7 @@ const pick = (page, f) => page.evaluate(f);
     await page.evaluate(() => { window.__shared = null; AllisonOS.layer.share = (app, data) => { window.__shared = { app, data }; }; window.__travel.save(); });
     const sh = await pick(page, () => window.__shared);
     assert.ok(sh && sh.data.bookings, 'shared');
+    assert.equal(sh.app, APP === 'travelvintage' ? 'travelv' : 'travel', 'as the layer of the app at this address (the old Travel Vintage one keeps its own)');
     const confs = sh.data.bookings.map(x => x.conf);
     assert.ok(!confs.includes('KQ7T2M'), 'United has its own calendar event: ' + confs.join(' '));
     assert.ok(!sh.data.bookings.some(x => x.name === 'Courtyard Cleveland Beachwood'), 'the hotel came from the calendar');
@@ -435,7 +438,7 @@ const pick = (page, f) => page.evaluate(f);
 
 // =================== an improved reader reads the mail again once, and rebuilds what the old one made ===================
 {
-  const KEY = APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1';
+  const KEY = 'allison-travel-v1';
   const P = require(path.join(ROOT, 'travel/parse.js'));
   const link = v => 'http://rlm.passkey.com/Tracking/track.do?token=' + Buffer.from('trkid=1~~~url=' + v).toString('base64') + '&hash=5A9787681ED76AA41C92F9A7B7F9E453';
   const sd = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -467,7 +470,7 @@ const pick = (page, f) => page.evaluate(f);
 
 // =================== a re-read that cannot download the mail puts back what it cleared, and tries again ===================
 {
-  const KEY = APP === 'travelvintage' ? 'allison-travelv-v1' : 'allison-travel-v1';
+  const KEY = 'allison-travel-v1';
   const old = { type: 'flight', status: 'confirmed', conf: 'OLD123', airlineCode: 'F9', flightNo: '3073', from: 'RDU', to: 'CLE', dep: iso(day(30)) + 'T10:00', guess: true, id: 'f-old', created: 1, notes: '', source: { msgId: 'e1', date: 1 } };
   const { ctx, page } = await open({ calendar: false, failGets: true, stored: { [KEY]: JSON.stringify({ bookings: [old], trips: [] }), [KEY + '-query-v']: '3', [KEY + '-seen']: JSON.stringify(['e1', 'e2']), [KEY + '-scan']: String(Date.now() - 3600e3) } });
   await step('when the mail cannot be downloaded, nothing the old reader made is lost, the re-read is tried again, and Settings says what happened', async () => {

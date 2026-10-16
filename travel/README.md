@@ -1,7 +1,7 @@
 # Travel
 
 Every flight, hotel and rental car in one place, as a home-screen web app in
-the same frosted glass as Mail, Notes and News. It fills itself from the
+a mid-century Vintage design or the Sea glass of Mail, Notes and News. It fills itself from the
 booking emails in Gmail, shows live status for flights about to leave, and
 links out to Google Flights, Google Hotels, Marriott and rental car searches
 with the details filled in.
@@ -33,10 +33,77 @@ with the details filled in.
   by someone else) the same way Gmail's are read.
 - **Two phones**: a shared Google Sheet, set up like Notes' (below).
 
-**Travel Vintage** is the same app in a mid-century modern look, as its own app
-with its own bookings and settings ([`travelvintage/`](../travelvintage/README.md)).
-It needs its own redirect address in Google Cloud (below), asks this app's flight
-status function, and can share this app's Google Sheet.
+## The two designs
+
+One app, one set of bookings: the design changes only how Travel looks, at
+once, and is kept on this phone (**Settings → Design**, the first section), as
+in Clock. `../home/design.js`, loaded in `<head>`, applies it before the page
+is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Mail, Home and Orders:
+  - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+    place of glass;
+  - mustard, teal, burnt orange and olive: the Trips filter and the section bar
+    have a mustard thumb, and each kind of booking is a solid round colour - a
+    flight teal, a hotel burnt orange, a rental car olive, anything else (a
+    ride) mustard - on a trip's timeline and in Add;
+  - the next flight, hotel check-in or car pick-up at the top is tinted by its
+    kind, with a dashed flight path between the two airports; status pills are
+    outlined (olive on time, mustard delayed or to check, orange canceled, teal
+    scheduled); the live status is two flat tiles with a teal and an orange top
+    edge for leaving and landing;
+  - three atomic shapes behind the title that scroll away with the page (and a
+    mustard sun in the corner of a trip's page), and three little bars under
+    the title;
+  - a solid burnt-orange add button and Done button; outlined teal and outlined
+    red buttons; Futura, which iOS has built in, so no font is downloaded.
+
+  **The sky.** Behind the title is the shared Vintage sky (`../home/sky.js`,
+  as in every Vintage design): by day a ground washed with mustard, the sun and
+  rays that turn very slowly; after sunset a ground washed with deep teal, the
+  moon and twinkling stars; each over cream (Light) or walnut (Dark), for the
+  phone's place (only if the app already has location permission: it never
+  asks), else its time zone. It holds still with reduced motion. This app only
+  gives its disc its colour (`--sky-disc`) and keeps its own sizes and places
+  for the shapes; the sun on a trip's page is the moon at night too. Checked by
+  `aOS/scripts/sky-test.mjs`.
+- **Standard**: Sea glass: Notes' style block, frosted glass over a slow
+  aurora, no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. Only colours, shapes and type change: every button, sheet and swipe works
+the same in both (the section bar's and the filter's thumbs are measured again
+when the design changes, as Futura is wider). The choice is `localStorage`
+`design.travel`. What iOS reads when Travel is added to the Home Screen follows
+it: the icon (`icon-180.png`, Vintage: a cream jet climbing away on walnut, with
+a mustard sun and a burnt-orange pill; `icon-glass-180.png`, Standard), the
+status bar style (`default` in Vintage, where `black-translucent`'s white clock
+would vanish on the cream) and the bar colours.
+
+**The old Travel Vintage app.** Travel Vintage used to be an app of its own
+(`travelvintage/`, with its own storage). Its address now opens this same app
+(the deploy copies `travel/` there, `.github/workflows/news.yml`), so a phone
+that added it keeps it. The first time it opens there, `design.js` moves that
+app's data on the phone over to Travel's names (`allison-travelv-…` →
+`allison-travel-…`, `travelv.…` → `travel.…`, so the bookings, settings and
+Gmail sign-in; the IndexedDB copy of the Sheet link `allison-travelv` →
+`allison-travel`; and what it had seen, so no walkthrough again), unless Travel
+already has data on that phone; nothing old is deleted. From there:
+
+- its calls go to `../travel/api/` (not `api/`), so they reach Travel's route
+  from either address;
+- Google's sign-in returns to the address it started from, which is already
+  registered for it (`https://tomallison24-news.pages.dev/travelvintage/`,
+  "Gmail" below);
+- Calendar's Travel layer is published under the old app's own name,
+  `travelv`, as before (Travel's is `travel`): on a phone with both on the
+  Home Screen, each keeps its own copy up to date and neither overwrites the
+  other's (a write replaces the whole layer); the server shows the two
+  together as Travel (`functions/aOS/api`, `GET layer`; a booking in both
+  shows once, matched by its id).
 
 ## How the emails are read
 
@@ -301,8 +368,9 @@ client once:
    application** client.
 2. **Authorised redirect URIs** → add, exactly (trailing slash included):
    - `https://tomallison24-news.pages.dev/travel/`
-   - and, for Travel Vintage, `https://tomallison24-news.pages.dev/travelvintage/`
-     (each app needs its own address: Google matches them exactly)
+   - and, for the old Travel Vintage address (it opens this same app, "The two
+     designs" above), `https://tomallison24-news.pages.dev/travelvintage/`
+     (Google matches each address exactly)
    - and the Cloudflare address too, if you use that one: `https://<your
      Cloudflare Pages address>/travel/`
 3. **Save**. Google can take a few minutes to pick it up.
@@ -391,8 +459,9 @@ site.
 ## How it's built
 
 - **No build step.** `index.html` is the page and its look (Notes' style
-  block, unchanged, plus Travel's own pieces at the end), `app.js` the app,
-  `parse.js` the email reading, `sw.js` the offline shell. As in Calendar,
+  block, unchanged, plus Travel's own pieces at the end, for Standard; then
+  the `<style id="vintage">` block, "The two designs" above), `app.js` the app,
+  `parse.js` the email reading, `sw.js` the offline shell. In Standard, as in Calendar,
   the sheets are Liquid Glass floating just inside the screen's edges (the
   trip page stays a whole page, with the same rows and glass buttons), the
   toast is the same clear glass as the sheets, the
@@ -412,12 +481,13 @@ site.
 ```sh
 node travel/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts
 node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed
-node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed
-node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed
-node travel/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg
+node travel/scripts/reader-version-test.mjs   # QUERY_V is bumped whenever the reader or the search changes
+node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed; both designs, Settings > Design, the old Travel Vintage address
+node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed; at Travel's address or the old Travel Vintage one
+node travel/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
-The last two need Playwright with Chromium (`npm i -g playwright`).
+The last three need Playwright with Chromium (`npm i -g playwright`).
 
 ## What I could not verify
 
@@ -457,4 +527,5 @@ sites were blocked by the network, and without a real inbox. So:
 - **The Google Flights / Google Hotels / Marriott / Kayak address formats**
   are not documented by those sites (see *Links out*).
 - **Safari on an iPhone** was not tested; the app was checked in Chromium at
-  iPhone size, light and dark.
+  iPhone size, light and dark, in both designs (where Futura falls back to the
+  next font in the stack).
