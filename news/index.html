@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>News</title>
-<meta name="description" content="Latest headlines for UK, World, US, Business, Tech, Science and Sport in one clean, frosted-glass home-screen app.">
+<meta name="description" content="Latest headlines for UK, World, US, Business, Tech, Science and Sport, and live scores, in one home-screen app, in a mid-century Vintage design or Sea glass.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="News">
 <link rel="apple-touch-icon" href="icon-180.png?v=5">
@@ -22,7 +23,12 @@
   in feeds.json. The app never talks to a news site itself (no CORS there),
   it only reads that one same-origin file.
 
-  Look: a quiet gradient backdrop that drifts slowly, with frosted glass
+  Two designs, picked in Settings > Design (the gear; ../home/design.js, as in
+  Clock): Vintage (mid-century modern, the default: the <style id="vintage">
+  block) and Standard (Sea glass: that block switched off, as below). The old
+  News Vintage address opens this same app.
+
+  Sea glass: a quiet gradient backdrop that drifts slowly, with frosted glass
   (backdrop-filter) only on the topic picker, the chips, the toast and the
   sheets; the lead story, the
   story list and the other cards are very faint tiles with no blur, the same
@@ -171,6 +177,9 @@
   .masthead h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .logo { width: 36px; height: 36px; flex: none; border-radius: 22.5%; box-shadow: 0 2px 10px rgba(20, 24, 48, 0.22); }
+  .logo.vintage-logo { display: none; }   /* the Sea glass icon here; the Vintage block swaps them */
+  .ambient { display: none; }             /* the atomic shapes behind the title: Vintage only */
+  .mh-btns { display: flex; align-items: center; gap: 8px; flex: none; }
   .round-btn { width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center; flex: none; margin-bottom: 2px; }
   /* Line icons drawn like the Mail app's (and iOS's): thin, rounded strokes. */
   svg.i { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -640,6 +649,11 @@
   .ai-send:disabled { opacity: 0.4; }
   .ai-send svg { width: 20px; height: 20px; }
 
+  /* ---- Settings: the gear by Refresh; one short sheet, as tall as what it holds ---- */
+  #set-sheet .sheet { height: auto; }
+  #set-sheet .sheet-body { padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+  #set-design { --accent-text: var(--accent); }   /* the design rows' tick, in the accent */
+
   /* ---- Table: a league's standings ----
      A rank, the team, and up to six stats, in a faint card like the scores. A thin bar down
      a row's left edge is ESPN's own zone (Champions League, relegation) in its colour; a
@@ -755,25 +769,242 @@
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
-:where(#refresh, [data-action^="retry"], .chip.pill){position:relative}
-:where(#refresh, [data-action^="retry"], .chip.pill)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+:where(#refresh, #setBtn, [data-action^="retry"], .chip.pill){position:relative}
+:where(#refresh, #setBtn, [data-action^="retry"], .chip.pill)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   News' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+   shapes instead of glass; a cream ground (walnut in dark mode) with mustard,
+   teal, burnt orange and olive; atomic shapes behind the title that scroll
+   away; Futura (iOS's own, so nothing to download) for every word. After
+   the glass styles so it wins over them; Settings > Design switches it off
+   for the Standard (Sea glass) design (../home/design.js). Only colours,
+   shapes and type change: every button, sheet and swipe works the same in
+   both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --sel-ink:#2B2522; --icon:#1F6F6B;
+  --accent-soft:rgba(31,111,107,.13); --accent-edge:rgba(31,111,107,.40);
+  --cta:#C9502A; --cta-ink:#FFF8EC;
+  --hairline:rgba(43,37,34,.14); --field:rgba(43,37,34,.07); --skeleton:rgba(43,37,34,.09);
+  --glass:#FBF5E9; --glass-strong:#FBF5E9; --glass-edge:rgba(43,37,34,.14); --glass-shadow:none;
+  --bar-hi:transparent; --bar-lift:rgba(43,37,34,.10);
+  --lg-rim:rgba(43,37,34,.14); --lg-solid:#FBF5E9;
+  --ctl-bg:#FBF5E9; --ctl-filter:none; --ctl-rim:inset 0 0 0 1.5px rgba(43,37,34,.14);
+  --seg-shine:none; --seg-thumb:#E3A72F; --seg-lift:transparent;
+  --chip-on-bg:#2B2522; --chip-on-text:#FFF8EC;
+  --scrim:rgba(43,37,34,.35); --sheet:#FBF5E9; --live:#C23A1E;
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --pill-top:#FBF5E9; --pill-bottom:#FBF5E9; --pill-ic:#E3A72F; --pill-press:#F0E5D0;
+  --pill-rim:inset 0 0 0 1.5px rgba(43,37,34,.14), 0 10px 22px -10px rgba(43,37,34,.5);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.14);
+  --lgs-field:#F0E5D0; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30); --lgs-lift:rgba(43,37,34,.28); --lgs-ok:rgba(43,37,34,.5);
+  --ok:#5F7A1E; --bad:#B02E1F; --orange-text:#B84A25;
+  --tc-uk:#B8452B; --tc-world:#1F6F6B; --tc-us:#3E6A8A; --tc-business:#E3A72F; --tc-tech:#7A5A3C;
+  --tc-ai:#8A5A8E; --tc-science:#7E8C34; --tc-sport:#E3702A; --tc-stemcells:#C4566B;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --sel-ink:#2B2522; --icon:#E3A72F;
+  --accent-soft:rgba(92,189,181,.16); --accent-edge:rgba(92,189,181,.45);
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --hairline:rgba(244,236,221,.14); --field:rgba(244,236,221,.08); --skeleton:rgba(244,236,221,.09);
+  --glass:#322A25; --glass-strong:#322A25; --glass-edge:rgba(244,236,221,.14);
+  --bar-lift:rgba(0,0,0,.3);
+  --lg-rim:rgba(244,236,221,.14); --lg-solid:#322A25;
+  --ctl-bg:#322A25; --ctl-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --chip-on-bg:#F4ECDD; --chip-on-text:#241E1A;
+  --scrim:rgba(12,8,5,.55); --sheet:#322A25; --live:#F0775A;
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --pill-top:#322A25; --pill-bottom:#322A25; --pill-press:#3D332C;
+  --pill-rim:inset 0 0 0 1.5px rgba(244,236,221,.14), 0 10px 24px -8px rgba(0,0,0,.65);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14);
+  --lgs-field:#3D332C; --lgs-scrim:rgba(12,8,5,.5); --lgs-lift:rgba(0,0,0,.5);
+  --ok:#A3B04A; --bad:#E8684A; --orange-text:#F0805C;
+  --tc-uk:#E8684A; --tc-world:#4FB3AB; --tc-us:#7DB1D1; --tc-tech:#C9A27A; --tc-ai:#C79BCB;
+  --tc-science:#A3B04A; --tc-sport:#F08A4B; --tc-stemcells:#E58A9C;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --sel-ink:#2B2522; --icon:#E3A72F;
+  --accent-soft:rgba(92,189,181,.16); --accent-edge:rgba(92,189,181,.45);
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --hairline:rgba(244,236,221,.14); --field:rgba(244,236,221,.08); --skeleton:rgba(244,236,221,.09);
+  --glass:#322A25; --glass-strong:#322A25; --glass-edge:rgba(244,236,221,.14);
+  --bar-lift:rgba(0,0,0,.3);
+  --lg-rim:rgba(244,236,221,.14); --lg-solid:#322A25;
+  --ctl-bg:#322A25; --ctl-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --chip-on-bg:#F4ECDD; --chip-on-text:#241E1A;
+  --scrim:rgba(12,8,5,.55); --sheet:#322A25; --live:#F0775A;
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --pill-top:#322A25; --pill-bottom:#322A25; --pill-press:#3D332C;
+  --pill-rim:inset 0 0 0 1.5px rgba(244,236,221,.14), 0 10px 24px -8px rgba(0,0,0,.65);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14);
+  --lgs-field:#3D332C; --lgs-scrim:rgba(12,8,5,.5); --lgs-lift:rgba(0,0,0,.5);
+  --ok:#A3B04A; --bad:#E8684A; --orange-text:#F0805C;
+  --tc-uk:#E8684A; --tc-world:#4FB3AB; --tc-us:#7DB1D1; --tc-tech:#C9A27A; --tc-ai:#C79BCB;
+  --tc-science:#A3B04A; --tc-sport:#F08A4B; --tc-stemcells:#E58A9C;
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page); the drifting colour fields are gone */
+.backdrop{display:none}
+.ambient{display:block;position:absolute;inset:0 0 auto 0;height:270px;z-index:-1;overflow:hidden;pointer-events:none}
+.ambient i{position:absolute;display:block}
+.ambient i:nth-child(1){width:200px;height:200px;right:-70px;top:-70px;border-radius:50%;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:56px;height:56px;right:150px;top:56px;border-radius:50%;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:120px;height:34px;right:-30px;top:100px;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
+
+/* the title: big, tight, with the three little bars under it */
+.masthead .date{font-size:12px;font-weight:600;letter-spacing:.14em}
+.masthead h1{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.masthead h1::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.brand{align-items:flex-start}
+.logo{box-shadow:none;margin-top:2px}
+.logo.glass-logo{display:none}
+.logo.vintage-logo{display:block}   /* the Vintage icon (icon.svg); Standard shows the Sea glass one */
+.sect-head h3,.lg-name,.tgname,.msub,.ai-card h4,.mphase,.sect h3{letter-spacing:.14em;font-weight:600}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.round-btn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+.round-btn:active{background:var(--mc-card-2)}
+.round-btn svg{color:var(--accent-text)}
+.chip,.modes,.notice .actions button.secondary{-webkit-backdrop-filter:none;backdrop-filter:none}
+.chip{font-weight:600;letter-spacing:.02em;background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.chip svg{color:var(--accent-text)}
+.chip .n{background:var(--cta);color:var(--cta-ink)}
+.chip.pill.on{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.chip.pill.on svg,.chip.pill.on .n{color:var(--mc-on-mustard)}
+.chip.pill.on .n{background:transparent;box-shadow:inset 0 0 0 1.5px var(--mc-on-mustard)}
+.notice button,.show-btn,.lg .okbtn,.ai-send{background:var(--cta);color:var(--cta-ink);box-shadow:none;font-weight:600;letter-spacing:.02em}
+.notice button:active,.show-btn:active,.ai-send:active{filter:brightness(.92)}
+.notice .actions button.secondary{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.text-btn{font-weight:600}
+.lg .text-btn,.ai-open{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent);font-weight:600}
+.lg .text-btn:disabled{color:var(--muted);box-shadow:inset 0 0 0 2px var(--mc-edge)}
+.opt.add,.scores .more,.meta .pickname{color:var(--accent-text)}
+
+/* News | Scores, the time range and the filter panel's switches: cream track, a mustard thumb under the chosen one */
+.modes,.segmented{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.modes > .slthumb,.segmented > .slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.seg{font-weight:600;letter-spacing:.02em}
+.seg[aria-selected="true"]{color:var(--mc-on-mustard)}
+.lg .segmented{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg[aria-selected="true"]{background:var(--mc-mustard);box-shadow:none}
+.live-dot{background:var(--live)}
+.seg[aria-selected="true"] .live-dot,.chip.pill.on .live-dot{background:#A8301A}   /* a live game's dot on the mustard thumb */
+
+/* the topic picker: a flat cream pill, with a mustard disc round the topic's icon */
+.vbar::before{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--pill-rim)}
+.vbar > button{font-weight:600;letter-spacing:0}
+.vbar .vb-ic{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.viewmenu,.pmenu{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:24px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 36px -12px var(--lgs-lift)}
+.viewmenu .ic,.pmenu .ic{background:var(--mc-mustard);color:var(--mc-on-mustard);border-radius:50%}
+.viewmenu button[aria-selected="true"],.pmenu button[aria-selected="true"],.pmenu button[aria-pressed="true"]{background:color-mix(in srgb,var(--mc-mustard) 24%,var(--mc-card))}
+.viewmenu button:active,.pmenu button:active{background:var(--mc-card-2)}
+.viewmenu .tick,.pmenu .tick{color:var(--accent-text)}
+.viewmenu button,.pmenu button{font-weight:600}
+
+/* the stories: solid cream cards, round-cornered, no rim light */
+.lead,.list,.notice,.card,.tbl,.ai-card,.ai-a{box-shadow:none}
+.lead,.list,.notice{background:var(--mc-card);border-radius:20px}
+.card,.tbl,.mev,.mstats,.mlu,.mshots,.lg .card,.ai-card{border-radius:20px}
+.lead h2{font-weight:600;letter-spacing:-.02em}
+.row h3,.ai-story h3{font-weight:600}
+.row .thumb{border-radius:14px}
+.meta{font-weight:600}
+.meta .new{background:var(--mc-mustard);color:var(--mc-on-mustard);border-radius:999px;padding:1px 8px;letter-spacing:.06em}
+.sum-btn{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.status{color:var(--muted)}
+
+/* scores and tables */
+.gstat.in{color:var(--live)}
+.gscore,.msc{font-weight:600}
+.game.decided .gteam.win{font-weight:600}
+.trow.me{background:color-mix(in srgb,var(--mc-mustard) 26%,var(--mc-card))}
+.tc.last{font-weight:600}
+.tr-rank,.tc,.gstat{font-weight:600}
+
+/* a game's own page */
+.mbar .h{background:var(--mc-teal)}
+.mbar .a{background:var(--mc-orange);opacity:1}
+.mkeys .h{color:var(--accent-text)}
+.mkeys .a{color:var(--orange-text)}
+.mkeys .a b,.mkeys .h b{color:inherit}
+.mpitch{background:color-mix(in srgb,var(--mc-olive) 24%,var(--mc-card));border-radius:14px}
+.shot.h .v{fill:var(--mc-teal);stroke:var(--mc-teal)}
+.shot.a .v{fill:var(--mc-orange);stroke:var(--mc-orange)}
+.shot.block .v{fill:none}
+.mphase{background:color-mix(in srgb,var(--mc-mustard) 26%,var(--mc-card))}
+.mtag,.mp .cap{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.mrow.goal .mi,.mrow.try .mi{color:var(--accent-text)}
+.mp .out{color:var(--bad)}
+.mp .in{color:var(--ok)}
+.mlegend .k.on{background:color-mix(in srgb,var(--muted) 40%,transparent)}
+
+/* the sheets: cream panels with round corners; the lists inside are a shade darker */
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:30px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 24px 50px -14px var(--lgs-lift)}
+.lg .grabber{background:var(--mc-edge)}
+.sheet-head h2{font-weight:600;letter-spacing:-.01em}
+.lg .close-btn{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text)}
+.lg .close-btn svg{color:var(--accent-text)}
+.lg .search,.ai-ask .search{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .search:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .card,.lg .ai-card,.ai-a{background:var(--field)}
+.lg .opt:active{background:var(--mc-card-2)}
+.opt .tick{color:var(--accent-text)}
+.sheet-foot{border-top:0}
+.ai-q{background:color-mix(in srgb,var(--mc-mustard) 30%,var(--mc-card));box-shadow:none}
+.ai-card li::marker{color:var(--mc-orange)}
+.ai-send{color:var(--cta-ink)}
+.ai-send:disabled{opacity:.4}
+
+/* the toast */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lgs-lift)}
+.toast button{color:var(--accent-text)}
+</style>
+<script src="../home/design.js" data-app="news" data-was="newsvintage" data-keys="newsv.=news."></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 <div class="backdrop" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
+<!-- the atomic shapes behind the title (Vintage only; there the drifting backdrop above is hidden) -->
+<div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="wrap">
   <header class="masthead">
     <div>
       <p class="date" id="today"></p>
       <div class="brand">
-        <img class="logo" src="icon.svg?v=4" alt="" width="36" height="36">
+        <img class="logo glass-logo" src="icon-glass.svg?v=1" alt="" width="36" height="36">
+        <img class="logo vintage-logo" src="icon.svg?v=4" alt="" width="36" height="36">
         <h1>News</h1>
       </div>
     </div>
-    <button class="round-btn glass" id="refresh" aria-label="Refresh">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 13.2A7.8 7.8 0 1 1 17.7 6.6"/><path d="M18.4 2.9v4.2h-4.2"/></svg>
-    </button>
+    <div class="mh-btns">
+      <button class="round-btn glass" id="setBtn" type="button" aria-label="Settings" aria-haspopup="dialog">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.45 12.00 21.42 12.49 21.29 12.98 20.81 13.40 19.62 13.62 18.75 13.81 18.46 14.10 18.30 14.42 18.17 14.75 18.05 15.08 18.06 15.50 18.53 16.24 19.22 17.24 19.26 17.88 19.01 18.31 18.68 18.68 18.31 19.01 17.88 19.26 17.24 19.22 16.24 18.53 15.50 18.06 15.08 18.05 14.75 18.17 14.42 18.30 14.10 18.46 13.81 18.75 13.62 19.62 13.40 20.81 12.98 21.29 12.49 21.42 12.00 21.45 11.51 21.42 11.02 21.29 10.60 20.81 10.38 19.62 10.19 18.75 9.90 18.46 9.58 18.30 9.25 18.17 8.92 18.05 8.50 18.06 7.76 18.53 6.76 19.22 6.12 19.26 5.69 19.01 5.32 18.68 4.99 18.31 4.74 17.88 4.78 17.24 5.47 16.24 5.94 15.50 5.95 15.08 5.83 14.75 5.70 14.42 5.54 14.10 5.25 13.81 4.38 13.62 3.19 13.40 2.71 12.98 2.58 12.49 2.55 12.00 2.58 11.51 2.71 11.02 3.19 10.60 4.38 10.38 5.25 10.19 5.54 9.90 5.70 9.58 5.83 9.25 5.95 8.92 5.94 8.50 5.47 7.76 4.78 6.76 4.74 6.12 4.99 5.69 5.32 5.32 5.69 4.99 6.12 4.74 6.76 4.78 7.76 5.47 8.50 5.94 8.92 5.95 9.25 5.83 9.58 5.70 9.90 5.54 10.19 5.25 10.38 4.38 10.60 3.19 11.02 2.71 11.51 2.58 12.00 2.55 12.49 2.58 12.98 2.71 13.40 3.19 13.62 4.38 13.81 5.25 14.10 5.54 14.42 5.70 14.75 5.83 15.08 5.95 15.50 5.94 16.24 5.47 17.24 4.78 17.88 4.74 18.31 4.99 18.68 5.32 19.01 5.69 19.26 6.12 19.22 6.76 18.53 7.76 18.06 8.50 18.05 8.92 18.17 9.25 18.30 9.58 18.46 9.90 18.75 10.19 19.62 10.38 20.81 10.60 21.29 11.02 21.42 11.51z"/><circle cx="12" cy="12" r="3.1"/></svg>
+      </button>
+      <button class="round-btn glass" id="refresh" aria-label="Refresh">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 13.2A7.8 7.8 0 1 1 17.7 6.6"/><path d="M18.4 2.9v4.2h-4.2"/></svg>
+      </button>
+    </div>
   </header>
 </div>
 
@@ -868,6 +1099,21 @@
       </button>
     </header>
     <div class="sheet-body" id="match-body" aria-live="polite"></div>
+  </section>
+</div>
+
+<!-- Settings: the design (Vintage or Standard), just on this phone. -->
+<div class="sheet-wrap lg" id="set-sheet" hidden>
+  <div class="scrim" data-action="close-set"></div>
+  <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="set-title" tabindex="-1">
+    <div class="grabber" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <h2 id="set-title">Settings</h2>
+      <button class="close-btn" data-action="close-set" aria-label="Close">
+        <svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+      </button>
+    </header>
+    <div class="sheet-body" id="set-body"></div>
   </section>
 </div>
 

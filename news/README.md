@@ -1,11 +1,13 @@
 # News
 
 Latest headlines by topic (AI, Business, Science, Sport, Stem cells, Tech, UK, US, World) as a
-home-screen web app: clean, minimal, frosted glass, light and dark.
+home-screen web app, light and dark, in two designs: Vintage (mid-century modern, the default)
+or Standard (Sea glass, frosted glass), picked in Settings (below).
 
 - **Data:** the RSS and Atom feeds listed in `feeds.json`.
-  `scripts/fetch-news.mjs` reads them into `data/news.json`, the only file the
-  app loads. News sites don't allow browsers on other sites to read
+  `scripts/fetch-news.mjs` reads them into `data/news.json`, the only file of
+  headlines the app loads (as `../news/data/news.json`, so it is the same file
+  from the old News Vintage address). News sites don't allow browsers on other sites to read
   their feeds (CORS), so the feeds are fetched ahead of time instead. No API
   keys needed.
 - **Updates:** `.github/workflows/news.yml` re-fetches the feeds and
@@ -17,7 +19,7 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
   `sw.js` keeps it working offline, and the last headlines are kept in
   `localStorage`.
 - **Tapping a story** opens the full article on the publisher's site.
-- **Liquid Glass**, as in iOS 26 and the Calendar app: the Sport filters and
+- **Liquid Glass** (the Standard design), as in iOS 26 and the Calendar app: the Sport filters and
   Sources panels float as clear glass sheets, the My teams and league pills and
   News | Scores are frosted glass with a lit rim, and every switch (News | Scores,
   the time range) has a bright
@@ -31,10 +33,68 @@ home-screen web app: clean, minimal, frosted glass, light and dark.
 - **Newest first** on every tab. The top story is shown large when it has
   a picture; an older story with a picture never jumps ahead of it.
 
-**News Vintage** is the same app in a mid-century modern look, as its own app
-with its own settings ([`newsvintage/`](../newsvintage/README.md)). It reads the
-headlines and scores this app publishes and uses this app's summaries route, so
-nothing here is made twice.
+## The two designs
+
+One app, one set of headlines and scores: the design changes only how News
+looks, at once, and is kept on this phone (**Settings → Design**: the gear by
+Refresh, the first and only section of its sheet), as in Clock.
+`../home/design.js`, loaded in `<head>`, applies it before the page is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Meals and Clock:
+  - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+    place of glass and the drifting colour fields;
+  - mustard, teal, burnt orange and olive: News | Scores and the time range
+    have a mustard thumb, the topic picker has a mustard disc round its icon,
+    a game's home side is teal and the away side orange, the shot map's pitch
+    is olive, and each topic has its own dot (brick, teal, denim, mustard,
+    walnut, plum, olive, pumpkin and rose, each lighter in dark mode: the
+    `--tc-*` colours, which `app.js` falls back from to Standard's own);
+  - three atomic shapes behind the title (a mustard sun, a teal dot and an
+    orange pill) that scroll away with the page, and three little bars under
+    it; the Vintage icon (`icon.svg`) beside the title;
+  - solid burnt-orange buttons (Show N stories, Try again, the send arrow);
+    outlined teal ones (Reset, the sparkle on a story); Futura, which iOS has
+    built in, so no font is downloaded.
+
+  Football's yellow and red cards, and the colours ESPN gives a table's zones
+  (Champions League, relegation), stay as they are: they say something.
+
+  **The sky.** Behind the title is the shared Vintage sky (`../home/sky.js`,
+  as in every Vintage design): by day a ground washed with mustard, the sun
+  and rays that turn very slowly; after sunset deep teal, the moon and
+  twinkling stars; each over cream (Light) or walnut (Dark). Sunrise and
+  sunset are for the phone's place (only if the app already has location
+  permission: it never asks), else its time zone. It holds still with reduced
+  motion. This app only gives its disc its colour (`--sky-disc`) and keeps its
+  own sizes and places for the shapes, tuned to its header.
+- **Standard**: Sea glass: the frosted glass, Liquid Glass sheets and
+  drifting colour fields described above, the Sea glass icon
+  (`icon-glass.svg`) beside the title, no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.news`. What iOS reads when News is
+added to the Home Screen follows it: the icon (`icon-180.png`, Vintage: a cream
+front page on olive with a mustard sun and a burnt-orange pill;
+`icon-glass-180.png`, Standard), the status bar style (`default` in Vintage,
+where `black-translucent`'s white clock would vanish on the cream) and the bar
+colours. Only colours, shapes and type change: every tap, sheet and swipe
+works the same in both.
+
+**The old News Vintage app.** News Vintage used to be an app of its own
+(`newsvintage/`, with its own storage). Its address now opens this same app
+(the deploy copies `news/` there, `.github/workflows/news.yml`), so a phone
+that added it keeps it. The first time it opens there, `design.js` moves that
+app's data on the phone over to News' names (`newsv.…` → `news.…`: the last
+headlines and scores, the topic, the Sport filters and your teams, the
+leagues, the tables and the Stem cells filters; and what it had seen, so no
+walkthrough again), unless News already has data on that phone; nothing old is
+deleted. It had no IndexedDB, sessionStorage or cookies of its own. Its files
+and calls are named from News' side (`../news/data/`, `../news/sport-catalog.json`,
+`../news/leagues.json`, `../news/api/`), so from either address it reads the
+one copy of the headlines and reaches the family's summaries route.
 
 ## Summaries
 
@@ -249,7 +309,12 @@ its right:
   without notice.
 
 Test: `node news/scripts/app-test.mjs` drives Scores in Chromium at iPhone size
-on made-up ESPN data (`scripts/scores-fixture.mjs`).
+on made-up ESPN data (`scripts/scores-fixture.mjs`), in both designs: the
+Vintage look (light and dark), Standard, Settings → Design both ways and kept
+across a reload, and the old News Vintage address (its data moved over once,
+the files read from `/news/`). `node news/scripts/make-icons.mjs` draws
+`icon-*.png` from `icon.svg` (Vintage) and `icon-glass-*.png` from
+`icon-glass.svg` (Standard).
 
 
 ### Table: standings

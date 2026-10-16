@@ -1,12 +1,19 @@
 // news's own script, moved out of index.html so the page's
 // Content-Security-Policy can allow only this site's own files (script-src 'self').
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard
+// (Sea glass), kept on this phone (../home/design.js, as in Clock).
 (() => {
   'use strict';
 
-  const DATA_URL = 'data/news.json';
-  const CATALOG_URL = 'sport-catalog.json';
-  const LEAGUES_URL = 'leagues.json';
-  const SCORES_URL = 'data/scores.json';                  // copy saved on each refresh
+  // News' own files and route (functions/news/api), named from the site root's side so they are the
+  // same from the old News Vintage address, which opens this same app (../home/design.js): the
+  // headlines and scores are published once, under /news/data/ (.github/workflows/news.yml).
+  const HOME = '../news/';
+  const DATA_URL = HOME + 'data/news.json';
+  const CATALOG_URL = HOME + 'sport-catalog.json';
+  const LEAGUES_URL = HOME + 'leagues.json';
+  const SCORES_URL = HOME + 'data/scores.json';                  // copy saved on each refresh
+  const API = HOME + 'api/';
   const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
   // ESPN answers on two hosts with the same data; the standings and the match details are asked of
   // site.web.api.espn.com first (the one checked against ESPN's live answers, with CORS open to any
@@ -31,9 +38,11 @@
     { id: 'business', label: 'Business' }, { id: 'tech', label: 'Tech' }, { id: 'ai', label: 'AI' },
     { id: 'science', label: 'Science' }, { id: 'sport', label: 'Sport' }, { id: 'stemcells', label: 'Stem cells' },
   ];
+  // The dot before a story's source: in Vintage the Retro colours (--tc-*, set for light and dark by
+  // index.html's Vintage block), in Standard these.
   const TOPIC_COLOURS = {
-    uk: '#FF453A', world: '#30B0C7', us: '#0A84FF', business: '#FF9F0A',
-    tech: '#5E5CE6', ai: '#BF5AF2', science: '#30D158', sport: '#FF6B2C', stemcells: '#FF2D92',
+    uk: 'var(--tc-uk, #FF453A)', world: 'var(--tc-world, #30B0C7)', us: 'var(--tc-us, #0A84FF)', business: 'var(--tc-business, #FF9F0A)',
+    tech: 'var(--tc-tech, #5E5CE6)', ai: 'var(--tc-ai, #BF5AF2)', science: 'var(--tc-science, #30D158)', sport: 'var(--tc-sport, #FF6B2C)', stemcells: 'var(--tc-stemcells, #FF2D92)',
   };
   const ICON = {
     sliders: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 7.2h9.4M17.8 7.2h2.4M3.8 16.8h2.4M10.8 16.8h9.4"/><circle cx="15.5" cy="7.2" r="2.3"/><circle cx="8.5" cy="16.8" r="2.3"/></svg>',
@@ -299,6 +308,8 @@
   }
   const slideSeg = jump => slide(segEl, segEl.querySelector('[aria-selected="true"]'), 'sheet-seg', { jump });
   window.addEventListener('resize', () => { slideBar(true); if (sheetOpen) slideSeg(true); });
+  // Futura (Vintage) and the system font (Standard) are different widths: the thumbs are measured again.
+  window.addEventListener('aos:design', () => requestAnimationFrame(() => { slideBar(true); if (sheetOpen) slideSeg(true); }));
 
   // ---- render ----
   // The topic picker: the pill shows the chosen topic, the menu lists them all.
@@ -517,6 +528,37 @@
     keepBarInPlace();
   }
 
+  // ---- Settings: the design, Vintage or Standard (Sea glass), at once and just on this phone ----
+  // ../home/design.js draws the rows (the same in every app) and keeps the choice; nothing to save.
+  const setWrap = $('set-sheet'), setSheetEl = setWrap.querySelector('.sheet'), setBody = $('set-body'), setBtn = $('setBtn');
+  let setOpen = false, setReturn = null;
+  if (window.aosDesign) {
+    setBody.innerHTML = '<div class="sect"><h3>Design</h3><div class="card" id="set-design">' + aosDesign.picker() + '</div>'
+      + '<p class="sheet-note">Just on this phone, and at once.</p></div>';
+    aosDesign.bind(setBody);
+  } else setBtn.hidden = true;
+
+  function openSetSheet() {
+    if (setOpen) return;
+    setOpen = true;
+    setReturn = document.activeElement;
+    closeViewMenu();
+    setWrap.hidden = false;
+    document.documentElement.classList.add('locked');
+    requestAnimationFrame(() => requestAnimationFrame(() => setWrap.classList.add('open')));
+    setSheetEl.focus({ preventScroll: true });
+  }
+
+  function closeSetSheet() {
+    if (!setOpen) return;
+    setOpen = false;
+    setWrap.classList.remove('open');
+    document.documentElement.classList.remove('locked');
+    const hide = () => { if (!setOpen) setWrap.hidden = true; };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 330);
+    if (setReturn && setReturn.isConnected) setReturn.focus({ preventScroll: true });
+  }
+
   const srcWrap = $('src-sheet'), srcSheetEl = srcWrap.querySelector('.sheet'), srcBody = $('src-body');
   const srcSearch = $('src-search'), srcReset = $('src-reset'), srcShow = $('src-show');
   let srcOpen = false;
@@ -588,7 +630,7 @@
   async function aiCall(route, body) {
     const opts = { method: 'POST', cache: 'no-store', headers: { 'X-News': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
     let r;
-    try { r = accountApi() ? await accountApi().fetch('api/' + route, opts) : await fetch('api/' + route, opts); }
+    try { r = accountApi() ? await accountApi().fetch(API + route, opts) : await fetch(API + route, opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
     if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server') });
@@ -1145,7 +1187,7 @@
     goal: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.2l3.2 2.3-1.2 3.7h-4l-1.2-3.7z" fill="currentColor"/></svg>',
     yellow: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#F5C518"/></svg>',
     red: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="1.8" fill="#E5242B"/></svg>',
-    sub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v12M4.8 8.2L8 5l3.2 3.2" fill="none" stroke="#3FB07F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19V7M12.8 15.8L16 19l3.2-3.2" fill="none" stroke="#E5575A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    sub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v12M4.8 8.2L8 5l3.2 3.2" fill="none" stroke="#3FB07F" style="stroke:var(--ok, #3FB07F)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19V7M12.8 15.8L16 19l3.2-3.2" fill="none" stroke="#E5575A" style="stroke:var(--bad, #E5575A)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     miss: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="3 2.4"/></svg>',
     try: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="8.6" ry="5.4" transform="rotate(-35 12 12)" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.6 15.4l6.8-6.8M10.6 10.2l3.2 3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   };
@@ -1699,6 +1741,8 @@
     if (e.target.closest('[data-action="reset-picks"]')) return resetFromResults();
   });
   refreshBtn.addEventListener('click', load);
+  setBtn.addEventListener('click', openSetSheet);
+  setWrap.addEventListener('click', e => { if (e.target.closest('[data-action="close-set"]')) closeSetSheet(); });
 
   segEl.addEventListener('click', e => {
     const b = e.target.closest('[data-seg]');
@@ -1745,6 +1789,7 @@
     if (e.key === 'Escape' && srcOpen) closeSrcSheet();
     if (e.key === 'Escape' && aiOpen) closeAi();
     if (e.key === 'Escape' && matchOpen) closeMatch();
+    if (e.key === 'Escape' && setOpen) closeSetSheet();
   });
 
   // Broken or refused images: try the original, then drop the frame.

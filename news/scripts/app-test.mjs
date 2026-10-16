@@ -6,6 +6,12 @@
 // the filter sheet and Reset. Also light and dark, and that nothing trips the
 // page's Content Security Policy. Screenshots go to the folder given as the
 // second argument.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (Futura, flat cream
+// or walnut cards, a mustard thumb, an orange button, the atomic shapes behind the title; the sky held
+// at day, aos.sky), and Standard (Sea glass); Settings > Design switches between them at once and keeps
+// the choice; and the old News Vintage address (served from news/, as the deploy does) moves that app's
+// data on the phone over to News' names, and reads the headlines, scores, sport lists and summaries
+// from /news/.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node news/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -27,6 +33,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/newsvintage\//, '/news/');   // the old News Vintage address: the deploy copies news/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -36,27 +43,77 @@ await new Promise(r => server.listen(0, r));
 const BASE = 'http://localhost:' + server.address().port;
 
 const browser = await chromium.launch();
-const errors = [];
-async function newPage(scheme, store = {}) {
+const errors = [], requested = [];
+// store: JSON values, merged over the usual seed; raw: the whole seed instead, as strings (a phone
+// as it was); design: 'glass' for Standard; at: the address opened.
+async function newPage(scheme, store = {}, { raw = null, design = null, at = '/news/' } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
   await ctx.route('**/site.api.espn.com/**', r => { const m = new URL(r.request().url()).pathname.match(/sports\/(.+)\/scoreboard/); return r.fulfill({ json: espnFor(m[1]) }); });
   await ctx.route('**/data/scores.json*', r => r.fulfill({ json: snapshot() }));
   await ctx.route('**/data/news.json*', r => r.fulfill({ json: newsJson() }));
-  const seed = Object.assign({ 'aos.seen': { news: '999' }, 'news.topic': 'sport', 'news.sport.mode': 'scores' }, store);
-  await ctx.addInitScript(seed => {
+  await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"off"}' }));
+  const seed = raw || Object.fromEntries(Object.entries(Object.assign({ 'aos.seen': { news: '999' }, 'news.topic': 'sport', 'news.sport.mode': 'scores' }, store)).map(([k, v]) => [k, JSON.stringify(v)]));
+  await ctx.addInitScript(([seed, design]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v));
-  }, seed);
+    for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+    localStorage.setItem('aos.sky', 'day');   // the sky held at day, so the colours don't depend on the hour
+    if (design) localStorage.setItem('design.news', design);
+  }, [seed, design]);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
-  await page.goto(BASE + '/news/');
+  page.on('request', r => { const u = new URL(r.url()); if (u.origin === BASE) requested.push(u.pathname); });
+  await page.goto(BASE + at);
   await page.waitForSelector('.sect');
   return { ctx, page };
 }
 const shot = async (page, name) => SHOTS ? (await page.waitForTimeout(400), page.screenshot({ path: path.join(SHOTS, name + '.png') })) : null;
+const q = (page, sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
+const visible = (page, sel) => page.$eval(sel, e => getComputedStyle(e).display !== 'none');
+// The Retro look (Vintage, mid-century modern): Futura, a cream (walnut) ground, flat cream cards, a
+// mustard thumb, solid orange buttons and the atomic shapes behind the title; the Vintage icon; a
+// status bar that isn't translucent.
+async function retroLook(page, scheme) {
+  const light = scheme === 'light';
+  const cream = light ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = light ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.look), 'vintage');
+  assert.match((await q(page, 'body', ['fontFamily']))[0], /Futura/);
+  assert.equal((await q(page, 'html', ['backgroundColor']))[0], ground, 'the ground');
+  const [bg, shadow, backdrop, radius] = await q(page, '.card.scores', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+  assert.equal(bg, cream, 'a flat cream (walnut) card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+  assert.equal((await q(page, '.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+  assert.equal((await q(page, '.ambient i:nth-child(2)', ['backgroundColor']))[0], light ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', 'a teal dot');
+  assert.equal((await q(page, '.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+  assert.equal((await q(page, '.backdrop', ['display']))[0], 'none', 'no drifting glass colour fields');
+  assert.equal((await q(page, '.modes .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb');
+  assert.equal((await q(page, '.modes .seg[aria-selected="true"]', ['color']))[0], 'rgb(43, 37, 34)', 'dark ink on the mustard thumb');
+  assert.equal((await q(page, '#sheet-show', ['backgroundColor']))[0], light ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the sheet button is solid orange');
+  assert.equal((await q(page, '.vbar', ['backgroundColor'], '::before'))[0], cream, 'the topic picker is flat cream');
+  assert.equal((await q(page, '.vbar .vb-ic', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard disc round the topic icon');
+  assert.equal((await q(page, '.masthead h1', ['fontSize']))[0], '44px');
+  assert.equal((await q(page, '.chip.pill', ['backdropFilter']))[0], 'none');
+  assert.ok(await visible(page, '.logo.vintage-logo') && !(await visible(page, '.logo.glass-logo')), 'the Vintage icon by the title');
+  assert.doesNotMatch(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /glass/, 'the Vintage Home Screen icon');
+  assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default');
+}
+// Standard (Sea glass): the Vintage block switched off, no sky, the glass look, icon and status bar.
+async function glassLook(page, scheme) {
+  const light = scheme === 'light';
+  assert.ok(await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), 'data-look glass, the Vintage styles off, no sky');
+  assert.equal((await q(page, 'html', ['backgroundColor']))[0], light ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', 'the Sea glass ground');
+  assert.doesNotMatch((await q(page, 'body', ['fontFamily']))[0], /Futura/);
+  assert.equal((await q(page, '.ambient', ['display']))[0], 'none', 'no atomic shapes');
+  assert.equal((await q(page, '.backdrop', ['display']))[0], 'block', 'the drifting colour fields');
+  assert.notEqual((await q(page, '.chip.pill', ['backdropFilter']))[0], 'none', 'frosted glass chips');
+  assert.notEqual((await q(page, '.modes .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'no mustard thumb');
+  assert.equal((await q(page, '.masthead h1', ['fontSize']))[0], '34px');
+  assert.ok(await visible(page, '.logo.glass-logo') && !(await visible(page, '.logo.vintage-logo')), 'the Sea glass icon by the title');
+  assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/, 'the Sea glass Home Screen icon');
+  assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+  assert.equal(await page.getAttribute(`meta[name="theme-color"][media*="${scheme}"]`, 'content'), light ? '#EEF2F0' : '#0D1213');
+}
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 const block = (page, title) => page.locator('.sect', { has: page.locator('h3', { hasText: new RegExp('^' + title + '$') }) });
@@ -77,6 +134,11 @@ await test('the Scores view opens on the Premier League, one card, and a Coming 
   assert.equal(await block(page, 'Coming up').locator('.game').count(), 5, 'five fixtures, then Show more');
   assert.equal((await block(page, 'Coming up').locator('.more').innerText()).trim(), 'Show 2 more');
   await shot(page, 'scores-default');
+});
+
+await test('Vintage by default, drawn in the Retro look: Futura, flat cream cards, mustard, orange, atomic shapes (light)', async () => {
+  await retroLook(page, 'light');
+  await shot(page, 'scores-retro-light');
 });
 
 await test('the whole page is short: no more than a couple of screens', async () => {
@@ -230,12 +292,96 @@ await test('only one league has games: the pill is just a label', async () => {
 
 await test('dark mode', async () => {
   const d = await newPage('dark');
+  await retroLook(d.page, 'dark');
+  await shot(d.page, 'scores-retro-dark');
   await d.page.locator('.sect-head .chip.pill').first().click();
   await shot(d.page, 'scores-menu-dark');
   const bg = await d.page.evaluate(() => getComputedStyle(document.querySelector('.pmenu:not([hidden])')).backgroundColor);
   const [r, g, b] = bg.match(/[\d.]+/g).map(Number);
   assert.ok(Math.max(r, g, b) < 80, 'a dark menu in dark mode: ' + bg);
   await d.ctx.close();
+});
+
+await test('Standard (Sea glass), light and dark: the glass look, no sky, the glass icon and status bar', async () => {
+  for (const scheme of ['light', 'dark']) {
+    const g = await newPage(scheme, {}, { design: 'glass' });
+    await glassLook(g.page, scheme);
+    await shot(g.page, 'scores-glass-' + scheme);
+    assert.deepEqual(await g.page.evaluate(() => window.__csp || []), []);
+    await g.ctx.close();
+  }
+});
+
+await test('Settings > Design: Vintage, then Standard and back, at once, kept across a reload', async () => {
+  const s = await newPage('light');
+  const look = () => s.page.evaluate(() => document.documentElement.dataset.look);
+  const checked = d => s.page.getAttribute(`#set-body [data-design="${d}"]`, 'aria-checked');
+  assert.equal(await look(), 'vintage');
+  await s.page.click('#setBtn');
+  await s.page.waitForSelector('#set-sheet.open:not([hidden])');
+  assert.equal((await s.page.locator('#set-body .sect h3').first().innerText()).trim().toLowerCase(), 'design', 'Design is the first section');
+  assert.match(await s.page.locator('#set-body .sheet-note').innerText(), /Just on this phone, and at once\./);
+  assert.equal(await checked('vintage'), 'true'); assert.equal(await checked('glass'), 'false');
+  await shot(s.page, 'settings-vintage');
+  await s.page.click('#set-body [data-design="glass"]');
+  assert.equal(await look(), 'glass', 'Standard at once');
+  assert.equal(await checked('glass'), 'true');
+  assert.ok(await s.page.isVisible('#set-sheet'), 'the sheet stays open');
+  assert.equal(await s.page.evaluate(() => localStorage.getItem('design.news')), 'glass');
+  await shot(s.page, 'settings-glass');
+  await s.page.keyboard.press('Escape');
+  await s.page.waitForSelector('#set-sheet', { state: 'hidden' });
+  await s.page.reload(); await s.page.waitForSelector('.sect');
+  await glassLook(s.page, 'light');
+  await s.page.click('#setBtn');
+  await s.page.waitForSelector('#set-sheet.open:not([hidden])');
+  await s.page.click('#set-body [data-design="vintage"]');
+  assert.equal(await look(), 'vintage');
+  await s.page.click('#set-sheet .close-btn');
+  await s.page.waitForSelector('#set-sheet', { state: 'hidden' });
+  await s.page.reload(); await s.page.waitForSelector('.sect');
+  await retroLook(s.page, 'light');
+  // the thumb under News | Scores sits under the chosen one in either font
+  const [th, on] = await Promise.all([s.page.locator('.modes .slthumb').boundingBox(), s.page.locator('.modes .seg[aria-selected="true"]').boundingBox()]);
+  assert.ok(Math.abs(th.x - on.x) < 3 && Math.abs(th.width - on.width) < 3, 'the thumb under the chosen switch');
+  await s.ctx.close();
+});
+
+await test('the old News Vintage address: its data moved to News\' names once, News\' files and route', async () => {
+  const before = requested.length;
+  const raw = { 'aos.seen': JSON.stringify({ newsvintage: '999' }), 'newsv.topic': '"sport"', 'newsv.sport.mode': '"scores"', 'newsv.scores.league': '"all"', 'newsv.scores.next': '"rugby.267979"' };
+  const o = await newPage('light', {}, { raw, at: '/newsvintage/' });
+  assert.equal(await pillText(o.page, 'Scores'), 'All leagues', 'its league choice, now News\'');
+  assert.equal(await pillText(o.page, 'Coming up'), 'Premiership Rugby');
+  const got = await o.page.evaluate(() => ({ league: localStorage.getItem('news.scores.league'), topic: localStorage.getItem('news.topic'), seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('newsv.scores.league'), look: document.documentElement.dataset.look }));
+  assert.equal(got.league, '"all"'); assert.equal(got.topic, '"sport"');
+  assert.equal(got.seen.news, '999', 'what it had seen carries over: no walkthrough again');
+  assert.equal(got.old, '"all"', 'nothing old is deleted');
+  assert.equal(got.look, 'vintage');
+  // the headlines, scores and sport lists are News' own, and the summaries go to News' route
+  await o.page.locator('.modes [data-mode="news"]').click();
+  await o.page.locator('#feed .sum-btn').first().click();
+  await o.page.waitForSelector('#ai-sheet.open:not([hidden])');
+  await o.page.waitForTimeout(300);
+  const mine = requested.slice(before);
+  for (const f of ['/news/data/news.json', '/news/data/scores.json', '/news/sport-catalog.json', '/news/leagues.json', '/news/api/summarize'])
+    assert.ok(mine.includes(f), f + ' asked for: ' + mine.filter(p => !/\.(js|svg|png)$/.test(p)));
+  assert.deepEqual(mine.filter(p => /^\/newsvintage\/(data|api)\/|^\/newsvintage\/(sport-catalog|leagues)\.json/.test(p)), [], 'nothing from /newsvintage/ but the page');
+  await o.page.keyboard.press('Escape');
+  // once only: a later change to the old keys is not copied again
+  await o.page.evaluate(() => localStorage.setItem('newsv.scores.league', '"eng.1"'));
+  await o.page.reload(); await o.page.waitForSelector('#feed');
+  assert.equal(await o.page.evaluate(() => localStorage.getItem('news.scores.league')), '"all"', 'moved once only');
+  assert.deepEqual(await o.page.evaluate(() => window.__csp || []), []);
+  await o.ctx.close();
+});
+
+await test('a phone with both: News\' own data is kept, the old app\'s is not copied over it', async () => {
+  const raw = { 'aos.seen': JSON.stringify({ news: '999', newsvintage: '999' }), 'news.topic': '"sport"', 'news.sport.mode': '"scores"', 'news.scores.league': '"uefa.champions"', 'newsv.scores.league': '"all"' };
+  const b = await newPage('light', {}, { raw, at: '/newsvintage/' });
+  assert.equal(await b.page.evaluate(() => localStorage.getItem('news.scores.league')), '"uefa.champions"');
+  assert.equal(await pillText(b.page, 'Scores'), 'Champions League');
+  await b.ctx.close();
 });
 
 await test('nothing trips the Content Security Policy, and no script errors', async () => {
