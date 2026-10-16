@@ -85,6 +85,27 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.6', date: '2026-10-16', title: 'Ipsy, everywhere', intro: 'ipsy',
+      highlights: ['Ipsy is now in Travel, Meals, Calendar, Notes and News',
+        'Ipsy checks flights live and searches the web for you',
+        'In Orders and Travel, Ipsy fixes what\'s in To check by itself, with Undo'],
+      notes: ['Ipsy, the little stem cell you chat with, is in six apps now: Orders, Travel, Meals, Calendar, Notes and News. In each it works on that app\'s own things, every change shows in its chat with Undo, it can search the web, and it is for signed-in family. It runs on Claude Sonnet 5.5',
+        'Travel: Ipsy takes the place of the Ask AI bar. Ask about your trips, fix, add, move or delete a booking (it asks before deleting a whole trip), check any flight live by its number (delays, gates, where it is), find a flight number from the airport\'s board, and look through your Gmail',
+        'Travel: Check with AI is now Have Ipsy check. Say yes once and Ipsy fills in what your upcoming bookings are missing by itself, after each read of Gmail; what it fills in is marked Check, with Undo (Settings, Smart help)',
+        'Orders: say yes once and Ipsy checks the orders in To check by itself after each read of Gmail, fixing what it can, with Undo; Fix details with Claude is now Have Ipsy check this order (Settings, Ipsy)',
+        'Meals: Ipsy swaps a night\'s dinner, plans a new week around the deals, finds what\'s on sale and says what you can make with what you have, always keeping to what the family never eats',
+        'Calendar: Ipsy finds what\'s on and free time, and adds, moves or deletes an event in the Family calendar. It asks you first before every change, one event at a time, never touches a repeating event, and only reads the other layers',
+        'Notes: Ipsy finds and writes notes, adds to lists, checks things off, sorts groceries into store sections and sets reminders. It never sees private notes, and asks before deleting one',
+        'News: Ipsy finds and sums up stories in today\'s headlines, checks scores, fixtures and tables, changes the teams you follow, and looks up anything newer on the web',
+        'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps'],
+      apps: {
+        travel: { highlights: ['Meet Ipsy: tap the little stem cell and chat about your trips', 'Ipsy checks any flight live and finds flight numbers', 'Ipsy fills in what your bookings are missing, with Undo'] },
+        meals: { highlights: ['Meet Ipsy: tap the little stem cell and chat about dinner', 'Ipsy swaps a night or plans a week around the deals', 'It always keeps to what the family never eats'] },
+        calendar: { highlights: ['Meet Ipsy: tap the little stem cell and ask what\'s on', 'Ipsy finds free time and adds, moves or deletes events', 'It always asks you first before changing anything'] },
+        notes: { highlights: ['Meet Ipsy: tap the little stem cell and chat about your notes', 'Ipsy writes notes, adds to lists and sets reminders, with Undo', 'Private notes stay private: Ipsy never sees them'] },
+        news: { highlights: ['Meet Ipsy: tap the little stem cell and ask about the news', 'Ipsy sums up stories and checks scores and tables', 'Ipsy can change the teams you follow'] },
+        orders: { highlights: ['Ipsy now checks To check by itself and fixes what it can', 'Each fix shows in Ipsy\'s chat with Undo', 'Turn it on or off in Settings, Ipsy'] },
+      } },
     { v: '1.5', date: '2026-10-16', title: 'Meet Ipsy', intro: 'ipsy',
       highlights: ['Meet Ipsy: a little stem cell you can chat with, in Orders',
         'Ask about your orders and Ipsy finds, fixes, merges and deletes them, with Undo',
