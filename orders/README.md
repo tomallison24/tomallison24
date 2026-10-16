@@ -171,9 +171,10 @@ there is none it becomes a package of its own.
   clears an *unavailable* flag by itself.
 
 Nothing about the emails is kept or sent anywhere: only the orders found in
-them, on the phone and in your Google Sheet if you connect one. The one
-exception is **Fix details with Claude**, which only runs when you tap it
-(below).
+them, on the phone and in your Google Sheet if you connect one. The
+exceptions are Ipsy's: an order's email read again to fix it (when you tap
+**Have Ipsy check this order**, or by itself for To check once you've said
+yes), and whatever Ipsy reads to answer you in its chat (below).
 
 ## One-off clean-up
 
@@ -189,10 +190,28 @@ is a one-time tidy per phone, **not a rule**: orders that go quiet later stay
 where they are until you mark them. The delivered date it gives is the last
 news, not the real arrival.
 
-## Fix details with Claude
+## Ipsy checks To check (and any order)
 
-When the words-only reader gets an order wrong (a *Check details* card, or any
-order), open it and tap **Fix details with Claude**. The app fetches that one
+**By itself.** After each read of Gmail (and when Orders opens), Ipsy goes
+through the orders marked *Check details* that came from an email and checks
+each one, quietly, at most 10 at a time: the same check as below, with no
+tap. Each email is checked once (a new email about the order is checked
+again). A fix shows in Ipsy's chat with **Undo**, and Ipsy says in a little
+bubble by its corner what it did (*I fixed 2 orders in To check; 1 still needs
+you*). What it can't fix (an order nothing has been heard about for weeks, an
+item the store says is unavailable) stays in To check for you.
+
+- **Offered once.** The first time there's something to check, Ipsy asks from
+  its corner; nothing is sent until you say yes. **Settings > Ipsy > Ipsy checks
+  To check** turns it on or off.
+- It never asks for Face ID by itself: signed out, it waits (and says so).
+- It stops for the day at the daily limit below, and tries again later.
+
+**On an order's page.** **Have Ipsy check this order** (it was *Fix details with
+Claude*) does the same for that one order. Asked once first, in Ipsy's chat.
+
+**How a check works.** When the words-only reader gets an order wrong (a
+*Check details* card, or any order), the app fetches that one
 email from Gmail again, takes out its links, and sends the text to Claude Haiku
 5.5 through the family server (`functions/orders/api`, the same
 `ANTHROPIC_API_KEY` as News and Meals). Claude reports the store, where the

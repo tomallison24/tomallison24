@@ -15,7 +15,8 @@
 //                                         // confirm(text, { yes, no }): asks in the chat first (a card with
 //                                         //   Yes / No) and resolves true or false; nothing runs until tapped
 //     label: (name, input) => 'Looking at your orders',   // what Ipsy says it's doing
-//   })
+//   })   -> { open, close, busy, hint(text, onTap), ask(text, opt), note(text), change(text, undo), working(on), prompt(text) }
+//          for work the app does with Ipsy by itself (Orders checks its "To check" orders)
 //
 // Tapped, Ipsy's chat pops out of it as a speech bubble (not a page): the bubble rises from
 // above its head, tail pointing at it, and shrinks back into it when put away.
@@ -142,6 +143,11 @@
   // The look: the app's own tokens, so it's Sea glass or Vintage, light or dark, as the app is
   // ---------------------------------------------------------------------------
   const CSS = `
+.ipsy-hint{position:fixed;z-index:6;max-width:min(260px,calc(100vw - 110px));padding:9px 13px;border-radius:18px 18px 18px 6px;font-size:14px;font-weight:600;line-height:1.3;
+  cursor:pointer;border:0;text-align:left;font-family:inherit;animation:ipsyPop .4s cubic-bezier(.2,1.3,.35,1) both;transform-origin:0 100%}
+.ipsy-glass.ipsy-hint{background:var(--sheet,rgba(248,250,249,.95));color:var(--text,#10181A);box-shadow:0 8px 24px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.5);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.ipsy-vintage.ipsy-hint{background:var(--mc-card,#FBF5E9);color:var(--mc-ink,#2B2522);box-shadow:0 0 0 2.5px var(--mc-mustard,#E3A72F),0 8px 20px rgba(43,37,34,.2)}
+.ipsy-hint.out{animation:ipsyShrink .2s ease-in both}
 .ipsy-btn{position:relative;width:62px;height:62px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .ipsy-btn:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px;border-radius:50%}
 .ipsy-btn .ipsy-host{width:100%;height:100%}
@@ -575,7 +581,39 @@
       busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
     }
 
-    return { open, close, get busy() { return busy; } };
+    // ---- For the app: Ipsy doing things by itself (Orders and Travel check their "To check" items) ----
+    let hintEl = null, hintTimer = 0;
+    function hint(text, onTap, ms = 9000) {
+      // A small speech bubble beside Ipsy's button, while the chat is closed; a tap opens the chat (or onTap).
+      if (!wrap.hidden && !wrap.classList.contains('ipsy-closing')) return;   // the chat is open: it's said there
+      if (hintEl) hintEl.remove();
+      clearTimeout(hintTimer);
+      const r = btn.getBoundingClientRect(); if (!r.width) return;   // (still laid out while the chat is open: only hidden)
+      const el = hintEl = document.createElement('button');
+      el.type = 'button'; el.className = 'ipsy-hint'; follow(el); el.textContent = text;
+      el.style.left = (r.right - 4) + 'px'; el.style.bottom = (window.innerHeight - r.top - 6) + 'px';
+      el.addEventListener('click', () => { gone(); (onTap || open)(); });
+      document.body.appendChild(el);
+      const gone = () => { if (el !== hintEl) return; hintEl = null; el.classList.add('out'); setTimeout(() => el.remove(), still() ? 0 : 200); };
+      hintTimer = setTimeout(gone, ms);
+      setMood(btnCell, 'talk'); setTimeout(() => { if (!busy) setMood(btnCell, 'idle'); }, 1400);
+    }
+    return {
+      open, close, get busy() { return busy; },
+      hint,
+      ask: (text, opt) => confirm(text, opt).then(ok => { if (!busy) { mood(document.activeElement === input ? 'listen' : 'idle'); say(''); } return ok; }),
+      // A line in the chat, or a change with its Undo, from work the app did with Ipsy outside a question.
+      note: text => { add({ t: 'act', text }); persist(); },
+      change: (text, undo) => {
+        const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        if (typeof undo === 'function') undos.set(id, undo);
+        add({ t: 'change', id, text }); persist();
+      },
+      // Ipsy at work in its corner (its button's mood) while the app does something for it.
+      working: on => { if (!busy) setMood(btnCell, on ? 'work' : 'idle'); },
+      // Open the chat and ask a question, as if typed (an app's "Ask Ipsy about this" button).
+      prompt: text => { open(); if (busy || !ls.get(K.ok, '')) { input.value = text; return; } input.value = text; submit(); },
+    };
   }
 
   // A character on its own, for a page that only shows Ipsy (aOS's Meet Ipsy card and page):
