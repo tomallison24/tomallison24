@@ -95,6 +95,7 @@ await page.evaluate(({ seed, SHEET }) => {
   localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
   localStorage.setItem('allison-notes-v1-tab', 'rem');
   localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
+  localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still (Vintage is the default design)
 }, { seed, SHEET });
 await page.reload();
 await page.waitForTimeout(1500);
