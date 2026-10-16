@@ -5,15 +5,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self' https:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Notes</title>
-<meta name="description" content="Notes and reminders with tags, search and share-a-copy, in the same frosted glass as Mail and News.">
+<meta name="description" content="Notes and reminders with tags, search and share-a-copy, in a mid-century Vintage design or Sea glass.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Notes">
-<link rel="apple-touch-icon" href="icon-180.png?v=5">
-<link rel="icon" type="image/png" href="icon-512.png?v=5">
+<link rel="apple-touch-icon" href="icon-180.png?v=6">
+<link rel="icon" type="image/png" href="icon-512.png?v=6">
 <link rel="manifest" href="manifest.webmanifest?v=4">
 <!--
   Notes - notes and reminders as a home-screen web app.
@@ -23,7 +24,11 @@
   after the #, which is never sent to any server, or a small .json file.
   Backups are a single .json file you save wherever you like.
 
-  Look: the same frosted glass over a drifting aurora as Mail and News.
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block)
+  and Standard (Sea glass: that block switched off, the same frosted glass
+  over a drifting aurora as Mail and News). The old Notes Vintage address
+  opens this same app.
 -->
 <style>
 /* Allison OS family look, shared with Mail and News: frosted glass over a slow aurora. */
@@ -644,6 +649,267 @@ svg.fs{fill:currentColor}
 :where(.iconbtn, .chip, #viewBtn, #tagsBtn, #tidyBtn){position:relative}
 :where(.iconbtn, .chip, #viewBtn, #tagsBtn, #tidyBtn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Notes' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage, Orders Vintage and Travel
+   Vintage: flat, solid shapes instead of glass; a cream ground and cards
+   (walnut in dark mode) with mustard, teal, burnt orange and olive; atomic
+   shapes behind the title that scroll away; Futura (iOS's own, so nothing to
+   download) for every word. A note's colour, a list's colour and a tag's hue
+   are drawn in the same palette. Last in the sheet so it wins over the glass
+   above; Settings > Design switches it off for the Standard (Sea glass)
+   design (../home/design.js). Only colours, shapes and type change: every
+   tap, swipe, sheet and step works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-ink:#1F6F6B; --accent-text:#1F6F6B; --sel-ink:#2B2522;
+  --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B;
+  --danger:#B8452B; --danger-ink:#9E3A1A; --danger-text:#9E3A1A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9; --toast:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
+  --tint-mix:14%; --note-mix:30%; --tcm:42%; --aurora:1; --mark:rgba(227,167,47,.45); --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-row:rgba(43,37,34,.06); --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --sw-off:rgba(43,37,34,.22); --track:rgba(43,37,34,.16);
+  /* the colour of a note, of a swipe action, and of a pinned or flagged thing */
+  --n-yellow:#E3A72F; --n-green:#7E8C34; --n-blue:#1F6F6B; --n-pink:#D0705F; --n-purple:#8B5E83;
+  --flag:#B3600F; --flag-tint:#E3A72F; --tag-tint:#1F6F6B; --arch-tint:#7E8C34; --bin-tint:#D8572A;
+  --flag-ink:#2B2522; --tag-ink:#FFF8EC; --arch-ink:#FFF8EC; --bin-ink:#FFF8EC;
+  /* the seven list colours, and the ink on each (a tick on a filled box) */
+  --lc0:#1F6F6B; --lc1:#E3A72F; --lc2:#7E8C34; --lc3:#8B5E83; --lc4:#D8572A; --lc5:#4DAFA6; --lc6:#B8452B;
+  --lci0:#FFF8EC; --lci1:#2B2522; --lci2:#FFF8EC; --lci3:#FFF8EC; --lci4:#FFF8EC; --lci5:#2B2522; --lci6:#FFF8EC;
+  /* the ten tag colours: teal, orange, plum, olive, rose, mustard, light teal, walnut, denim, brick */
+  --tc0:#1F6F6B; --tc1:#D8572A; --tc2:#8B5E83; --tc3:#7E8C34; --tc4:#C96F5E; --tc5:#D9A02A; --tc6:#3E9A92; --tc7:#8A5A3A; --tc8:#3F6E9A; --tc9:#B8452B;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --note-mix:26%; --tcm:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --gb-shine:none; --gb-shadow:none; --hi:transparent; --blur:none; --seg-thumb:#E3A72F; --lg-filter:none; --lgs-filter:none; --lgs-rim:transparent;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-row:rgba(244,236,221,.07); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --sw-off:rgba(244,236,221,.24); --track:rgba(244,236,221,.2);
+  --n-yellow:#E3A72F; --n-green:#A3B04A; --n-blue:#4FB3AB; --n-pink:#E8856F; --n-purple:#B58BB0;
+  --flag:#E3A72F; --flag-tint:#E3A72F; --tag-tint:#4FB3AB; --arch-tint:#A3B04A; --bin-tint:#E8684A;
+  --flag-ink:#2B2522; --tag-ink:#1E1916; --arch-ink:#1E1916; --bin-ink:#1E1916;
+  --lc0:#4FB3AB; --lc1:#E3A72F; --lc2:#A3B04A; --lc3:#B58BB0; --lc4:#E8684A; --lc5:#8FD3CC; --lc6:#E8684A;
+  --lci0:#1E1916; --lci1:#2B2522; --lci2:#1E1916; --lci3:#1E1916; --lci4:#1E1916; --lci5:#1E1916; --lci6:#1E1916;
+  --tc0:#4FB3AB; --tc1:#E8704A; --tc2:#B58BB0; --tc3:#A3B04A; --tc4:#E8856F; --tc5:#E3A72F; --tc6:#8FD3CC; --tc7:#B78A66; --tc8:#7FA9D1; --tc9:#E8684A;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --note-mix:26%; --tcm:62%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --gb-shine:none; --gb-shadow:none; --hi:transparent; --blur:none; --seg-thumb:#E3A72F; --lg-filter:none; --lgs-filter:none; --lgs-rim:transparent;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-row:rgba(244,236,221,.07); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --sw-off:rgba(244,236,221,.24); --track:rgba(244,236,221,.2);
+  --n-yellow:#E3A72F; --n-green:#A3B04A; --n-blue:#4FB3AB; --n-pink:#E8856F; --n-purple:#B58BB0;
+  --flag:#E3A72F; --flag-tint:#E3A72F; --tag-tint:#4FB3AB; --arch-tint:#A3B04A; --bin-tint:#E8684A;
+  --flag-ink:#2B2522; --tag-ink:#1E1916; --arch-ink:#1E1916; --bin-ink:#1E1916;
+  --lc0:#4FB3AB; --lc1:#E3A72F; --lc2:#A3B04A; --lc3:#B58BB0; --lc4:#E8684A; --lc5:#8FD3CC; --lc6:#E8684A;
+  --lci0:#1E1916; --lci1:#2B2522; --lci2:#1E1916; --lci3:#1E1916; --lci4:#1E1916; --lci5:#1E1916; --lci6:#1E1916;
+  --tc0:#4FB3AB; --tc1:#E8704A; --tc2:#B58BB0; --tc3:#A3B04A; --tc4:#E8856F; --tc5:#E3A72F; --tc6:#8FD3CC; --tc7:#B78A66; --tc8:#7FA9D1; --tc9:#E8684A;
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page) */
+.ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:220px;height:220px;left:auto;right:-70px;top:-60px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:44px;height:44px;left:auto;right:92px;top:80px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-30px;top:100px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+#remView .title{font-size:clamp(30px,8.6vw,40px)}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;max-width:190px;line-height:1.5}
+.sechead,.label{font-weight:600;letter-spacing:.16em;color:var(--muted)}
+.hint,.resulthead{color:var(--faint)}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow,.morebtn,.chip{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2)}
+.iconbtn[aria-pressed="true"],#edPin[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.textbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600}
+.pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text);font-weight:600;letter-spacing:.02em}
+.pillbtn:active{background:var(--mc-card-2)}
+.pillbtn.bluec,.pillbtn.bluec svg{color:var(--accent-text)}
+.pillbtn.bluec{background:transparent;box-shadow:inset 0 0 0 2px var(--accent)}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.quiet.danger,.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);border-radius:999px;font-weight:600}
+.lg .btn{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.lg .btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .btn.danger,.lg .btn.quiet.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);border-radius:999px}
+.fab{background:var(--mc-card);color:var(--icon);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.fab:not(.small){background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
+.send{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.search{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.quickadd{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.quickadd:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.morebtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.02em}
+.morebtn:active{background:var(--mc-card-2)}
+.arrow{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+#remBellBtn .bdot{background:var(--mc-orange);box-shadow:none}
+
+/* the dock: a cream pill, with a mustard thumb under the chosen section */
+.tabs{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 22px -12px var(--lift-strong)}
+.tab{color:var(--muted);letter-spacing:.02em}
+.tab svg{color:var(--icon)}
+.tabs > .slthumb,.tab[aria-selected="true"]{background:var(--mc-mustard);box-shadow:none}
+.tabs.slides .tab[aria-selected="true"]{background:none}
+.tab[aria-selected="true"],.tab[aria-selected="true"] svg,.tabs.slides .tab[aria-selected="true"],.tabs.slides .tab[aria-selected="true"] svg{color:var(--mc-on-mustard)}
+.slthumb{box-shadow:none;background:var(--mc-mustard)}
+
+/* the filters: cream pills, with a mustard thumb under the chosen one */
+.chip{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
+.chip[aria-pressed="true"]{background:var(--mc-mustard);box-shadow:none;color:var(--mc-on-mustard)}
+.chips.slides .chip[aria-pressed="true"]{color:var(--mc-on-mustard);font-weight:600}
+.chips > .slthumb,.opts > .slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.chip.ghost{background:transparent;border:1.5px dashed var(--ring);box-shadow:none}
+.chip .badge,.badge{background:var(--mc-orange);color:#FFF8EC}
+.ctile i{width:14px;height:14px;background:var(--tc);box-shadow:none}
+.ctile.plain i{background:var(--ring)}
+.chip .sw,.opt .sw{background:var(--lc);box-shadow:none}
+
+/* tags: outlined chips, one Retro hue each */
+.tchip,.ctile{--tc:var(--tc0)}
+.tchip{background:color-mix(in srgb,var(--tc) 18%,transparent);border:0;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tc) 55%,transparent);color:color-mix(in srgb,var(--tc) var(--tcm),var(--text));font-weight:600;letter-spacing:.02em}
+.tchip.over{--tc:var(--tc9)}
+.tchip.lst{color:var(--muted);background:transparent;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.tchip.lst::before{background:var(--lc);box-shadow:none}
+
+/* the reminders' view switch: a cream pill with a mustard thumb */
+.seg{background:var(--mc-card);border:0;border-radius:22px;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg button{border-radius:19px;font-weight:600;letter-spacing:.04em}
+.seg > .slthumb{border-radius:19px}
+.seg button b{font-weight:600}
+.seg button[aria-pressed="true"],.seg.slides button[aria-pressed="true"],.seg button[aria-pressed="true"] b{color:var(--mc-on-mustard);box-shadow:none}
+.seg button.warn[aria-pressed="true"] b{color:#8A2D12}
+
+/* cards: solid cream, round-cornered, no rim light; a note keeps its colour, flat */
+.card.glass,.ctile.glass,.rgroup.glass,.box.glass,.paper.glass,.notice.glass,.empty.glass,.cookcard.glass,.empty{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.card.glass[data-color]:not([data-color="none"]),.paper.glass[data-color]:not([data-color="none"]){box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tint) 60%,transparent);border-color:transparent}
+.card h3{font-weight:600;letter-spacing:-.015em}
+.empty{padding:26px 20px}
+.empty strong{font-weight:600;letter-spacing:-.01em}
+.ctile .cn{font-weight:600}
+.ctile .cname{font-weight:600}
+.cookcard.glass{border-radius:24px}
+.nrow .nt{font-weight:600}
+.grid .sw:is(.show-l,.show-r,.open-l,.open-r){border-radius:20px}
+
+/* reminders: round ticks in the list's own colour */
+.rgroup > .sechead{padding-top:13px}
+.check{border-radius:50%;color:var(--lci,#FFF8EC)}
+.check[aria-checked="true"]{background:var(--lc);box-shadow:none}
+.tbody .t{font-weight:600}
+.prio i{background:var(--ring)}
+.prio.p1 i:nth-child(-n+1),.prio.p2 i:nth-child(-n+2),.prio.p3 i:nth-child(-n+3){background:var(--mc-orange)}
+.sw-acts .sa{font-weight:600;letter-spacing:.02em}
+.sa .gi{background:var(--tint);color:var(--ink);border:0;box-shadow:none}
+.sw:is(.show-l,.show-r,.open-l,.open-r) > :is(.card,.nrow){background:var(--mc-card);background-clip:padding-box}
+.sw:is(.show-l,.show-r,.open-l,.open-r) > .card[data-color]:not([data-color="none"]){background:linear-gradient(color-mix(in srgb,var(--tint) var(--note-mix),var(--glass)),color-mix(in srgb,var(--tint) var(--note-mix),var(--glass))),var(--bg)}
+
+/* the strips and the swatches */
+.swatch{border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);background:color-mix(in srgb,var(--tint) 75%,var(--mc-card))}
+.swatch[data-color="none"]{background:var(--mc-card-2)}
+.swatch.list{background:var(--lc)}
+.lg .swatch{border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.swatch[aria-checked="true"]{outline:3px solid var(--accent);outline-offset:2px}
+
+/* the sheets: cream panels with round corners */
+.lg .sheet:not(.page){background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.sheet.page{background:var(--bg);overflow:hidden}
+.sheet.page::before{content:'';position:absolute;z-index:0;width:190px;height:190px;border-radius:50%;right:-60px;top:-122px;background:var(--sky-disc,var(--mc-mustard));opacity:var(--aurora);pointer-events:none}
+.sheet.page > *{position:relative;z-index:1}
+.lg .sheethead h2{font-weight:600;letter-spacing:-.01em}
+.lg .okbtn,.lg .okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.lg .okbtn:active{filter:brightness(.92)}
+.lg .rgroup,.lg .box,.lg .empty.glass{background:var(--fill);box-shadow:none;border-radius:20px}
+.lg .paper,.lg .paper[data-color="none"]{border-radius:20px;background:var(--mc-card);box-shadow:none}
+.lg .paper[data-color]:not([data-color="none"]){background:color-mix(in srgb,var(--tint) var(--note-mix),var(--glass));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tint) 60%,transparent)}
+.sheet.page .rgroup,.sheet.page .box{background:var(--mc-card)}
+.lg .rowbtn:active{background:var(--fill)}
+.rowbtn{font-weight:600}
+.rowbtn .ic{color:var(--icon)}
+.paper #edTitle{font-weight:600;letter-spacing:-.035em}
+.lg .box:has(.plain:focus-visible,.tagedit input:focus-visible){box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .inrow input[type="date"],.lg .inrow input[type="time"],.lg .inrow input[type="datetime-local"],.lg .linkbox{
+  border:0;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .inrow input:focus-visible,.lg .linkbox:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .opt{background:transparent;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.02em}
+.lg .opt[aria-checked="true"],.lg .opt[aria-pressed="true"]{background:var(--mc-mustard);color:var(--sel-ink);box-shadow:none}
+.opts.slides .opt[aria-checked="true"]{background:none;box-shadow:none}
+.lg .field > .label,.lg .field > .hint,.lg .sheetbody > .hint{margin-left:6px;margin-right:6px}
+.lg .sheet.page .opt{background:transparent}
+.cookcard .k{color:var(--accent-text);letter-spacing:.14em}
+.cookcard .big{font-weight:600;letter-spacing:-.02em}
+
+/* switches: a flat track, teal when on */
+.switch{background:var(--sw-off);box-shadow:none}
+.switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+.swrow:active > .switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+[aria-checked="true"] > .switch{background:var(--mc-teal)}
+.swrow{font-weight:600}
+
+/* step by step */
+#cook{background:var(--bg)}
+#cook::before{content:'';position:absolute;z-index:-1;width:220px;height:220px;border-radius:50%;right:-80px;top:-120px;background:var(--sky-disc,var(--mc-mustard));opacity:var(--aurora)}
+.cooktop .cn{min-width:0;padding:5px 12px;border-radius:999px;background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text);text-align:center}
+.cookbar{background:var(--fill)}
+.cookbar i{background:var(--mc-teal)}
+.cookdots i{background:var(--ring)}
+.cookdots i.on{background:var(--mc-orange)}
+.ingl .bx{border-radius:50%}
+.ingl [aria-pressed="true"] .bx{color:var(--on-accent)}
+
+/* the toast and the pills at the top */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:18px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.updpill{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600}
+.updpill svg{color:var(--mc-mustard)}
+@keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05)}}
+</style>
+<script src="../home/design.js" data-app="notes" data-was="notesvintage" data-keys="allison-notesv-=allison-notes-" data-dbs="allison-notesv=allison-notes"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 
@@ -659,8 +925,8 @@ svg.fs{fill:currentColor}
         <h1 class="title"><span id="notesTitle">Notes</span><small id="notesSub"></small></h1>
         <div class="acts">
           <button class="iconbtn glass" id="viewBtn" type="button" aria-label="Switch to list view"></button>
-<button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
-            <svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg>
+<button class="iconbtn glass" id="setBtn" data-open-backup type="button" aria-label="Settings">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg>
           </button>
           <button class="iconbtn glass" id="tagsBtn" type="button" aria-label="Manage tags">
             <svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>
@@ -688,8 +954,8 @@ svg.fs{fill:currentColor}
           <button class="iconbtn glass" id="remBellBtn" type="button" aria-label="Notifications">
             <svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg><i class="bdot" id="remBellDot" hidden></i>
           </button>
-<button class="iconbtn glass" data-open-backup type="button" aria-label="Backup and import">
-            <svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg>
+<button class="iconbtn glass" id="remSetBtn" data-open-backup type="button" aria-label="Settings">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg>
           </button>
           <button class="iconbtn glass" id="remTagsBtn" type="button" aria-label="Manage tags">
             <svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>
@@ -919,9 +1185,17 @@ svg.fs{fill:currentColor}
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="bkLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="bkLbl">Backup and sync</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
-      <div class="sheetbody">
-        <p class="hint" id="bkStatus"></p>
+      <div class="sheethead"><h2 id="bkLbl">Settings</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
+      <div class="sheetbody" id="bkBody">
+        <div class="field">   <!-- Design: Vintage or Standard, at once (app.js, ../home/design.js) -->
+          <p class="label">Design</p>
+          <div class="rgroup glass" id="bkDesign"></div>
+          <p class="hint">Just on this phone, and at once.</p>
+        </div>
+        <div class="field">
+          <p class="label">Backup and sync</p>
+          <p class="hint" id="bkStatus"></p>
+        </div>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="bkSheet">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>

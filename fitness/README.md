@@ -1,12 +1,9 @@
 # Fitness
 
-A simple workout log as a home-screen web app, in the same frosted glass as
-Calendar, Notes and Travel. It is kept deliberately small: the week, and for
-each day what you did.
-
-**Fitness Vintage** is the same app in a mid-century modern look, as its own app
-with its own log and settings ([`fitnessvintage/`](../fitnessvintage/README.md)).
-It needs nothing new from Google, and can share this app's Google Sheet.
+A simple workout log as a home-screen web app, in two designs: mid-century
+Vintage (the default) or the same frosted Sea glass as Calendar, Notes and
+Travel, picked in **Settings → Design** (below). It is kept deliberately small:
+the week, and for each day what you did.
 
 - **The week**: seven rows, one a day, each with coloured chips for the
   muscle groups worked and how many exercises and sets. Today is marked. A day you
@@ -45,9 +42,71 @@ It needs nothing new from Google, and can share this app's Google Sheet.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
-- **Week and Analysis**: pick between them from the Liquid Glass pill at the
+- **Week and Analysis**: pick between them from the pill at the
   bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
   it, and the app remembers the view you were on. See below.
+
+## The two designs
+
+One app, one log: the design changes only how Fitness looks, at once, and is
+kept on this phone (**Settings → Design**, the gear at the top, the first and
+only section), as in Clock. `../home/design.js`, loaded in `<head>`, applies it
+before the page is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Mail, Home and Orders:
+  - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+    place of glass;
+  - mustard, teal, burnt orange and olive: the Week / Month switch has a
+    mustard thumb, today is a mustard disc, the view picker at the bottom is a
+    walnut pill with a mustard chip, the + button and the sheet's Done button
+    are solid burnt orange, and secondary buttons are outlined teal;
+  - each muscle group keeps one colour, drawn from the Retro colours (chest
+    orange, back teal, shoulders mustard, arms olive, plus walnut, denim,
+    brick, plum, sky and taupe for lower back, core, legs, glutes, cardio and
+    your own). They colour the chips, the dots and the bars in Analysis; the
+    name is always written beside the colour;
+  - three atomic shapes behind the title that scroll away with the page, and
+    three little bars under it; Futura, which iOS has built in, so no font is
+    downloaded.
+
+  **The sky.** Behind the title is the shared **Vintage sky**
+  (`../home/sky.js`, as in every Vintage design), with the real sun: by day a
+  ground washed with mustard, the sun and rays that turn very slowly; after
+  sunset a ground washed with deep teal, the moon and twinkling stars; each
+  over cream (Light) or walnut (Dark). Sunrise and sunset are for the phone's
+  place (kept on the phone, to a tenth of a degree, and only if the app
+  already has location permission: it never asks), else the time zone. It
+  holds still with reduced motion. This app only gives its disc its colour
+  (`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to
+  its header. Checked by `aOS/scripts/sky-test.mjs`.
+- **Standard**: Sea glass: Notes' style block, unchanged, plus Fitness's own
+  pieces; Liquid Glass sheets, no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. Only colours, shapes and type change: every button, sheet and swipe works
+the same in both. The choice is `localStorage` `design.fitness`. What iOS reads
+when Fitness is added to the Home Screen follows it: the icon (`icon-180.png`,
+Vintage: a cream dumbbell on walnut with a mustard sun and a burnt-orange pill;
+`icon-glass-180.png`, Standard: a white dumbbell on slate), the status bar
+style (`default` in Vintage, where `black-translucent`'s white clock would
+vanish on the cream) and the bar colours. The Week / Month thumb is measured
+again on a change, since Futura and the system font are different widths.
+
+**The old Fitness Vintage app.** Fitness Vintage used to be an app of its own
+(`fitnessvintage/`, with its own log and Sheet settings). Its address now
+opens this same app (the deploy copies `fitness/` there,
+`.github/workflows/news.yml`), so a phone that added it keeps it. The first
+time it opens there, `design.js` moves that app's data on the phone over to
+Fitness' names (`allison-fitnessv-v1…` → `allison-fitness-v1…`: the log, the
+graves, the Sheet link, the view; the IndexedDB copy of the Sheet link
+`allison-fitnessv` → `allison-fitness`, which the app waits for before it opens
+it; and what it had seen, so no walkthrough again), unless Fitness already has
+data on that phone; nothing old is deleted. Both always used the same Sheet
+script, so a Sheet connected to either keeps working. Its **Open Drinks** row
+now opens Drinks (`../drinks/`), which carries both designs too.
 
 ## Analysis
 
@@ -175,7 +234,8 @@ iPhone, it keeps separate storage, and Calendar can't see its log.
 ## How it's built
 
 **No build step.** `index.html` is the page and its look: Notes' style block,
-unchanged, plus Fitness's own pieces at the end. The day sheet is the same
+unchanged, plus Fitness's own pieces, then the Vintage block (`<style
+id="vintage">`, see The two designs). The day sheet is the same
 Liquid Glass sheet as Calendar's. `app.js` is the app, `analysis.js` does
 Analysis's comparisons, and `sw.js` is the offline shell.
 
@@ -240,15 +300,17 @@ iPhone didn't fill in another app's saved code.
 ## Icons
 
 `node fitness/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
-from `icon.svg`: "Slate", a white dumbbell on slate, one of the Sea glass
-tints.
+from `icon.svg` (Vintage: a cream dumbbell on walnut, with a mustard sun and a
+burnt-orange pill), and `icon-glass-512.png` and `icon-glass-180.png` from
+`icon-glass.svg` (Standard: "Slate", a white dumbbell on slate, one of the Sea
+glass tints).
 
 ## Tests
 
 ```sh
 node fitness/scripts/analysis-test.mjs                           # Analysis's sums: the windows, totals, stronger / weaker / steady, groups missed
 node fitness/scripts/sheet-test.mjs                              # google-sheet-sync.gs on an in-memory Sheet: secret, merge, deletions, the Workouts tab
-node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, search, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP
+node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, search, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP, both designs, Settings > Design, the old Fitness Vintage address
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps

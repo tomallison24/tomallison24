@@ -84,6 +84,27 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.4', date: '2026-10-16', title: 'Your look, in Settings',
+      highlights: ['Every app opens in Vintage. Prefer Sea glass? Pick it in the app\'s Settings',
+        'Each app is one app now, with both looks inside',
+        'Added a Vintage app before? It keeps working, with your data'],
+      notes: ['Every app carries both its designs, as Clock does: Vintage (mid-century modern, now the default) and Standard (Sea glass), picked in the app\'s own Settings > Design, the first section. The choice changes the app at once, is kept on this phone, and the Home Screen icon, status bar and bar colours follow it when you add the app',
+        'The Vintage apps (Mail Vintage, Notes Vintage and the rest) are no longer apps of their own: aOS shows one app for each, with no Design menu. A Vintage app already on your Home Screen still opens, now as the app itself, in Vintage, with its notes, settings, sign-ins and history moved over on the phone the first time (nothing is deleted)'],
+      apps: {
+        mail: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        calendar: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        news: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        weather: { highlights: ['Vintage and Sea glass are now one app: pick your look in Places > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Places'] },
+        notes: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        podcasts: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        travel: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        places: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        fitness: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        drinks: { highlights: ['Vintage and Sea glass are now one app: pick your look in More > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in More'] },
+        meals: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        orders: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        house: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+      } },
     { v: '1.3', date: '2026-10-13', title: 'A look for every app', added: ['clock', 'orders'],
       highlights: ['Every app has a Vintage design: pick your look in aOS',
         'Clock is new: world time, alarms, a stopwatch and timers',
@@ -222,32 +243,19 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
-  // Apps that come in more than one design. aOS shows one row for the app and a Design menu on its
-  // page; each design is its own app folder (and its own Home Screen app, with its own sign-in and
-  // settings). The first is the standard one; the rest get no row of their own (VARIANTS).
-  const DESIGNS = {
-    mail: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'mail' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mailvintage' }],
-    orders: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'orders' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'ordersvintage' }],
-    house: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'house' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'housevintage' }],
-    calendar: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'calendar' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'calendarvintage' }],
-    news: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'news' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'newsvintage' }],
-    weather: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'weather' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'weathervintage' }],
-    travel: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'travel' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'travelvintage' }],
-    fitness: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'fitness' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'fitnessvintage' }],
-    drinks: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'drinks' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'drinksvintage' }],
-    notes: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'notes' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'notesvintage' }],
-    podcasts: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'podcasts' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'podcastsvintage' }],
-    places: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'places' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'placesvintage' }],
-    meals: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'meals' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mealsvintage' }],
-  };
+  // Apps that come in more than one design, each design its own app folder: aOS would show one row for
+  // the app and a Design menu on its page. None now: every app carries both its designs itself, Vintage
+  // (the default) and Standard (Sea glass), picked in its own Settings (../home/design.js). The old
+  // Vintage apps' addresses (mealsvintage/ and the rest) open the same app (news.yml copies it there).
+  const DESIGNS = {};
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', notesvintage: 'Notes', podcastsvintage: 'Podcasts', placesvintage: 'Places', mealsvintage: 'Meals', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -280,388 +288,6 @@
         }
       ]
     },
-    "newsvintage": {
-      "tag": "Headlines, scores and your teams, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same News in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "globe",
-          "t": "News by topic",
-          "d": "Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more."
-        },
-        {
-          "i": "list",
-          "t": "Tap to read",
-          "d": "Stories are newest first and each shows only once. Tap one to read the full article on the publisher's site."
-        },
-        {
-          "i": "sparkle",
-          "t": "Summarize a story",
-          "d": "Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about the article. Summaries are for signed-in family."
-        },
-        {
-          "i": "star",
-          "t": "Follow your teams",
-          "d": "On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own topic and team choices and reads the same headlines, so the standard News stays just as it is. Use either, or both."
-        }
-      ]
-    },
-    "fitnessvintage": {
-      "tag": "A simple workout log, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Fitness in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "calendar",
-          "t": "Your week at a glance",
-          "d": "Each day shows the muscle groups you worked and how many sets. Swipe sideways to move a week at a time."
-        },
-        {
-          "i": "dumbbell",
-          "t": "Log in seconds",
-          "d": "Search an exercise, like \"db curl\", and last time's weight, reps and sets fill in for you."
-        },
-        {
-          "i": "heart",
-          "t": "Cardio counts too",
-          "d": "Log time and distance on the treadmill, bikes, rower, track or pool alongside your lifting."
-        },
-        {
-          "i": "chart",
-          "t": "See your progress",
-          "d": "Analysis compares this week or month with the one before, showing what's improving and what needs work."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own log, so the standard Fitness stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step."
-        }
-      ]
-    },
-    "travelvintage": {
-      "tag": "Every trip, all in one place, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Travel in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "inbox",
-          "t": "Fills itself from Gmail",
-          "d": "Connect Gmail and your flight, hotel and rental car confirmations become trips on their own."
-        },
-        {
-          "i": "plane",
-          "t": "What's next",
-          "d": "See your next flight, check-in or pick-up at the top, with live flight status and gates as take-off nears."
-        },
-        {
-          "i": "calendar",
-          "t": "Trips day by day",
-          "d": "Each trip is a day-by-day timeline. Add the whole trip to the Family calendar in one tap."
-        },
-        {
-          "i": "search",
-          "t": "Plan the next one",
-          "d": "Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own trips and Gmail sign-in, so the standard Travel stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step."
-        }
-      ]
-    },
-    "drinksvintage": {
-      "tag": "A simple log of what you drink, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Drinks in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "calendar",
-          "t": "Your week in one number",
-          "d": "Each day shows its standard drinks or alcohol-free, and the week adds up against the limit you set."
-        },
-        {
-          "i": "plus",
-          "t": "One tap to log",
-          "d": "Your usual drinks sit in each day as tiles. Tap one to log it, or Something else for anything new."
-        },
-        {
-          "i": "chart",
-          "t": "How it's going",
-          "d": "Tap the week's number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which."
-        },
-        {
-          "i": "lock",
-          "t": "Private to you",
-          "d": "Signed in, your log is kept in your family account where only you can see it, and follows you to another phone."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own copy of your log on the phone and shares your private log with Drinks through your account, so a drink logged in either shows in both. Use either, or both."
-        }
-      ]
-    },
-    "weathervintage": {
-      "tag": "The forecast, radar and alerts, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Weather in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "rain",
-          "t": "Know when rain starts",
-          "d": "A chip under the temperature says when rain is due to start or stop, like \"Rain at 3:45PM\" (continental US)."
-        },
-        {
-          "i": "radar",
-          "t": "Radar that looks ahead",
-          "d": "Watch the latest radar, then up to four hours of forecast rain, looping on a map. Continental US only."
-        },
-        {
-          "i": "alert",
-          "t": "Weather alerts",
-          "d": "Active National Weather Service alerts show at the top, most severe first. Tap one to read it."
-        },
-        {
-          "i": "pin",
-          "t": "Your places",
-          "d": "It opens to where you are. Save up to 12 cities and swipe the forecast sideways to move between them."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own saved places and settings, so the standard Weather stays just as it is. Use either, or both."
-        }
-      ]
-    },
-    "calendarvintage": {
-      "tag": "The Family calendar, everywhere, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Calendar in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "people",
-          "t": "One shared calendar",
-          "d": "This is your iCloud Family calendar, so changes here show up in everyone's iPhone Calendar too."
-        },
-        {
-          "i": "calendar",
-          "t": "Day to Year views",
-          "d": "Pick Day, Week, Month, Year or List from the bottom bar, swipe to move through time, and tap Today to come back."
-        },
-        {
-          "i": "clock",
-          "t": "Add events fast",
-          "d": "Tap + or an empty time to add an event, with repeats, alerts, travel time and notes."
-        },
-        {
-          "i": "swipe",
-          "t": "Drag to reschedule",
-          "d": "In Day or Week, press and hold an event to drag it to a new time, or drag its bottom edge to change its length."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own settings and uses Calendar's iCloud connection and layers, so the standard Calendar stays just as it is. Use either, or both."
-        }
-      ]
-    },
-    "notesvintage": {
-      "tag": "Notes, reminders and lists, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Notes in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "note",
-          "t": "Notes with #tags",
-          "d": "Type a #tag anywhere to file a note into a collection. Pin, color and search your notes too."
-        },
-        {
-          "i": "check",
-          "t": "Quick reminders",
-          "d": "Type \"Call mom tomorrow #family\" and it's set. See Today, Upcoming and Flagged at a glance."
-        },
-        {
-          "i": "list",
-          "t": "Smart grocery lists",
-          "d": "Grocery items sort into store sections in aisle order, and it learns where you like things to go."
-        },
-        {
-          "i": "sparkle",
-          "t": "Paste from anywhere",
-          "d": "Copy a reply from Claude or anywhere, tap the clipboard button, and it becomes a note or a list of reminders."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own notes, lists and settings, so the standard Notes stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step."
-        }
-      ]
-    },
-    "podcastsvintage": {
-      "tag": "Your shows, ready to play, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Podcasts in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "play",
-          "t": "Up Next",
-          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
-        },
-        {
-          "i": "search",
-          "t": "Find new shows",
-          "d": "Browse Apple's Top shows, search by name, or paste a show's feed link. Private and premium feeds work too."
-        },
-        {
-          "i": "clock",
-          "t": "Listen your way",
-          "d": "Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV."
-        },
-        {
-          "i": "refresh",
-          "t": "Resume where you left off",
-          "d": "Each episode resumes right where you stopped, and the next one in Up Next plays when it ends."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own shows, progress and settings, so the standard Podcasts stays just as it is. Use either, or both, and move your shows across with Export and Import."
-        }
-      ]
-    },
-    "placesvintage": {
-      "tag": "Where to go, and where you've been, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Places in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "list",
-          "t": "Want to go and Been",
-          "d": "Keep two lists: places you want to try and places you've been. Tap Been to move a place across."
-        },
-        {
-          "i": "map",
-          "t": "Your places on a map",
-          "d": "Pins show blue for Want to go and gold for Been. Touch and hold anywhere on the map to add a spot."
-        },
-        {
-          "i": "search",
-          "t": "Find somewhere new",
-          "d": "Search \"tacos\" or a name to find nearby businesses, or zoom in to see food, things to do and shops."
-        },
-        {
-          "i": "star",
-          "t": "Rate and remember",
-          "d": "Add stars, price and notes with #tags, and Places keeps track of every visit."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own places, so the standard Places stays just as it is. Use either, or both, and give them the same Google Sheet (Notes’) to keep them in step."
-        }
-      ]
-    },
-    "mealsvintage": {
-      "tag": "Dinner for the family, for less, mid-century style",
-      "cards": [
-        {
-          "i": "star",
-          "t": "A vintage look",
-          "d": "The same Meals in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type."
-        },
-        {
-          "i": "calendar",
-          "t": "A week of dinners",
-          "d": "Pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine."
-        },
-        {
-          "i": "tag",
-          "t": "This week's deals",
-          "d": "Your Whole Foods' sales, found for you or pasted from its app, sorted like a grocery list."
-        },
-        {
-          "i": "list",
-          "t": "One shopping list",
-          "d": "Everything the dinners need in one list, sorted by aisle, with what's on sale. Tick it off in the store."
-        },
-        {
-          "i": "shield",
-          "t": "Safe for the family",
-          "d": "Every plan is checked against your family's allergies before it's kept."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it shares the family’s plans, deals and settings with the standard Meals, so a plan made in either shows in both. Use either, or both."
-        }
-      ]
-    },
-    "mailvintage": {
-      "tag": "Your mail, mid-century style",
-      "cards": [
-        { "i": "inbox", "t": "A vintage look", "d": "The same Mail in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
-        { "i": "swipe", "t": "Swipe to sort", "d": "Swipe right to tag or move to Marketing; swipe left to flag, archive or trash. Every swipe has Undo." },
-        { "i": "tag", "t": "Tags that stick", "d": "Tag one email and everything from that sender gets the tag too, now and in future." },
-        { "i": "bell", "t": "Remind Me", "d": "Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top." },
-        { "i": "share", "t": "Its own app", "d": "This design is its own app: it signs in and keeps its settings on its own, so the standard Mail stays just as it is. Use either, or both." }
-      ]
-    },
-    "housevintage": {
-      "tag": "Your whole house, mid-century style",
-      "cards": [
-        { "i": "star", "t": "A vintage look", "d": "The same Home in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
-        { "i": "star", "t": "Favorites first", "d": "It opens on what you use most: what's playing, what's running now, the weather, thermostats, cameras and lamps." },
-        { "i": "thermo", "t": "Heat and cool", "d": "Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls." },
-        { "i": "bulb", "t": "Lights by room", "d": "Switch a whole room on or off, dim each light with a slider, or use All on and All off." },
-        { "i": "shield", "t": "Cameras and security", "d": "Arm or disarm Blink, see each camera's latest still, take a snapshot or pause motion detection." },
-        { "i": "house", "t": "Its own app", "d": "This design is its own app: it connects and keeps its settings on its own, so the standard Home stays just as it is. Use either, or both." }
-      ]
-    },
-    "ordersvintage": {
-      "tag": "Everything you've bought, mid-century style",
-      "cards": [
-        { "i": "star", "t": "A vintage look", "d": "The same Orders in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type." },
-        { "i": "inbox", "t": "Fills itself from Gmail", "d": "Connect Gmail and your order, shipping and pickup emails become orders on their own." },
-        { "i": "truck", "t": "See where it is", "d": "On the way, ordered, ready for pickup or delivered, each with its courier and tracking number." },
-        { "i": "box", "t": "Tracking in one tap", "d": "Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up." },
-        { "i": "check", "t": "A quick check when it's unsure", "d": "An order read from the words of an email, or one that has gone quiet, waits under To check." },
-        { "i": "share", "t": "Its own app", "d": "This design is its own app: it keeps its orders and settings on its own, so the standard Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step." }
-      ]
-    },
     "mail": {
       "tag": "Mail.Controlled.",
       "cards": [
@@ -689,6 +315,11 @@
           "i": "share",
           "t": "Send with Undo",
           "d": "Reply, Reply All or Forward with attachments. Every send waits 5 seconds so you can take it back."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -719,6 +350,11 @@
           "i": "grid",
           "t": "Everything in one place",
           "d": "Turn on layers for holidays, Notes reminders, trips, Mail reminders, workouts and the weather forecast."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -746,14 +382,14 @@
           "d": "On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams."
         },
         {
-          "i": "chart",
-          "t": "League tables",
-          "d": "Switch Sport to Table for a league's standings, kept up to date as games finish, with the teams in play marked and the ones you follow tinted."
+          "i": "bolt",
+          "t": "Scores and tables",
+          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV, or to Table for a league's standings, kept up to date as games finish. Tap a football or rugby game for its own page: events, stats, shots and players."
         },
         {
-          "i": "bolt",
-          "t": "Live scores",
-          "d": "Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football or rugby game for its own page: events, stats, shots and players."
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -784,6 +420,11 @@
           "i": "chart",
           "t": "Every hour and day",
           "d": "Tap an hour or a day for the details: feels like, wind, humidity, chance of rain, sunrise and sunset."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -814,6 +455,11 @@
           "i": "swipe",
           "t": "Swipe to tidy",
           "d": "Swipe a note left to archive or delete it, or right to pin or tag it. Deleted notes wait 30 days in Trash."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -839,6 +485,11 @@
           "i": "refresh",
           "t": "Resume where you left off",
           "d": "Each episode resumes right where you stopped, and the next one in Up Next plays when it ends."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -869,6 +520,11 @@
           "i": "note",
           "t": "Add by hand",
           "d": "Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -899,6 +555,11 @@
           "i": "sliders",
           "t": "Choose what counts",
           "d": "Packages and store pickups show. Turn on food, subscriptions or tickets in Settings."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -913,7 +574,7 @@
         {
           "i": "map",
           "t": "Your places on a map",
-          "d": "Pins show blue for Want to go and gold for Been. Touch and hold anywhere on the map to add a spot."
+          "d": "Pins show which places you want to go to and which you’ve been to, each in its own color. Touch and hold anywhere on the map to add a spot."
         },
         {
           "i": "search",
@@ -924,6 +585,11 @@
           "i": "star",
           "t": "Rate and remember",
           "d": "Add stars, price and notes with #tags, and Places keeps track of every visit."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -949,6 +615,11 @@
           "i": "chart",
           "t": "See your progress",
           "d": "Analysis compares this week or month with the one before, showing what's improving and what needs work."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -974,6 +645,11 @@
           "i": "lock",
           "t": "Private to you",
           "d": "Signed in, your log is kept in your family account where only you can see it, and follows you to another phone."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -1004,6 +680,11 @@
           "i": "people",
           "t": "Shared with the family",
           "d": "Everyone signed in sees the same plan and deals."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -1034,6 +715,11 @@
           "i": "moon",
           "t": "Routines in one tap",
           "d": "Run Goodnight, Evening Lights and your other routines straight from Favorites."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     }
@@ -1787,16 +1473,6 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       pre: () => mailFab() },
   ], done: () => mailFab() };
   function mailFab() { const f = document.getElementById('fab'); if (f && f.dataset.aosShown) { f.classList.add('hide'); delete f.dataset.aosShown; } }
-  // Mail Vintage is Mail's page in another look, so it has Mail's screen to point at.
-  SPOTS.mailvintage = { stops: [
-    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'A vintage look', d: 'The same Mail in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
-    { sel: '[data-aos-demo="mail-row"] li', demo: MAIL_ROW, pad: 4, t: 'Swipe to sort', d: 'Swipe right to tag or move to Marketing; swipe left to flag, archive or trash. Every swipe has Undo.', g: 'swipe-right',
-      pre: () => { const li = mailRow(); if (li) { li.classList.remove('peek'); void li.offsetWidth; li.classList.add('peek'); } } },
-    { sel: '[data-aos-demo="mail-row"] .tchip:not(.rem)', demo: MAIL_ROW, pad: 6, t: 'Tags that stick', d: 'Tag one email and everything from that sender gets the tag too, now and in future.' },
-    { sel: '[data-aos-demo="mail-row"] .tchip.rem', demo: MAIL_ROW, pad: 6, t: 'Remind Me', d: 'Put a conversation away until Tomorrow, This Weekend or Next Week. It comes back unread at the top.' },
-    { sel: '#screen .signin [data-act="signin"]', t: 'Its own app', d: 'This design is its own app: it signs in and keeps its settings on its own, so the standard Mail stays just as it is. Use either, or both.', g: 'tap',
-      pre: () => mailFab() },
-  ], done: () => mailFab() };
   SPOTS.calendar = { stops: [
     { sel: ['#mgrid', '#main .mgrid'], t: 'One shared calendar', d: 'This is your iCloud Family calendar, so changes here show up in everyone’s iPhone Calendar too.' },
     { sel: '.dock .tabs', t: 'Day to Year views', d: 'Pick Day, Week, Month, Year or List from the bottom bar, swipe to move through time, and tap Today to come back.', g: 'tap' },
@@ -1810,7 +1486,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['#feed .sum-btn', '#feed'], t: 'Summarize a story', d: 'Tap the sparkle on a story for a two-sentence summary and the key takeaways, then ask questions about the article. Summaries are for signed-in family.', g: 'tap' },
     { sel: '#viewBtn', t: 'Follow your teams', d: 'On Sport, the My teams pill holds Liverpool, England and the rest: pick one to see just their news and games, or choose your own sports and teams.', g: 'tap' },
     { sel: '#viewBtn', t: 'League tables', d: 'Switch Sport to Table for a league\'s standings, kept up to date as games finish, with the teams in play marked and the ones you follow tinted.' },
-    { sel: '#viewBtn', t: 'Live scores', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football or rugby game for its own page: events, stats, shots and players.' },
+    { sel: '#viewBtn', t: 'Scores and tables', d: 'Switch Sport to Scores for live results, upcoming fixtures and where to watch on US TV. The Premier League shows first; a pill picks another league. Tap a football or rugby game for its own page: events, stats, shots and players.' },
     { sel: '#refresh', t: 'Always fresh', d: 'News checks for new stories on its own. Tap here to check now.', g: 'tap' },
   ] };
   SPOTS.weather = { ready: '#card', wait: 6000, stops: [
@@ -1852,7 +1528,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox.', g: 'tap' },
     { sel: '.tabs .tab[data-tab="explore"]', t: 'Plan the next one', d: 'Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in.', g: 'tap' },
   ] };
-  // Orders and Orders Vintage share one page, so one demo card.
+  // Orders' demo card.
   const ORDER_CARD = { into: '#list', hide: '#list .empty, #list .btn', html: () => `<button class="ocard" type="button" tabindex="-1" style="--i:0"><div class="otop"><span class="mono m1">N</span><div class="omid"><div class="ostore">Northfield Hardware</div><div class="owhat">Oak flooring and underlayment</div></div><span class="oprice">$987.21</span></div>
         <div class="ostate"><b class="s-now">Out for delivery</b><span class="when">Today</span></div><div class="osteps" style="grid-template-columns:repeat(4,1fr)"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
         <div class="ocarrier"><span class="cpill">UPS</span><span class="t">1Z 000 000 00 0000 0000</span></div></button>` };
@@ -1865,17 +1541,9 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#setBtn', t: 'Choose what counts', d: 'Packages and store pickups show. Turn on food, subscriptions or tickets in Settings.', g: 'tap' },
     { sel: ['.dock .dockr', '#fab'], t: 'Add by hand', d: 'Tap + to add an order yourself, or paste an order email from any inbox.', g: 'tap' },
   ] };
-  SPOTS.ordersvintage = { stops: [
-    { sel: '#list [data-aos-demo].ocard', demo: ORDER_CARD, pad: 4, t: 'A vintage look', d: 'The same Orders in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
-    { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your order, shipping and pickup emails become orders on their own.', g: 'tap' },
-    { sel: '#list [data-aos-demo].ocard', demo: ORDER_CARD, pad: 4, t: 'See where it is', d: 'On the way, ordered, ready for pickup or delivered, each with its courier and tracking number.', g: 'tap' },
-    { sel: '#list [data-aos-demo] .ocarrier', demo: ORDER_CARD, t: 'Tracking in one tap', d: 'Tap Track to open UPS, USPS, FedEx or DHL with your package already looked up.', g: 'tap' },
-    { sel: '#whenChips', t: 'A quick check when it’s unsure', d: 'An order read from the words of an email, or one that has gone quiet, waits under To check.', g: 'tap' },
-    { sel: '#setBtn', t: 'Its own app', d: 'This design is its own app: it keeps its orders and settings on its own, so the standard Orders stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.', g: 'tap' },
-  ] };
   SPOTS.places = { stops: [
     { sel: '#seg', t: 'Want to go and Been', d: 'Keep two lists: places you want to try and places you’ve been. Tap Been to move a place across.', g: 'tap' },
-    { sel: '#map', focus: [.5, .58, 190, 190], r: 95, t: 'Your places on a map', d: 'Pins show blue for Want to go and gold for Been. Touch and hold anywhere on the map to add a spot.', g: 'hold' },
+    { sel: '#map', focus: [.5, .58, 190, 190], r: 95, t: 'Your places on a map', d: 'Pins show which places you want to go to and which you’ve been to, each in its own color. Touch and hold anywhere on the map to add a spot.', g: 'hold' },
     { sel: '#filterWrap', t: 'Find somewhere new', d: 'Search "tacos" or a name to find nearby businesses, or zoom in to see food, things to do and shops.', g: 'tap' },
     { sel: '#fab', t: 'Rate and remember', d: 'Add stars, price and notes with #tags, and Places keeps track of every visit.', g: 'tap' },
   ] };
@@ -1915,58 +1583,9 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#viewBtn', t: 'Every room and system', d: 'Tap here for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
-  // Home Vintage is Home's page in another look, so it has Home's screen to point at.
-  SPOTS.housevintage = { stops: [
-    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'A vintage look', d: 'The same Home in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.' },
-    { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'It opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
-    { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
-    { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights by room', d: 'Switch a whole room on or off, dim each light with a slider, or use All on and All off.', g: 'tap' },
-    { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
-    { sel: '#bannerBtn', t: 'Its own app', d: 'This design is its own app: it connects and keeps its settings on its own, so the standard Home stays just as it is. Use either, or both. Tap Connect to link your Home Assistant.', g: 'tap' },
-  ] };
-  const LOOK_TEXT = {
-    newsvintage: "The same News in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    fitnessvintage: "The same Fitness in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    travelvintage: "The same Travel in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    drinksvintage: "The same Drinks in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    weathervintage: "The same Weather in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    calendarvintage: "The same Calendar in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    notesvintage: "The same Notes in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    podcastsvintage: "The same Podcasts in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    placesvintage: "The same Places in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    mealsvintage: "The same Meals in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-  };
-  const OWN_TEXT = {
-    newsvintage: "This design is its own app: it keeps its own topic and team choices and reads the same headlines, so the standard News stays just as it is. Use either, or both.",
-    fitnessvintage: "This design is its own app: it keeps its own log, so the standard Fitness stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.",
-    travelvintage: "This design is its own app: it keeps its own trips and Gmail sign-in, so the standard Travel stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.",
-    drinksvintage: "This design is its own app: it keeps its own copy of your log on the phone and shares your private log with Drinks through your account, so a drink logged in either shows in both. Use either, or both.",
-    weathervintage: "This design is its own app: it keeps its own saved places and settings, so the standard Weather stays just as it is. Use either, or both.",
-    calendarvintage: "This design is its own app: it keeps its own settings and uses Calendar's iCloud connection and layers, so the standard Calendar stays just as it is. Use either, or both.",
-    notesvintage: "This design is its own app: it keeps its own notes, lists and settings, so the standard Notes stays just as it is. Use either, or both, and give them the same Google Sheet to keep them in step.",
-    podcastsvintage: "This design is its own app: it keeps its own shows, progress and settings, so the standard Podcasts stays just as it is. Use either, or both, and move your shows across with Export and Import.",
-    placesvintage: "This design is its own app: it keeps its own places, so the standard Places stays just as it is. Use either, or both, and give them the same Google Sheet (Notes’) to keep them in step.",
-    mealsvintage: "This design is its own app: it shares the family’s plans, deals and settings with the standard Meals, so a plan made in either shows in both. Use either, or both.",
-  };
-  // A Vintage design is its base app's page in another look, so its tour is the base app's stops, with the
-  // look first and "its own app" last (the base app's first and last controls are what they point at).
-  const VINTAGE_TOURS = {
-    newsvintage: "news",
-    fitnessvintage: "fitness",
-    travelvintage: "travel",
-    drinksvintage: "drinks",
-    weathervintage: "weather",
-    calendarvintage: "calendar",
-    notesvintage: "notes",
-    podcastsvintage: "podcasts",
-    placesvintage: "places",
-    mealsvintage: "meals",
-  };
-  for (const [v, base] of Object.entries(VINTAGE_TOURS)) {
-    const src = SPOTS[base]; if (!src) continue;
-    const first = src.stops[0], last = src.stops[src.stops.length - 1];
-    SPOTS[v] = { ...src, stops: [{ ...first, t: 'A vintage look', d: LOOK_TEXT[v], g: undefined }, ...src.stops, { ...last, t: 'Its own app', d: OWN_TEXT[v], g: 'tap' }] };
-  }
+  // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {
     if (!e || !e.isConnected || e.closest('#aos-welcome')) return false;

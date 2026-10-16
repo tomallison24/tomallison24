@@ -5,6 +5,11 @@
 // Settings, deleting, and that nothing trips the page's Content Security
 // Policy. Screenshots go to the folder given as the second argument
 // (default: none).
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (Futura, flat
+// cream or walnut cards, a mustard thumb, an orange add button, atomic shapes behind the title;
+// the sky held at day, aos.sky), and Standard (Sea glass); Settings > Design switches between them
+// at once and keeps the choice; and the old Orders Vintage address (served from orders/, as the
+// deploy does) moves that app's data on the phone over to Orders' names, IndexedDB copy included.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node orders/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -25,6 +30,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/ordersvintage\//, '/orders/');   // the old Orders Vintage address: the deploy copies orders/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -82,7 +88,7 @@ const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.
 
 for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' }))));   // no aOS walkthrough over the page; the sky held still
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });   // welcome.js asks ../aOS/api/state, which this static server doesn't have
@@ -119,6 +125,26 @@ for (const scheme of ['light', 'dark']) {
     assert.ok(listed[0].startsWith('newer_than:1y') && listed[0].includes('label:Orders') && listed[0].includes('-label:Travel'), listed[0]);
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'list-' + scheme + '.png') });
+
+  await step(scheme + ': Vintage by default, drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes', async () => {
+    const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.look), 'vintage');
+    assert.equal(await page.evaluate(() => document.getElementById('vintage').media), 'all');
+    assert.match((await q('body', ['fontFamily']))[0], /Futura/);
+    assert.equal((await q('body', ['backgroundColor']))[0], ground);
+    const [bg, shadow, backdrop, radius] = await q('.ocard', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+    assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the add button is solid orange');
+    assert.equal((await q('#whenChips .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb');
+    assert.equal((await q('.title', ['fontSize']))[0], '44px');
+    assert.ok((await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('), 'the three little bars under the title');
+    assert.equal((await q('.ocard .mono', ['borderRadius']))[0], '50%');
+    assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-180\.png/, 'the Vintage icon');
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default', 'the status bar is not translucent');
+  });
 
   await step(scheme + ': On the way: sections, cards with the courier and tracking number', async () => {
     assert.deepEqual(await texts(page, '#whenChips .chip'), ['On the way 4', 'Delivered 1', 'To check 1']);
@@ -329,6 +355,8 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': settings open and show Gmail', async () => {
     await page.click('#setBtn');
     assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
+    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'What counts as an order', 'Backup Log', 'Backup'], 'Design is the first section');
+    assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });
   });
@@ -443,6 +471,159 @@ await step('Sheet Log: every order added, every status change, deletion and left
   await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK456'; window.__orders.save(); });
   await page.waitForFunction(() => /old copy/.test(document.body.textContent), null, { timeout: 8000 });
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log')).length), 1);
+  await ctx.close();
+});
+
+// ---- Both designs (../home/design.js) ----
+// A phone: Gmail answers with no mail (or the made-up emails), the Sheet and the rest of the web are stubbed or cut off.
+async function phone(scheme = 'light', { design = null, at = '/orders/', emails = false } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
+  await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: emails ? EMAILS.map(m => ({ id: m.id, threadId: m.threadId })) : [] } });
+    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  const posts = [];
+  await ctx.route('https://script.google.com/**', route => {
+    if (route.request().method() !== 'POST') return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1 } });
+    const body = JSON.parse(route.request().postData()); posts.push(body);
+    return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1, logged: (body.log || []).map(e => e.id), at: Date.now(), graves: {}, orders: [] } });
+  });
+  await ctx.addInitScript(design => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('aos.sky', 'day');
+    if (!localStorage.getItem('aos.seen')) localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' }));
+    if (design) localStorage.setItem('design.orders', design);
+  }, design);
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e)));
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|net::ERR/.test(m.text())) errs.push(m.text()); });
+  return { ctx, page, errs, posts, open: async () => { await page.goto(BASE + at); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(600); } };
+}
+// What an old app left on the phone, written from a page of the same site before the app first opens (localStorage, and an IndexedDB database of key -> value)
+const seedPhone = (page, ls, dbs = {}) => page.evaluate(async ([ls, dbs]) => {
+  for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v);
+  for (const [name, rows] of Object.entries(dbs)) await new Promise((res, rej) => {
+    const r = indexedDB.open(name, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); for (const [k, v] of Object.entries(rows)) t.objectStore('kv').put(v, k); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = () => rej(t.error); };
+    r.onerror = () => rej(r.error);
+  });
+}, [ls, dbs]);
+const readDB = (page, name, key) => page.evaluate(([name, key]) => new Promise(res => {
+  const r = indexedDB.open(name);
+  r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) { d.close(); return res(null); } const q = d.transaction('kv').objectStore('kv').get(key); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => res(null); };
+  r.onerror = () => res(null);
+}), [name, key]);
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const TOKEN = () => JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' });
+const ORDER = (id, store) => ({ id, store, storeKey: store.toLowerCase().replace(/\W/g, ''), items: [{ name: 'A thing from ' + store }], status: 'shipped', kind: 'package', locks: {}, created: Date.now(), updated: Date.now(), notes: '', steps: { shipped: ymd(day(-1)) } });
+
+for (const scheme of ['light', 'dark']) {
+  await step(scheme + ' Standard: Sea glass, the Vintage block switched off, no sky; the icon, status bar and bar colour follow', async () => {
+    const { ctx, page, errs, open } = await phone(scheme, { design: 'glass', emails: true });
+    await ctx.addInitScript(t => { if (!localStorage.getItem('orders.token')) { localStorage.setItem('orders.token', t); localStorage.setItem('orders.token.ever', '1'); } }, TOKEN());
+    await open();
+    await page.waitForFunction(() => window.__orders.orders.length >= 5, null, { timeout: 8000 });
+    await settled(page);
+    const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    assert.ok(await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')));
+    assert.equal((await q('body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)');
+    assert.doesNotMatch((await q('body', ['fontFamily']))[0], /Futura/);
+    assert.notEqual((await q('.ocard', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', 'no cream card');
+    assert.notEqual((await q('#whenChips .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'no mustard thumb');
+    assert.notEqual((await q('.title', ['fontSize']))[0], '44px');
+    assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-glass-180\.png/);
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'glass-list-' + scheme + '.png') });
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
+}
+
+await step('Settings > Design: Vintage, then Standard and back, at once (the filter thumb follows the new widths), kept across a reload', async () => {
+  const { ctx, page, errs, open } = await phone('light', { emails: true });
+  await ctx.addInitScript(t => { if (!localStorage.getItem('orders.token')) { localStorage.setItem('orders.token', t); localStorage.setItem('orders.token.ever', '1'); } }, TOKEN());
+  await open();
+  await page.waitForFunction(() => window.__orders.orders.length >= 5, null, { timeout: 8000 });
+  await settled(page);
+  const look = () => page.evaluate(() => document.documentElement.dataset.look);
+  const box = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width }; });
+  const thumbFits = async () => { const t = await box('#whenChips .slthumb'), c = await box('#whenChips [aria-pressed="true"]'); return Math.abs(t.x - c.x) < 3 && Math.abs(t.w - c.w) < 3; };
+  assert.equal(await look(), 'vintage');
+  await page.click('#whenChips [data-when="done"]'); await page.waitForTimeout(700);
+  await page.click('#setBtn'); await page.waitForTimeout(500);
+  assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
+  assert.equal(await page.getAttribute('#stDesign [data-design="glass"]', 'aria-checked'), 'false');
+  await page.click('#stDesign [data-design="glass"]'); await page.waitForTimeout(300);
+  assert.equal(await look(), 'glass', 'Standard at once');
+  assert.equal(await page.getAttribute('#stDesign [data-design="glass"]', 'aria-checked'), 'true');
+  assert.ok(await page.isVisible('#setSheet'), 'Settings stays open');
+  await page.click('#setSheet [data-close].okbtn'); await page.waitForTimeout(700);
+  assert.ok(await thumbFits(), 'the thumb fits the chosen filter in the system font');
+  await page.reload(); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(500);
+  assert.equal(await look(), 'glass', 'Standard is kept');
+  assert.equal(await page.evaluate(() => localStorage.getItem('design.orders')), 'glass');
+  await page.click('#setBtn'); await page.waitForTimeout(500);
+  await page.click('#stDesign [data-design="vintage"]'); await page.waitForTimeout(300);
+  assert.equal(await look(), 'vintage');
+  await page.click('#setSheet [data-close].okbtn'); await page.waitForTimeout(700);
+  assert.ok(await thumbFits(), 'the thumb fits the chosen filter in Futura');
+  await page.reload(); await page.waitForFunction(() => window.__orders);
+  assert.equal(await look(), 'vintage', 'back to Vintage, kept');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('the old Orders Vintage address: its orders, sign-in, settings and Sheet copy move over once, and what it had seen', async () => {
+  const { ctx, page, errs, posts, open } = await phone('light', { at: '/ordersvintage/' });
+  await page.goto(BASE + '/orders/icon.svg');   // the same site, before the app has ever opened
+  await seedPhone(page, {
+    'aos.seen': JSON.stringify({ ordersvintage: '1.3' }),
+    'ordersv.token': TOKEN(), 'ordersv.token.ever': '1', 'ordersv.me': 'tom@example.com',
+    'allison-ordersv-v1': JSON.stringify({ orders: [ORDER('o-v', 'Vintage Shop')], kinds: { package: true, pickup: true, food: true } }),
+    'allison-ordersv-v1-tab': 'way',
+  }, { 'allison-ordersv': { sync: { url: 'https://script.google.com/macros/s/vintage/exec', secret: 'maple-otter' } } });
+  await open();
+  const got = await page.evaluate(() => ({ stores: window.__orders.orders.map(o => o.store), food: window.__orders.kinds.food, token: !!localStorage.getItem('orders.token'), me: localStorage.getItem('orders.me'),
+    seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-ordersv-v1'), look: document.documentElement.dataset.look }));
+  assert.deepEqual(got.stores, ['Vintage Shop'], JSON.stringify(got));
+  assert.ok(await page.isVisible('#list .ocard:has(.ostore:text("Vintage Shop"))'), 'and it is on the list');
+  assert.equal(got.food, true, 'its kinds'); assert.ok(got.token, 'its Gmail sign-in'); assert.equal(got.me, 'tom@example.com');
+  assert.equal(got.seen.orders, '1.3', 'what it had seen (no walkthrough again)');
+  assert.ok(got.old, 'nothing old is deleted'); assert.equal(got.look, 'vintage');
+  // the Sheet link only lived in the old app's IndexedDB copy: it is copied over before Orders opens its own, so Orders reconnects from it
+  await page.waitForFunction(() => localStorage.getItem('allison-orders-v1-sync'), null, { timeout: 8000 });
+  assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('allison-orders-v1-sync'))).url, 'https://script.google.com/macros/s/vintage/exec');
+  assert.equal((await readDB(page, 'allison-orders', 'sync')).url, 'https://script.google.com/macros/s/vintage/exec');
+  assert.ok(await readDB(page, 'allison-ordersv', 'sync'), 'the old copy is kept');
+  for (let i = 0; i < 40 && !posts.length; i++) await page.waitForTimeout(150);
+  assert.ok(posts.length && posts[0].orders.some(o => o.store === 'Vintage Shop'), 'and syncs with the Sheet');
+  // once only: a later change to the old keys is not copied again
+  await page.evaluate(() => localStorage.setItem('allison-ordersv-v1', JSON.stringify({ orders: [], kinds: {} })));
+  await page.reload(); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => window.__orders.orders.map(o => o.store)), ['Vintage Shop'], 'moved once only');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('a phone with both: Orders\' own orders are kept, the old app\'s are not copied over them', async () => {
+  const { ctx, page, errs, open } = await phone('light', { at: '/ordersvintage/' });
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, {
+    'aos.seen': JSON.stringify({ orders: '999', ordersvintage: '999' }),
+    'allison-orders-v1': JSON.stringify({ orders: [ORDER('o-s', 'Standard Shop')], kinds: { package: true } }),
+    'allison-ordersv-v1': JSON.stringify({ orders: [ORDER('o-v', 'Vintage Shop')], kinds: { package: true } }),
+  });
+  await open();
+  assert.deepEqual(await page.evaluate(() => window.__orders.orders.map(o => o.store)), ['Standard Shop']);
+  assert.deepEqual(errs, []);
   await ctx.close();
 });
 

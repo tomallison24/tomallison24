@@ -15,6 +15,8 @@
 //   Notes' reminders and nudges, Travel's trips, Mail's Remind Me days,
 //   Fitness's workouts (they share this phone's storage when opened from
 //   AllisonOS Home), and the weather (Open-Meteo, as in the Weather app).
+// - Two designs, picked in Settings > Design: Vintage (the default) and Standard
+//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -37,7 +39,9 @@ if (window.top !== window.self) {
   const MIN = 60e3, H = 3600e3, D = 24 * H;
   const KEY = 'allison-calendar-v1';
   const K = { settings: KEY + '-settings', items: KEY + '-items', view: KEY + '-view', mail: KEY + '-mail', wx: KEY + '-wx', loc: KEY + '-loc', version: KEY + '-version' };
-  const API = new URL('api/', location.href).href;
+  // Calendar's route (functions/calendar/api), named from the site root's side so it is the same from
+  // the old Calendar Vintage address, which opens this same app (../home/design.js)
+  const API = new URL('../calendar/api/', location.href).href;
   const TZ = I.localTz();
   const PRODID = '-//Allison OS//Calendar//EN';
   const REFRESH_MS = 3 * MIN;
@@ -143,7 +147,11 @@ if (window.top !== window.self) {
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your own standard drinks and alcohol-free days, from your account. Only you see them.' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
   };
-  const calColor = () => st.calendar && /^#[0-9a-f]{6}$/i.test(st.calendar.color || '') ? st.calendar.color : 'var(--cal)';
+  // Vintage draws the Family calendar in Retro mustard (--cal) and every Notes item in Retro plum, so
+  // they keep apart from the layers' Retro colours; Standard (Sea glass) uses the colours iCloud and
+  // Notes have for them.
+  const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'vintage';
+  const calColor = () => !vintage() && st.calendar && /^#[0-9a-f]{6}$/i.test(st.calendar.color || '') ? st.calendar.color : 'var(--cal)';
 
   // ---------------------------------------------------------------------
   // The iCloud function
@@ -352,7 +360,7 @@ if (window.top !== window.self) {
     const out = [], lists = new Map((data.lists || []).map(l => [l.id, l]));
     for (const t of data.todos || []) {
       if (!t || !t.date || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
-      const list = lists.get(t.list), color = list && /^#[0-9a-f]{6}$/i.test(list.color || '') ? list.color : LAYER.note.color;
+      const list = lists.get(t.list), color = !vintage() && list && /^#[0-9a-f]{6}$/i.test(list.color || '') ? list.color : LAYER.note.color;   // Vintage: plum for every list (the list's name is still in the line under the title)
       const extra = { sub: (list ? list.name : 'Reminder') + (t.done ? ' · done' : ''), color, link: '../notes/', done: !!t.done, notes: t.notes || '', flagged: !!t.flagged };
       if (t.time && /^\d{2}:\d{2}$/.test(t.time)) {
         const [h, mi] = t.time.split(':').map(Number);
@@ -1352,11 +1360,13 @@ if (window.top !== window.self) {
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
+      + '<p class="label">Design</p><div class="rgroup glass">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
+      + '<p class="hint">Just on this phone, and at once.</p>'
       + '<p class="label">iCloud</p><div class="rgroup glass"><div class="status ' + status.cls + '"><i></i><span>' + status.text + '</span></div>'
       + '<button class="rowbtn" type="button" id="stRefresh"><span class="ic">' + ICON.refresh + '</span><span>Check for changes now<span class="sub">Also happens when the app opens and every few minutes while it is open</span></span></button>'
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
-      + '<div class="lrow" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
+      + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
       + '</div><p class="hint">Every layer is optional: use the apps you want, and switch off the ones you don’t. Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account (each signed in once), so they appear even though every app on an iPhone keeps its own storage. Only you see yours.</p>'
       + '<p class="label">Display</p><div class="rgroup glass">'
@@ -1393,6 +1403,14 @@ if (window.top !== window.self) {
   });
   const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
+  if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: Vintage or Standard, at once (../home/design.js)
+  // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
+  // different widths, so the sliding thumbs are measured again.
+  addEventListener('aos:design', () => {
+    rebuild(); render();
+    const fam = $('stFamily'); if (fam) fam.style.setProperty('--c', calColor());
+    requestAnimationFrame(() => { slideTabs(true); if (!$('setSheet').hidden) slideSegs(); });
+  });
   const ago = t => { const m = Math.round((Date.now() - t) / MIN); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
 
   // ---------------------------------------------------------------------

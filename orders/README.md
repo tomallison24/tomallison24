@@ -1,7 +1,8 @@
 # Orders
 
-Everything you've bought and where it is, as a home-screen web app in the same
-frosted glass as Mail, Notes and Travel. It fills itself from the order,
+Everything you've bought and where it is, as a home-screen web app in a
+mid-century Vintage design (the default) or the same frosted glass as Mail,
+Notes and Travel (Settings → Design). It fills itself from the order,
 shipping, delivery and store-pickup emails in Gmail, shows the courier and the
 tracking number, and opens the carrier's own tracking page with one tap.
 
@@ -27,10 +28,57 @@ tracking number, and opens the carrier's own tracking page with one tap.
   are read.
 - **Two phones**: a shared Google Sheet, set up like Notes' and Travel's (below).
 
-**Orders Vintage** is the same app in a mid-century modern look, as its own app
-with its own orders and settings ([`ordersvintage/`](../ordersvintage/README.md)).
-It needs its own redirect address in Google Cloud (below), and can share this
-app's Google Sheet.
+## The two designs
+
+One app, one set of orders: the design changes only how Orders looks, at once,
+and is kept on this phone (**Settings → Design**, the first section), as in
+Clock. `../home/design.js`, loaded in `<head>`, applies it before the page is
+drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Mail, Home and Meals. A cream ground and cards
+  (walnut in dark mode), flat and round-cornered, in place of glass; mustard,
+  teal, burnt orange and olive: the filter has a mustard thumb, the progress
+  bars are teal, each store gets a round teal, mustard, orange or olive
+  monogram, the strip that asks for a check is mustard-outlined; three atomic
+  shapes behind the title that scroll away with the page, and three little bars
+  under it; a solid burnt-orange add button, outlined teal and solid-orange
+  buttons; Futura (built into iOS, nothing downloaded). Behind the title is the
+  shared **Vintage sky** (`../home/sky.js`, as in every Vintage design): by day
+  a ground washed with mustard and the sun's slow rays; after sunset deep teal,
+  the moon and twinkling stars, for the phone's place (only if it already has
+  location permission: it never asks), else its time zone. It holds still with
+  reduced motion; this app only gives its disc its colour (`--sky-disc`) and
+  keeps its own sizes and places for the shapes, tuned to its header.
+- **Standard**: Sea glass: Travel's style block plus Orders' own pieces, the
+  slow aurora and frosted glass, no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.orders`. What iOS reads when Orders
+is added to the Home Screen follows it: the icon (`icon-180.png`, Vintage: a
+cream parcel on burnt orange, with a teal sun and a mustard pill;
+`icon-glass-180.png`, Standard), the status bar style (`default` in Vintage,
+where `black-translucent`'s white clock would vanish on the cream) and the bar
+colours. Only colours, shapes and type change: every button, sheet and swipe
+works the same in both.
+
+**The old Orders Vintage app.** Orders Vintage used to be an app of its own
+(`ordersvintage/`, a copy of this page and script with its own storage). Its
+address now opens this same app (the deploy copies `orders/` there,
+`.github/workflows/news.yml`), so a phone that added it keeps it. The first
+time it opens there, `design.js` moves that app's data on the phone over to
+Orders' names (`ordersv.…` → `orders.…` for the Gmail sign-in,
+`allison-ordersv-…` → `allison-orders-…` for the orders, what was read, the
+kinds, the Sheet link and the rest; the IndexedDB copy of the Sheet link
+`allison-ordersv` → `allison-orders`, which Orders opens only once that is
+done; and what it had seen, so no walkthrough again), unless Orders already has
+data on that phone; nothing old is deleted. Fix with Claude calls
+`../orders/api/read`, so it reaches the family's route from either address; an
+email opens in Mail (`../mail/?thread=…`), which also carries both designs now.
+Gmail's sign-in returns to the address it started from, which is why both
+addresses stay registered (below).
 
 ## What counts as an order
 
@@ -179,8 +227,9 @@ client once:
    application** client.
 2. **Authorised redirect URIs** → add, exactly (trailing slash included):
    - `https://tomallison24-news.pages.dev/orders/`
-   - and, for Orders Vintage, `https://tomallison24-news.pages.dev/ordersvintage/`
-     (each app needs its own address: Google matches them exactly)
+   - and the old Orders Vintage address, `https://tomallison24-news.pages.dev/ordersvintage/`
+     (already added; keep it: a phone that added Orders Vintage opens this
+     app there, and Google matches addresses exactly)
    - and the Cloudflare address too, if you use that one: `https://<your
      Cloudflare Pages address>/orders/`
 3. **Save**. Google can take a few minutes to pick it up.
@@ -271,8 +320,9 @@ are kept as text.
 
 ## How it's built
 
-- **No build step.** `index.html` is the page and its look (Travel's style
-  block plus Orders' own pieces at the end), `app.js` the app, `parse.js` the
+- **No build step.** `index.html` is the page and its two looks (Travel's style
+  block plus Orders' own pieces, then the `<style id="vintage">` block; see
+  "The two designs"), `app.js` the app, `parse.js` the
   email reading, `sw.js` the offline shell.
 - **No server for reading.** Gmail is read from the phone and tracking opens the
   carrier's page. The only Pages Function is Fix with Claude (above).
@@ -290,8 +340,8 @@ are kept as text.
 node orders/scripts/api-test.mjs     # Fix with Claude's server side, with a stand-in for Anthropic
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
 node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs)
-node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed
-node orders/scripts/make-icons.mjs   # redraws icon-512.png and icon-180.png from icon.svg
+node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed: both designs, Settings > Design, the old Orders Vintage address
+node orders/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
 The last two need Playwright with Chromium (`npm i -g playwright`).

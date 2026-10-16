@@ -18,6 +18,11 @@
 // light-on-dark for faint ink on light.
 // All but Beach are drawn on one canvas at about 30 frames a second, paused
 // while the app is hidden; with reduced motion they are drawn once, still.
+// All of this is the Standard (Sea glass) design's. In the Vintage design (the
+// default, ../home/design.js) the page is the shared Vintage sky
+// (../home/sky.js: cream or walnut, washed with mustard by day and teal at
+// night), nothing moves behind it, and Settings hides Customization; what is
+// picked here is kept for Standard.
 'use strict';
 const BG_IDEAS = [
   { id: 'bubbles', name: 'Bubbles', note: 'Small, very faint glass bubbles drift slowly and bounce off the edges of the screen.' },
@@ -52,13 +57,18 @@ const BG = {
   set(id) { store.set('bg', id); this.start(id); },
   tone() { const v = store.get('tone'); return BG_TONES.find(t => t.id === v) || BG_TONES[0]; },
   setTone(id) { store.set('tone', id); this.paintTone(); },
-  // The page's colour, and the phone's bar over it.
+  // The page's colour, and the phone's bar over it. Vintage: the sky's (sky.js sets both), so none here.
+  vintage: () => (window.aosDesign ? aosDesign.get() : 'vintage') !== 'glass',
   paintTone() {
+    if (this.vintage()) {
+      if (this.painted !== 'vintage') { this.painted = 'vintage'; document.documentElement.style.removeProperty('--bg'); }
+      return;
+    }
     const t = this.tone(), c = t.temp ? this.tempColour(this.outsideF()) : this.light ? t.lite : t.hex;
     if (c === this.painted) return;
     this.painted = c;
     document.documentElement.style.setProperty('--bg', c);
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c;
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = c;   // c is for Light or Dark, whichever is showing
   },
   // Temperature: cold, Google Home's grey, warm - at 60, 72.5 and 85°F - for each mode.
   T_LO: 60, T_HI: 85,
@@ -88,7 +98,7 @@ const BG = {
     this.id = id;
     const box = document.querySelector('.bgfx'); box.dataset.bg = id;
     if (!this.c) { this.c = document.createElement('canvas'); box.prepend(this.c); this.x = this.c.getContext('2d'); addEventListener('resize', () => this.size()); }
-    this.c.hidden = id === 'beach' || id === 'none';
+    this.c.hidden = id === 'beach' || id === 'none' || this.vintage();   // Vintage: nothing moving (.bgfx is hidden there too)
     this.size(); this.s = null;
     cancelAnimationFrame(this.raf);
     if (!this.c.hidden) { this.t0 = performance.now(); this.last = 0; this.raf = requestAnimationFrame(t => this.frame(t)); }
@@ -198,6 +208,7 @@ BG.scheme = matchMedia('(prefers-color-scheme: light)');   // kept, so its liste
 BG.repaint = () => { BG.painted = null; BG.paintTone(); if (BG.still && BG.c && !BG.c.hidden) BG.draw(0, 0); };
 BG.scheme.addEventListener('change', BG.repaint);
 addEventListener('aos:theme', BG.repaint);   // Light, Dark or Automatic chosen in the app
+addEventListener('aos:design', () => { BG.start(BG.id); BG.repaint(); });   // Vintage or Standard (Settings > Design): the sky, or the background picked here
 
 // Settings → Customization → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.

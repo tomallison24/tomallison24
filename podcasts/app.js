@@ -1,5 +1,7 @@
 // podcasts's own script, moved out of index.html so the page's
 // Content-Security-Policy can allow only this site's own files (script-src 'self').
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass), kept on
+// this phone (../home/design.js, as in Clock).
 (function(){
   'use strict';
   const KEY = 'allison-podcasts-v1';
@@ -85,13 +87,14 @@
 
   const idb = (function(){
     let dbp = null;
-    const open = () => dbp || (dbp = new Promise((res, rej) => {
+    // After design.js has moved the old Podcasts Vintage app's databases over (at its old address, once), so they aren't made empty first
+    const open = () => dbp || (dbp = Promise.resolve(window.aosDesign && aosDesign.moved).then(() => new Promise((res, rej) => {
       if (!window.indexedDB) return rej(new Error('No IndexedDB'));
       const r = indexedDB.open('allison-podcasts', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('shows');
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
-    }));
+    })));
     const run = (mode, fn) => open().then(db => new Promise((res, rej) => {
       const tx = db.transaction('shows', mode), req = fn(tx.objectStore('shows'));
       tx.oncomplete = () => res(req && req.result);
@@ -209,14 +212,15 @@
   // =====================================================================
   // FEEDS
   // =====================================================================
-  // ./api/ is the Pages Function beside this app. Where it isn't (GitHub
+  // ../podcasts/api/ is the Pages Function beside this app, named from the site root's side so it is the
+  // same from the old Podcasts Vintage address, which opens this same app (../home/design.js). Where it isn't (GitHub
   // Pages, a local server) the answer is a 404 or an HTML page, and the app
   // goes straight to the feed for the rest of the session.
   let apiGone = false;
   async function api(path){
     if (apiGone) throw new Error('noapi');
     let r;
-    try { r = await fetch('api/' + path, {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'}); }
+    try { r = await fetch('../podcasts/api/' + path, {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'}); }
     catch(e) { throw new Error('offline'); }
     const ct = r.headers.get('Content-Type') || '';
     if (r.status === 404 || r.status === 405 || /html/i.test(ct)) { apiGone = true; throw new Error('noapi'); }
@@ -675,9 +679,11 @@
   }
   // The tab bar's thumb; it goes while Search (its own button) is chosen.
   const slideTabs = jump => { const t = document.querySelector('.tabs'); slide(t, t.querySelector('.tab[aria-selected="true"]'), 'tabs', {jump}); };
-  window.addEventListener('resize', () => {
+  const reslide = () => {
     slideTabs(true); slideChips($('libView'), 'lib', {jump:true}); slideChips($('homeBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
-  });
+  };
+  window.addEventListener('resize', reslide);
+  window.addEventListener('aos:design', () => requestAnimationFrame(reslide));   // Futura and the system font are different widths
   function setTab(t){
     if (st.show) { st.show = null; }
     else if (t === st.tab) { window.scrollTo({top:0, behavior:'smooth'}); return; }
@@ -1234,6 +1240,11 @@
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
   const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
+  // Design, the first section: Vintage or Standard, at once and just on this phone (../home/design.js); not part of the other settings
+  if (window.aosDesign) {
+    $('setBack').parentElement.insertAdjacentHTML('afterbegin', '<p class="label">Design</p><div class="rgroup glass" id="setDesign">' + aosDesign.picker() + '</div><p class="hint">Just on this phone, and at once.</p>');
+    aosDesign.bind($('setDesign'));
+  }
   $('setExport').onclick = () => {
     if (!S.follows.length) { toast('You’re not following any shows yet.'); return; }
     const body = S.follows.map(f => '    <outline type="rss" text="' + esc(f.title) + '" title="' + esc(f.title) + '" xmlUrl="' + esc(f.feed) + '"/>').join('\n');
@@ -1318,11 +1329,11 @@
   // cleared localStorage (every AllisonOS app shares its space). Separate from the episode database, so that one is never touched.
   const sheetKeep = (function(){
     let dbp = null;
-    const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const open = () => dbp || (dbp = Promise.resolve(window.aosDesign && aosDesign.moved).then(() => new Promise((res, rej) => {   // after design.js's move (as the episode database)
       const r = indexedDB.open('allison-podcasts-sheet', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error);

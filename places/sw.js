@@ -2,9 +2,9 @@
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Your places live in localStorage, never in this cache, and search,
 // place details and map tiles (other sites) are never cached here.
-const CACHE = 'places-v27';
+const CACHE = 'places-v29';
 // slide.js is shared by every app, from home/.
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=3', 'icon-512.png?v=3', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/welcome.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=4', 'icon-512.png?v=4', 'icon-glass-180.png?v=4', 'icon-glass-512.png?v=4', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -12,7 +12,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('places-') && k !== CACHE).map(k => caches.delete(k))))
+    // (and the old Places Vintage app's own cache, placesvintage-*: its address now opens this app)
+    .then(keys => Promise.all(keys.filter(k => (k.startsWith('places-') || k.startsWith('placesvintage-')) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

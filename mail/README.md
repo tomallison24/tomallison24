@@ -1,7 +1,7 @@
 # Mail
 
-Gmail triage as a home-screen web app: frosted glass over a slow aurora, a
-Marketing bucket that empties itself, tags that sort mail by who sent it,
+Gmail triage as a home-screen web app, in two designs (mid-century Vintage, the
+default, or Sea glass's frosted glass over a slow aurora): a Marketing bucket that empties itself, tags that sort mail by who sent it,
 Gmail's own categories, a page for each conversation, search, and the everyday
 parts of iOS Mail: swipes, reply and forward with Undo Send, attachments,
 Remind Me, and an unread count on the icon.
@@ -136,6 +136,67 @@ reading, **Show**, attachments, unsubscribe, search, settings and sending were
 all checked for anything the policy blocks. Safari on an iPhone was not tested (see *What I
 could not verify*).
 
+`node mail/scripts/design-test.mjs` checks the two designs, signed out and
+with a stand-in Gmail, and no network: Vintage by default (the Retro look,
+light and dark), Standard (Sea glass), Settings → Design switching both ways
+at once and kept across a reload, and the old Mail Vintage address moving that
+app's data over once (CI: `apps-check.yml`, with the security test).
+
+## The two designs
+
+One app, one mailbox: the design changes only how Mail looks, at once, and is
+kept on this phone (**Settings → Design**, the first section of the Settings
+sheet), as in Clock. `../home/design.js`, loaded in `<head>`, applies it
+before the page is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas. A cream ground and cards (walnut in dark mode),
+  flat and round-cornered, in place of glass; mustard, teal, burnt orange and
+  olive; three atomic shapes behind the title that scroll away with the page,
+  and three little bars under it; a walnut pill at the bottom for the mailbox
+  menu, with a mustard icon; a solid orange compose button; outlined teal
+  buttons; Futura (built into iOS, nothing downloaded). Where this README says
+  "glass" it means the place and shape of a control, not its surface.
+- **Standard**: Sea glass: one sheet of frosted glass over a slow aurora, no
+  sky.
+
+**The sky** (Vintage only). The page behind the title is Weather Vintage's,
+with the real sun: by day a ground washed with mustard, the sun and rays that
+turn very slowly; after sunset a ground washed with deep teal, the moon and
+twinkling stars; each over cream (Light) or walnut (Dark). Sunrise and sunset
+are for the phone's place (only if the app already has location permission:
+it never asks), else its time zone, and the sky changes by itself while the
+app is open. It holds still with reduced motion. `../home/sky.js` does it for
+every Vintage design (loaded in `<head>`, listed in `sw.js`); this app only
+gives its disc its colour (`--sky-disc`) and keeps its own sizes and places
+for the shapes, tuned to its header.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.mail`; it is not part of the
+Settings tick's save. What iOS reads when Mail is added to the Home Screen
+follows it: the icon (`icon-180.png`, Vintage: a cream envelope on teal, with
+a mustard sun and a burnt-orange pill; `icon-glass-180.png`, Standard: a white
+envelope on mist blue) and the bar colours. The status bar is `default` in
+both (see *Light and dark*). The title's size and the sliding thumbs are
+measured again on a switch, since Futura and the system font are different
+widths.
+
+**The old Mail Vintage app.** Mail Vintage used to be an app of its own
+(`mailvintage/`, with its own storage: every key `mailv.…`). Its address now
+opens this same app (the deploy copies `mail/` there,
+`.github/workflows/news.yml`), so a phone that added it keeps it. The first
+time it opens there, `design.js` moves that app's data on the phone over to
+Mail's names (`mailv.…` → `mail.…`: the sign-in, settings, tags, Tidy and
+Marketing state, and what it had seen, so no walkthrough again), unless Mail
+already has data on that phone (then both were in use in the same Safari, and
+Mail's own are kept); nothing old is deleted. It had no IndexedDB, session
+storage or cookies of its own. Its old offline cache (`mailvintage-…`) is
+cleared by `sw.js`. Sign-in stays where it is: Google returns to the page it
+started from, and `https://tomallison24-news.pages.dev/mailvintage/` is
+already a registered redirect URI on the OAuth client, next to `/mail/`.
+
 ## Light and dark
 
 The app follows the iPhone's own appearance — Settings → Display &
@@ -146,8 +207,8 @@ the tests, not by eye). Emails themselves always render on white, as their
 senders designed them.
 
 The status bar is set to iOS's `default` style rather than
-`black-translucent`: that one always draws the clock in white, which would
-vanish on the light theme. The bar takes its colour from `theme-color`, set
+`black-translucent`, in both designs: that one always draws the clock in
+white, which would vanish on the light theme (and on Vintage's cream). The bar takes its colour from `theme-color`, set
 per theme. If the change doesn't show, remove the app from the home screen
 and add it again — iOS reads the status bar style when the app is added.
 
@@ -170,6 +231,8 @@ and add it again — iOS reads the status bar style when the app is added.
    — exactly that, trailing slash included. The app's setup screen prints the
    two values for whatever address you actually opened it on; copy from there
    if you serve it somewhere else as well (each origin needs its own entry).
+   The old Mail Vintage address, `https://tomallison24-news.pages.dev/mailvintage/`,
+   opens this same app and is registered too (see *The two designs*).
 7. Open the app, paste the client ID, tap **Save and connect**.
 
 Scopes asked for: `gmail.modify` (read, label, move, trash) and
@@ -719,8 +782,10 @@ npx http-server . -p 8080    # then open http://localhost:8080/mail/
 Add `http://localhost:8080` as an origin and `http://localhost:8080/mail/` as
 a redirect URI on the OAuth client first; the app's setup screen prints both.
 
-`node mail/scripts/make-icons.mjs` redraws the icons from `icon.svg` ("Mist":
-a white envelope on mist blue, one of the Sea glass tints). iOS keeps the icon it saved when the
+`node mail/scripts/make-icons.mjs` redraws the icons: `icon-*.png` from
+`icon.svg` (Vintage: a cream envelope on teal, with a mustard sun and a
+burnt-orange pill) and `icon-glass-*.png` from `icon-glass.svg` (Standard,
+"Mist": a white envelope on mist blue, one of the Sea glass tints). iOS keeps the icon it saved when the
 app was added, so after an icon change remove the app from the Home Screen and
 add it again from Safari.
 

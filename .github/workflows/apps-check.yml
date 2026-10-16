@@ -30,10 +30,9 @@ jobs:
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
-      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs && node ordersvintage/scripts/same-reader-test.mjs
+      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
-      - run: node calendarvintage/scripts/same-reader-test.mjs && node drinksvintage/scripts/same-reader-test.mjs && node fitnessvintage/scripts/same-reader-test.mjs && node travelvintage/scripts/same-reader-test.mjs && node weathervintage/scripts/same-reader-test.mjs && node mealsvintage/scripts/same-reader-test.mjs && node placesvintage/scripts/same-reader-test.mjs
 
   # Each app's live tour finds its way round the app, and tidies up after itself
   # (aOS/scripts/tours-test.mjs). The slowest test, so it's in three shards that run
@@ -79,68 +78,54 @@ jobs:
               aOS/scripts/sky-test.mjs
               aOS/scripts/release-test.mjs
               aOS/scripts/today-test.mjs
-          # aOS: Calendar's layers through the family account, an invite, notifications, designs, the look, Android; Meals and Podcasts
+          # aOS: Calendar's layers through the family account, an invite, notifications, designs (and home/design.js), the look, Android; Meals and Podcasts
           - group: aos
             tests: |
               calendar/scripts/layers-test.mjs
-              calendarvintage/scripts/layers-test.mjs
               aOS/scripts/join-test.mjs
               aOS/scripts/notify-test.mjs
               aOS/scripts/designs-test.mjs
+              aOS/scripts/design-test.mjs
               aOS/scripts/look-test.mjs
               aOS/scripts/android-installed-test.mjs
               meals/scripts/app-test.mjs
-              mealsvintage/scripts/app-test.mjs
               podcasts/scripts/app-test.mjs
-          # Drinks, Podcasts Vintage, Places Vintage
+          # Drinks
           - group: drinks
             tests: |
               drinks/scripts/app-test.mjs
-              podcastsvintage/scripts/app-test.mjs
-              placesvintage/scripts/app-test.mjs
-          # Drinks Vintage, Home, News' table and match pages, Calendar
+          # Home, News' table and match pages, Calendar
           - group: home
             tests: |
-              drinksvintage/scripts/app-test.mjs
               house/scripts/app-test.mjs
               house/scripts/connect-test.mjs
               news/scripts/table-test.mjs
               news/scripts/match-test.mjs
               calendar/scripts/app-test.mjs
-          # Home Vintage, Fitness, Calendar Vintage, Clock, Notes
+          # Fitness, Clock, Notes
           - group: apps
             tests: |
-              housevintage/scripts/app-test.mjs
-              housevintage/scripts/connect-test.mjs
               fitness/scripts/app-test.mjs
-              calendarvintage/scripts/app-test.mjs
-              fitnessvintage/scripts/app-test.mjs
               clock/scripts/app-test.mjs
               notes/scripts/aisles-app-test.mjs
               notes/scripts/push-app-test.mjs
               notes/scripts/security-test.mjs
-          # Notes Vintage, Places, Travel, Weather Vintage, News
+          # Notes, Places, Travel, Weather, News
           - group: apps-more
             tests: |
-              notesvintage/scripts/aisles-app-test.mjs
-              notesvintage/scripts/push-app-test.mjs
-              notesvintage/scripts/security-test.mjs
-              notesvintage/scripts/app-test.mjs
+              notes/scripts/app-test.mjs
               places/scripts/app-test.mjs
               travel/scripts/app-test.mjs
               travel/scripts/smart-test.mjs travel
               travel/scripts/smart-test.mjs travelvintage
-              travelvintage/scripts/app-test.mjs
-              weathervintage/scripts/app-test.mjs
+              weather/scripts/app-test.mjs
               news/scripts/app-test.mjs
-              newsvintage/scripts/app-test.mjs
-          # Orders and Mail, both designs (Mail: the security tests that run in a page)
+          # Orders and Mail (Mail: the security tests that run in a page, and both designs)
           - group: orders-mail
             tests: |
               orders/scripts/app-test.mjs
-              ordersvintage/scripts/app-test.mjs
               mail/scripts/security-test.mjs
-              mailvintage/scripts/security-test.mjs
+              mail/scripts/design-test.mjs
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0

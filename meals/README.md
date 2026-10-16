@@ -39,6 +39,49 @@ Tap the tick (Done) to save what you changed for the family; with nothing change
 ([`mealsvintage/`](../mealsvintage/README.md)). It uses this app's server route
 and the same Google Sheet script, so a plan made in either shows in both.
 
+## The two designs
+
+One app, one plan: the design changes only how Meals looks, at once, and is
+kept on this phone (**Settings → Design**, the first section), as in Clock.
+`../home/design.js`, loaded in `<head>`, applies it before the page is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas. A cream ground and cards (walnut in dark mode), flat
+  and round-cornered, in place of glass; mustard, teal, burnt orange and olive
+  (the Dinners / Deals / List tabs have a mustard thumb, the chosen meat, store,
+  card and allergy chips are mustard, a ticked item is a teal disc, what is on
+  sale is olive, a new plan waiting to be accepted is a mustard-outlined card);
+  three atomic shapes behind the title and three little bars under it; solid
+  burnt-orange main buttons, outlined teal for the others; Futura (built into
+  iOS, nothing downloaded). Behind the title is the shared **Vintage sky**
+  (`../home/sky.js`, as in every Vintage design): by day a ground washed with
+  mustard and the sun's slow rays; after sunset deep teal, the moon and
+  twinkling stars, for the phone's place (only if it already has location
+  permission: it never asks), else its time zone.
+- **Standard**: Sea glass: Drinks' tokens, faint tiles and Liquid Glass sheets,
+  no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.meals`. What iOS reads when Meals is
+added to the Home Screen follows it: the icon (`icon-180.png`, Vintage: a cream
+bowl with steam on paprika red with a mustard sun and a teal pill;
+`icon-glass-180.png`, Standard: a white bowl on muted paprika), the status bar
+style (`default` in Vintage, where `black-translucent`'s white clock would
+vanish on the cream) and the bar colours.
+
+**The old Meals Vintage app.** Meals Vintage used to be an app of its own
+(`mealsvintage/`, with its own storage). Its address now opens this same app
+(the deploy copies `meals/` there, `.github/workflows/news.yml`), so a phone
+that added it keeps it. The first time it opens there, `design.js` moves that
+app's data on the phone over to Meals' names (`allison-mealsv-…` →
+`allison-meals-…`, the IndexedDB copy of the Sheet link `allison-mealsv` →
+`allison-meals`, and what it had seen, so no walkthrough again), unless Meals
+already has data on that phone; nothing old is deleted. Its calls go to
+`../meals/api/` (not `api/`), so they reach the family's route from either
+address.
+
 ## Data
 
 The family's, not one person's: one plan, one deals list a store and one set
@@ -149,6 +192,6 @@ and a step in `app-test.mjs` (what the app sends).
 node meals/scripts/api-test.mjs     # the server: sign-in, both AI services (stand-ins), deals, plans, the allergy check
 node meals/scripts/logic-test.mjs   # sections, the shopping list, matching sales, the week
 node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
-node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, and the Google Sheet copy
-node meals/scripts/make-icons.mjs   # icon-512.png and icon-180.png from icon.svg
+node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, the Google Sheet copy, both designs, Settings > Design, the old Meals Vintage address
+node meals/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```

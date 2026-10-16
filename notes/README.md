@@ -1,7 +1,8 @@
 # Notes
 
-Notes and reminders as a home-screen web app, in the same frosted glass as
-Mail and News. Free, no accounts, no server.
+Notes and reminders as a home-screen web app, in two designs: Vintage
+(mid-century modern, the default) or Standard (the same frosted glass as Mail
+and News), picked in Settings. Free, no accounts, no server.
 
 - **Notes**: colour, pin, tags (type `#tag` anywhere), search (`#work budget`),
   and a "nudge" date shown on the card.
@@ -49,7 +50,9 @@ Mail and News. Free, no accounts, no server.
   "Add this note?" and keeps its own copy; later edits don't sync.
   On iPhone a Home Screen app keeps separate storage from Safari, so a link
   opened in Safari offers to copy it for pasting into the Home Screen app.
-- **Backup**: the download button makes one `.json` file with everything.
+- **Settings** (the gear at the top of Notes and of Reminders): **Design**
+  first (below), then **Backup and sync**.
+- **Backup**: Settings → **Back up everything** makes one `.json` file with everything.
   **Import** restores it, or opens a shared file. Restoring asks first ("Add
   3 notes, 2 reminders and 1 list from this file?"), and only restore files
   you made yourself. A banner appears when the last backup is more than 7
@@ -63,9 +66,83 @@ Mail and News. Free, no accounts, no server.
   note's nudge. Each phone picks which lists alert it. See *Notifications*
   below; it needs the Google Sheet sync and a small free server.
 
-**Notes Vintage** is the same app in a mid-century modern look, as its own app
-with its own notes and settings ([`notesvintage/`](../notesvintage/README.md)).
-It can share this app's Google Sheet and notification server.
+## The two designs
+
+One app, one set of notes: the design changes only how Notes looks, at once,
+and is kept on this phone (**Settings → Design**, the first section), as in
+Clock. `../home/design.js`, loaded in `<head>`, applies it before the page is
+drawn. Every tap, swipe, sheet and step works the same in both.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in every Vintage design:
+  - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+    place of glass;
+  - mustard, teal, burnt orange and olive: the Notes / Reminders bar, the
+    reminder views, the list chips and a reminder's When, Alert, Priority and
+    List all have a mustard thumb; Done, the add buttons and Connect are solid
+    burnt orange; Cancel-style buttons are outlined teal and Delete is outlined
+    orange; a switch that is on is teal;
+  - **a note's colour** (yellow, green, blue, pink, purple) is mustard, olive,
+    teal, terracotta and plum, flat and ringed in the same colour;
+  - **a list's colour** (the same seven choices, stored as the same hex values
+    in both designs, so a list means the same everywhere and in the Sheet) is
+    drawn as teal, mustard, olive, plum, burnt orange, light teal and brick, on
+    the round tick beside each reminder, the dot on a list chip and the colour
+    choices;
+  - **a tag's colour** is one of ten Retro colours (teal, orange, plum, olive,
+    rose, mustard, light teal, walnut, denim, brick), picked from the tag's
+    name as Standard picks its hue; the name is always written too;
+  - the swipe actions are flat discs: Pin mustard, Tag teal, Archive olive,
+    Delete orange;
+  - three atomic shapes (a mustard sun, a teal dot, an orange pill) behind each
+    title that scroll away with the page, and three little bars under it; the
+    note editor and step by step have a mustard sun of their own;
+  - Futura, which iOS has built in, so no font is downloaded.
+
+  **The sky.** Behind the title is the shared **Vintage sky**
+  (`../home/sky.js`, as in every Vintage design): by day a ground washed with
+  mustard, the sun and rays that turn very slowly; after sunset a ground
+  washed with deep teal, the moon and twinkling stars; each over cream (Light)
+  or walnut (Dark), for the phone's place (only if the app already has
+  location permission: it never asks), else its time zone. It holds still
+  with reduced motion. This app only gives its disc its colour (`--sky-disc`)
+  and keeps its own sizes and places for the shapes; the sun on the note
+  editor and step by step is the moon at night too. Checked by
+  `aOS/scripts/sky-test.mjs`.
+- **Standard**: Sea glass: the frosted glass over a drifting aurora (*Look*,
+  below), no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The list and tag colours drawn in script follow it too (`app.js`: a tag
+carries both its hue and its Retro token; a list's Retro token is used only in
+Vintage, and the page is redrawn when the design changes). The choice is
+`localStorage` `design.notes`. What iOS reads when Notes is added to the Home
+Screen follows it: the icon (`icon-180.png`, Vintage: a cream note page on
+pine green with a mustard sun and an orange pill; `icon-glass-180.png`,
+Standard), the status bar style (`default` in Vintage, where
+`black-translucent`'s white clock would vanish on the cream) and the bar
+colours.
+
+**The old Notes Vintage app.** Notes Vintage used to be an app of its own
+(`notesvintage/`, with its own storage). Its address now opens this same app
+(the deploy copies `notes/` there, `.github/workflows/news.yml`), so a phone
+that added it keeps it. The first time it opens, `design.js` moves that app's
+data on the phone over to Notes' names (`allison-notesv-…` → `allison-notes-…`:
+the notes, lists and reminders, the deleted marks, the Sheet link and its time,
+the notification choices, the view and tab, the last backup; the IndexedDB
+copy of the Sheet link `allison-notesv` → `allison-notes`, which the app opens
+only after that; and what it had seen, so no walkthrough again), unless Notes
+already has data on that phone; nothing old is deleted. Its Google Sheet link
+and notification choices move with it, so it stays connected to the same Sheet
+and server (`notes/push`), and a notification still opens the address it was
+turned on at. What it shows in Calendar is still sent under its own name,
+`notesv`, when the app runs at that address (`notes` everywhere else;
+`functions/aOS/api` shows the two together as Notes), so a phone with both Home
+Screen apps keeps two copies that never overwrite each other.
+Places finds the Sheet link under Notes' name (`allison-notes-v1-sync`) as
+before. Its old offline cache (`notesvintage-…`) is cleared by `sw.js`.
 
 ## Notifications
 
@@ -131,7 +208,7 @@ on with the new one takes over.
 2. **Reminders → bell**. Paste the server address, tap **Turn on
    notifications**, then **Allow**.
 3. Tap **Send a test**.
-4. For your wife's phone: **Copy setup link** (download button → Google Sheet
+4. For your wife's phone: **Copy setup link** (Settings → Google Sheet
    sync) now includes the server address. Set up her phone with it as before,
    then on her phone go to **Reminders → bell → Turn on notifications**.
 
@@ -160,11 +237,28 @@ an iPhone, so notifications are turned on in each one you want them in.
   deployed by `.github/workflows/notes-push.yml`.
 - **Data** lives in the browser's `localStorage` on each device, and, once
   connected, in a Google Sheet you both share (below).
-- Published with the other apps by `.github/workflows/news.yml`.
+- **Two designs**: `../home/design.js` and `../home/sky.js` in `<head>` (*The
+  two designs*, above).
+- Published with the other apps by `.github/workflows/news.yml` (also at the
+  old Notes Vintage address, `/notesvintage/`).
+
+## Tests
+
+```sh
+node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark, both designs: home, collections, the editor, colours, Trash and Undo, Reminders, swipes, lists, the Sheet and Settings sheets, step by step, its storage, Settings > Design, the old Notes Vintage address
+node notes/scripts/push-app-test.mjs    # the notifications, the app's side (a stubbed Sheet and server)
+node notes/scripts/aisles-app-test.mjs  # the grocery sections in the app
+node notes/scripts/security-test.mjs    # hostile data from a backup, the Sheet or a setup link (both designs)
+node notes/scripts/push-test.mjs        # the notification server (notes/push)
+node notes/scripts/aisles-test.mjs      # the grocery word list (../home/aisles.js)
+node notes/scripts/make-icons.mjs       # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
+```
 
 Design notes and decisions: `tomallison24/Notes-Allison-OS`, `docs/DESIGN.md`.
 
 ## Look
+
+This is Standard (Sea glass); Vintage is above (*The two designs*).
 
 Same icons and buttons as Mail: line icons on a 24px grid with a 1.7 stroke
 (2.2 for chevrons, ticks and close), in Mail's slate-teal (`--icon`), with
@@ -224,7 +318,7 @@ tag and list tabs are rebuilt on every change, so make edits in the app.
 
 ### Connect the phones
 
-1. On your phone, open Notes → the **download** button (top right) → **Google
+1. On your phone, open Notes → **Settings** (the gear, top right) → **Google
    Sheet sync**. Paste the Web app URL and type the secret phrase, then
    **Connect and sync**. If the iPhone offers to save them as a password, say
    yes: next time, tap the link box and pick it.

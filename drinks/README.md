@@ -1,7 +1,8 @@
 # Drinks
 
-A simple log of what you drink, as a home-screen web app in the same frosted
-glass as Fitness. It replaces the ABV Tracker (a single HTML file kept in
+A simple log of what you drink, as a home-screen web app with two designs:
+mid-century Vintage (the default) and Sea glass, the same frosted glass as
+Fitness (below, "The two designs"). It replaces the ABV Tracker (a single HTML file kept in
 Google Drive) and is kept deliberately small: the week, and for each day its
 standard drinks or "alcohol-free".
 
@@ -53,15 +54,77 @@ standard drinks or "alcohol-free".
   is over, or finished. Days you didn't log are left out of averages, so a week
   with gaps can read low; each view says how many there were. There are no tips
   for cutting down yet.
-- **More** (the person button): your account, your goals (a week at most, a
-  day at most, alcohol-free days a week), **Bring in ABV Tracker history**,
+- **More** (the person button): the design (Vintage or Standard), your
+  account, your goals (a week at most, a day at most, alcohol-free days a week), **Bring in ABV Tracker history**,
   **Export** (CSV) and **Delete all data**.
 
-**Drinks Vintage** is the same app in a mid-century modern look, as its own app
-with its own copy of the log on the phone ([`drinksvintage/`](../drinksvintage/README.md)).
-It uses this app's server route, so signed in it is the same private log in
-your family account, and Calendar shows it either way. It needs nothing new
-set up.
+## The two designs
+
+One app, one log: the design changes only how Drinks looks, at once, and is
+kept on this phone (**More → Design**, the first section; More is Drinks'
+settings), as in Clock. `../home/design.js`, loaded in `<head>`, applies it
+before the page is drawn. Every tap, swipe, sheet and chart works the same in
+both.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Mail, Home and Orders:
+  - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
+    place of glass;
+  - mustard, teal, burnt orange and olive: today in the week is a mustard disc,
+    the week's bar and the chart columns are teal, weeks and days over a limit
+    are burnt orange (with the ▲ as before), alcohol-free days are olive, and
+    the Week / Month, By name / By kind and oz / ml switches have a mustard
+    thumb;
+  - each kind of drink keeps its own dot and bar colour, from the same palette
+    (beer mustard, wine orange, spirits walnut, cocktail teal, seltzer light
+    teal, cider olive, other taupe); the name is always written too;
+  - three atomic shapes (a mustard sun, a teal dot, an orange pill) behind the
+    title that scroll away with the page, and three little bars under it;
+  - solid burnt-orange buttons (+, Done, Add, Sign in); outlined teal for
+    Cancel, and an outlined olive Alcohol-free day;
+  - the Analysis view picker is a walnut pill with a mustard disc, as in Home;
+    its menu is a cream panel;
+  - Futura, which iOS has built in, so no font is downloaded.
+
+  **The sky.** Behind the title is the shared Vintage sky (`../home/sky.js`,
+  as in every Vintage design), with the real sun: by day a ground washed with
+  mustard, the sun and rays that turn very slowly; after sunset a ground washed
+  with deep teal, the moon and twinkling stars; each over cream (Light) or
+  walnut (Dark). Sunrise and sunset are for the phone's place (kept on the
+  phone, to a tenth of a degree, and only if the app already has location
+  permission: it never asks), else the time zone, and the sky changes by itself
+  while the app is open. It holds still with reduced motion. This app only
+  gives the sun its colour (`--sky-disc`) and keeps its own sizes and places
+  for the shapes, tuned to its header. Checked by `aOS/scripts/sky-test.mjs`.
+- **Standard**: Sea glass: Fitness's tokens, faint tiles and Liquid Glass
+  sheets, with only the pieces Drinks uses; no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.drinks`; the script draws nothing in
+colour itself, so only the Week / Month thumb is measured again on a change
+(Futura and the system font are different widths). What iOS reads when Drinks
+is added to the Home Screen follows it: the icon (`icon-180.png`, Vintage: a
+cream wine glass, the level of the wine cut out of it, on olive with a mustard
+sun and an orange pill; `icon-glass-180.png`, Standard: "Plum", a white wine
+glass on dusty plum), the status bar style (`default` in Vintage, where
+`black-translucent`'s white clock would vanish on the cream) and the bar
+colours.
+
+**The old Drinks Vintage app.** Drinks Vintage used to be an app of its own
+(`drinksvintage/`, with its own copy of the log on the phone, and its calls
+already going to this app's route). Its address now opens this same app (the
+deploy copies `drinks/` there, `.github/workflows/news.yml`), so a phone that
+added it keeps it. The first time it opens there, `design.js` moves that app's
+data on the phone over to Drinks' names (`allison-drinksv-v1…` →
+`allison-drinks-v1…`: the log, its graves, the sync marker, the Google Sheet
+link and code, the Analysis view and switches; the IndexedDB copy of the Sheet
+link `allison-drinksv` → `allison-drinks`; and what it had seen, so no
+walkthrough again), unless Drinks already has data on that phone; nothing old
+is deleted. Signed in, the log was the same private log in your account in
+both, so nothing is lost either way. Its calls go to `../drinks/api/` (not
+`api/`), so they reach your account from either address.
 
 ## The sums
 
@@ -186,13 +249,16 @@ drink wins, wherever it was made, and a deletion reaches the other phones.
 
 ## Files
 
-- `index.html`: the page and its look (Fitness's tokens, tiles and Liquid
-  Glass sheets, with only the pieces Drinks uses).
+- `index.html`: the page and its two looks: Standard (Fitness's tokens, tiles
+  and Liquid Glass sheets, with only the pieces Drinks uses) and Vintage, the
+  `<style id="vintage">` block after it.
 - `app.js`: the app, Analysis included (the charts are plain inline SVG).
   `calc.js`: the sums and the ABV Tracker import.
 - `sw.js`: the offline shell (network-first; `api/` is left alone).
-- `icon.svg` → `icon-180.png`, `icon-512.png` ("Plum": a white wine glass on
-  dusty plum, one of the Sea glass tints), drawn by `scripts/make-icons.mjs`.
+- `icon.svg` → `icon-180.png`, `icon-512.png` (Vintage: a cream wine glass on
+  olive), and `icon-glass.svg` → `icon-glass-180.png`, `icon-glass-512.png`
+  (Standard, "Plum": a white wine glass on dusty plum, one of the Sea glass
+  tints), drawn by `scripts/make-icons.mjs`.
 - `google-sheet-sync.gs`: the Apps Script that goes in your Sheet.
 - `../functions/drinks/api/[[route]].js`: your log in your account.
 
@@ -202,9 +268,19 @@ drink wins, wherever it was made, and a deletion reaches the other phones.
 node drinks/scripts/calc-test.mjs    # the sums and the import
 node drinks/scripts/api-test.mjs     # the server route, on Workers KV in memory
 node drinks/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (fake-sheet.mjs)
-node drinks/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright)
+node drinks/scripts/app-test.mjs     # the app in Chromium at iPhone size, both designs, the old Drinks Vintage address (needs Playwright)
+node drinks/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
 `app-test.mjs` runs the real server route behind the page, so it covers two
 phones kept in step, a delete travelling between them, signed out, accounts
 not yet on, Calendar's layer, and the Google Sheet (the real script, on a fake Sheet).
+It runs in Vintage, the default, and also checks: the Retro look in light and
+dark (Futura, the ground, flat cream or walnut cards and sheets, the shapes
+behind the title, orange buttons, mustard thumbs, the walnut view pill, teal,
+orange and olive columns); Standard (the Vintage block off, no sky, the Sea
+glass ground, icon and status bar); More → Design switching both ways at once
+and kept across a reload; and the old Drinks Vintage address (served from
+`drinks/`, as the deploy does): its data moved over once, what it had seen
+carried over, nothing old deleted, a phone with both keeping Drinks' own, and
+its sync going to Drinks' route.
