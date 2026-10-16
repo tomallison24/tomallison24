@@ -6,10 +6,13 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // In the Vintage look every app shows its mid-century icon here, whichever design is picked: an app shows its
-  // Vintage design's icon.
+  // Vintage design's icon. An app that carries both designs itself (picked in its own Settings) has both icons
+  // in its folder: icon-512.png (Vintage) and BOTH[id] (Sea glass).
   // In the Sea glass look an app shows its own folder's icon (the Vintage design's, for a Vintage design). The app's
   // own icon (what a Home Screen shows) is its folder's, and is not changed.
+  const BOTH = { clock: 'icon-glass-512.png' };
   const icon = id => {
+    if (BOTH[id]) return `../${id}/${window.aosLook && aosLook.get() === 'glass' ? BOTH[id] : 'icon-512.png'}`;
     if (window.aosLook && aosLook.get() === 'glass') return `../${id}/icon-512.png`;
     const v = (D.DESIGNS[id] || []).find(d => d.look === 'vintage');
     return v ? `../${v.app}/icon-512.png` : `../${id}/icon-512.png`;
@@ -17,12 +20,13 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { notesvintage: '85,96,107', podcastsvintage: '122,74,140', placesvintage: '62,142,90', mealsvintage: '142,58,43', newsvintage: '126,140,52', fitnessvintage: '74,52,38', travelvintage: '74,52,38', drinksvintage: '126,140,52', weathervintage: '126,140,52', calendarvintage: '63,110,154', mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const CAT = { notesvintage: 'Productivity', podcastsvintage: 'Entertainment', placesvintage: 'Travel', mealsvintage: 'Food & Drink', newsvintage: 'News', fitnessvintage: 'Health & Fitness', travelvintage: 'Travel', drinksvintage: 'Health & Fitness', weathervintage: 'Weather', calendarvintage: 'Productivity', mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const HUE = { clock: '78,93,126', notesvintage: '85,96,107', podcastsvintage: '122,74,140', placesvintage: '62,142,90', mealsvintage: '142,58,43', newsvintage: '126,140,52', fitnessvintage: '74,52,38', travelvintage: '74,52,38', drinksvintage: '126,140,52', weathervintage: '126,140,52', calendarvintage: '63,110,154', mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
+  const CAT = { clock: 'Utilities', notesvintage: 'Productivity', podcastsvintage: 'Entertainment', placesvintage: 'Travel', mealsvintage: 'Food & Drink', newsvintage: 'News', fitnessvintage: 'Health & Fitness', travelvintage: 'Travel', drinksvintage: 'Health & Fitness', weathervintage: 'Weather', calendarvintage: 'Productivity', mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
+    clock: [['ok', 'Nothing: your alarms stay on this phone']],
     notesvintage: [['once', 'The family Google Sheet, to share notes (optional)']],
     podcastsvintage: [['ok', 'Nothing']],
     placesvintage: [['once', 'The family Google Sheet, to share lists (optional)']],

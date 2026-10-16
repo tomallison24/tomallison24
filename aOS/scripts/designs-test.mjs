@@ -48,10 +48,11 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
   }
-  // searching for a design finds the app that has it, once
+  // searching for a design finds the app that has it, once (Clock too: it has both designs in one app, picked in its Settings)
+  const IN_APP = ['clock'];
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
-  if ([...found].sort().join() !== [...WITH_DESIGNS].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + WITH_DESIGNS.join());
+  if ([...found].sort().join() !== [...WITH_DESIGNS, ...IN_APP].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + [...WITH_DESIGNS, ...IN_APP].join());
   report('Every app with a design is one row, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
 }
 
