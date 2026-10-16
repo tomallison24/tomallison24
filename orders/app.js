@@ -672,7 +672,7 @@ if (window.top !== window.self) {
   // marked Check details that came from an email is checked once (per email), at most 10 at a time,
   // quietly. Asked once first, from Ipsy's corner; Settings > Ipsy turns it on or off. A fix shows in
   // Ipsy's chat with Undo, and Ipsy says in its corner what it did. What it can't fix stays in To check.
-  let autoBusy = false;
+  let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
   const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy'];
   async function autoCheck() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
@@ -682,6 +682,8 @@ if (window.top !== window.self) {
     const mode = ls.get(K.ipsyAuto, '');
     if (mode === '0') return;
     if (mode !== '1') {
+      if (autoOffered) return;
+      autoOffered = true;
       ipsy.hint(plural(todo.length, 'order') + ' to check. Want me to try fixing ' + (todo.length === 1 ? 'it' : 'them') + '?', async () => {
         const ok = await ipsy.ask('Want me to check the orders in **To check** by myself? I’ll read each one’s email again with Claude (through the family server; nothing is kept) and fix what I can, now and whenever Gmail brings something unsure. Each fix shows here with Undo, and you can turn this off in Settings.', { yes: 'Yes, check them', no: 'Not now' });
         ls.set(K.ipsyAuto, ok ? '1' : '0');

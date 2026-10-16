@@ -325,8 +325,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.ok(reads.every(r => !/https?:/.test(r.b.text)), 'no links are sent');
     const w = await walmart();
     assert.equal(w.check, false, 'fixed: out of To check'); assert.equal(w.items[0].name, 'Mini Fridge 4L Cooler'); assert.equal(w.total, 49.99);
-    await page.waitForSelector('.ipsy-hint');
-    assert.match(await page.textContent('.ipsy-hint'), /I fixed/);
+    await page.waitForFunction(() => /I fixed/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-fixed.png') });
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-change');
