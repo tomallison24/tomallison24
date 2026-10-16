@@ -24,8 +24,30 @@
 //                      saved with its dates and the sale prices it was planned
 //                      with (so its shopping list stays as it was), and added
 //                      to the log, as Fitness keeps each workout
-//   POST discard    -> {} the draft goes
+//   POST discard    { at? } -> {} the draft goes (with at: only if it is still that draft)
 //   POST settings   { stores, cards, avoid } -> { settings }
+//
+// For Ipsy, the helper you chat with (its changes, and their Undo, go through these and the
+// ones above, so the allergy check and every other rule here applies to them too):
+//   POST night      { draft?, day, meal, id?, at? } -> { plan, log } or { draft }
+//                      one night's dinner on the family's plan (or, with draft: true, on the
+//                      new plan waiting): the whole dinner, cleaned as a plan's are and
+//                      checked against what the family avoids ({ error: 'avoid', hits } if it
+//                      slips; nothing is saved). id (the plan's) or at (the draft's): only if
+//                      it is still that one ({ error: 'changed' } if someone changed it since).
+//   POST draft      { draft, over? } -> { draft }
+//                      puts a draft back as it was (Undo of a new plan, or of Discard),
+//                      checked like a plan; over: the at of the draft it may replace (none:
+//                      only when no draft is waiting).
+//   POST unaccept   { id } -> { plan, log, draft }
+//                      Undo of Accept: the plan id goes back to being the draft waiting, out
+//                      of the log and the history, and the plan before it is the family's again.
+//   POST ipsy       { messages } -> Anthropic's answer, as it comes (one step of Ipsy's chat,
+//                      server/ipsy.js): adds Ipsy's instructions and tools (IPSY_SYSTEM,
+//                      IPSY_CLIENT_TOOLS) and asks Claude Sonnet 5.5 (MEALS_IPSY_MODEL names
+//                      another); the phone runs the tools, on the family's Meals through the
+//                      routes above. Nothing about the conversation is kept: only a count of
+//                      questions (meals:ipsy:<user id>:<day>, IPSY_DAILY a person a day).
 //
 // The model: Claude Haiku 5.5 (the cheapest Claude, and plenty for this: the
 // allergy check below doesn't rely on the model), through Anthropic's API with
@@ -47,11 +69,12 @@
 //   meals:log       [{ id, start, end, meat, shop, people, titles }] accepted plans, newest
 //                   first, the last 52; meals:log:<id> each one whole
 //   meals:history   [{ title, cuisine, at }] the last 40 dinners, so new plans differ
-// Writes happen only when a deals list or a plan is made, or settings change.
+// Writes happen only when a deals list or a plan is made or changed, or settings change.
 //
 // The X-Meals header stops other web pages calling this (as X-Drinks does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
+import { IPSY_MODEL, IPSY_DAILY, T, DAY, persona, modelOf as ipsyModelFor, requestHead, ipsyStep } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -225,6 +248,86 @@ export async function makePlan(env, settings, o, deals, history, f = fetch) {
   return plan;
 }
 
+// ---- Ipsy: the helper you chat with (server/ipsy.js, shared by every app with Ipsy) ----
+// The phone keeps the conversation and runs Meals' tools (meals/ipsy-tools.js), on the family's
+// plan, draft and deals through this route's own endpoints; Anthropic runs web search and web
+// fetch. MEALS_IPSY_MODEL names another model than Claude Sonnet 5.5.
+export { IPSY_MODEL, IPSY_DAILY };
+export const ipsyModelOf = env => ipsyModelFor(env, 'MEALS_IPSY_MODEL');
+const WHICH = { type: 'string', enum: ['current', 'draft'], description: 'current: the family\'s accepted plan; draft: the new plan waiting to be accepted' };
+const NIGHT = { type: 'integer', description: 'The night\'s number in the plan, from 1' };
+const DINNER = { type: 'object', additionalProperties: false, required: ['title', 'ingredients', 'steps'], properties: {
+  title: { type: 'string', description: 'The dish, like "Honey-garlic chicken thighs with roasted broccoli"' },
+  cuisine: { type: 'string' }, method: { type: 'string', description: 'The way it is cooked: grilled, braised, stir-fried, sheet pan, slow cooker, soup...' },
+  minutes: { type: 'integer', description: 'Total time' }, why: { type: 'string', description: 'One short line on why it suits the night' },
+  uses: { type: 'array', items: { type: 'string' }, description: 'Exact names of this week\'s sale items it uses (get_deals); for a plan across stores, the store in brackets, like "Ground chuck (Publix)"' },
+  ingredients: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['item'], properties: {
+    item: { type: 'string' }, qty: { type: 'string', description: 'For the whole family, in US measures, like "2 lb"' }, pantry: { type: 'boolean', description: 'A staple most kitchens have (oil, salt, pepper, dried spices, flour, sugar)' } } } },
+  steps: { type: 'array', items: { type: 'string' }, description: 'Short steps, in order' },
+} };
+export const IPSY_CLIENT_TOOLS = [
+  T('get_meals', 'An overview of the family\'s Meals: this week\'s plan (each night\'s date and dinner), the new plan waiting to be accepted if there is one, what the family never eats (avoid), their stores and member cards, which stores have this week\'s deals, and how many past plans there are.', {}),
+  T('get_dinners', 'Whole recipes (ingredients, amounts, steps, the sale items each uses) from the current plan, the new plan waiting, or a past plan.', {
+    plan: { type: 'string', description: 'current, draft, or a past plan\'s id (get_past_plans)' },
+    nights: { type: 'array', items: { type: 'integer' }, description: 'Which nights, from 1 (default: all)' },
+  }, ['plan']),
+  T('get_deals', 'This week\'s sales at the family\'s stores (sales run Wednesday to Tuesday): each item\'s name, sale price, usual price, whether it needs the store\'s member card, and terms.', {
+    store: { type: 'string', enum: ['all', ...STORES.map(x => x.id)], description: 'One store, or all of the family\'s (default)' },
+    query: { type: 'string', description: 'Words to match in the item names, like "chicken"' },
+  }),
+  T('get_past_plans', 'The plans the family accepted before, newest first: each one\'s id, dates, meat, store and dinners.', {
+    limit: { type: 'integer', description: 'Most to return (default 12, at most 52)' },
+  }),
+  T('get_shopping_list', 'The shopping list for the current plan, as the List tab shows it: by grocery section, each item\'s amount, which nights need it, its sale price, and whether it is ticked on this phone; staples apart.', {}),
+  T('tick_items', 'Tick items off the shopping list (or untick them), on this phone only.', {
+    items: { type: 'array', items: { type: 'string' }, description: 'Item names as get_shopping_list gives them' },
+    ticked: { type: 'boolean', description: 'true to tick (default), false to untick' },
+  }, ['items']),
+  T('set_dinner', 'Change one night\'s dinner on the current plan or the new plan waiting: give the whole dinner. The server checks it against what the family never eats before saving; if it slips, nothing changes and the answer says what it found. Everyone in the family sees the change.', {
+    plan: WHICH, night: NIGHT, dinner: DINNER,
+  }, ['plan', 'night', 'dinner']),
+  T('make_plan', 'Make a new plan the way the app\'s + button does: the meal planner writes a few nights of different dinners, checked against what the family never eats, and it waits as the new plan (not saved yet) until accepted. Takes about half a minute. If a new plan is already waiting, the person is asked first, as it takes its place.', {
+    meat: { type: 'string', enum: MEATS, description: 'What every dinner is built around; "on sale" for whichever meat or fish is on sale' },
+    nights: { type: 'integer', description: '2 to 7 (default 4)' }, people: { type: 'integer', description: '1 to 10 (default: as the current plan, else 4)' },
+    shop: { type: 'string', enum: ['all', ...STORES.map(x => x.id)], description: 'One store, or all: the best deals across the family\'s stores (default)' },
+    use_deals: { type: 'boolean', description: 'Build it around this week\'s deals (default true)' },
+    note: { type: 'string', description: 'Anything else, like "kid-friendly" or "no spice" (at most 200 characters)' },
+    again: { type: 'boolean', description: 'Make it unlike the new plan already waiting (another go)' },
+  }, ['meat']),
+  T('accept_plan', 'Accept the new plan waiting, so it becomes the family\'s plan, night 1 on start, with its shopping list. It takes the place of the current plan for everyone, so the person is asked first.', {
+    start: { ...DAY, description: 'The first night (YYYY-MM-DD; default today)' },
+  }),
+  T('discard_draft', 'Discard the new plan waiting (the person is asked first). The current plan stays.', {}),
+  T('show_dinner', 'Open one night\'s recipe on the person\'s screen, behind the chat.', { plan: WHICH, night: NIGHT }, ['plan', 'night']),
+];
+const GROUP_WORDS = Object.entries(GROUPS).map(([k, v]) => '"' + k + '" (' + v.join(', ') + ')').join('; ');
+export const IPSY_SYSTEM = persona({
+  app: 'Meals',
+  about: 'an iPhone app a family uses to plan dinners around this week\'s grocery deals, with each dinner\'s recipe and a shopping list',
+  can: [
+    'Read the family\'s Meals: get_meals (the plan, the new plan waiting, what they never eat, their stores), get_dinners (whole recipes), get_deals (this week\'s sales), get_past_plans, and get_shopping_list.',
+    'Change one night\'s dinner on the plan or on the new plan waiting (set_dinner): you write the whole dinner, and the server checks it before it is saved.',
+    'Make a new plan the way the app does (make_plan), accept it so it becomes the family\'s plan (accept_plan), or discard it (discard_draft).',
+    'Tick items off the shopping list on this phone (tick_items), and open a recipe on the screen (show_dinner).',
+  ],
+  rules: [
+    'The allergy rules come first. Before you suggest or write any dish, check what the family never eats (the avoid list in get_meals; the note at the start of each message has it too), and never suggest anything with one of them in any form: oils, milks, flours, butters, sauces, garnishes, curry pastes. The app checks each dinner word by word: ' + GROUP_WORDS + '; anything else on the list by its own name. Peanuts aren\'t tree nuts.',
+    'Never write those words in a dinner at all, not even to say it is free of them ("nut-free", "no coconut"): the check would turn it away. If set_dinner answers avoid, it names what it found: write the dinner again without it. Packaged foods can hide them, so say to check labels when it matters.',
+    'Meals is the family\'s, not one person\'s: the plan, the new plan waiting, the deals and the settings are shared, so everyone in the family sees what you change.',
+    'Change one night\'s dinner when asked, without asking first: it shows in the chat with an Undo. A whole week is different: make_plan in place of a new plan already waiting, accept_plan and discard_draft ask the person first with a Yes / No card in the chat. If they say no, leave it.',
+    'A dinner you write is a whole recipe for the plan\'s number of people: US measures, amounts for everyone, staples (oil, salt, pepper, dried spices, flour, sugar) marked pantry, short steps in order, doable on a weeknight unless its minutes say otherwise, and a different cuisine and way of cooking from the plan\'s other nights. Put this week\'s sale items it uses in uses, named as get_deals names them.',
+    '"What can I make with ...": suggest a few dinners that keep to the allergy rules; put one on the plan only when asked.',
+    'You can\'t change the stores, member cards or what the family never eats (that is Settings, the gear, for the person to do), find new deals (the Deals tab: Find this week\'s deals, or Paste deals), or add things to the shopping list (it comes from the plan; Copy the list puts it in Notes). Ticks stay on this phone.',
+    'Recipes are made by AI and sale prices come from deal pages: say to check times, temperatures and prices when it matters.',
+  ],
+  bold: 'a dinner or a store',
+});
+export const ipsyRequestHead = env => requestHead({ model: ipsyModelOf(env), system: IPSY_SYSTEM, tools: IPSY_CLIENT_TOOLS });
+
+// One dinner, kept as a plan keeps them (cleanPlan), or null; a plan's sale items, kept as deals are.
+const oneMeal = m => cleanPlan({ meals: [m] }, 1).meals[0] || null;
+const cleanSales = a => (Array.isArray(a) ? a : []).slice(0, 400).map(x => x && storeOf(x.store) ? { ...cleanDeals({ items: [x] }).items[0], store: x.store } : null).filter(x => x && x.name);
+
 // ---- the route ----
 async function body(request) {
   const t = await request.text();
@@ -253,6 +356,10 @@ export async function onRequest({ request, params, env }, f = fetch) {
   const me = await sessionUser(db, request);
   if (!me) return reply({ error: 'signin' }, 401);
   try {
+    if (route === 'ipsy' && method === 'POST') {
+      if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
+      return await ipsyStep({ env, request, db, me, app: 'meals', head: ipsyRequestHead(env) }, f);
+    }
     const settings = settingsOf(await getJSON(db, 'meals:settings')), wk = week();
     if (route === 'state' && method === 'GET') {
       const deals = {};
@@ -311,8 +418,59 @@ export async function onRequest({ request, params, env }, f = fetch) {
       return reply({ plan, log: kept });
     }
     if (route === 'discard' && method === 'POST') {
+      const b = await body(request);
+      if (b.at) { const d = await getJSON(db, 'meals:draft'); if (d && d.at !== b.at) return reply({ error: 'changed' }, 409); }
       await db.delete('meals:draft');
       return reply({});
+    }
+    // ---- for Ipsy: one night's dinner, a draft put back, an accept taken back (see the top) ----
+    if (route === 'night' && method === 'POST') {
+      const b = await body(request), key = b.draft ? 'meals:draft' : 'meals:plan', p = await getJSON(db, key);
+      if (!p || !Array.isArray(p.meals) || !p.meals.length) return reply({ error: b.draft ? 'no-draft' : 'no-plan' }, 409);
+      if (b.draft ? b.at && b.at !== p.at : b.id && b.id !== p.id) return reply({ error: 'changed' }, 409);
+      const i = int(b.day, 1, p.meals.length, 0) - 1, m = oneMeal(b.meal);
+      if (i < 0) return reply({ error: 'day' }, 400);
+      if (!m) return reply({ error: 'meal' }, 400);
+      const hits = avoidHits(planText([m]), settings.avoid);
+      if (hits.length) return reply({ error: 'avoid', hits }, 422);
+      const old = p.meals[i]; m.day = old.day;
+      p.meals = p.meals.map((x, j) => j === i ? m : x);
+      await putJSON(db, key, p);
+      if (b.draft) return reply({ draft: p });
+      // the accepted plan: its copy in the log, its titles there, and the history new plans differ from
+      const log = (await getJSON(db, 'meals:log')) || [], e = log.find(x => x.id === p.id);
+      if (p.id && e) { e.titles = p.meals.map(x => x.title); await putJSON(db, 'meals:log:' + p.id, p); await putJSON(db, 'meals:log', log); }
+      const history = (await getJSON(db, 'meals:history')) || [], h = history.find(x => x.at === p.acceptedAt && x.title === old.title);
+      if (h) { h.title = m.title; h.cuisine = m.cuisine; await putJSON(db, 'meals:history', history); }
+      return reply({ plan: p, log });
+    }
+    if (route === 'draft' && method === 'POST') {
+      const b = await body(request), d = b.draft && typeof b.draft === 'object' ? b.draft : {}, now = await getJSON(db, 'meals:draft');
+      if (now && now.at !== b.over) return reply({ error: 'changed' }, 409);
+      const p = cleanPlan(d, 7);
+      if (!p.meals.length) return reply({ error: 'meal' }, 400);
+      const hits = avoidHits(planText(p.meals), settings.avoid);
+      if (hits.length) return reply({ error: 'avoid', hits }, 422);
+      const at = +d.at > 0 && +d.at <= Date.now() ? Math.round(+d.at) : Date.now();
+      const draft = { at, by: str(d.by, 60) || me.name, week: ISO.test(d.week) ? d.week : wk, meat: MEATS.includes(d.meat) ? d.meat : 'chicken', days: p.meals.length,
+        people: int(d.people, 1, 10, 4), useDeals: !!d.useDeals, shop: d.shop === 'all' || storeOf(d.shop) ? d.shop : 'all', note: str(d.note, 200), ...p, sales: cleanSales(d.sales) };
+      await putJSON(db, 'meals:draft', draft);
+      return reply({ draft });
+    }
+    if (route === 'unaccept' && method === 'POST') {
+      const b = await body(request), plan = await getJSON(db, 'meals:plan');
+      if (!plan || !plan.id || plan.id !== b.id) return reply({ error: 'changed' }, 409);
+      if (await getJSON(db, 'meals:draft')) return reply({ error: 'draft' }, 409);
+      const log = ((await getJSON(db, 'meals:log')) || []).filter(e => e.id !== plan.id);
+      const before = log[0] ? await getJSON(db, 'meals:log:' + log[0].id) : null;
+      const history = ((await getJSON(db, 'meals:history')) || []).filter(h => h.at !== plan.acceptedAt);
+      const { id, start, dates, acceptedAt, acceptedBy, ...draft } = plan;
+      await putJSON(db, 'meals:draft', draft);
+      await db.delete('meals:log:' + plan.id);
+      await putJSON(db, 'meals:log', log);
+      if (before) await putJSON(db, 'meals:plan', before); else await db.delete('meals:plan');
+      await putJSON(db, 'meals:history', history);
+      return reply({ plan: before, log, draft });
     }
     const lm = /^log\/(p[a-z0-9]{1,16})$/.exec(route);
     if (lm && method === 'GET') {

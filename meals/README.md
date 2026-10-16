@@ -29,6 +29,8 @@ Dinner for the family, for less. One screen, three tabs:
   ("You probably have") apart. Tick it off in the store (ticks stay on the
   phone), or copy it into a grocery list in Notes.
 
+**Ipsy** (bottom left) is the helper you chat with about dinner (below).
+
 The gear: which stores to follow, the family's member cards (Prime, VIC), what
 the family never eats (tree nuts and coconut to start; peanuts are fine), your
 account, and an optional **Google Sheet** that keeps a readable copy of it all
@@ -91,7 +93,8 @@ of settings, in the accounts' Workers KV (`meals:settings`,
 `functions/meals/api`, which only signed-in family can call
 (`functions/meals/api/_middleware.js`). The last plan and deals are kept on
 the phone too (`allison-meals-v2`), so the list opens in the store with no
-signal. Needs family accounts switched on.
+signal. Needs family accounts switched on. Ipsy keeps only a count of questions
+there (`meals:ipsy:<user id>:<day>`, gone after two days).
 
 ## The AI
 
@@ -143,6 +146,78 @@ is held to 5 searches a store.
   (`scripts/deals-live.mjs`); it saves nothing.
 - Made by AI: check times and temperatures, as the recipe says.
 
+## Ipsy
+
+**Ipsy** is the little stem cell in the bottom left corner, beside **+**: a
+helper you chat with about the family's dinners, in the design picked in
+Settings (it changes with the design at once). Ask in your own words, e.g.
+*What's for dinner tonight?*, *Swap Thursday for something quicker*, *What's on
+sale this week?*, *What can I make with ground beef?*, *Plan a pork week around
+the deals*, *Tick off the broccoli*.
+
+- **What it can do** (`ipsy-tools.js`). Read the family's Meals: this week's
+  plan and its recipes, the new plan waiting, this week's deals at each store,
+  past plans, the shopping list and what the family never eats. Change one
+  night's dinner on the plan or on the new plan waiting (it writes the whole
+  dinner: ingredients, amounts and steps). Make a new plan the way **+** does,
+  accept it, or discard it. Tick items off the list, and open a recipe on the
+  screen. It also searches the web and reads pages.
+- **The allergy rules come first.** Its instructions say to check what the
+  family never eats before it suggests or writes any dish, and never to suggest
+  anything with one of them in any form; they list what the server's check
+  covers ("tree nuts": almonds, pesto, marzipan and the rest; "coconut") and
+  that peanuts are fine. That check doesn't rely on Ipsy: **every dinner it
+  saves goes through the server's own word-by-word check**, the one every plan
+  goes through, and a dinner that slips is turned away with what it found
+  (nothing is saved). The family's allergy settings are read-only to Ipsy: it
+  can't change them, the stores or the member cards (that's Settings, the gear).
+- **The family's, so everyone sees it.** The plan, the new plan waiting and the
+  deals are the family's (Data, above): what Ipsy changes, everyone signed in
+  sees, and it goes to the Google Sheet like any other change.
+- **Asked first for a whole week.** One night's dinner changes without asking
+  (it shows with Undo). Making a new plan in place of one already waiting,
+  accepting a plan and discarding one ask first, with a Yes / No card in the
+  chat that says what changes for everyone; nothing happens until you tap.
+- **Every change shows in the chat with Undo**, for as long as the app stays
+  open, and Undo puts it back on the family server: the dinner that was there,
+  the new plan that was waiting (just as it was), or the plan before an accept
+  (the accepted plan goes back to waiting, out of Past plans). If someone in the
+  family changed it since, Undo leaves their change alone and says so. Ticks are
+  on this phone only, as in the app.
+- **Only through the app's own server routes.** Ipsy changes nothing on the
+  phone or the server by itself: it calls `functions/meals/api` as the app
+  does (`plan`, `accept`, `discard`), plus three routes made for it, each with
+  the same checks: `night` (one night's dinner, checked like a plan), `draft`
+  (puts a new plan back as it was, for Undo, checked like a plan) and
+  `unaccept` (Undo of an accept). `discard` and `night` take the plan they mean,
+  so a plan someone else made or accepted since is never changed by mistake.
+- **How it works.** The chat lives on the phone. Each step sends the whole
+  conversation to the family server (`POST ipsy`), which adds Ipsy's
+  instructions and tools and asks **Claude Sonnet 5.5** (medium effort, prompt
+  caching on, Anthropic's server-side fallback if it declines). When Claude asks
+  for one of Meals' tools, it runs on the phone and the result goes back with
+  the next step. Web search and web pages run at Anthropic. Plans Ipsy asks for
+  are still made by Meals' own model (`MEALS_MODEL`, Haiku 5.5 by default);
+  `MEALS_IPSY_MODEL` (optional repository secret) names another model for Ipsy.
+- **Asked first, once.** Before the first question, Ipsy says what is sent
+  where: your question and whatever it looks at to answer it (the family's
+  plans, deals and settings in Meals) go to Claude through the family server,
+  which keeps only a count of questions (80 a person a day; the steps a
+  question takes aren't counted).
+- **For signed-in family** (Face ID), like the rest of Meals. Without the key it
+  says Ipsy isn't set up.
+- **Web pages are read, never obeyed**: Ipsy is told they are material, not
+  instructions, and a recipe it finds still has to pass the allergy check.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone
+  until then.
+- **Limits.** Ipsy can't find new deals (the Deals tab's **Find this week's
+  deals** or **Paste deals** does), add things to the shopping list (it comes
+  from the plan; **Copy the list** puts it in Notes), or change Past plans other
+  than the current one.
+- **Not tried against the real API or on a phone**: the tests use a stand-in for
+  Claude (`node meals/scripts/ipsy-test.mjs`, `node meals/scripts/api-test.mjs`),
+  so the first real questions are the real test of the instructions.
+
 ## Google Sheet
 
 Optional. **Gear → Google Sheet** keeps a **readable copy** of Meals in a Google Sheet. It goes **one way**: Meals
@@ -189,9 +264,10 @@ and a step in `app-test.mjs` (what the app sends).
 ## Tests
 
 ```
-node meals/scripts/api-test.mjs     # the server: sign-in, both AI services (stand-ins), deals, plans, the allergy check
+node meals/scripts/api-test.mjs     # the server: sign-in, both AI services (stand-ins), deals, plans, the allergy check, and Ipsy's step and routes
 node meals/scripts/logic-test.mjs   # sections, the shopping list, matching sales, the week
 node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
 node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, the Google Sheet copy, both designs, Settings > Design, the old Meals Vintage address
+node meals/scripts/ipsy-test.mjs    # Ipsy in both designs, light and dark, on the real server code with a stand-in Claude: every tool, the allergy check, ask-first, Undo
 node meals/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
