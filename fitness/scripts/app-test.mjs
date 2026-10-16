@@ -9,6 +9,11 @@
 // running on fake-sheet.mjs) including a second phone set up from the
 // setup link, dark mode, and that nothing trips the page's Content
 // Security Policy. Screenshots go to the folder given as the second argument.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (Futura, flat cream
+// or walnut cards, a mustard thumb, an orange add button, the shapes behind the title; the sky held at
+// day, aos.sky), and Standard (Sea glass); Settings > Design switches between them at once and keeps
+// the choice; and the old Fitness Vintage address (served from fitness/, as the deploy does) moves that
+// app's data on the phone over to Fitness' names, once.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node fitness/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -31,6 +36,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/fitnessvintage\//, '/fitness/');   // the old Fitness Vintage address: the deploy copies fitness/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -60,7 +66,7 @@ const sheetCalls = [];
 
 const browser = await chromium.launch();
 const violations = [], errors = [];
-async function newPage(scheme, seed = SEED, extra = null) {
+async function newPage(scheme, seed = SEED, extra = null, { design = null, fresh = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US' });
   // Calendar reaches for iCloud and the weather; nothing is there in a test.
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"no-config"}' }));
@@ -71,14 +77,17 @@ async function newPage(scheme, seed = SEED, extra = null) {
     sheetCalls.push(JSON.parse(req.postData()));
     return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.post(req.postData())) });
   });
-  await ctx.addInitScript(({ seed, extra }) => {
+  await ctx.addInitScript(({ seed, extra, design, fresh }) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('aos.sky', 'day');   // holds the Vintage sky still (../home/sky.js)
+    if (design) localStorage.setItem('design.fitness', design);
+    if (fresh) { for (const [k, v] of Object.entries(fresh)) localStorage.setItem(k, v); return; }   // just these (the old Fitness Vintage app's)
     localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
     // The walkthrough (home/welcome.js) as already seen, as on a phone that has been using the app.
     localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999', calendar: '999' }));
     if (extra) for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
-  }, { seed, extra });
+  }, { seed, extra, design, fresh });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource|404|503/.test(m.text())) errors.push(m.text()); });
@@ -87,6 +96,30 @@ async function newPage(scheme, seed = SEED, extra = null) {
 }
 const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, name + '.png') }) : null;
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('allison-fitness-v1')));
+// Vintage, the default design: the Retro look (the <style id="vintage"> block): Futura, a cream (walnut) ground
+// and flat cards, mustard, burnt orange, the shapes behind the title; a mustard thumb under the chosen of
+// Week / Month in Analysis.
+async function retroLook(page, scheme, { thumb = false } = {}) {
+  const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.look), 'vintage');
+  assert.match((await q('body', ['fontFamily']))[0], /Futura/);
+  assert.equal((await q('body', ['backgroundColor']))[0], ground);
+  assert.equal((await q('.title', ['fontSize']))[0], '44px');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+  assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+  assert.equal((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'the + button is solid orange');
+  assert.equal((await q('#vbar > button', ['fontFamily']))[0].includes('Futura'), true);
+  assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default', 'not translucent on the cream');
+  assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#F1DFBB' : '#4A391E', 'the bar is the sky\'s ground (home/sky.js)');
+  if (await page.$('.week')) {
+    const [bg, shadow, backdrop, radius] = await q('.week', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+    assert.equal((await q('.drow.today .dn b', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'today is a mustard disc');
+  }
+  if (thumb) assert.equal((await q('.seg > .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb');
+}
+
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 
@@ -104,6 +137,11 @@ await test('the week shows seven days from Sunday, today marked', async () => {
   assert.equal(await page.textContent('#viewName'), 'Week');
   assert.ok(await page.isHidden('#todayBtn'), 'no "this week" button on this week');
   await shot(page, '01-week');
+});
+
+await test('Vintage by default, light: drawn in the Retro look: Futura, flat cream cards, mustard, orange, atomic shapes', async () => {
+  await retroLook(page, 'light');
+  assert.doesNotMatch(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /glass/, 'the Vintage icon');
 });
 
 await test('last week shows the shoulder day, with its groups and totals', async () => {
@@ -389,6 +427,7 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   assert.match(work[0], /Lateral Raise15 lb × 12 · was 20 lb × 12 on .+25%/);
   assert.match(work[1], /LegsNot trained in the last 7 days \(4 sets in the 7 before\)/);
   assert.equal(await p.$eval('.gbar[data-g="legs"] .gv', e => e.textContent), '0 −4');
+  await retroLook(p, 'light', { thumb: true });
   assert.ok(await p.$('.seg > .slthumb'), 'the Week / Month switch has its sliding thumb');
   await shot(p, '09-analysis-week');
   // Month: the four weeks before hold the old lateral raise, so the bench is new.
@@ -412,6 +451,7 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   await an.ctx.close();
   const dk = await newPage('dark', seed, { 'allison-fitness-v1-view': 'analysis' });
   await dk.page.goto(BASE + '/fitness/'); await dk.page.waitForFunction(() => window.__fitness); await dk.page.waitForTimeout(500);
+  await retroLook(dk.page, 'dark', { thumb: true });
   await shot(dk.page, '10-analysis-dark');
   if (SHOTS) await dk.page.screenshot({ path: path.join(SHOTS, '11-analysis-dark-full.png'), fullPage: true });
   violations.push(...(await dk.page.evaluate(() => window.__csp || [])));
@@ -609,6 +649,7 @@ await test('dark mode renders', async () => {
   await dark.page.goto(BASE + '/fitness/');
   await dark.page.waitForFunction(() => window.__fitness);
   await dark.page.waitForTimeout(500);
+  await retroLook(dark.page, 'dark');
   await shot(dark.page, '05-week-dark');
   await dark.page.click('.drow.today');
   await dark.page.click('.opt[data-group="legs"]');
@@ -617,6 +658,100 @@ await test('dark mode renders', async () => {
   await shot(dark.page, '06-day-dark');
   violations.push(...(await dark.page.evaluate(() => window.__csp || [])));
   await dark.ctx.close();
+});
+
+await test('Standard: Sea glass, the Vintage block switched off, no sky; the icon, status bar and bar colour follow', async () => {
+  for (const scheme of ['light', 'dark']) {
+    const g = await newPage(scheme, SEED, { 'allison-fitness-v1-view': 'analysis' }, { design: 'glass' });
+    await g.page.goto(BASE + '/fitness/'); await g.page.waitForFunction(() => window.__fitness); await g.page.waitForTimeout(500);
+    const q = (sel, props) => g.page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    assert.ok(await g.page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), scheme + ': glass, Vintage off, no sky');
+    assert.equal((await q('body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', scheme + ': the Sea glass ground');
+    assert.doesNotMatch((await q('body', ['fontFamily']))[0], /Futura/);
+    assert.notEqual((await q('.title', ['fontSize']))[0], '44px');
+    assert.notEqual((await q('#fab', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)', 'no orange +');
+    assert.notEqual((await q('.seg > .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'no mustard thumb');
+    assert.match(await g.page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/);
+    assert.equal(await g.page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    assert.equal(await g.page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
+    await shot(g.page, '17-glass-analysis-' + scheme);
+    violations.push(...(await g.page.evaluate(() => window.__csp || [])));
+    await g.ctx.close();
+  }
+});
+
+await test('Settings > Design: Vintage, then Standard and back, at once, kept across a reload', async () => {
+  const d = await newPage('light');
+  const p = d.page, look = () => p.evaluate(() => document.documentElement.dataset.look);
+  await p.goto(BASE + '/fitness/'); await p.waitForFunction(() => window.__fitness); await p.waitForTimeout(300);
+  assert.equal(await look(), 'vintage');
+  await p.click('#setBtn');
+  await p.waitForSelector('#setSheet:not([hidden])');
+  assert.equal(await p.textContent('#setBody .label'), 'Design', 'Design is the first section');
+  assert.match(await p.textContent('#setBody .hint'), /Just on this phone, and at once\./);
+  assert.equal(await p.getAttribute('#setBody [data-design="vintage"]', 'aria-checked'), 'true');
+  assert.equal(await p.getAttribute('#setBody [data-design="glass"]', 'aria-checked'), 'false');
+  await shot(p, '18-settings-vintage');
+  await p.click('#setBody [data-design="glass"]'); await p.waitForTimeout(200);
+  assert.equal(await look(), 'glass', 'Standard at once');
+  assert.equal(await p.getAttribute('#setBody [data-design="glass"]', 'aria-checked'), 'true');
+  assert.ok(await p.isVisible('#setSheet'), 'the sheet stays open');
+  await shot(p, '19-settings-glass');
+  await p.reload(); await p.waitForFunction(() => window.__fitness); await p.waitForTimeout(300);
+  assert.equal(await look(), 'glass', 'Standard is kept');
+  assert.equal(await p.evaluate(() => localStorage.getItem('design.fitness')), 'glass');
+  await p.click('#setBtn'); await p.waitForSelector('#setSheet:not([hidden])');
+  await p.click('#setBody [data-design="vintage"]'); await p.waitForTimeout(200);
+  assert.equal(await look(), 'vintage', 'Vintage at once');
+  await p.keyboard.press('Escape');
+  assert.ok(await p.isHidden('#setSheet'), 'Escape closes Settings');
+  await p.reload(); await p.waitForFunction(() => window.__fitness); await p.waitForTimeout(300);
+  assert.equal(await look(), 'vintage', 'back to Vintage, kept');
+  assert.equal(await p.evaluate(() => localStorage.getItem('design.fitness')), 'vintage');
+  // the Week / Month thumb is measured again for the other font
+  await p.evaluate(() => { localStorage.setItem('allison-fitness-v1-view', 'analysis'); });
+  await p.reload(); await p.waitForFunction(() => window.__fitness); await p.waitForTimeout(400);
+  const fits = () => p.evaluate(() => { const t = document.querySelector('.seg > .slthumb').getBoundingClientRect(), b = document.querySelector('.seg button[aria-pressed="true"]').getBoundingClientRect(); return Math.abs(t.left - b.left) < 2 && Math.abs(t.width - b.width) < 2; });
+  assert.ok(await fits(), 'the thumb sits under the chosen period');
+  await p.evaluate(() => aosDesign.set('glass')); await p.waitForTimeout(300);
+  assert.ok(await fits(), 'and still does in Standard');
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await d.ctx.close();
+});
+
+await test('the old Fitness Vintage address: its log, Sheet link and seen move over to Fitness once, in Vintage', async () => {
+  const oldLog = { v: 2, exercises: [], logs: [{ id: 'v1', date: TODAY, group: 'arms', exercise: 'Dumbbell Curl', weight: 25, reps: 10, sets: 3, updated: 5 }] };
+  const fresh = { 'aos.seen': JSON.stringify({ fitnessvintage: '1.3', calendar: '999' }), 'allison-fitnessv-v1': JSON.stringify(oldLog), 'allison-fitnessv-v1-view': 'analysis' };
+  const o = await newPage('light', SEED, null, { fresh });
+  // the old app's backup copy of the Sheet link, in its own IndexedDB
+  await o.page.goto(BASE + '/fitness/manifest.webmanifest');
+  // (only there: this phone's own storage lost the link, so the app reconnects from that copy, as it would at its old address)
+  await o.page.evaluate(([u, sec]) => new Promise((res, rej) => { const r = indexedDB.open('allison-fitnessv', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: u, secret: sec }, 'sync'); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = rej; }; r.onerror = rej; }), [SHEET_URL, SECRET]);
+  await o.page.goto(BASE + '/fitnessvintage/'); await o.page.waitForFunction(() => window.__fitness); await o.page.waitForTimeout(800);
+  const got = await o.page.evaluate(() => ({ log: JSON.parse(localStorage.getItem('allison-fitness-v1') || 'null'), view: window.__fitness.st.view, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-fitnessv-v1'), look: document.documentElement.dataset.look, sync: JSON.parse(localStorage.getItem('allison-fitness-v1-sync') || 'null') }));
+  assert.ok(got.log && got.log.logs.some(l => l.id === 'v1'), 'the log is now Fitness\'');
+  assert.equal(got.view, 'analysis', 'it opens on the view it was on');
+  assert.equal(got.seen.fitness, '1.3', 'what it had seen carries over (no walkthrough again)');
+  assert.ok(got.old, 'nothing old is deleted');
+  assert.equal(got.look, 'vintage');
+  const idb = await o.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-fitness', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sync'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }; r.onerror = () => res(null); }));
+  assert.equal(idb && idb.url, SHEET_URL, 'the backup copy of the Sheet link moved to allison-fitness');
+  assert.equal(got.sync && got.sync.url, SHEET_URL, 'and Fitness reconnected to the Sheet from it');
+  await o.page.evaluate(() => window.__fitness.setView('week')); await o.page.waitForTimeout(300);
+  assert.match(await o.page.textContent('.drow.today'), /Arms/, 'the old log shows in the week');
+  // once only: a later change to the old keys is not copied again
+  await o.page.evaluate(() => localStorage.setItem('allison-fitnessv-v1-period', 'month'));
+  await o.page.reload(); await o.page.waitForFunction(() => window.__fitness); await o.page.waitForTimeout(400);
+  assert.equal(await o.page.evaluate(() => localStorage.getItem('allison-fitness-v1-period')), null, 'moved once only');
+  assert.match(await o.page.textContent('.drow.today'), /Arms/);
+  await shot(o.page, '20-old-address');
+  violations.push(...(await o.page.evaluate(() => window.__csp || [])));
+  await o.ctx.close();
+  // a phone with both: Fitness' own log is kept, the old app's is not copied over it
+  const both = await newPage('light', SEED, { 'allison-fitnessv-v1': JSON.stringify(oldLog), 'aos.seen': JSON.stringify({ fitness: '999', fitnessvintage: '999', calendar: '999' }) });
+  await both.page.goto(BASE + '/fitnessvintage/'); await both.page.waitForFunction(() => window.__fitness); await both.page.waitForTimeout(300);
+  assert.equal(await both.page.evaluate(() => localStorage.getItem('allison-fitness-v1')), JSON.stringify(SEED), 'both: Fitness\' own log is kept');
+  await both.ctx.close();
 });
 
 await test('nothing tripped the Content Security Policy and no script errors', async () => {
