@@ -1,16 +1,21 @@
-// Drives the Weather Vintage app in headless Chromium at iPhone size, light and dark, against made-up weather
+// Drives the Weather app in headless Chromium at iPhone size, light and dark, against made-up weather
 // (scripts/fake-weather.mjs stands in for the National Weather Service, Open-Meteo, BigDataCloud and the map
 // tiles, so no network is used): it opens to where you are, the hourly, feels like, humidity, wind and radar
 // views, the hour and day sheets, the Places sheet (search, add a city, units, page dots), the alerts, the
 // radar's forecast frames through Weather's own helper (../weather/api/hrrr), and that nothing trips the
-// page's Content Security Policy; that its storage is its own (wxv.*) and never reads or writes Weather's
-// (wx.*); and that it is drawn in the Retro look: Futura, flat cream (walnut) cards, a mustard thumb, an
-// orange main button, a flat disc and atomic shapes for the sky instead of a gradient, with text that reads
-// on every colour it lands on.
+// page's Content Security Policy; that its storage is wx.*.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look: Futura, flat cream
+// (walnut) cards, a mustard thumb, an orange main button, a flat disc and atomic shapes for the sky instead
+// of a gradient, with text that reads on every colour it lands on; and Standard (Sea glass): the gradient
+// skies and glowing icons, no Vintage styles. Settings > Design (the first section of the Places sheet)
+// switches between them at once, redraws what is open and keeps the choice; and the old Weather Vintage
+// address (served from weather/, as the deploy does) moves that app's data on the phone over to Weather's
+// names, once. Seeds localStorage['aos.seen'] so the walkthrough stays away, and aos.sky (as every Vintage
+// test does; Weather draws its own sky, so it is not read here).
 // Screenshots go to the folder given as the second argument (default: none).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node weathervintage/scripts/app-test.mjs [repo root] [screenshot dir]
+//   node weather/scripts/app-test.mjs [repo root] [screenshot dir]
 // It works at any time of day, on any day: TEST_NOW=<an ISO time> pretends it is another moment.
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -32,6 +37,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/weathervintage\//, '/weather/');   // the old Weather Vintage address: the deploy copies weather/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -60,11 +66,20 @@ const rgb = (r, g, b) => `rgb(${r}, ${g}, ${b})`;
 
 const DISC = scheme => ({ sun: rgb(227, 167, 47), night: scheme === 'light' ? rgb(251, 245, 233) : rgb(233, 221, 196), cloud: rgb(143, 207, 199), rain: rgb(111, 189, 180), storm: rgb(232, 128, 90), snow: rgb(168, 211, 202), fog: rgb(185, 196, 106), wind: rgb(163, 176, 74), alert: rgb(238, 138, 104) });
 const SKY_GROUPS = ['sun', 'night', 'cloud', 'rain', 'storm', 'snow', 'fog', 'wind', 'alert'];
-const newPage = async (scheme, { weather = {}, geo = true, seed, route } = {}) => {
+// design: 'glass' or 'vintage' is put in design.weather before every load (null: whatever is kept, else Vintage);
+// seed: localStorage to start with, once (then aos.seen is the seed's own).
+const newPage = async (scheme, { weather = {}, geo = true, seed, route, design = null } = {}) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block',
     geolocation: geo ? { latitude: PLACE.lat, longitude: PLACE.lon } : undefined, permissions: geo ? ['geolocation'] : [] });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ weathervintage: '999' })));   // no aOS walkthrough over the page
-  if (seed) await ctx.addInitScript(seed);
+  await ctx.addInitScript(([seed, design]) => {
+    if (!sessionStorage.getItem('seeded')) {
+      sessionStorage.setItem('seeded', '1');
+      if (seed) for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+      else localStorage.setItem('aos.seen', JSON.stringify({ weather: '999' }));   // no aOS walkthrough over the page
+      localStorage.setItem('aos.sky', 'day');
+    }
+    if (design) localStorage.setItem('design.weather', design);
+  }, [seed || null, design]);
   const calls = await installWeather(ctx, Object.assign({ now: NOW }, weather));
   if (route) await route(ctx);
   const page = await ctx.newPage();
@@ -79,7 +94,7 @@ const ready = page => page.waitForSelector('#hxTray .hx-col', { timeout: 10000 }
 
 for (const scheme of ['light', 'dark']) {
   const { ctx, page, problems, requests, calls } = await newPage(scheme);
-  await page.goto(BASE + '/weathervintage/');
+  await page.goto(BASE + '/weather/');
   await ready(page);
   const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
 
@@ -177,7 +192,7 @@ for (const scheme of ['light', 'dark']) {
     assert.ok((await texts(page, '#hxTray .hx-lbl')).some(t => /^(N|NE|E|SE|S|SW|W|NW)$/.test(t)));
     await page.click('#vsw [data-view="now"]');
     assert.equal(await text(page, '#hours .hx-title'), 'Hourly');
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wxv.view'))), 'now');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wx.view'))), 'now');
   });
 
   await step(scheme + ': tap an hour: a sheet with its weather, stepping through the hours', async () => {
@@ -238,9 +253,10 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#vsw [data-view="now"]');
   });
 
-  await step(scheme + ': Places: search, add a city, units, page dots; and its own storage', async () => {
+  await step(scheme + ': Places: search, add a city, units, page dots; and its storage', async () => {
     await page.click('#hero .w3-place');
     await page.waitForSelector('#sheetWrap.open #placesList .prow');
+    assert.equal(await page.$eval('#sheetWrap .sheet-body > :not([hidden])', e => e.id), 'designLabel', 'Design is the first section');
     assert.equal((await texts(page, '#placesList .prow b'))[0], 'My Location');
     assert.equal((await q('#units .slthumb', ['backgroundColor']))[0], rgb(227, 167, 47), 'a mustard thumb under the units');
     await page.fill('#q', 'Colum');
@@ -251,18 +267,18 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForSelector('#dots .dot', { timeout: 8000 });
     assert.equal((await page.$$('#dots .dot')).length, 2, 'My Location and the new city');
     assert.equal(await text(page, '#hero .w3-place'), 'Columville', 'the new city is on screen');
-    const places = await page.evaluate(() => JSON.parse(localStorage.getItem('wxv.places')));
+    const places = await page.evaluate(() => JSON.parse(localStorage.getItem('wx.places')));
     assert.equal(places.length, 1); assert.equal(places[0].name, 'Columville');
     assert.equal((await q('#dots .dot.on i', ['backgroundColor']))[0], rgb(216, 87, 42), 'the current dot is an orange pill');
     await page.click('#hero .w3-place');
     await page.click('#units [data-u="metric"]');
     await page.waitForFunction(() => +document.querySelector('#hero .w3-temp').textContent.replace('°', '') < 40);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wxv.units'))), 'metric');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wx.units'))), 'metric');
     await page.keyboard.press('Escape');
-    // storage: Weather Vintage's keys are wxv.*; the only wx.* key is the NWS grid cache (data.js, the same file as Weather's)
+    // storage: Weather's keys are wx.* (the NWS grid cache, wx.pts, is data.js's, shared with Home); nothing under the old Vintage app's wxv.*
     const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => /^wxv?\./.test(k)));
-    assert.deepEqual(keys.filter(k => k.startsWith('wx.')), ['wx.pts']);
-    assert.ok(['wxv.places', 'wxv.here', 'wxv.cache', 'wxv.units', 'wxv.view'].every(k => keys.includes(k)), keys.join());
+    assert.deepEqual(keys.filter(k => k.startsWith('wxv.')), []);
+    assert.ok(['wx.places', 'wx.here', 'wx.cache', 'wx.units', 'wx.view', 'wx.pts'].every(k => keys.includes(k)), keys.join());
   });
 
   await step(scheme + ': it opens to where you are again, with its settings kept', async () => {
@@ -275,7 +291,7 @@ for (const scheme of ['light', 'dark']) {
 
   await step(scheme + ': no script errors, nothing blocked by the Content Security Policy', async () => {
     assert.deepEqual(problems, []);
-    assert.ok(requests.every(r => !/\/weathervintage\/api\//.test(r.url)), 'it never calls an api of its own: it has none');
+    assert.ok(requests.every(r => !/\/weathervintage\//.test(r.url)), 'nothing from the old Vintage address');
   });
   await ctx.close();
 }
@@ -283,7 +299,7 @@ for (const scheme of ['light', 'dark']) {
 for (const scheme of ['light', 'dark']) {
   // alerts, and an alert above the hero: the disc moves down with the hero
   const { ctx, page, problems } = await newPage(scheme, { weather: { cond: 'ovc', alerts: true } });
-  await page.goto(BASE + '/weathervintage/');
+  await page.goto(BASE + '/weather/');
   await ready(page);
   await step(scheme + ': alerts: most severe first, in Retro colours, and the sky stays behind the hero', async () => {
     assert.deepEqual(await texts(page, '#alerts .alert b'), ['Flood Watch', 'Wind Advisory']);
@@ -307,7 +323,7 @@ for (const scheme of ['light', 'dark']) {
 for (const scheme of ['light', 'dark']) {
   // no location and no saved place: the welcome message, with its buttons
   const { ctx, page, problems } = await newPage(scheme, { geo: false });
-  await page.goto(BASE + '/weathervintage/');
+  await page.goto(BASE + '/weather/');
   await page.waitForSelector('.msg .pill.primary');
   await step(scheme + ': the welcome: a cream card, a solid orange button and an outlined teal one', async () => {
     assert.equal(await text(page, '.msg b'), 'Weather');
@@ -326,13 +342,14 @@ for (const scheme of ['light', 'dark']) {
 }
 
 {
-  // the radar's forecast frames come through Weather's own helper (IEM won't let another site read the model run's time)
+  // the radar's forecast frames come through Weather's own helper (IEM won't let another site read the model run's time),
+  // from the old Weather Vintage address too (Pages Functions are only under /weather/api/)
   const hrrr = [];
   const { ctx, page, problems, requests, calls } = await newPage('light', { weather: { directHrrr: false },
     route: ctx => ctx.route('**/weather/api/hrrr', route => { hrrr.push(route.request().headers()); return route.fulfill({ json: { model_init_utc: new Date(Math.floor((NOW || Date.now()) / 3600e3) * 3600e3).toISOString().slice(0, 16).replace(/[-T:]/g, '') } }); }) });
   await page.goto(BASE + '/weathervintage/');
   await ready(page);
-  await step('radar: the forecast frames come from Weather\'s helper, /weather/api/hrrr', async () => {
+  await step('radar, at the old Vintage address: the forecast frames come from Weather\'s helper, /weather/api/hrrr', async () => {
     await page.click('#vsw [data-view="radar"]');
     await page.waitForFunction(() => document.querySelectorAll('#rd .rd-fr.ahead').length > 0, null, { timeout: 8000 });
     assert.equal(hrrr.length, 1, 'one request to the helper');
@@ -348,28 +365,148 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
+for (const scheme of ['light', 'dark']) {
+  // Standard: Sea glass, the Vintage block switched off: the gradient sky over the whole screen, glowing icons, glass chips
+  const { ctx, page, problems } = await newPage(scheme, { design: 'glass', weather: { alerts: true } });
+  await page.goto(BASE + '/weather/');
+  await ready(page);
+  const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+  await step(scheme + ' Standard: Sea glass: no Vintage styles, no sky.js, a gradient sky over the whole screen', async () => {
+    const st = await page.evaluate(() => ({ look: document.documentElement.dataset.look, media: document.getElementById('vintage').media, sky: document.documentElement.hasAttribute('data-sky'),
+      c: document.documentElement.dataset.c, body: document.body.style.background, top: document.getElementById('sky').style.top, skyjs: !!document.querySelector('script[src*="sky.js"]') }));
+    assert.equal(st.look, 'glass'); assert.equal(st.media, 'not all'); assert.equal(st.sky, false); assert.equal(st.skyjs, false);
+    assert.equal(st.c, undefined, 'no colour group on <html>'); assert.match(st.body, /linear-gradient/, 'the sky\'s colours under it'); assert.equal(st.top, '', 'the sky is not moved to the hero');
+    assert.equal((await q('html', ['backgroundColor']))[0], rgb(13, 18, 19), 'the Sea glass ground');
+    assert.doesNotMatch((await q('body', ['fontFamily']))[0], /Futura/);
+    assert.equal((await q('#sky', ['position']))[0], 'fixed');
+    assert.match((await q('.w3-sky', ['backgroundImage']))[0], /linear-gradient/);
+    assert.equal((await q('#hero .w3-chip', ['backgroundColor']))[0], 'rgba(255, 255, 255, 0.16)', 'glass chips');
+    assert.equal((await q('#hero .w3-temp', ['fontWeight', 'textShadow']))[0], '200');
+    assert.match((await q('#hero .w3-temp', ['textShadow']))[0], /24px/);
+    assert.equal((await q('#hero .w3-card, #card', ['color']))[0], rgb(255, 255, 255));
+    assert.match(await page.$eval('#hero .w3-ico svg', e => e.style.filter), /drop-shadow/, 'a glowing icon');
+    assert.match(await page.$eval('.hx-col[data-hour] .hx-ico svg', e => e.style.filter), /drop-shadow/);
+    assert.equal((await q('#hours', ['backgroundColor']))[0], 'rgba(255, 255, 255, 0.05)', 'a faint tile');
+    assert.equal(await page.$eval('#alerts .alert .dot', e => getComputedStyle(e).color), rgb(255, 69, 58), 'severe is red');
+  });
+  await step(scheme + ' Standard: the Sea glass icon, a translucent status bar, the Sea glass bar colour', async () => {
+    assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/);
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), '#0D1213');
+  });
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'glass-main-' + scheme + '.png') });
+  await step(scheme + ' Standard: humidity bars, the hour and the day in Weather\'s own colours', async () => {
+    await page.click('#vsw [data-view="humidity"]');
+    assert.match((await q('#hxTray .hx-bar', ['backgroundImage']))[0], /linear-gradient/, 'glowing bars');
+    await page.click('#vsw [data-view="now"]');
+    await page.locator('#hxTray .hx-col[data-hour]').nth(2).click();
+    await page.waitForSelector('#hourWrap.open .hd-hero');
+    assert.match((await q('#hourBody .hd-hero', ['backgroundImage']))[0], /linear-gradient/);
+    assert.equal(await page.$eval('#hourBody .hd-hero', e => e.dataset.c), undefined);
+    await page.keyboard.press('Escape');
+    await page.click('#days .dc[data-day="1"]');
+    await page.waitForSelector('#dayWrap.open .dd-chart');
+    assert.equal((await q('#dayBody .dd-chart .dd-pt', ['fill']))[0], rgb(255, 255, 255), 'the high and low are marked in white');
+    assert.equal(await page.$eval('#dayBody .dd-key span:nth-child(2) i', e => getComputedStyle(e).backgroundColor), rgb(90, 200, 250), 'rain is light blue');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'glass-day-' + scheme + '.png') });
+    await page.keyboard.press('Escape');
+  });
+  await step(scheme + ' Standard: no script errors', async () => assert.deepEqual(problems, []));
+  await ctx.close();
+}
+
 {
-  // Weather's own storage is never read: its saved city and units don't show up here
-  const { ctx, page, problems } = await newPage('light', { seed: () => {
-    if (sessionStorage.getItem('seeded')) return;
-    sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('wx.places', JSON.stringify([{ lat: 41.88, lon: -87.63, name: 'Chicago', sub: 'Illinois, United States' }]));
-    localStorage.setItem('wx.units', JSON.stringify('metric'));
-    localStorage.setItem('wx.here', JSON.stringify({ lat: 48.85, lon: 2.35, name: 'Paris' }));
-  } });
+  // Settings > Design, the first section of the Places sheet: Vintage, then Standard and back, at once, kept across a reload
+  const { ctx, page, problems } = await newPage('light');
+  await page.goto(BASE + '/weather/');
+  await ready(page);
+  const look = () => page.evaluate(() => document.documentElement.dataset.look);
+  const checked = d => page.getAttribute('#designBox [data-design="' + d + '"]', 'aria-checked');
+  await step('Design: Vintage by default, with the Vintage icon, a cream bar and a dark status bar clock', async () => {
+    assert.equal(await look(), 'vintage');
+    const icon = await page.getAttribute('link[rel="apple-touch-icon"]', 'href');
+    assert.match(icon, /icon-180\.png/); assert.doesNotMatch(icon, /glass/);
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="light"]', 'content'), '#F4ECDD');
+    assert.equal(await page.getAttribute('meta[name="theme-color"][media*="dark"]', 'content'), '#241E1A');
+    assert.equal(await page.evaluate(() => !!document.querySelector('script[src*="sky.js"]') || document.documentElement.hasAttribute('data-sky')), false, 'its own sky, not sky.js\'s');
+  });
+  await step('Design: Settings (the Places button) shows Vintage picked; Standard at once, redrawn, the sheet still open', async () => {
+    await page.click('#foot [data-action="location"]');
+    await page.waitForSelector('#sheetWrap.open #designBox [data-design]');
+    assert.equal(await checked('vintage'), 'true'); assert.equal(await checked('glass'), 'false');
+    assert.equal(await page.$eval('#designNote', e => e.textContent), 'Just on this phone, and at once.');
+    if (SHOTS) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, 'settings-vintage.png') }); }
+    await page.click('#designBox [data-design="glass"]');
+    assert.equal(await look(), 'glass'); assert.equal(await checked('glass'), 'true'); assert.equal(await checked('vintage'), 'false');
+    assert.ok(await page.isVisible('#sheetWrap .sheet'));
+    const st = await page.evaluate(() => ({ c: document.documentElement.dataset.c, body: document.body.style.background, top: document.getElementById('sky').style.top, sky: document.querySelector('.w3-sky').style.background, ico: document.querySelector('#hero .w3-ico svg').style.filter }));
+    assert.equal(st.c, undefined); assert.match(st.body, /linear-gradient/); assert.equal(st.top, ''); assert.match(st.sky, /linear-gradient/); assert.match(st.ico, /drop-shadow/);
+    assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    const thumb = await page.$eval('#units .slthumb', e => { const t = e.getBoundingClientRect(), b = document.querySelector('#units [aria-pressed="true"]').getBoundingClientRect(); return Math.abs(t.width - b.width) < 2 && Math.abs(t.left - b.left) < 2; });
+    assert.ok(thumb, 'the units thumb sits under the chosen units');
+    if (SHOTS) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, 'settings-glass.png') }); }
+  });
+  await step('Design: Standard is kept across a reload', async () => {
+    await page.reload(); await ready(page);
+    assert.equal(await look(), 'glass'); assert.equal(await page.evaluate(() => localStorage.getItem('design.weather')), 'glass');
+    assert.match(await page.evaluate(() => document.body.style.background), /linear-gradient/);
+  });
+  await step('Design: an open hour sheet is drawn again in the design picked; back to Vintage, kept', async () => {
+    await page.locator('#hxTray .hx-col[data-hour]').nth(1).click();
+    await page.waitForSelector('#hourWrap.open .hd-hero');
+    assert.match(await page.$eval('#hourBody .hd-hero', e => getComputedStyle(e).backgroundImage), /linear-gradient/);
+    await page.evaluate(() => aosDesign.set('vintage'));
+    assert.equal(await look(), 'vintage');
+    const st = await page.evaluate(() => ({ hero: document.querySelector('#hourBody .hd-hero').dataset.c, bg: getComputedStyle(document.querySelector('#hourBody .hd-hero')).backgroundImage, c: document.documentElement.dataset.c, body: document.body.style.background, ico: document.querySelector('#hero .w3-ico svg').style.filter }));
+    assert.ok(SKY_GROUPS.includes(st.hero), JSON.stringify(st)); assert.equal(st.bg, 'none'); assert.ok(SKY_GROUPS.includes(st.c)); assert.equal(st.body, ''); assert.equal(st.ico, '');
+    await page.keyboard.press('Escape');
+    await page.reload(); await ready(page);
+    assert.equal(await look(), 'vintage'); assert.equal(await page.evaluate(() => localStorage.getItem('design.weather')), 'vintage');
+  });
+  await step('Design: no script errors', async () => assert.deepEqual(problems, []));
+  await ctx.close();
+}
+
+{
+  // the old Weather Vintage app, on a phone that added it: its address opens Weather, with its data moved over once
+  // (wx.pts is there too: data.js wrote it under Weather's name in both apps, so it doesn't count as Weather's own)
+  const chicago = JSON.stringify([{ lat: 41.88, lon: -87.63, name: 'Chicago', sub: 'Illinois, United States' }]);
+  const seed = { 'aos.seen': JSON.stringify({ weathervintage: '1.3' }), 'wxv.places': chicago, 'wxv.units': '"metric"', 'wxv.view': '"humidity"', 'wx.pts': '{}' };
+  const { ctx, page, problems } = await newPage('light', { seed });
   await page.goto(BASE + '/weathervintage/');
   await ready(page);
-  await step('storage: Weather\'s saved cities, units and last place are not read, or changed', async () => {
-    assert.equal(await text(page, '#hero .w3-place'), 'Raleigh');
-    assert.ok(+(await text(page, '#hero .w3-temp')).replace('°', '') > 40, 'degrees F: Weather\'s metric setting is not used');
-    assert.equal(await page.$('#dots .dot'), null, 'Weather\'s Chicago is not a place here');
-    await page.click('#hero .w3-place');
-    assert.deepEqual(await texts(page, '#placesList .prow b'), ['My Location']);
-    await page.keyboard.press('Escape');
-    const base = await page.evaluate(() => ({ places: localStorage.getItem('wx.places'), units: localStorage.getItem('wx.units'), here: localStorage.getItem('wx.here') }));
-    assert.equal(JSON.parse(base.places)[0].name, 'Chicago'); assert.equal(JSON.parse(base.units), 'metric'); assert.equal(JSON.parse(base.here).name, 'Paris');
+  await step('old address: Weather Vintage\'s cities, units and view are now Weather\'s, and on screen', async () => {
+    assert.equal((await page.$$('#dots .dot')).length, 2, 'My Location and Chicago');
+    assert.ok(+(await text(page, '#hero .w3-temp')).replace('°', '') < 40, 'metric');
+    assert.equal(await page.getAttribute('#vsw [data-view="humidity"]', 'aria-pressed'), 'true');
+    const got = await page.evaluate(() => ({ places: localStorage.getItem('wx.places'), units: localStorage.getItem('wx.units'), seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('wxv.places'), look: document.documentElement.dataset.look }));
+    assert.equal(JSON.parse(got.places)[0].name, 'Chicago'); assert.equal(got.units, '"metric"');
+    assert.equal(got.seen.weather, '1.3', 'what it had seen carries over (no walkthrough again)');
+    assert.ok(got.old, 'nothing old is deleted'); assert.equal(got.look, 'vintage');
   });
-  assert.deepEqual(problems, []);
+  await step('old address: moved once only', async () => {
+    await page.evaluate(() => localStorage.setItem('wxv.units', '"us"'));
+    await page.reload(); await ready(page);
+    assert.equal(await page.evaluate(() => localStorage.getItem('wx.units')), '"metric"');
+  });
+  await step('old address: no script errors', async () => assert.deepEqual(problems, []));
+  await ctx.close();
+}
+
+{
+  // a phone with both: Weather's own data is kept, the old app's is not copied over it
+  const seed = { 'aos.seen': JSON.stringify({ weather: '999', weathervintage: '999' }), 'wx.units': '"us"', 'wx.places': '[]',
+    'wxv.units': '"metric"', 'wxv.places': JSON.stringify([{ lat: 41.88, lon: -87.63, name: 'Chicago', sub: 'Illinois, United States' }]) };
+  const { ctx, page, problems } = await newPage('light', { seed });
+  await page.goto(BASE + '/weathervintage/');
+  await ready(page);
+  await step('both: Weather\'s own cities and units are kept', async () => {
+    assert.equal(await page.evaluate(() => localStorage.getItem('wx.units')), '"us"');
+    assert.equal(await page.$('#dots .dot'), null, 'no Chicago');
+    assert.ok(+(await text(page, '#hero .w3-temp')).replace('°', '') > 40, 'degrees F');
+  });
+  await step('both: no script errors', async () => assert.deepEqual(problems, []));
   await ctx.close();
 }
 

@@ -1,4 +1,4 @@
-// Made-up weather for Weather Vintage's browser test: the National Weather Service, Open-Meteo,
+// Made-up weather for Weather's browser test: the National Weather Service, Open-Meteo,
 // BigDataCloud and the map-tile hosts, answered by Playwright's route interception with
 // invented data in the shapes the real services send (no real place, no network). Used by
 // scripts/app-test.mjs. Raleigh's coordinates are only a spot in the continental US, so the
