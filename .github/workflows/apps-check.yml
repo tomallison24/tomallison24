@@ -31,6 +31,8 @@ jobs:
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
       - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs && node ordersvintage/scripts/same-reader-test.mjs
+      # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds; and Clock Vintage is the same app
+      - run: node clock/scripts/logic-test.mjs && node clockvintage/scripts/same-reader-test.mjs
       - run: node calendarvintage/scripts/same-reader-test.mjs && node drinksvintage/scripts/same-reader-test.mjs && node fitnessvintage/scripts/same-reader-test.mjs && node travelvintage/scripts/same-reader-test.mjs && node weathervintage/scripts/same-reader-test.mjs && node mealsvintage/scripts/same-reader-test.mjs && node placesvintage/scripts/same-reader-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
@@ -112,6 +114,8 @@ jobs:
       - run: node calendarvintage/scripts/app-test.mjs
       - run: node drinksvintage/scripts/app-test.mjs
       - run: node fitnessvintage/scripts/app-test.mjs
+      # Clock and Clock Vintage at iPhone size, the page's clock moved on by the test: alarms ring, snooze and stop, timers, the stopwatch
+      - run: node clock/scripts/app-test.mjs clock && node clock/scripts/app-test.mjs clockvintage
 
   # The other half of the apps' own tests, a job of its own so the two run side by side.
   apps-more:

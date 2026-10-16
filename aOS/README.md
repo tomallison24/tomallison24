@@ -65,9 +65,10 @@ Places and Meals, which have no Vintage design, show theirs from `aOS/icons/` (`
 redraws the PNGs from the SVGs there). In the **Sea glass** look an app shows its own folder's icon (the Vintage
 design's, when that design is picked). `icon()` in `app.js` decides, and the list, the Today stories and the family
 icon repaint when the look is changed under the account. This changes only what aOS draws: each app's own icon
-(what a Home Screen shows, and the install steps) is still its folder's `icon-512.png`. The 13 mid-century icons each
+(what a Home Screen shows, and the install steps) is still its folder's `icon-512.png`. The 14 mid-century icons each
 have a different background colour: teal Mail, mustard Home, orange Orders, olive News, denim Calendar, walnut
-Fitness, berry Drinks, sky Weather, indigo Travel, slate Notes, plum Podcasts, green Places, brick Meals.
+Fitness, berry Drinks, sky Weather, indigo Travel, slate Notes, plum Podcasts, green Places, brick Meals,
+midnight Clock.
 
 ## The flow
 
