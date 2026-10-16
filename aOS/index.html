@@ -21,9 +21,10 @@
   (the first <style>): look.js applies the choice before the page is drawn.
 
   - Today: the family card first - the family icon, "The Allison Family", a
-    greeting by name and everyone in the family (signed in) - then postcards, as a bento (one tall, two halves, one wide): setting up
-    Home, the app of the day, what's new in aOS (the mark, #mark), meet an app,
-    your family account. Signed out, a card at the top asks you to sign in.
+    greeting by name and everyone in the family (signed in) - then postcards, as a bento (one tall, two halves, one wide, again):
+    an app the newest release brought (its `added`) and what's new in aOS (the mark, #mark) first,
+    for 30 days after the release; then a mix that changes every day - the app of the day, other
+    apps, setting up Home, your family account (aOS/app.js, "Today"). Signed out, a card at the top asks you to sign in.
   - Apps: every app as a card glowing in its own colour, with its tagline (or
     "New in aOS1.1" when the latest release changed it) and Get.
   - Search: by name, tagline or what the walkthrough says.
@@ -88,7 +89,7 @@
   .story:active { transform: scale(.975); }
   .story .art { position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 30%, rgba(var(--c), .9), rgba(var(--c), .28) 58%, #0C1112 100%); }
   .story .art::after { content: ''; position: absolute; inset: 6px; border-radius: 24px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); pointer-events: none; }
-  .story .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: 120px; box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); animation: float 6s ease-in-out infinite; }
+  .story .art img { position: absolute; width: 120px; height: 120px; border-radius: 30px; right: 26px; top: 186px; box-shadow: 0 0 0 10px rgba(255,255,255,.08), 0 0 60px 16px rgba(var(--c), .55); animation: float 6s ease-in-out infinite; }
   @keyframes float { 50% { transform: translateY(-6px); } }
   .story .art svg { position: absolute; left: -24px; bottom: 70px; width: 230px; height: 230px; color: rgba(255,255,255,.12); }
   .story .txt { position: absolute; left: 22px; right: 22px; top: 22px; }

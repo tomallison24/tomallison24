@@ -70,6 +70,8 @@
   //   apps        { weather: { highlights: [...], notes: [...] } } - what changed in
   //               each app; a plain list is all notes
   //   cards       (major only) aOS's own setup cards after the new mark
+  //   added       ['clock', ...] the apps this version brings to aOS: Today in aOS leads
+  //               with them for 30 days after its date, until a newer version comes
   //   silent      true: logged here only, shown nowhere - not in aOS's What's new;
   //               the apps keep showing the last version that wasn't silent, and
   //               no update screen plays for it
@@ -82,7 +84,7 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '1.3', date: '2026-10-13', title: 'A look for every app',
+    { v: '1.3', date: '2026-10-13', title: 'A look for every app', added: ['clock', 'orders'],
       highlights: ['Every app has a Vintage design: pick your look in aOS',
         'Clock is new: world time, alarms, a stopwatch and timers',
         'Settings looks the same in every app',
@@ -99,6 +101,7 @@
         'News: Sport > Table shows a league\'s standings from ESPN, with a pill to pick the league, kept up to date as games finish (every minute while a game is on), the teams in play marked and the teams you follow tinted',
         'News: tap a football or rugby game in Sport > Scores for its own page instead of ESPN\'s: the score and clock, key events (goals, cards, substitutions), stats side by side, a shot map and each player\'s goals, assists and shots for football, the scoring and line-ups for rugby, refreshed every 45 seconds while the game is on, with Open on ESPN at the bottom',
         'Home: the thermostats and the Windmill AC show a few small snowflakes falling while they cool and a small flickering flame while they heat, all faint and animated',
+        'aOS: Today leads with what\'s new - a new app, big, with What\'s new in aOS beside it - and below it shows a different mix of apps every day',
         'aOS on Android: an app you removed from the tablet shows Get again once you tap it in aOS (Chrome tells the app it is no longer installed). iPhone can\'t tell, so there it is still the "Removed it from your Home Screen?" button',
         'Orders is new, one of the Allison family apps: everything you\'ve bought and where it is, read from the order, shipping and store-pickup emails in your Gmail, with the courier, the tracking number and a link to track it. Packages and store pickups show; food, subscriptions and tickets can be switched on in Settings',
         'Mail has a Vintage design: the same Mail in a mid-century modern look in the Retro colors - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. Pick it from the Design menu on Mail\'s page in aOS. It is its own app on your Home Screen, with its own sign-in and settings, so Mail stays as it is',
@@ -155,7 +158,7 @@
         mail: { highlights: ['Mail has a new tagline: Mail.Controlled.'] },
         drinks: { highlights: ['Analysis is one page, opened from the week\'s number, with a pill at the bottom to pick a view', 'Pick a view from the pill: this week or month against the one before, your top drinks, days of the week, and more'] },
       } },
-    { v: '1.1', date: '2026-10-10', title: 'Dinner is served',
+    { v: '1.1', date: '2026-10-10', title: 'Dinner is served', added: ['meals'],
       highlights: ['Meals: a few nights of different dinners around one meat, this week\'s Whole Foods deals, and one shopping list', 'Easier to tap: small buttons, arrows and chips take a tap a little way round them'],
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',

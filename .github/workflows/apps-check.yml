@@ -73,11 +73,12 @@ jobs:
             tests: |
               aOS/scripts/apps-smoke-test.mjs
               aOS/scripts/standalone-test.mjs
-          # the Vintage sky; the newest release's update screens in aOS and every app
+          # the Vintage sky; the newest release's update screens in aOS and every app; aOS's Today
           - group: sky-release
             tests: |
               aOS/scripts/sky-test.mjs
               aOS/scripts/release-test.mjs
+              aOS/scripts/today-test.mjs
           # aOS: Calendar's layers through the family account, an invite, notifications, designs, the look, Android; Meals and Podcasts
           - group: aos
             tests: |

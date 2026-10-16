@@ -106,26 +106,42 @@
 
   // ---- Today ----
   $('date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
-  const day = Math.floor(Date.now() / 864e5), aotd = D.APPS.filter(id => !D.VARIANTS.has(id))[day % D.APPS.filter(id => !D.VARIANTS.has(id)).length];
-  const STORIES = [
-    { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
+  // Today's postcards: what's new first, then a mix of apps that changes every day.
+  //   - an app the newest release brought to aOS (its `added`, home/welcome.js) leads, big,
+  //     for 30 days after the release's date; with two or more, a different one leads each day
+  //   - what's new in aOS (the mark, #mark) sits beside it while that release is fresh (and is
+  //     the big card when it brought no app); after that it joins the mix
+  //   - then every other app's card, setting up Home and your family account, shuffled by the
+  //     day (the same mix all day, a new one tomorrow); the first is the app of the day
+  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5);
+  const rnd = (n => () => (n = (n * 1664525 + 1013904223) >>> 0) / 2 ** 32)(day);
+  const mix = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const fresh = Date.now() - Date.parse(now.date || 0) < 30 * 864e5;
+  const added = fresh ? (now.added || []).filter(id => D.APPS.includes(id) && !D.VARIANTS.has(id)) : [];
+  const brought = added.map((_, i) => added[(i + day) % added.length]);
+  const HEAD = { travel: 'Every trip, the whole family\'s' };
+  const meet = (id, k) => ({ id, k, h: HEAD[id] || `${D.NAMES[id]}: ${T(id).tag}`, art: (T(id).cards[0] || {}).i, body: () => T(id).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') });
+  const NEWS = { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } };
+  const SETUP = { house: { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
       <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
       <h3>1. The address fills itself in</h3><p>Signed in to your family account, Home already knows where your house is. Nothing to type.</p>
       <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> at the bottom → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>AllisonOS</b> and your name, and tap <b>Copy</b> straight away: it's only shown once.</p>
       <p class="muted">Home shows these steps animated, the first time you open it.</p>
-      <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` },
-    { id: aotd, k: 'App of the day', h: `${D.NAMES[aotd]}: ${T(aotd).tag}`, art: (T(aotd).cards[0] || {}).i, body: () => T(aotd).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
-    { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } },
-    { id: 'travel', k: 'Meet', h: 'Every trip, the whole family\'s', art: 'plane', body: () => T('travel').cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') },
-    { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
+      <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` } };
+  const FAM = { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
       <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
       <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
-      <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` },
-  ];
-  const SHAPE = ['', 'half', 'half', 'wide', ''];
+      <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` };
+  const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
+  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS])]);
+  const aotd = pool.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';
+  const STORIES = [...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
+  for (const s of pool) if (STORIES.length < SHAPE.length && !STORIES.some(o => o.id && o.id === s.id)) STORIES.push(s);
+  const w = STORIES.indexOf(NEWS); if (SHAPE[w] === 'wide') [STORIES[w], STORIES[w + 1]] = [STORIES[w + 1], STORIES[w]];   // the mark needs height
+  let tint = 0; for (const s of STORIES) s.cls = s.plain ? 's2' : ['s0', 's1', 's3', 's4'][tint++ % 4];   // the Vintage postcard colors
   $('stories').innerHTML = STORIES.map((s, i) => s.plain
-    ? `<div class="story plain s${i} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
-    : `<div class="story s${i} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
+    ? `<div class="story plain ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
+    : `<div class="story ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
        <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div></div>`).join('');
 
@@ -218,7 +234,7 @@
   }
   function storyPage(i) {
     const s = STORIES[i];
-    page(`<div class="hero s${i}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
+    page(`<div class="hero ${s.cls}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
       ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
@@ -352,7 +368,7 @@
   addEventListener('aos:look', () => {   // the picker: the family icon and every app's icon follow the look
     if (state) paintHero(state);
     paintList();
-    for (const el of document.querySelectorAll('#stories .story[data-story]')) { const st = STORIES[+el.dataset.story], im = el.querySelector('.art img'); if (st && st.id && im) im.src = icon(st.id); }
+    for (const el of document.querySelectorAll('#stories .story[data-story]')) { const st = STORIES[+el.dataset.story]; if (st && st.id) for (const im of el.querySelectorAll('img')) im.src = icon(st.id); }
   });   // the picker: the family icon follows the look
   let members = null;
   async function paintHero(st) {

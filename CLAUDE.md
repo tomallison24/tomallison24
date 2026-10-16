@@ -41,6 +41,8 @@ notice, add a line for it:
     `.claude/skills/aos-major-release/SKILL.md`.
   Either way `node aOS/scripts/release-test.mjs` (CI runs it) plays the new
   entry in aOS and every app, as a phone on the version before would see it.
+- A new app: add its id to the entry's `added: [...]`. aOS's Today then leads with it (and
+  What's new beside it) for 30 days after the entry's date; after that, Today is a daily mix.
 - `highlights` are the most important changes - the update screens in the
   apps show these; `notes` are everything else, shown in aOS's full log.
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
