@@ -65,7 +65,7 @@ end with 0 errors.
 ## Tests
 
 Every test runs in CI (`.github/workflows/apps-check.yml`): plain Node tests
-in the `check` job, browser tests in `smoke`, `apps` and `apps-more` (the tours run in three shards, `tours`; checks run on the PR, and on pushes only to the default branch). `check-apps.mjs` fails on any
+in the `check` job, browser tests in the `browser` groups that run side by side (about four minutes each: put a new one in the group that runs shortest), and the tours in three shards, `tours`; checks run on the PR, and on pushes only to the default branch. `check-apps.mjs` fails on any
 `<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
 the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
 with `'999'` for every app they open, so no walkthrough or update screen
