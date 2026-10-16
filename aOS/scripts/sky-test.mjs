@@ -11,7 +11,7 @@
 //     app is open, works from a place the app was already allowed to know (never asking), from the time zone
 //     when there is none, and can be held still (aos.sky: what the other tests do, so they work at any hour);
 //   - aOS in its Sea glass look has no sky, nor any app in its Standard (Sea glass) design (home/design.js);
-//     Home's other tones stay as picked.
+//     Home's Customization tones are Standard's.
 // Weather isn't here: in Vintage it draws its own sky from the forecast (weather/scripts/app-test.mjs).
 // The text-off-the-disc check holds on the widest fallback font too (the phone has Futura; CI's Linux and Android do not):
 // SKY_FONT="DejaVu Sans" node aOS/scripts/sky-test.mjs tries one.
@@ -219,7 +219,7 @@ if (!process.argv[3]) {
     }
     report('aOS: Sea glass has no sky, and Vintage brings it back', pr);
   }
-  { // Home in Vintage: the Vintage tone is the sky's ground; a tone picked in Customization stays as picked
+  { // Home in Vintage: the page is the sky's ground; a tone picked in Customization is Standard's
     const pr = [];
     let o = await open('house', { scheme: 'dark', at: NIGHT }); let s = await look(o.p);
     if (s.ground !== SKY['night dark'].ground) pr.push('the Vintage tone is ' + s.ground + ' at night in Dark, not the sky\'s ' + SKY['night dark'].ground);
@@ -227,11 +227,12 @@ if (!process.argv[3]) {
     o = await open('house', { scheme: 'light', at: NOON }); s = await look(o.p);
     if (s.ground !== SKY['day light'].ground) pr.push('the Vintage tone is ' + s.ground + ' by day in Light, not the sky\'s ' + SKY['day light'].ground);
     await o.ctx.close();
+    // a tone picked in Customization is for Standard: in Vintage the page is still the sky's
     o = await open('house', { scheme: 'light', at: NOON, seed: { 'house.toneV': '2', 'house.tone': '"slate"' } }); s = await look(o.p);
-    if (s.ground === SKY['day light'].ground) pr.push('a picked tone (Slate) was painted over with the sky\'s ground');
-    if (s.sky !== 'day' || s.disc !== SKY['day light'].disc) pr.push('with another tone the sky is still drawn over it, but it is ' + s.sky + ' with a ' + s.disc + ' disc');
+    if (s.ground !== SKY['day light'].ground) pr.push('a tone picked for Standard (Slate) shows in Vintage: ' + s.ground);
+    if (s.sky !== 'day' || s.disc !== SKY['day light'].disc) pr.push('the sky is ' + s.sky + ' with a ' + s.disc + ' disc');
     await o.ctx.close();
-    report('Home in Vintage: its Vintage tone is the sky\'s ground; other tones stay as picked', pr);
+    report('Home in Vintage: the page is the sky\'s ground, whatever tone Standard has', pr);
   }
 }
 
