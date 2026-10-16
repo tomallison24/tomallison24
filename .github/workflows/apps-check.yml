@@ -30,10 +30,9 @@ jobs:
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
-      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs && node ordersvintage/scripts/same-reader-test.mjs
+      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
-      - run: node calendarvintage/scripts/same-reader-test.mjs && node drinksvintage/scripts/same-reader-test.mjs && node fitnessvintage/scripts/same-reader-test.mjs && node travelvintage/scripts/same-reader-test.mjs && node weathervintage/scripts/same-reader-test.mjs && node mealsvintage/scripts/same-reader-test.mjs && node placesvintage/scripts/same-reader-test.mjs
 
   # Every app opens in Chromium, light and dark, with no script errors and
   # nothing its Content-Security-Policy blocks (aOS/scripts/apps-smoke-test.mjs).
@@ -47,7 +46,7 @@ jobs:
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node aOS/scripts/apps-smoke-test.mjs
       # Calendar's layers through the family account, each app in its own storage as on an iPhone
-      - run: node calendar/scripts/layers-test.mjs && node calendarvintage/scripts/layers-test.mjs
+      - run: node calendar/scripts/layers-test.mjs
       # every app works on its own: users may want only some of the core apps
       - run: node aOS/scripts/standalone-test.mjs
       # an invite on a phone: the account, then how to add aOS (iPhone and Android)
@@ -55,9 +54,11 @@ jobs:
       # notifications in aOS: turning them on and off, and the owner's composer, as on a phone
       - run: node aOS/scripts/notify-test.mjs
       - run: node aOS/scripts/designs-test.mjs
+      # both designs in every app (home/design.js): Vintage and Standard, and an old Vintage app's data moved over once
+      - run: node aOS/scripts/design-test.mjs
       # aOS's Look picker: Vintage by default, Sea glass back under the account, kept on the phone
       - run: node aOS/scripts/look-test.mjs
-      # the day and night sky every Vintage design and aOS share (home/sky.js): Light and Dark, the rays and stars, reduced motion
+      # the day and night sky every app's Vintage design and aOS share (home/sky.js): Light and Dark, the rays and stars, reduced motion
       - run: node aOS/scripts/sky-test.mjs
       # an app removed from an Android tablet: opened in Chrome it says so, and aOS shows Get
       - run: node aOS/scripts/android-installed-test.mjs
@@ -65,10 +66,7 @@ jobs:
       - run: node aOS/scripts/release-test.mjs
       # Meals at iPhone size, against its real server code and a stand-in AI
       - run: node meals/scripts/app-test.mjs
-      - run: node mealsvintage/scripts/app-test.mjs
       - run: node podcasts/scripts/app-test.mjs
-      - run: node podcastsvintage/scripts/app-test.mjs
-      - run: node placesvintage/scripts/app-test.mjs
 
   # Each app's live tour finds its way round the app, and tidies up after itself
   # (aOS/scripts/tours-test.mjs). The slowest test, so it's in three shards that run
@@ -104,16 +102,11 @@ jobs:
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: node house/scripts/app-test.mjs
       - run: node house/scripts/connect-test.mjs
-      - run: node housevintage/scripts/app-test.mjs
-      - run: node housevintage/scripts/connect-test.mjs
       - run: node news/scripts/table-test.mjs
       - run: node news/scripts/match-test.mjs
       - run: node calendar/scripts/app-test.mjs
       - run: node drinks/scripts/app-test.mjs
       - run: node fitness/scripts/app-test.mjs
-      - run: node calendarvintage/scripts/app-test.mjs
-      - run: node drinksvintage/scripts/app-test.mjs
-      - run: node fitnessvintage/scripts/app-test.mjs
       # Clock at iPhone size, in both its designs, the page's clock moved on by the test: alarms ring, snooze and stop, timers, the stopwatch
       - run: node clock/scripts/app-test.mjs
 
@@ -129,18 +122,12 @@ jobs:
       - run: node notes/scripts/aisles-app-test.mjs
       - run: node notes/scripts/push-app-test.mjs
       - run: node notes/scripts/security-test.mjs
-      - run: node notesvintage/scripts/aisles-app-test.mjs
-      - run: node notesvintage/scripts/push-app-test.mjs
-      - run: node notesvintage/scripts/security-test.mjs
-      - run: node notesvintage/scripts/app-test.mjs
+      - run: node notes/scripts/app-test.mjs
       - run: node places/scripts/app-test.mjs
       - run: node travel/scripts/app-test.mjs
       - run: node travel/scripts/smart-test.mjs travel && node travel/scripts/smart-test.mjs travelvintage
       - run: node orders/scripts/app-test.mjs
-      - run: node ordersvintage/scripts/app-test.mjs
-      - run: node travelvintage/scripts/app-test.mjs
-      - run: node weathervintage/scripts/app-test.mjs
+      - run: node weather/scripts/app-test.mjs
       - run: node mail/scripts/security-test.mjs
-      - run: node mailvintage/scripts/security-test.mjs
+      - run: node mail/scripts/design-test.mjs
       - run: node news/scripts/app-test.mjs
-      - run: node newsvintage/scripts/app-test.mjs

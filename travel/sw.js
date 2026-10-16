@@ -2,8 +2,8 @@
 // a new deploy shows up on the next open and the cache is only the fallback.
 // Gmail, the Sheet and the flight status service are never touched here, and
 // neither is travel/api/: a cached flight status would be a wrong one.
-const CACHE = 'travel-v36';
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/welcome.js', '../home/account.js', '../home/design.js', '../home/sky.js'];
+const CACHE = 'travel-v37';
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=3', 'icon-glass-512.png?v=3', '../home/slide.js', '../home/welcome.js', '../home/account.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

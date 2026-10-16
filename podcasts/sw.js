@@ -3,8 +3,8 @@
 // offline. Feeds (../podcasts/api/) are never cached here: the app keeps each show's
 // episodes itself. Episodes and artwork come from the podcasts' own servers
 // and are left to the browser.
-const CACHE = 'podcasts-v23';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=1', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
+const CACHE = 'podcasts-v24';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=1', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=3', 'icon-glass-512.png?v=3', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
