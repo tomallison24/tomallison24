@@ -102,7 +102,7 @@ jobs:
               news/scripts/table-test.mjs
               news/scripts/match-test.mjs
               calendar/scripts/app-test.mjs
-          # Fitness, Clock, Notes
+          # Fitness, Clock, Notes, and Ipsy in Travel
           - group: apps
             tests: |
               fitness/scripts/app-test.mjs
@@ -110,6 +110,7 @@ jobs:
               notes/scripts/aisles-app-test.mjs
               notes/scripts/push-app-test.mjs
               notes/scripts/security-test.mjs
+              travel/scripts/ipsy-test.mjs
           # Notes, Places, Travel, Weather, News
           - group: apps-more
             tests: |
