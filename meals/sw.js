@@ -3,8 +3,8 @@
 // The family's plan and deals never pass through here: the last ones are kept
 // in this phone's storage by app.js, and the calls to the server (api/) are
 // left alone.
-const CACHE = 'meals-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/aisles.js', '../home/slide.js', '../home/account.js', '../home/welcome.js'];
+const CACHE = 'meals-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/aisles.js', '../home/slide.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

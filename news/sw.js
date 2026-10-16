@@ -2,8 +2,8 @@
 // so a new deploy (and fresh headlines) show up on the next open; the cache
 // is only the fallback when offline. Story images come from the publishers
 // and are left to the browser's own cache.
-const CACHE = 'news-v52';
-const SHELL = ['./', 'index.html', 'app.js', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=4', 'icon-180.png?v=4', 'icon-512.png?v=4', '../home/slide.js', '../home/account.js', '../home/welcome.js'];
+const CACHE = 'news-v53';
+const SHELL = ['./', 'index.html', 'app.js', 'sport-catalog.json', 'leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=4', 'icon-glass.svg?v=1', 'icon-180.png?v=5', 'icon-512.png?v=5', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
