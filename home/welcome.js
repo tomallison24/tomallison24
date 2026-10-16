@@ -70,6 +70,8 @@
   //   apps        { weather: { highlights: [...], notes: [...] } } - what changed in
   //               each app; a plain list is all notes
   //   cards       (major only) aOS's own setup cards after the new mark
+  //   added       ['clock', ...] the apps this version brings to aOS: Today in aOS leads
+  //               with them for 30 days after its date, until a newer version comes
   //   silent      true: logged here only, shown nowhere - not in aOS's What's new;
   //               the apps keep showing the last version that wasn't silent, and
   //               no update screen plays for it
@@ -103,7 +105,7 @@
         orders: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
         house: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
       } },
-    { v: '1.3', date: '2026-10-13', title: 'A look for every app',
+    { v: '1.3', date: '2026-10-13', title: 'A look for every app', added: ['clock', 'orders'],
       highlights: ['Every app has a Vintage design: pick your look in aOS',
         'Clock is new: world time, alarms, a stopwatch and timers',
         'Settings looks the same in every app',
@@ -112,6 +114,7 @@
       notes: ['Travel and Travel Vintage: an email with no date in it (Frontier\'s sometimes) is no longer dropped; it waits in To check until your calendar, a later email or you give it its day, and To check only lists what is still to come. The Family calendar now works both ways: flights, hotels and rental cars in it show up in Travel, and confirmed bookings are added to it, never twice. Where a booking is missing something, the airport\'s flight board can find a missing flight number, and a Check with AI button on the trip card (only when something is missing, and only when you press it) has Claude read that one email for it; anything filled in this way is marked Check. An Ask AI bar on Trips answers questions about your current, past and to-check trips (only when you ask). The calendar and the AI can be switched off in Settings, under Smart help',
         'Travel and Travel Vintage: one booking is one trip (the flights out and home of a reservation are no longer split into two trips), and a hotel confirmation from a booking site such as Hilton\'s is named and placed from the email, with its "pending" and confirmed emails read as one stay. Emails whose plain-text part is only tracking links (Hilton\'s, sent through Cvent) are now read from their html, so those hotel stays are no longer missed. The Ask AI bar has a Change switch: tell Travel what to change (edit or clear any detail, add a booking, cancel or delete one, put a booking in a trip or take it out, rename a trip), look over the changes it proposes, and tap Apply; nothing changes before that, and Undo puts it all back. Settings says which AI models answer, and which one gave the last answer. Travel now reads your mail again once after this update (so Hilton\'s emails and other stays missed before show up), searches for more airlines, hotel groups, car rental companies and booking sites, and no longer mixes up two trips on the same flight number (like a September and a November Cleveland trip). Settings has a new What Travel read list: every email the last look went through and what it made of it, so a missing booking can be tracked down; the re-reading after an update can no longer leave holes if it is interrupted; and West Palm Beach\'s new airport code (DJT) is recognised',
         'New: Clock, one of the core apps, with two designs picked in its Settings, Vintage (starburst clock faces, the default) and Standard (Sea glass): World Clock with the cities you add; Alarms with Sleep | Wake Up, repeat days, a label, six sounds made in the app and snooze from 1 to 15 minutes; a Stopwatch, digital or analog, with laps; as many Timers at once as you like, with Recents; and Nightstand, a bedside clock that keeps the screen on so alarms ring. A web app can only ring while it is open, so Clock says so, and lists anything that came due while it was closed',
+        'Clock: pick the main clock\'s city in Settings (alarms and Nightstand keep your phone\'s time)',
         'New: a Vintage design for Notes, Podcasts, Places and Meals, so every app has one (pick it on the app\'s page in aOS)',
         'Meals and Podcasts can keep a readable copy in a Google Sheet of your own (Meals: every plan, the list, deals; Podcasts: shows, saved episodes and history); Orders\' Sheet gets a Log tab of every order, status change and deletion',
         'aOS: notifications. Under your account, from the Home Screen app, turn them on; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
@@ -119,6 +122,7 @@
         'News: Sport > Table shows a league\'s standings from ESPN, with a pill to pick the league, kept up to date as games finish (every minute while a game is on), the teams in play marked and the teams you follow tinted',
         'News: tap a football or rugby game in Sport > Scores for its own page instead of ESPN\'s: the score and clock, key events (goals, cards, substitutions), stats side by side, a shot map and each player\'s goals, assists and shots for football, the scoring and line-ups for rugby, refreshed every 45 seconds while the game is on, with Open on ESPN at the bottom',
         'Home: the thermostats and the Windmill AC show a few small snowflakes falling while they cool and a small flickering flame while they heat, all faint and animated',
+        'aOS: Today leads with what\'s new - a new app, big, with What\'s new in aOS beside it - and below it shows a different mix of apps every day',
         'aOS on Android: an app you removed from the tablet shows Get again once you tap it in aOS (Chrome tells the app it is no longer installed). iPhone can\'t tell, so there it is still the "Removed it from your Home Screen?" button',
         'Orders is new, one of the Allison family apps: everything you\'ve bought and where it is, read from the order, shipping and store-pickup emails in your Gmail, with the courier, the tracking number and a link to track it. Packages and store pickups show; food, subscriptions and tickets can be switched on in Settings',
         'Mail has a Vintage design: the same Mail in a mid-century modern look in the Retro colors - cream (walnut in dark mode), mustard, teal and burnt orange, flat round-cornered cards and buttons instead of glass, atomic shapes behind the title and Futura type. Pick it from the Design menu on Mail\'s page in aOS. It is its own app on your Home Screen, with its own sign-in and settings, so Mail stays as it is',
@@ -175,7 +179,7 @@
         mail: { highlights: ['Mail has a new tagline: Mail.Controlled.'] },
         drinks: { highlights: ['Analysis is one page, opened from the week\'s number, with a pill at the bottom to pick a view', 'Pick a view from the pill: this week or month against the one before, your top drinks, days of the week, and more'] },
       } },
-    { v: '1.1', date: '2026-10-10', title: 'Dinner is served',
+    { v: '1.1', date: '2026-10-10', title: 'Dinner is served', added: ['meals'],
       highlights: ['Meals: a few nights of different dinners around one meat, this week\'s Whole Foods deals, and one shopping list', 'Easier to tap: small buttons, arrows and chips take a tap a little way round them'],
       notes: ['Meals is one of the Allison family apps, in aOS: the family\'s plan, deals and list are shared, and every plan is checked against the family\'s allergies',
         'News keeps its last headlines up if the news sources can\'t be reached for a while',

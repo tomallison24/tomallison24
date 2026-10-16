@@ -66,7 +66,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `home/welcome.js` `TOURS` | `{ tag, cards }`: a one-line tag and 3 to 6 cards, written from its README; each card's `i` must be a key of `LINE` |
 | `home/welcome.js` `OS_TOUR` | the sentence listing every app by name |
 | `home/welcome.js` `DARK_ONLY` | only if it is drawn for dark only |
-| `home/welcome.js` `RELEASES` | a line in the top entry (see `CLAUDE.md`, "The release log") |
+| `home/welcome.js` `RELEASES` | a line in the top entry, and the app's id in its `added` so aOS's Today leads with it (see `CLAUDE.md`, "The release log") |
 | `aOS/app.js` | `HUE` (its glow: its icon's middle tint, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
@@ -156,7 +156,7 @@ node <id>/scripts/<tests>.mjs          # the app's own tests
 
 `.github/workflows/apps-check.yml` runs all of this on every pull request (and on
 pushes to the default branch): add each new test to it (plain Node tests to the
-`check` job, browser tests to the `apps` or `apps-more` job, whichever is shorter). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
+`check` job, browser tests to one of the `browser` job's groups, whichever runs shortest: each is about four minutes, and they run side by side). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
 that no workflow runs. Fix every error; say in the PR which warnings remain and why.
 
 Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),

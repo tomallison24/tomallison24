@@ -41,6 +41,8 @@ notice, add a line for it:
     `.claude/skills/aos-major-release/SKILL.md`.
   Either way `node aOS/scripts/release-test.mjs` (CI runs it) plays the new
   entry in aOS and every app, as a phone on the version before would see it.
+- A new app: add its id to the entry's `added: [...]`. aOS's Today then leads with it (and
+  What's new beside it) for 30 days after the entry's date; after that, Today is a daily mix.
 - `highlights` are the most important changes - the update screens in the
   apps show these; `notes` are everything else, shown in aOS's full log.
 - Per app: `apps: { weather: { highlights: [...], notes: [...] } }` (a plain
@@ -65,7 +67,7 @@ end with 0 errors.
 ## Tests
 
 Every test runs in CI (`.github/workflows/apps-check.yml`): plain Node tests
-in the `check` job, browser tests in `smoke`, `apps` and `apps-more` (the tours run in three shards, `tours`; checks run on the PR, and on pushes only to the default branch). `check-apps.mjs` fails on any
+in the `check` job, browser tests in the `browser` groups that run side by side (about four minutes each: put a new one in the group that runs shortest), and the tours in three shards, `tours`; checks run on the PR, and on pushes only to the default branch. `check-apps.mjs` fails on any
 `<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
 the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
 with `'999'` for every app they open, so no walkthrough or update screen
