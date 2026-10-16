@@ -247,6 +247,10 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .fab:active{transform:scale(.9)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
 .dockr{display:flex;align-items:center;gap:8px}
+/* Ipsy beside the new-event button, a little smaller than its own 62px so the view bar keeps its room */
+.dockr .ipsyslot{display:flex;margin-right:-4px}
+.dockr .ipsyslot:empty{display:none}
+.dockr .ipsy-btn{width:50px;height:50px}
 @media (max-width:389px){.tab svg{display:none}.tab{padding:0 14px}}
 .fab.small{width:46px;height:46px}
 .fab.small svg{width:21px;height:21px;stroke-width:1.9}
@@ -1060,6 +1064,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <button class="tab" type="button" role="tab" data-view="list" aria-selected="false" aria-label="List"><svg viewBox="0 0 24 24"><path d="M8.4 6.4h12M8.4 12h12M8.4 17.6h12"/><circle cx="4.4" cy="6.4" r=".9" class="fs"/><circle cx="4.4" cy="12" r=".9" class="fs"/><circle cx="4.4" cy="17.6" r=".9" class="fs"/></svg></button>
     </nav>
     <div class="dockr">
+      <span class="ipsyslot"></span>   <!-- Ipsy, the helper you chat with (../home/ipsy.js) -->
       <button class="fab" id="fab" type="button" aria-label="New event">
         <svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>
       </button>
@@ -1116,6 +1121,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 <script src="../home/slide.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signs calls to calendar/api in -->
 <script src="ical.js"></script>
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="calendar" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
