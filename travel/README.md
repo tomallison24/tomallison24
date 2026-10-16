@@ -31,6 +31,9 @@ with the details filled in.
 - **Add by hand** (the + button): a flight, hotel or rental car. The clipboard
   button reads a **pasted confirmation** (from any inbox, e.g. one forwarded
   by someone else) the same way Gmail's are read.
+- **Ipsy**, the little stem cell at the bottom left: ask about your trips in your
+  own words, change them (each change with Undo), look up any flight live, and
+  check your Gmail (below).
 - **Two phones**: a shared Google Sheet, set up like Notes' (below).
 
 ## The two designs
@@ -265,68 +268,93 @@ board, and last the AI:
   one. It uses the repository's `ANTHROPIC_API_KEY` secret (the same one Meals,
   News and Orders use) and `claude-haiku-5-5` (a narrow reading job whose every
   answer is checked); the optional `TRAVEL_AI_MODEL` secret names another model. Settings has a switch that hides the button.
-- *Ask AI.* Under the filters on Trips there is a bar: ask a question about your
-  trips ("when is my next flight?", "which hotels did I stay at in September?",
-  "what's still to check?") and press Enter. Nothing is sent while you type. The
-  question goes to the function (`ask`) with your trip list (current, past and to
-  check: dates, places, flight numbers, hotel and rental names, confirmation codes
-  and what is unconfirmed; never names, seats, notes, email addresses or subjects),
-  and Claude answers from that list alone, in a few sentences, and names the
-  bookings it used, which are shown under the answer and open when tapped. If the
-  list doesn't say, it says so. At most 300 characters a question, and no other
-  limit. The bar shows even before there are any bookings: it then says there is
-  nothing to look through, without asking Claude. Same key as above; it uses
-  `claude-sonnet-5-5` (it reasons over dates and counts), and the optional
-  `TRAVEL_ASK_MODEL` secret names another model. Claude Haiku 5.5 has no
-  server-side fallback for a declined request, so none is asked for when either
-  model is a Haiku. Each question costs a few cents at most (Sonnet 5.5 is $2 / $10
-  per million tokens in / out; Haiku 5.5, $0.10 / $0.50). The Settings switch hides the
-  bar along with the buttons.
-- *Change by asking.* The bar has an **Ask / Change** switch. In Change, tell Travel
-  what to change ("delete the Sheraton", "move my flight home to the 20th", "put the
-  hotel in the San Diego trip", "add dinner with Pat on the 16th at 7 in Old Town",
-  "cancel the Portland flight", "no seat on that flight", "call this trip December in
-  San Diego") and press Enter. The function (`edit`) gets the instruction and the same
-  trip list as Ask AI, with each trip's id, and Claude answers with changes from this
-  list, at most thirty at a time:
-  - **set** any field of a booking that you can edit by hand (flights: airline, number,
-    airports, departure and arrival, terminal, gate, confirmation, seat, traveler,
-    notes; hotels: name, address, city, confirmation, check-in and check-out with their
-    times, phone, notes; cars: company, confirmation, places, pick-up and drop-off, car,
-    city, notes; other bookings: title, place, start, end, confirmation, notes), or clear
-    it with an empty value (a booking keeps its first date and its identifying names);
-  - **add** a booking (flight, hotel, car or other), which needs its first date and what
-    identifies it (a flight: airline, number, both airports; a hotel: name and check-out;
-    a car: company; other: title);
-  - **delete** a booking; **cancel** it or bring a cancelled one back; mark it **checked**
-    ("looks right");
-  - **join** a booking to another's trip, or **take it out** of its trip (a trip of its own);
-  - **rename** a trip.
-  Every change is checked in the function (the booking exists, the field belongs to its
-  kind, the value has the right shape: airports are three letters, days are real days)
-  and again in the app, and the ones that don't check out are left out and counted.
-  What is left comes up as a **preview**, a line each, deletes in red, and **nothing
-  changes until you tap Apply**. Apply marks what it touched as yours (an email never
-  overwrites it again), a deleted booking stays deleted (and comes out of the calendar if
-  Travel wrote it there), and **Undo** in the toast puts everything back, adds and
-  deletes included. A day on its own keeps the booking's time. If the instruction is
-  unclear it asks one short question instead. Joining and separating trips by hand is
-  stored as `tripWith` and `tripApart` on the booking; trips also join by themselves when
-  they share a confirmation code or the next flight leaves from where the last one
-  landed (above). It sees what Ask AI sees, so names, seats, notes and emails are never
-  sent from your trips; what you say in the instruction itself is sent, so if you tell
-  it a seat or a traveler's name, that goes. Same key, model and cost as Ask AI, no limit
-  of its own.
+- *Questions and changes in your own words* are Ipsy's (below). Ipsy took the place of the
+  Ask AI bar that was under the filters on Trips, with its Ask and Change modes.
 - *Which model answers.* Settings, under Smart help, says which models the function
-  is set to use (Check: Haiku 5.5, Ask and Change: Sonnet 5.5, unless the
-  `TRAVEL_AI_MODEL` and `TRAVEL_ASK_MODEL` secrets name others; `ping` reports them),
-  and what the last answer on this phone said it came from, which is the function's
-  own report of the model that answered. If a request was declined and a fallback
-  model answered instead, it says so.
+  is set to use (Check: Haiku 5.5, unless the `TRAVEL_AI_MODEL` secret names another;
+  Ipsy: Sonnet 5.5, unless `TRAVEL_IPSY_MODEL` does; `ping` reports both), and what
+  the last Check answer on this phone said it came from, which is the function's own
+  report of the model that answered. If a request was declined and a fallback model
+  answered instead, it says so.
 - Whatever is filled in this way is marked in the booking (*Filled in … from
   your calendar / by AI / from the airport's flight board. Check these
   details.*) and stays in **To check** until you tap **Looks right** or edit it.
   It is not written to the calendar until then.
+
+## Ipsy
+
+**Ipsy** is the little stem cell at the bottom left, just above the Trips and
+Explore tabs: a helper you chat with about your trips, in the design picked in
+Settings (mustard, teal and cream in Vintage, pastel glass in Standard; it
+changes with the design at once). It took the place of the Ask AI bar under the
+filters on Trips, and does both of its jobs: answering questions and changing
+your trips. Ask in your own words, e.g. *When's my next flight? Is it on time?*,
+*Where's the hotel in San Diego?*, *Is UA 1234 tomorrow delayed?*, *What's the
+number of the Frontier flight from RDU to Cleveland on Nov 2 at 4 PM?*, *Move my
+flight home to the 20th*, *Put the hotel in the San Diego trip*, *Add dinner with
+Pat on the 16th at 7 in Old Town*, *Delete the Denver trip*, *Check Gmail for
+bookings I'm missing*.
+
+- **What it can do** (`ipsy-tools.js`, its tools in `functions/travel/api`,
+  `IPSY_CLIENT_TOOLS`):
+  - look through your trips and bookings, every detail of each (seat, traveler,
+    terminal, notes, why one is marked Check, the email it came from);
+  - change them: edit or clear any detail you can edit by hand (a day on its own
+    keeps the booking's time), cancel one or bring it back, mark one checked, add
+    one, delete, put a booking in another trip or take it out into one of its own,
+    rename a trip, delete a whole trip; and open a trip on screen;
+  - **look up any flight live, on its own**: its status, delays, times, gates,
+    terminals and baggage belt, through the app's own flight service
+    (`travel/api/flight`), whether or not the flight is in the app or in any email;
+    and find a flight's number from the airline, the airport, the day and the time
+    on the airport's departure board (`travel/api/find`). It is told to use these
+    for live status rather than the emails, and when it doesn't know a flight's
+    number, to try the board, then search the web (the airline, route, day and
+    time), and to confirm what it found with a live look-up;
+  - search and read your Gmail (read-only, with the app's own sign-in), and search
+    the web and read pages.
+- **Every change shows in the chat with Undo**, for as long as the app stays open,
+  so it changes what you ask without asking first; the one exception is **deleting a
+  whole trip** (or every booking in one), which it asks about in the chat, with
+  Delete and Keep it buttons, and nothing goes until you tap Delete. Changes go
+  through the same checks and the same save as the rest of the app (`checkEdit`,
+  `applyEdits` in `app.js`): what it changes is yours (a later email won't overwrite
+  it), a deleted booking doesn't come back from the email and comes out of the Family
+  calendar if Travel put it there, and it all goes to the Google Sheet. Undo puts back
+  just the bookings and trip name that change touched.
+- **Live look-ups count** toward the same monthly allowances on the phone as the
+  app's own (250 flight look-ups, 30 departure board look-ups; "Live flight status"
+  below); past them, Ipsy says so. A look-up of one of your flights close to take-off
+  also updates its live status in the app.
+- **How it works.** The chat lives on the phone. Each step sends the whole
+  conversation to the family server (`functions/travel/api`, `POST ipsy`), which adds
+  Ipsy's instructions and tools and asks **Claude Sonnet 5.5** (medium effort, prompt
+  caching on, Anthropic's server-side fallback if it declines; `server/ipsy.js`). When
+  Claude asks for one of Travel's tools, it runs on the phone, where the bookings and
+  the Gmail sign-in are, and the result goes back with the next step. Web search and
+  web pages run at Anthropic. `TRAVEL_IPSY_MODEL` (optional repository secret) names
+  another model.
+- **Asked first, once.** Before the first question, Ipsy says what is sent where: your
+  question and whatever it looks at to answer it (your bookings, with any names,
+  seats and notes in them, and any email it opens) go to Claude through the family
+  server, which keeps only a count of questions (80 a person a day; the steps a
+  question takes aren't counted). Flight look-ups send AeroDataBox only the flight
+  number and the day. Unlike the Ask AI bar, which sent a trip list without names,
+  seats or notes, Ipsy reads what the question needs, so those can be sent.
+- **For signed-in family** (Face ID): `/travel/api/` is locked to the family once
+  accounts are on, and Ipsy also needs the `ANTHROPIC_API_KEY` secret; without it, it
+  says it isn't set up.
+- **Emails and web pages are read, never obeyed**: Ipsy is told they are material,
+  not instructions. Gmail access is read-only, and an email's links reach Claude as
+  their site only (*[link to united.com]*), so a one-tap link in an email (check in,
+  cancel, change a seat) is never opened.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone until then.
+- **Not tried against the real API or on a phone**: the tests use a stand-in for
+  Claude and for the flight service (`node travel/scripts/ipsy-test.mjs`,
+  `node travel/scripts/api-test.mjs`), so the first real questions are the real test
+  of the instructions. Ipsy floats above the tabs (the dock has no room beside them
+  on a 390-point-wide phone), so trip cards scroll under it, as they do under the
+  dock; the list ends far enough up that nothing is left under it.
 
 ## What Travel searches for, and re-reading
 
@@ -411,7 +439,8 @@ before that; the server keeps each answer for 10 minutes so both phones share
 it; and each phone stops at 250 lookups a month. Sent to AeroDataBox: the
 flight number and date, nothing about who's flying. The flight board lookup
 (Smart help) sends an airline, two airports, a day and a time, is capped at 30
-a month on a phone, and each answer is kept for an hour.
+a month on a phone, and each answer is kept for an hour. Ipsy's look-ups (above)
+count toward the same two caps.
 
 ## Google Sheet sync
 
@@ -461,7 +490,8 @@ site.
 - **No build step.** `index.html` is the page and its look (Notes' style
   block, unchanged, plus Travel's own pieces at the end, for Standard; then
   the `<style id="vintage">` block, "The two designs" above), `app.js` the app,
-  `parse.js` the email reading, `sw.js` the offline shell. In Standard, as in Calendar,
+  `parse.js` the email reading, `ipsy-tools.js` Ipsy's tools (Ipsy itself is
+  `../home/ipsy.js`, shared by every app with Ipsy), `sw.js` the offline shell. In Standard, as in Calendar,
   the sheets are Liquid Glass floating just inside the screen's edges (the
   trip page stays a whole page, with the same rows and glass buttons), the
   toast is the same clear glass as the sheets, the
@@ -480,19 +510,20 @@ site.
 
 ```sh
 node travel/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts
-node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed
+node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed; extract; Ipsy's step, Claude stubbed
 node travel/scripts/reader-version-test.mjs   # QUERY_V is bumped whenever the reader or the search changes
 node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed; both designs, Settings > Design, the old Travel Vintage address
 node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed; at Travel's address or the old Travel Vintage one
+node travel/scripts/ipsy-test.mjs    # Ipsy in headless Chromium, both designs, light and dark: its tools, Undo, asking before a whole trip goes; Claude, Gmail and the flight service stubbed
 node travel/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
-The last three need Playwright with Chromium (`npm i -g playwright`).
+The last four need Playwright with Chromium (`npm i -g playwright`).
 
 ## What I could not verify
 
-- **Smart help was built and tested without the real services.** The AI route
-  was never called against the real Claude API, and the flight board lookup
+- **Smart help and Ipsy were built and tested without the real services.** The AI
+  routes (extract, ipsy) were never called against the real Claude API, and the flight board lookup
   was never called against AeroDataBox: both are tested with stand-ins that
   follow the documentation (`scripts/api-test.mjs`), and the departure board's
   answer shape (`movement`, `scheduledTime`) is from memory of AeroDataBox's

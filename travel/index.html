@@ -171,7 +171,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .seg button.warn b{color:var(--danger)}
 
 /* ---- content ---- */
-.list{padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.list{padding:6px 14px calc(176px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
 .sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:6px 4px 6px;display:flex;justify-content:space-between}
 .resulthead{font-size:13px;color:var(--faint);margin:0 4px}
 /* Two plain flex columns, not CSS multi-column: Safari can fail to draw
@@ -243,6 +243,9 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .fab:active{transform:scale(.9)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
 .dockr{display:flex;align-items:center;gap:8px}
+/* Ipsy, the helper (../home/ipsy.js): above the tabs at the bottom left, as the dock has no room beside them */
+.ipsyslot{position:absolute;left:14px;bottom:calc(100% + 8px);width:62px;height:62px}
+.ipsyslot:empty{display:none}
 @media (max-width:389px){.tab svg{display:none}.tab{padding:0 14px}}
 .fab.small{width:46px;height:46px}
 .fab.small svg{width:21px;height:21px;stroke-width:1.9}
@@ -528,13 +531,6 @@ svg.fs{fill:currentColor}
 .trip .dates{font-size:14px;color:var(--muted)}
 .trip .icons{display:flex;flex-wrap:wrap;gap:6px}
 .trip.past{opacity:.82}
-.askbar{margin:10px 0 2px}
-.askbar[hidden]{display:none}
-.askout{border-radius:22px;padding:14px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
-.askq{font-size:13px;color:var(--muted)}
-.aska{font-size:16px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
-.aska.err{color:var(--muted)}
-.askclear{align-self:flex-end}
 #stAiSub{white-space:pre-line}
 .logrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:11px 14px}
 .logrow + .logrow{border-top:1px solid var(--hair)}
@@ -543,15 +539,6 @@ svg.fs{fill:currentColor}
 .logrow .lgt span{font-size:12px;color:var(--muted)}
 .logrow .lgo{flex:none;max-width:42%;text-align:right;font-size:13px;font-weight:600;color:var(--accent-text)}
 .logrow .lgo.no{color:var(--muted);font-weight:500}
-.askmode{flex:none;height:32px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:700;color:var(--accent-text);background:var(--fill);box-shadow:var(--lg-rim)}
-.askmode:active{transform:scale(.94)}
-.editlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.35}
-.editlist li{padding-left:14px;position:relative;overflow-wrap:anywhere}
-.editlist li:before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.editlist li.del{color:var(--danger-text)}
-.editlist li.del:before{background:var(--danger)}
-.editbtns{display:flex;justify-content:flex-end;gap:10px;align-items:center}
-.askout .tl{margin:0}
 .tripwrap{position:relative}
 .trip.hasai{padding-bottom:54px}
 .aibtn{position:absolute;right:12px;bottom:10px}
@@ -928,11 +915,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         </div>
       </div>
       <div class="chips" id="whenChips" role="toolbar" aria-label="Which trips"></div>
-      <form class="search glass askbar" id="askForm" role="search" action="#" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>
-        <input id="askInput" type="search" placeholder="Ask AI about your trips" aria-label="Ask AI about your trips" enterkeyhint="send" maxlength="300" autocomplete="off" autocapitalize="sentences">
-        <button class="askmode" type="button" id="askMode" aria-label="Asking questions. Switch to changing trips">Ask</button>
-      </form>
     </header>
     <main class="list" id="list"></main>
   </section>
@@ -964,6 +946,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 
   <!-- DOCK -->
   <div class="dock">
+    <span class="ipsyslot" id="ipsySlot"></span>
     <nav class="tabs glass" role="tablist" aria-label="Sections">
       <button class="tab" type="button" role="tab" data-tab="trips" aria-selected="true">
         <svg viewBox="0 0 24 24"><rect x="3.4" y="7" width="17.2" height="12.8" rx="3.2"/><path d="M8.6 7V5.6a2 2 0 0 1 2-2h2.8a2 2 0 0 1 2 2V7"/><path d="M3.4 12.4h17.2"/></svg>Trips
@@ -1149,6 +1132,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 <script src="../home/slide.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signs calls to travel/api and calendar/api in -->
 <script src="parse.js"></script>
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="travel" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
