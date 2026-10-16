@@ -134,11 +134,12 @@ jobs:
               weathervintage/scripts/app-test.mjs
               news/scripts/app-test.mjs
               newsvintage/scripts/app-test.mjs
-          # Orders and Mail, both designs (Mail: the security tests that run in a page)
+          # Orders and Mail, both designs (Mail: the security tests that run in a page), and Ipsy in Orders
           - group: orders-mail
             tests: |
               orders/scripts/app-test.mjs
               ordersvintage/scripts/app-test.mjs
+              orders/scripts/ipsy-test.mjs
               mail/scripts/security-test.mjs
               mailvintage/scripts/security-test.mjs
     steps:

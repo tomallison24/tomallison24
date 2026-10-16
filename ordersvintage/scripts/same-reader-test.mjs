@@ -3,6 +3,7 @@
 // (and both can share one Google Sheet). So the email reader is checked to be
 // the very same file, byte for byte. When parse.js changes in orders/, copy it
 // to ordersvintage/:  cp orders/parse.js ordersvintage/parse.js
+// The same goes for Ipsy's tools (ipsy-tools.js): both apps' Ipsy works on orders the same way.
 //
 //   node ordersvintage/scripts/same-reader-test.mjs
 import fs from 'node:fs';
@@ -12,3 +13,6 @@ const root = new URL('../..', import.meta.url).pathname;
 const a = fs.readFileSync(root + 'orders/parse.js', 'utf8'), b = fs.readFileSync(root + 'ordersvintage/parse.js', 'utf8');
 assert.equal(b, a, 'ordersvintage/parse.js differs from orders/parse.js: copy it over (cp orders/parse.js ordersvintage/parse.js)');
 console.log('ok - ordersvintage/parse.js is orders/parse.js');
+const c = fs.readFileSync(root + 'orders/ipsy-tools.js', 'utf8'), d = fs.readFileSync(root + 'ordersvintage/ipsy-tools.js', 'utf8');
+assert.equal(d, c, 'ordersvintage/ipsy-tools.js differs from orders/ipsy-tools.js: copy it over (cp orders/ipsy-tools.js ordersvintage/ipsy-tools.js)');
+console.log('ok - ordersvintage/ipsy-tools.js is orders/ipsy-tools.js');

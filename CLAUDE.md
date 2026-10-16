@@ -92,7 +92,8 @@ from.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
   steps, release log, theme), `slide.js`, `sky.js` (the Vintage designs' day and night
-  sky) and `aisles.js` (grocery sections, for Notes and Meals) - plus the Welcome Lab. Its
+  sky), `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the
+  AI helper you chat with, so far in Orders) - plus the Welcome Lab. Its
   `index.html` is a "moved to aOS" notice.
 - `home/back.js` (swipe up to the launcher) is **gone**: don't add
   `../home/back.js` back to a page or to a `sw.js` SHELL list (a missing file

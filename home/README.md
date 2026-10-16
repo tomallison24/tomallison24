@@ -27,6 +27,14 @@ What stays in this folder:
   `window.aosSky.mode()`, `.tone()` and `.ground()` tell a page which sky it is, and
   `aos:sky` fires when it changes. Weather Vintage doesn't load it: it draws its
   own sky from the forecast. `aOS/scripts/sky-test.mjs` checks it.
+- **`ipsy.js`**: Ipsy, the helper you chat with: a little stem cell that turns
+  into other cells as it works (a nerve cell while it thinks, a white blood cell
+  while it runs a tool), its chat sheet, and the loop that asks Claude through the
+  app's own server route and runs the app's tools on the phone. It takes the app's
+  look (Sea glass, or Vintage with `data-look="vintage"`) and its light or dark
+  tokens. An app loads it before its own script, lists it in its `sw.js` SHELL and
+  calls `AllisonOS.ipsy.mount({...})` with its tools (see the top of the file).
+  Orders is the first (`../orders/README.md`, "Ipsy").
 - **`welcome-lab.html`**: plays the welcome, a walkthrough, an update or the
   Safari steps on demand.
 - **`index.html`**: the retirement notice. In a browser it goes straight on to

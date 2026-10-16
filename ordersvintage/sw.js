@@ -1,8 +1,8 @@
 // Offline shell for the Orders Vintage app. Same-origin files load network-first, so
 // a new deploy shows up on the next open and the cache is only the fallback.
 // Gmail and the Sheet are never touched here.
-const CACHE = 'ordersvintage-v2';
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/account.js', '../home/welcome.js'];
+const CACHE = 'ordersvintage-v3';
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/account.js', '../home/welcome.js', '../home/ipsy.js', 'ipsy-tools.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

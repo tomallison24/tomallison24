@@ -1216,6 +1216,22 @@ if (window.top !== window.self) {
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+  // Ipsy (../home/ipsy.js), the helper you chat with: its tools (ipsy-tools.js) work on these same
+  // orders and this same Gmail sign-in; Claude answers through functions/orders/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.OrdersIpsy) {
+    const TAB_NAMES = { way: 'the On the way list', done: 'the Delivered list', check: 'the To check list' };
+    window.AllisonOS.ipsy.mount({
+      app: 'ordersvintage', name: 'Orders', endpoint: '../orders/api/ipsy', headers: { 'X-Orders': '1' }, slot: document.querySelector('.dock > span'),
+      ...window.OrdersIpsy({
+        P, get orders() { return orders; }, set orders(v) { orders = v; }, save, render, todayStr, isOpen, needsCheck, checkReason, kindOn,
+        gmail, bodies, header, getToken, AuthError, openOrder, current: () => (!$('opage').hidden && st.order) || null,
+        closeOrder: id => { if (st.order && st.order.id === id) { st.order = null; closeSheet('opage'); } },
+        refreshOrder: () => { if (st.order && !orders.includes(st.order)) { const o = orders.find(x => x.id === st.order.id); if (o) { st.order = o; renderOrder(); } else { st.order = null; closeSheet('opage'); } } },
+        screen: () => st.q ? 'search results for "' + st.q + '"' : TAB_NAMES[st.tab] || 'the order list',
+      }),
+    });
+  }
+
   // For the tests (ordersvintage/scripts/app-test.mjs) only.
   window.__orders = { get orders() { return orders; }, tidy: cleanupOnce, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale };
 })();

@@ -47,13 +47,16 @@ change independently and Orders is never touched.
 - **The one-off clean-up** of old open orders works as in Orders (`orders/README.md`), once on this app's own orders.
 - **Fix details with Claude** works the same, through the same server route as Orders
   (`/orders/api/read`), and asks its own first-time question.
+- **Ipsy**, the helper you chat with, works the same (`orders/README.md`, "Ipsy"),
+  in the Vintage colors (a mustard stem cell, teal while it thinks), through the
+  same server route (`/orders/api/ipsy`), with its own chat and its own first-time question.
 - **Opens its email in Mail Vintage**, not Mail (`../mailvintage/?thread=…`). Both are
   separate Home Screen apps; whether iOS opens that address inside the installed
   Mail Vintage or in Safari is up to iOS, which treats a link outside an app's
   own folder as a web page (not checked on a phone).
 - **Own storage.** Every key is `ordersv.…` or `allison-ordersv-…` (Orders' is
   `orders.…` / `allison-orders-…`), so each app has its own orders, settings
-  and offline cache (`ordersvintage-v2`). An order edited in one is not edited
+  and offline cache (`ordersvintage-v3`). An order edited in one is not edited
   in the other. A backup file from one can be imported into the other.
 - **Own sign-in address.** Google's sign-in returns to the page it started
   from, so the OAuth client needs this redirect URI added **once**, next to
@@ -74,7 +77,7 @@ change independently and Orders is never touched.
 - **The same email reader.** `parse.js` is the same file as Orders' (checked by
   `scripts/same-reader-test.mjs`), so an email reads the same in both. When
   `orders/parse.js` changes, copy it over: `cp orders/parse.js
-  ordersvintage/parse.js`.
+  ordersvintage/parse.js`. The same goes for Ipsy's tools, `ipsy-tools.js`.
 
 ## Tests
 

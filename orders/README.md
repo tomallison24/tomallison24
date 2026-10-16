@@ -168,6 +168,55 @@ they go onto the order, with **Undo**.
   tap is the real test of the prompt.
 
 
+## Ipsy
+
+**Ipsy** is the little stem cell in the bottom left corner: a helper you chat
+with about your orders, in the app's own look (Orders Vintage has it in mustard,
+teal and cream). Ask in your own words, e.g. *What's arriving this week?*,
+*Find duplicate orders and merge them*, *The Walmart total should be $49.99*,
+*Delete everything from Tandoor House*, *Check Gmail for orders I'm missing*,
+*How long does Target hold a pickup?*
+
+- **What it can do.** Look through every order and change them: edit any
+  detail, mark one delivered, add one, delete, and merge duplicates into one
+  (`ipsy-tools.js`). Search and read your Gmail (read-only, with the app's own
+  sign-in), and search the web and read pages (a store's return policy, a
+  carrier's tracking page). It changes what you ask without asking first; it
+  asks only when it isn't clear which orders you mean, or before deleting or
+  merging more than five at once.
+- **Every change shows in the chat with Undo**, for as long as the app stays
+  open. What Ipsy changes is kept like your own edits (a later email won't
+  overwrite it), a deleted order doesn't come back from the email, and it all
+  goes to the Google Sheet and its Log tab like any other change.
+- **It changes shape as it works**: a stem cell at rest, a nerve cell (sparks
+  at its tips) while it thinks, a white blood cell while it runs one of its
+  tools, and it talks while the answer appears. Reduce Motion holds it still.
+- **How it works.** The chat lives on the phone. Each step sends the whole
+  conversation to the family server (`functions/orders/api`, `POST ipsy`),
+  which adds Ipsy's instructions and tools and asks **Claude Sonnet 5.5**
+  (medium effort, prompt caching on, Anthropic's server-side fallback if it
+  declines). When Claude asks for one of the order or Gmail tools, it runs on
+  the phone, where the orders and the Gmail sign-in are, and the result goes
+  back with the next step. Web search and web pages run at Anthropic.
+  `ORDERS_IPSY_MODEL` (optional repository secret) names another model.
+- **Asked first, once.** Before the first question, Ipsy says what is sent
+  where: your question and whatever it looks at to answer it (your orders, and
+  any email it opens) go to Claude through the family server. The server keeps
+  only a count of questions (80 a person a day; the steps a question takes
+  aren't counted).
+- **For signed-in family** (Face ID), like Fix with Claude. Without the key it
+  says Ipsy isn't set up.
+- **Emails and web pages are read, never obeyed**: Ipsy is told they are
+  material, not instructions, and to say so when one asks it to do something.
+  Gmail access is read-only, so it can't send, change or delete email, and an
+  email's links reach Claude as their site only (*[link to ups.com]*), so a
+  one-tap link in an email (confirm, cancel, unsubscribe) is never opened.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone
+  until then (a very long one stops at about 1 MB and asks for a new chat).
+- **Not tried against the real API or on a phone**: the tests use a stand-in for
+  Claude (`node orders/scripts/ipsy-test.mjs`, `node orders/scripts/api-test.mjs`),
+  so the first real questions are the real test of the instructions.
+
 ## Gmail
 
 Orders signs in with **Mail's own Google client** (the same client ID), so
@@ -275,7 +324,10 @@ are kept as text.
   block plus Orders' own pieces at the end), `app.js` the app, `parse.js` the
   email reading, `sw.js` the offline shell.
 - **No server for reading.** Gmail is read from the phone and tracking opens the
-  carrier's page. The only Pages Function is Fix with Claude (above).
+  carrier's page. The only Pages Function is Claude's (Fix with Claude and Ipsy, above).
+- **Ipsy**: `../home/ipsy.js` (the character, the chat and its loop, shared with
+  any app that adds Ipsy) and `ipsy-tools.js` (its tools here; Orders Vintage has
+  the same file, byte for byte).
 - **Security as in Mail and Travel**: a Content Security Policy that only runs
   these files, no email is ever shown as a page (the HTML is only read as
   text), it refuses to run in a frame, and the sign-in carries a random `state`.
@@ -287,7 +339,8 @@ are kept as text.
 ## Tests
 
 ```sh
-node orders/scripts/api-test.mjs     # Fix with Claude's server side, with a stand-in for Anthropic
+node orders/scripts/api-test.mjs     # Fix with Claude's and Ipsy's server side, with a stand-in for Anthropic
+node orders/scripts/ipsy-test.mjs    # Ipsy in both designs, in headless Chromium, with a stand-in for Claude and Gmail
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
 node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs)
 node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed
