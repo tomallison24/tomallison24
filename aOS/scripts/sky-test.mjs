@@ -1,5 +1,5 @@
-// The Vintage sky (home/sky.js), as a person sees it at iPhone size (390 x 844): aOS and every Vintage
-// design wear Weather Vintage's backgrounds - by day (the sun is up) a ground washed with mustard, the sun
+// The Vintage sky (home/sky.js), as a person sees it at iPhone size (390 x 844): aOS and every app in
+// its Vintage design wear Weather Vintage's backgrounds - by day (the sun is up) a ground washed with mustard, the sun
 // and rays that turn very slowly; by night a ground washed with deep teal, the moon and twinkling stars -
 // each over cream (Light) or walnut (Dark), so four skies. Day and night are the real sun's: sunrise and
 // sunset for the phone's place (the equation Weather Vintage uses), else its time zone's. Checks, in every one:
@@ -10,8 +10,9 @@
 //   - the sun: the changeover is at sunrise and sunset (an hour either side), moves on by itself while the
 //     app is open, works from a place the app was already allowed to know (never asking), from the time zone
 //     when there is none, and can be held still (aos.sky: what the other tests do, so they work at any hour);
-//   - aOS in its Sea glass look has no sky; Home Vintage's other tones stay as picked.
-// Weather Vintage isn't here: it draws its own sky from the forecast (weathervintage/scripts/app-test.mjs).
+//   - aOS in its Sea glass look has no sky, nor any app in its Standard (Sea glass) design (home/design.js);
+//     Home's other tones stay as picked.
+// Weather isn't here: in Vintage it draws its own sky from the forecast (weather/scripts/app-test.mjs).
 // The text-off-the-disc check holds on the widest fallback font too (the phone has Futura; CI's Linux and Android do not):
 // SKY_FONT="DejaVu Sans" node aOS/scripts/sky-test.mjs tries one.
 // Works on any day: the clock is pinned (September 30, the longest month name, which makes the widest headers).
@@ -29,7 +30,7 @@ const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
-const APPS = ['aOS', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'clock'];
+const APPS = ['aOS', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock'];   // every app in its Vintage design (the default)
 // the four skies: sky and tone -> the page colour, the disc, the hex the theme-color meta carries
 const SKY = {
   'day light': { ground: 'rgb(241, 223, 187)', disc: 'rgb(227, 167, 47)', meta: '#F1DFBB' },
@@ -56,7 +57,7 @@ async function open(app, { at = NOON, scheme = 'light', theme = null, reduce = f
   if (install) await ctx.clock.install({ time: new Date(at) }); else await ctx.clock.setFixedTime(new Date(at));
   await ctx.addInitScript(({ theme, look, seed, place, pin, at, PLACE }) => {
     try {
-      const s = {}; for (const a of ['aos', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'clock']) s[a] = '999';
+      const s = {}; for (const a of ['aos', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock']) s[a] = '999';
       localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
       if (place) localStorage.setItem('aos.sky.loc', JSON.stringify({ ...PLACE, t: Date.parse(at) }));
       if (pin) localStorage.setItem('aos.sky', pin);
@@ -154,18 +155,18 @@ if (!process.argv[3]) {
   { // the sun: the changeover is at sunrise and sunset for the place, and moves on by itself
     const pr = [];
     for (const [t, want] of [['06:15', 'night'], ['07:45', 'day'], ['18:15', 'day'], ['19:45', 'night'], ['02:00', 'night']]) {
-      const o = await open('notesvintage', { at: local(t) }); const s = await look(o.p);
+      const o = await open('notes', { at: local(t) }); const s = await look(o.p);
       if (s.sky !== want) pr.push('at ' + t + ' (sunrise about 7:10, sunset about 6:55 pm in Raleigh on September 30) the sky is ' + s.sky + ', not ' + want);
       await o.ctx.close();
     }
     // the same place, later in the year: the winter sun is down at 5:15 pm but up at 4:15 pm (Raleigh, December 21: sunset 5:03 pm)
     for (const [iso, want] of [['2026-12-21T21:15:00Z', 'day'], ['2026-12-21T22:15:00Z', 'night']]) {
-      const o = await open('notesvintage', { at: iso }); const s = await look(o.p);
+      const o = await open('notes', { at: iso }); const s = await look(o.p);
       if (s.sky !== want) pr.push('on December 21 at ' + new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' the sky is ' + s.sky + ', not ' + want);
       await o.ctx.close();
     }
     // open across sunrise: it turns to day by itself, and the theme-color metas go with it
-    const o = await open('notesvintage', { at: local('06:30'), scheme: 'light', install: true });
+    const o = await open('notes', { at: local('06:30'), scheme: 'light', install: true });
     let s = await look(o.p); if (s.sky !== 'night') pr.push('before sunrise the sky is ' + s.sky);
     await o.p.clock.runFor(90 * 60000); s = await look(o.p);
     if (s.sky !== 'day' || s.ground !== SKY['day light'].ground) pr.push('90 minutes later (after sunrise) with the app still open the sky is ' + s.sky + ' on ' + s.ground + ', not day');
@@ -178,28 +179,28 @@ if (!process.argv[3]) {
   { // where: the time zone's guess, then a place the phone gives when it was already allowed (never asked)
     const pr = [];
     for (const [zone, at, want] of [['America/New_York', NOON, 'day'], ['America/New_York', NIGHT, 'night'], ['America/Los_Angeles', '2026-09-30T19:00:00Z', 'day'], ['America/Los_Angeles', '2026-10-01T09:00:00Z', 'night'], ['Europe/London', '2026-09-30T12:00:00Z', 'day'], ['Europe/London', '2026-10-01T01:00:00Z', 'night']]) {
-      const o = await open('notesvintage', { at, zone, place: false }); const s = await look(o.p);
+      const o = await open('notes', { at, zone, place: false }); const s = await look(o.p);
       if (s.sky !== want) pr.push('with no place, in ' + zone + ' at ' + at + ' the sky is ' + s.sky + ', not ' + want);
       if (s.saved) pr.push('with no permission a place was kept anyway: ' + s.saved);
       await o.ctx.close();
     }
     // allowed already: the phone's position is kept, to a tenth of a degree, and it decides. 7:30 pm in New York
     // (23:30 UTC) is after sunset there, but 4:30 pm in Seattle, where the phone is: day
-    const o = await open('notesvintage', { at: '2026-09-30T23:30:00Z', place: false, geo: { latitude: 47.6062, longitude: -122.3321 } });
+    const o = await open('notes', { at: '2026-09-30T23:30:00Z', place: false, geo: { latitude: 47.6062, longitude: -122.3321 } });
     await o.p.waitForTimeout(600); const s = await look(o.p);
     let kept = null; try { kept = JSON.parse(s.saved); } catch {}
     if (!kept || kept.lat !== 47.6 || kept.lon !== -122.3) pr.push('the position the phone gave is not kept, rounded to a tenth of a degree: ' + s.saved);
     if (s.sky !== 'day') pr.push('with the phone in Seattle at 4:30 pm there the sky is ' + s.sky + ', not day');
     await o.ctx.close();
-    const n = await open('notesvintage', { at: '2026-09-30T23:30:00Z', place: false }); const sn = await look(n.p);
+    const n = await open('notes', { at: '2026-09-30T23:30:00Z', place: false }); const sn = await look(n.p);
     if (sn.sky !== 'night') pr.push('the same moment with no place known (the New York time zone\'s guess) is ' + sn.sky + ', not night');
     await n.ctx.close();
     report('where: the time zone when there is no place, the phone\'s position (kept to a tenth of a degree) only if it was already allowed', pr);
   }
   { // held still
     const pr = [];
-    let o = await open('notesvintage', { at: NOON, pin: 'night' }); pr.push(...sky(await look(o.p), 'night light', 'pinned to night at noon')); await o.ctx.close();
-    o = await open('notesvintage', { at: NIGHT, pin: 'day', scheme: 'dark' }); pr.push(...sky(await look(o.p), 'day dark', 'pinned to day at night')); await o.ctx.close();
+    let o = await open('notes', { at: NOON, pin: 'night' }); pr.push(...sky(await look(o.p), 'night light', 'pinned to night at noon')); await o.ctx.close();
+    o = await open('notes', { at: NIGHT, pin: 'day', scheme: 'dark' }); pr.push(...sky(await look(o.p), 'day dark', 'pinned to day at night')); await o.ctx.close();
     report('aos.sky holds the sky still, for tests', pr);
   }
   { // aOS in Sea glass has none of it, and it comes back with Vintage
@@ -218,20 +219,34 @@ if (!process.argv[3]) {
     }
     report('aOS: Sea glass has no sky, and Vintage brings it back', pr);
   }
-  { // Home Vintage: the Vintage tone is the sky's ground; a tone picked in Customization stays as picked
+  { // Home in Vintage: the Vintage tone is the sky's ground; a tone picked in Customization stays as picked
     const pr = [];
-    let o = await open('housevintage', { scheme: 'dark', at: NIGHT }); let s = await look(o.p);
+    let o = await open('house', { scheme: 'dark', at: NIGHT }); let s = await look(o.p);
     if (s.ground !== SKY['night dark'].ground) pr.push('the Vintage tone is ' + s.ground + ' at night in Dark, not the sky\'s ' + SKY['night dark'].ground);
     await o.ctx.close();
-    o = await open('housevintage', { scheme: 'light', at: NOON }); s = await look(o.p);
+    o = await open('house', { scheme: 'light', at: NOON }); s = await look(o.p);
     if (s.ground !== SKY['day light'].ground) pr.push('the Vintage tone is ' + s.ground + ' by day in Light, not the sky\'s ' + SKY['day light'].ground);
     await o.ctx.close();
-    o = await open('housevintage', { scheme: 'light', at: NOON, seed: { 'housev.toneV': '2', 'housev.tone': '"slate"' } }); s = await look(o.p);
+    o = await open('house', { scheme: 'light', at: NOON, seed: { 'house.toneV': '2', 'house.tone': '"slate"' } }); s = await look(o.p);
     if (s.ground === SKY['day light'].ground) pr.push('a picked tone (Slate) was painted over with the sky\'s ground');
     if (s.sky !== 'day' || s.disc !== SKY['day light'].disc) pr.push('with another tone the sky is still drawn over it, but it is ' + s.sky + ' with a ' + s.disc + ' disc');
     await o.ctx.close();
-    report('Home Vintage: its Vintage tone is the sky\'s ground; other tones stay as picked', pr);
+    report('Home in Vintage: its Vintage tone is the sky\'s ground; other tones stay as picked', pr);
   }
+}
+
+{ // every app in its Standard (Sea glass) design: no sky (home/design.js sets data-look="glass"), and Vintage brings it back
+  const pr = [];
+  for (const app of APPS.filter(a => a !== 'aOS' && a !== 'clock')) {
+    const o = await open(app, { seed: { ['design.' + app]: 'glass' } });
+    const st = await o.p.evaluate(() => ({ look: document.documentElement.dataset.look, sky: document.documentElement.getAttribute('data-sky') }));
+    if (st.look !== 'glass' || st.sky) pr.push(app + ' in Standard: look ' + st.look + ', sky ' + st.sky);
+    await o.p.evaluate(() => aosDesign.set('vintage')); await o.p.waitForTimeout(150);
+    if (await o.p.evaluate(() => document.documentElement.getAttribute('data-sky')) !== 'day') pr.push(app + ': Vintage did not bring the sky back');
+    pr.push(...o.errs.map(e => app + ': ' + e));
+    await o.ctx.close();
+  }
+  report('every app in Standard (Sea glass) has no sky, and Vintage brings it back at once', pr);
 }
 
 await b.close(); server.close();

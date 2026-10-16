@@ -71,19 +71,26 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
-A **design of an existing app** (Mail Vintage, Home Vintage, Orders Vintage) is a new app folder wired in
-as above, plus an entry in `home/welcome.js` `DESIGNS` (the app's id, then its designs; the
-first is the standard one). aOS then shows one row for the app and a Design menu on its page;
-the design's folder gets no row of its own (`VARIANTS`) and is not in the Allison family
-count. Give it its own storage keys and cache name (never the base app's), and note in its
-README anything it needs that the base app doesn't (a sign-in address, a token).
-It wears the shared day and night sky (Weather Vintage's backgrounds with the real sun, `home/sky.js`):
-load `<script src="../home/sky.js"></script>` in `<head>` after the styles, list
-`'../home/sky.js'` in `sw.js` SHELL, and colour the disc (the first shape of its
-`.ambient` box) `var(--sky-disc, var(--mc-mustard))`; keep any text off the disc, since at
-night it is cream. A test that checks its colours holds the sky still with
-`localStorage['aos.sky'] = 'day'`. `check-apps.mjs` and `aOS/scripts/sky-test.mjs` (add the app to its
-list) check it. Weather Vintage is the exception: it draws its own sky.
+**Every app has two designs**, as one app: **Vintage** (mid-century modern in the Retro
+colours, the default) and **Standard** (Sea glass), picked in the app's own **Settings → Design**
+(Meals, `meals/`, is the pattern; Clock started it with its own `clock/design.js`):
+- The Sea glass styles are the page's main `<style>`; the Vintage look is a second
+  `<style id="vintage">` right after it (cream and walnut, mustard, teal, burnt orange, flat
+  cards, atomic shapes in `.ambient`, Futura).
+- In `<head>`, after the styles: `<script src="../home/design.js" data-app="<id>"></script>`, then
+  `<script src="../home/sky.js"></script>` (the shared day and night sky, Vintage only: colour the
+  disc, the first shape of `.ambient`, `var(--sky-disc, var(--mc-mustard))` and keep text off it).
+  Both in `sw.js` SHELL. Weather is the exception: it draws its own sky.
+- Settings: a **Design** section first, `aosDesign.picker()` in the app's group box and
+  `aosDesign.bind(<container>)`; script that draws colours itself reads `aosDesign.get()` (or
+  `data-look` on `<html>`) and redraws on the window's `aos:design` event.
+- Icons: `icon.svg` → `icon-*.png` is the Vintage one, `icon-glass.svg` → `icon-glass-*.png` the
+  Sea glass one (`scripts/make-icons.mjs` draws both); link the Vintage ones in the page and the
+  manifest (colours `#241E1A`); design.js swaps them. aOS shows the one for its own look.
+- Server calls go to `../<id>/api/`, not `api/`.
+- Tests: the app's browser test covers both designs and Settings → Design (seed
+  `localStorage['design.<id>']` and hold the sky still with `aos.sky = 'day'`), and
+  `aOS/scripts/sky-test.mjs` lists the app. `check-apps.mjs` checks the wiring.
 
 Server side, if it needs one: `functions/<id>/api/[[route]].js`, guarded by an
 `X-<Name>: 1` header, answering with `reply()` from `server/auth.js`. Lock it to
@@ -100,7 +107,7 @@ per person is deleted in `functions/aOS/api` `remove`.
   Calendar's layers are) or a shared file, never another app's storage. What
   another app adds is extra, and says so ("If you use Notes, …"), never an
   error. `aOS/scripts/standalone-test.mjs` checks every app alone.
-- **Look: Sea glass**, the AllisonOS colors, in Fitness's tokens: grounds
+- **Look: Sea glass** (the Standard design; Vintage goes on top of it, above), the AllisonOS colors, in Fitness's tokens: grounds
   `--bg` `#EEF2F0` / `#0D1213`; the accent `#3B7366` light / `#A9D3C7` dark
   for `--accent`, `--accent-text`, `--icon` and the like (4.5:1 or more on
   the ground); `--on-accent` (white light, `#10181A` dark) for text on a solid

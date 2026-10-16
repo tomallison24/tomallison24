@@ -20,6 +20,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/([a-z]+)vintage\//, '/$1/');   // an old Vintage app's address: the deploy copies the app there (news.yml)
   const f = path.join(R, p);
   if (!f.startsWith(R) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -35,7 +36,7 @@ const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { 
   list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
 const tok = await issue(db, 'O1');
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
 const b = await chromium.launch();
 const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
@@ -66,8 +67,8 @@ await b.close();
 server.close();
 let bad = 0;
 for (const r of out) {
-  // a Vintage design reads the files and server routes of the app it is a design of (News's headlines, Calendar's account
-  // data): published by the server, not that app's storage or install
+  // an old Vintage app's address is a copy of the app (news.yml): it reads that app's files and server routes
+  // (News's headlines, Calendar's account data), as published by the server, not its storage or install
   const own = new RegExp('^/' + (DESIGN_OF[r.app] || '\\0') + '/');
   const odd = r.reqs.filter(x => !SHARED(x.split(' ')[1]) && !own.test(x.split(' ')[1]));
   const okRun = !r.errs.length && !odd.length;

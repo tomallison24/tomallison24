@@ -5,8 +5,8 @@ modern look. Part of the Allison Corporation. Its address ends in `/aOS/`.
 
 ## The look
 
-Mid-century modern in the Retro colors, the same as Mail Vintage, Home Vintage
-and Orders Vintage (from the aOS Design Styles canvas):
+Mid-century modern in the Retro colors, the same as every app's Vintage design
+(from the aOS Design Styles canvas):
 
 - a cream ground and cards (walnut in dark mode), flat and round-cornered, in
   place of glass;
@@ -25,7 +25,7 @@ It is its own `<style id="vintage">` block in `index.html`, after the Sea glass
 styles, which are still there underneath.
 
 **The sky.** In the Vintage look the page behind the title has Weather Vintage's
-backgrounds with the real sun, as every Vintage design does (`../home/sky.js`): by
+backgrounds with the real sun, as every app's Vintage design does (`../home/sky.js`): by
 day a ground washed with mustard, the sun and rays that turn very slowly; after
 sunset a ground washed with deep teal, the moon and twinkling stars; each over
 cream (Light) or walnut (Dark), and the app's page for an app has a moon behind its
@@ -59,17 +59,16 @@ would vanish on the cream.
 
 ## App icons
 
-They follow the look. In the **Vintage** look every app shows its mid-century icon in aOS, whichever design is
-picked: an app with a Vintage design shows that design's icon (`<app>vintage/icon-512.png`), and Notes, Podcasts,
-Places and Meals, which have no Vintage design, show theirs from `aOS/icons/` (`node aOS/scripts/make-app-icons.mjs`
-redraws the PNGs from the SVGs there). In the **Sea glass** look an app shows its own folder's icon (the Vintage
-design's, when that design is picked). `icon()` in `app.js` decides, and the list, the Today stories and the family
-icon repaint when the look is changed under the account. This changes only what aOS draws: each app's own icon
-(what a Home Screen shows, and the install steps) is still its folder's `icon-512.png`. The 14 mid-century icons each
+They follow the look. Every app carries both its designs (Vintage and Standard, picked in its own Settings,
+`home/design.js`), so its folder has both icons: `icon-512.png` (Vintage, mid-century) and `icon-glass-512.png`
+(Sea glass). In the **Vintage** look aOS shows each app's Vintage icon; in the **Sea glass** look, its Sea glass
+one. `icon()` in `app.js` decides, and the list, the Today stories and the family icon repaint when the look is
+changed under the account; the glow behind each (`HUE`) follows too. This changes only what aOS draws: the icon
+an app gets on the Home Screen follows the design picked in that app. The 14 mid-century icons each
 have a different background colour: teal Mail, mustard Home, orange Orders, olive News, denim Calendar, walnut
 Fitness, berry Drinks, sky Weather, indigo Travel, slate Notes, plum Podcasts, green Places, brick Meals,
-midnight Clock. Clock carries both its designs in one app (picked in its own Settings), so its folder has both
-icons: `icon-512.png` (Vintage) and `icon-glass-512.png` (Sea glass), named in `BOTH` in `app.js`.
+midnight Clock. (`aOS/icons/` holds the first mid-century icons drawn for Notes, Podcasts, Places and Meals;
+aOS no longer shows them.)
 
 ## The flow
 
@@ -129,16 +128,13 @@ pastel stop that slides between them, and your avatar top right.
   storage, an app that has never signed in asks once, after its walkthrough, with
   the family sign-in sheet ("Not now" isn't asked again). A tap on Installed
   still offers the install steps, in case it's been removed.
-- **Designs**: an app that comes in more than one design (Mail, Orders and Home: Standard
-  and Vintage, `DESIGNS` in `home/welcome.js`) is one row, with a "2 designs" tag,
-  not a row per design. Its page has a **Design** menu under the tagline: each
-  option has a small preview and says whether it is installed. Each design is its
-  own app folder and its own Home Screen app (its own sign-in and settings), so the
-  design picked, kept on this phone (`aos.design.<app>`), decides which app **Get**
-  adds and which one says **Installed**. **Get** on a design that isn't added asks
-  which design first ("Make Mail yours"), then opens that app's own address as
-  usual. Only the first design has a row (`VARIANTS` are the rest); search finds an
-  app by its design names. `node aOS/scripts/designs-test.mjs` covers it.
+- **Designs**: every app carries both its designs itself, Vintage (the default) and
+  Standard (Sea glass), picked in the app's own **Settings → Design**, so aOS shows one
+  row per app, with no Design menu, and **Get** always adds the app itself. The old
+  Vintage apps (`mailvintage` and the rest) are not offered; their addresses open the
+  app itself (the deploy copies each app there). `DESIGNS` in `home/welcome.js` (a
+  design that is its own app folder) is empty, and the Design menu code is unused.
+  `node aOS/scripts/designs-test.mjs` covers it.
 - **Search**: by name, tagline, category, design or what its walkthrough says.
 - **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
   (version, category, shared or yours, maker); What's New (the latest version only);
