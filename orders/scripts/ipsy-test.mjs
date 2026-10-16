@@ -1,10 +1,11 @@
-// Drives Ipsy (home/ipsy.js with orders/ipsy-tools.js) in Orders and Orders Vintage, in headless
+// Drives Ipsy (home/ipsy.js with orders/ipsy-tools.js) in Orders, in both its designs, in headless
 // Chromium, against a stubbed Gmail and a stand-in for Claude at /orders/api/ipsy (no network, no
 // keys). Checks: the button in the dock, asking once before the first question, the chat running
 // the tools Claude asks for (finding, updating, merging and deleting orders, searching and reading
 // Gmail) on the app's own orders, each change with an Undo that works, web searches and sources
 // shown, a paused turn carried on, the conversation only ever added to between steps, a failed
-// question taken back out, the chat kept when the app is opened again, light and dark, both looks,
+// question taken back out, the chat kept when the app is opened again, light and dark, both designs
+// (and Ipsy changing with the design at once),
 // and nothing tripping the page's Content Security Policy. Screenshots go to the folder given as
 // the second argument (default: none).
 //
@@ -110,10 +111,11 @@ let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
 
-for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
+for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
+  const app = 'orders', tag = 'orders (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.addInitScript(a => localStorage.setItem('aos.seen', JSON.stringify({ [a]: '999' })), app);
-  await ctx.addInitScript(() => localStorage.setItem('aos.sky', 'day'));
+  await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); }, design);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|429/.test(m.text())) problems.push(m.text()); });
@@ -143,7 +145,7 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
   await ctx.addInitScript(a => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    const k = a === 'orders' ? 'orders' : 'ordersv';
+    const k = 'orders';
     localStorage.setItem(k + '.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem(k + '.token.ever', '1');
   }, app);
@@ -154,19 +156,19 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
   const count = () => page.evaluate(() => window.__orders.orders.length);
   const before = await count();
 
-  await step(app + ': Ipsy sits in the dock, and opens a chat that asks once before the first question', async () => {
+  await step(tag + ': Ipsy sits in the dock, and opens a chat that asks once before the first question', async () => {
     assert.equal(await page.$$eval('.dock > span .ipsy-btn', e => e.length), 1);
-    assert.equal(await page.$eval('.ipsy-btn', e => e.classList.contains(location.pathname.includes('vintage') ? 'ipsy-vintage' : 'ipsy-glass')), true);
+    assert.equal(await page.$eval('.ipsy-btn', (e, d) => e.classList.contains('ipsy-' + d), design), true, 'Ipsy wears the app\'s design');
     await page.click('.ipsy-btn');
     await page.waitForSelector('.ipsy-sheet');
     assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*Undo/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
-    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, app + '-consent.png') });
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-consent.png') });
     await page.click('#ipsyOk');
     assert.equal(await page.$$eval('.ipsy-chip[data-ask]', e => e.length), 4);
   });
 
-  await step(app + ': one question: Ipsy finds the orders, merges the duplicate and fixes a total, with web sources', async () => {
+  await step(tag + ': one question: Ipsy finds the orders, merges the duplicate and fixes a total, with web sources', async () => {
     await page.fill('#ipsyIn', 'Please tidy up my orders');
     await page.press('#ipsyIn', 'Enter');
     await page.waitForFunction(() => /grab it soon/.test(document.querySelector('.ipsy-log').textContent) && !document.querySelector('.ipsy-send').disabled, null, { timeout: 15000 });
@@ -188,9 +190,9 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
     assert.deepEqual(sent[1][1].content[0], { type: 'thinking', thinking: '', signature: 'sig-' + 'x'.repeat(20) }, 'thinking goes back unchanged');
     assert.equal(sent[2][3].content.length, 2, 'both tool results in one message');
   });
-  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, app + '-chat-' + scheme + '.png') });
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-chat-' + scheme + '.png') });
 
-  await step(app + ': Undo on a change puts the order back', async () => {
+  await step(tag + ': Undo on a change puts the order back', async () => {
     await page.locator('.ipsy-change .ipsy-undo').first().click();
     assert.equal(await count(), before, 'the merged order is back');
     assert.ok(await page.evaluate(() => !!window.__orders.orders.find(o => o.id === 'h-dup')));
@@ -198,7 +200,7 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
     assert.equal(await page.$$eval('.ipsy-change.undone', e => e.length), 1);
   });
 
-  await step(app + ': a question that reads Gmail, deletes an order and waits out a paused web look-up', async () => {
+  await step(tag + ': a question that reads Gmail, deletes an order and waits out a paused web look-up', async () => {
     const n0 = sent.length;
     await page.fill('#ipsyIn', 'Check the Skin Tech one and delete it');
     await page.click('#ipsySend');
@@ -217,7 +219,7 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
     assert.ok(await page.evaluate(() => window.__orders.orders.some(o => o.store === 'Skin Tech')), 'Undo brings it back');
   });
 
-  await step(app + ': a question that fails says so and is taken back out of the conversation', async () => {
+  await step(tag + ': a question that fails says so and is taken back out of the conversation', async () => {
     const n0 = sent.length, len = sent[n0 - 1].length;
     await page.fill('#ipsyIn', 'limit please');
     await page.click('#ipsySend');
@@ -231,7 +233,7 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
     assert.ok(!JSON.stringify(last).includes('limit please'));
   });
 
-  await step(app + ': the chat is kept when the app opens again, and New chat clears it', async () => {
+  await step(tag + ': the chat is kept when the app opens again, and New chat clears it', async () => {
     await page.reload();
     await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
     await page.click('.ipsy-btn');
@@ -243,7 +245,15 @@ for (const [app, scheme] of [['orders', 'light'], ['ordersvintage', 'dark']]) {
     assert.equal(await page.$eval('.ipsy-wrap', e => e.hidden), true);
   });
 
-  await step(app + ': no script errors and nothing blocked by the page policy', async () => {
+  await step(tag + ': picking the other design in Settings changes Ipsy at once', async () => {
+    const other = design === 'glass' ? 'vintage' : 'glass';
+    await page.evaluate(d => window.aosDesign.set(d), other);
+    assert.equal(await page.$eval('.ipsy-btn', (e, d) => e.classList.contains('ipsy-' + d), other), true);
+    assert.equal(await page.$eval('.ipsy-wrap', (e, d) => e.classList.contains('ipsy-' + d), other), true);
+    await page.evaluate(d => window.aosDesign.set(d), design);
+  });
+
+  await step(tag + ': no script errors and nothing blocked by the page policy', async () => {
     assert.deepEqual(problems, []);
   });
   await ctx.close();

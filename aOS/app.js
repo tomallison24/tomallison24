@@ -5,40 +5,24 @@
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
-  // In the Vintage look every app shows its mid-century icon here, whichever design is picked: an app shows its
-  // Vintage design's icon. An app that carries both designs itself (picked in its own Settings) has both icons
-  // in its folder: icon-512.png (Vintage) and BOTH[id] (Sea glass).
-  // In the Sea glass look an app shows its own folder's icon (the Vintage design's, for a Vintage design). The app's
-  // own icon (what a Home Screen shows) is its folder's, and is not changed.
-  const BOTH = { clock: 'icon-glass-512.png' };
-  const icon = id => {
-    if (BOTH[id]) return `../${id}/${window.aosLook && aosLook.get() === 'glass' ? BOTH[id] : 'icon-512.png'}`;
-    if (window.aosLook && aosLook.get() === 'glass') return `../${id}/icon-512.png`;
-    const v = (D.DESIGNS[id] || []).find(d => d.look === 'vintage');
-    return v ? `../${v.app}/icon-512.png` : `../${id}/icon-512.png`;
-  };
+  // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
+  // both icons: icon-512.png (Vintage) and icon-glass-512.png (Sea glass). aOS shows the one for its own look.
+  // The app's own icon (what a Home Screen shows) follows the design picked in the app.
+  const icon = id => `../${id}/${window.aosLook && aosLook.get() === 'glass' ? 'icon-glass-512.png' : 'icon-512.png'}`;
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const HUE = { clock: '78,93,126', notesvintage: '85,96,107', podcastsvintage: '122,74,140', placesvintage: '62,142,90', mealsvintage: '142,58,43', newsvintage: '126,140,52', fitnessvintage: '74,52,38', travelvintage: '74,52,38', drinksvintage: '126,140,52', weathervintage: '126,140,52', calendarvintage: '63,110,154', mail: '127,147,194', mailvintage: '31,111,107', housevintage: '227,167,47', ordersvintage: '216,87,42', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const CAT = { clock: 'Utilities', notesvintage: 'Productivity', podcastsvintage: 'Entertainment', placesvintage: 'Travel', mealsvintage: 'Food & Drink', newsvintage: 'News', fitnessvintage: 'Health & Fitness', travelvintage: 'Travel', drinksvintage: 'Health & Fitness', weathervintage: 'Weather', calendarvintage: 'Productivity', mail: 'Productivity', mailvintage: 'Productivity', housevintage: 'Lifestyle', ordersvintage: 'Shopping', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
+  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42' };   // each mid-century icon's colour
+  // the glow behind an app: its icon's tint, for aOS's look
+  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => (window.aosLook && aosLook.get() === 'glass' ? o[id] : VINTAGE_HUE[id] || o[id]) });
+  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
     clock: [['ok', 'Nothing: your alarms stay on this phone']],
-    notesvintage: [['once', 'The family Google Sheet, to share notes (optional)']],
-    podcastsvintage: [['ok', 'Nothing']],
-    placesvintage: [['once', 'The family Google Sheet, to share lists (optional)']],
-    mealsvintage: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],
-    newsvintage: [['ok', 'Nothing']],
-    fitnessvintage: [['once', 'Your own Google Sheet, as a backup (optional)']],
-    travelvintage: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
-    drinksvintage: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
-    weathervintage: [['ok', 'Your location, if you allow it']],
-    calendarvintage: [['ok', 'Your family account (Face ID)']],
     mail: [['once', 'Sign in with your own Google account']],
-    mailvintage: [['once', 'Sign in with your own Google account']],
     calendar: [['ok', 'Your family account (Face ID)']],
     news: [['ok', 'Nothing']],
     weather: [['ok', 'Your location, if you allow it']],
@@ -47,12 +31,10 @@
     travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
     places: [['once', 'The family Google Sheet, to share lists (optional)']],
     orders: [['ok', 'Your family account (Face ID), only to use Fix with Claude'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
-    ordersvintage: [['ok', 'Your family account (Face ID), only to use Fix with Claude'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     drinks: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
     meals: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
-    housevintage: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
   };
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
   // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone.
@@ -143,7 +125,7 @@
   const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt in your orders'],
     ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
-      <p>Ipsy is a little stem cell you can chat with about your orders. It lives in the bottom left corner of Orders (and Orders Vintage), and it runs on Claude, by Anthropic.</p>
+      <p>Ipsy is a little stem cell you can chat with about your orders. It lives in the bottom left corner of Orders, and it runs on Claude, by Anthropic.</p>
       <h3>Ask in your own words</h3><p>“What’s arriving this week?” “Merge my duplicate orders.” “The Walmart total should be $49.99.” “Delete everything from that pizza place.” “Is anything late?”</p>
       <h3>It does the work</h3><p>Ipsy finds any order, fixes its details, marks it delivered, adds, deletes and merges duplicates into one. <b>Every change shows in the chat with Undo.</b></p>
       <h3>Gmail and the web</h3><p>It reads your Gmail to check an order against its emails or find one that was missed (it can’t send, change or delete email), and searches the web for things like a store’s return policy.</p>

@@ -19,8 +19,10 @@
 //   The views: compared with before, weekly drinks, weeks over the limit, top
 //   drinks, days of the week, alcohol-free days, days over the limit, strength
 //   and size.
-// - More (the person button): your account, your goals, bringing in the ABV
-//   Tracker's history, export, and delete.
+// - More (the person button): the design, your account, your goals, bringing
+//   in the ABV Tracker's history, export, and delete.
+// - Two designs, picked in More > Design: Vintage (the default) and Standard
+//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -375,7 +377,9 @@ if (window.top !== window.self) {
       error: ['Couldn’t save just now', 'Your log is safe on this phone. Trying again shortly.'],
       idle: ['Checking…', ''],
     }[syncState === 'syncing' && settled !== 'idle' ? settled : syncState] || ['', ''];
-    $('moreBody').innerHTML = '<div class="rgroup acct" id="acct"><p><strong>' + esc(ACCT[0]) + '</strong>' + esc(ACCT[1]) + '</p>'
+    $('moreBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
+      + '<p class="hint">Just on this phone, and at once.</p>'
+      + '<div class="rgroup acct" id="acct"><p><strong>' + esc(ACCT[0]) + '</strong>' + esc(ACCT[1]) + '</p>'
       + (settled === 'signin' && syncState !== 'ok' ? '<button class="btn" type="button" id="signIn">Sign in with Face ID</button>' : '') + '</div>'
       + '<p class="label">Your goals</p><div class="rgroup">'
       + '<div class="frow"><label for="gWeek">A week, at most</label><select id="gWeek">' + opts(withVal([0, 3, 5, 7, 10, 12, 14, 18, 21, 25, 30], g.week), g.week, v => +v ? v + ' drinks' : 'No limit') + '</select></div>'
@@ -391,6 +395,7 @@ if (window.top !== window.self) {
   const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); if (syncState !== 'syncing') sync(); };
   const more = $('moreBody');
+  if (window.aosDesign) aosDesign.bind(more);   // Design: Vintage or Standard, at once (../home/design.js)
   more.addEventListener('change', e => {
     const t = e.target, k = { gWeek: 'week', gDay: 'day', gAf: 'af' }[t.id]; if (!k) return;
     const g = Object.assign({ id: 'goals' }, goals(), { [k]: +t.value });
@@ -448,6 +453,9 @@ if (window.top !== window.self) {
   // sends only what changed since it last synced, and hears everything only
   // when another phone changed something (the free plan's limits: see there).
   // ---------------------------------------------------------------------
+  // Drinks' route (functions/drinks/api), named from the site root's side so it is the same from the old
+  // Drinks Vintage address, which opens this same app (../home/design.js)
+  const API = '../drinks/api/';
   let info = ls.json(K.sync, {}) || {};   // { at: the server's time of our last sync, pushed: our time then, user }
   let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', lastSyncAt = +info.when || 0;
   const saveInfo = () => ls.set(K.sync, JSON.stringify(info));
@@ -498,7 +506,7 @@ if (window.top !== window.self) {
         graves: Object.fromEntries(Object.entries(graves).filter(([, t]) => t > pushed)) };
       const headers = { 'Content-Type': 'application/json', 'X-Drinks': '1' };
       if (token) headers.Authorization = 'Bearer ' + token;
-      let r; try { r = await fetch('api/sync', { method: 'POST', headers, body: JSON.stringify(payload), cache: 'no-store' }); }
+      let r; try { r = await fetch(API + 'sync', { method: 'POST', headers, body: JSON.stringify(payload), cache: 'no-store' }); }
       catch { setState(navigator.onLine ? 'error' : 'offline'); return false; }
       let res = {}; try { res = await r.json(); } catch {}
       if (r.status === 401) { setState('signin'); return false; }
@@ -547,11 +555,12 @@ if (window.top !== window.self) {
   // (every AllisonOS app shares its space).
   const sheetKeep = (() => {
     let db = null;
-    const open = () => db || (db = new Promise((res, rej) => {
+    // after ../home/design.js has copied the old Drinks Vintage app's copy over, at its old address
+    const open = () => db || (db = Promise.resolve(window.aosDesign && aosDesign.moved).then(() => new Promise((res, rej) => {
       const r = indexedDB.open('allison-drinks', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
@@ -1069,7 +1078,9 @@ if (window.top !== window.self) {
   });
   $('trBody').addEventListener('keydown', e => { const h = e.target.closest && e.target.closest('.hit'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(h); } });
   $('trBody').addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.tview')) tr.table = e.target.open; }, true);
-  window.addEventListener('resize', () => { const box = $('trBody').querySelector('.seg'); if (box && !$('trends').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:' + tr.view, { jump: true }); });
+  const reslide = () => { const box = $('trBody').querySelector('.seg'); if (box && !$('trends').hidden && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:' + tr.view, { jump: true }); };
+  addEventListener('aos:design', () => requestAnimationFrame(reslide));   // Futura and the system font are different widths
+  window.addEventListener('resize', reslide);
   function openTrends() {
     tr.scroll = window.scrollY; tr.sel = null;
     $('app').classList.add('intrends'); $('trends').hidden = false; window.scrollTo(0, 0);

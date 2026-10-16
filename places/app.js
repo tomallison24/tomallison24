@@ -1,10 +1,16 @@
 // Places: where you want to go and where you've been. See README.md.
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass), kept on
+// this phone (../home/design.js, as in Clock). Here they change only the businesses' colours on the
+// map and how far the map keeps clear of the header (taller in Vintage); the rest is index.html.
 (() => {
   'use strict';
   const P = window.PlacesParse;
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
   const KEY = 'allison-places-v1', SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', HERE_KEY = KEY + '-here', AT_KEY = KEY + '-synced';
-  const NOTES_SYNC = 'allison-notes-v1-sync';        // Notes' Google Sheet link and secret, when this browser has them
+  // Notes' Google Sheet link and secret, when this browser has them: Notes', or the old Notes
+  // Vintage app's (its own name until it is next opened and design.js moves it to Notes')
+  const NOTES_SYNC = ['allison-notes-v1-sync', 'allison-notesv-v1-sync'];
+  const notesSync = () => { for (const k of NOTES_SYNC) { const n = store.get(k, null); if (n && n.url && n.secret) return n; } return null; };
   // The map is CARTO's (OpenStreetMap data), with the same free key as Weather's radar map.
   const CARTO_KEY = 'cb1_48id_1_0ed95665ed15e6f191380e40';
   const PHOTON = 'https://photon.komoot.io';          // OpenStreetMap search
@@ -204,8 +210,8 @@
     map.once('moveend', () => {
       let m = bizShown.get(key);
       if (!m) {
-        m = L.circleMarker([o.lat, o.lon], { radius: 7, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group] || BIZ_COLOR.fun, fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(key) })
-          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] }).addTo(biz);
+        m = L.circleMarker([o.lat, o.lon], { radius: 7, weight: 2, color: '#fff', fillColor: bizColor(o.group), fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(key) })
+          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()] }).addTo(biz);
         bizShown.set(key, m);
       }
       m.openPopup();
@@ -261,7 +267,12 @@
   // coloured by group: tap one for its card, and add it from there. The groups
   // (Food & drink, Things to do, Shops) are the chips at the top in map view.
   // What came back is kept for the visit, so panning back costs nothing.
-  const BIZ_ZOOM = 15, BIZ_COLOR = { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' };
+  // The groups' colours follow the design: Sea glass coral, violet and teal; Vintage's Retro burnt
+  // orange, olive and walnut (its dark mode lightens the olive and walnut in index.html, #vintage).
+  const BIZ_ZOOM = 15, BIZ_COLOR = { glass: { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' }, vintage: { food: '#D8572A', fun: '#7E8C34', shops: '#8A5A3A' } };
+  const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
+  const bizColor = g => { const c = BIZ_COLOR[look()] || BIZ_COLOR.vintage; return c[g] || c.fun; };
+  const taller = () => look() === 'glass' ? 0 : 26;   // Vintage's header (the 44px title and its bars) is 26px taller: the map keeps that much more clear
   let biz = null, bizTimer = null, bizCtl = null, bizBox = null, bizShown = new Map();
   const bizSeen = new Map();                         // 'node/123' -> place fields
   const bizKey = o => o.osm.type + '/' + o.osm.id;
@@ -302,8 +313,8 @@
     for (const [k, m] of bizShown) if (!want.has(k)) { biz.removeLayer(m); bizShown.delete(k); }
     for (const [k, o] of want) {
       if (bizShown.has(k)) continue;
-      const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: BIZ_COLOR[o.group], fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(k) })
-        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200] })
+      const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: bizColor(o.group), fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(k) })
+        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()] })
         .addTo(biz);
       bizShown.set(k, m);
     }
@@ -342,7 +353,7 @@
     pts = pts || sorted(shown()).filter(p => p.lat != null).map(p => [p.lat, p.lon]);
     if (!pts.length) { if (st.here) map.setView([st.here.lat, st.here.lon], 13); return; }
     if (pts.length === 1) map.setView(pts[0], 15);
-    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 220], maxZoom: 15 });
+    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 220 + taller()], maxZoom: 15 });
   }
   function setView(v) {
     st.view = v;
@@ -653,8 +664,7 @@
       : syncState === 'error' ? (ERR[syncErr] || 'Not synced.') : syncState === 'syncing' ? 'Syncing…' : st.lastSync ? 'Connected. Last synced ' + ago(st.lastSync) + '.' : 'Connected.';
     $('syStatus').textContent = line;
     $('syForm').hidden = on; $('syOn').hidden = !on;
-    const notes = store.get(NOTES_SYNC, null);
-    $('syNotes').hidden = on || !(notes && notes.url && notes.secret);
+    $('syNotes').hidden = on || !notesSync();
     $('sub').textContent = places.length ? (places.length + (places.length === 1 ? ' place' : ' places')) + syncLabel() : syncLabel().replace(/^ · /, '');
   }
   async function connect(url, secret) {
@@ -673,7 +683,7 @@
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzjWJ3Iwk0J8YZiQ20sYKCKeUaG-OcQiPM2n0O9F2cDvNL4wiAEbjptQNYFzz4cf_HL/exec';
   $('syncBtn').onclick = () => { renderSync(); if (syncCfg) { $('syUrl').value = syncCfg.url; $('sySecret').value = syncCfg.secret; } else $('syUrl').value = SHEET_URL; openSheet('syncSheet'); };
   $('syForm').addEventListener('submit', e => { e.preventDefault(); connect($('syUrl').value.trim(), $('sySecret').value.trim()); });
-  $('syNotes').onclick = () => { const n = store.get(NOTES_SYNC, null); if (n) connect(n.url, n.secret); };
+  $('syNotes').onclick = () => { const n = notesSync(); if (n) connect(n.url, n.secret); };
   $('syPaste').onclick = async () => {
     let text = '';
     try { text = await navigator.clipboard.readText(); } catch { $('syStatus').textContent = 'Couldn’t read the clipboard here. Paste the link and secret into the boxes instead.'; return; }
@@ -694,6 +704,21 @@
   };
   document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - st.lastSync > 30000) sync(false); });
   window.addEventListener('online', () => { if (syncCfg) sync(false); });
+
+  // ---------- Settings: the design ----------
+  // Vintage or Standard, at once and just on this phone (../home/design.js): not part of any save.
+  $('setBtn').hidden = !window.aosDesign;
+  $('setBtn').onclick = () => { $('setDesign').innerHTML = window.aosDesign ? aosDesign.picker() : ''; openSheet('setSheet'); };
+  if (window.aosDesign) aosDesign.bind($('setBody'));
+  // On a change, what the script drew follows: the business dots' colours and their cards' pan, and
+  // the tabs' thumb (Futura and the system font are different widths).
+  addEventListener('aos:design', () => {
+    for (const [k, m] of bizShown) {
+      const o = bizSeen.get(k); m.setStyle({ fillColor: bizColor(o ? o.group : 'fun') });
+      const pop = m.getPopup(); if (pop) pop.options.autoPanPaddingTopLeft = [20, 200 + taller()];
+    }
+    requestAnimationFrame(() => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
+  });
 
   // ---------- start ----------
   // Places opens on the map (the list is a tap away, top right).

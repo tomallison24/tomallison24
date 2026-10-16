@@ -5,16 +5,17 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fitness</title>
-<meta name="description" content="A simple workout log as a home-screen web app, in the same frosted glass as Calendar, Notes and Travel: the week as a list of days, and for each day the muscle group, the exercise, and the weight, reps and sets done.">
+<meta name="description" content="A simple workout log as a home-screen web app, in a mid-century Vintage design or Sea glass: the week as a list of days, and for each day the muscle group, the exercise, and the weight, reps and sets done.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fitness">
 <meta name="referrer" content="no-referrer">
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
-<link rel="icon" type="image/png" href="icon-512.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=3">
+<link rel="icon" type="image/png" href="icon-512.png?v=3">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   Fitness - a workout log, kept deliberately small: the week as seven days,
@@ -28,8 +29,11 @@
   on the day Calendar's setting says; both work because the apps share this
   phone's storage when they are opened in Safari. Code: app.js,
   and analysis.js for the Analysis view's comparisons.
-  The look is Notes' own style block, unchanged, plus Fitness's own pieces
-  at the end.
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block)
+  and Standard (Sea glass: that block switched off, Notes' own style block,
+  unchanged, plus Fitness's own pieces at the end). The old Fitness Vintage
+  address opens this same app.
 -->
 <style>
 /* Allison OS family look, shared with Mail and News: frosted glass over a slow aurora. */
@@ -736,6 +740,215 @@ a.xrow:active{background:var(--fill)}
 :where(.iconbtn){position:relative}
 :where(.iconbtn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Fitness' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+   shapes instead of glass; a cream ground and cards (walnut in dark mode)
+   with mustard, teal, burnt orange and olive; atomic shapes behind the title
+   that scroll away; Futura (iOS's own, so nothing to download) for every
+   word. The muscle groups keep one colour each, now drawn from the Retro
+   colours. Last in the sheet so it wins over the glass above; Settings >
+   Design switches it off for the Standard (Sea glass) design
+   (../home/design.js). Only colours, shapes and type change: every button,
+   sheet and swipe works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522; --mc-walnut:#4A3426;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-ink:#1F6F6B; --accent-text:#1F6F6B; --sel-ink:#2B2522;
+  --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B; --flag:#B8761A;
+  --danger:#B8452B; --danger-ink:#9E3A1A; --danger-text:#9E3A1A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9; --toast:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
+  --tint-mix:14%; --tl:30%; --aurora:1; --mark:rgba(227,167,47,.45); --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --sw-off:rgba(43,37,34,.22);
+  --up:#54701A; --down:#B02E1F; --bar:#1F6F6B; --drk:#B8452B;
+  --c-chest:#D8572A; --c-back:#1F6F6B; --c-lowerback:#8A5A3C; --c-shoulders:#E3A72F; --c-arms:#7E8C34;
+  --c-core:#3F6E94; --c-legs:#A63D2F; --c-glutes:#8A4A6E; --c-cardio:#4A9BB5; --c-other:#8C7B6B;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#F4ECDD;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F; --flag:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --tl:78%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --sw-off:rgba(244,236,221,.24);
+  --up:#A3B04A; --down:#E8684A; --bar:#4FB3AB; --drk:#F2906E;
+  --c-chest:#E8693F; --c-back:#4FB3AB; --c-lowerback:#C08A66; --c-shoulders:#E3A72F; --c-arms:#A3B04A;
+  --c-core:#6FA0C8; --c-legs:#D9695A; --c-glutes:#C07CA3; --c-cardio:#6BBFD6; --c-other:#A99C86;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#F4ECDD;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F; --flag:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --tl:78%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --sw-off:rgba(244,236,221,.24);
+  --up:#A3B04A; --down:#E8684A; --bar:#4FB3AB; --drk:#F2906E;
+  --c-chest:#E8693F; --c-back:#4FB3AB; --c-lowerback:#C08A66; --c-shoulders:#E3A72F; --c-arms:#A3B04A;
+  --c-core:#6FA0C8; --c-legs:#D9695A; --c-glutes:#C07CA3; --c-cardio:#6BBFD6; --c-other:#A99C86;
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page) */
+.ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:180px;height:180px;left:auto;right:-66px;top:-64px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:56px;height:56px;left:auto;right:132px;top:16px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-40px;top:80px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.sechead,.label{font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
+.sechead span{letter-spacing:.08em}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.textbtn,.pillbtn,.btn,.send,.fab,.search,.tabs,.seg,.quickadd,.arrow{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.iconbtn[aria-pressed="true"]{color:var(--accent-text)}
+.iconbtn.warn{color:var(--danger-text)}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
+.btn::after{display:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent);font-weight:600}
+.btn.quiet.danger,.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);border-radius:999px;font-weight:600}
+.lg .btn.danger{border-radius:999px}
+.fab{background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
+
+/* the view picker at the bottom: a walnut pill with a mustard chip, as in Home Vintage */
+.vbar::before,:root:not([data-theme="light"]) .vbar::before{background:var(--mc-walnut);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1px rgba(244,236,221,.12),0 10px 22px -10px rgba(43,37,34,.6)}
+.vbar > button{color:#F4ECDD;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:14px}
+.vbar > button:active,:root:not([data-theme="light"]) .vbar > button:active{background:rgba(244,236,221,.14)}
+.vbar .vb-ic,:root:not([data-theme="light"]) .vbar .vb-ic{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.vbar .vb-chev{opacity:1}
+.vbar .vb-chev svg{color:#E3A72F}
+.viewmenu{border-radius:24px;background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.viewmenu button{border-radius:16px}
+.viewmenu button:active,.viewmenu button[aria-selected="true"]{background:var(--fill)}
+.viewmenu .ic{border-radius:50%;background:color-mix(in srgb,var(--mc-mustard) 34%,transparent);color:var(--text)}
+.viewmenu button:nth-child(2n) .ic{background:color-mix(in srgb,var(--mc-teal) 28%,transparent)}
+.viewmenu small{letter-spacing:0}
+
+/* the week and its totals: solid cream cards, round-cornered, no rim light */
+.rgroup,.empty,.notice,.stats,.kpis,.box,.lg .rgroup{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.lg .rgroup,.lg .box{background:var(--fill)}
+.lg .box{border-radius:20px}
+.week{border-radius:20px}
+.navrow .lbl{font-weight:600;letter-spacing:.02em}
+.dn small{font-weight:600;letter-spacing:.12em}
+.dn b{font-weight:600}
+.drow.today .dn b{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.drow.today .dn small{color:var(--text)}
+.drk{color:var(--muted)}
+.drk svg{color:var(--drk)}
+:root:not([data-theme="light"]) .drk svg,:root[data-theme="dark"] .drk svg{color:var(--drk)}
+.stat,.kpi{position:relative}
+.stat::before,.kpi::before{content:'';position:absolute;top:0;left:50%;width:26px;height:5px;margin-left:-13px;border-radius:0 0 4px 4px;background:var(--mc-teal)}
+.kpi::before{left:16px;margin-left:0}
+.stat:nth-child(2)::before,.kpi:nth-child(2)::before{background:var(--mc-mustard)}
+.stat:nth-child(3)::before,.kpi:nth-child(3)::before{background:var(--mc-orange)}
+.kpi:nth-child(4)::before{background:var(--mc-olive)}
+.stat b,.kpi .kv{font-weight:600;letter-spacing:-.03em}
+.kpi{padding-top:15px}
+.stat{padding-top:16px}
+.kd.up,.chg.up{color:var(--up)} .kd.down,.chg.down{color:var(--down)}
+.xrow.quiet .xt,.chg{font-weight:600}
+a.xrow .xt{color:var(--accent-text)}
+
+/* muscle groups: one colour each, from the Retro colours (and a few tones of them) */
+[data-g]{--gc:var(--c-other)}
+[data-g="chest"]{--gc:var(--c-chest)} [data-g="back"]{--gc:var(--c-back)} [data-g="lowerback"]{--gc:var(--c-lowerback)} [data-g="shoulders"]{--gc:var(--c-shoulders)}
+[data-g="arms"]{--gc:var(--c-arms)} [data-g="core"]{--gc:var(--c-core)} [data-g="legs"]{--gc:var(--c-legs)} [data-g="glutes"]{--gc:var(--c-glutes)}
+[data-g="cardio"]{--gc:var(--c-cardio)} [data-g="other"]{--gc:var(--c-other)}
+.tchip{color:var(--text);font-weight:600;background:color-mix(in srgb,var(--gc,var(--c-other)) 22%,var(--mc-card));border:0}
+.tchip::before{width:7px;height:7px;background:var(--gc,var(--c-other))}
+.opt .gd,.ebody i,.xrow > i,.gbar .gn i,.srow > i{background:var(--gc,var(--c-other));box-shadow:none}
+.opt .gd,.gbar .gn i{width:9px;height:9px}
+.ebody i,.xrow > i,.srow > i{width:11px;height:11px}
+.gbar .bar{height:12px;border-radius:0 6px 6px 0;background:var(--gc,var(--bar))}
+.gbar .bar.zero{background:var(--hair)}
+.gbar .gn{font-weight:600}
+
+/* the Week / Month switch: a mustard thumb */
+.seg{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border:0;border-radius:20px}
+.seg button{font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+.seg > .slthumb,.slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.seg button[aria-pressed="true"],.seg.slides button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.seg button[aria-pressed="true"]:not(.slides *){background:var(--mc-mustard);box-shadow:none}
+.seg.slides button[aria-pressed="true"]{background:none;box-shadow:none}
+
+/* a day's sheet: a cream panel with round corners */
+.lg .sheet{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.lg .sheethead h2{font-weight:600;letter-spacing:-.01em}
+.lg .okbtn,.lg .okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.rowbtn .ic{color:var(--icon)}
+.lg .rowbtn:active,.rowbtn:active{background:var(--fill)}
+.erow.editing{background:color-mix(in srgb,var(--mc-mustard) 22%,transparent)}
+.ebody .et{font-weight:600}
+.erow .del{color:var(--muted)}
+.lg .erow .del:active{background:var(--fill)}
+.lg .search,.search{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .search > svg{color:var(--icon)}
+.srow:active{background:var(--fill)}
+.srow.add .st{color:var(--accent-text)}
+.lg .opt{background:transparent;color:var(--text);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .opt[aria-checked="true"]{background:color-mix(in srgb,var(--gc,var(--accent)) 28%,transparent);color:var(--text);
+  box-shadow:inset 0 0 0 2px var(--gc,var(--accent))}
+.lg .frow select{background-color:var(--lgs-field);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600}
+.lg .frow select:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.lg .frow > label{font-weight:600}
+.lg .box .plain{background:transparent}
+.lg .kv label{letter-spacing:.14em}
+.lg .hint{color:var(--faint)}
+.formbtns .btn{border-radius:999px}
+
+/* the toast and the pills at the top */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:18px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.toast button{color:var(--accent-text)}
+.updpill{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 8px 20px -10px var(--lift-strong)}
+.updpill svg{color:var(--mc-mustard)}
+.syncpill svg{color:var(--icon)}
+</style>
+<script src="../home/design.js" data-app="fitness" data-was="fitnessvintage" data-keys="allison-fitnessv-=allison-fitness-" data-dbs="allison-fitnessv=allison-fitness"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 
@@ -747,6 +960,7 @@ a.xrow:active{background:var(--fill)}
       <div class="titlerow">
         <h1 class="title" id="title">Fitness</h1>
         <div class="acts">
+          <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg></button>
           <button class="iconbtn glass" id="syncBtn" type="button" aria-label="Google Sheet backup"><svg viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .6-8 5.5 5.5 0 0 0-10.6-1.4A4.7 4.7 0 0 0 7 18.5z"/><path d="M12 15.6v-5M9.8 12.6l2.2-2.2 2.2 2.2"/></svg></button>
           <button class="iconbtn glass" id="todayBtn" type="button" aria-label="This week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" class="fs"/></svg></button>
         </div>
@@ -812,6 +1026,16 @@ a.xrow:active{background:var(--fill)}
           <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Settings: the design (Vintage or Standard), just on this phone -->
+  <div class="sheetwrap lg" id="setSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="setLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody" id="setBody"></div>
     </div>
   </div>
 

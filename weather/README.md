@@ -3,10 +3,75 @@
 The Signal dashboard's W3 "Vivid" weather card (ha-config,
 `views_signal/favorites.yaml`) as a standalone home-screen web app.
 
-**Weather Vintage** is the same app in a mid-century modern look, as its own app
-with its own places and settings ([`weathervintage/`](../weathervintage/README.md)).
-It uses this app's forecast code (`data.js`: when it changes here, copy it to
-`weathervintage/`) and its radar helper (`functions/weather/api`).
+## The two designs
+
+One app, one set of places: the design changes only how Weather looks, at once,
+and is kept on this phone (**Settings → Design**, the first section of the
+Places sheet: the cog "Places" button under the forecast, or the place name),
+as in Clock. `../home/design.js`, loaded in `<head>`, applies it before the
+page is drawn. Every number, chart, view, sheet and swipe is the same in both.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in the other Vintage designs:
+  - a cream ground (walnut in dark mode) and flat, round-cornered cards in
+    place of glass: the hourly timeline, the 7-day forecast, the chips, the
+    sheets and the alerts. Light and dark both follow the phone, or the choice
+    in aOS (Standard is drawn for dark only, like the iPhone's own);
+  - **the sky**: not a gradient. Each kind of weather has a colour group
+    (`V.groups` in `app.js`, put on `<html data-c>` and on the hour and day
+    heroes): a flat **disc** top right behind the condition (a mustard sun
+    with a sunburst, a cream or sand moon with stars, a teal rain cloud, an
+    orange storm, a pale snow disc, olive for fog and wind), and a ground
+    tinted with the same hue. Clouds are flat pills, rain and snow flat dashes
+    and dots, fog olive stripes, wind mustard lines, lightning a flash of
+    mustard. A teal dot and a burnt-orange pill sit beside the disc, and they
+    scroll away with the page; the disc moves down with the hero when alerts
+    push it down (`placeSky()`). The text on the disc is always ink (every
+    disc colour is light enough for it, in both modes). Weather draws this sky
+    itself, from the forecast for the place on screen, so it does **not** load
+    the shared Vintage sky, `../home/sky.js` (whose `sun` and `night` ground
+    and disc came from these colour groups);
+  - icons in the palette instead of glowing: a burnt-orange sun by day
+    (mustard in dark mode), a teal moon (cream in dark mode), teal for rain and
+    snow, olive for fog and wind, ink clouds, and a mustard bolt over teal
+    drops for storms. The temperature bars run teal, olive, mustard to burnt
+    orange; the rain chance is a teal line;
+  - a mustard thumb under the chosen timeline view and units; the current
+    hour outlined in mustard; the page dots stretch into a burnt-orange pill;
+    the radar's dot is orange, its scrubber teal with a mustard thumb (the map
+    itself and its dark panel are unchanged); a solid burnt-orange main
+    button and outlined teal ones; three little bars under the place name;
+    Futura, which iOS has built in, so no font is downloaded.
+- **Standard**: Sea glass: the W3 card as described below, its gradient skies
+  over the whole screen, glowing icons, glass chips and Liquid Glass sheets.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`. What `app.js` draws in script
+follows the design too (`vintage()`): the colour group or the gradient for the
+sky, the Retro or glowing icon colours, the temperature ramp, the alert
+colours, the day chart's colours; a change of design draws the screen and any
+open sheet again (`aos:design`) and measures the sliding thumbs again (Futura
+and the system font are different widths). The choice is `localStorage`
+`design.weather`. What iOS reads when Weather is added to the Home Screen
+follows it: the icon (`icon-180.png`, Vintage: a cream cloud on olive with a
+mustard sun and a burnt-orange pill; `icon-glass-180.png`, Standard: a white
+cloud and sun on sea glass blue), the status bar style (`default` in Vintage,
+where `black-translucent`'s white clock would vanish on the cream) and the bar
+colours (cream or walnut in Vintage, `#0D1213` in Standard).
+
+**The old Weather Vintage app.** Weather Vintage used to be an app of its own
+(`weathervintage/`, with its own storage, `wxv.…`). Its address now opens this
+same app (the deploy copies `weather/` there, `.github/workflows/news.yml`), so
+a phone that added it keeps it. The first time it opens there, `design.js`
+moves that app's saved cities, last place, forecasts, units and timeline view
+over to Weather's names (`wxv.places`, `wxv.here`, `wxv.cache`, `wxv.units`,
+`wxv.view` → `wx.…`, named one by one rather than by the `wxv.` prefix: the
+NWS grid cache `wx.pts` was already under Weather's name in both apps and in
+Home, so it can't tell whether Weather itself was used) and what it had seen,
+so no walkthrough again, unless Weather already has its own places or settings
+on that phone; nothing old is deleted. The radar helper is asked at
+`../weather/api/hrrr` (not `api/hrrr`), so it is reached from either address.
 
 - Data: National Weather Service (api.weather.gov): forecast, current station
   observations and active alerts. Open-Meteo is the fallback outside the US or
@@ -138,19 +203,43 @@ It uses this app's forecast code (`data.js`: when it changes here, copy it to
 - The Location sheet is iOS 26 "Liquid Glass": clear glass floating just
   inside the screen's edges, the sky blurring through it, with a round ✕ to
   close and a glass thumb that slides between the units (`home/slide.js`,
-  shared by every app).
+  shared by every app). Its first section is Design (above).
 - Needs HTTPS for location (GitHub Pages is fine). On iPhone: open the page
   in Safari → Share → Add to Home Screen.
 
 ## Icon
 
 `node weather/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
-from `icon.svg`, in the style of the other AllisonOS icons: a white cloud in
-front of a white sun on a sea glass sky blue (one of the Sea glass tints).
-An installed Home Screen icon is a fixed picture, so it cannot change
-with the time of day. The links carry `?v=4` so phones fetch the new picture;
-a Home Screen app added before it keeps the old one until it is removed and
-added again.
+from `icon.svg` (Vintage: a cream cloud on olive, with a mustard sun and a
+burnt-orange pill), and `icon-glass-512.png` and `icon-glass-180.png` from
+`icon-glass.svg` (Standard, in the style of the other AllisonOS icons: a white
+cloud in front of a white sun on a sea glass sky blue). An installed Home
+Screen icon is a fixed picture, so it cannot change with the time of day. The
+links carry `?v=5` so phones fetch the new picture; a Home Screen app added
+before it keeps the old one until it is removed and added again.
+
+## Tests
+
+`node weather/scripts/app-test.mjs` opens the app in Chromium at iPhone size,
+light and dark, against made-up weather (`scripts/fake-weather.mjs` stands in
+for the National Weather Service, Open-Meteo, BigDataCloud and the map tiles:
+no network) and checks it opens to where you are, the five views, the hour and
+day sheets, Places (search, add a city, units, page dots), alerts, the radar
+and its helper path, and its storage; both designs: Vintage drawn in the Retro
+look (Futura, flat cream or walnut cards, a mustard thumb, an orange main
+button, a flat disc and atomic shapes for the sky, text that reads on every
+colour it lands on) and Standard in Sea glass (gradient sky, glowing icons, no
+Vintage styles, no `sky.js`); Settings → Design switching both ways at once,
+drawing an open sheet again and kept across a reload; and the old Weather
+Vintage address moving that app's data over once, or keeping Weather's own
+(CI: `apps-check.yml`).
+
+## What could not be verified
+
+- **Futura on an iPhone** and **Safari on an iPhone**: the app was checked in
+  Chromium at iPhone size, where Futura is not installed and the fallback font
+  is drawn.
+- **Live data**: the tests use made-up forecasts.
 
 ## Robustness
 

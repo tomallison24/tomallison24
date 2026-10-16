@@ -74,12 +74,14 @@ const NAMES = constant(W, 'NAMES', 'home/welcome.js') || {};
 const TOURS = constant(W, 'TOURS', 'home/welcome.js') || {};
 const DARK_ONLY = constant(W, 'DARK_ONLY', 'home/welcome.js') || [];
 const DESIGNS = constant(W, 'DESIGNS', 'home/welcome.js') || {};
-// aOS and every Vintage design show the day and night sky (home/sky.js); Weather Vintage draws its own from the forecast
-const SKY = new Set(['aos', ...Object.values(DESIGNS).flatMap(d => d.slice(1).filter(x => x.look === 'vintage').map(x => x.app))].filter(id => id !== 'weathervintage'));
+// Every app carries both designs, Vintage (the default) and Standard (Sea glass), picked in its own
+// Settings: home/design.js (Clock: its own design.js, where it started).
+// aOS and every app's Vintage design show the day and night sky (home/sky.js); Weather draws its own from the forecast
+const SKY = new Set(['aos', ...APPS, ...Object.values(DESIGNS).flatMap(d => d.slice(1).filter(x => x.look === 'vintage').map(x => x.app))].filter(id => id !== 'weather'));
 const LINEsrc = (/const LINE = \{/.exec(W) || {}).index;
 const LINE = LINEsrc === undefined ? new Set() : new Set([...literal(W, LINEsrc + 'const LINE = '.length).matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]));
 const S = (read('aOS/app.js') || '') + (read('aOS/index.html') || '');   // aOS's script is app.js (it was inline in index.html)
-const HUE = constant(S, 'HUE', 'aOS/app.js') || {};
+const HUE = constant(S, 'GLASS_HUE', 'aOS/app.js') || {};   // HUE follows aOS's look; GLASS_HUE has every app
 const CAT = constant(S, 'CAT', 'aOS/app.js') || {};
 const NEEDS = constant(S, 'NEEDS', 'aOS/app.js') || {};
 const API = read('functions/aOS/api/[[route]].js') || '';
@@ -172,6 +174,13 @@ for (const id of ids) {
   rule(/name="theme-color"/.test(html), 'no theme-color meta');
   rule(DARK_ONLY.includes(id) || /prefers-color-scheme:\s*(dark|light)/.test(html), 'no light and dark: every app follows the phone (prefers-color-scheme), or is listed in DARK_ONLY');
   rule(/prefers-reduced-motion/.test(html), 'doesn’t honour prefers-reduced-motion');
+  if (store) {
+    const own = id === 'clock';
+    rule(own || new RegExp('<script\\s+src="\\.\\./home/design\\.js"[^>]*data-app="' + id + '"').test(html), 'loads ../home/design.js with data-app="' + id + '" (in <head>, after the styles): its two designs, picked in Settings');
+    rule(own || list.includes('../home/design.js'), 'sw.js SHELL should list ../home/design.js');
+    rule(/<style id="vintage">/.test(html), 'has no <style id="vintage">: the Vintage design, switched off for Standard');
+    for (const f of ['icon-glass-180.png', 'icon-glass-512.png']) rule(exists(dir + '/' + f), 'no ' + f + ': the Standard (Sea glass) design\'s icon');
+  }
   if (SKY.has(id)) {
     rule(/<script\s+src="\.\.\/home\/sky\.js"/.test(html), 'a Vintage design loads ../home/sky.js (in <head>): the day and night sky every Vintage app shares');
     rule(list.includes('../home/sky.js'), 'sw.js SHELL should list ../home/sky.js, so the sky works offline');

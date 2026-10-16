@@ -27,6 +27,8 @@
 // - Signed in to the family account and logging in Drinks, Analysis also shows
 //   your standard drinks and alcohol-free days over the same two windows,
 //   read from your own Drinks log (drinks/api/summary; only you can read it).
+// - Two designs, picked in Settings (the gear) > Design: Vintage (the default) and
+//   Standard (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -420,6 +422,8 @@ if (window.top !== window.self) {
     render();
   });
   window.addEventListener('resize', () => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); });
+  // Futura (Vintage) and the system font (Standard) are different widths: the Week / Month thumb is measured again
+  window.addEventListener('aos:design', () => requestAnimationFrame(() => { const box = main.querySelector('.seg'); if (box) window.AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:period', { jump: true }); }));
 
   // ---------------------------------------------------------------------
   // A day: what was done, and the form
@@ -680,11 +684,12 @@ if (window.top !== window.self) {
   // full or cleared localStorage (every AllisonOS app shares its space).
   const keep = (() => {
     let db = null;
-    const open = () => db || (db = new Promise((res, rej) => {
+    // At the old Fitness Vintage address, once its copy (allison-fitnessv) has been moved over (../home/design.js).
+    const open = () => db || (db = Promise.resolve(window.aosDesign && aosDesign.moved).catch(() => {}).then(() => new Promise((res, rej) => {
       const r = indexedDB.open('allison-fitness', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
@@ -781,6 +786,11 @@ if (window.top !== window.self) {
     openSheet('syncSheet');
   }
   $('syncBtn').onclick = () => openSyncSheet();
+  // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js)
+  $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
+    + '<p class="hint">Just on this phone, and at once.</p>';
+  if (window.aosDesign) aosDesign.bind($('setBody'));
+  $('setBtn').onclick = () => openSheet('setSheet');
   $('syForm').onsubmit = async e => {
     e.preventDefault();
     const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();

@@ -1,7 +1,6 @@
 "use strict";
 
-// Ipsy's tools in Orders (and Orders Vintage, which has a copy of this file, byte for byte:
-// ordersvintage/scripts/same-reader-test.mjs checks it). Claude asks for them by name through
+// Ipsy's tools in Orders (in both its designs). Claude asks for them by name through
 // functions/orders/api (IPSY_CLIENT_TOOLS describes them to it); they run here, on the phone,
 // against the same orders and the same Gmail sign-in as the app, and what they return goes back
 // to Claude. Every change comes back with an undo for the chat's Undo button.

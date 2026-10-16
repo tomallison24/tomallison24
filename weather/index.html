@@ -5,14 +5,17 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https://mesonet.agron.iastate.edu https://*.basemaps.cartocdn.com https://radar.weather.gov; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://api.weather.gov https://api.bigdatacloud.net https://mesonet.agron.iastate.edu">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Weather</title>
-<meta name="description" content="Signal-style weather for the home screen: the W3 Vivid card from the Home Assistant dashboard, fed by Open-Meteo.">
-<meta name="theme-color" content="#0D1213">
+<meta name="description" content="Signal-style weather for the home screen, in a mid-century Vintage design or Sea glass: the W3 Vivid card from the Home Assistant dashboard, fed by the National Weather Service and Open-Meteo.">
+<!-- Sea glass's bar colour; in Vintage design.js makes it cream (walnut in dark mode) -->
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Weather">
-<link rel="apple-touch-icon" href="icon-180.png?v=4">
-<link rel="icon" type="image/png" href="icon-512.png?v=4">
+<link rel="apple-touch-icon" href="icon-180.png?v=5">
+<link rel="icon" type="image/png" href="icon-512.png?v=5">
 <link rel="manifest" href="manifest.webmanifest">
 <!--
   Weather - the Signal dashboard's W3 "Vivid" card as a standalone app.
@@ -33,6 +36,12 @@
   Markup is still deterministic (seeded particles) and the DOM is only
   replaced when the string changes, for the same reason as on the dashboard:
   a repaint must not restart the animations.
+
+  Two designs, picked in Settings > Design (the Places sheet; ../home/design.js,
+  as in Clock): Vintage (mid-century modern, the default: the <style
+  id="vintage"> block, with a sky of flat shapes app.js draws from the
+  forecast) and Standard (Sea glass: that block switched off, the card's
+  gradient skies). The old Weather Vintage address opens this same app.
 -->
 <style>
   :root {
@@ -90,6 +99,8 @@
     background: var(--tile); box-shadow: inset 0 0 0 0.5px var(--tile-edge); }
   .w3-dhead { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; opacity: 0.78; padding: 2px 0 6px; border-bottom: 0.5px solid rgba(255,255,255,0.22); }
   .w3-place { display: inline-flex; align-items: center; gap: 4px; }
+  .w3-temp { font-weight: 200; letter-spacing: -3px; text-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+  .w3-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 9px; border-radius: 999px; background: rgba(255,255,255,0.16); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.40); font-size: 14px; font-weight: 600; letter-spacing: -0.1px; white-space: nowrap; }
   /* Room to breathe: under the place name, around the chips, and before Hourly. */
   .w3-hero { padding-bottom: 14px; }
 
@@ -428,7 +439,241 @@
   .slthumb.off { opacity: 0; scale: .7; }
   .seg.slides button[aria-pressed="true"] { background: none; }
   .note { font-size: 14px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
+  /* Settings > Design, the first section of the Places sheet: the rows are ../home/design.js's */
+  #designLabel { margin-top: 6px; }
+  .note.design { margin-top: 8px; }
+  .note.design:not([hidden]) + .search { margin-top: 18px; }
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Weather's look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+   shapes instead of glass; a cream ground (walnut in dark mode) with
+   mustard, teal, burnt orange and olive; Futura (iOS's own, so nothing to
+   download) for every word. Last in the page so it wins over the glass
+   above; Settings > Design switches it off for the Standard (Sea glass)
+   design (../home/design.js). Only colours, shapes and type change: every
+   number, chart, view and swipe is the same in both.
+
+   The sky is no longer a gradient: each kind of weather has a colour group
+   (app.js V.groups, put on <html data-c> and on the hour and day heroes) that
+   gives it a flat disc, a sun, a moon or a cloud, behind the top of the page,
+   and a ground tinted to match. The sun, rain, snow, stars, fog and wind
+   are flat shapes in the palette. They scroll away with the page. Weather
+   draws this sky itself, from the forecast: it doesn't use the shared
+   Vintage sky (../home/sky.js).
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --accent-text:#1F6F6B; --on-accent:#FFF8EC; --icon:#1F6F6B;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#FBF5E9; --border:rgba(43,37,34,.14);
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06);
+  --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-field:rgba(43,37,34,.06); --lgs-edge:rgba(43,37,34,.12); --lgs-rim:transparent; --lgs-shine:linear-gradient(transparent,transparent);
+  --lgs-thumb:#E3A72F; --lgs-filter:none; --lgs-solid:#FBF5E9; --lgs-lift:rgba(43,37,34,.10); --lgs-lift-strong:rgba(43,37,34,.22);
+  --gmix:17%; --wv-night-disc:#FBF5E9;
+/* the weather's own colours: icons on the cards, rain, the bolt, alerts, and the sky's shapes */
+  --wv-ink:#2B2522; --wv-disc-ink:#2B2522;
+  --wv-sun:#D8572A; --wv-moon:#1F6F6B; --wv-rain:#1F6F6B; --wv-olive:#6A7A22; --wv-orange:#D8572A; --wv-bolt:#C98A12;
+  --wv-al-hi:#B8452B; --wv-al-mid:#9A6508; --wv-al-lo:#6A7A22;
+  --wv-night:rgba(43,37,34,.09);
+  --wv-cloud:#FFFDF6; --wv-drop:#1F6F6B; --wv-flake:#1F6F6B; --wv-star:#1F6F6B; --wv-gust:#D8572A;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --accent-text:#5CBDB5; --on-accent:#1E1916; --icon:#E3A72F;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#322A25; --border:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-field:rgba(244,236,221,.07); --lgs-edge:rgba(244,236,221,.14); --lgs-solid:#322A25; --lgs-lift:rgba(0,0,0,.22); --lgs-lift-strong:rgba(0,0,0,.4);
+  --gmix:24%; --wv-night-disc:#E9DDC4;
+  --wv-ink:#F4ECDD; --wv-sun:#E3A72F; --wv-moon:#F4ECDD; --wv-rain:#5CBDB5; --wv-olive:#A3B04A; --wv-orange:#E8684A; --wv-bolt:#E3A72F;
+  --wv-al-hi:#E8684A; --wv-al-mid:#E3A72F; --wv-al-lo:#A3B04A;
+  --wv-night:rgba(0,0,0,.26);
+  --wv-cloud:#5A4D42; --wv-drop:#5CBDB5; --wv-flake:#F4ECDD; --wv-star:#F4ECDD; --wv-gust:#E3A72F;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --accent-text:#5CBDB5; --on-accent:#1E1916; --icon:#E3A72F;
+  --cta:#C24C28; --cta-ink:#FFF8EC;
+  --surface:#322A25; --border:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-field:rgba(244,236,221,.07); --lgs-edge:rgba(244,236,221,.14); --lgs-solid:#322A25; --lgs-lift:rgba(0,0,0,.22); --lgs-lift-strong:rgba(0,0,0,.4);
+  --gmix:24%; --wv-night-disc:#E9DDC4;
+  --wv-ink:#F4ECDD; --wv-sun:#E3A72F; --wv-moon:#F4ECDD; --wv-rain:#5CBDB5; --wv-olive:#A3B04A; --wv-orange:#E8684A; --wv-bolt:#E3A72F;
+  --wv-al-hi:#E8684A; --wv-al-mid:#E3A72F; --wv-al-lo:#A3B04A;
+  --wv-night:rgba(0,0,0,.26);
+  --wv-cloud:#5A4D42; --wv-drop:#5CBDB5; --wv-flake:#F4ECDD; --wv-star:#F4ECDD; --wv-gust:#E3A72F;
+  color-scheme:dark;
+}
+
+/* the colour groups: a disc (sun, moon, cloud...) and a ground tinted with the same hue */
+[data-c]{--hue:#1F6F6B; --disc:#8FCFC7; --gk:.8; --ground:color-mix(in srgb,var(--hue) calc(var(--gmix) * var(--gk)),var(--bg))}
+[data-c="sun"]{--hue:#E3A72F; --disc:#E3A72F; --gk:1.15}
+[data-c="night"]{--hue:#1F6F6B; --disc:var(--wv-night-disc); --gk:1.5}
+[data-c="rain"]{--hue:#1F6F6B; --disc:#6FBDB4; --gk:1.4}
+[data-c="storm"]{--hue:#D8572A; --disc:#E8805A; --gk:.95}
+[data-c="snow"]{--hue:#1F6F6B; --disc:#A8D3CA; --gk:.6}
+[data-c="fog"]{--hue:#7E8C34; --disc:#B9C46A; --gk:1.05}
+[data-c="wind"]{--hue:#7E8C34; --disc:#A3B04A; --gk:.85}
+[data-c="alert"]{--hue:#D8572A; --disc:#EE8A68; --gk:1.3}
+
+html{background:var(--bg)}
+html[data-c]{background:var(--ground)}
+body{background:transparent;font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.w3-card,.w3-in{color:var(--text);text-shadow:none}
+svg.i{filter:none}
+
+/* ---- the sky: flat shapes behind the top of the page ---- */
+#sky{--pad:12px;position:absolute;inset:0 0 auto 0;height:440px;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}   /* app.js placeSky() puts its top at the hero's */
+.w3-sky{animation:none;inset:auto;left:auto;bottom:auto;width:236px;height:236px;border-radius:50%;background:var(--disc);background-size:auto !important;
+  top:calc(var(--pad) - 14px);right:calc(max(16px,(100% - 480px) / 2) - 70px)}
+.w3-sun,.w3-moon{display:none}
+.w3-rays{width:560px;height:560px;left:auto;bottom:auto;top:calc(var(--pad) - 180px);right:calc(max(16px,(100% - 480px) / 2) - 240px);
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--disc) 38%,transparent) 0deg 6deg,transparent 6deg 18deg);
+  -webkit-mask-image:radial-gradient(circle,transparent 20%,#000 22%,transparent 68%);mask-image:radial-gradient(circle,transparent 20%,#000 22%,transparent 68%)}
+#sky::before,#sky::after{content:'';position:absolute;pointer-events:none}
+#sky::after{width:36px;height:36px;border-radius:50%;background:var(--mc-teal);right:calc(max(16px,(100% - 480px) / 2) + 162px);top:calc(var(--pad) + 124px)}
+#sky::before{width:118px;height:34px;border-radius:17px;background:var(--mc-orange);right:calc(max(16px,(100% - 480px) / 2) - 40px);top:calc(var(--pad) + 228px);transform:rotate(-18deg)}
+.w3-star{background:var(--wv-star)}
+.w3-cloud{filter:none;border-radius:999px;height:22px !important;background:var(--wv-cloud)}
+.w3-drop{width:3px;background:var(--wv-drop)}
+.w3-flake{background:var(--wv-flake)}
+.w3-flash{background:var(--mc-mustard)}
+.w3-fog{filter:none;height:16px !important;background:color-mix(in srgb,var(--mc-olive) 34%,transparent)}
+.w3-gust{height:2px;background:var(--wv-gust);opacity:.5}
+@keyframes w3-glow{from{opacity:.78}to{opacity:1}}
+
+/* ---- the hero ---- */
+.w3-side{color:var(--wv-disc-ink)}
+.w3-place{font-weight:600}
+.w3-temp{position:relative;font-weight:500;letter-spacing:-.05em;text-shadow:none}
+.w3-temp::before{content:'';position:absolute;left:3px;top:-11px;width:62px;height:6px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.w3-chip{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border-radius:999px;background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);
+  font-size:14px;font-weight:600;letter-spacing:0;white-space:nowrap}
+.w3-chip svg{color:var(--accent-text)}
+
+/* ---- the cards: flat, round-cornered, no rim light ---- */
+.w3-hours,.w3-days{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.w3-dhead{font-weight:600;letter-spacing:.14em;opacity:1;color:var(--muted);border-bottom:1.5px solid var(--hair)}
+.msg,.skeleton{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.hx-title{font-weight:600;letter-spacing:-.01em}
+.hx-title small{opacity:1;color:var(--muted)}
+
+/* the hourly tray */
+.hx-now{background:color-mix(in srgb,var(--mc-mustard) 30%,var(--mc-card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--mc-mustard) 70%,transparent)}
+.hx-line{stroke:color-mix(in srgb,var(--text) 38%,transparent)}
+.hx-dot{background:var(--text);opacity:.75}
+.hx-temp{text-shadow:none;font-weight:600}
+.hx-bar{background:var(--mc-teal);box-shadow:none}
+.hx-pct{color:var(--accent-text)}
+.hx-rline{stroke:var(--mc-teal);opacity:.8}
+.hx-rdot{background:var(--mc-teal)}
+.hx-col[data-hour]:focus-visible,.dc[data-day]:focus-visible,.rd-bar input:focus-visible{outline:2px solid var(--accent)}
+
+/* the five little view buttons: a cream pill with a mustard thumb */
+.vsw{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);-webkit-backdrop-filter:none;backdrop-filter:none}
+.vsw button{color:var(--muted)}
+.vsw button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.slthumb,.vsw .slthumb{background:var(--mc-mustard);box-shadow:none}
+
+/* the 7-day forecast */
+.dc-r{color:var(--accent-text)}
+.dc-bar{box-shadow:none}
+.dc-now{background:var(--text);box-shadow:0 0 0 2.5px var(--mc-card)}
+.dc[data-day]:active{background:var(--fill)}
+
+/* page dots */
+.dot{color:var(--faint)}
+.dot i{background:color-mix(in srgb,var(--text) 28%,transparent)}
+.dot.on{color:var(--text)}
+.dot.on i{background:var(--mc-orange)}
+
+/* the line under it all */
+.foot{color:var(--muted);text-shadow:none}
+.foot button{color:var(--muted)}
+
+/* buttons: outlined teal, and solid orange for the main one */
+.pill{background:transparent;color:var(--accent-text);font-weight:600;letter-spacing:.02em;border:0;box-shadow:inset 0 0 0 2px var(--accent);-webkit-backdrop-filter:none;backdrop-filter:none}
+.pill:active{background:var(--fill)}
+.pill.primary,.pill.primary:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+
+/* alerts */
+.alert{background:var(--mc-card);border:0;border-radius:20px}
+.alert .body{color:var(--text)}
+
+/* ---- radar: the map's tiles stay as they are; the chrome around them is Retro ---- */
+.hx.rd{border-radius:20px;background:#10131A}
+.rd-zoom button,.rd-play,.rd-bar,.rd-note.small{background:var(--mc-card);color:var(--text);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.rd-play{color:var(--accent-text)}
+.rd-note.small{background:var(--mc-card);color:var(--text)}
+.rd-note.over{background:color-mix(in srgb,var(--mc-card) 94%,transparent);color:var(--text)}
+.rd-note b{color:var(--text)}
+.rd-note a{color:var(--accent-text)}
+.rd-kind{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.rd-dot{background:var(--mc-orange);border-color:#FBF5E9}
+@keyframes rd-ping{0%{box-shadow:0 0 0 0 rgba(216,87,42,.65)}80%,100%{box-shadow:0 0 0 16px rgba(216,87,42,0)}}
+.rd-bar input::-webkit-slider-runnable-track{box-shadow:none;background:linear-gradient(90deg,var(--mc-teal) 0 var(--rd-at),var(--hair) var(--rd-at))}
+.rd-bar input::-moz-range-track{box-shadow:none;background:var(--hair)}
+.rd-bar input::-moz-range-progress{background:var(--mc-teal)}
+.rd-bar input::-webkit-slider-thumb{background:var(--mc-mustard);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input::-moz-range-thumb{background:var(--mc-mustard);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input:active::-webkit-slider-thumb{background:var(--mc-orange);box-shadow:0 0 0 2px var(--mc-card)}
+.rd-bar input:active::-moz-range-thumb{background:var(--mc-orange);box-shadow:0 0 0 2px var(--mc-card)}
+
+/* ---- the sheets: cream panels with round corners ---- */
+.scrim{background:var(--scrim)}
+.sheet{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.grab{background:var(--grab)}
+.sheet h2{font-weight:600;letter-spacing:-.01em}
+.sheet h2 button{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text)}
+.search{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.list{background:var(--mc-card-2);box-shadow:none;border-radius:20px}
+.list button + button,.prow + .prow{border-top:1.5px solid var(--hair-2)}
+.list button:active{background:var(--fill)}
+.prow.on .pmain{background:color-mix(in srgb,var(--mc-mustard) 26%,transparent)}
+.pr-t{font-weight:500}
+.label{font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--muted)}
+.seg{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg button{color:var(--muted)}
+.seg button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.seg.slides button[aria-pressed="true"]{background:none}
+
+/* the hour and day sheets */
+.hd-hero{background:var(--disc);color:var(--wv-disc-ink);box-shadow:none;border-radius:20px}
+.hd-temp{font-weight:500;letter-spacing:-.05em}
+.hd-tile{background:var(--mc-card-2);box-shadow:none;border-radius:20px}
+.dd-chart text{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif;fill:var(--muted)}
+.dd-chart .lbl{fill:var(--text)}
+.dd-night{fill:var(--wv-night)}
+.dd-key .dd-night{background:var(--wv-night);box-shadow:inset 0 0 0 1px var(--hair)}
+.dd-rain{fill:var(--wv-rain);background:var(--wv-rain)}
+.dd-pt{fill:var(--text)}
+.dd-tick,.dd-base{stroke:var(--hair)}
+.dd-now{stroke:var(--text)}
+.dd-fade{stop-color:var(--text)}
+.wv-bolt{fill:var(--wv-bolt)}
+.wv-drops{fill:var(--wv-rain)}
+.w3-ico .wv-bolt,.w3-ico .wv-drops,.hd-hero .wv-bolt,.hd-hero .wv-drops{fill:var(--wv-disc-ink)}
+</style>
+<script src="../home/design.js" data-app="weather" data-was="weathervintage" data-keys="wxv.places=wx.places,wxv.here=wx.here,wxv.cache=wx.cache,wxv.units=wx.units,wxv.view=wx.view"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn. Weather draws its own Vintage sky (app.js), so no ../home/sky.js -->
 </head>
 <body>
 <div id="sky" class="w3-fx" aria-hidden="true"></div>
@@ -440,6 +685,10 @@
     <div class="grab"></div>
     <h2><span id="sheetTitle">Places</span><button data-close aria-label="Close"></button></h2>
     <div class="sheet-body">
+      <!-- Settings > Design: Vintage or Standard, just on this phone (app.js fills it from ../home/design.js) -->
+      <div class="label" id="designLabel" hidden>Design</div>
+      <div class="list" id="designBox" hidden></div>
+      <p class="note design" id="designNote" hidden>Just on this phone, and at once.</p>
       <label class="search"><span id="searchIcon"></span><input id="q" type="search" placeholder="Add a city" autocomplete="off" enterkeyhint="search"></label>
       <div class="list" id="results"></div>
       <div class="label">Your places</div>

@@ -18,6 +18,8 @@
 //   account, and an optional Google Sheet that keeps a readable copy of the
 //   plans, the shopping list and the deals (one way: google-sheet-sync.gs;
 //   steps in the README).
+// - Two designs, picked in Settings > Design: Vintage (the default) and Standard
+//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -68,11 +70,14 @@ if (window.top !== window.self) {
   let ticks = ls.json(K.ticks, { at: 0, keys: [] });
 
   const A = () => window.AllisonOS && window.AllisonOS.account;
+  // Meals' route (functions/meals/api), named from the site root's side so it is the same from the old
+  // Meals Vintage address, which opens this same app (../home/design.js)
+  const API = '../meals/api/';
   async function api(path, body) {
     const opts = { method: body === undefined ? 'GET' : 'POST', headers: { 'X-Meals': '1' }, cache: 'no-store' };
     if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     let r;
-    try { r = A() ? await A().fetch('api/' + path, opts) : await fetch('api/' + path, opts); }
+    try { r = A() ? await A().fetch(API + path, opts) : await fetch(API + path, opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
     if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server') });
@@ -399,7 +404,9 @@ if (window.top !== window.self) {
     const s = data.settings, user = A() && A().user();
     const model = modelName();
     const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
-    $('setBody').innerHTML = '<p class="label">Account</p><div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
+    $('setBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
+      + '<p class="hint">Just on this phone, and at once.</p>'
+      + '<p class="label">Account</p><div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
@@ -416,6 +423,7 @@ if (window.top !== window.self) {
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
   let draftAvoid = null, draft = { stores: [], cards: [] };
+  if (window.aosDesign) aosDesign.bind($('setBody'));   // Design: Vintage or Standard, at once (../home/design.js)
   $('setBtn').onclick = () => { draftAvoid = [...(data.settings.avoid || [])]; draft = { stores: [...(data.settings.stores || [])], cards: [...(data.settings.cards || [])] }; renderSettings(); openSheet('setSheet'); };
   $('setBody').addEventListener('click', async e => {
     if (e.target.closest('[data-act="signin"]')) { closeSheet('setSheet'); return signIn(); }
@@ -445,6 +453,7 @@ if (window.top !== window.self) {
 
   // Tabs
   const slideTabs = jump => { const box = $('tabs'); if (window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'meals:tab', { jump }); };
+  addEventListener('aos:design', () => requestAnimationFrame(() => slideTabs(true)));   // Futura and the system font are different widths
   $('tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-tab]'); if (!b || b.dataset.tab === st.tab) return;
     st.tab = b.dataset.tab; ls.set(K.tab, st.tab); render(); slideTabs(false); animateIn(main); scrollTo(0, 0);

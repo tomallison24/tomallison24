@@ -1,8 +1,10 @@
-// Designs in the aOS store, as a person uses them at iPhone size: an app that comes in
-// more than one design (home/welcome.js DESIGNS: Mail, Orders and Home) is one row with a
-// "2 designs" tag, not a row per design; its page has a Design menu; the design picked
-// decides which app Get adds and which one says Installed; Get on a design that isn't
-// added yet asks which design first. Apps with one design are left alone.
+// Designs in the aOS store, as a person uses them at iPhone size. Every app carries both its
+// designs itself, Vintage (the default) and Standard (Sea glass), picked in its own Settings
+// (home/design.js), so aOS shows one row per app with no Design menu and no "2 designs" tag;
+// Get always adds the app itself; each app's icon follows aOS's own look (icon-512.png in
+// Vintage, icon-glass-512.png in Sea glass); and searching "vintage" finds every app. The
+// old Vintage apps (mailvintage and the rest) are not offered. An app's own Settings > Design
+// is checked by its own test (meals/scripts/app-test.mjs and the rest).
 // The accounts server is stood in for (the server rules are accounts-api-test.mjs).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -39,129 +41,56 @@ async function open(apps = {}, scheme = 'light', look = 'glass') {   // the Sea 
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => null);
 
-// 1. one row per app: the designs of Mail, Orders, Home and the rest have no rows of their own, only a tag
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
+const OLD = APPS.filter(a => a !== 'clock').map(a => a + 'vintage');
+
+// 1. one row per app, no old Vintage rows, no Design tag; searching "vintage" finds every app
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
-  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks', 'notes', 'podcasts', 'places', 'meals'];
-  for (const id of WITH_DESIGNS) {
-    if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
-    if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
-  }
-  // searching for a design finds the app that has it, once (Clock too: it has both designs in one app, picked in its Settings)
-  const IN_APP = ['clock'];
+  for (const id of OLD) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
+  for (const id of APPS) if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
+  if (await p.locator('#list .row .dtag').count()) pr.push('a row still has a designs tag: ' + await text(p, '#list .row .dtag'));
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
-  if ([...found].sort().join() !== [...WITH_DESIGNS, ...IN_APP].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + [...WITH_DESIGNS, ...IN_APP].join());
-  report('Every app with a design is one row, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
+  if ([...found].sort().join() !== [...APPS].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not every app');
+  report('One row per app, no Vintage rows or Design tags; searching "vintage" finds every app', pr); await ctx.close();
 }
 
-// 2. the Design menu on the app's page: Standard first; picking Vintage changes what Get adds
-{
-  const { ctx, p, errs } = await open(); const pr = [...errs];
-  await p.click('#list .row[data-app="mail"]'); await p.waitForSelector('.dbtn');
-  if (!/Standard/.test(await text(p, '.dbtn'))) pr.push('the menu does not start on Standard');
-  if (await p.locator('.dmenu').isVisible()) pr.push('the menu is open before it is tapped');
-  if (!/\/mail\/\?via=aos/.test(await attr(p, '.apphead [data-get]', 'href') || '')) pr.push('Get does not add Mail');
-  await p.click('.dbtn');
-  if (await p.getAttribute('.dbtn', 'aria-expanded') !== 'true') pr.push('aria-expanded does not say open');
-  const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
-  if (opts.length !== 2 || !/Standard/.test(opts[0]) || !/Vintage/.test(opts[1])) pr.push('the menu lists: ' + JSON.stringify(opts));
-  if (!/Not added/.test(opts[1] || '')) pr.push('Vintage does not say it is not added');
-  await p.click('.dopt[data-did="vintage"]');
-  if (await p.locator('.dmenu').isVisible()) pr.push('the menu stays open after a pick');
-  if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the menu does not say Vintage after the pick');
-  if (!/mailvintage\/icon-512/.test(await attr(p, '.apphead img', 'src') || '')) pr.push('the page keeps Mail\'s icon');
-  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'mailvintage') pr.push('Get still adds ' + await attr(p, '.apphead [data-get]', 'data-get'));
-  if (await p.locator('.apphead h1').innerText() !== 'Mail') pr.push('the name changed');
-  // the list agrees, and the choice is kept on this phone
-  await p.click('.page .back'); await p.waitForTimeout(500);
-  if (await attr(p, '#list .row[data-app="mail"] [data-get]', 'data-get') !== 'mailvintage') pr.push('Mail\'s row still points at the standard design');
-  await p.reload(); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]');
-  if (await attr(p, '#list .row[data-app="mail"] [data-get]', 'data-get') !== 'mailvintage') pr.push('the pick was not kept');
-  if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) pr.push('the page scrolls sideways');
-  report('the Design menu: Standard first, Vintage changes the icon and what Get adds, and it is kept', pr); await ctx.close();
+// 2. an app's page: no Design menu, Get adds the app itself, in both looks
+for (const look of ['vintage', 'glass']) {
+  const { ctx, p, errs } = await open({}, 'light', look); const pr = [...errs];
+  const gets = await p.locator('#list .row [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get + '=' + new URL(b.href).pathname));
+  for (const id of APPS) if (!gets.includes(id + '=/' + id + '/')) pr.push(id + ' does not link to /' + id + '/: ' + gets.filter(x => x.startsWith(id)).join(' '));
+  const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));
+  if (story.some(id => /vintage$/.test(id))) pr.push('a Today story links to an old Vintage app: ' + story.join());
+  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.apphead [data-get]');
+  if (await p.locator('.dbtn').count()) pr.push('the app page still has a Design menu');
+  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weather') pr.push('Get on Weather adds ' + await attr(p, '.apphead [data-get]', 'data-get'));
+  await p.click('.apphead [data-get]'); await p.waitForTimeout(500);
+  if (await p.locator('.dsheet').count()) pr.push('Get asked for a design');
+  report(look + ' look: Get adds the app itself, with no Design menu or question', pr); await ctx.close();
 }
 
-// 3. Get on a design not added yet asks which design, then opens that app's own address (no new tab until then)
-{
-  const { ctx, p, errs } = await open(); const pr = [...errs];
-  let popups = 0; ctx.on('page', () => popups++);
-  await p.click('#list .row[data-app="house"] [data-get]');
-  await p.waitForSelector('.dsheet', { timeout: 5000 }).catch(() => pr.push('Get did not ask for a design'));
-  await p.waitForTimeout(300);
-  if (popups) pr.push('Get opened the app before a design was picked');
-  if (!/Home/.test(await text(p, '.dsheet h1'))) pr.push('the sheet is not about Home: ' + await text(p, '.dsheet h1'));
-  if (await attr(p, '[data-go]', 'data-go') !== 'house') pr.push('the sheet does not start on Standard');
-  await p.click('.dsheet .dopt[data-did="vintage"]');
-  if (await attr(p, '[data-go]', 'data-go') !== 'housevintage' || !/\/housevintage\/\?via=aos/.test(await attr(p, '[data-go]', 'href') || '')) pr.push('the button does not go to Home Vintage');
-  if (!/Home/.test(await text(p, '[data-go]'))) pr.push('the button does not name Home: ' + await text(p, '[data-go]'));
-  if (await attr(p, '[data-go]', 'target') !== '_blank') pr.push('the button does not open in a new tab');
-  await p.click('.dsheet .dopt[data-did="standard"]');
-  if (await attr(p, '[data-go]', 'data-go') !== 'house') pr.push('going back to Standard did not change the button');
-  report('Get on an app with designs asks which design, then goes to that app', pr); await ctx.close();
-}
-
-// 4. an installed design: the row and the page say Installed, the menu says which, and Get does not ask
-{
-  const { ctx, p, errs } = await open({ mailvintage: Date.now() }); const pr = [...errs];
-  await p.waitForFunction(() => /Installed/.test(document.querySelector('#list .row[data-app="mail"] [data-get]').textContent), null, { timeout: 5000 }).catch(() => pr.push('Mail\'s row does not say Installed when Mail Vintage is'));
-  await p.click('#list .row[data-app="mail"]'); await p.waitForSelector('.dbtn');
-  if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the page does not start on the installed design');
-  await p.click('.dbtn');
-  const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
-  if (!/Not added/.test(opts[0] || '') || !/Installed/.test(opts[1] || '')) pr.push('the menu does not say which is installed: ' + JSON.stringify(opts));
-  await p.click('.dopt[data-did="vintage"]');
-  const pop = ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null);
-  await p.click('.apphead [data-get]');
-  if (await p.locator('.dsheet').count()) pr.push('Get asked for a design for one that is already added');
-  const np = await pop; if (!np) pr.push('Get did not open the app'); else await np.close();
-  report('an installed design says Installed, and Get on it does not ask', pr); await ctx.close();
-}
-
-// 5. (every app now has a Vintage design, so there is no one-design app left to check)
-
-// 6. in the Vintage look every link in aOS goes to the Vintage app: the design that goes with the look is the one
-// picked until you pick another, and the Sea glass look brings Standard back
+// 3. the icons follow aOS's look: the Vintage icon in Vintage, the Sea glass one in Sea glass, and switching swaps them
 {
   const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
-  const gets = () => p.locator('#list .row [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get + '=' + new URL(b.href).pathname));
-  let g = await gets();
-  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage'], ['notes', 'notesvintage'], ['podcasts', 'podcastsvintage'], ['places', 'placesvintage'], ['meals', 'mealsvintage']])
-    if (!g.includes(v + '=/' + v + '/')) pr.push('in the Vintage look ' + base + ' does not link to ' + v + ': ' + g.filter(x => x.startsWith(base) || x.startsWith(v)).join(' '));
-  // the Today postcards and an app's page agree
-  const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));
-  if (story.some(id => ['mail', 'weather', 'news', 'calendar', 'drinks', 'fitness', 'travel', 'orders', 'house'].includes(id))) pr.push('a Today story links to a Standard app: ' + story.join());
-  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.dbtn');
-  if (!/Vintage/.test(await text(p, '.dbtn'))) pr.push('the Design menu does not start on Vintage: ' + await text(p, '.dbtn'));
-  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weathervintage') pr.push('Get on Weather does not add Weather Vintage');
-  // a pick still wins
-  await p.click('.dbtn'); await p.click('.dopt[data-did="standard"]');
-  if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weather') pr.push('picking Standard does not bring Weather back');
-  await p.click('.page .back'); await p.waitForTimeout(400);
-  if (await attr(p, '#list .row[data-app="weather"] [data-get]', 'data-get') !== 'weather') pr.push('the list ignores the pick');
-  // and the Sea glass look, with no pick, is Standard everywhere
-  await p.evaluate(() => { localStorage.removeItem('aos.design.weather'); aosLook.set('glass'); }); await p.waitForTimeout(500);
-  g = await gets();
-  if (!g.includes('mail=/mail/') || !g.includes('weather=/weather/')) pr.push('the Sea glass look does not link to Standard: ' + g.slice(0, 6).join(' '));
-  report('in the Vintage look every link goes to the Vintage app, a pick wins, and Sea glass goes back to Standard', pr); await ctx.close();
+  const icons = () => p.locator('#list .row').evaluateAll(rs => Object.fromEntries(rs.map(r => [r.dataset.app, new URL(r.querySelector('img').src).pathname])));
+  let ic = await icons();
+  for (const id of APPS) if (ic[id] !== `/${id}/icon-512.png`) pr.push(`Vintage: ${id} shows ${ic[id]}`);
+  await p.evaluate(() => aosLook.set('glass')); await p.waitForTimeout(500);
+  ic = await icons();
+  for (const id of APPS) if (ic[id] !== `/${id}/icon-glass-512.png`) pr.push(`Sea glass: ${id} shows ${ic[id]}`);
+  const missing = [];
+  for (const id of APPS) for (const f of ['icon-512.png', 'icon-glass-512.png']) if (!fs.existsSync(path.join(ROOT, id, f))) missing.push(id + '/' + f);
+  if (missing.length) pr.push('missing: ' + missing.join(' '));
+  report('each app\'s icon follows aOS\'s look (Vintage or Sea glass)', pr); await ctx.close();
 }
 
-// 7. the Standard app already on the Home Screen does not hide the Vintage one: in the Vintage look Get still offers it
+// 4. Installed: an app on the Home Screen says Installed in either look
 {
-  const { ctx, p, errs } = await open({ weather: Date.now(), mail: Date.now() }, 'light', 'vintage'); const pr = [...errs];
-  await p.waitForTimeout(600);
-  for (const [base, v] of [['weather', 'weathervintage'], ['mail', 'mailvintage']]) {
-    const row = '#list .row[data-app="' + base + '"] [data-get]';
-    if (await attr(p, row, 'data-get') !== v) pr.push(base + ' is Installed, but its row does not offer ' + v + ': ' + await attr(p, row, 'data-get'));
-    if (!/^Get$/i.test((await text(p, row)).trim())) pr.push(v + ' says ' + (await text(p, row)).trim() + ', not Get');
-    if (!new RegExp('/' + v + '/\\?via=aos').test(await attr(p, row, 'href') || '')) pr.push('the link does not open ' + v);
-  }
-  // and the Standard one is one tap away in the Design menu, still Installed
-  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.dbtn'); await p.click('.dbtn');
-  const opts = await p.locator('.dopt').evaluateAll(os => os.map(o => o.textContent));
-  if (!/Installed/.test(opts[0] || '')) pr.push('the Design menu does not say Standard is Installed: ' + JSON.stringify(opts));
-  report('with the Standard app already installed, the Vintage look still offers Get on the Vintage app', pr); await ctx.close();
+  const { ctx, p, errs } = await open({ weather: Date.now() }, 'light', 'vintage'); const pr = [...errs];
+  await p.waitForFunction(() => /Installed/.test(document.querySelector('#list .row[data-app="weather"] [data-get]').textContent), null, { timeout: 5000 }).catch(() => pr.push('Weather\'s row does not say Installed'));
+  report('an installed app says Installed', pr); await ctx.close();
 }
 
 await b.close(); server.close();

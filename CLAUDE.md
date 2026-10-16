@@ -31,7 +31,7 @@ releases it (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS1.4 now): each merge releases it again,
+- By default, add to the top entry (aOS1.5 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
@@ -91,7 +91,7 @@ from.
   its `data-app` id is `aos`. Each app is added to the Home Screen on its own.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme), `slide.js`, `sky.js` (the Vintage designs' day and night
+  steps, release log, theme), `slide.js`, `design.js` (Vintage or Sea glass), `sky.js` (the Vintage designs' day and night
   sky), `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the
   AI helper you chat with, so far in Orders) - plus the Welcome Lab. Its
   `index.html` is a "moved to aOS" notice.
@@ -113,6 +113,15 @@ from.
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
+- **Two designs in every app**: Vintage (mid-century modern, the default) and Standard (Sea
+  glass), picked in the app's own Settings > Design and kept on the phone (`design.<app>`).
+  `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
+  id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
+  `icon-glass-*.png` Sea glass), status bar and bar colours. A change to how an app looks is
+  made in both designs. The Vintage designs used to be apps of their own (`<app>vintage/`):
+  those folders are gone, and the deploy copies each app to its old Vintage address so phones
+  that added one keep it (`design.js` moves that app's data over once). Server calls go to
+  `../<app>/api/`, never a bare `api/`, so they work from that address too.
 - The AllisonOS colours are **Sea glass** (sea glass, mist, shell, sand):
   `--w-pastel` / `--w-hot` in `welcome.js`, `--pastel` in `aOS/index.html`.
   Use these rather than new pastel gradients. "aOS" is always written with a

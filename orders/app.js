@@ -10,6 +10,8 @@
 // - A Google Sheet keeps both phones in step, as in Notes and Travel.
 // - Packages and store pickups show by default; food, subscriptions and
 //   tickets can be switched on in Settings.
+// - Two designs, picked in Settings > Design: Vintage (the default) and Standard
+//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -37,6 +39,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // Mail's OAuth client (not a secret: see mail/app.js). Orders' own address
   // must be added to it as a redirect URI once - orders/README.md, "Gmail".
+  // The old Orders Vintage address (which opens this same app) is already there.
   const CLIENT_ID = '804406956056-e91hbdndc4cqgerh9sffl9fmt76nfpua.apps.googleusercontent.com';
   const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me';
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -100,14 +103,15 @@ if (window.top !== window.self) {
   const st = { tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
   // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
-  // or cleared localStorage (every AllisonOS app shares its space).
+  // or cleared localStorage (every AllisonOS app shares its space). Opened only
+  // once the old Orders Vintage app's copy is moved over (../home/design.js).
   const keep = (() => {
     let db = null;
-    const open = () => db || (db = new Promise((res, rej) => {
+    const open = () => db || (db = Promise.resolve(window.aosDesign && aosDesign.moved).catch(() => {}).then(() => new Promise((res, rej) => {
       const r = indexedDB.open('allison-orders', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
@@ -307,6 +311,7 @@ if (window.top !== window.self) {
   const whenBox = $('whenChips');
   const slideWhen = jump => slide(whenBox, whenBox.querySelector('[aria-pressed="true"]'), 'when', { jump });
   window.addEventListener('resize', () => slideWhen(true));
+  window.addEventListener('aos:design', () => requestAnimationFrame(() => slideWhen(true)));   // Futura and the system font are different widths
   let toastTimer;
   function toast(msg, undo, ms) {
     $('toastMsg').textContent = msg;
@@ -978,6 +983,9 @@ if (window.top !== window.self) {
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
+  // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
+  if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }
+  else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = $('stDesign').nextElementSibling.hidden = true;
   $('setBtn').onclick = openSettings;
   $('stKinds').addEventListener('click', e => {
     const b = e.target.closest('[data-kind]'); if (!b) return;

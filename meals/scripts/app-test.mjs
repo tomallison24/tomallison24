@@ -6,6 +6,10 @@
 // coconut never saved, settings, the Google Sheet copy (the real google-sheet-sync.gs
 // on a fake Sheet: the form, the errors, what is sent and when), and no script errors
 // or sideways scrolling in light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (the sky held at day,
+// aos.sky), and Standard (Sea glass); Settings > Design switches between them at once and keeps the
+// choice; and the old Meals Vintage address (served from meals/, as the deploy does) moves that app's
+// data on the phone over to Meals' names.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node meals/scripts/app-test.mjs
@@ -25,6 +29,7 @@ const { issue, putJSON } = await import(path.join(R, 'server/auth.js'));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/mealsvintage\//, '/meals/');   // the old Meals Vintage address: the deploy copies meals/ there (news.yml)
   const f = path.join(R, p);
   if (!f.startsWith(R) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
@@ -60,7 +65,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const ok = (label, cond, extra) => { if (!cond) failed++; console.log((cond ? 'ok - ' : 'not ok - ') + label + (extra ? '  ' + extra : '')); };
 
-async function phone(scheme = 'light') {
+async function phone(scheme = 'light', { design = null, seed = null, at = '/meals/' } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.route('**/meals/api/**', async route => {
     if (down) return route.abort('internetdisconnected');
@@ -69,18 +74,21 @@ async function phone(scheme = 'light') {
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
   });
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
-  await ctx.addInitScript(t => {
+  await ctx.addInitScript(([t, design, seed]) => {
     if (!sessionStorage.getItem('seeded')) {
-      localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' })); localStorage.setItem('aos.signin.asked', '1');
+      if (seed) for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+      else localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
+      localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.sky', 'day');
+      if (design) localStorage.setItem('design.meals', design);
       localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
       sessionStorage.setItem('seeded', '1');
     }
-  }, tok);
+  }, [tok, design, seed]);
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   page.on('console', msg => { if (msg.type() === 'error' && !/Failed to load resource|net::ERR/.test(msg.text())) errs.push(msg.text()); });
-  await page.goto(BASE + '/meals/');
+  await page.goto(BASE + at);
   await page.waitForTimeout(800);
   return { ctx, page, errs };
 }
@@ -360,6 +368,101 @@ const SHEET_STEP = async () => {
   ok('Sheet: a phone that lost its storage reconnects from the IndexedDB copy', await until(() => posts3.length > n3), String(posts3.length - n3));
   await S.ctx.close();
 };
+{ // Vintage, the default design, drawn in the Retro look, light and dark: Futura, flat cream or walnut, mustard, teal, orange, atomic shapes
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page, errs } = await phone(scheme);
+    const q = (sel, props, pseudo) => page.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+    const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
+    const flat = v => v === 'none' || v === '';
+    await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+    ok(scheme + ': Futura', /Futura/.test((await q('body', ['fontFamily']))[0]));
+    ok(scheme + ': the ground is cream / walnut', (await q('body', ['backgroundColor']))[0] === ground);
+    const [bg, shadow, backdrop, radius] = await q('#main [data-meal]', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    ok(scheme + ': a night is a flat cream / walnut card, 20px round', bg === cream && shadow === 'none' && flat(backdrop) && radius === '20px', [bg, shadow, backdrop, radius].join(' | '));
+    ok(scheme + ': a mustard sun, a teal dot and a burnt-orange pill behind the title', (await q('.ambient i:nth-child(1)', ['backgroundColor']))[0] === ('rgb(227, 167, 47)')
+      && (await q('.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q('.ambient i:nth-child(3)', ['backgroundColor']))[0] === 'rgb(216, 87, 42)');
+    ok(scheme + ': the title is big, with the three little bars under it', (await q('.title', ['fontSize']))[0] === '44px' && (await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
+    ok(scheme + ': the tabs have a mustard thumb', (await q('#tabs .slthumb', ['backgroundColor']))[0] === 'rgb(227, 167, 47)' && (await q('#tabs', ['backgroundColor']))[0] === cream);
+    ok(scheme + ': + is solid orange', (await q('#fab', ['backgroundColor']))[0] === orange);
+    ok(scheme + ': the theme colour is the sky\'s ground (home/sky.js) and the status bar is not translucent', (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#F1DFBB' : '#4A391E')
+      && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'default');
+    await page.click('#fab'); await page.waitForTimeout(700);
+    const [sbg, sradius, sfilter] = await q('#planSheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
+    ok(scheme + ': the sheet is a flat panel', sbg === cream && sradius === '28px' && flat(sfilter), [sbg, sradius, sfilter].join(' | '));
+    ok(scheme + ': Plan is solid orange, the chosen meat is mustard, Nights is a flat menu', (await q('#planGo', ['backgroundColor']))[0] === orange
+      && (await q('#meats [aria-checked="true"]', ['boxShadow']))[0].includes('rgb(227, 167, 47)') && (await q('#pDays', ['backgroundColor']))[0] === cream);
+    await shot(page, 'retro-plan-' + scheme);
+    await page.click('#planSheet .iconbtn[data-close]'); await page.waitForTimeout(400);
+    await page.click('#main [data-meal="0"]'); await page.waitForTimeout(600);
+    ok(scheme + ': a recipe\'s Done is solid orange', (await q('#recipeSheet .okbtn', ['backgroundColor']))[0] === orange);
+    await shot(page, 'retro-recipe-' + scheme);
+    await page.click('#recipeSheet .okbtn'); await page.waitForTimeout(400);
+    await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(500);
+    ok(scheme + ': a secondary button is outlined teal, not filled', (await q('#main [data-act="find"]', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && (await q('#main [data-act="find"]', ['color']))[0] === (scheme === 'light' ? teal : 'rgb(92, 189, 181)'));
+    await shot(page, 'retro-deals-' + scheme);
+    await page.click('#tabs [data-tab="list"]'); await page.waitForTimeout(500);
+    await page.click('.irow >> nth=0'); await page.waitForTimeout(200);
+    ok(scheme + ': a ticked item is teal', (await q('.irow[aria-checked="true"] .box', ['backgroundColor']))[0] === teal);
+    await shot(page, 'retro-list-' + scheme);
+    await page.click('#tabs [data-tab="dinners"]'); await page.waitForTimeout(300);
+    ok(scheme + ': no script errors, nothing blocked by the page policy', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
+}
+{ // Standard: Sea glass, the Vintage block switched off, no sky; the icon and status bar follow
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page, errs } = await phone(scheme, { design: 'glass' });
+    await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+    const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    ok(scheme + ' Standard: data-look is glass, the Vintage styles are off, no sky', await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')));
+    ok(scheme + ' Standard: the Sea glass ground and the system font', (await q('body', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)') && !/Futura/.test((await q('body', ['fontFamily']))[0]));
+    ok(scheme + ' Standard: the Sea glass icon, a translucent status bar, the Sea glass bar colour', /icon-glass-180\.png/.test(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'))
+      && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'black-translucent'
+      && (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#EEF2F0' : '#0D1213'));
+    await shot(page, 'glass-dinners-' + scheme);
+    ok(scheme + ' Standard: no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
+}
+{ // Settings > Design: Vintage, then Standard and back, at once, kept across a reload
+  const { ctx, page, errs } = await phone();
+  const look = () => page.evaluate(() => document.documentElement.dataset.look);
+  ok('Design: Vintage by default, with the Vintage icon', await look() === 'vintage' && /\/?icon-180\.png/.test(await page.getAttribute('link[rel="apple-touch-icon"]', 'href')) && !/glass/.test(await page.getAttribute('link[rel="apple-touch-icon"]', 'href')));
+  await page.click('#setBtn'); await page.waitForTimeout(400);
+  ok('Design: Settings shows Vintage picked', (await page.getAttribute('#setBody [data-design="vintage"]', 'aria-checked')) === 'true' && (await page.getAttribute('#setBody [data-design="glass"]', 'aria-checked')) === 'false');
+  await page.click('#setBody [data-design="glass"]'); await page.waitForTimeout(200);
+  ok('Design: Standard at once', await look() === 'glass' && (await page.getAttribute('#setBody [data-design="glass"]', 'aria-checked')) === 'true' && await page.isVisible('#setSheet'));
+  await page.reload(); await page.waitForTimeout(800);
+  ok('Design: Standard is kept', await look() === 'glass' && (await page.evaluate(() => localStorage.getItem('design.meals'))) === 'glass');
+  await page.click('#setBtn'); await page.waitForTimeout(400);
+  await page.click('#setBody [data-design="vintage"]'); await page.waitForTimeout(200);
+  await page.reload(); await page.waitForTimeout(800);
+  ok('Design: back to Vintage, kept', await look() === 'vintage' && (await page.evaluate(() => localStorage.getItem('design.meals'))) === 'vintage');
+  ok('Design: no script errors', !errs.length, errs.join(' | '));
+  await ctx.close();
+}
+{ // the old Meals Vintage app, on a phone that added it: its address opens Meals, with its data moved over once
+  const seed = { 'aos.seen': JSON.stringify({ mealsvintage: '1.3' }), 'allison-mealsv-v1-tab': '"list"', 'allison-mealsv-v1-ticks': JSON.stringify({ at: 1, keys: ['x'] }) };
+  const { ctx, page, errs } = await phone('light', { seed, at: '/mealsvintage/' });
+  await page.waitForTimeout(600);
+  const got = await page.evaluate(() => ({ tab: document.querySelector('#tabs [aria-pressed="true"]').dataset.tab, ticks: localStorage.getItem('allison-meals-v1-ticks'), seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-mealsv-v1-tab'), look: document.documentElement.dataset.look }));
+  ok('old address: Meals Vintage\'s data is now Meals\' (it opens on the tab it was on)', got.tab === 'list' && got.ticks === JSON.stringify({ at: 1, keys: ['x'] }), JSON.stringify(got));
+  ok('old address: what it had seen carries over (no walkthrough again), and nothing old is deleted', got.seen.meals === '1.3' && !!got.old);
+  ok('old address: in Vintage', got.look === 'vintage');
+  // once only: a later change to the old keys is not copied again
+  await page.evaluate(() => localStorage.setItem('allison-mealsv-v1-ticks', '{"at":2,"keys":[]}'));
+  await page.reload(); await page.waitForTimeout(800);
+  ok('old address: moved once only', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-ticks'))) === JSON.stringify({ at: 1, keys: ['x'] }));
+  ok('old address: no script errors', !errs.length, errs.join(' | '));
+  await ctx.close();
+}
+{ // a phone with both: Meals' own data is kept, the old app's is not copied over it
+  const seed = { 'aos.seen': JSON.stringify({ meals: '999', mealsvintage: '999' }), 'allison-meals-v1-tab': '"deals"', 'allison-mealsv-v1-tab': '"list"' };
+  const { ctx, page } = await phone('light', { seed });
+  ok('both: Meals\' own data is kept', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-tab'))) === '"deals"');
+  await ctx.close();
+}
 await SHEET_STEP();
 await browser.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

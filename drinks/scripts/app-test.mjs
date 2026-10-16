@@ -7,6 +7,11 @@
 // in-memory Workers KV with real sessions, two phones kept in step, a delete
 // travelling between them, signed out, and accounts not yet switched on.
 // Also dark mode, and that nothing trips the page's Content Security Policy.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look
+// (the sky held at day, aos.sky), and Standard (Sea glass); More > Design switches
+// between them at once and keeps the choice; and the old Drinks Vintage address
+// (served from drinks/, as the deploy does) moves that app's data on the phone over
+// to Drinks' names, and syncs with Drinks' route.
 // Screenshots go to the folder given as the second argument.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -33,6 +38,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/drinksvintage\//, '/drinks/');   // the old Drinks Vintage address: the deploy copies drinks/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -74,7 +80,8 @@ async function newPage(scheme, extra = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US' });
   await ctx.route('**/drinks/api/**', api);
   // The walkthroughs (home/welcome.js) as already seen, as on a phone that has been using the apps.
-  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinks: '999', calendar: '999' }) }, extra);
+  // The sky held at day (home/sky.js), so the Vintage colours don't depend on the hour.
+  extra = Object.assign({ 'aos.seen': JSON.stringify({ drinks: '999', calendar: '999' }), 'aos.sky': 'day' }, extra);
   await ctx.addInitScript(extra => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -637,6 +644,170 @@ await test('Google Sheet sync: a setup link from the other phone fills in the fo
   const idb = await S.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-drinks', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => res(q.result); }; }));
   assert.deepEqual(idb, { url: SHEET_URL, secret: SHEET_SECRET });
   await S.ctx.close();
+});
+
+// ---- the two designs (../home/design.js) ----
+const ORANGE = scheme => scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
+await test('Vintage, the default: drawn in the Retro look, light and dark: Futura, flat cream or walnut, mustard, teal, orange, atomic shapes', async () => {
+  for (const scheme of ['light', 'dark']) {
+    const R = await newPage(scheme, { 'allison-drinks-v1': seedLog() });
+    const rp = R.page;
+    await rp.goto(BASE + '/drinks/'); await rp.waitForFunction(() => window.__drinks); await rp.waitForTimeout(1000);
+    const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
+    const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+    const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)';
+    assert.equal(await rp.evaluate(() => document.documentElement.dataset.look), 'vintage');
+    assert.equal(await rp.evaluate(() => document.getElementById('vintage').media), 'all');
+    assert.match((await q('body', ['fontFamily']))[0], /Futura/, scheme + ': Futura');
+    assert.equal((await q('body', ['backgroundColor']))[0], ground, scheme + ': the ground');
+    const [bg, shadow, backdrop, radius] = await q('.rgroup.week', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    assert.equal(bg, cream); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+    assert.equal((await q('.sum', ['backgroundColor']))[0], cream, 'the week’s number is a flat card too');
+    assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+    assert.equal((await q('.ambient i:nth-child(2)', ['backgroundColor']))[0], teal, 'a teal dot');
+    assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+    assert.equal((await q('#fab', ['backgroundColor']))[0], ORANGE(scheme), 'the + button is solid orange');
+    assert.equal((await q('.title', ['fontSize']))[0], '44px');
+    assert.equal((await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('), true, 'the three little bars under the title');
+    assert.equal((await q('.drow.today .dn b', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'today is a mustard disc');
+    assert.equal((await q('.track i', ['backgroundColor']))[0], teal, 'the week’s bar is teal');
+    assert.equal(await rp.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#F1DFBB' : '#4A391E', 'the bar colour is the sky’s ground (home/sky.js)');
+    assert.equal(await rp.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default', 'the status bar is not translucent on the cream');
+    assert.match(await rp.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-180\.png/, 'the Vintage icon');
+    await rp.click('#fab'); await rp.waitForSelector('#daySheet:not([hidden])'); await rp.waitForTimeout(600);
+    const [sbg, sradius, sfilter] = await q('#daySheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
+    assert.equal(sbg, cream, 'the sheet is a flat panel'); assert.equal(sradius, '28px'); assert.ok(sfilter === 'none' || sfilter === '');
+    assert.equal((await q('#daySheet .okbtn', ['backgroundColor']))[0], ORANGE(scheme), 'Done is solid orange');
+    await rp.click('#somethingElse');
+    assert.equal((await q('#fSave', ['backgroundColor']))[0], ORANGE(scheme), 'Add is solid orange');
+    assert.equal((await q('#fCancel', ['backgroundColor']))[0], 'rgba(0, 0, 0, 0)', 'Cancel is outlined, not filled');
+    assert.equal((await q('.frow .unit button[aria-pressed="true"]', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'oz / ml has a mustard thumb');
+    await shot(rp, '20-retro-form-' + scheme);
+    await rp.click('#daySheet .okbtn'); await rp.waitForTimeout(400);
+    await rp.click('#sumBtn'); await rp.waitForSelector('#trends:not([hidden])'); await rp.waitForTimeout(900);
+    const [pillBg] = await rp.evaluate(() => [getComputedStyle(document.getElementById('trBar'), '::before').backgroundColor]);
+    assert.equal(pillBg, 'rgb(74, 52, 38)', 'the view pill is walnut');
+    assert.equal((await q('#trBody .seg .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb on Week / Month');
+    assert.equal((await q('#trBody .kpis', ['backgroundColor']))[0], cream);
+    await pickView(rp, 2);
+    assert.equal((await q('.chart .bar', ['fill']))[0], teal, 'teal columns');
+    assert.equal((await q('.chart .bar.over', ['fill']))[0], 'rgb(216, 87, 42)', 'orange over the limit');
+    await shot(rp, '21-retro-weekly-' + scheme);
+    await pickView(rp, 6);
+    assert.equal((await q('.chart .bar.af', ['fill']))[0], scheme === 'light' ? 'rgb(126, 140, 52)' : 'rgb(163, 176, 74)', 'olive alcohol-free columns');
+    assert.deepEqual(await rp.evaluate(() => window.__csp || []), []);
+    await R.ctx.close();
+  }
+});
+
+await test('Standard: Sea glass, the Vintage styles off, no sky; the icon, status bar and bar colour follow', async () => {
+  for (const scheme of ['light', 'dark']) {
+    const G = await newPage(scheme, { 'allison-drinks-v1': seedLog(), 'design.drinks': 'glass' });
+    const gp = G.page;
+    await gp.goto(BASE + '/drinks/'); await gp.waitForFunction(() => window.__drinks); await gp.waitForTimeout(700);
+    const q = (sel, props) => gp.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+    assert.ok(await gp.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), scheme + ': glass, the Vintage block off, no sky');
+    assert.equal((await q('body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', scheme + ': the Sea glass ground');
+    assert.doesNotMatch((await q('body', ['fontFamily']))[0], /Futura/, 'the system font');
+    assert.notEqual((await q('.rgroup.week', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', 'no cream card');
+    assert.notEqual((await q('#fab', ['backgroundColor']))[0], ORANGE(scheme), 'no orange +');
+    assert.match(await gp.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-glass-180\.png/, 'the Sea glass icon');
+    assert.equal(await gp.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+    assert.equal(await gp.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
+    await shot(gp, '22-glass-week-' + scheme);
+    assert.deepEqual(await gp.evaluate(() => window.__csp || []), []);
+    await G.ctx.close();
+  }
+});
+
+await test('More > Design: the first section; Standard and back, at once, kept across a reload; the Week / Month thumb follows the new font', async () => {
+  const P = await newPage('light', { 'allison-drinks-v1': seedLog() });
+  const pp = P.page, look = () => pp.evaluate(() => document.documentElement.dataset.look);
+  await pp.goto(BASE + '/drinks/'); await pp.waitForFunction(() => window.__drinks); await pp.waitForTimeout(500);
+  assert.equal(await look(), 'vintage');
+  await pp.click('#moreBtn'); await pp.waitForSelector('#moreSheet:not([hidden])'); await pp.waitForTimeout(300);
+  assert.equal(await pp.$eval('#moreBody', b => b.firstElementChild.textContent), 'Design', 'Design is the first section');
+  assert.equal(await pp.getAttribute('#moreBody [data-design="vintage"]', 'aria-checked'), 'true');
+  assert.equal(await pp.getAttribute('#moreBody [data-design="glass"]', 'aria-checked'), 'false');
+  await shot(pp, '23-more-design-vintage');
+  await pp.click('#moreBody [data-design="glass"]'); await pp.waitForTimeout(200);
+  assert.equal(await look(), 'glass', 'at once');
+  assert.equal(await pp.getAttribute('#moreBody [data-design="glass"]', 'aria-checked'), 'true');
+  assert.ok(await pp.isVisible('#moreSheet'), 'More stays open');
+  // More is drawn again on every sync; the rows still answer and say which is picked
+  await pp.evaluate(() => window.__drinks.sync()); await pp.waitForTimeout(300);
+  assert.equal(await pp.getAttribute('#moreBody [data-design="glass"]', 'aria-checked'), 'true');
+  await pp.reload(); await pp.waitForFunction(() => window.__drinks); await pp.waitForTimeout(500);
+  assert.equal(await look(), 'glass', 'kept');
+  assert.equal(await pp.evaluate(() => localStorage.getItem('design.drinks')), 'glass');
+  // the Week / Month thumb sits under the pressed button in either font
+  await pp.click('#sumBtn'); await pp.waitForSelector('#trends:not([hidden])'); await pp.waitForTimeout(700);
+  const thumbFits = () => pp.evaluate(() => { const s = document.querySelector('#trBody .seg'), t = s.querySelector('.slthumb').getBoundingClientRect(), b = s.querySelector('[aria-pressed="true"]').getBoundingClientRect(); return Math.abs(t.left - b.left) < 2 && Math.abs(t.width - b.width) < 2; });
+  assert.ok(await thumbFits(), 'the thumb fits in Standard');
+  await pp.evaluate(() => window.aosDesign.set('vintage')); await pp.waitForTimeout(400);
+  assert.ok(await thumbFits(), 'and again in Vintage, at once');
+  await pp.click('#trBack');
+  await pp.click('#moreBtn'); await pp.waitForSelector('#moreSheet:not([hidden])'); await pp.waitForTimeout(300);
+  await pp.click('#moreBody [data-design="glass"]'); await pp.waitForTimeout(200);
+  await shot(pp, '24-more-design-glass');
+  await pp.click('#moreBody [data-design="vintage"]'); await pp.waitForTimeout(200);
+  await pp.reload(); await pp.waitForFunction(() => window.__drinks); await pp.waitForTimeout(500);
+  assert.equal(await look(), 'vintage', 'back to Vintage, kept');
+  assert.equal(await pp.evaluate(() => localStorage.getItem('design.drinks')), 'vintage');
+  assert.deepEqual(await pp.evaluate(() => window.__csp || []), []);
+  await P.ctx.close();
+});
+
+await test('the old Drinks Vintage address, on a phone that added it: it opens Drinks, with its log, its Sheet link and what it had seen moved over once', async () => {
+  const old = seedLog();
+  const O = await newPage('light', { 'aos.seen': JSON.stringify({ drinksvintage: '1.3' }), 'allison-drinksv-v1': old, 'allison-drinksv-v1-trview': 'weekly', 'allison-drinksv-v1-period': 'month' });
+  await withSheet(O, fakeSheet());
+  const op = O.page;
+  // The old app's IndexedDB copy of its Sheet link and code (its localStorage copy lost), made at the old address
+  // before the app opens there (a plain file, so nothing of the app runs)
+  await op.goto(BASE + '/drinksvintage/icon.svg');
+  await op.evaluate(([u, s]) => new Promise((res, rej) => { const r = indexedDB.open('allison-drinksv', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: u, secret: s }, 'sheet'); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = () => rej(t.error); }; r.onerror = () => rej(r.error); }), [SHEET_URL, SHEET_SECRET]);
+  await op.goto(BASE + '/drinksvintage/'); await op.waitForFunction(() => window.__drinks); await op.waitForTimeout(1200);
+  const got = await op.evaluate(() => ({ log: localStorage.getItem('allison-drinks-v1'), view: localStorage.getItem('allison-drinks-v1-trview'), seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-drinksv-v1'), look: document.documentElement.dataset.look, n: window.__drinks.data.entries.length, today: document.querySelector('.drow.today .dsum').textContent }));
+  assert.equal(JSON.parse(got.log).entries.length, JSON.parse(old).entries.length, 'the log is now Drinks’');
+  assert.equal(got.n, JSON.parse(old).entries.length, 'and the app shows it');
+  assert.match(got.today, /Wine/, 'today’s Wine is on the week');
+  assert.equal(got.view, 'weekly', 'the Analysis view too');
+  assert.equal(got.seen.drinks, '1.3', 'what it had seen carries over (no walkthrough again)');
+  assert.equal(got.old, old, 'nothing old is deleted');
+  assert.equal(got.look, 'vintage');
+  assert.deepEqual(await op.evaluate(() => window.__drinks.sheetCfg()), { url: SHEET_URL, secret: SHEET_SECRET }, 'the Sheet link and code, from the moved IndexedDB copy');
+  // once only: a later change to the old keys is not copied again
+  await op.evaluate(() => localStorage.setItem('allison-drinksv-v1-trview', 'top'));
+  await op.reload(); await op.waitForFunction(() => window.__drinks); await op.waitForTimeout(500);
+  assert.equal(await op.evaluate(() => localStorage.getItem('allison-drinks-v1-trview')), 'weekly', 'moved once only');
+  assert.deepEqual(await op.evaluate(() => window.__csp || []), []);
+  await O.ctx.close();
+});
+
+await test('a phone with both: Drinks’ own log is kept, the old app’s is not copied over it', async () => {
+  const mine = JSON.stringify({ v: 1, entries: [sheetDrink('mine1')], days: [], prefs: [] });
+  const B = await newPage('light', { 'aos.seen': JSON.stringify({ drinks: '999', drinksvintage: '999' }), 'allison-drinks-v1': mine, 'allison-drinksv-v1': seedLog() });
+  await B.page.goto(BASE + '/drinksvintage/'); await B.page.waitForFunction(() => window.__drinks); await B.page.waitForTimeout(500);
+  assert.deepEqual(await B.page.evaluate(() => window.__drinks.data.entries.map(x => x.id)), ['mine1']);
+  await B.ctx.close();
+});
+
+await test('from the old address, signed in: every key is Drinks’ own, the sync goes to Drinks’ route, and Drinks has the same log', async () => {
+  const P = await newPage('light', { 'aos.session': SESSION, 'aos.seen': JSON.stringify({ drinks: '999' }) });
+  apiCalls.length = 0;
+  await P.page.goto(BASE + '/drinksvintage/'); await P.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
+  await P.page.click('#fab'); await P.page.click('.utile[data-usual="1"]'); await P.page.click('#daySheet .okbtn');
+  await syncNow(P.page);
+  const keys = await P.page.evaluate(() => Object.keys(localStorage));
+  assert.ok(keys.includes('allison-drinks-v1'), keys.join());
+  assert.deepEqual(keys.filter(k => !/^(allison-drinks-|aos\.|design\.drinks)/.test(k)), [], 'nothing outside Drinks’ own names (and the aOS keys)');
+  assert.ok(apiCalls.length && apiCalls.every(c => c.path === '/drinks/api/sync'), 'the account’s route is Drinks’: ' + apiCalls.map(c => c.path).join());
+  const D = await newPage('light', { 'aos.session': SESSION });
+  await D.page.goto(BASE + '/drinks/'); await D.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
+  assert.equal((await local(D.page)).entries.length, stored().entries.length, 'Drinks has the same log from the account');
+  assert.ok(stored().entries.length >= 1);
+  await D.ctx.close(); await P.ctx.close();
 });
 
 await test('no errors and no Content Security Policy violations', async () => {

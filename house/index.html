@@ -5,14 +5,17 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Home</title>
-<meta name="description" content="The Signal dashboard's devices as an AllisonOS app, talking to Home Assistant directly.">
-<meta name="theme-color" content="#1A212B">
+<meta name="description" content="The Signal dashboard's devices as an AllisonOS app, in a mid-century Vintage design or Sea glass, talking to Home Assistant directly.">
+<!-- Sea glass bar colours (bg.js sets them to the background picked); design.js and sky.js set the Vintage ones -->
+<meta name="theme-color" content="#E6EBF1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A212B" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Home">
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
-<link rel="icon" type="image/png" href="icon-512.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=3">
+<link rel="icon" type="image/png" href="icon-512.png?v=3">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="devices.css">
 <!--
@@ -46,6 +49,13 @@
 
   With no Home Assistant set up it runs as a PREVIEW on sample states, and the
   controls change those, so the design can be tried on the phone first.
+
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block,
+  over the shared Vintage sky, ../home/sky.js) and Standard (Sea glass: that
+  block switched off; the glass, skies and backgrounds above). The colours the
+  scripts draw follow it too (dual() in app.js). The old Home Vintage address
+  opens this same app.
 -->
 <style>
   :root {
@@ -596,6 +606,12 @@
   #sheetWrap .view > * { margin-top: 0; margin-bottom: 0; }
   #sheetWrap #custBlock { display: flex; flex-direction: column; gap: 14px; }
   #sheetWrap #custBlock[hidden] { display: none; }
+  #sheetWrap #designBlock { display: flex; flex-direction: column; gap: 14px; }   /* Settings > Design (../home/design.js) */
+  #sheetWrap #designBlock[hidden] { display: none; }
+  /* its swatches are .sw too (design.js's name), not switches: no knob, no frosting */
+  .aos-design .sw { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .aos-design .sw::after { content: none; }
+  .ambient { display: none; }   /* the atomic shapes behind the title: the Vintage design's (#vintage) */
   #sheetWrap .label { margin: 4px 8px -6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
   #sheetWrap .group { border-radius: 26px; margin-top: 0; }
   #sheetWrap .rowi { min-height: 48px; font-size: 15px; }
@@ -721,8 +737,131 @@
 :where(#gear, #bannerBtn, .disc.sm){position:relative}
 :where(#gear, #bannerBtn, .disc.sm)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<style id="vintage">
+  /* ======================================================================
+     Mid-century modern, in the Retro colours
+     ----------------------------------------------------------------------
+     Home's Vintage design (the default), drawn from the aOS Design Styles
+     canvas ("Mid-century modern" + "Retro"). Flat, solid cream cards (walnut
+     in dark mode) in place of glass and skies; mustard, teal, burnt orange and
+     olive; atomic shapes behind the title; Futura (iOS's own, nothing to
+     download). After the glass styles so it wins over them, the generated
+     light rules included; Settings > Design switches it off for the Standard
+     (Sea glass) design (../home/design.js). Behind it all is the shared
+     Vintage sky (../home/sky.js); the Background picked in Settings >
+     Customization (bg.js) is Standard's, so it is hidden here. Only colours,
+     shapes and type change: every control works the same in both. */
+  :root {
+    --bg: var(--mc-ground);   /* the page: cream or walnut, washed by the sky (../home/sky.js) */
+    --mc-ground: #241E1A; --mc-card: #322A25; --mc-card-2: #3D332C; --mc-edge: rgba(244,236,221,0.14);
+    --mc-mustard: #E3A72F; --mc-teal: #4FB3AB; --mc-orange: #D8572A; --mc-olive: #A3B04A; --mc-walnut: #4A3426; --mc-on-mustard: #2B2522;
+    --text: #F4ECDD; --muted: rgba(244,236,221,0.68);
+    --accent: #5CBDB5; --cta: #D8572A; --cta-ink: #FFF8EC;
+    --good: #A3B04A; --warn: #E3A72F; --bad: #E8684A;
+    --tile: #322A25; --tile-edge: rgba(244,236,221,0.05);
+    --lgs-top: #322A25; --lgs-bottom: #322A25; --lgs-rim: transparent; --lgs-edge: rgba(244,236,221,0.14);
+    --lgs-row: rgba(244,236,221,0.07); --lgs-field: rgba(244,236,221,0.08); --lgs-shine: none; --lgs-filter: none;
+    --lgs-lift: rgba(0,0,0,0.3); --lgs-lift-strong: rgba(0,0,0,0.45); --lgs-solid: #2D2621;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --mc-ground: #F4ECDD; --mc-card: #FBF5E9; --mc-card-2: #F0E5D0; --mc-edge: rgba(43,37,34,0.14);
+      --mc-teal: #1F6F6B; --mc-olive: #7E8C34;
+      --text: #2B2522; --muted: #5B4A3F;
+      --accent: #1F6F6B; --cta: #C9502A; --cta-ink: #FFF8EC;
+      --good: #7E8C34; --warn: #B07A00; --bad: #B8452B;
+      --tile: #FBF5E9; --tile-edge: rgba(43,37,34,0.05);
+      --lgs-top: #FBF5E9; --lgs-bottom: #FBF5E9; --lgs-rim: transparent; --lgs-edge: rgba(43,37,34,0.12);
+      --lgs-row: rgba(43,37,34,0.05); --lgs-field: rgba(43,37,34,0.06);
+      --lgs-lift: rgba(43,37,34,0.10); --lgs-lift-strong: rgba(43,37,34,0.2); --lgs-solid: #FBF5E9;
+    }
+  }
+  /* no blur anywhere, and nothing moving behind the page */
+  *, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .bgfx { display: none; }
+  #sheetWrap #custBlock { display: none; }   /* Customization (bg.js): Standard's backgrounds; Vintage has the sky */
+  body { font-family: "Futura", "Futura-Medium", "Avenir Next", "Jost", system-ui, sans-serif; }
+  button, input, textarea, select { font-family: inherit; }
+
+  /* the atomic shapes behind the title (they scroll away with the page) */
+  /* a sun (the moon at night: home/sky.js), a quarter of it showing in the corner */
+  .ambient { display: block; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; }
+  .ambient i { position: absolute; display: block; width: 204px; height: 204px; right: -140px; top: -104px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
+
+
+  /* the title, the sections */
+  .top h1 { font-size: 46px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+  .top h1::after { content: ''; display: block; width: 62px; height: 6px; margin-top: 10px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat; }
+  .sec h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .sec small { color: var(--muted); letter-spacing: .04em; }
+  .chip, .round { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); color: var(--text); }
+  .round { color: var(--accent); }
+  .chip { letter-spacing: .06em; text-transform: uppercase; font-size: 12px; }
+
+  /* the view picker: a walnut pill with a mustard disc, as the design's tab bar */
+  .vbar::before { background: var(--mc-walnut); box-shadow: inset 0 0 0 1px rgba(244,236,221,0.12), 0 10px 22px -10px rgba(43,37,34,0.6); }
+  .vbar > button { color: #F4ECDD; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; }
+  .vbar > button:active { background: rgba(244,236,221,0.14); }
+  .vbar .vb-ic { background: var(--mc-mustard); color: var(--mc-on-mustard); }
+  .vbar .vb-chev svg { color: #E3A72F; }
+  .viewmenu { border-radius: 24px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px var(--lgs-lift-strong); }
+  .viewmenu button { border-radius: 16px; }
+  .viewmenu button:active, .viewmenu button[aria-selected="true"] { background: var(--lgs-row); }
+  .viewmenu .ic { background: color-mix(in srgb, var(--mc-mustard) 30%, transparent); border-radius: 50%; color: var(--text); }
+  .viewmenu button:nth-child(2n) .ic { background: color-mix(in srgb, var(--mc-teal) 28%, transparent); }
+  .viewmenu button:nth-child(3n) .ic { background: color-mix(in srgb, var(--mc-orange) 26%, transparent); }
+
+  /* the banner, buttons and the one thing to tap */
+  .banner { background: color-mix(in srgb, var(--mc-mustard) 22%, var(--mc-card)); box-shadow: none; border-radius: 20px; }
+  .banner span { color: var(--text); }
+  .banner button, .btn.primary { background: var(--cta); color: var(--cta-ink); box-shadow: none; }
+  .btn, .ghost, .ecobtn { box-shadow: inset 0 0 0 1.5px var(--mc-edge); background: transparent; }
+  .btn.primary { box-shadow: none; }
+
+  /* cards: solid cream, round-cornered, no skies, sheens, motes or mist */
+  .dg, .group, .tile, .estrip, .en, .ag, .runpanel, .lp, .hsplit, .awaypill, .wxpill, .sysalert { background: var(--mc-card); box-shadow: none; }
+  .dg { border-radius: 22px; box-shadow: none !important; }
+  .runchip i, .runchip i::after, .cbadge.active i { background: var(--mc-olive); }
+  .dg::after { box-shadow: none; }
+  .dg > .dg-fx, .dg-fx, .dg-sheen, .dg-mote, .dg-mist, .tc-ember, .tc-frost, .tc-air, .tc-snow, .tc-flame, .dg-pool { display: none !important; }
+  .dg-title { font-weight: 500; letter-spacing: -0.02em; }
+  .dg-name, .tb-tg small, .tb-in small { letter-spacing: .16em; }
+  .pwr, .round, .disc, .rb-disc { background: var(--mc-card-2); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .alert { background: color-mix(in srgb, var(--mc-mustard) 28%, transparent); box-shadow: none; }
+  .alert.full { background: color-mix(in srgb, var(--mc-orange) 28%, transparent); }
+  .tank .glass { background: color-mix(in srgb, var(--mc-card) 40%, transparent); box-shadow: inset 0 0 0 2px var(--mc-edge); }
+
+  /* popups and sheets */
+  .usheet, .sheet { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 -14px 40px -12px var(--lgs-lift-strong); }
+  .usheet .group, .group { background: var(--mc-card-2); }
+  .scrim { background: rgba(43,37,34,0.4); }
+  .toast { background: var(--mc-card-2); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 10px 24px -10px var(--lgs-lift-strong); }
+  .field, .field input, .bugform .field textarea { background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--mc-edge); border-radius: 14px; }
+
+  /* switches, segments, chips */
+  .sw { background: rgba(244,236,221,0.24); }
+  .sw.on { background: var(--mc-teal); }
+  .sw::after { background: #FFF8EC; }
+  .seg { background: var(--mc-card-2); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .seg button { font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: 13px; }
+  .seg button[aria-pressed="true"], .seg.slides button[aria-pressed="true"] { color: var(--mc-on-mustard); }
+  .slthumb { background: var(--mc-mustard); box-shadow: none; }
+  .chip2 { background: var(--mc-card-2); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
+  .chip2[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .hs-half.lit { background: color-mix(in srgb, var(--mc-mustard) 30%, transparent); }
+  .bgopt.on, .tone.on { box-shadow: inset 0 0 0 2px var(--accent); }
+  /* the Arm button: the system's own colour (teal when armed), not the glass blue */
+  .armbtn:not(.on) { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgba(var(--a),0.95); }
+  .armbtn:not(.on):not(:disabled):active { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgb(var(--a)); }
+  .dots i.on { background: var(--accent); }
+
+</style>
+<script src="../home/design.js" data-app="house" data-was="housevintage" data-keys="housev.=house."></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><i></i></div>   <!-- Vintage: the sun (the moon at night) behind the title -->
 <div class="bgfx" aria-hidden="true"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="bgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16233A"/><stop offset=".55" stop-color="#3B4E6E"/><stop offset=".85" stop-color="#9C8BA0"/><stop offset="1" stop-color="#E2A982"/></linearGradient>
@@ -777,6 +916,13 @@
     <div class="grab"></div>
     <h2><span id="sheetTitle">Settings</span><button data-close id="sheetClose" aria-label="Done"></button></h2>
     <div class="sheet-body">
+      <!-- Design: Vintage or Standard, on this phone, at once (app.js fills it from ../home/design.js). -->
+      <div id="designBlock" hidden>
+        <p class="label">Design</p>
+        <div class="group" id="designBox"></div>
+        <p class="help">Just on this phone, and at once.</p>
+      </div>
+
       <!-- Locked: what is saved. Changing or disconnecting needs the PIN. -->
       <div class="view" id="vLocked" hidden>
         <p class="label">Home Assistant</p>

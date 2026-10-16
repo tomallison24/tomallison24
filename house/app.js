@@ -1,5 +1,7 @@
 // house's own script, moved out of index.html so the page's
 // Content-Security-Policy can allow only this site's own files (script-src 'self').
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass), kept on
+// this phone (../home/design.js, as in Clock); the colours drawn here follow it (dual(), below).
 'use strict';
 // ---------------------------------------------------------------------------
 // Icons: MDI paths (@mdi/js 7.4.47), inline so the app works offline.
@@ -146,6 +148,25 @@ const store = {
 };
 
 // ---------------------------------------------------------------------------
+// The design (../home/design.js): Vintage (mid-century modern, the default) or Standard (Sea glass).
+// The CSS follows it by itself (<style id="vintage">); the colours the scripts draw follow it here.
+// dual(glass, vintage) is an object whose every key reads glass[k] in Standard and, in Vintage,
+// vintage[k] where vintage has it (else glass[k]), at the moment it is read; so a palette made with
+// it changes with the design, and render() (on 'aos:design', below) draws it again.
+const vintageLook = () => (window.aosDesign ? aosDesign.get() : 'vintage') !== 'glass';
+function dual(glass, vintage) {
+  const o = {};
+  for (const k of new Set([...Object.keys(glass), ...Object.keys(vintage)])) {
+    Object.defineProperty(o, k, { enumerable: true, get: () => (vintageLook() && k in vintage ? vintage : glass)[k] });
+  }
+  return o;
+}
+// Single colours the device files draw with (Retro in Vintage: mustard, teal, burnt orange, olive):
+//   on     a switch that is on, where the device has no colour of its own (Sea glass: iOS green)
+//   amber  waiting / standby (security)
+const PAL = dual({ on: '48,209,88', amber: '255,180,78' }, { on: '47,140,134', amber: '227,167,47' });
+
+// ---------------------------------------------------------------------------
 // The two units: the DG1 instance variables, entity for entity.
 // The Cube's plug still carries the old "M&D Dyson" names (see the Energy
 // block on All Devices) - it is the Cube's real draw despite the ids.
@@ -159,7 +180,9 @@ const SKY_SHARED = {
   off: 'linear-gradient(160deg, #17181A 0%, #212326 50%, #33363B 100%)',
   offline: 'linear-gradient(160deg, #121316 0%, #1C1D21 50%, #2C2E34 100%)',
 };
-const ACC_SHARED = { full: '240,179,187', off: '190,194,204', offline: '154,160,166' };
+const ACC_G = { full: '240,179,187', off: '190,194,204', offline: '154,160,166' };
+const ACC_V = { full: '216,87,42', off: '165,150,128', offline: '154,145,130' };   // Retro: burnt orange when the tank is full; warm greys
+const ACC_SHARED = dual(ACC_G, ACC_V);
 const UNITS = [
   {
     id: 'cube', name: 'Cube',
@@ -171,7 +194,7 @@ const UNITS = [
     pw: 'sensor.m_d_dyson_current_consumption', day: 'sensor.m_d_dyson_today_s_consumption', month: 'sensor.m_d_dyson_this_month_s_consumption',
     modes: ['Set', 'Continuous', 'Dry'],
     skies: { drying: 'linear-gradient(160deg, #17201F 0%, #213030 50%, #374C4A 100%)', holding: 'linear-gradient(160deg, #191D1D 0%, #242B2B 50%, #394342 100%)', ...SKY_SHARED },
-    accents: { drying: '156,212,202', holding: '184,206,202', ...ACC_SHARED },
+    accents: dual({ drying: '156,212,202', holding: '184,206,202', ...ACC_G }, { drying: '31,111,107', holding: '126,140,52', ...ACC_V }),
   },
   {
     id: 'upstairs', name: 'Upstairs',
@@ -183,7 +206,7 @@ const UNITS = [
     pw: 'sensor.upstairs_dehumidifier_current_consumption', day: 'sensor.upstairs_dehumidifier_today_s_consumption', month: 'sensor.upstairs_dehumidifier_this_month_s_consumption',
     modes: ['Set', 'Smart', 'Continuous'],
     skies: { drying: 'linear-gradient(160deg, #181C23 0%, #222A35 50%, #384556 100%)', holding: 'linear-gradient(160deg, #1A1C20 0%, #252930 50%, #3B414B 100%)', ...SKY_SHARED },
-    accents: { drying: '166,194,230', holding: '190,200,216', ...ACC_SHARED },
+    accents: dual({ drying: '166,194,230', holding: '190,200,216', ...ACC_G }, { drying: '227,167,47', holding: '126,140,52', ...ACC_V }),
   },
 ];
 const T_MIN = 35, T_MAX = 85, T_STEP = 5;   // the integration clamps to 35-85; the units' panels move in 5s
@@ -627,7 +650,7 @@ function tgtHTML(u, r) {
 
 // ---- the popup's rows ----
 // On, the switch is tinted with the unit's colour; with the unit off (grey sky) it is iOS green.
-const swHTML = (u, r, on) => `<span class="sw${on ? ' on' : ''}" style="--tint:${u.accents[r.mood] === ACC_SHARED.off ? '48,209,88' : u.accents[r.mood]}"></span>`;
+const swHTML = (u, r, on) => `<span class="sw${on ? ' on' : ''}" style="--tint:${u.accents[r.mood] === ACC_SHARED.off ? PAL.on : u.accents[r.mood]}"></span>`;
 const icon = (n, extra = '') => `<span class="ic"${extra}>${svg(n, 18)}</span>`;
 
 function powerRowHTML(u, r) {
@@ -901,7 +924,8 @@ const T_SCENES = {
   focus: { day: 'linear-gradient(160deg, #1C2025 0%, #283039 50%, #3E4854 100%)', night: 'linear-gradient(160deg, #17191C 0%, #21262C 50%, #323A44 100%)', glow: '170,190,210' },
   breeze: { day: 'linear-gradient(170deg, #1C2226 0%, #293539 50%, #405049 100%)', night: 'linear-gradient(170deg, #17191D 0%, #212A2E 50%, #2F3B35 100%)', glow: '110,170,130' },
 };
-const T_ACC = { heat: '255,166,92', cool: '156,210,255', fan: '142,227,214', idle: '205,210,218', eco: '140,214,160', off: '154,160,166', offline: '154,160,166' };
+const T_ACC = dual({ heat: '255,166,92', cool: '156,210,255', fan: '142,227,214', idle: '205,210,218', eco: '140,214,160', off: '154,160,166', offline: '154,160,166' },
+  { heat: '216,87,42', cool: '31,111,107', fan: '126,140,52', idle: '165,150,128', eco: '126,140,52', off: '154,145,130', offline: '154,145,130' });   // Vintage: Retro
 
 // What was tapped, shown until the unit reports it (or 20 s).
 const tpend = {};
@@ -1045,11 +1069,11 @@ function tPowerHTML(t, r) {
 }
 // The targets the ruler shows: Auto has two (Heat, Cool), Heat / Cool /
 // the Windmill's Eco one, Off and Fan only none.
-const T_HEAT = '255,166,92', T_COOL = '156,210,255';
+const T_HC = dual({ heat: '255,166,92', cool: '156,210,255' }, { heat: '216,87,42', cool: '47,140,134' });   // the Heat and Cool targets
 function tSets(t, r) {
   if (r.offline || r.s === 'off' || r.s === 'fan_only') return [];
-  if (r.range) return [['target_temp_low', 'Heat', r.lo, T_HEAT], ['target_temp_high', 'Cool', r.hi, T_COOL]];
-  return [['temperature', r.s === 'heat' ? 'Heat' : r.s === 'cool' ? 'Cool' : modeName(t, r.s), r.temp, r.s === 'heat' ? T_HEAT : T_COOL]];
+  if (r.range) return [['target_temp_low', 'Heat', r.lo, T_HC.heat], ['target_temp_high', 'Cool', r.hi, T_HC.cool]];
+  return [['temperature', r.s === 'heat' ? 'Heat' : r.s === 'cool' ? 'Cool' : modeName(t, r.s), r.temp, r.s === 'heat' ? T_HC.heat : T_HC.cool]];
 }
 // The targets as the hero (Labs' design B): each a big thin number with a
 // soft chevron above (raise) and below (lower), the target's name under it;
@@ -1083,7 +1107,7 @@ function tEcoRow(t, r) {
 }
 function tPowerRow(t, r) {
   const on = !r.offline && r.s !== 'off';
-  return `<button class="rowi${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" role="switch" aria-checked="${on}"${r.offline ? ' disabled' : ''}>${icon('power')}<span class="k">Power</span><span class="sw${on ? ' on' : ''}" style="--tint:${T_ACC[r.mood] === T_ACC.off ? '48,209,88' : T_ACC[r.mood] || T_ACC.idle}"></span></button>`;
+  return `<button class="rowi${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" role="switch" aria-checked="${on}"${r.offline ? ' disabled' : ''}>${icon('power')}<span class="k">Power</span><span class="sw${on ? ' on' : ''}" style="--tint:${T_ACC[r.mood] === T_ACC.off ? PAL.on : T_ACC[r.mood] || T_ACC.idle}"></span></button>`;
 }
 const tModeSeg = (t, r) => t.modes.map(([m, n]) => `<button data-a="tmode" data-v="${m}" aria-pressed="${r.s === m}"${r.offline ? ' disabled' : ''}>${n}</button>`).join('');
 const tFanSeg = (t, r) => (t.fans || []).map(f => `<button data-a="tfan" data-v="${f}" aria-pressed="${r.fm === f}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${f}</button>`).join('');
@@ -1380,6 +1404,11 @@ function openSheet() {
   syncSheet();
 }
 $('gear').onclick = openSheet; $('bannerBtn').onclick = openSheet;
+// Settings > Design, its first section: Vintage or Standard, on this phone, at once (../home/design.js).
+// Not part of anything saved: a tap switches the design there and then.
+if (window.aosDesign) { $('designBox').innerHTML = aosDesign.picker(); aosDesign.bind($('designBox')); }
+// A new design: the colours the scripts draw (dual(), above) are drawn again; bg.js does the background.
+addEventListener('aos:design', () => render());
 dragToClose(sheetWrap); dragToClose(unitWrap); dragToClose(thermoWrap); dragToClose(devWrap);
 
 let statusDetail = '';
@@ -1412,6 +1441,7 @@ function showView(v) {
   $('vJoin').hidden = v !== 'join';
   $('vAccess').hidden = v !== 'access';
   $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join' || v === 'access';
+  $('designBlock').hidden = !window.aosDesign || $('custBlock').hidden;   // Design: with Settings itself, not its sub-views
   if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
   $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : v === 'access' ? 'Devices with access' : 'Settings';
   const done = v === 'locked' || v === 'edit', cb = $('sheetClose');   // Settings closes with a Done tick; its sub-views with a cross

@@ -28,7 +28,8 @@ const BLINKS = [['yard', 'Yard'], ['garage', 'Garage'], ['kitchen', 'Kitchen'], 
   temp: `sensor.blink_${k}_temperature`, wifi: `sensor.blink_${k}_wi_fi_signal_strength`, pause: `script.pause_${k}_camera_motion_detection`,
   pauseOnCard: k === 'yard' }));   // the Yard's pause is used often enough to sit on its card
 const PAUSES = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [240, '4 hours']];
-const SEC_ACC = { armed: '78,161,255', disarmed: '154,160,166', arming: '255,180,78', triggered: '255,92,92', offline: '154,160,166' };
+const SEC_ACC = dual({ armed: '78,161,255', disarmed: '154,160,166', arming: '255,180,78', triggered: '255,92,92', offline: '154,160,166' },
+  { armed: '47,140,134', disarmed: '154,145,130', arming: '227,167,47', triggered: '184,69,43', offline: '154,145,130' });   // Vintage: Retro (dual, app.js)
 // Front-door events are timestamps; their type reads better without "camera_".
 const evWhen = id => { const v = val(id); return v && v !== 'unknown' && v !== 'unavailable' ? ago(v) : 'None'; };
 const evWhat = id => String(attr(id, 'event_type') || '').replace(/^camera_/, '').replace(/_/g, ' ');
@@ -111,7 +112,7 @@ family({
     put(el.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
     put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''));
     put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
-      <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? '48,209,88' : '255,180,78')}</button>`);
+      <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? PAL.on : PAL.amber)}</button>`);
     const pz = el.querySelector('[data-r="pause"]');
     if (pz) {
       const left = this.pauseLeft(c, r);
@@ -142,12 +143,12 @@ family({
     const dbm = num(c.wifi), wifi = isNaN(dbm) ? '—' : Math.round(dbm) + ' dBm · ' + (dbm >= -60 ? 'Strong' : dbm >= -70 ? 'Fair' : 'Weak');
     const mo = st(c.motion), low = isOn(c.battery), tu = attr(c.temp, 'unit_of_measurement') || '°';
     return {
-      title: c.name, accent: r.badge === 'active' ? '48,209,88' : r.badge === 'standby' ? '255,180,78' : '154,160,166',
-      fx: skyHTML(grad('#121316', '#1C1D21', '#2C2E34'), '190,194,204', {}, 150), pill: pillHTML2(r.badge === 'active' ? 'Active' : r.badge === 'standby' ? 'Standby' : 'Off', r.badge === 'active' ? '48,209,88' : r.badge === 'standby' ? '255,180,78' : ''),
+      title: c.name, accent: r.badge === 'active' ? PAL.on : r.badge === 'standby' ? PAL.amber : '154,160,166',
+      fx: skyHTML(grad('#121316', '#1C1D21', '#2C2E34'), '190,194,204', {}, 150), pill: pillHTML2(r.badge === 'active' ? 'Active' : r.badge === 'standby' ? 'Standby' : 'Off', r.badge === 'active' ? PAL.on : r.badge === 'standby' ? PAL.amber : ''),
       parts: [
         ['view', `<div class="camv">${this.snap('', r.pic, '', this.ageOf(c, r))}</div>`],
         ['acts', `<div class="camacts"><button class="ghost big" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Take a snapshot</button></div><p class="tnote">Blink sends stills, not video. A new one takes about 8 seconds.</p>`],
-        ['motion', grp(swRow('motion', 'Motion detection', 'motion', r.on, sys.armed ? '48,209,88' : '255,180,78', { dis: gone(c.sw), wait: tWaiting(r.d, 'sw'), sub: r.on && !sys.armed ? 'On, but the system is disarmed' : '' }), true)],
+        ['motion', grp(swRow('motion', 'Motion detection', 'motion', r.on, sys.armed ? PAL.on : PAL.amber, { dis: gone(c.sw), wait: tWaiting(r.d, 'sw'), sub: r.on && !sys.armed ? 'On, but the system is disarmed' : '' }), true)],
         ['pause', (() => { const left = this.pauseLeft(c, r);
           return `<div class="glbl cp-lbl"><span>PAUSE MOTION DETECTION</span>${this.pauseLine(c, r)}</div>` + chipsHTML('pause', PAUSES, left && left.mins != null ? left.m : null, { dis: !r.on && !left }); })()],
         ['read', lbl('READINGS') + grp(readRow('motion', 'Last motion', mo && mo.state === 'on' ? 'Detected' : mo && mo.lc ? ago(mo.lc) : '—')

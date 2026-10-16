@@ -1,6 +1,8 @@
 // Notes, against hostile data: nothing from a backup file, the Sheet or what
 // is already stored can become part of the page, and a setup link says where
-// it points and doesn't change anything until Connect works.
+// it points and doesn't change anything until Connect works. In Vintage (the
+// default design) and, for what is drawn differently (a list's colour), in
+// Standard too.
 //
 //   node notes/scripts/security-test.mjs [repo root]
 //
@@ -51,24 +53,27 @@ const browser = await chromium.launch();
 const errors = [];
 const fresh = async () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.addInitScript(() => { try { localStorage.getItem('aos.seen') || localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); } catch (e) {} });   // no aOS walkthrough over the page
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(BASE + '/notes/');
   await page.evaluate(seed => { localStorage.clear(); localStorage.setItem('allison-notes-v1', JSON.stringify(seed)); }, seed);
   return page;
 };
 
-// 1. Already stored on the phone (from before this fix).
-{
+// 1. Already stored on the phone (from before this fix), in both designs: Vintage draws the seven list colours as
+// Retro tokens, Standard as the hex itself.
+for (const [design, want] of [['vintage', '--lc:var(--lc0);--lci:var(--lci0)'], ['glass', '--lc:#3B82F6']]) {
   const page = await fresh();
   const e = evil('stored');
-  await page.evaluate(([seed, e]) => localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: e.notes, lists: seed.lists.concat(e.lists), todos: e.todos })), [seed, e]);
+  await page.evaluate(([seed, e, design]) => { localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: e.notes, lists: seed.lists.concat(e.lists), todos: e.todos })); localStorage.setItem('design.notes', design); }, [seed, e, design]);
   await showReminders(page);
-  ok('stored data: nothing runs', !(await pwned(page)), await pwned(page));
+  const D = design === 'glass' ? ' (Standard)' : ' (Vintage)';
+  ok('stored data: nothing runs' + D, !(await pwned(page)), await pwned(page));
   const chip = await page.$$eval('#listChips [data-list]', bs => bs.map(b => b.dataset.list));
-  ok('stored data: the odd list id is kept as plain text', chip.includes(e.lists[0].id), JSON.stringify(chip));
+  ok('stored data: the odd list id is kept as plain text' + D, chip.includes(e.lists[0].id), JSON.stringify(chip));
   // (it is fixed as Notes loads; the stored copy is rewritten on the next save)
   const style = await page.evaluate(() => [...document.querySelectorAll('#listChips [data-list]')].find(b => b.textContent.includes('Evil stored'))?.getAttribute('style'));
-  ok('stored data: a bad list colour is drawn as a plain colour', style === '--lc:#3B82F6', String(style));
+  ok('stored data: a bad list colour is drawn as the first list colour, never as the stored text' + D, style === want, String(style));
   await page.close();
 }
 

@@ -1,7 +1,8 @@
 // Ipsy: the AllisonOS helper you chat with. A little stem cell that changes into other cells
-// as it works, in the look of the app it's in (Sea glass, or Vintage with data-look="vintage").
+// as it works, in the look of the app it's in: the design picked in its Settings (../home/design.js,
+// data-look on <html>: Vintage or Sea glass), following a change at once (aos:design, aos:look).
 //
-//   <script src="../home/ipsy.js" data-look="vintage"></script>     (before the app's script)
+//   <script src="../home/ipsy.js"></script>     (before the app's script)
 //   AllisonOS.ipsy.mount({
 //     app: 'orders',                      // its own storage: ipsy.<app>.*
 //     endpoint: '../orders/api/ipsy',     // the app's server route: adds Ipsy's instructions and
@@ -30,7 +31,13 @@
   const AOS = window.AllisonOS = window.AllisonOS || {};
   if (AOS.ipsy) return;
   const me = document.currentScript;
-  const LOOK = me && me.dataset.look === 'vintage' ? 'vintage' : 'glass';
+  // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
+  const FIXED = me && me.dataset.look;
+  const LOOK = () => (FIXED || document.documentElement.dataset.look) === 'vintage' ? 'vintage' : 'glass';
+  const followers = new Set();                       // elements that wear the page's look
+  const wear = el => { const l = LOOK(); el.classList.toggle('ipsy-vintage', l === 'vintage'); el.classList.toggle('ipsy-glass', l !== 'vintage'); };
+  const follow = el => { followers.add(el); wear(el); };
+  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(wear));
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ls = {
@@ -294,7 +301,7 @@
 
     // The button
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'ipsy-btn ipsy-' + LOOK; btn.setAttribute('aria-label', 'Ask Ipsy'); btn.setAttribute('aria-haspopup', 'dialog');
+    btn.type = 'button'; btn.className = 'ipsy-btn'; follow(btn); btn.setAttribute('aria-label', 'Ask Ipsy'); btn.setAttribute('aria-haspopup', 'dialog');
     btn.innerHTML = '<span class="ipsy-host"></span>';
     if (o.slot) { o.slot.textContent = ''; o.slot.appendChild(btn); }
     else { btn.style.cssText = 'position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5'; document.body.appendChild(btn); }
@@ -302,7 +309,7 @@
 
     // The sheet
     const wrap = document.createElement('div');
-    wrap.className = 'ipsy-wrap ipsy-' + LOOK; wrap.hidden = true;
+    wrap.className = 'ipsy-wrap'; follow(wrap); wrap.hidden = true;
     wrap.innerHTML = '<div class="ipsy-scrim" data-close></div>'
       + '<section class="ipsy-sheet" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
       + '<span class="ipsy-peek ipsy-host"></span>'
@@ -512,7 +519,7 @@
     addStyle();
     host.classList.add('ipsy-host');
     const setLook = l => { host.classList.toggle('ipsy-vintage', l === 'vintage'); host.classList.toggle('ipsy-glass', l !== 'vintage'); };
-    setLook(o.look || LOOK);
+    if (o.look) setLook(o.look); else follow(host);
     const c = addCell(host);
     c.live = !!o.live; c.form = FORMS[o.form] ? o.form : '';
     setMood(c, o.mood || 'idle');
@@ -524,5 +531,5 @@
     };
   }
 
-  AOS.ipsy = { mount, character, forms: Object.keys(FORMS), look: LOOK };
+  AOS.ipsy = { mount, character, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass'
 })();

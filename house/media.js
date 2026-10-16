@@ -30,6 +30,8 @@ const TVS = [
   { id: 'tv', name: 'Living Room TV', ent: 'media_player.65_oled', acc: '170,188,230', kind: 'tv' },
 ];
 const PLAYERS = [...SPEAKERS, ...TVS];
+// Each player's colour in the Vintage design (Retro: mustard, teal, burnt orange, olive), by id; tv: the Arc playing the TV
+const MEDIA_V = { kt: '227,167,47', lo: '47,140,134', of: '216,87,42', ar: '140,155,60', arTv: '47,140,134', mv: '184,69,43', nm: '196,170,120', atv: '227,167,47', tv: '47,140,134' };
 // MediaPlayerEntityFeature bits; a player that doesn't report them gets its kind's.
 const MF = { pause: 1, seek: 2, vol: 4, mute: 8, prev: 16, next: 32, on: 128, off: 256, source: 2048, shuffle: 32768, repeat: 262144, group: 524288 };
 const MF_KIND = { sonos: 1 | 2 | 4 | 8 | 16 | 32 | 32768 | 262144 | 524288, nest: 1 | 4 | 8 | 256, atv: 1 | 2 | 4 | 8 | 16 | 32 | 128 | 256 | 2048, tv: 128 | 256 | 2048 };
@@ -59,7 +61,7 @@ function mediaFamily(cfg) {
       return { d, A, state, offline, playing, on, tv, mood, can: k => (sf & MF[k]) !== 0, vol, muted, group, dur, pos,
         art: haPic(A.entity_picture), shuffle: !!held(d, 'shuffle', A.shuffle), repeat: held(d, 'repeat', A.repeat || 'off') };
     },
-    acc(p, r) { return r.mood === 'tv' && p.tvAcc ? p.tvAcc : p.acc; },
+    acc(p, r) { const v = vintageLook(); return r.mood === 'tv' && p.tvAcc ? (v ? MEDIA_V[p.id + 'Tv'] : p.tvAcc) : (v && MEDIA_V[p.id]) || p.acc; },
     sky(p, r) {
       const a = this.acc(p, r);
       if (r.mood === 'offline') return grad('#121316', '#1C1D21', '#2C2E34');
@@ -170,7 +172,7 @@ function mediaFamily(cfg) {
           p.kind === 'tv' && Array.isArray(A.source_list) && r.on ? ['src', lbl('SOURCE') + `<div class="tiles nodrag">${A.source_list.slice(0, 9).map(x => `<button class="tile${A.source === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${esc(x)}</button>`).join('')}</div>`] : null,
           p.kind !== 'sonos' ? ['power', grp(p.kind === 'nest'
             ? actRow('turnoff', 'Turn off', 'power', { dis: dis || r.state === 'off' })
-            : swRow('tvpower', 'Power', 'power', r.on, '48,209,88', { dis, wait: tWaiting(r.d, 'state') }), true)] : null,
+            : swRow('tvpower', 'Power', 'power', r.on, PAL.on, { dis, wait: tWaiting(r.d, 'state') }), true)] : null,
           sonos && favs.length ? ['favs', lbl('FAVORITES') + `<div class="tiles nodrag">${favs.map(([fid, t]) => `<button class="tile${[A.media_title, A.media_album_name, A.media_playlist, A.media_channel].includes(t) ? ' on' : ''}" data-a="fav" data-v="${esc(fid)}"${dis ? ' disabled' : ''}>${esc(t)}</button>`).join('')}</div>`] : null,
           sonos ? ['play', lbl('PLAYBACK') + grp(
             (r.can('shuffle') ? swRow('shuffle', 'Shuffle', 'shuffle', r.shuffle, a, { dis, wait: tWaiting(r.d, 'shuffle') }) : '')

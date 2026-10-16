@@ -4,7 +4,8 @@
 // (AllisonOS.layer in home/welcome.js) to the real functions/aOS/api code on an
 // in-memory KV; then Calendar, with none of their data in its own storage, shows
 // them all. Also: only changes are sent, Notes' samples never are, and signed out,
-// Calendar says to sign in.
+// Calendar says to sign in. Calendar is checked at its old Calendar Vintage address too (served from
+// calendar/, as the deploy does), which reads the same layers.
 //   node calendar/scripts/layers-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -23,6 +24,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/calendarvintage\//, '/calendar/');   // the old Calendar Vintage address: the deploy copies calendar/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -100,8 +102,8 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
 
 await putJSON(db, 'layer:mail:O1', { at: Date.now(), data: { items: [{ id: 'th1', date: TOMORROW, subject: 'Book the vet', from: 'Sam' }] } });
 
-await test('Calendar, with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
-  const { page, ctx } = await app('calendar');
+for (const dir of ['calendar', 'calendarvintage']) await test('Calendar (/' + dir + '/), with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
+  const { page, ctx } = await app(dir);
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
   await page.waitForTimeout(400);
   const kinds = await page.evaluate(() => { const c = window.__calendar; return [...new Set(c.st.all ? c.st.all.map(x => x.kind) : [])]; }).catch(() => []);

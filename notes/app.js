@@ -1,5 +1,7 @@
 // notes's own script, moved out of index.html so the page's
 // Content-Security-Policy can allow only this site's own files (script-src 'self').
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass), kept on
+// this phone (../home/design.js, as in Clock); Vintage draws list and tag colours in the Retro palette.
 (function(){
   const KEY = 'allison-notes-v1';
   const COLORS = ['none','yellow','green','blue','pink','purple'];
@@ -12,6 +14,13 @@
   const okId = v => typeof v === 'string' && v.length > 0 && v.length <= 100;
   const okHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
   const hexOr = c => okHex(c) ? c : LIST_COLORS[0];
+  // The design (../home/design.js): Vintage, the default, or Standard (Sea glass).
+  const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'vintage';
+  // A list's colour. Stored as one of the seven hex values whatever the design (so a list means the same
+  // everywhere, and in the Sheet). Standard draws it as it is; Vintage draws the seven as their Retro colours:
+  // --lc0..6, and the ink on each, --lci0..6, are tokens in index.html's #vintage block that follow Light and
+  // Dark. Any other (valid) hex is drawn as it is in both.
+  const lcStyle = c => { const i = vintage() ? LIST_COLORS.findIndex(x => x.toLowerCase() === String(c).toLowerCase()) : -1; return i < 0 ? '--lc:' + hexOr(c) : '--lc:var(--lc' + i + ');--lci:var(--lci' + i + ')'; };
   const prioOf = t => [0, 1, 2, 3].includes(t.prio) ? t.prio : 0;
   const strs = a => Array.isArray(a) && a.every(x => typeof x === 'string');
   function saneList(l){
@@ -96,11 +105,13 @@
   // localStorage is cleared or full (every AllisonOS app shares its space).
   const keep = (() => {
     let db = null;
-    const open = () => db || (db = new Promise((res, rej) => {
+    // opened after the old Notes Vintage app's copy is moved over, if it is (../home/design.js)
+    const moved = () => Promise.resolve(window.aosDesign && aosDesign.moved).catch(() => {});
+    const open = () => db || (db = moved().then(() => new Promise((res, rej) => {
       const r = indexedDB.open('allison-notes', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    }));
+    })));
     const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
       const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
       t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
@@ -161,9 +172,15 @@
   const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const normTag = s => s.trim().replace(/^#+/,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-_]/g,'');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
+  // A tag's colour is picked from its name (one of ten, by a sum of its letters). Standard draws it as a hue of the
+  // colour wheel (--h); Vintage as one of ten Retro colours, the tokens --tc0..9 in index.html's #vintage block
+  // (teal, orange, plum, olive, rose, mustard, light teal, walnut, denim, brick), which follow Light and Dark. Both
+  // are set, so a tag is right in either design with no redraw.
   const HUES = [211, 28, 268, 162, 340, 45, 190, 300, 120, 10];
-  const hue = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return HUES[h % HUES.length]; };
-  const tchip = (t, q) => '<span class="tchip" style="--h:'+hue(t)+'">'+hl(t, q)+'</span>';
+  const tagN = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % HUES.length; };
+  const hue = t => HUES[tagN(t)];
+  const tcv = t => '--h:' + hue(t) + ';--tc:var(--tc' + tagN(t) + ')';
+  const tchip = (t, q) => '<span class="tchip" style="'+tcv(t)+'">'+hl(t, q)+'</span>';
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
@@ -172,10 +189,15 @@
   // Calendar's Notes layer: dated reminders and notes with a nudge, kept in your own
   // family account (home/welcome.js AllisonOS.layer), since Calendar can't read this
   // app's storage on an iPhone. Only what Calendar shows; the last 400 days on.
+  // Its name in the account: 'notes', or 'notesv' at the old Notes Vintage address (which opens this same app,
+  // ../home/design.js), as that app sent it. The server shows the two together as Notes (functions/aOS/api, GET
+  // layer), so a phone with both Home Screen apps keeps two copies that never overwrite each other, and each stays
+  // up to date.
+  const LAYER = /^\/notesvintage\//.test(location.pathname) ? 'notesv' : 'notes';
   function shareCal(){
     const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
     const since = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10), cut = v => String(v || '').slice(0, 500);
-    L.share('notes', {
+    L.share(LAYER, {
       lists: lists.map(l => ({ id: l.id, name: l.name, color: l.color })),
       todos: todos.filter(t => t && t.date && t.date >= since).map(t => ({ id: t.id, title: t.title, date: t.date, time: t.time || '', done: !!t.done, notes: cut(t.notes), flagged: !!t.flagged, list: t.list })),
       notes: notes.filter(n => n && n.reminder && !n.deletedAt && !n.archived).map(n => ({ id: n.id, title: n.title, body: cut(n.body), reminder: n.reminder })),
@@ -293,7 +315,7 @@
       getItem().tags.forEach(t => {
         const s = document.createElement('span');
         s.className = 'tchip';
-        s.style.setProperty('--h', hue(t));
+        s.style.setProperty('--h', hue(t)); s.style.setProperty('--tc', 'var(--tc' + tagN(t) + ')');
         s.innerHTML = esc(t)+'<button type="button" aria-label="Remove tag '+esc(t)+'">'+I.x+'</button>';
         s.querySelector('button').onclick = () => { const it = getItem(); it.tags = it.tags.filter(x => x !== t); render(); };
         input.before(s);
@@ -430,11 +452,11 @@
       if (pinned.length) h += '<section><h2 class="sechead">Pinned</h2>' + grid(pinned) + '</section>';
       const tags = countTags(live), untagged = live.filter(n => !n.tags.length);
       const latest = t => live.filter(n => t ? n.tags.includes(t) : !n.tags.length).sort(byCreated)[0];
-      const tile = (coll, name, count, h, last, i) => '<button class="ctile glass" type="button" style="--h:' + h + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
+      const tile = (coll, name, count, tag, last, i) => '<button class="ctile glass" type="button" style="' + (tag == null ? '--h:0;--tc:var(--tc0)' : tcv(tag)) + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
         + '<span class="ctop"><i></i><span class="cn">' + count + '</span></span><span class="cname">' + esc(name) + '</span>'
         + '<span class="clast">' + esc(last ? (last.title || snippet(last) || 'Untitled') : '') + '</span></button>';
-      const tiles = tags.map(([t, k], i) => tile('tag:' + t, collName('tag:' + t), k, hue(t), latest(t), i));
-      if (untagged.length) tiles.push(tile('untagged', 'No tag', untagged.length, 0, latest(null), tiles.length).replace('class="ctile glass"', 'class="ctile glass plain"'));
+      const tiles = tags.map(([t, k], i) => tile('tag:' + t, collName('tag:' + t), k, t, latest(t), i));
+      if (untagged.length) tiles.push(tile('untagged', 'No tag', untagged.length, null, latest(null), tiles.length).replace('class="ctile glass"', 'class="ctile glass plain"'));
       if (tiles.length) h += '<section><h2 class="sechead">Collections</h2><div class="ctiles">' + tiles.join('') + '</div></section>';
       const recent = live.slice().sort(byCreated).slice(0, 5);
       if (recent.length) h += '<section><h2 class="sechead">Recent</h2><div class="rgroup glass nlist">' + recent.map(nrow).join('') + '</div></section>';
@@ -567,7 +589,7 @@
   }
   function renderQuickTag(){
     qtTags.render();
-    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="--lc:hsl(' + hue(t) + ' 90% 62%)"><span class="sw"></span>' + esc(t) + '</button>').join('');
+    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="' + (vintage() ? '--lc:var(--tc' + tagN(t) + ')' : '--lc:hsl(' + hue(t) + ' 90% 62%)') + '"><span class="sw"></span>' + esc(t) + '</button>').join('');
   }
   $('qtAll').addEventListener('click', e => { const b = e.target.closest('[data-qt]'); if (!b) return; const t = b.dataset.qt; qt.tags = qt.tags.includes(t) ? qt.tags.filter(x => x !== t) : [...qt.tags, t]; renderQuickTag(); });
   function finishQuickTag(){
@@ -751,7 +773,7 @@
     if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+(alertsHere(t) ? I.bell : I.clock)+esc(fmtDue(t))+'</span>');
     if (!st.rlist) meta.push('<span class="tchip lst">'+esc(l.name)+'</span>');
     t.tags.forEach(x => meta.push(tchip(x, st.rq)));
-    return '<div class="todo'+(t.done ? ' done' : '')+'" style="--lc:'+hexOr(l.color)+';--i:'+(i||0)+'">'
+    return '<div class="todo'+(t.done ? ' done' : '')+'" style="'+lcStyle(l.color)+';--i:'+(i||0)+'">'
       + '<button class="check" type="button" role="checkbox" aria-checked="'+!!t.done+'" data-check="'+esc(t.id)+'" aria-label="Complete '+esc(t.title)+'">'+I.check+'</button>'
       + '<button class="tbody" type="button" data-todo="'+esc(t.id)+'"><span class="t">'+hl(t.title, st.rq)+'</span>'
       + (t.notes ? '<span class="n">'+hl(t.notes.split('\n')[0], st.rq)+'</span>' : '')
@@ -796,7 +818,7 @@
     let c = '<button class="chip glass" type="button" data-list="" aria-pressed="'+(!st.rlist)+'">All lists</button>';
     lists.forEach(l => {
       const n = todos.filter(t => !t.done && t.list === l.id).length;
-      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)+' <span class="n">'+n+'</span></button>';
+      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)+' <span class="n">'+n+'</span></button>';
     });
     c += '<button class="chip ghost" type="button" id="addList">'+I.plus+'List</button>';
     $('listChips').innerHTML = c;
@@ -916,7 +938,7 @@
       $('tdAisle').innerHTML = '<button class="opt" type="button" role="radio" data-ai="" aria-checked="'+!cur+'">Auto · '+esc(AISLE.NAMES[auto])+'</button>'
         + AISLE.SECTIONS.map(x => '<button class="opt" type="button" role="radio" data-ai="'+x.id+'" aria-checked="'+(cur === x.id)+'">'+esc(x.name)+'</button>').join('');
     }
-    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
     todoTags.render();
     slideTodo();
@@ -992,7 +1014,7 @@
     $('lsName').focus();
   }
   function renderListColors(){
-    $('lsColors').innerHTML = LIST_COLORS.map(c => '<button class="swatch list" type="button" role="radio" data-c="'+c+'" style="--lc:'+c+'" aria-label="Color '+c+'" aria-checked="'+(st.listEdit.color === c)+'"></button>').join('');
+    $('lsColors').innerHTML = LIST_COLORS.map(c => '<button class="swatch list" type="button" role="radio" data-c="'+c+'" style="'+lcStyle(c)+'" aria-label="Color '+c+'" aria-checked="'+(st.listEdit.color === c)+'"></button>').join('');
   }
   const editGrocery = () => isGrocery(Object.assign({}, st.listEdit, {name: $('lsName').value}));
   function renderListGrocery(){ $('lsGrocery').setAttribute('aria-checked', editGrocery()); }
@@ -1618,7 +1640,7 @@
       : !syncCfg ? PUSH_ERRORS['no-sheet']
       : on ? 'On in ' + place() + '. Reminders alert here at their Alert time, even with Notes closed.'
       : 'Get an alert on this phone when a reminder is due or a note’s nudge comes round, even with Notes closed.';
-    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="--lc:'+hexOr(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('puNudges').setAttribute('aria-checked', push.nudges);
     $('puMorning').value = push.morning;
   }
@@ -1721,6 +1743,12 @@
     const days = Math.floor((Date.now() - t) / D);
     return 'Last backup ' + (days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago') + '.';
   }
+  // Settings > Design, the sheet's first section: Vintage or Standard, at once, just on this phone (../home/design.js).
+  // Drawn once; design.js keeps its ticks right. A change redraws what is drawn in script (list and tag colours)
+  // and slides the thumbs again (Futura and the system font are different widths).
+  if (window.aosDesign) { $('bkDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('bkDesign')); }
+  else $('bkDesign').closest('.field').hidden = true;
+  addEventListener('aos:design', () => { render(); requestAnimationFrame(() => { slideTabs(true); slideRem(true); }); });
   document.addEventListener('click', e => {
     if (!e.target.closest('[data-open-backup]')) return;
     $('bkStatus').textContent = backupStatus();

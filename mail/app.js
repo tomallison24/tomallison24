@@ -1,3 +1,6 @@
+// Mail - Gmail triage as a home-screen app (index.html says what it does).
+// Two designs, picked in Settings > Design: Vintage (the default) and Standard
+// (Sea glass), kept on this phone (../home/design.js, as in Clock).
 "use strict";
 
 // Refuse to run inside another page's frame. A hostile site could otherwise
@@ -1969,7 +1972,9 @@ function viewSettings() {
   const ic = s => '<span class="ic">' + s + '</span>';
   const UP = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.6"/><path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0"/><path d="M16.6 5a3.4 3.4 0 0 1 0 6.6"/><path d="M18.2 14a5.6 5.6 0 0 1 3 5.2"/></svg>';
   const OUT = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M10 4H6.8A2.8 2.8 0 0 0 4 6.8v10.4A2.8 2.8 0 0 0 6.8 20H10"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9.6"/></svg>';
-  return '<p class="label">Account</p>' +
+  return (window.aosDesign ? '<p class="label">Design</p><div class="sgroup">' + aosDesign.picker() + '</div>' +
+      '<p class="hint">Just on this phone, and at once.</p>' : '') +
+    '<p class="label">Account</p>' +
     '<div class="sgroup">' +
       '<div class="frow"><span class="l">Signed in</span><span class="v">' + esc(state.me || '—') + '</span></div>' +
       '<div class="frow"><span class="l">Filter permission</span><span class="v">' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
@@ -3765,6 +3770,7 @@ addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && pull) pu
 addEventListener('pointerup', e => { if (e.pointerType === 'mouse') pullEnd(); });
 
 $('#gear').addEventListener('click', () => { if (state.sheet?.settings) closeSheet(); else openSettings(); });
+if (window.aosDesign) aosDesign.bind($('#sheet'));   // Settings > Design: Vintage or Standard, at once, not part of the tick's save (../home/design.js)
 
 function findItem(id) {
   if (state.reading?.item.id === id) return state.reading.item;
@@ -4307,6 +4313,8 @@ document.addEventListener('pointerdown', e => {
 }, { passive: true });
 
 addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideNotify(true); slideTags(true); });
+// Futura (Vintage) and the system font (Standard) are different widths: fit the title and place the sliding thumbs again
+addEventListener('aos:design', () => requestAnimationFrame(() => { fitTitle(); slideSeg(true); slideNotify(true); slideTags(true); }));
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out

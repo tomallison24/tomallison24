@@ -1,6 +1,6 @@
 // /orders/api/* - Orders' "Fix with Claude": one order email, read by Claude when the
 // words-only reader (orders/parse.js) got it wrong or wasn't sure; and Ipsy, the helper you
-// chat with. Locked to signed-in family by _middleware.js. Orders and Orders Vintage both call it.
+// chat with. Locked to signed-in family by _middleware.js.
 //
 //   POST read   { subject, from, date, text } -> { fact }   or   { fact: null, reason: 'not-an-order' }
 //                 text: the email as plain text, links already removed by the app, up to MAX_TEXT
