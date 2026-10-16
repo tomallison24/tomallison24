@@ -21,9 +21,9 @@
 // - What a web app can't do: ring while it's closed or the phone is locked. A ring that
 //   came due then is listed under Alarms as missed when Clock is next opened (or rings,
 //   if it's less than ten minutes late).
-// - Everything is kept on this phone, in localStorage (the key is the page's aos-store
-//   meta, so Clock and Clock Vintage each keep their own). This file is the same, byte for
-//   byte, in clock/ and clockvintage/ (clockvintage/scripts/same-reader-test.mjs).
+// - Everything is kept on this phone, in localStorage (the key is the page's aos-store meta).
+// - Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass).
+//   design.js applies the one kept in set.design before the page is drawn.
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -95,7 +95,7 @@ if (window.top !== window.self) {
       recents: (Array.isArray(d.recents) ? d.recents : []).filter(r => r && r.dur > 0).slice(0, 10).map(r => ({ dur: +r.dur, label: String(r.label || '').slice(0, 40), sound: okSound(r.sound) })),
       pick: Object.assign({ h: 0, m: 5, s: 0 }, d.pick && typeof d.pick === 'object' ? d.pick : {}),
       tsound: okSound(d.tsound || 'twinbell'),
-      set: Object.assign({ h24: false, secs: false, analog: false }, d.set && typeof d.set === 'object' ? d.set : {}),
+      set: Object.assign({ h24: false, secs: false, analog: false, design: 'vintage' }, d.set && typeof d.set === 'object' ? d.set : {}),
       missed: (Array.isArray(d.missed) ? d.missed : []).filter(x => x && x.at).slice(-10),
       tz: typeof d.tz === 'string' ? d.tz : '',
     };
@@ -107,6 +107,7 @@ if (window.top !== window.self) {
     S.sw.laps = Array.isArray(S.sw.laps) ? S.sw.laps.filter(n => typeof n === 'number' && n >= 0) : [];
     S.sw.acc = +S.sw.acc || 0; S.sw.t0 = +S.sw.t0 || 0; S.sw.run = !!S.sw.run && S.sw.t0 > 0;
     if (S.sw.face !== 'analog') S.sw.face = 'digital';
+    if (S.set.design !== 'glass') S.set.design = 'vintage';
     ['h', 'm', 's'].forEach(k => { const v = Math.floor(+S.pick[k] || 0); S.pick[k] = Math.max(0, Math.min(k === 'h' ? 23 : 59, v)); });
     return S;
   }
@@ -134,8 +135,8 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
-  // Faces: one SVG (200 x 200), its hands turned by setHands. Clock Vintage's
-  // style sheet shows the starburst (.rays) behind it; the standard one hides it.
+  // Faces: one SVG (200 x 200), its hands turned by setHands. The Vintage design's
+  // style sheet shows the starburst (.rays) behind it; Standard hides it.
   // ---------------------------------------------------------------------
   function faceSVG(kind) {
     const big = kind === 'big', P = (r, a) => [100 + r * Math.sin(a * Math.PI / 180), 100 - r * Math.cos(a * Math.PI / 180)].map(v => v.toFixed(2));
@@ -783,11 +784,19 @@ if (window.top !== window.self) {
   // Settings
   // ---------------------------------------------------------------------
   function paintSettings() {
+    document.querySelectorAll('#setDesign [data-design]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.design === S.set.design)));
     $('set24').setAttribute('aria-checked', String(!!S.set.h24));
     $('setSecs').setAttribute('aria-checked', String(!!S.set.secs));
     $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
   }
   $('setBtn').addEventListener('click', () => { paintSettings(); openSheet('setSheet'); });
+  // Design: Vintage or Standard, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+  $('setDesign').addEventListener('click', e => {
+    const b = e.target.closest('[data-design]'); if (!b || b.dataset.design === S.set.design) return;
+    S.set.design = b.dataset.design; save();
+    if (window.clockDesign) clockDesign.set(S.set.design);
+    paintSettings(); requestAnimationFrame(() => slideTabs(true));   // Futura and the system font are different widths
+  });
   [['set24', 'h24'], ['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
   $('setTest').addEventListener('click', () => {
     const a = S.alarms.find(x => x.on) || S.alarms[0];

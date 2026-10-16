@@ -1,12 +1,12 @@
 {
   "name": "Clock",
   "short_name": "Clock",
-  "description": "Clock for AllisonOS: the time around the world, alarms with a sleep schedule, a stopwatch with laps, timers, and a bedside Nightstand.",
+  "description": "Clock for AllisonOS: the time around the world, alarms with a sleep schedule, a stopwatch with laps, timers, and a bedside Nightstand, in a mid-century Vintage design or Sea glass.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0D1213",
-  "theme_color": "#0D1213",
+  "background_color": "#241E1A",
+  "theme_color": "#241E1A",
   "icons": [
     { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
     { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

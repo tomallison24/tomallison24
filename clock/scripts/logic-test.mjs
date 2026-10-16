@@ -1,4 +1,4 @@
-// Clock's sums and sounds (clock/logic.js, the same file as clockvintage/logic.js), in plain
+// Clock's sums and sounds (clock/logic.js), in plain
 // Node, in New York's time zone: when an alarm next rings (once, on its days, skipping one,
 // across summer time starting and ending, the end of a month and of a year), the repeat in
 // words, the sleep schedule, how a city stands against here (a zone half an hour off too),

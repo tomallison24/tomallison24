@@ -1,5 +1,5 @@
-// Drives Clock (or Clock Vintage: pass clockvintage) in headless Chromium at iPhone size, as a
-// person would, with the page's clock held at a made-up moment (Wednesday, March 11, 2026,
+// Drives Clock in headless Chromium at iPhone size, as a person would, in each of its two
+// designs (Vintage in Light, Standard in Dark), with the page's clock held at a made-up moment (Wednesday, March 11, 2026,
 // 8:00 AM in New York) and moved on by the test, so it works on any day and at any hour:
 //   - World Clock: a city found and added, its time and how far ahead it is; removed with
 //     Edit, and Undo
@@ -11,13 +11,14 @@
 //     running after a reload
 //   - Timers: a quick length, a label, pause and resume, it rings, Repeat, cancel, Recents
 //   - Nightstand opens and closes; Settings' 24-hour time changes the digits
-//   - its storage is its own; the look is its own (Vintage: Futura, starburst faces, a mustard
-//     tab thumb; Standard: no starburst), light and dark; no script errors and nothing the
-//     page's Content Security Policy blocks
+//   - each design looks like itself (Vintage: Futura, starburst faces, a mustard tab thumb, the
+//     sky; Standard: Sea glass, no starburst, no sky), and Settings > Design switches between
+//     them at once, keeps the choice, and gives iOS the right icon and status bar
+//   - no script errors and nothing the page's Content Security Policy blocks
 // Screenshots go to the folder given as the second argument.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node clock/scripts/app-test.mjs [clock|clockvintage] [screenshot dir]
+//   node clock/scripts/app-test.mjs [screenshot dir]
 process.env.TZ = 'America/New_York';   // this test's own dates read in New York's time, as the page's do
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -28,13 +29,11 @@ import assert from 'assert/strict';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
-const APP = process.argv[2] || 'clock';
-assert.ok(['clock', 'clockvintage'].includes(APP), 'clock or clockvintage');
-const SHOTS = process.argv[3] || '';
+const APP = 'clock';
+const SHOTS = process.argv[2] || '';
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 const ROOT = path.resolve(new URL('../..', import.meta.url).pathname);
-const KEY = APP === 'clock' ? 'allison-clock-v1' : 'allison-clockv-v1', OTHER = APP === 'clock' ? 'allison-clockv-v1' : 'allison-clock-v1';
-const VINTAGE = APP === 'clockvintage';
+const KEY = 'allison-clock-v1';
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
@@ -63,13 +62,13 @@ async function open(scheme, seed) {
   page.on('response', r => { if (r.status() >= 400 && !/\/aOS\/api\//.test(r.url())) errors.push('response ' + r.status() + ': ' + r.url()); });
   await page.clock.install({ time: T0.getTime() - 20e3 });
   await page.addInitScript(([app, key, seed]) => {
+    window.__csp = window.__csp || [];   // what the page's Content Security Policy blocks, on every load
+    document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI));
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('aos.seen', JSON.stringify({ [app]: '999' }));
     localStorage.setItem('aos.sky', 'day');
     if (seed) localStorage.setItem(key, JSON.stringify(seed));
-    window.__csp = [];
-    document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI));
   }, [APP, KEY, seed || null]);
   await page.goto(BASE + '/' + APP + '/');
   await page.waitForSelector('#hero svg');
@@ -81,8 +80,21 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const text = (page, sel) => page.locator(sel).first().innerText();
 const stored = page => page.evaluate(k => JSON.parse(localStorage.getItem(k) || '{}'), KEY);
 
-for (const scheme of ['light', 'dark']) {
-  const { ctx, page, errors } = await open(scheme);
+const look = page => page.evaluate(() => ({
+  look: document.documentElement.getAttribute('data-look'),
+  sky: document.documentElement.getAttribute('data-sky'),
+  font: getComputedStyle(document.body).fontFamily,
+  rays: getComputedStyle(document.querySelector('#hero .rays')).display,
+  thumb: getComputedStyle(document.querySelector('#tabs .slthumb')).backgroundColor,
+  touch: document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'),
+  bar: document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content,
+}));
+const isVintage = l => { assert.equal(l.look, 'vintage'); assert.match(l.font, /Futura/); assert.notEqual(l.rays, 'none', 'starburst faces'); assert.equal(l.thumb, 'rgb(227, 167, 47)', 'a mustard tab thumb'); assert.equal(l.sky, 'day', 'the Vintage sky'); assert.match(l.touch, /^icon-180\.png/); assert.equal(l.bar, 'default'); };
+const isGlass = l => { assert.equal(l.look, 'glass'); assert.doesNotMatch(l.font, /Futura/); assert.equal(l.rays, 'none', 'no starburst in Sea glass'); assert.equal(l.sky, null, 'no sky in Sea glass'); assert.match(l.touch, /^icon-glass-180\.png/); assert.equal(l.bar, 'black-translucent'); };
+
+for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
+  const VINTAGE = design === 'vintage';
+  const { ctx, page, errors } = await open(scheme, VINTAGE ? null : { set: { design: 'glass' } });   // a new install opens in Vintage
 
   await step(`${scheme}: opens on World Clock with your own time`, async () => {
     assert.equal(await text(page, '#title'), 'World Clock');
@@ -92,24 +104,11 @@ for (const scheme of ['light', 'dark']) {
     assert.ok(await page.locator('#cityEmpty').isVisible());
   });
 
-  await step(`${scheme}: the look is ${VINTAGE ? 'Vintage' : 'Sea glass'}`, async () => {
-    const look = await page.evaluate(() => ({
-      font: getComputedStyle(document.body).fontFamily,
-      rays: getComputedStyle(document.querySelector('#hero .rays')).display,
-      thumb: getComputedStyle(document.querySelector('#tabs .slthumb')).backgroundColor,
-      tabsPos: getComputedStyle(document.querySelector('#tabs')).position,
-      tabsBottom: Math.round(innerHeight - document.querySelector('#tabs').getBoundingClientRect().bottom),
-    }));
-    assert.equal(look.tabsPos, 'fixed', 'the tab bar floats at the bottom');
-    assert.ok(look.tabsBottom >= 8 && look.tabsBottom <= 40, 'the tab bar sits at the bottom (' + look.tabsBottom + ')');
-    if (VINTAGE) {
-      assert.match(look.font, /Futura/);
-      assert.notEqual(look.rays, 'none', 'starburst faces');
-      assert.equal(look.thumb, 'rgb(227, 167, 47)', 'a mustard tab thumb');
-    } else {
-      assert.doesNotMatch(look.font, /Futura/);
-      assert.equal(look.rays, 'none', 'no starburst in Sea glass');
-    }
+  await step(`${scheme}: it opens in the ${VINTAGE ? 'Vintage' : 'Standard'} design`, async () => {
+    const tabs = await page.evaluate(() => ({ pos: getComputedStyle(document.querySelector('#tabs')).position, bottom: Math.round(innerHeight - document.querySelector('#tabs').getBoundingClientRect().bottom) }));
+    assert.equal(tabs.pos, 'fixed', 'the tab bar floats at the bottom');
+    assert.ok(tabs.bottom >= 8 && tabs.bottom <= 40, 'the tab bar sits at the bottom (' + tabs.bottom + ')');
+    (VINTAGE ? isVintage : isGlass)(await look(page));
     await shot(page, scheme + '-world-empty');
   });
 
@@ -278,9 +277,23 @@ for (const scheme of ['light', 'dark']) {
     assert.match(await text(page, '#heroT'), /^08:\d\d$/);
   });
 
-  await step(`${scheme}: its storage is its own, and nothing was blocked or broken`, async () => {
-    const s = await page.evaluate(([k, o]) => [!!localStorage.getItem(k), localStorage.getItem(o)], [KEY, OTHER]);
-    assert.equal(s[0], true); assert.equal(s[1], null);
+  await step(`${scheme}: Settings > Design switches the design at once, and keeps it`, async () => {
+    const other = VINTAGE ? 'glass' : 'vintage';
+    await page.click('#setBtn');
+    assert.equal(await page.locator(`#setDesign [data-design="${design}"]`).getAttribute('aria-checked'), 'true');
+    await page.click(`#setDesign [data-design="${other}"]`);
+    assert.equal(await page.locator(`#setDesign [data-design="${other}"]`).getAttribute('aria-checked'), 'true');
+    (VINTAGE ? isGlass : isVintage)(await look(page));
+    await shot(page, scheme + '-design-' + other);
+    await page.click('#setSheet .sheethead [data-close]');
+    assert.equal((await stored(page)).set.design, other);
+    await page.reload(); await page.waitForSelector('#hero svg'); await page.clock.runFor(300);
+    (VINTAGE ? isGlass : isVintage)(await look(page));
+    await page.click('#setBtn'); await page.click(`#setDesign [data-design="${design}"]`); await page.click('#setSheet .sheethead [data-close]');
+    (VINTAGE ? isVintage : isGlass)(await look(page));
+  });
+
+  await step(`${scheme}: nothing was blocked or broken`, async () => {
     const csp = await page.evaluate(() => window.__csp);
     assert.deepEqual(csp, []);
     assert.deepEqual(errors, []);

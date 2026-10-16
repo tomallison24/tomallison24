@@ -1,8 +1,7 @@
 "use strict";
 
 // Clock's sums, kept apart from the page so they can be tested in Node
-// (clock/scripts/logic-test.mjs). The same file, byte for byte, is
-// clockvintage/logic.js (clockvintage/scripts/same-reader-test.mjs checks it).
+// (clock/scripts/logic-test.mjs).
 //
 //   cities     a list of cities people look for, each with its time zone, and
 //              a search over them and over every zone the phone knows

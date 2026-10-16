@@ -42,16 +42,17 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
 // 1. one row per app: the designs of Mail, Orders, Home and the rest have no rows of their own, only a tag
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'clockvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
-  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks', 'notes', 'podcasts', 'places', 'meals', 'clock'];
+  for (const id of ['mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage']) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
+  const WITH_DESIGNS = ['mail', 'orders', 'house', 'calendar', 'news', 'weather', 'travel', 'fitness', 'drinks', 'notes', 'podcasts', 'places', 'meals'];
   for (const id of WITH_DESIGNS) {
     if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
     if (!/2 designs/.test(await text(p, `#list .row[data-app="${id}"] .dtag`))) pr.push(`${id}'s row does not say 2 designs`);
   }
-  // searching for a design finds the app that has it, once
+  // searching for a design finds the app that has it, once (Clock too: it has both designs in one app, picked in its Settings)
+  const IN_APP = ['clock'];
   await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
-  if ([...found].sort().join() !== [...WITH_DESIGNS].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + WITH_DESIGNS.join());
+  if ([...found].sort().join() !== [...WITH_DESIGNS, ...IN_APP].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not ' + [...WITH_DESIGNS, ...IN_APP].join());
   report('Every app with a design is one row, with a "2 designs" tag; their designs have no rows', pr); await ctx.close();
 }
 
@@ -126,7 +127,7 @@ const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => n
   const { ctx, p, errs } = await open({}, 'light', 'vintage'); const pr = [...errs];
   const gets = () => p.locator('#list .row [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get + '=' + new URL(b.href).pathname));
   let g = await gets();
-  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage'], ['notes', 'notesvintage'], ['podcasts', 'podcastsvintage'], ['places', 'placesvintage'], ['meals', 'mealsvintage'], ['clock', 'clockvintage']])
+  for (const [base, v] of [['mail', 'mailvintage'], ['weather', 'weathervintage'], ['news', 'newsvintage'], ['calendar', 'calendarvintage'], ['drinks', 'drinksvintage'], ['fitness', 'fitnessvintage'], ['travel', 'travelvintage'], ['orders', 'ordersvintage'], ['house', 'housevintage'], ['notes', 'notesvintage'], ['podcasts', 'podcastsvintage'], ['places', 'placesvintage'], ['meals', 'mealsvintage']])
     if (!g.includes(v + '=/' + v + '/')) pr.push('in the Vintage look ' + base + ' does not link to ' + v + ': ' + g.filter(x => x.startsWith(base) || x.startsWith(v)).join(' '));
   // the Today postcards and an app's page agree
   const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));

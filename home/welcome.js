@@ -90,7 +90,7 @@
         'Vintage apps have Weather\'s day and night sky: the sun by day, the moon and stars after sunset'],
       notes: ['Travel and Travel Vintage: an email with no date in it (Frontier\'s sometimes) is no longer dropped; it waits in To check until your calendar, a later email or you give it its day, and To check only lists what is still to come. The Family calendar now works both ways: flights, hotels and rental cars in it show up in Travel, and confirmed bookings are added to it, never twice. Where a booking is missing something, the airport\'s flight board can find a missing flight number, and a Check with AI button on the trip card (only when something is missing, and only when you press it) has Claude read that one email for it; anything filled in this way is marked Check. An Ask AI bar on Trips answers questions about your current, past and to-check trips (only when you ask). The calendar and the AI can be switched off in Settings, under Smart help',
         'Travel and Travel Vintage: one booking is one trip (the flights out and home of a reservation are no longer split into two trips), and a hotel confirmation from a booking site such as Hilton\'s is named and placed from the email, with its "pending" and confirmed emails read as one stay. Emails whose plain-text part is only tracking links (Hilton\'s, sent through Cvent) are now read from their html, so those hotel stays are no longer missed. The Ask AI bar has a Change switch: tell Travel what to change (edit or clear any detail, add a booking, cancel or delete one, put a booking in a trip or take it out, rename a trip), look over the changes it proposes, and tap Apply; nothing changes before that, and Undo puts it all back. Settings says which AI models answer, and which one gave the last answer. Travel now reads your mail again once after this update (so Hilton\'s emails and other stays missed before show up), searches for more airlines, hotel groups, car rental companies and booking sites, and no longer mixes up two trips on the same flight number (like a September and a November Cleveland trip). Settings has a new What Travel read list: every email the last look went through and what it made of it, so a missing booking can be tracked down; the re-reading after an update can no longer leave holes if it is interrupted; and West Palm Beach\'s new airport code (DJT) is recognised',
-        'New: Clock, one of the core apps, in Standard and Vintage (starburst clock faces): World Clock with the cities you add; Alarms with Sleep | Wake Up, repeat days, a label, six sounds made in the app and snooze from 1 to 15 minutes; a Stopwatch, digital or analog, with laps; as many Timers at once as you like, with Recents; and Nightstand, a bedside clock that keeps the screen on so alarms ring. A web app can only ring while it is open, so Clock says so, and lists anything that came due while it was closed',
+        'New: Clock, one of the core apps, with two designs picked in its Settings, Vintage (starburst clock faces, the default) and Standard (Sea glass): World Clock with the cities you add; Alarms with Sleep | Wake Up, repeat days, a label, six sounds made in the app and snooze from 1 to 15 minutes; a Stopwatch, digital or analog, with laps; as many Timers at once as you like, with Recents; and Nightstand, a bedside clock that keeps the screen on so alarms ring. A web app can only ring while it is open, so Clock says so, and lists anything that came due while it was closed',
         'New: a Vintage design for Notes, Podcasts, Places and Meals, so every app has one (pick it on the app\'s page in aOS)',
         'Meals and Podcasts can keep a readable copy in a Google Sheet of your own (Meals: every plan, the list, deals; Podcasts: shows, saved episodes and history); Orders\' Sheet gets a Log tab of every order, status change and deletion',
         'aOS: notifications. Under your account, from the Home Screen app, turn them on; the owner can then write a notification and send it to everyone in the family who has them on (iPhone: iOS 16.4 or later)',
@@ -218,7 +218,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'clockvintage'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -239,12 +239,11 @@
     podcasts: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'podcasts' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'podcastsvintage' }],
     places: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'places' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'placesvintage' }],
     meals: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'meals' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'mealsvintage' }],
-    clock: [{ id: 'standard', name: 'Standard', note: 'Sea glass', look: 'glass', app: 'clock' }, { id: 'vintage', name: 'Vintage', note: 'Mid-century, Retro colors', look: 'vintage', app: 'clockvintage' }],
   };
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', notesvintage: 'Notes', podcastsvintage: 'Podcasts', placesvintage: 'Places', mealsvintage: 'Meals', clock: 'Clock', clockvintage: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', mailvintage: 'Mail', housevintage: 'Home', ordersvintage: 'Orders', drinksvintage: 'Drinks', fitnessvintage: 'Fitness', newsvintage: 'News', weathervintage: 'Weather', travelvintage: 'Travel', calendarvintage: 'Calendar', notesvintage: 'Notes', podcastsvintage: 'Podcasts', placesvintage: 'Places', mealsvintage: 'Meals', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -269,36 +268,11 @@
           "i": "moon",
           "t": "Nightstand",
           "d": "A dark bedside clock that keeps the screen on, so your alarm rings in the morning. Alarms ring only while Clock is open."
-        }
-      ]
-    },
-    "clockvintage": {
-      "tag": "World time, alarms, a stopwatch and timers, mid-century style",
-      "cards": [
+        },
         {
           "i": "star",
-          "t": "A vintage look",
-          "d": "The same Clock in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, starburst clock faces and Futura type."
-        },
-        {
-          "i": "globe",
-          "t": "World Clock",
-          "d": "See your own time and the cities you add, each with its time, its day and how far ahead or behind it is."
-        },
-        {
-          "i": "bell",
-          "t": "Alarms",
-          "d": "Set alarms that repeat on the days you pick, each with a label, a sound and snooze. Sleep | Wake Up keeps your bedtime and wake-up time."
-        },
-        {
-          "i": "clock",
-          "t": "Stopwatch and timers",
-          "d": "A stopwatch with laps, the fastest and slowest marked, and as many timers as you like at once. Recent timers are one tap."
-        },
-        {
-          "i": "share",
-          "t": "Its own app",
-          "d": "This design is its own app: it keeps its own alarms, cities and timers, so the standard Clock stays just as it is. Use either, or both."
+          "t": "Two designs",
+          "d": "Vintage, mid-century with starburst clock faces, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -1926,6 +1900,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#tabs [data-tab="alarms"]', t: 'Alarms', d: 'Set alarms that repeat on the days you pick, each with a label, a sound and snooze. Sleep | Wake Up keeps your bedtime and wake-up time.', g: 'tap' },
     { sel: ['#tabs [data-tab="stopwatch"]', '#tabs [data-tab="timers"]'], t: 'Stopwatch and timers', d: 'A stopwatch with laps, the fastest and slowest marked, and as many timers as you like at once. Recent timers are one tap.', g: 'tap' },
     { sel: '#nightBtn', t: 'Nightstand', d: 'A dark bedside clock that keeps the screen on, so your alarm rings in the morning. Alarms ring only while Clock is open.', g: 'tap' },
+    { sel: '#setBtn', t: 'Two designs', d: 'Vintage, mid-century with starburst clock faces, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' },
   ] };
   SPOTS.house = { stops: [
     { sel: ['#v-fav .runpanel', '#v-fav .fnp', '#v-fav'], t: 'Favorites first', d: 'It opens on what you use most: what’s playing, what’s running now, the weather, thermostats, cameras and lamps.' },
@@ -1956,7 +1931,6 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     podcastsvintage: "The same Podcasts in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
     placesvintage: "The same Places in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
     mealsvintage: "The same Meals in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, flat shapes and Futura type.",
-    clockvintage: "The same Clock in a mid-century modern style: cream and walnut, mustard, teal and burnt orange, starburst clock faces and Futura type.",
   };
   const OWN_TEXT = {
     newsvintage: "This design is its own app: it keeps its own topic and team choices and reads the same headlines, so the standard News stays just as it is. Use either, or both.",
@@ -1969,7 +1943,6 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     podcastsvintage: "This design is its own app: it keeps its own shows, progress and settings, so the standard Podcasts stays just as it is. Use either, or both, and move your shows across with Export and Import.",
     placesvintage: "This design is its own app: it keeps its own places, so the standard Places stays just as it is. Use either, or both, and give them the same Google Sheet (Notes’) to keep them in step.",
     mealsvintage: "This design is its own app: it shares the family’s plans, deals and settings with the standard Meals, so a plan made in either shows in both. Use either, or both.",
-    clockvintage: "This design is its own app: it keeps its own alarms, cities and timers, so the standard Clock stays just as it is. Use either, or both.",
   };
   // A Vintage design is its base app's page in another look, so its tour is the base app's stops, with the
   // look first and "its own app" last (the base app's first and last controls are what they point at).
@@ -1984,7 +1957,6 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     podcastsvintage: "podcasts",
     placesvintage: "places",
     mealsvintage: "meals",
-    clockvintage: "clock",
   };
   for (const [v, base] of Object.entries(VINTAGE_TOURS)) {
     const src = SPOTS[base]; if (!src) continue;

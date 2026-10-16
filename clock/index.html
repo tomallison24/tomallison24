@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Clock</title>
-<meta name="description" content="Clock: the time around the world, alarms with a sleep schedule, a stopwatch with laps, timers, and a bedside Nightstand.">
-<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Clock: the time around the world, alarms with a sleep schedule, a stopwatch with laps, timers, and a bedside Nightstand, in a mid-century Vintage design or Sea glass.">
+<meta name="theme-color" content="#F4ECDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#241E1A" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Clock">
 <meta name="referrer" content="no-referrer">
@@ -26,11 +27,14 @@
     Stopwatch    digital or analog, with laps (the fastest and slowest marked)
     Timers       as many as you like at once, each with a label and a sound; Recents
   and Nightstand (the moon): a bedside clock that keeps the screen on.
+  Two designs, picked in Settings > Design: Vintage (mid-century modern, the default: the
+  <style id="vintage"> block at the end) and Standard (Sea glass: that block switched off).
+  design.js, in <head>, applies the one picked before the page is drawn.
 
   Everything stays on this phone (localStorage, the key in the aos-store meta above),
-  as the iPhone's own alarms do. Code: app.js, and logic.js for the sums and the sounds
-  (the same two files as Clock Vintage's). The look is Fitness's tokens, tiles and
-  Liquid Glass sheets.
+  as the iPhone's own alarms do. Code: app.js, and logic.js for the sums and the sounds.
+  The Standard look is Fitness's tokens, tiles and Liquid Glass sheets; Vintage is the Retro
+  look on top of it.
 -->
 <style>
 :root{
@@ -388,6 +392,10 @@ html.locked .tabs{opacity:0;pointer-events:none}
 .snd[aria-checked="true"] .tick{opacity:1}
 .snd .pl{color:var(--icon)}
 .snd.playing .pl{animation:pulse 1s ease-in-out infinite}
+/* Settings > Design: a little swatch of each */
+.snd .sw{width:30px;height:30px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px var(--hair)}
+.snd .sw.vintage{background:conic-gradient(#E3A72F 0 25%,#1F6F6B 0 50%,#D8572A 0 75%,#4A3426 0)}
+.snd .sw.glass{background:linear-gradient(135deg,#6FA597,#8193BC 40%,#BE918F 70%,#BC9C68)}
 @keyframes pulse{50%{opacity:.35}}
 .rowbtn{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;padding:10px 14px;font-size:16px;font-weight:600;border-top:1px solid var(--hair-2);color:var(--text)}
 .rowbtn:first-child{border-top:0}
@@ -450,6 +458,194 @@ html.locked .tabs{opacity:0;pointer-events:none}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Clock's look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Drinks Vintage and Home Vintage: flat, solid shapes instead
+   of glass; a cream ground and cards (walnut in dark mode) with mustard,
+   teal, burnt orange and olive; atomic shapes behind the title that scroll
+   away; every clock face a starburst (the atomic wall clock); Futura (iOS's
+   own, so nothing to download) for every word and digit. Last in the sheet so
+   it wins over the glass above; Settings > Design switches it off for the
+   Standard (Sea glass) design (design.js). Only colours, shapes and type
+   change: every tap, swipe, sheet and alarm works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-walnut:#4A3426; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --icon:#1F6F6B;
+  --cta:#C9502A; --cta-ink:#FFF8EC;
+  --danger:#B8452B; --danger-text:#9E3A1A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28);
+  --tint-mix:14%; --aurora:1;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --up:#4F6A1A; --down:#B02E1F; --sw-on:#1F6F6B; --sw-off:rgba(43,37,34,.22);
+  --face:#FBF5E9; --face-ink:#2B2522; --face-tick:rgba(43,37,34,.5); --face-night:#4A3426; --face-night-ink:#FBF5E9;
+  --hand-s:#D8572A; --hand-lap:#1F6F6B; --ray:#4A3426; --ray-tip:#E3A72F;
+  --ns-bg:#16110E; --ns-ink:#E3A72F; --ns-dim:rgba(227,167,47,.62);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --up:#A3B04A; --down:#F2906E; --sw-on:#4FB3AB; --sw-off:rgba(244,236,221,.24);
+  --face:#F4ECDD; --face-ink:#2B2522; --face-tick:rgba(43,37,34,.5); --face-night:#4A3426; --face-night-ink:#F4ECDD;
+  --hand-s:#D8572A; --hand-lap:#1F6F6B; --ray:#CFC1AC; --ray-tip:#E3A72F;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --up:#A3B04A; --down:#F2906E; --sw-on:#4FB3AB; --sw-off:rgba(244,236,221,.24);
+  --face:#F4ECDD; --face-ink:#2B2522; --face-tick:rgba(43,37,34,.5); --face-night:#4A3426; --face-night-ink:#F4ECDD;
+  --hand-s:#D8572A; --hand-lap:#1F6F6B; --ray:#CFC1AC; --ray-tip:#E3A72F;
+}
+
+body,.face .nm,.face .dg{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+
+/* the atomic shapes behind the title (they scroll away with the page); kept right of the title, so nothing under it is hard to read */
+.ambient{position:absolute;inset:0 0 auto 0;height:150px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-100px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:34px;height:34px;left:auto;right:58px;top:72px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:118px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+@media (max-width:359px){.ambient i:nth-child(1){width:150px;height:150px;top:-74px;right:-56px}.ambient i:nth-child(2){width:28px;height:28px;right:40px}.ambient i:nth-child(3){right:-40px}}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.subtitle{margin-top:8px;letter-spacing:.02em}
+.sechead,.label{letter-spacing:.16em;color:var(--muted)}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.btn,.pillbtn,.tabs,.round,.sheet,.toast{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);letter-spacing:.04em}
+.pillbtn[aria-pressed="true"]{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.main{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);font-weight:600;box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger)}
+.iconbtn.okbtn,.iconbtn.okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+
+/* cards: flat cream, round-cornered */
+.rgroup,.empty,.hero,.tcard{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.crow .ct,.arow .at,.hero .ht b,.sleepcard .st b,.trow .tt b,.rrow .rt b{font-weight:500;letter-spacing:-.02em}
+.hero .ht small{letter-spacing:.16em;color:var(--muted)}
+.arow .snz{color:var(--mc-orange)}
+.missed{background:color-mix(in srgb,var(--mc-orange) 14%,var(--mc-card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--mc-orange) 40%,transparent)}
+
+/* every clock face a starburst: rays with mustard tips, a cream dial, walnut hands, an orange second hand */
+.face .rays{display:inline;stroke:var(--ray);stroke-width:3;stroke-linecap:round}
+.face .rays .tip{fill:var(--ray-tip);stroke:none}
+.face .dial{fill:var(--face);stroke:var(--mc-walnut);stroke-width:3}
+.face.mini .rays{stroke-width:5}
+.face.mini .dial{stroke-width:5}
+.face .hh{stroke-width:7} .face .mh{stroke-width:5}
+.face .hub{fill:var(--mc-mustard)} .face .hub2{fill:var(--mc-walnut)}
+.face.dark .dial{fill:var(--face-night);stroke:var(--ray-tip)}
+.face.dark .hub{fill:var(--mc-mustard)}
+.face.sw .dial{stroke-width:2}
+.face .nm{font-weight:600}
+
+/* switches: teal when on, a cream knob */
+.switch{background:var(--sw-off);box-shadow:none}
+.switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+[aria-checked="true"] > .switch,.switch[aria-checked="true"]{background:var(--mc-teal)}
+
+/* the alarm and sleep editors: mustard days and snooze lengths */
+.days button{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge);letter-spacing:.04em}
+.days button[aria-pressed="true"],.snoozes button[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.timepick input{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:500}
+.snd .pl{color:var(--icon)}
+.search{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.inner{background:var(--lgs-field)}
+
+/* Stopwatch: big Futura digits; Start orange, Stop outlined orange, Lap outlined teal; laps olive and orange */
+.swface .dig{font-weight:500;letter-spacing:-.03em}
+.round{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2.5px var(--accent);letter-spacing:.04em}
+.round.go{background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
+.round.stop{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2.5px var(--danger)}
+.dots button[aria-pressed="true"]::before{background:var(--mc-mustard)}
+.lrow small{letter-spacing:.12em;text-transform:uppercase;font-size:11px}
+
+/* Timers: teal rings, a mustard band on the wheels */
+.trow .tring .bgc{stroke:var(--hair)}
+.trow .tring .fgc{stroke:var(--mc-teal)}
+.trow.paused .tring .fgc{stroke:var(--mc-mustard)}
+.mini{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.mini.go{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.wheels::before{background:color-mix(in srgb,var(--mc-mustard) 26%,transparent)}
+.chip{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge);letter-spacing:.02em}
+
+/* the tab bar: a walnut pill with a mustard thumb, as in Home Vintage */
+.tabs{background:var(--mc-walnut);box-shadow:inset 0 0 0 1px rgba(244,236,221,.12),0 10px 22px -10px rgba(43,37,34,.6)}
+.tabs button{color:#E9DCC6;letter-spacing:.04em}
+.tabs button[aria-selected="true"]{color:var(--mc-on-mustard)}
+.slthumb{background:var(--mc-mustard);box-shadow:none}
+
+/* the sheets: cream panels with round corners */
+.sheet{background:var(--mc-card);border-radius:28px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.sheethead h2{font-weight:600;letter-spacing:-.01em}
+.sheet .rgroup{background:var(--lgs-field);border-radius:20px}
+.toast{background:var(--mc-card-2);border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+
+/* ringing: the cream ground with a big mustard sun and an orange pill */
+.ring{background:var(--bg);overflow:hidden}
+.ring::before{inset:auto;width:min(120vw,620px);aspect-ratio:1;border-radius:50%;left:50%;top:-28%;translate:-50% 0;background:var(--mc-mustard);opacity:.9}
+.ring::after{content:'';position:absolute;z-index:-1;width:150px;height:44px;border-radius:22px;right:-30px;bottom:18%;background:var(--mc-orange);transform:rotate(-18deg)}
+.ring .rk{letter-spacing:.2em;color:var(--mc-on-mustard)}
+.ring .rbell{color:var(--mc-on-mustard)}
+.ring .rtime{font-weight:500;letter-spacing:-.03em;color:var(--mc-on-mustard)}
+.ring .rbtns .btn{font-weight:600;letter-spacing:.04em}
+
+/* Nightstand: walnut-black, mustard digits, a starburst clock */
+.night .nt{font-weight:500;letter-spacing:-.04em}
+.night .nd,.night .na{letter-spacing:.06em}
+.night .nface .face .rays{stroke:var(--ns-dim)}
+.night .nface .face .rays .tip{fill:var(--ns-ink)}
+.night .nface .face .dial{fill:transparent;stroke:var(--ns-ink)}
+.night .nface .face .hub{fill:var(--ns-ink)}
+.night .nface .face .sh{stroke:var(--mc-orange)}
+</style>
+<script src="design.js"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage app (off in Standard) -->
 </head>
 <body>
 
@@ -601,6 +797,11 @@ html.locked .tabs{opacity:0;pointer-events:none}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Settings</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
       <div class="sheetbody">
+        <p class="label" id="setDesignLbl">Design</p>
+        <div class="rgroup" id="setDesign" role="radiogroup" aria-labelledby="setDesignLbl">
+          <button class="snd" type="button" role="radio" data-design="vintage" aria-checked="true"><span class="sw vintage" aria-hidden="true"></span><span class="grow"><b>Vintage</b><small>Mid-century: cream and walnut, mustard, teal and orange, starburst clock faces</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
+          <button class="snd" type="button" role="radio" data-design="glass" aria-checked="false"><span class="sw glass" aria-hidden="true"></span><span class="grow"><b>Standard</b><small>Sea glass, as in the other aOS apps</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
+        </div>
         <p class="label">Time</p>
         <div class="rgroup"><button class="swrow" id="set24" type="button" role="switch" aria-checked="false"><span class="grow">24-Hour Time<small>13:00 rather than 1:00 PM</small></span><span class="switch" aria-hidden="true"></span></button></div>
         <p class="label">Nightstand</p>
