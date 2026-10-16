@@ -1240,64 +1240,81 @@ if (window.top !== window.self) {
     st.items.set(name, { etag: res.etag || '', ics, cal });
     return res;
   }
+  // Writes a new or changed event to iCloud (scope: this, future or all, for a repeating one) and
+  // returns the file written; throws when it fails (code 'changed': it was changed elsewhere first).
+  // Ipsy's changes (ipsy-tools.js) come through here too.
+  async function writeEvent(x, f, scope) {
+    if (!x) {
+      const uid = I.uid(), cal = newCalendar(), ev = newEvent(uid);
+      applyForm(ev, f); cal.children.push(ev);
+      await writeItem(uid + '.ics', cal, null);
+      return uid + '.ics';
+    } else {
+      const item = st.items.get(x.name); if (!item) throw Object.assign(new Error('gone'), { code: 'changed' });
+      const cal = item.cal, m = master(x);
+      if (!x.o.recurring || scope === 'all') {
+        if (x.o.recurring) {
+          // Shift the series by as much as this occurrence moved; keep its dates otherwise.
+          const delta = f.start - x.start, ms = I.toMs(I.dateProp(m, 'DTSTART'), cal, TZ);
+          const f2 = Object.assign({}, f, { start: ms + delta, end: ms + delta + (f.end - f.start) });
+          applyForm(m, f2);
+        } else applyForm(m, f);
+        await writeItem(x.name, cal, item.etag);
+      } else if (scope === 'this') {
+        let ov = x.o.comp !== m ? x.o.comp : null;
+        if (!ov) {
+          ov = I.component('VEVENT', []);
+          for (const p of m.props) if (!['RRULE', 'RDATE', 'EXDATE', 'DTSTART', 'DTEND', 'DURATION', 'CREATED', 'SEQUENCE'].includes(p.name)) ov.props.push({ name: p.name, params: Object.assign({}, p.params), value: p.value });
+          I.setDate(ov, 'RECURRENCE-ID', x.o.rid);
+          ov.props.push({ name: 'CREATED', params: {}, value: I.stamp() }, { name: 'SEQUENCE', params: {}, value: '0' });
+          for (const c of m.children) if (c.name === 'VALARM') ov.children.push(JSON.parse(JSON.stringify(c)));
+          cal.children.push(ov);
+        }
+        applyForm(ov, f, { rule: false });
+        await writeItem(x.name, cal, item.etag);
+      } else if (scope === 'future') {
+        if (isFirst(x)) { applyForm(m, f); await writeItem(x.name, cal, item.etag); }
+        else {
+          const uid = I.uid(), cal2 = newCalendar(), ev = newEvent(uid);
+          for (const p of m.props) if (!['UID', 'DTSTART', 'DTEND', 'DURATION', 'CREATED', 'SEQUENCE', 'RECURRENCE-ID', 'EXDATE', 'RDATE'].includes(p.name)) ev.props.push({ name: p.name, params: Object.assign({}, p.params), value: p.value });
+          applyForm(ev, f); cal2.children.push(ev);
+          // Changed occurrences from here on move to the new series; the old one ends before this occurrence.
+          const cut = x.o.rid ? I.toMs(x.o.rid, cal, TZ) : x.start;
+          const rule = I.parseRRule(I.prop(m, 'RRULE') ? I.prop(m, 'RRULE').value : 'FREQ=DAILY');
+          delete rule.COUNT; rule.UNTIL = untilBefore(x, x.allDay);
+          I.setProp(m, 'RRULE', I.fmtRRule(rule));
+          cal.children = cal.children.filter(c => c.name !== 'VEVENT' || c === m || I.toMs(I.dateProp(c, 'RECURRENCE-ID'), cal, TZ) < cut);
+          for (const p of I.props(m, 'EXDATE')) { /* keep: dates before the cut still matter, later ones are harmless */ }
+          I.setProp(m, 'DTSTAMP', I.stamp()); I.setProp(m, 'LAST-MODIFIED', I.stamp()); I.setProp(m, 'SEQUENCE', String((parseInt(I.text(m, 'SEQUENCE'), 10) || 0) + 1));
+          await writeItem(uid + '.ics', cal2, null);
+          await writeItem(x.name, cal, item.etag);
+        }
+      }
+      return x.name;
+    }
+  }
+  // After a write: kept on the phone, drawn, and read back from iCloud in a moment (to learn its etag).
+  function written(word) {
+    st.lastRefresh = 0; saveCache(); rebuild(); render();
+    pillDone(word);
+    setTimeout(() => refresh({ force: true }), 1200);
+  }
   async function saveEvent(x, f, scope) {
     if (st.api !== 'ok') { toast(errText({ code: st.api === 'off' ? 'unavailable' : st.api === 'unconfigured' ? 'no-account' : st.apiError || 'unreachable' }), null, 6000); return; }
     busyPill('Saving');
     try {
-      if (!x) {
-        const uid = I.uid(), cal = newCalendar(), ev = newEvent(uid);
-        applyForm(ev, f); cal.children.push(ev);
-        await writeItem(uid + '.ics', cal, null);
-      } else {
-        const item = st.items.get(x.name); if (!item) throw Object.assign(new Error('gone'), { code: 'changed' });
-        const cal = item.cal, m = master(x);
-        if (!x.o.recurring || scope === 'all') {
-          if (x.o.recurring) {
-            // Shift the series by as much as this occurrence moved; keep its dates otherwise.
-            const delta = f.start - x.start, ms = I.toMs(I.dateProp(m, 'DTSTART'), cal, TZ);
-            const f2 = Object.assign({}, f, { start: ms + delta, end: ms + delta + (f.end - f.start) });
-            applyForm(m, f2);
-          } else applyForm(m, f);
-          await writeItem(x.name, cal, item.etag);
-        } else if (scope === 'this') {
-          let ov = x.o.comp !== m ? x.o.comp : null;
-          if (!ov) {
-            ov = I.component('VEVENT', []);
-            for (const p of m.props) if (!['RRULE', 'RDATE', 'EXDATE', 'DTSTART', 'DTEND', 'DURATION', 'CREATED', 'SEQUENCE'].includes(p.name)) ov.props.push({ name: p.name, params: Object.assign({}, p.params), value: p.value });
-            I.setDate(ov, 'RECURRENCE-ID', x.o.rid);
-            ov.props.push({ name: 'CREATED', params: {}, value: I.stamp() }, { name: 'SEQUENCE', params: {}, value: '0' });
-            for (const c of m.children) if (c.name === 'VALARM') ov.children.push(JSON.parse(JSON.stringify(c)));
-            cal.children.push(ov);
-          }
-          applyForm(ov, f, { rule: false });
-          await writeItem(x.name, cal, item.etag);
-        } else if (scope === 'future') {
-          if (isFirst(x)) { applyForm(m, f); await writeItem(x.name, cal, item.etag); }
-          else {
-            const uid = I.uid(), cal2 = newCalendar(), ev = newEvent(uid);
-            for (const p of m.props) if (!['UID', 'DTSTART', 'DTEND', 'DURATION', 'CREATED', 'SEQUENCE', 'RECURRENCE-ID', 'EXDATE', 'RDATE'].includes(p.name)) ev.props.push({ name: p.name, params: Object.assign({}, p.params), value: p.value });
-            applyForm(ev, f); cal2.children.push(ev);
-            // Changed occurrences from here on move to the new series; the old one ends before this occurrence.
-            const cut = x.o.rid ? I.toMs(x.o.rid, cal, TZ) : x.start;
-            const rule = I.parseRRule(I.prop(m, 'RRULE') ? I.prop(m, 'RRULE').value : 'FREQ=DAILY');
-            delete rule.COUNT; rule.UNTIL = untilBefore(x, x.allDay);
-            I.setProp(m, 'RRULE', I.fmtRRule(rule));
-            cal.children = cal.children.filter(c => c.name !== 'VEVENT' || c === m || I.toMs(I.dateProp(c, 'RECURRENCE-ID'), cal, TZ) < cut);
-            for (const p of I.props(m, 'EXDATE')) { /* keep: dates before the cut still matter, later ones are harmless */ }
-            I.setProp(m, 'DTSTAMP', I.stamp()); I.setProp(m, 'LAST-MODIFIED', I.stamp()); I.setProp(m, 'SEQUENCE', String((parseInt(I.text(m, 'SEQUENCE'), 10) || 0) + 1));
-            await writeItem(uid + '.ics', cal2, null);
-            await writeItem(x.name, cal, item.etag);
-          }
-        }
-      }
-      st.lastRefresh = 0; saveCache(); rebuild(); render();
-      pillDone('Saved');
-      setTimeout(() => refresh({ force: true }), 1200);
+      await writeEvent(x, f, scope);
+      written('Saved');
     } catch (e) {
       busyPill('');
       toast(errText(e), null, 6000);
       if (e.code === 'changed') refresh({ force: true });
     }
+  }
+  // Deletes one event's file from iCloud, refusing if it changed since it was read (the etag).
+  async function deleteFile(name, etag) {
+    await api('event?name=' + encodeURIComponent(name), { method: 'DELETE', headers: etag ? { 'If-Match': etag } : {} });
+    st.items.delete(name);
   }
   async function deleteEvent(x) {
     if (x.kind !== 'family') return;
@@ -1315,8 +1332,7 @@ if (window.top !== window.self) {
     busyPill('Deleting');
     try {
       if (scope === 'all' || (scope === 'future' && isFirst(x))) {
-        await api('event?name=' + encodeURIComponent(x.name), { method: 'DELETE', headers: item.etag ? { 'If-Match': item.etag } : {} });
-        st.items.delete(x.name);
+        await deleteFile(x.name, item.etag);
         st.lastRefresh = 0; saveCache(); rebuild(); render(); pillDone('Deleted');
         toast('Deleted “' + x.title + '”', { label: 'Undo', action: async () => { try { await writeItem(x.name, I.parse(before), null, { overwrite: true }); rebuild(); render(); saveCache(); } catch (e) { toast(errText(e)); } } }, 6000);
         return;
@@ -1380,7 +1396,7 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="stAlert">Alert</label><select id="stAlert">' + opt(ALERTS_TIMED, settings.alertTimed) + '</select></div>'
       + '<div class="frow"><label for="stAlertAD">All-day alert</label><select id="stAlertAD">' + opt(ALERTS_ALLDAY, settings.alertAllDay) + '</select></div>'
       + '</div>'
-      + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored or sent anywhere.</p>';
+      + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored, and nothing is sent anywhere else except what Ipsy looks at when you ask it something.</p>';
     $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); };
     const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
     slideSegs();
@@ -1440,6 +1456,23 @@ if (window.top !== window.self) {
   })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: its tools (ipsy-tools.js) read these same events
+  // and write the Family calendar through these same calls, asking first; Claude answers through
+  // functions/calendar/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.CalendarIpsy) {
+    const VIEW_NAMES = { day: 'Day', week: 'Week', month: 'Month', year: 'Year', list: 'List' };
+    window.AllisonOS.ipsy.mount({
+      app: 'calendar', name: 'Calendar', endpoint: '../calendar/api/ipsy', headers: { 'X-Calendar': '1' }, slot: document.querySelector('.dock .ipsyslot'),
+      ...window.CalendarIpsy({
+        I, TZ, st, settings, LAYER, eventsOn, matches, refresh, rebuild, render, goTo, writeEvent, writeItem, deleteFile, written, formFrom,
+        ymd, dayMs, addDays, today, fmtTime, longDate, medDate, wxFor, busyPill, toast, errText,
+        calendarName: () => st.calendar && st.calendar.name || 'Family',
+        screen: () => (!$('evSheet').hidden && shown ? 'the event “' + shown.title + '” (' + (shown.kind === 'family' ? 'id ' + shown.name : LAYER[shown.kind].name) + '), over ' : '')
+          + (st.searching ? 'search results for “' + st.search + '”' : 'the ' + VIEW_NAMES[st.view] + ' view, ' + (st.view === 'day' ? longDate(st.sel) : st.view === 'year' ? st.sel.slice(0, 4) : st.view === 'week' ? 'the week of ' + medDate(weekStartOf(st.sel)) : MONTHS[+st.sel.slice(5, 7) - 1] + ' ' + st.sel.slice(0, 4))),
+      }),
+    });
+  }
 
   // For the tests (calendar/scripts/app-test.mjs) only.
   window.__calendar = { st, settings, render, refresh, rebuild, goTo, setView, openEvent, openEditor, eventsOn, usHolidays, saveEvent, deleteEvent, formFrom };

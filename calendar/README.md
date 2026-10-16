@@ -144,6 +144,77 @@ one, with nothing to set up. Its layer items opened the old Vintage apps
 (`../travelvintage/` and the rest); they now open Travel, Mail, Fitness and
 Drinks, which carry both designs too.
 
+## Ipsy
+
+**Ipsy** is the little stem cell in the dock, beside the + button: a helper you
+chat with about the calendar, in the design picked in Settings (it changes with
+the design at once). Ask in your own words, e.g. *What's on this week?*, *Find
+us a free evening next week*, *When is our next dentist appointment?*, *Add
+piano on Saturday at 4*, *Move the dentist to 3:30*, *What can you change
+here?*
+
+- **Reading is free.** It reads what the app shows: the Family calendar and the
+  layers that are on (US Holidays, Notes, Travel, Mail, Fitness), and the
+  weather (`ipsy-tools.js`: `find_events` for a range of days or words in a
+  title, place or notes, `get_event` for one in full, `free_time` for the gaps
+  in a day, `show_day` to open a day behind the chat). Not Drinks: that is your
+  own health data, which the app keeps out of its own storage, so it isn't
+  sent to Claude either. When you ask about days outside the months the app
+  has loaded, the calendar moves there to load them.
+- **The Family calendar is the whole family's, so changes have rules**, and
+  Ipsy explains them if you ask:
+  - **Every change asks first.** Adding, changing or deleting an event shows a
+    card in the chat with exactly what will happen: the title, the day, start
+    and end, all day or not, repeat, the calendar, and for a change what each
+    was before (*2:00 PM → 3:30 PM*). Nothing is written until you tap **Yes**;
+    on **No** nothing changes and Ipsy is told you said no.
+  - **One event at a time.** Each change is one event (there is no way to
+    change or delete many at once), and Ipsy asks about at most **5 changes in
+    one question**; a sixth is refused without a card, and you ask again for
+    the rest.
+  - **Repeating events are read only** for Ipsy: it won't change or delete a
+    series or one occurrence of it, and tells you to do that in the app (tap
+    the event, then Edit or Delete Event), where you choose this event, all
+    future events or all events. It can add an event that repeats (every day,
+    week, 2 weeks, month or year, with an optional last day), asked first like
+    any other.
+  - **Only the Family calendar** is changed: holidays, reminders, trips,
+    Remind Me days and workouts come from other apps, and Ipsy says where to
+    change them.
+  - **Never over someone else's change.** Writes go through the app's own
+    calls to its server with the event's version (If-Match, as the editor
+    does), so if someone changed the event on another phone meanwhile, iCloud
+    refuses, the app loads the new version, and Ipsy tells you nothing was
+    written over.
+  - **Undo** on every change in the chat, through the same calls: an added
+    event is deleted (only if nobody changed it since), a changed one is put
+    back as it was, a deleted one is written back (only if nothing has taken
+    its place). A change made since is never written over: the Undo says so in
+    the app's message at the bottom of the screen.
+- **Event text is material, not instructions.** Titles, places and notes are
+  written by whoever made the event (or an invitation from outside); Ipsy is
+  told never to act on what they say, and to mention it if one asks it to do
+  something.
+- **How it works.** The chat lives on the phone. Each step sends the whole
+  conversation to the family server (`functions/calendar/api`, `POST ipsy`),
+  which adds Ipsy's instructions and tools and asks **Claude Sonnet 5.5**
+  (medium effort, prompt caching on, Anthropic's server-side fallback if it
+  declines). Ipsy's tools run on the phone, on the events the app has loaded;
+  the server sees only the conversation and keeps only a count of questions
+  (80 a person a day). Web search and web pages run at Anthropic.
+  `CALENDAR_IPSY_MODEL` (optional repository secret) names another model.
+- **Asked first, once.** Before the first question, Ipsy says what is sent
+  where. **For signed-in family** (Face ID); without the key it says Ipsy
+  isn't set up.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone
+  until then.
+- **Not tried against the real API, iCloud or on a phone**: the tests use a
+  stand-in for Claude and for the iCloud function (`node
+  calendar/scripts/ipsy-test.mjs`, `node calendar/scripts/api-test.mjs`), so the
+  first real questions are the real test of the instructions. The chat's Undo
+  doesn't wait for iCloud's answer: a failed Undo shows in the app's message,
+  while the chat already says Undone.
+
 ## How it reaches iCloud
 
 A web page can't talk to iCloud's calendar server (CalDAV) itself: Apple's
@@ -243,21 +314,22 @@ it with a key of its own.
   checks every file name, and only writes what looks like a calendar file.
 - **Data**: the events last seen (`localStorage`), the settings, the weather
   and the Mail reminders for a while. Nothing about the events is sent
-  anywhere but iCloud.
+  anywhere but iCloud, except what Ipsy looks at when you ask it something (above).
 - Published with the other apps by `.github/workflows/news.yml`.
 
 ## Tests
 
 ```sh
 node calendar/scripts/ical-test.mjs   # reading, writing, repeats, zones
-node calendar/scripts/api-test.mjs    # the CalDAV function, iCloud stubbed
+node calendar/scripts/api-test.mjs    # the CalDAV function, iCloud stubbed; Ipsy's step, Claude stubbed
 node calendar/scripts/access-test.mjs # the Access check in front of every function
 node calendar/scripts/app-test.mjs    # the app in headless Chromium, iCloud stubbed, both designs, Settings > Design, the old Calendar Vintage address
 node calendar/scripts/layers-test.mjs # Notes, Travel, Fitness and Mail through the family account
+node calendar/scripts/ipsy-test.mjs   # Ipsy and its rules (asks first, 5 a question, no repeating events, etags, Undo), both designs, light and dark
 node calendar/scripts/make-icons.mjs  # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
-The last three need Playwright with Chromium (`npm i -g playwright`).
+The last four need Playwright with Chromium (`npm i -g playwright`).
 
 ## What I could not verify
 
