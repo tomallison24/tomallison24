@@ -403,7 +403,7 @@ await test('it keeps Calendar’s storage and cache, and talks only to Calendar�
   assert.deepEqual([...apis].sort(), ['/aOS/api/', '/calendar/api/'], [...apis].join());
   await page.evaluate(() => navigator.serviceWorker.ready);
   const caches = await page.evaluate(async () => { for (let i = 0; i < 40; i++) { const k = await window.caches.keys(); if (k.length) return k; await new Promise(r => setTimeout(r, 100)); } return []; });
-  assert.deepEqual(caches, ['calendar-v24']);
+  assert.deepEqual(caches, [/const CACHE = '([^']+)'/.exec(fs.readFileSync(path.join(ROOT, 'calendar/sw.js'), 'utf8'))[1]]);   // calendar/sw.js's own
 });
 
 await test('Standard (Sea glass), light and dark: no Vintage, iCloud’s and Notes’ own colours', async () => {
