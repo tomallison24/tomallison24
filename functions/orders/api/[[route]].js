@@ -36,6 +36,7 @@
 // The X-Orders header stops other web pages calling this (as X-News does).
 
 import { reply, kv, sessionUser } from '../../../server/auth.js';
+import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, modelOf as ipsyModelFor, turnKind, requestHead, ipsyStep } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -154,23 +155,12 @@ export async function read(env, { subject, from, date, text }, f = fetch) {
   return cleanFact(parsed, text, new Date(date).getTime());
 }
 
-// ---- Ipsy: the helper you chat with ----
-// Claude Sonnet 5.5 by default (the owner's choice: quick, and good at work that takes several
-// tools), at medium effort, with adaptive thinking (its default). The phone keeps the conversation
-// and runs the order and Gmail tools; Anthropic runs web search and web fetch.
-export const IPSY_MODEL = 'claude-sonnet-5-5';
-export const ipsyModelOf = env => str(env && env.ORDERS_IPSY_MODEL, 60) || IPSY_MODEL;
-export const IPSY_DAILY = 80;                    // questions a person a day
-export const IPSY_MAX_BODY = 1024 * 1024;        // a conversation, as the phone sends it
-export const IPSY_MAX_MESSAGES = 240;
-const IPSY_TIMEOUT_MS = 110e3;
-// Server-side fallback on a declined request (Anthropic's recommended model for the reason it
-// declined), for the models that take it; the web tools' newest versions, for the models that have them.
-const FALLBACK_OK = /^claude-(sonnet-5-5|opus-5-5|opus-5|fable-5-1|fable-5)$/;
-const WEB_NEW = /^claude-(sonnet-5-5|sonnet-5|sonnet-4-6|opus-5-5|opus-5|opus-4-[678]|fable-5-1|fable-5)$/;
-
-const T = (name, description, properties, required = []) => ({ name, description, input_schema: { type: 'object', additionalProperties: false, properties, required } });
-const DAY = { type: 'string', description: 'YYYY-MM-DD' };
+// ---- Ipsy: the helper you chat with (server/ipsy.js, shared by every app with Ipsy) ----
+// The phone keeps the conversation and runs the order and Gmail tools; Anthropic runs web search and
+// web fetch. ORDERS_IPSY_MODEL names another model than Claude Sonnet 5.5.
+export { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES };
+export const ipsyModelOf = env => ipsyModelFor(env, 'ORDERS_IPSY_MODEL');
+export const ipsyTurn = turnKind;
 const FIELDS = {
   store: { type: 'string' },
   items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['name'], properties: { name: { type: 'string' }, qty: { type: 'integer' }, price: { type: 'number' } } } },
@@ -220,12 +210,6 @@ export const IPSY_CLIENT_TOOLS = [
     message_id: { type: 'string' },
   }, ['message_id']),
 ];
-export function ipsyTools(model) {
-  const v = WEB_NEW.test(model) ? '20260209' : null;
-  return [...IPSY_CLIENT_TOOLS,
-    { type: v ? 'web_search_' + v : 'web_search_20250305', name: 'web_search', max_uses: 6 },
-    { type: v ? 'web_fetch_' + v : 'web_fetch_20250910', name: 'web_fetch', max_uses: 6 }];
-}
 
 export const IPSY_SYSTEM = `You are Ipsy, the friendly helper inside Orders, an iPhone app a family uses to track everything they've bought and where it is. You're a little stem cell, which you can mention lightly but never at length.
 
@@ -245,55 +229,7 @@ How to work:
 Replies: short and friendly, in plain US English, dates like "Oct 9". Use "- " at the start of a line for a list. No headings, tables or other markdown, except **bold** for a store or an item. Say in a line what you changed.
 Each of the person's messages starts with a note from the app in [brackets]: today's date and what's on their screen. The app adds it; the person didn't type it.`;
 
-export function ipsyRequestHead(env) {
-  const model = ipsyModelOf(env);
-  return {
-    model, max_tokens: 16000,
-    system: [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }],
-    tools: ipsyTools(model),
-    output_config: { effort: 'medium' },
-    cache_control: { type: 'ephemeral' },                 // and the conversation so far, as it grows
-    ...(FALLBACK_OK.test(model) ? { fallbacks: 'default' } : {}),
-  };
-}
-
-// What kind of step this is: a new question (counted), tool results, or carrying on a paused turn.
-export function ipsyTurn(messages) {
-  if (!Array.isArray(messages) || !messages.length || messages.length > IPSY_MAX_MESSAGES) throw fail('bad-turn', 400);
-  for (const m of messages) {
-    if (!m || typeof m !== 'object' || (m.role !== 'user' && m.role !== 'assistant')) throw fail('bad-turn', 400);
-    if (!(typeof m.content === 'string' || Array.isArray(m.content)) || !m.content.length) throw fail('bad-turn', 400);
-  }
-  if (messages[0].role !== 'user') throw fail('bad-turn', 400);
-  const lastMsg = messages[messages.length - 1];
-  if (lastMsg.role === 'assistant') return 'resume';
-  return Array.isArray(lastMsg.content) && lastMsg.content.some(b => b && b.type === 'tool_result') ? 'tools' : 'question';
-}
-
-async function ipsy(env, request, db, me, f) {
-  const t = await request.text();
-  if (t.length > IPSY_MAX_BODY) return reply({ error: 'too-long' }, 413);
-  // The phone sends exactly {"messages":[...]}: checked here, then passed on as written (no
-  // second encoding of what can be a long conversation, on a plan with 10 ms of CPU).
-  let b; try { b = JSON.parse(t); } catch { throw fail('bad-json', 400); }
-  if (!b || typeof b !== 'object' || Object.keys(b).join() !== 'messages' || !t.startsWith('{"messages":') || !t.endsWith('}')) throw fail('bad-turn', 400);
-  if (ipsyTurn(b.messages) === 'question') {
-    const used = 'orders:ipsy:' + me.id + ':' + day(), n = (+(await db.get(used)) || 0) + 1;
-    if (n > IPSY_DAILY) return reply({ error: 'limit' }, 429);
-    await db.put(used, String(n), { expirationTtl: 2 * 86400 });
-  }
-  const head = ipsyRequestHead(env), json = JSON.stringify(head);
-  const r = await post(env, json.slice(0, -1) + ',"messages":' + t.slice('{"messages":'.length, -1) + '}', f,
-    { timeout: IPSY_TIMEOUT_MS, beta: head.fallbacks ? 'server-side-fallback-2026-07-01' : '' });
-  if (!r.ok) {
-    let why = ''; try { const e = await r.json(); why = str(e && e.error && e.error.message, 300); } catch {}
-    const code = r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 || r.status === 529 ? 'ai-busy' : r.status === 413 ? 'too-long' : 'ai-' + r.status;
-    return reply({ error: code, ...(why ? { why } : {}) }, 502);
-  }
-  return new Response(r.body, { status: 200, headers: {
-    'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy': "default-src 'none'; sandbox", 'Referrer-Policy': 'no-referrer' } });
-}
+export const ipsyRequestHead = env => requestHead({ model: ipsyModelOf(env), system: IPSY_SYSTEM, tools: IPSY_CLIENT_TOOLS });
 
 // ---- the route ----
 async function body(request) {
@@ -313,7 +249,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
   if (!me) return reply({ error: 'signin' }, 401);
   try {
     if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
-    if (route === 'ipsy') return await ipsy(env, request, db, me, f);
+    if (route === 'ipsy') return await ipsyStep({ env, request, db, me, app: 'orders', head: ipsyRequestHead(env) }, f);
     const b = await body(request);
     const text = String(b.text == null ? '' : b.text).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_TEXT);
     if (text.length < 40) return reply({ error: 'empty' }, 400);

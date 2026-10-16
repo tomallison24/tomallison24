@@ -11,7 +11,9 @@
 //     intro, placeholder, suggestions,    // the words on an empty chat
 //     consent,                            // what is sent where, shown once before the first question
 //     context: () => 'On screen: …',      // added to every question, with today's date
-//     tools: { name: async input => ({ content, change: { text, undo } }) },
+//     tools: { name: async (input, { confirm }) => ({ content, change: { text, undo } }) },
+//                                         // confirm(text, { yes, no }): asks in the chat first (a card with
+//                                         //   Yes / No) and resolves true or false; nothing runs until tapped
 //     label: (name, input) => 'Looking at your orders',   // what Ipsy says it's doing
 //   })
 //
@@ -247,6 +249,16 @@
 .ipsy-undo{border:0;background:none;font:inherit;font-weight:700;color:var(--accent-text,var(--accent,#3B7366));padding:6px 4px;cursor:pointer}
 .ipsy-vintage .ipsy-undo{color:var(--mc-teal,#1F6F6B)}
 .ipsy-change.undone{opacity:.6}.ipsy-change.undone span{text-decoration:line-through}
+.ipsy-ask{align-self:stretch;display:grid;gap:10px;font-size:14.5px;line-height:1.4;padding:12px 12px 12px 14px;border-radius:16px;
+  background:color-mix(in srgb,var(--accent,#3B7366) 9%,transparent);border:1.5px solid color-mix(in srgb,var(--accent,#3B7366) 45%,transparent)}
+.ipsy-vintage .ipsy-ask{background:color-mix(in srgb,var(--mc-teal,#1F6F6B) 10%,transparent);border-color:var(--mc-teal,#1F6F6B)}
+.ipsy-ask b{font-weight:700}
+.ipsy-ask .ipsy-ans{display:flex;gap:8px;flex-wrap:wrap}
+.ipsy-ask button{min-height:40px;padding:0 16px;border-radius:999px;font:inherit;font-weight:700;cursor:pointer;border:1.5px solid var(--accent,#3B7366);background:transparent;color:var(--accent-text,var(--accent,#3B7366))}
+.ipsy-ask button[data-ans="yes"]{background:var(--accent,#3B7366);color:var(--on-accent,#fff)}
+.ipsy-vintage .ipsy-ask button{border-color:var(--mc-teal,#1F6F6B);color:var(--mc-teal,#1F6F6B)}
+.ipsy-vintage .ipsy-ask button[data-ans="yes"]{background:var(--mc-teal,#1F6F6B);color:#FBF5E9}
+.ipsy-ask small{color:var(--muted,rgba(16,24,26,.64));font-size:13px}
 .ipsy-err{align-self:stretch;font-size:14px;padding:10px 12px;border-radius:14px;color:var(--danger-ink,#AE2117);background:color-mix(in srgb,var(--danger,#E5281D) 10%,transparent)}
 .ipsy-empty{margin:auto 0 6px;display:grid;gap:12px;font-size:15px;line-height:1.45}
 .ipsy-empty p{margin:0;color:var(--muted,rgba(16,24,26,.64))}
@@ -308,6 +320,7 @@
     addStyle();
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok' };
     let messages = [], view = [], busy = false, undos = new Map();
+    const asks = new Map();               // questions waiting on a Yes or No: id -> resolve
     try { const saved = JSON.parse(ls.get(K.chat, 'null')); if (saved && Array.isArray(saved.messages) && Array.isArray(saved.view)) { messages = saved.messages; view = saved.view; } } catch {}
 
     // The button
@@ -380,7 +393,7 @@
     input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(120, input.scrollHeight) + 'px'; });
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
     $('ipsyForm').addEventListener('submit', e => { e.preventDefault(); submit(); });
-    $('ipsyNew').addEventListener('click', () => { if (busy) return; messages = []; view = []; undos = new Map(); persist(); draw(); input.focus(); });
+    $('ipsyNew').addEventListener('click', () => { if (busy || asks.size) return; messages = []; view = []; undos = new Map(); persist(); draw(); input.focus(); });
     // The keyboard, a turned phone: Ipsy and its bubble move up above the keyboard, and fit the screen.
     const refit = () => { if (!wrap.hidden) place(); };
     if (vv) { vv.addEventListener('resize', refit); vv.addEventListener('scroll', refit); }
@@ -406,9 +419,19 @@
       if (v.t === 'act') return '<div class="ipsy-act">' + esc(v.text) + '</div>';
       if (v.t === 'change') return '<div class="ipsy-change' + (v.undone ? ' undone' : '') + '"><span>' + esc(v.text) + '</span>' + (!v.undone && undos.has(v.id) ? '<button class="ipsy-undo" type="button" data-undo="' + esc(v.id) + '">Undo</button>' : '') + '</div>';
       if (v.t === 'err') return '<div class="ipsy-err" role="alert">' + esc(v.text) + '</div>';
+      if (v.t === 'ask') return '<div class="ipsy-ask" role="group" aria-label="Ipsy is asking first"><span>' + rich(v.text) + '</span>'
+        + (v.state === 'yes' ? '<small>You said yes.</small>' : v.state === 'no' ? '<small>You said no, so nothing changed.</small>'
+          : asks.has(v.id) ? '<div class="ipsy-ans"><button type="button" data-ans="yes" data-q="' + esc(v.id) + '">' + esc(v.yes) + '</button><button type="button" data-ans="no" data-q="' + esc(v.id) + '">' + esc(v.no) + '</button></div>'
+          : '<small>Not answered, so nothing changed.</small>') + '</div>';
       return '';
     }
     log.addEventListener('click', e => {
+      const ans = e.target.closest('[data-ans]');
+      if (ans) {
+        const id = ans.dataset.q, done = asks.get(id), v = view.find(x => x.id === id);
+        if (!done || !v) return;
+        asks.delete(id); v.state = ans.dataset.ans; persist(); draw(); done(v.state === 'yes'); return;
+      }
       const ask = e.target.closest('[data-ask]'); if (ask) { input.value = ask.dataset.ask; submit(); return; }
       if (e.target.closest('#ipsyOk')) { ls.set(K.ok, '1'); draw(); input.focus(); return; }
       const u = e.target.closest('[data-undo]');
@@ -440,11 +463,23 @@
       if (!r.ok || !j) throw Object.assign(new Error((j && (j.why || j.error)) || 'http-' + r.status), { code: (j && j.error) || (r.status === 404 ? 'no-ai' : 'server'), why: j && j.why });
       return j;
     }
+    // A tool that changes something the person should approve first (Calendar's events) asks here:
+    // a card in the chat with exactly what will change, and Yes / No buttons. Nothing happens until a
+    // button is tapped; the tool gets true for Yes, false for No.
+    function confirm(text, opt = {}) {
+      const id = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      return new Promise(resolve => {
+        asks.set(id, resolve);
+        if (wrap.hidden) open();
+        add({ t: 'ask', id, text: String(text), yes: opt.yes || 'Yes, do it', no: opt.no || 'No' });
+        mood('listen'); say('Waiting for your answer…');
+      }).then(ok => { mood('work'); say('Working…'); return ok; });
+    }
     async function runTool(u) {
       const fn = o.tools && o.tools[u.name];
       if (!fn) return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: 'No such tool here.' };
       try {
-        const res = await fn(u.input || {}) || {};
+        const res = await fn(u.input || {}, { confirm }) || {};
         if (res.change && res.change.text) {
           const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
           if (typeof res.change.undo === 'function') undos.set(id, res.change.undo);
