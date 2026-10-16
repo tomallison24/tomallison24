@@ -1878,4 +1878,34 @@
   })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: its tools (ipsy-tools.js) work on these same
+  // notes, reminders and lists, through save(); Claude answers through functions/notes/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.NotesIpsy) {
+    // A note or reminder Ipsy is about to change may be open (show opens a note behind the chat):
+    // its sheet is finished first, as Done would, so its copy can't write over the change later.
+    const release = (kind, id) => {
+      if (kind === 'note' && st.editing && st.editing.id === id && !$('editor').hidden) finishEdit();
+      if (kind === 'todo' && st.todo && st.todo.id === id && !$('todoSheet').hidden) finishTodo();
+    };
+    const finishOpen = () => { if (!$('editor').hidden) finishEdit(); if (!$('todoSheet').hidden) finishTodo(); };
+    window.AllisonOS.ipsy.mount({
+      app: 'notes', name: 'Notes', endpoint: '../notes/api/ipsy', headers: { 'X-Notes': '1' }, slot: document.querySelector('.dock > .ipsyslot'),
+      ...window.NotesIpsy({
+        get notes() { return notes; }, set notes(v) { notes = v; },
+        get todos() { return todos; }, set todos(v) { todos = v; },
+        get lists() { return lists; }, set lists(v) { lists = v; },
+        save, render, newId, normTag, extractTags, matchQuery, todayStr, COLORS, LIST_COLORS,
+        AISLE, isGrocery, aisleOf, learnAisle, parseRecipe, formatRecipe, countRecipe, looksLikeRecipe,
+        alertsOn: () => push.on, release,
+        showNote: id => { finishOpen(); setTab('notes'); openEditor(id); },
+        showList: id => { finishOpen(); st.rlist = id; if (isGrocery(listById(id))) st.rview = 'all'; setTab('rem'); },
+        screen: () => {
+          if (!$('editor').hidden && st.editing) return st.editing.private ? 'a private note, open in the editor' : st.isNew ? 'a new note being written' : 'the note ' + st.editing.id + ' (“' + (st.editing.title || 'Untitled') + '”), open in the editor';
+          if (st.tab === 'rem') return 'Reminders, ' + (st.rlist ? 'the list ' + listById(st.rlist).name : 'the ' + VIEWS[st.rview] + ' view, all lists');
+          return st.q ? 'search results for "' + st.q + '" in Notes' : st.coll ? 'the ' + collName(st.coll) + ' collection in Notes' : 'the Notes home';
+        },
+      }),
+    });
+  }
 })();
