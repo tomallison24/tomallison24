@@ -120,10 +120,11 @@ jobs:
               travel/scripts/smart-test.mjs travelvintage
               weather/scripts/app-test.mjs
               news/scripts/app-test.mjs
-          # Orders and Mail (Mail: the security tests that run in a page, and both designs)
+          # Orders and Mail (Mail: the security tests that run in a page, and both designs), and Ipsy in Orders
           - group: orders-mail
             tests: |
               orders/scripts/app-test.mjs
+              orders/scripts/ipsy-test.mjs
               mail/scripts/security-test.mjs
               mail/scripts/design-test.mjs
     steps:

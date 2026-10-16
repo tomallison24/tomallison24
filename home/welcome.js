@@ -72,6 +72,7 @@
   //   cards       (major only) aOS's own setup cards after the new mark
   //   added       ['clock', ...] the apps this version brings to aOS: Today in aOS leads
   //               with them for 30 days after its date, until a newer version comes
+  //   intro       'ipsy': while the release is fresh, aOS's Today leads with Meet Ipsy (aOS/app.js)
   //   silent      true: logged here only, shown nowhere - not in aOS's What's new;
   //               the apps keep showing the last version that wasn't silent, and
   //               no update screen plays for it
@@ -84,6 +85,16 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.5', date: '2026-10-16', title: 'Meet Ipsy', intro: 'ipsy',
+      highlights: ['Meet Ipsy: a little stem cell you can chat with, in Orders',
+        'Ask about your orders and Ipsy finds, fixes, merges and deletes them, with Undo',
+        'Ipsy checks your Gmail and searches the web for you'],
+      notes: ['Orders: Ipsy, the little stem cell in the bottom left corner, is a helper you chat with, running on Claude Sonnet 5.5. Ask in your own words and it looks through your orders, fixes details, marks them delivered, adds, deletes and merges duplicates (each change shows in the chat with Undo, and is kept like your own edit), reads your Gmail (read-only) to check an order or find one that was missed, and searches the web. It asks once before your first question, and is for signed-in family',
+        'Ipsy changes shape as it works: a stem cell at rest, a nerve cell while it thinks, a white blood cell while it looks through your orders',
+        'aOS: Today leads with Meet Ipsy, Ipsy itself telling what it can do as it turns from one cell into the next; tap it for the whole story'],
+      apps: {
+        orders: { highlights: ['Meet Ipsy: tap the little stem cell, bottom left, and chat about your orders', 'Ipsy finds, fixes, merges and deletes orders for you, each with Undo', 'Ipsy checks your Gmail and searches the web too'] },
+      } },
     { v: '1.4', date: '2026-10-16', title: 'Your look, in Settings',
       highlights: ['Every app opens in Vintage. Prefer Sea glass? Pick it in the app\'s Settings',
         'Each app is one app now, with both looks inside',

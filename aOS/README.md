@@ -118,7 +118,11 @@ pastel stop that slides between them, and your avatar top right.
   "The Allison Family", a greeting by name, and, signed in, everyone in the
   family (`GET /aOS/api/members`, names only). Then postcards laid out as a bento (one tall, two halves, one wide):
   setting up Home, the app of the day, what's new (the aOS mark), meet an app,
-  your family account. Each opens full screen. Signed out, a card at the top
+  your family account, and **Meet Ipsy**: the helper you chat with in Orders
+  (`../home/ipsy.js`), drawn live on the card, telling what it can do in a speech
+  bubble as it turns from one cell into the next; its page shows all six of its
+  cells. While a release with `intro: 'ipsy'` is fresh (aOS1.5), Meet Ipsy leads,
+  big, with what's new beside it. Each opens full screen. Signed out, a card at the top
   asks you to sign in (or set up, or join).
 - **Apps**: each app its own card, glowing in its colour, with its tagline (or
   "New in aOS1.1" when the newest release changed it) and **Get**, or **✓

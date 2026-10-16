@@ -31,7 +31,7 @@ releases it (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS1.4 now): each merge releases it again,
+- By default, add to the top entry (aOS1.5 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
@@ -92,7 +92,8 @@ from.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
   steps, release log, theme), `slide.js`, `design.js` (Vintage or Sea glass), `sky.js` (the Vintage designs' day and night
-  sky) and `aisles.js` (grocery sections, for Notes and Meals) - plus the Welcome Lab. Its
+  sky), `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the
+  AI helper you chat with, so far in Orders) - plus the Welcome Lab. Its
   `index.html` is a "moved to aOS" notice.
 - `home/back.js` (swipe up to the launcher) is **gone**: don't add
   `../home/back.js` back to a page or to a `sw.js` SHELL list (a missing file

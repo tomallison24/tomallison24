@@ -114,18 +114,71 @@
       <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
       <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
       <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` };
+  // Meet Ipsy: the helper you chat with (home/ipsy.js), a little stem cell that changes shape as it works.
+  // While a release that introduces it is fresh (its intro: 'ipsy'), it leads Today, big, telling what it can
+  // do in a speech bubble as it turns from one cell into the next; after that it joins the mix.
+  const IPSY_SAYS = [
+    ['stem', 'Hi! I’m Ipsy, a little stem cell.'], ['wbc', 'I hunt down any order you ask about.'],
+    ['rbc', 'I fix details and merge duplicates.'], ['neuron', 'I check your Gmail and the web.'],
+    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me in Orders, bottom left!'],
+  ];
+  const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt in your orders'],
+    ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
+  const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
+      <p>Ipsy is a little stem cell you can chat with about your orders. It lives in the bottom left corner of Orders, and it runs on Claude, by Anthropic.</p>
+      <h3>Ask in your own words</h3><p>“What’s arriving this week?” “Merge my duplicate orders.” “The Walmart total should be $49.99.” “Delete everything from that pizza place.” “Is anything late?”</p>
+      <h3>It does the work</h3><p>Ipsy finds any order, fixes its details, marks it delivered, adds, deletes and merges duplicates into one. <b>Every change shows in the chat with Undo.</b></p>
+      <h3>Gmail and the web</h3><p>It reads your Gmail to check an order against its emails or find one that was missed (it can’t send, change or delete email), and searches the web for things like a store’s return policy.</p>
+      <h3>A cell of many shapes</h3><div class="ipsy-forms">${IPSY_FORMS.map(([f, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-form="${f}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
+      <h3>What it shares</h3><p>Your question, and whatever Ipsy looks at to answer it, goes to Claude through the family server, which keeps only a count of questions. Ipsy is for signed-in family and asks once before your first question.</p>
+      <h3>Where to find it</h3><p>Open Orders and tap the little cell in the bottom left corner. Orders is the first app with Ipsy.</p>` };
+  const ipsyStage = (cls, line) => `<div class="${cls}" data-ipsy-stage></div><p class="ipsy-say" aria-hidden="true"><span>${esc(line)}</span></p>`;
+  // Brings every Ipsy on the page to life: the card's and the page's tell what it can do, one shape at a time.
+  let ipsyTimer = 0;
+  const ipsys = [];
+  function wakeIpsy(root) {
+    const I = AllisonOS.ipsy; if (!I || !I.character) return;
+    for (const host of root.querySelectorAll('[data-ipsy-stage]:not([data-on])')) {
+      host.dataset.on = '1';
+      ipsys.push({ host, say: host.parentNode.querySelector('.ipsy-say'), c: I.character(host, { look: aosLook.get(), live: true }), i: 0 });
+    }
+    for (const host of root.querySelectorAll('[data-ipsy-form]:not([data-on])')) {
+      host.dataset.on = '1';
+      I.character(host, { look: aosLook.get(), form: host.dataset.ipsyForm, mood: host.dataset.ipsyForm === 'neuron' ? 'think' : 'idle' });
+    }
+    if (!ipsyTimer && !matchMedia('(prefers-reduced-motion: reduce)').matches) ipsyTimer = setInterval(() => {
+      for (let k = ipsys.length - 1; k >= 0; k--) {
+        const o = ipsys[k];
+        if (!o.host.isConnected) { ipsys.splice(k, 1); continue; }
+        o.i = (o.i + 1) % IPSY_SAYS.length;
+        const [form, line] = IPSY_SAYS[o.i];
+        o.c.form(form); o.c.mood('talk'); setTimeout(() => o.c.mood('idle'), 1100);
+        if (o.say) o.say.innerHTML = `<span>${esc(line)}</span>`;
+      }
+    }, 2900);
+  }
+  addEventListener('aos:look', () => {
+    for (const host of document.querySelectorAll('[data-ipsy-stage], [data-ipsy-form]')) host.classList.toggle('ipsy-vintage', aosLook.get() === 'vintage'), host.classList.toggle('ipsy-glass', aosLook.get() !== 'vintage');
+  });
   const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
-  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS])]);
+  const intro = fresh && now.intro === 'ipsy';
+  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
   const aotd = pool.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';
-  const STORIES = [...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
+  const STORIES = [...(intro ? [IPSY] : []), ...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
   for (const s of pool) if (STORIES.length < SHAPE.length && !STORIES.some(o => o.id && o.id === s.id)) STORIES.push(s);
   const w = STORIES.indexOf(NEWS); if (SHAPE[w] === 'wide') [STORIES[w], STORIES[w + 1]] = [STORIES[w + 1], STORIES[w]];   // the mark needs height
-  let tint = 0; for (const s of STORIES) s.cls = s.plain ? 's2' : ['s0', 's1', 's3', 's4'][tint++ % 4];   // the Vintage postcard colors
-  $('stories').innerHTML = STORIES.map((s, i) => s.plain
+  let tint = 0; for (const s of STORIES) s.cls = s.plain ? 's2' : s.ipsy ? (tint++, 's0') : ['s0', 's1', 's3', 's4'][tint++ % 4];   // the Vintage postcard colors (Ipsy: mustard on teal)
+  $('stories').innerHTML = STORIES.map((s, i) => s.ipsy
+    ? `<div class="story ipsy ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:129,147,188"><div class="art">${ipsyStage('ipsy-stage', IPSY_SAYS[0][1])}</div>
+       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy lives in ${esc(D.NAMES[s.id])}</b><i>Tap the little cell, bottom left</i></span>${getBtn(appOf(s.id))}</div></div>`
+    : s.plain
     ? `<div class="story plain ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
     : `<div class="story ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
        <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div></div>`).join('');
+
+  wakeIpsy($('stories'));
 
   // ---- Apps, and Search ----
   const rows = ids => ids.map(id => { const ap = appOf(id), ds = hasDesigns(id);
@@ -216,6 +269,13 @@
   }
   function storyPage(i) {
     const s = STORIES[i];
+    if (s.ipsy) {
+      const el = page(`<div class="hero ipsy ${s.cls}"><div class="art">${ipsyStage('ipsy-hero', IPSY_SAYS[0][1])}</div>
+        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div></div>
+        <div class="body">${s.body()}</div>
+        <div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div>`, { up: true, c: '129,147,188' });
+      return wakeIpsy(el);
+    }
     page(`<div class="hero ${s.cls}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
