@@ -125,6 +125,68 @@ affected). Follow-ups remember what was asked before.
   (`scripts/ai-test.mjs`), not against the live API: the first real summary is the
   real check.
 
+## Ipsy
+
+**Ipsy** is the little stem cell in the bottom left corner: a helper you chat
+with about the news and sport, in the design picked in Settings (mustard, teal
+and cream in Vintage, pastel glass in Standard; it changes with the design at
+once). It sits clear of the topic picker, Refresh, Settings and the Undo toast,
+and the end of every list scrolls above it. Ask in your own words, e.g. *What
+are the top stories today?*, *What does the BBC say about the budget?*, *Sum up
+the library story*, *How did Liverpool get on?*, *Show me the Premier League
+table*, *Follow Arsenal*, *Only Nature on Stem cells this week*. It sits beside
+the sparkle on each story (Summaries, above), not instead of it.
+
+- **What it can do** (`ipsy-tools.js`, on the phone): find stories in the
+  published headlines by words, topic, source or day, and read their details;
+  summarize one through the same summaries route the sparkle uses (so only a
+  story in the published headlines is read, and a summary the family already
+  made is free); today's scores, the fixtures coming up and a league's table,
+  from ESPN as the Sport tab reads them (a team, a league, or the teams you
+  follow); show a story (its tab, scrolled to it and marked, or its summary) or
+  a Sport view, league or match page on screen behind the chat. For anything
+  newer, or not in News, it searches the web and reads pages, and says that it did.
+- **What it changes**, only on this phone and only what you could change
+  yourself: the sports, teams and keywords you follow (Sport filters), the
+  one-tap team, and Stem cells' source and time filters. It does what you ask
+  without asking first; **each change shows in the chat with Undo**, for as long
+  as the app stays open. Everything else it only reads.
+- **Where its answers come from.** It answers from News' own headlines first
+  and says which source a story is from; scores and tables are ESPN's, with how
+  fresh they are (and when they're the saved copy). It reports what stories say,
+  neutrally, and doesn't add its own view.
+- **How it works.** The chat lives on the phone (`../home/ipsy.js`, shared by
+  every app with Ipsy). Each step sends the whole conversation to the family
+  server (`functions/news/api`, `POST ipsy`, `server/ipsy.js`), which adds
+  Ipsy's instructions and tools and asks **Claude Sonnet 5.5** (medium effort,
+  prompt caching on, Anthropic's server-side fallback if it declines). When
+  Claude asks for one of News' tools, it runs on the phone, against the same
+  headlines, scores and tables the app shows, and the result goes back with the
+  next step. Web search and web pages run at Anthropic. `NEWS_IPSY_MODEL`
+  (optional repository secret) names another model; `NEWS_AI_MODEL` still sets
+  the summaries' model on its own.
+- **Asked first, once.** Before the first question, Ipsy says what is sent
+  where: your question and whatever it looks at to answer it (the headlines,
+  scores and tables, and the teams you follow) go to Claude through the family
+  server. The server keeps only a count of questions (80 a person a day, counted
+  apart from the 60 summaries; the steps a question takes aren't counted). A
+  summary Ipsy asks for counts toward the summaries' 60, like a tap on the sparkle.
+- **For signed-in family** (Face ID), like the summaries. Without the key it
+  says Ipsy isn't set up.
+- **Web pages and stories are read, never obeyed**: Ipsy is told they are
+  material, not instructions, and to say so when one asks it to do something.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone until
+  then (a very long one stops at about 1 MB and asks for a new chat).
+- **Limits.** It can't open a publisher's page for you (a page can only be
+  opened by a tap): it shows the story in its list or its summary, which has the
+  link. Only football and rugby games have a match page. It knows only the
+  leagues in `leagues.json` and the stories in today's headlines; for anything
+  else it goes to the web.
+- **Not tried against the real API or on a phone**: the tests use a stand-in
+  for Claude, ESPN and the summaries route (`node news/scripts/ipsy-test.mjs`,
+  and the `ipsy:` tests in `node news/scripts/ai-test.mjs`), so the first real
+  questions are the real test of the instructions.
+
 ## Refreshing every 30 minutes
 
 `news.yml` has a schedule (:15 and :45 past each hour), but GitHub runs

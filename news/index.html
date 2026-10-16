@@ -771,6 +771,13 @@
    position they already have. */
 :where(#refresh, #setBtn, [data-action^="retry"], .chip.pill){position:relative}
 :where(#refresh, #setBtn, [data-action^="retry"], .chip.pill)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+
+  /* ---- Ipsy (../home/ipsy.js): the colours it reads, named from News' own, for both designs ---- */
+  :root { --hair: var(--hairline); --glass-2: var(--glass-strong); --danger: var(--bad, #E5281D); --danger-ink: var(--bad, #AE2117); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --danger-ink: var(--bad, #FF8A80); } }
+  :root[data-theme="dark"] { --danger-ink: var(--bad, #FF8A80); }
+  /* a story Ipsy shows you, marked for a moment */
+  .row.ipsy-spot, .lead.ipsy-spot { outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: 14px; }
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -1122,6 +1129,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 <!-- The switches' sliding glass thumb, shared by the AllisonOS apps. -->
 <script src="../home/slide.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: summaries and questions are for signed-in family -->
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="news" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
