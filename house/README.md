@@ -7,8 +7,10 @@ launcher (retired; it now holds the scripts every app shares), and its
 `localStorage` keys are `house.*`. It has every device on the Signal
 dashboard in six views, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
-menu opens upwards). The view's name is the title at the top. Behind it
-all, the page is a quiet tone (dark, or pale in light mode) - Slate, a blue-grey as Google Home's,
+menu opens upwards). The view's name is the title at the top. It has two
+designs (**Settings → Design**; see "The two designs" below): **Vintage**,
+mid-century modern over the Vintage sky, the default, and **Standard**, Sea
+glass. In Standard, behind it all, the page is a quiet tone (dark, or pale in light mode) - Slate, a blue-grey as Google Home's,
 by default - with something slow moving behind the glass, small faint
 Bubbles by default (`bg.js`; both picked in **Settings → Customization →
 Background** and kept on the phone). Every card is as clear as the energy
@@ -67,6 +69,63 @@ Same entities, same colours.
   an open popup. If Home Assistant turns a call down, a note says why.
 - **Preview**: with no Home Assistant set up, the app runs on sample readings
   and the controls change those, so the design can be tried first.
+
+## The two designs
+
+One app, one house: the design changes only how Home looks, at once, and is
+kept on this phone (**Settings → Design**, the first section of Settings), as
+in Clock. `../home/design.js`, loaded in `<head>`, applies it before the page
+is drawn. Every tap, popup, connection and setting works the same in both.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from
+  the aOS Design Styles canvas. A cream ground and cards (walnut in dark mode),
+  flat and round-cornered, in place of glass, skies, mist and motes; mustard,
+  teal, burnt orange and olive, including the per-device colours the scripts
+  draw (heat is orange, cooling teal, a full tank orange, a light with no
+  colour of its own mustard, a switch that is on teal); the lights' colour
+  swatches stay true colours. A mustard sun behind the title and three little
+  bars under it; a walnut pill at the bottom for the view picker, with a
+  mustard disc; outlined and solid-orange buttons; Futura (built into iOS,
+  nothing downloaded).
+- **Standard**: Sea glass, as described above and below: the DG1 glass,
+  the card and popup skies, and the background picked in **Settings →
+  Customization → Background** (`bg.js`).
+
+**The sky.** In Vintage the page behind the title is the shared **Vintage
+sky** (`../home/sky.js`, as in every Vintage design): by day a ground washed
+with mustard, the sun and rays that turn very slowly; after sunset a ground
+washed with deep teal, the moon and twinkling stars; each over cream (Light)
+or walnut (Dark). Sunrise and sunset are for the phone's place (only if the
+app already has location permission: it never asks), else its time zone, and
+the sky changes by itself while the app is open; it holds still with reduced
+motion. Nothing moves behind it, and **Customization** (the background's
+colour and movement, `bg.js`) is hidden in Vintage: it is Standard's, and
+what is picked there is kept for Standard.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html` (and after the generated light rules, so it does not
+need regenerating); Standard is that block switched off (`media="not all"`),
+with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no sky. The
+colours the scripts draw follow it through `dual(glass, vintage)` in `app.js`
+(each palette, `PAL`, `T_ACC`, the units' `accents`, the Dysons', the
+speakers' and the rest, read at the moment they are drawn), and the page is
+drawn again on `aos:design`. The choice is `localStorage` `design.house`.
+What iOS reads when Home is added to the Home Screen follows it: the icon
+(`icon-180.png`, Vintage; `icon-glass-180.png`, Standard), the status bar
+style (`default` in Vintage, where `black-translucent`'s white clock would
+vanish on the cream) and the bar colours.
+
+**The old Home Vintage app.** Home Vintage used to be an app of its own
+(`housevintage/`, with its own storage, `housev.…`). Its address now opens
+this same app (the deploy copies `house/` there, `.github/workflows/news.yml`),
+so a phone that added it keeps it. The first time it opens there, `design.js`
+moves that app's data on the phone over to Home's names (`housev.…` →
+`house.…`: the Home Assistant address and token, the PIN, favorites,
+schedules, everything; and what it had seen, so no walkthrough again), unless
+Home already has data on that phone; nothing old is deleted. A phone that had
+connected Home Vintage with its own token keeps using that token. Its only
+server call (`../aOS/api/home`, the family's address) already works from
+either address.
 
 ## Thermostats
 
@@ -504,13 +563,23 @@ sample states and preview are the family's own.
 
 ## Icons
 
-`node house/scripts/make-icons.mjs` draws `icon-512.png` and `icon-180.png`
-from `icon.svg`: a white house with its window cut out, on sand (one of the
-Sea glass tints), in the style of the other AllisonOS icons.
+`node house/scripts/make-icons.mjs` draws both designs' icons:
+`icon-512.png` and `icon-180.png` from `icon.svg` (Vintage: a cream house on
+mustard with a teal sun and a burnt-orange pill), and `icon-glass-512.png` and
+`icon-glass-180.png` from `icon-glass.svg` (Standard: a white house with its
+window cut out, on sand, one of the Sea glass tints). `../home/design.js` puts
+the one for the design picked on the page.
 
 ## Tests
 
 `node house/scripts/app-test.mjs` (CI runs it, `apps-check.yml`) opens Home in
 its preview at iPhone size, light and dark: it opens on Favorites, the lamps'
 night moon (1%) and sun (100%) chips work, every view in the drop-down opens
-with something in it, and nothing errors or trips the page's policy.
+with something in it, and nothing errors or trips the page's policy. It also
+covers both designs: Vintage by default (Futura, flat cream or walnut cards,
+the sky's ground, the mustard sun, the Retro colours the scripts draw, no
+Customization), Standard (the Vintage block off, no sky, the Sea glass ground
+and icon, the background back), Settings → Design switching both ways at once
+and kept across a reload, and the old Home Vintage address (served from
+`house/`, as the deploy does) moving that app's data over once.
+`node house/scripts/connect-test.mjs` (CI too) plays the connection race.

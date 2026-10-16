@@ -24,7 +24,8 @@ const VACS = [
 ];
 const V_SKY = { cleaning: grad('#221F2C', '#36324A', '#5A5470'), returning: grad('#201E2A', '#312E42', '#4E4963'), paused: grad('#1C1C22', '#2A2A33', '#42424E'),
   charging: grad('#1A2224', '#293938', '#48625D'), error: grad('#241D20', '#3C2C31', '#614A50'), docked: grad('#1A1B20', '#26272F', '#3B3D47'), off: grad('#121316', '#202227', '#34373F') };
-const V_ACC = { cleaning: '207,195,242', returning: '189,178,230', paused: '169,166,191', charging: '168,224,204', error: '240,179,187', docked: '195,198,214', off: '154,160,166' };
+const V_ACC = dual({ cleaning: '207,195,242', returning: '189,178,230', paused: '169,166,191', charging: '168,224,204', error: '240,179,187', docked: '195,198,214', off: '154,160,166' },
+  { cleaning: '47,140,134', returning: '227,167,47', paused: '165,150,128', charging: '126,140,52', error: '184,69,43', docked: '196,170,120', off: '154,145,130' });   // Vintage: Retro (dual, app.js)
 const V_WORD = { cleaning: 'Cleaning', returning: 'Heading home', paused: 'Paused', charging: 'Charging', error: 'Needs attention', docked: 'Docked', off: 'Offline' };
 
 family({
@@ -143,7 +144,7 @@ const BLINDS = [
   { id: 'left', name: 'Left', cover: 'cover.office_left_blind', helper: 'input_number.office_left_blind_target' },
   { id: 'right', name: 'Right', cover: 'cover.office_right_blind', helper: 'input_number.office_right_blind_target' },
 ];
-const DEPART = 'lock.velux_gateway_departure_mode', GUEST = 'input_boolean.guest_mode', B_ACC = '129,201,149';
+const DEPART = 'lock.velux_gateway_departure_mode', GUEST = 'input_boolean.guest_mode', BLIND = dual({ acc: '129,201,149' }, { acc: '126,140,52' });   // the blinds' colour: olive in Vintage
 
 family({
   id: 'blinds', name: 'Blinds', icon: 'blinds', group: 'Around the house', order: 2,
@@ -168,21 +169,21 @@ family({
     const sides = BLINDS.slice(1).map(x => { const q = this.read(x); return x.name + ' ' + (q.pos == null ? '—' : Math.round(q.pos) + '%'); }).join(' · ');
     const locked = val(DEPART) === 'locked';
     put(this.el.querySelector('[data-r="banner"]'), locked ? `<div class="warnbar">${svg('lock', 18)}Departure mode - the blinds will not move</div>` : '');
-    put(R('fx'), skyHTML(grad('#171C19', '#202A23', '#324236'), B_ACC, r.pos > 0 ? { pool: 'drift', poolA: 0.06 + 0.1 * r.pos / 100, poolRgb: '255,236,200' } : {}));
+    put(R('fx'), skyHTML(grad('#171C19', '#202A23', '#324236'), BLIND.acc, r.pos > 0 ? { pool: 'drift', poolA: 0.06 + 0.1 * r.pos / 100, poolRgb: '255,236,200' } : {}));
     put(R('hero'), this.shade(r, 'sm'));
     put(R('info'), infoHTML2(b.name, this.words(r), sides, isOn(GUEST) ? `<div class="alerts"><span class="alert guest">${svg('guest', 13)}Guest mode</span></div>` : ''));
     put(R('chips'), this.chips(b, r));
     card.classList.toggle('offline', r.offline);
-    shadow(card, B_ACC);
+    shadow(card, BLIND.acc);
     this.sum = r.offline ? 'Unavailable' : this.words(r);
   },
   sheet() {
     const r = this.read(BLINDS[0]), guest = held(dv('blinds', 'guest', 'Guest mode'), 'g', val(GUEST)) === 'on';
-    const side = b => { const q = this.read(b); return `<div class="bside">${sliderHTML('pos', q.tgt ?? q.pos ?? 0, 0, 100, 1, { v: b.id, label: b.name.toUpperCase(), shown: this.words(q), unit: '%', tint: B_ACC, dis: q.offline || gone(b.helper) })}
+    const side = b => { const q = this.read(b); return `<div class="bside">${sliderHTML('pos', q.tgt ?? q.pos ?? 0, 0, 100, 1, { v: b.id, label: b.name.toUpperCase(), shown: this.words(q), unit: '%', tint: BLIND.acc, dis: q.offline || gone(b.helper) })}
       ${this.chips(b, q).replace(/data-a="pos"/g, `data-a="pos" data-b="${b.id}"`)}</div>`; };
     return {
-      title: 'Office Blinds', accent: B_ACC, pill: pillHTML2(this.words(r)),
-      fx: skyHTML(grad('#171C19', '#202A23', '#324236'), B_ACC, {}, 150),
+      title: 'Office Blinds', accent: BLIND.acc, pill: pillHTML2(this.words(r)),
+      fx: skyHTML(grad('#171C19', '#202A23', '#324236'), BLIND.acc, {}, 150),
       parts: [
         ['hero', `<div class="uhero">${this.shade(r, 'lg')}<div class="dg-title">${this.words(r)}</div></div>`],
         val(DEPART) === 'locked' ? ['dep', `<div class="warnbar">${svg('lock', 18)}Departure mode - the blinds will not move</div>`] : null,
@@ -228,7 +229,8 @@ family({
 const HATCH = { ent: 'media_player.olivias_hatch_media_player', light: 'light.olivias_hatch_light', clock: 'light.olivias_hatch_clock', lock: 'switch.olivias_hatch_toddler_lock',
   wifi: 'binary_sensor.olivias_hatch_wifi', bed: 'scene.olivia_s_bedroom_olivias_hatch_white_noise_2', script: 'script.hatch_bedtime' };
 const H_SKY = { night: grad('#1A1B24', '#262838', '#3D4056'), light: grad('#1D1B20', '#2A272E', '#423D47'), sound: grad('#191B22', '#242833', '#394050'), off: grad('#17181C', '#212329', '#33363E'), offline: grad('#121316', '#1C1D21', '#2C2E34') };
-const H_ACC = { night: '196,190,226', light: '214,200,196', sound: '176,188,222', off: '190,194,204', offline: '154,160,166' };
+const H_ACC = dual({ night: '196,190,226', light: '214,200,196', sound: '176,188,222', off: '190,194,204', offline: '154,160,166' },
+  { night: '47,140,134', light: '227,167,47', sound: '216,87,42', off: '165,150,128', offline: '154,145,130' });   // Vintage: Retro
 const H_COLOURS = [[255, 60, 30], [255, 122, 89], [255, 183, 3], [90, 200, 120], [78, 161, 255], [155, 140, 255], [255, 255, 255]];
 const niceSound = s => !s || s === 'NONE' ? 'No sound' : String(s).replace(/([a-z])([A-Z0-9])/g, '$1 $2');
 
@@ -288,7 +290,7 @@ family({
       parts: [
         ['hero', `<div class="uhero">${this.lamp(r, 'lg')}<div class="dg-title">${this.title(r)}</div><div class="dg-sub">${this.sub(r)}</div></div>`],
         ['vol', this.volStep(r)],
-        ['main', grp(swRow('light', 'Light', 'lightbulb', r.lit, r.lit ? r.rgb : '48,209,88', { dis, wait: tWaiting(r.d, 'light') })
+        ['main', grp(swRow('light', 'Light', 'lightbulb', r.lit, r.lit ? r.rgb : PAL.on, { dis, wait: tWaiting(r.d, 'light') })
           + swRow('snd', 'Sound', 'sound', r.playing, H_ACC.sound, { dis, wait: tWaiting(r.d, 'snd') }), true)],
         ['sound', lbl('SOUND') + `<div class="sndrow"><button class="disc" data-a="sndstep" data-v="-1" aria-label="Previous sound"${dis || !list.length ? ' disabled' : ''}>${svg('prev', 20)}</button>
           <b>${esc(niceSound(r.sound))}</b><button class="disc" data-a="sndstep" data-v="1" aria-label="Next sound"${dis || !list.length ? ' disabled' : ''}>${svg('next', 20)}</button></div>`],

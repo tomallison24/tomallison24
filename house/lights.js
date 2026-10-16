@@ -52,7 +52,7 @@ for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL
 const L_SWATCH = [['white', 'White', '255,255,255', null], ['warm', 'Warm White', '255,217,168', [30, 25]], ['red', 'Red', '255,59,48', [0, 100]],
   ['green', 'Green', '52,199,89', [120, 100]], ['blue', 'Blue', '59,130,246', [220, 100]], ['purple', 'Purple', '168,85,247', [280, 100]]];
 const L_STRIP = 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', L_CUSTOM = 'input_text.signal_tv_strip_custom_hs';
-const L_TINT = '255,196,128';
+const L_TINT = dual({ c: '255,196,128' }, { c: '227,167,47' });   // a light with no colour of its own: mustard in Vintage
 const lfold = () => store.get('lfold') || [];
 // The room drawers start closed and close again when the view is left, so it
 // is always neat to come back to.
@@ -71,7 +71,7 @@ family({
     const bri = on ? held(d, 'bri', raw == null ? 100 : raw) : 0;
     // One warm colour for every light (its icon, glow and slider), the room switches' too, so the view reads as one;
     // a light's own colour still shows where it matters, in the TV strip's swatches.
-    const pc = L_TINT;
+    const pc = L_TINT.c;
     return { L, d, A, offline, on, bri, raw, pc, hs: A.hs_color, onoff: L.kind === 'onoff' || (Array.isArray(A.supported_color_modes) && A.supported_color_modes.join() === 'onoff') };
   },
   readout(r) { return r.offline ? 'Offline' : r.onoff ? (r.on ? 'On' : 'Off') : r.on ? (r.raw == null && !tWaiting(r.d, 'bri') ? 'On' : Math.round(r.bri) + '%') : 'Off'; },
@@ -144,10 +144,10 @@ family({
   },
 
   sheet(id) {
-    const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : '48,209,88';
+    const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : PAL.on;
     const memberRows = ms.map(m => {
       const q = this.read(m), nm = L_NAMES[m] || (attr(m, 'friendly_name') || m.replace(/^light\./, '').replace(/_/g, ' ')).replace(/^\w/, c => c.toUpperCase());
-      return `<div class="mrow" data-m="${m}">${swRow('mtoggle', esc(nm), q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : '48,209,88', { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
+      return `<div class="mrow" data-m="${m}">${swRow('mtoggle', esc(nm), q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : PAL.on, { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
         ${q.onoff ? '' : sliderHTML('mbri', q.bri, 1, 100, 1, { v: m, tint: q.pc, cls: 'thin', unit: '%', aria: nm + ' brightness', dis: q.offline })}</div>`;
     }).join('');
     return {

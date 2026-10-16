@@ -84,7 +84,7 @@ const heaters = family({
       parts: [
         ['hero', `<div class="uhero">${this.fins(h, r, 'lg')}<div class="dg-title">${this.title(h, r)}</div><div class="dg-sub">${r.offline ? 'The heater is not reachable' : (r.high ? 'High' : 'Low') + ' · it has no thermometer, so it heats to the target by its own sensor'}</div></div>`],
         ['tgt', this.step(h, r)],
-        ['power', grp(swRow('power', 'Power', 'power', r.on, a === h.acc.off ? '48,209,88' : a, { dis: r.offline, wait: tWaiting(r.d, 'mode') }), true)],
+        ['power', grp(swRow('power', 'Power', 'power', r.on, a === h.acc.off ? PAL.on : a, { dis: r.offline, wait: tWaiting(r.d, 'mode') }), true)],
         ['level', lbl('LEVEL') + segHTML('level', [['1', 'Low'], ['2', 'High']], r.high ? '2' : '1', { dis: r.offline || gone(h.level), wait: tWaiting(r.d, 'level') })],
         ['feat', lbl('FEATURES') + grp(swRow('lock', 'Child lock', r.lock ? 'lock' : 'lockOpen', r.lock, a, { dis: gone(h.lock), wait: tWaiting(r.d, 'lock') })
           + swRow('light', 'Backlight', 'lightbulb', r.back, a, { dis: gone(h.light), wait: tWaiting(r.d, 'light') }))],

@@ -244,7 +244,7 @@ family({
     if (id !== 'bug') return null;
     const ack = isOn('input_boolean.signal_bug_logged_ack');
     return {
-      title: 'Report a Bug', accent: '190,194,204', pill: ack ? pillHTML2('Logged', '48,209,88') : '',
+      title: 'Report a Bug', accent: '190,194,204', pill: ack ? pillHTML2('Logged', PAL.on) : '',
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}, 150),
       parts: [
         // Never redrawn (its HTML never changes), so what is typed stays put.

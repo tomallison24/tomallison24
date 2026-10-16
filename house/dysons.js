@@ -9,6 +9,9 @@
 // quality is the worst of its sensors' bands. Manual is the preset `Normal`.
 // The id prefixes are uneven (olivias_dyson_*, md_dyson_*): the registry's.
 'use strict';
+// Vintage's colours (dual, app.js), the same for all three: Retro
+const DY_V = { off: '165,150,128', fan: '47,140,134', heating: '216,87,42', warm: '227,167,47' };
+const DY_OFFLINE = dual({ c: '190,194,204' }, { c: '165,150,128' });
 const DYSONS = [
   { id: 'sofia', name: "Sofia's Dyson", fan: 'fan.sofias_dyson', clim: 'climate.sofias_dyson', temp: 'sensor.sofias_dyson_temperature', rh: 'sensor.sofias_dyson_humidity',
     aq: [['AQI', 'sensor.sofias_dyson_air_quality_index', 'idx'], ['VOC', 'sensor.sofias_dyson_volatile_organic_compounds_index', 'idx']],
@@ -16,25 +19,25 @@ const DYSONS = [
     sens: 'select.sofias_dyson_air_quality', filter: 'sensor.sofias_dyson_filter_life_percent', reset: 'button.sofias_dyson_reset_filter_life',
     runtime: 'sensor.sofias_dyson_runtime_today', tilt: 'binary_sensor.sofias_dyson_tilt', heated: 'sensor.sofias_dyson_heated_today', boost: 'input_boolean.signal_dyson_sofia_boost', flow: 'focus',
     skies: { off: grad('#19191E', '#23232B', '#34343F'), fan: grad('#1D1B24', '#2A2735', '#433E56'), heating: grad('#221C21', '#32282D', '#4F3F42'), warm: grad('#1F1B1F', '#2B2629', '#423A3F') },
-    acc: { off: '196,194,210', fan: '190,182,222', heating: '222,190,184', warm: '208,192,196' } },
+    acc: dual({ off: '196,194,210', fan: '190,182,222', heating: '222,190,184', warm: '208,192,196' }, DY_V) },
   { id: 'olivia', name: "Olivia's Dyson", fan: 'fan.olivia_s_bedroom_olivias_dyson', clim: 'climate.olivia_s_bedroom_olivias_dyson', temp: 'sensor.olivia_s_bedroom_olivias_dyson_temperature', rh: 'sensor.olivia_s_bedroom_olivias_dyson_humidity',
     aq: [['AQI', 'sensor.olivia_s_bedroom_olivias_dyson_air_quality_index', 'idx'], ['VOC', 'sensor.olivia_s_bedroom_olivias_dyson_volatile_organic_compounds_index', 'idx']],
     night: 'switch.olivia_s_bedroom_olivias_dyson_night_mode', prevNight: 'input_boolean.olivia_s_dyson_previous_night', sense: 'switch.olivia_s_bedroom_olivias_dyson_continuous_monitoring',
     sens: 'select.olivia_s_bedroom_olivias_dyson_air_quality', filter: 'sensor.olivias_dyson_filter_life_percent', reset: 'button.olivia_s_bedroom_olivias_dyson_reset_filter_life',
     runtime: 'sensor.olivias_dyson_runtime_today', tilt: 'binary_sensor.olivia_s_bedroom_olivias_dyson_tilt', heated: 'sensor.olivias_dyson_heated_today', boost: 'input_boolean.signal_dyson_olivia_boost', flow: 'focus',
     skies: { off: grad('#191A1D', '#23252A', '#34373E'), fan: grad('#1A1E24', '#252C36', '#3C4757'), heating: grad('#221D1D', '#332A29', '#504442'), warm: grad('#1E1C1D', '#2A2728', '#413C3E') },
-    acc: { off: '196,200,210', fan: '176,196,224', heating: '224,192,178', warm: '206,194,196' } },
+    acc: dual({ off: '196,200,210', fan: '176,196,224', heating: '224,192,178', warm: '206,194,196' }, DY_V) },
   { id: 'md', name: 'M&D Dyson', fan: 'fan.m_d_dyson', clim: 'climate.m_d_dyson', temp: 'sensor.m_d_dyson_temperature', rh: 'sensor.m_d_dyson_humidity',
     aq: [['PM2.5', 'sensor.m_d_dyson_pm_2_5', 'pm25'], ['PM10', 'sensor.m_d_dyson_pm_10', 'pm10'], ['NO₂', 'sensor.m_d_dyson_nitrogen_dioxide_index', 'idx'], ['VOC', 'sensor.m_d_dyson_volatile_organic_compounds_index', 'idx']],
     night: 'switch.m_d_dyson_night_mode', sense: 'switch.m_d_dyson_continuous_monitoring',
     filter: 'sensor.m_d_dyson_hepa_filter_life', filterName: 'HEPA filter', carbon: 'sensor.m_d_dyson_carbon_filter_life',
     runtime: 'sensor.md_dyson_runtime_today', heated: 'sensor.md_dyson_heated_today', boost: 'input_boolean.signal_dyson_md_boost', flow: 'dir',
     skies: { off: grad('#191A19', '#232523', '#343734'), fan: grad('#1A1F1C', '#262E29', '#3D4A42'), heating: grad('#211E1A', '#312B25', '#4E453A'), warm: grad('#1E1C1A', '#2A2724', '#413C37') },
-    acc: { off: '196,202,198', fan: '184,208,192', heating: '224,198,168', warm: '208,198,184' } },
+    acc: dual({ off: '196,202,198', fan: '184,208,192', heating: '224,198,168', warm: '208,198,184' }, DY_V) },
 ];
 // Air quality: each sensor's band, the worst one shown. 0-10 indices: 3/6/8.
 const AQ_CUT = { idx: [3, 6, 8], pm25: [12, 35.4, 55.4], pm10: [54, 154, 254] };
-const AQ_WORD = ['Good', 'Fair', 'Poor', 'Very poor'], AQ_RGB = ['160,214,180', '236,214,150', '240,180,140', '236,160,164'];
+const AQ_WORD = ['Good', 'Fair', 'Poor', 'Very poor'], AQ_RGB = dual(['160,214,180', '236,214,150', '240,180,140', '236,160,164'], ['126,140,52', '227,167,47', '216,87,42', '184,69,43']);
 const DY_SENS = [['Off', 'Off'], ['Good', 'Low'], ['Default', 'Std'], ['Sensitive', 'High'], ['Very Sensitive', 'Max']];
 const aqBand = (kind, v) => isNaN(v) ? -1 : AQ_CUT[kind].findIndex(c => v <= c) < 0 ? 3 : AQ_CUT[kind].findIndex(c => v <= c);
 
@@ -60,7 +63,7 @@ family({
       sense: held(d, 'sense', val(y.sense)) === 'on', sens: y.sens ? held(d, 'sens', val(y.sens)) : null,
       temp: num(y.temp), rh: num(y.rh), boost: isOn(y.boost), tilt: y.tilt ? isOn(y.tilt) : false };
   },
-  acc(y, r) { return y.acc[r.mood] || (r.mood === 'offline' ? '190,194,204' : y.acc.off); },
+  acc(y, r) { return y.acc[r.mood] || (r.mood === 'offline' ? DY_OFFLINE.c : y.acc.off); },
   title(y, r) {
     if (r.offline) return offWord(y.fan);
     const n = v => v == null ? '--' : Math.round(v);
@@ -121,7 +124,7 @@ family({
     this.sum = [n ? n + ' running' : '', heat ? heat + ' heating' : ''].filter(Boolean).join(' · ') || 'Off';
   },
   sheet(id) {
-    const y = DYSONS.find(x => x.id === id), r = this.read(y), a = this.acc(y, r), tint = r.mood === 'off' ? '48,209,88' : a;
+    const y = DYSONS.find(x => x.id === id), r = this.read(y), a = this.acc(y, r), tint = r.mood === 'off' ? PAL.on : a;
     const words = { heating: 'Heat · Active', warm: 'Heat · Holding', fan: r.boost ? 'Air Boost' : `Fan ${r.spd}${r.auto ? ' · Auto' : ''}`, off: 'Off', offline: 'Offline' };
     const C = r.C, modes = ['off', 'cool', 'heat'].filter(m => !Array.isArray(C.hvac_modes) || C.hvac_modes.includes(m));
     const lo = Number.isFinite(C.min_temp) ? C.min_temp : 34, hi = Number.isFinite(C.max_temp) ? C.max_temp : 98;
