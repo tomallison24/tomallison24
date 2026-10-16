@@ -176,7 +176,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .seg button.warn b{color:var(--danger)}
 
 /* ---- content ---- */
-.list{padding:6px 14px calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.list{padding:6px 14px calc(164px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
 .sechead{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:6px 4px 6px;display:flex;justify-content:space-between}
 .resulthead{font-size:13px;color:var(--faint);margin:0 4px}
 /* Two plain flex columns, not CSS multi-column: Safari can fail to draw
@@ -249,6 +249,8 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .fab:active{transform:scale(.9)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
 .dockr{display:flex;align-items:center;gap:8px}
+/* Ipsy (../home/ipsy.js), the helper you chat with: just above the Notes / Reminders bar, on the left (the bar fills the dock's row) */
+.dock > .ipsyslot{position:absolute;left:12px;bottom:calc(100% + 8px);width:62px;height:62px}
 @media (max-width:389px){.tab svg{display:none}.tab{padding:0 14px}}
 .fab.small{width:46px;height:46px}
 .fab.small svg{width:21px;height:21px;stroke-width:1.9}
@@ -981,6 +983,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 
   <!-- DOCK -->
   <div class="dock">
+    <span class="ipsyslot"></span>
     <nav class="tabs glass" role="tablist" aria-label="Sections">
       <button class="tab" type="button" role="tab" data-tab="notes" aria-selected="true">
         <svg viewBox="0 0 24 24"><rect x="4.2" y="2.8" width="15.6" height="18.4" rx="3.6"/><path d="M8.2 8h7.6M8.2 12h7.6M8.2 16h4.6"/></svg>Notes
@@ -1380,9 +1383,11 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
-<script src="../home/account.js"></script>   <!-- family accounts: signs "Add to calendar" in -->
+<script src="../home/account.js"></script>   <!-- family accounts: signs "Add to calendar" and Ipsy in -->
 <script src="../home/slide.js"></script>
 <script src="../home/aisles.js"></script>
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="notes" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>

@@ -2,7 +2,8 @@
 
 Notes and reminders as a home-screen web app, in two designs: Vintage
 (mid-century modern, the default) or Standard (the same frosted glass as Mail
-and News), picked in Settings. Free, no accounts, no server.
+and News), picked in Settings. Free, no accounts, no server (except Ipsy, the helper you
+chat with, below, which asks Claude through the family server).
 
 - **Notes**: colour, pin, tags (type `#tag` anywhere), search (`#work budget`),
   and a "nudge" date shown on the card.
@@ -65,6 +66,69 @@ and News), picked in Settings. Free, no accounts, no server.
   alerts the phone at its **Alert** time even with Notes closed, and so does a
   note's nudge. Each phone picks which lists alert it. See *Notifications*
   below; it needs the Google Sheet sync and a small free server.
+
+## Ipsy
+
+**Ipsy** is the little stem cell just above the Notes / Reminders bar, on the
+left: a helper you chat with about your notes, reminders and lists, in the
+design picked in Settings (it changes with the design at once). The bar fills
+the dock's row, so Ipsy sits above it, and the pages have room at the end to
+scroll clear of it. Ask in your own words, e.g. *What's on my grocery list?*,
+*Sort the groceries by aisle*, *Find my notes about the house*, *Add the
+gutters to my house note*, *Remind me to call Mom tomorrow at 5*, *Tidy up my
+pancake recipe*, *Turn my packing note into a list*.
+
+- **What it can do** (`ipsy-tools.js`). Find notes by words, `#tags`, color
+  or where they are (Archive, Trash, pinned, nudges) and read them; write a
+  note; change one (title, text, adding to the end, tags, color, pin, nudge,
+  archive, back from Trash); move notes to Trash; tidy a recipe with the app's
+  own Convert. On the lists: see them and their items, add items (making a
+  list if asked), change one (its words, date, time, alert, priority, flag,
+  list, or its store section on a grocery list), check items off or uncheck
+  them, and remove them. Sort a grocery list into store sections, or rewrite a
+  shopping-list note with a heading for each section, with the same word list
+  as the app (`../home/aisles.js`). Open a note or a list on the screen behind
+  the chat. And search the web and read pages.
+- **Reminders that alert.** A reminder Ipsy gives a date, time and alert is
+  the same as one you set in its sheet: once the Sheet syncs, the notification
+  server alerts the phones that have notifications on (*Notifications*, below).
+- **Every change shows in the chat with Undo**, for as long as the app stays
+  open, and goes through the app's own save, so it reaches the Google Sheet
+  (and the other phone) like any other change; an Undo does too. It follows
+  the app's rules: `#words` in a note's text become its tags, a deleted note
+  goes to Trash for 30 days, and a section picked for a grocery item is learned
+  by its list. If Ipsy opened a note and then changes it, the note's editor is
+  finished first, so it can't write over the change.
+- **Deleting a note asks first**, with Yes and No in the chat; nothing happens
+  until you tap one. Everything else just happens, with Undo.
+- **Private notes stay on this phone**: Ipsy never sees them. They are left out
+  of everything it reads (it is told only how many there are) and it can't
+  change them, as they are left out of the Sheet.
+- **How it works.** The chat lives on the phone. Each step sends the whole
+  conversation to the family server (`functions/notes/api`, `POST ipsy`; the
+  shared part is `server/ipsy.js`), which adds Ipsy's instructions and tools
+  and asks **Claude Sonnet 5.5** (medium effort, prompt caching on,
+  Anthropic's server-side fallback if it declines). When Claude asks for one of
+  Notes' tools, it runs on the phone, where the notes are, and the result goes
+  back with the next step. Web search and web pages run at Anthropic.
+  `NOTES_IPSY_MODEL` (optional repository secret) names another model.
+- **Asked first, once.** Before the first question, Ipsy says what is sent
+  where: your question and the notes, reminders and lists it reads to answer
+  it go to Claude through the family server, which keeps only a count of
+  questions (80 a person a day; the steps a question takes aren't counted).
+  Nothing about the notes is kept there.
+- **For signed-in family** (Face ID, `../home/account.js`): the route is locked
+  like the other apps' (`functions/notes/api/_middleware.js`). Without the
+  Anthropic key it says Ipsy isn't set up.
+- **Text in a note is read, never obeyed**: a pasted email or web page in a
+  note is material, like the web pages Ipsy reads.
+- **New chat** (top of the chat) starts over; a chat is kept on the phone
+  until then (a very long one stops at about 1 MB and asks for a new chat).
+- **Not tried against the real API or on a phone**: the tests use a stand-in
+  for Claude and for the Sheet (`node notes/scripts/ipsy-test.mjs`,
+  `node notes/scripts/ipsy-api-test.mjs`), so the first real questions are the
+  real test of the instructions. Ipsy floats over the page as it scrolls, like
+  the bar does.
 
 ## The two designs
 
@@ -231,7 +295,7 @@ an iPhone, so notifications are turned on in each one you want them in.
 ## How it's built
 
 - **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, for the page's Content-Security-Policy; with `../home/aisles.js`, the
-  grocery sections' word list); `sw.js` keeps it working
+  grocery sections' word list, and `ipsy-tools.js` with `../home/ipsy.js`, Ipsy); `sw.js` keeps it working
   offline and shows notifications; `manifest.webmanifest` and the icons make
   it installable. `push/` is the notification server (a Cloudflare Worker),
   deployed by `.github/workflows/notes-push.yml`.
@@ -249,6 +313,8 @@ node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark
 node notes/scripts/push-app-test.mjs    # the notifications, the app's side (a stubbed Sheet and server)
 node notes/scripts/aisles-app-test.mjs  # the grocery sections in the app
 node notes/scripts/security-test.mjs    # hostile data from a backup, the Sheet or a setup link (both designs)
+node notes/scripts/ipsy-test.mjs        # Ipsy in the app: its place, its tools, Undo, asking before deleting, private notes (a stand-in Claude and Sheet)
+node notes/scripts/ipsy-api-test.mjs    # Ipsy's server route, functions/notes/api (POST ipsy)
 node notes/scripts/push-test.mjs        # the notification server (notes/push)
 node notes/scripts/aisles-test.mjs      # the grocery word list (../home/aisles.js)
 node notes/scripts/make-icons.mjs       # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
