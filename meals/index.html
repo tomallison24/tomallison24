@@ -201,8 +201,8 @@ svg.b{stroke-width:2.2}
 .acct p{margin:0;font-size:14px;color:var(--muted)}
 .acct strong{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
 
-/* ---- the dock: + logs today ---- */
-.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end;padding:0 14px;z-index:5;pointer-events:none;transition:opacity .2s}
+/* ---- the dock: Ipsy on the left, + plans dinners ---- */
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;padding:0 14px;z-index:5;pointer-events:none;transition:opacity .2s}
 .dock > *{pointer-events:auto}
 html.locked .dock{opacity:0;pointer-events:none}
 
@@ -479,6 +479,7 @@ textarea.paste:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accen
   </section>
 
   <div class="dock">
+    <span></span>   <!-- Ipsy, the helper you chat with (../home/ipsy.js) -->
     <button class="fab" id="fab" type="button" aria-label="Plan dinners"><svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg></button>
   </div>
 
@@ -572,6 +573,8 @@ textarea.paste:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accen
 <script src="../home/account.js"></script>   <!-- family accounts: the family's plan and deals -->
 <script src="../home/aisles.js"></script>   <!-- the grocery sections, as in Notes' grocery lists -->
 <script src="logic.js"></script>
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="meals" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>

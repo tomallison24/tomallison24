@@ -80,7 +80,7 @@ if (window.top !== window.self) {
     try { r = A() ? await A().fetch(API + path, opts) : await fetch(API + path, opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
-    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server') });
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server'), body: j });
     return j;
   }
   const SAY = {
@@ -731,6 +731,28 @@ if (window.top !== window.self) {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !st.busy) load(); });
   window.addEventListener('online', () => { if (!st.busy) load(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: its tools (ipsy-tools.js) read this same
+  // data and change the family's plan only through this app's own server calls (api), so the
+  // server's allergy check applies to everything it saves; Claude answers through functions/meals/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.MealsIpsy) {
+    const TAB_NAMES = { dinners: 'the Dinners tab', deals: 'the Deals tab', list: 'the List tab (the shopping list)' };
+    window.AllisonOS.ipsy.mount({
+      app: 'meals', name: 'Meals', endpoint: '../meals/api/ipsy', headers: { 'X-Meals': '1' }, slot: document.querySelector('.dock > span'),
+      ...window.MealsIpsy({
+        L, api, say, toast, storeById, mine, shopOf, dayLabel, past: wholePlan,
+        get data() { return data; }, state: () => st.state,
+        // the app's own save: the copy on this phone, the Google Sheet, the screen
+        keep: patch => { Object.assign(data, patch); ls.set(KEY, data); scheduleSheet(); render(); },
+        today: () => isoDay(new Date()),
+        planning: ask => { st.busy = ask ? 'plan' : null; st.planning = ask; if (ask) { st.tab = 'dinners'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
+        ticked: () => data.plan && ticks.at === data.plan.at ? ticks.keys.slice() : [],
+        setTicks: keys => { ticks = { at: data.plan && data.plan.at, keys: keys.slice() }; ls.set(K.ticks, ticks); render(); },
+        show: (p, i) => { st.tab = 'dinners'; ls.set(K.tab, st.tab); render(); slideTabs(true); openRecipe(i, p); },
+        screen: () => !$('recipeSheet').hidden ? 'the recipe for ' + $('recipeLbl').textContent : TAB_NAMES[st.tab] || 'Meals',
+      }),
+    });
+  }
 
   // For the tests (meals/scripts/app-test.mjs) only.
   window.__meals = { st, data: () => data, render, load, openPlan, openRecipe, openPast };
