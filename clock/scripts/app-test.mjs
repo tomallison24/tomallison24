@@ -11,6 +11,7 @@
 //     running after a reload
 //   - Timers: a quick length, a label, pause and resume, it rings, Repeat, cancel, Recents
 //   - Nightstand opens and closes; Settings' 24-hour time changes the digits
+//   - the main clock shows a city picked in Settings, and goes back to this phone's time
 //   - each design looks like itself (Vintage: Futura, starburst faces, a mustard tab thumb, the
 //     sky; Standard: Sea glass, no starburst, no sky), and Settings > Design switches between
 //     them at once, keeps the choice, and gives iOS the right icon and status bar
@@ -52,7 +53,7 @@ const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gestur
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok - ' + name); } catch (e) { failed++; console.log('not ok - ' + name + '\n  ' + String(e && e.message || e).split('\n').slice(0, 6).join('\n  ')); } };
 
-async function open(scheme, seed) {
+async function open(scheme, seed, { at = T0, query = '' } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, locale: 'en-US', timezoneId: 'America/New_York', serviceWorkers: 'block' });
   const page = await ctx.newPage();
   const errors = [];
@@ -60,7 +61,7 @@ async function open(scheme, seed) {
   // (aOS's own sign-in check, /aOS/api/, has no server here: that's welcome.js's, not Clock's, and Clock never calls a server)
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
   page.on('response', r => { if (r.status() >= 400 && !/\/aOS\/api\//.test(r.url())) errors.push('response ' + r.status() + ': ' + r.url()); });
-  await page.clock.install({ time: T0.getTime() - 20e3 });
+  await page.clock.install({ time: at.getTime() - 20e3 });
   await page.addInitScript(([app, key, seed]) => {
     window.__csp = window.__csp || [];   // what the page's Content Security Policy blocks, on every load
     document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI));
@@ -70,9 +71,9 @@ async function open(scheme, seed) {
     localStorage.setItem('aos.sky', 'day');
     if (seed) localStorage.setItem(key, JSON.stringify(seed));
   }, [APP, KEY, seed || null]);
-  await page.goto(BASE + '/' + APP + '/');
+  await page.goto(BASE + '/' + APP + '/' + query);
   await page.waitForSelector('#hero svg');
-  await page.clock.pauseAt(T0);   // from here time moves only when the test says
+  await page.clock.pauseAt(at);   // from here time moves only when the test says
   await page.clock.runFor(500);
   return { ctx, page, errors };
 }
@@ -327,6 +328,32 @@ await step('an alarm that came due while Clock was closed is listed, not rung', 
   assert.equal(new Date(a.next).toString().slice(0, 21), 'Thu Mar 12 2026 07:00', 'and it is set for its next day');
   await page.click('#missedOk');
   assert.equal(await page.locator('#missed .missed').count(), 0);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await step('the main clock shows another city, and goes back to this phone\'s time', async () => {
+  const { ctx, page, errors } = await open('light');
+  await page.click('#setBtn');
+  assert.equal(await text(page, '#setHomeName'), 'New York (this phone)');
+  await page.click('#setHome');
+  assert.equal(await text(page, '#cityLbl'), 'Main Clock');
+  await page.fill('#cityQ', 'los ang');
+  await page.locator('#cityRes .cres').first().click();
+  await page.waitForSelector('#citySheet', { state: 'hidden' });
+  assert.equal(await text(page, '#setHomeName'), 'Los Angeles');
+  assert.equal(await text(page, '#hero small'), 'LOS ANGELES');
+  assert.match(await text(page, '#heroT'), /^5:00\s*AM$/);
+  assert.equal(await text(page, '#heroD'), 'Wednesday, March 11 · 3 hr behind this phone');
+  await page.click('#setSheet .sheethead [data-close]');
+  await page.click('#nightBtn');
+  assert.match(await text(page, '#nTime'), /^8:00\s*AM$/, 'Nightstand keeps this phone\'s time');
+  await page.click('#nClose');
+  await page.click('#setBtn'); await page.click('#setHome'); await page.click('#cityHere');
+  assert.equal(await text(page, '#hero small'), 'NEW YORK');
+  assert.match(await text(page, '#heroT'), /^8:00\s*AM$/);
+  assert.equal(await text(page, '#heroD'), 'Wednesday, March 11');
+  assert.equal((await stored(page)).set.home, null);
   assert.deepEqual(errors, []);
   await ctx.close();
 });

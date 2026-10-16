@@ -95,7 +95,7 @@ if (window.top !== window.self) {
       recents: (Array.isArray(d.recents) ? d.recents : []).filter(r => r && r.dur > 0).slice(0, 10).map(r => ({ dur: +r.dur, label: String(r.label || '').slice(0, 40), sound: okSound(r.sound) })),
       pick: Object.assign({ h: 0, m: 5, s: 0 }, d.pick && typeof d.pick === 'object' ? d.pick : {}),
       tsound: okSound(d.tsound || 'twinbell'),
-      set: Object.assign({ h24: false, secs: false, analog: false, design: 'vintage' }, d.set && typeof d.set === 'object' ? d.set : {}),
+      set: Object.assign({ h24: false, secs: false, analog: false, design: 'vintage', home: null }, d.set && typeof d.set === 'object' ? d.set : {}),
       missed: (Array.isArray(d.missed) ? d.missed : []).filter(x => x && x.at).slice(-10),
       tz: typeof d.tz === 'string' ? d.tz : '',
     };
@@ -108,6 +108,8 @@ if (window.top !== window.self) {
     S.sw.acc = +S.sw.acc || 0; S.sw.t0 = +S.sw.t0 || 0; S.sw.run = !!S.sw.run && S.sw.t0 > 0;
     if (S.sw.face !== 'analog') S.sw.face = 'digital';
     if (S.set.design !== 'glass') S.set.design = 'vintage';
+    const hm = S.set.home;   // the main clock's city: null is this phone's own time zone
+    S.set.home = hm && typeof hm.name === 'string' && L.validZone(hm.tz) ? { name: hm.name.slice(0, 60), where: String(hm.where || '').slice(0, 60), tz: hm.tz } : null;
     ['h', 'm', 's'].forEach(k => { const v = Math.floor(+S.pick[k] || 0); S.pick[k] = Math.max(0, Math.min(k === 'h' ? 23 : 59, v)); });
     return S;
   }
@@ -120,7 +122,7 @@ if (window.top !== window.self) {
   const hereZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } };
   const timeHTML = (h, m, secs) => { const c = L.clockText(h, m, h24(), secs); return esc(c.time) + (c.ap ? '<span>' + c.ap + '</span>' : ''); };
   const atLine = t => { const d = new Date(t); return L.clockLine(d.getHours(), d.getMinutes(), h24()); };
-  const dayLine = t => new Date(t).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const dayLine = (t, tz) => new Date(t).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz || undefined });
   // "7:00 AM" today, "7:00 AM tomorrow", "Fri 7:00 AM" later on
   function whenLine(t) {
     const d = new Date(t), n = new Date(), days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 864e5);
@@ -247,7 +249,7 @@ if (window.top !== window.self) {
   function paintSub() {
     const t = S.tab, el = $('sub');
     let s = '';
-    if (t === 'world') s = dayLine(now());
+    if (t === 'world') s = dayLine(now(), mainTz());
     else if (t === 'alarms') { const n = nextAlarm(); s = n ? 'Next alarm in ' + L.untilText(n.t - now()) : 'No alarms on'; }
     else if (t === 'timers') { const r = S.timers.filter(x => x.state === 'run').length; s = r ? r + (r === 1 ? ' timer running' : ' timers running') : ''; }
     else if (t === 'stopwatch') s = S.sw.run ? 'Running' : swElapsed() ? 'Stopped' : '';
@@ -261,7 +263,11 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // World Clock
   // ---------------------------------------------------------------------
-  function hereName() { const tz = hereZone(), c = L.CITIES.find(x => x.tz === tz) || L.zoneCity(tz); return c ? c.name : 'Here'; }
+  // The main clock (the big face): this phone's own time, or a city picked in Settings > Main Clock.
+  // Alarms and Nightstand always keep this phone's time.
+  function phoneName() { const tz = hereZone(), c = L.CITIES.find(x => x.tz === tz) || L.zoneCity(tz); return c ? c.name : 'Here'; }
+  const mainTz = () => (S.set.home && S.set.home.tz) || hereZone();
+  const hereName = () => S.set.home ? S.set.home.name : phoneName();
   function renderWorld() {
     $('hero').innerHTML = `<div class="fw">${faceSVG('big')}</div><div class="ht"><small>${esc(hereName())}</small><b id="heroT" class="num"></b><em id="heroD"></em></div>`;
     $('cityEmpty').hidden = S.cities.length > 0;
@@ -277,10 +283,12 @@ if (window.top !== window.self) {
   function paintWorld() {
     const t = now(), d = new Date(t);
     const ht = $('heroT'); if (!ht) return;
-    const html = timeHTML(d.getHours(), d.getMinutes());
+    const tz = mainTz(), z = L.zoneParts(tz, t), off = S.set.home ? L.zoneVs(tz, t).diff : 0;
+    const html = timeHTML(z.h, z.mi);
     if (ht.innerHTML !== html) ht.innerHTML = html;
-    const dl = dayLine(t); if ($('heroD').textContent !== dl) $('heroD').textContent = dl;
-    setHands($('hero').querySelector('svg'), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+    const dl = dayLine(t, tz) + (off ? ' · ' + L.diffText(off) + (off > 0 ? ' of' : '') + ' this phone' : '');   // "5 hr ahead of this phone", "3 hr behind this phone"
+    if ($('heroD').textContent !== dl) $('heroD').textContent = dl;
+    setHands($('hero').querySelector('svg'), z.h, z.mi, z.s, d.getMilliseconds());
     for (const row of $('cityList').children) {
       const c = S.cities.find(x => x.id === row.dataset.id); if (!c) continue;
       const z = L.zoneParts(c.tz, t), v = L.zoneVs(c.tz, t), th = timeHTML(z.h, z.mi);
@@ -319,23 +327,39 @@ if (window.top !== window.self) {
   });
 
   // Add a city
-  function openCities() { $('cityQ').value = ''; paintCityRes(); openSheet('citySheet'); setTimeout(() => $('cityQ').focus(), 380); }
+  // The same sheet picks the main clock's city (from Settings): mode 'home'
+  let cityMode = 'add';
+  function openCities(mode) {
+    cityMode = mode === 'home' ? 'home' : 'add';
+    $('cityLbl').textContent = cityMode === 'home' ? 'Main Clock' : 'Choose a City';
+    $('cityHereBox').hidden = cityMode !== 'home';
+    $('cityHere').querySelector('.sub').textContent = phoneName() + (S.set.home ? '' : ', as now');
+    $('citySheet').style.zIndex = cityMode === 'home' ? '12' : '';   // over Settings
+    $('cityQ').value = ''; paintCityRes(); openSheet('citySheet'); setTimeout(() => $('cityQ').focus(), 380);
+  }
   function paintCityRes() {
-    const q = $('cityQ').value, res = L.searchCities(q, 60), t = now(), have = new Set(S.cities.map(c => c.tz + '|' + c.name));
+    const q = $('cityQ').value, res = L.searchCities(q, 60), t = now();
+    const have = new Set(cityMode === 'home' ? (S.set.home ? [S.set.home.tz + '|' + S.set.home.name] : []) : S.cities.map(c => c.tz + '|' + c.name));
     $('cityRes').hidden = !res.length;
     $('cityHint').hidden = !!res.length;
     $('cityHint').textContent = q.trim() ? 'No cities match “' + q.trim() + '”.' : 'Type a city, a country or a state: London, Japan, Texas.';
     $('cityRes').innerHTML = res.map((c, i) => { const z = L.zoneParts(c.tz, t), on = have.has(c.tz + '|' + c.name);
-      return `<button class="cres${on ? ' have' : ''}" type="button" data-i="${i}"><span class="cn"><b>${esc(c.name)}</b><small>${esc(c.where)}${on ? ' · added' : ''}</small></span><span class="cv">${esc(L.clockLine(z.h, z.mi, h24()))}</span></button>`; }).join('');
+      return `<button class="cres${on ? ' have' : ''}" type="button" data-i="${i}"><span class="cn"><b>${esc(c.name)}</b><small>${esc(c.where)}${on ? (cityMode === 'home' ? ' · main clock' : ' · added') : ''}</small></span><span class="cv">${esc(L.clockLine(z.h, z.mi, h24()))}</span></button>`; }).join('');
     $('cityRes')._res = res;
   }
   $('cityQ').addEventListener('input', paintCityRes);
   $('cityRes').addEventListener('click', e => {
     const b = e.target.closest('[data-i]'); if (!b) return;
     const c = $('cityRes')._res[+b.dataset.i]; if (!c) return;
+    if (cityMode === 'home') { setHome({ name: c.name, where: c.where, tz: c.tz }); return; }
     if (!S.cities.some(x => x.tz === c.tz && x.name === c.name)) S.cities.push({ id: newId(), name: c.name, where: c.where, tz: c.tz });
     save(); closeSheet('citySheet'); renderHead(); renderWorld(); animateIn($('main'));
   });
+  function setHome(c) {
+    S.set.home = c; save(); closeSheet('citySheet'); paintSettings(); renderHead(); renderWorld();
+    toast('The main clock shows ' + (c ? c.name : 'this phone’s time') + '.');
+  }
+  $('cityHere').addEventListener('click', () => setHome(null));
 
   // ---------------------------------------------------------------------
   // Alarms: the next one, missed ones, Sleep | Wake Up, the list
@@ -784,6 +808,7 @@ if (window.top !== window.self) {
   // Settings
   // ---------------------------------------------------------------------
   function paintSettings() {
+    $('setHomeName').textContent = S.set.home ? S.set.home.name : phoneName() + ' (this phone)';
     document.querySelectorAll('#setDesign [data-design]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.design === S.set.design)));
     $('set24').setAttribute('aria-checked', String(!!S.set.h24));
     $('setSecs').setAttribute('aria-checked', String(!!S.set.secs));
@@ -797,6 +822,7 @@ if (window.top !== window.self) {
     if (window.clockDesign) clockDesign.set(S.set.design);
     paintSettings(); requestAnimationFrame(() => slideTabs(true));   // Futura and the system font are different widths
   });
+  $('setHome').addEventListener('click', () => openCities('home'));
   [['set24', 'h24'], ['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
   $('setTest').addEventListener('click', () => {
     const a = S.alarms.find(x => x.on) || S.alarms[0];

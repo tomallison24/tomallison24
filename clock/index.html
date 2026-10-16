@@ -722,6 +722,7 @@ body,.face .nm,.face .dg{font-family:"Futura","Futura-Medium","Avenir Next","Jos
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="cityLbl">Choose a City</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
       <div class="sheetbody">
+        <div class="rgroup" id="cityHereBox" hidden><button class="rowbtn" id="cityHere" type="button"><span class="ic"><svg viewBox="0 0 24 24"><rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.6"/><path d="M10.6 18.2h2.8"/></svg></span><span>This phone’s time zone<span class="sub"></span></span></button></div>
         <label class="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.6"/><path d="M15.8 15.8l4.4 4.4"/></svg><span class="vh">Search for a city</span><input id="cityQ" type="search" placeholder="Search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="search"></label>
         <div class="rgroup" id="cityRes" hidden></div>
         <p class="hint" id="cityHint">Type a city, a country or a state: London, Japan, Texas.</p>
@@ -802,6 +803,9 @@ body,.face .nm,.face .dg{font-family:"Futura","Futura-Medium","Avenir Next","Jos
           <button class="snd" type="button" role="radio" data-design="vintage" aria-checked="true"><span class="sw vintage" aria-hidden="true"></span><span class="grow"><b>Vintage</b><small>Mid-century: cream and walnut, mustard, teal and orange, starburst clock faces</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
           <button class="snd" type="button" role="radio" data-design="glass" aria-checked="false"><span class="sw glass" aria-hidden="true"></span><span class="grow"><b>Standard</b><small>Sea glass, as in the other aOS apps</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
         </div>
+        <p class="label">Main Clock</p>
+        <div class="rgroup"><button class="frow" id="setHome" type="button"><span class="lb">City</span><span class="val" id="setHomeName"></span></button></div>
+        <p class="hint">The big clock on World Clock. Pick a city to show its time there. Alarms and Nightstand always keep this phone’s time.</p>
         <p class="label">Time</p>
         <div class="rgroup"><button class="swrow" id="set24" type="button" role="switch" aria-checked="false"><span class="grow">24-Hour Time<small>13:00 rather than 1:00 PM</small></span><span class="switch" aria-hidden="true"></span></button></div>
         <p class="label">Nightstand</p>
