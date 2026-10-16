@@ -443,10 +443,13 @@
       const u = e.target.closest('[data-undo]');
       if (u) {
         const fn = undos.get(u.dataset.undo), v = view.find(x => x.id === u.dataset.undo);
-        if (!fn || !v) return;
-        try { fn(); v.undone = true; undos.delete(v.id); add({ t: 'act', text: 'Undone: ' + v.text }); }
-        catch (err) { add({ t: 'err', text: 'Couldn’t undo that: ' + (err && err.message || err) }); }
-        persist(); draw();
+        if (!fn || !v || u.disabled) return;
+        // An undo may go to a server (Meals'): it only says Undone once that has worked.
+        u.disabled = true; u.textContent = 'Undoing…';
+        Promise.resolve().then(fn).then(
+          () => { v.undone = true; undos.delete(v.id); add({ t: 'act', text: 'Undone: ' + v.text }); },
+          err => add({ t: 'err', text: 'Couldn’t undo that: ' + (err && err.message || err) }))
+          .then(() => { persist(); draw(); });
       }
     });
     function add(v) { view.push(v); if (!wrap.hidden) { log.insertAdjacentHTML('beforeend', item(v)); log.scrollTop = log.scrollHeight; } }
