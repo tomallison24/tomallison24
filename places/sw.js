@@ -12,7 +12,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('places-') && k !== CACHE).map(k => caches.delete(k))))
+    // (and the old Places Vintage app's own cache, placesvintage-*: its address now opens this app)
+    .then(keys => Promise.all(keys.filter(k => (k.startsWith('places-') || k.startsWith('placesvintage-')) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
