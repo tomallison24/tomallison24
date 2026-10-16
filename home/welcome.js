@@ -98,7 +98,7 @@
         travel: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
         places: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
         fitness: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
-        drinks: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
+        drinks: { highlights: ['Vintage and Sea glass are now one app: pick your look in More > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in More'] },
         meals: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
         orders: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },
         house: { highlights: ['Vintage and Sea glass are now one app: pick your look in Settings > Design', 'It opens in Vintage. Prefer Sea glass? Pick Standard in Settings'] },

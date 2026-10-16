@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Drinks</title>
-<meta name="description" content="A simple log of what you drink: each day's standard drinks, alcohol-free days, and how this week or month compares with the one before.">
+<meta name="description" content="A simple log of what you drink, in a mid-century Vintage design or Sea glass: each day's standard drinks, alcohol-free days, and how this week or month compares with the one before.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Drinks">
 <meta name="referrer" content="no-referrer">
@@ -26,8 +27,12 @@
   Data: on this phone (localStorage allison-drinks-v1) and, signed in, in
   your family account, private to you (functions/drinks/api), so it follows
   you to another phone and Calendar can show it. Code: app.js, and calc.js
-  for the sums. The look is Fitness's: the same tokens, tiles and Liquid Glass
-  sheets, with only the pieces Drinks uses.
+  for the sums.
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block)
+  and Standard (Sea glass: that block switched off, Fitness's tokens, tiles
+  and Liquid Glass sheets, with only the pieces Drinks uses). The old Drinks
+  Vintage address opens this same app.
 -->
 <style>
 :root{
@@ -431,6 +436,199 @@ html.locked .dock{opacity:0;pointer-events:none}
 .stackform{display:flex;flex-direction:column;gap:14px}
 .stackform[hidden]{display:none}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Drinks' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail Vintage, Home Vintage and Orders Vintage: flat, solid
+   shapes instead of glass; a cream ground and cards (walnut in dark mode)
+   with mustard, teal, burnt orange and olive; atomic shapes behind the title
+   that scroll away; Futura (iOS's own, so nothing to download) for every
+   word. Last in the sheet so it wins over the glass above; Settings > Design
+   switches it off for the Standard (Sea glass) design (../home/design.js).
+   Only colours, shapes and type change: every tap, swipe, sheet and chart
+   works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-walnut:#4A3426; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --icon:#1F6F6B;
+  --cta:#C9502A; --cta-ink:#FFF8EC;
+  --danger:#B8452B; --danger-text:#9E3A1A; --flag:#B3401C;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28);
+  --tint-mix:14%; --tl:30%; --aurora:1; --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --up:#4F6A1A; --down:#B02E1F; --af:#566F1B;
+  --k-beer:#E3A72F; --k-wine:#D8572A; --k-spirits:#8A5A3A; --k-cocktail:#1F6F6B; --k-seltzer:#4DAFA6; --k-cider:#7E8C34; --k-other:#A99C86;
+  --sw-off:rgba(43,37,34,.22);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E; --flag:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --tl:78%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --up:#A3B04A; --down:#F2906E; --af:#B7C45A;
+  --k-spirits:#B78A66; --k-cocktail:#4FB3AB; --k-seltzer:#8FD3CC; --k-cider:#A3B04A;
+  --sw-off:rgba(244,236,221,.24);
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E; --flag:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --tl:78%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --up:#A3B04A; --down:#F2906E; --af:#B7C45A;
+  --k-spirits:#B78A66; --k-cocktail:#4FB3AB; --k-seltzer:#8FD3CC; --k-cider:#A3B04A;
+  --sw-off:rgba(244,236,221,.24);
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+
+/* the atomic shapes behind the title (they scroll away with the page); kept in the first 90px, right of the title, so nothing under it is hard to read */
+.ambient{position:absolute;inset:0 0 auto 0;height:120px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:44px;height:44px;left:auto;right:96px;top:44px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:58px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+@media (max-width:359px){.ambient i:nth-child(1){width:150px;height:150px;top:-84px;right:-56px}.ambient i:nth-child(2){width:34px;height:34px;right:62px;top:56px}.ambient i:nth-child(3){right:-40px}}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.sechead,.label{letter-spacing:.16em}
+.label,.sechead{color:var(--muted)}
+.thead h2{font-weight:600;letter-spacing:-.025em}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.btn,.fab,.seg,.vbar::before,.viewmenu,.sheet,.toast{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.iconbtn.warn::after{background:var(--mc-orange)}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);font-weight:600;box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.afbtn{background:transparent;color:var(--af);box-shadow:inset 0 0 0 2px var(--af)}
+.btn.afbtn[aria-pressed="true"]{background:color-mix(in srgb,var(--af) 20%,transparent);color:var(--text);box-shadow:inset 0 0 0 2px var(--af)}
+.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger)}
+.fab{background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
+.iconbtn.okbtn,.iconbtn.okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.iconbtn.okbtn:active{filter:brightness(.92)}
+
+/* the week: cream cards, today a mustard disc */
+.rgroup,.empty,.sum,.kpis,.chartcard,.wstrip{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.navrow .lbl{font-weight:600;letter-spacing:.04em}
+.sum .big b{font-weight:600;letter-spacing:-.035em}
+.sum .big span.more{letter-spacing:.04em}
+.track{background:var(--hair)}
+.track i{background:var(--mc-teal)}
+.sum.over .track i{background:var(--mc-orange)}
+.drow.today .dn b{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.dn small{letter-spacing:.14em}
+.dsum.af{color:var(--af)}
+.dn b,.dval,.kpi .kv{font-weight:600}
+
+/* kinds of drink: one Retro colour each, on the dots and bars */
+[data-c="beer"]{--kc:var(--k-beer)} [data-c="wine"]{--kc:var(--k-wine)} [data-c="spirits"]{--kc:var(--k-spirits)} [data-c="cocktail"]{--kc:var(--k-cocktail)}
+[data-c="seltzer"]{--kc:var(--k-seltzer)} [data-c="cider"]{--kc:var(--k-cider)} [data-c="other"]{--kc:var(--k-other)}
+.cdot{background:var(--kc,var(--faint))}
+.gbar .bar{background:var(--kc,var(--faint))}
+
+/* a day's sheet: usual drinks, the form */
+.erow.editing{background:color-mix(in srgb,var(--mc-mustard) 24%,transparent)}
+.utile,.opt{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.utile .ut{font-weight:600}
+.utile svg{color:var(--icon)}
+.opt{font-weight:600;letter-spacing:.02em}
+.opt[aria-checked="true"]{color:var(--text);background:color-mix(in srgb,var(--kc,var(--faint)) 26%,var(--mc-card));box-shadow:inset 0 0 0 2px var(--kc,var(--faint))}
+.sheet .rgroup{background:var(--lgs-field);border-radius:20px}
+.frow select,.frow input[type="time"]{background-color:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.frow .unit{background:var(--fill)}
+.frow .unit button[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.frow input.txt:focus-visible{outline:none}
+.frow:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.linkbtn{letter-spacing:.02em}
+.dempty{color:var(--muted)}
+
+/* the sheets: cream panels with round corners */
+.sheet{background:var(--mc-card);border-radius:28px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.sheethead h2{font-weight:600;letter-spacing:-.01em}
+.toast{background:var(--mc-card-2);border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.rowbtn .ic{color:var(--icon)}
+
+/* Analysis: the week / month and by name / by kind switches, with a mustard thumb */
+.seg{background:var(--mc-card);border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg button{border-radius:999px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:13px}
+.seg button[aria-pressed="true"],.seg.slides button[aria-pressed="true"]{color:var(--mc-on-mustard)}
+.slthumb{background:var(--mc-mustard);box-shadow:none;border-radius:999px}
+.kd.good{color:var(--up)} .kd.bad{color:var(--down)}
+.wt{background:var(--fill)}
+.wt.over{background:color-mix(in srgb,var(--mc-orange) 22%,transparent)}
+.wt.ok{background:color-mix(in srgb,var(--mc-olive) 24%,transparent)}
+.xrow .xv.over{color:var(--flag)}
+
+/* the charts: teal columns, orange over the limit, olive alcohol-free days */
+.chart .bar{fill:var(--mc-teal)}
+.chart .bar.over,.chart .bar.heavy,.chart .tri{fill:var(--mc-orange)}
+.chart .bar.af{fill:var(--mc-olive)}
+.chart .limit{stroke:var(--mc-orange);stroke-width:2}
+.chart .goal{stroke:var(--text)}
+.chart .selbg{fill:color-mix(in srgb,var(--mc-mustard) 30%,transparent)}
+.chart .hit:hover{fill:color-mix(in srgb,var(--mc-mustard) 18%,transparent)}
+.chart .ln{stroke:var(--mc-teal);stroke-width:2.5}
+.chart .dot{fill:var(--mc-teal);stroke:var(--mc-card)}
+.chart .lbl{stroke:var(--mc-card)}
+.chart .val{font-weight:600}
+.legend i{background:var(--mc-teal)}
+.legend i.over,.legend i.heavy{background:var(--mc-orange)} .legend i.af{background:var(--mc-olive)}
+.legend i.lim{background:var(--mc-orange)}
+.legend i.tri{background:none;border-bottom-color:var(--mc-orange)}
+
+/* the view pill at the bottom: a walnut pill with a mustard disc, as in Home Vintage */
+.vbar::before{background:var(--mc-walnut);box-shadow:inset 0 0 0 1px rgba(244,236,221,.12),0 10px 22px -10px rgba(43,37,34,.6)}
+.vbar > button{color:#F4ECDD;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:14px}
+.vbar > button:active{background:rgba(244,236,221,.14)}
+.vbar .vb-ic{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+.vbar .vb-chev svg{color:#E3A72F}
+.viewmenu{background:var(--mc-card);border-radius:24px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.viewmenu button{border-radius:16px}
+.viewmenu button:active,.viewmenu button[aria-selected="true"]{background:var(--fill)}
+.viewmenu .ic{border-radius:50%;color:var(--text);background:color-mix(in srgb,var(--mc-mustard) 32%,transparent)}
+.viewmenu button:nth-child(3n+2) .ic{background:color-mix(in srgb,var(--mc-teal) 28%,transparent)}
+.viewmenu button:nth-child(3n) .ic{background:color-mix(in srgb,var(--mc-orange) 26%,transparent)}
+.viewmenu small{color:var(--muted)}
+</style>
+<script src="../home/design.js" data-app="drinks" data-was="drinksvintage" data-keys="allison-drinksv-=allison-drinks-" data-dbs="allison-drinksv=allison-drinks"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 
