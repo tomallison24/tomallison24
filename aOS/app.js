@@ -30,7 +30,7 @@
     podcasts: [['ok', 'Nothing']],
     travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
     places: [['once', 'The family Google Sheet, to share lists (optional)']],
-    orders: [['ok', 'Your family account (Face ID), only to use Fix with Claude'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
+    orders: [['ok', 'Your family account (Face ID), only for Ipsy'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     drinks: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
     meals: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],

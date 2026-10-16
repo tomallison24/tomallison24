@@ -209,7 +209,7 @@ airports); airline promotions with a flight number in them are still ignored.
 
 ## Smart help
 
-Two things, each switchable in Settings (the AI one only ever runs when you press its button):
+Two things, each switchable in Settings (the AI one runs when you press its button, or by itself once you have told Ipsy yes):
 
 **The Family calendar, both ways** (needs the Calendar app's function: the iCloud
 secrets in `calendar/README.md`). Each time Travel reads Gmail, opens (every 20
@@ -252,14 +252,23 @@ board, and last the AI:
   but no number: `functions/travel/api` `find` asks AeroDataBox's departure
   board for that airport in a window around the time. Only a single match is
   used.
-- *AI, only when you press it.* A trip card (an upcoming trip with a booking that
-  still lacks something) has a **Check with AI** button; nothing is ever sent to
-  Claude without a press (not when Travel reads Gmail, not when it opens). A press
+- *AI: Have Ipsy check, or Ipsy by itself.* A trip card (an upcoming trip with a booking that
+  still lacks something) has a **Have Ipsy check** button (it was Check with AI). Nothing is sent
+  to Claude by itself until you say yes to Ipsy: the first time Travel finds an upcoming booking
+  from an email that is missing something, Ipsy offers from its corner ("2 bookings are missing
+  details. Want me to look?"), and asks in its bubble. Yes turns on **Ipsy checks by itself**
+  (Settings, Smart help): after each read of Gmail, when Travel opens and after you change a
+  booking (once the calendar and the flight board have had their go), every upcoming booking
+  still missing something is checked, once per email, at most 10 at a time, quietly (with the
+  family session it has, never a Face ID prompt; signed out, it stops and says so). What it fills in
+  is marked **Check** (so it waits in To check for you to look over), with Undo in Ipsy's chat;
+  Ipsy says in its corner what it did. Not now, or the switch off, and only the button sends
+  anything. A press
   reads the emails behind that trip's incomplete bookings from Gmail, and for each
   asks only about what is missing (a date is asked for only if the email has
   one), with no limit of its own (the cost is a fraction of a cent a check). It then also asks the flight
-  board for a missing flight number, and says in a line what it did ("Filled in 2
-  details", "The email doesn't say anything more", "didn't come from an email").
+  board for a missing flight number, and says in a line what it did ("Ipsy filled in 2
+  details", with Undo, also in Ipsy's chat, "The email doesn't say anything more", "didn't come from an email").
   The function (`extract`) scrubs the text (links, addresses, phone and long
   numbers, and the lines about points, payment and prices), sends it with what is
   already known, and asks Claude for the missing fields as structured output with
@@ -267,7 +276,7 @@ board, and last the AI:
   excerpt, or whose shape is wrong, is thrown away: it can fill a gap, not invent
   one. It uses the repository's `ANTHROPIC_API_KEY` secret (the same one Meals,
   News and Orders use) and `claude-haiku-5-5` (a narrow reading job whose every
-  answer is checked); the optional `TRAVEL_AI_MODEL` secret names another model. Settings has a switch that hides the button.
+  answer is checked); the optional `TRAVEL_AI_MODEL` secret names another model. Settings has a switch that hides the button and stops Ipsy's own check.
 - *Questions and changes in your own words* are Ipsy's (below). Ipsy took the place of the
   Ask AI bar that was under the filters on Trips, with its Ask and Change modes.
 - *Which model answers.* Settings, under Smart help, says which models the function

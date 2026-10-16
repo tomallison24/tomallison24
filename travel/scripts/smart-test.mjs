@@ -102,7 +102,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], find: [], imports: [], deletes: [], events: 0 };
+  const seen = { extract: [], auth: [], find: [], imports: [], deletes: [], events: 0 };
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
@@ -117,7 +117,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
     if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true, find: board, ai, models: { check: 'claude-haiku-5-5', ipsy: 'claude-sonnet-5-5' } } });
     if (u.pathname.endsWith('/extract')) {
       const body = JSON.parse(req.postData() || '{}');
-      seen.extract.push(body);
+      seen.extract.push(body); seen.auth.push(req.headers().authorization || '');
       // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote
       return route.fulfill({ json: { ok: true, fields: body.missing.includes('from') ? { from: 'MCO', to: 'PHL' } : {} } });
     }
@@ -186,14 +186,14 @@ const pick = (page, f) => page.evaluate(f);
     await page.evaluate(() => window.__travel.smartPass());
     assert.equal(seen.extract.length, 0);
   });
-  await step('only a trip with something missing has a Check with AI button; pressing it asks once, for what is missing, and marks the answer', async () => {
+  await step('only a trip with something missing has a Have Ipsy check button; pressing it asks once, for what is missing, and marks the answer', async () => {
     await page.click('[data-when="upcoming"]');
     const cards = await page.$$eval('.tripwrap', els => els.map(e => ({ name: e.querySelector('h3').textContent, ai: !!e.querySelector('[data-ai]') })));
     assert.equal(cards.filter(c => c.ai).length, 1, JSON.stringify(cards));
     assert.equal(cards.filter(c => !c.ai).length >= 1, true, 'the trip that has everything has no button: ' + JSON.stringify(cards));
     if (SHOTS) { await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, APP + '-aicard.png') }); }
     await page.click('.tripwrap [data-ai]');
-    await page.waitForFunction(() => /Filled in 2 details/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    await page.waitForFunction(() => /Ipsy filled in 2 details/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
     assert.equal(seen.extract.length, 1, JSON.stringify(seen.extract.map(x => x.missing)));
     assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
     assert.equal(seen.extract[0].type, 'flight');
@@ -481,11 +481,12 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
-    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Nothing is sent until you press it/);
+    assert.match(await page.textContent('#stCalSub'), /^On\./); assert.match(await page.textContent('#stAiSub'), /Only a short excerpt/);
+    assert.match(await page.textContent('#stIpsyAutoSub'), /asks you first/);
     assert.match(await page.textContent('#stAiSub'), /chat with Ipsy/);
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
-    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No Check with AI button/);
+    assert.equal((await page.textContent('#stCalSub')).trim(), 'Off'); assert.match(await page.textContent('#stAiSub'), /^Off\. No Have Ipsy check button/);
     assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'and gone when it is off');
     const before = { ev: seen.events, ex: seen.extract.length };
     await page.evaluate(() => window.__travel.smartPass());
@@ -506,6 +507,55 @@ const pick = (page, f) => page.evaluate(f);
     await page.$eval('#stAiSub', e => e.scrollIntoView({ block: 'center' }));
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-models.png') });
   });
+  await ctx.close();
+}
+
+// =================== Ipsy checks by itself: offered once, then each booking's email read quietly, with Undo ===================
+{
+  const { ctx, page, seen, problems } = await open({ calendar: false, stored: { 'aos.session': JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Pat' } }) } });
+  page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
+  const orl = () => pick(page, () => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && { from: b.from, to: b.to, guess: b.guess, filled: b.filled || null }; });
+  await step('Ipsy\'s own check: offered once, from its corner, before anything is sent', async () => {
+    await page.waitForSelector('.ipsy-hint', { timeout: 12000 });
+    assert.match(await page.textContent('.ipsy-hint'), /missing details\. Want me to look\?/);
+    assert.equal(seen.extract.length, 0, 'nothing is sent before a yes');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-offer.png') });
+    await page.click('.ipsy-hint');
+    await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
+    assert.match(await page.textContent('.ipsy-ask'), /fill in what your upcoming bookings are missing, by myself/);
+    await page.click('.ipsy-ask [data-ans="yes"]');
+  });
+  await step('Ipsy\'s own check: each booking missing something is asked about once, signed in quietly, with Undo in the chat', async () => {
+    await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && b.from === 'MCO'; }, null, { timeout: 15000 });
+    assert.equal(seen.extract.length, 1, JSON.stringify(seen.extract.map(x => x.missing)));
+    assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
+    assert.equal(seen.auth[0], 'Bearer sess-1', 'the family session, never a Face ID prompt');
+    const b = await orl();
+    assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, true, 'what Ipsy fills in waits in To check');
+    await page.waitForFunction(() => /I filled in 2 details/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-filled.png') });
+    await page.click('.ipsy-hint');
+    await page.waitForSelector('.ipsy-change');
+    assert.match(await page.textContent('.ipsy-change'), /Filled in 2 details on .*Marked Check\..*Undo/);
+    await page.locator('.ipsy-change .ipsy-undo').first().click();
+    await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && !b.from && !b.filled; }, null, { timeout: 5000 });
+    await page.keyboard.press('Escape');
+  });
+  await step('Ipsy\'s own check: the same email is never asked about twice, and Settings turns it off', async () => {
+    const n = seen.extract.length;
+    await page.reload();
+    await page.waitForFunction(() => window.__travel && document.querySelector('.ipsy-btn'));
+    await page.waitForTimeout(4000);
+    assert.equal(seen.extract.length, n, 'already checked: not sent again');
+    assert.equal(await page.$$eval('.ipsy-hint', e => e.length), 0);
+    await page.click('#setBtn');
+    await page.waitForSelector('#setSheet:not([hidden]) #stIpsyAutoOpt');
+    assert.match(await page.textContent('#stIpsyAutoSub'), /^On\./);
+    await page.click('#stIpsyAutoOpt');
+    assert.match(await page.textContent('#stIpsyAutoSub'), /^Off\./);
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-ipsy-auto')), '0');
+  });
+  await step('Ipsy\'s own check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
 

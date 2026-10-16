@@ -74,7 +74,7 @@ Orders' names (`ordersv.…` → `orders.…` for the Gmail sign-in,
 kinds, the Sheet link and the rest; the IndexedDB copy of the Sheet link
 `allison-ordersv` → `allison-orders`, which Orders opens only once that is
 done; and what it had seen, so no walkthrough again), unless Orders already has
-data on that phone; nothing old is deleted. Fix with Claude calls
+data on that phone; nothing old is deleted. Ipsy's checks call
 `../orders/api/read`, so it reaches the family's route from either address; an
 email opens in Mail (`../mail/?thread=…`), which also carries both designs now.
 Gmail's sign-in returns to the address it started from, which is why both
@@ -276,7 +276,7 @@ in Vintage, pastel glass in Standard; it changes with the design at once). Ask i
   any email it opens) go to Claude through the family server. The server keeps
   only a count of questions (80 a person a day; the steps a question takes
   aren't counted).
-- **For signed-in family** (Face ID), like Fix with Claude. Without the key it
+- **For signed-in family** (Face ID), like Ipsy's checks. Without the key it
   says Ipsy isn't set up.
 - **Emails and web pages are read, never obeyed**: Ipsy is told they are
   material, not instructions, and to say so when one asks it to do something.
@@ -398,7 +398,7 @@ are kept as text.
   "The two designs"), `app.js` the app, `parse.js` the
   email reading, `sw.js` the offline shell.
 - **No server for reading.** Gmail is read from the phone and tracking opens the
-  carrier's page. The only Pages Function is Claude's (Fix with Claude and Ipsy, above).
+  carrier's page. The only Pages Function is Claude's (Ipsy and its checks, above).
 - **Ipsy**: `../home/ipsy.js` (the character, the chat and its loop, shared with
   any app that adds Ipsy) and `ipsy-tools.js` (its tools here).
 - **Security as in Mail and Travel**: a Content Security Policy that only runs
@@ -412,7 +412,7 @@ are kept as text.
 ## Tests
 
 ```sh
-node orders/scripts/api-test.mjs     # Fix with Claude's and Ipsy's server side, with a stand-in for Anthropic
+node orders/scripts/api-test.mjs     # Ipsy's server side and its checks (read), with a stand-in for Anthropic
 node orders/scripts/ipsy-test.mjs    # Ipsy in both designs, in headless Chromium, with a stand-in for Claude and Gmail
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
 node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs)
