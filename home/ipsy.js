@@ -54,6 +54,9 @@
     stem: () => 55,
     neuron: th => 42 + DEND.reduce((s, a, i) => s + AMP[i] * G(th, a * DEG, i === 4 ? 0.14 : 0.17), 0),
     wbc: th => 54 + 4.5 * Math.sin(8 * th) + 2.5 * Math.sin(13 * th + 1),
+    rbc: th => ell(th, 70, 42),                                             // the rest, for showing off (aOS's Meet Ipsy)
+    muscle: th => ell(th, 88, 32, 1.5),
+    heart: th => ell(th, 70, 46, 4) + 14 * G(th, 160 * DEG, 0.2) + 12 * G(th, -20 * DEG, 0.2),
   };
   const MOOD_FORM = { idle: 'stem', listen: 'stem', think: 'neuron', work: 'wbc', talk: 'stem' };
   const TARGET = {};
@@ -88,35 +91,38 @@
   let raf = 0, lastT = 0;
   function addCell(host) {
     host.innerHTML = cellSvg();
-    const c = { host, svg: host.firstChild, cur: TARGET.stem.slice(), mood: 'idle', live: false };
+    const c = { host, svg: host.firstChild, cur: TARGET.stem.slice(), mood: 'idle', form: '', live: false };
     c.path = c.svg.querySelector('.i-body'); c.sparks = [...c.svg.querySelectorAll('.i-spark')];
     cells.add(c); place(c, 0, 0);
     return c;
   }
+  const formOf = c => c.form || MOOD_FORM[c.mood];
   function setMood(c, mood) {
-    c.mood = mood; c.host.dataset.mood = mood; c.svg.dataset.form = MOOD_FORM[mood];
+    c.mood = mood; c.host.dataset.mood = mood; c.svg.dataset.form = formOf(c);
     kick();
   }
   function place(c, dt, t) {
-    const tgt = TARGET[MOOD_FORM[c.mood]], k = still() || !dt ? 1 : Math.min(1, dt * 6);
+    const form = formOf(c), tgt = TARGET[form], k = still() || !dt ? 1 : Math.min(1, dt * 6);
     const wob = still() || !c.live ? 0 : c.mood === 'listen' ? 2.6 : 1.6;
     let moving = false;
+    const p = t % 1, beating = form === 'heart' && !still();                    // a heart cell beats: lub, dub
+    const beat = beating ? 1 + 0.06 * (Math.exp(-(((p - 0.05) / 0.05) ** 2)) + 0.6 * Math.exp(-(((p - 0.3) / 0.05) ** 2))) : 1;
     const pts = c.cur.map((r, i) => {
       const nr = r + (tgt[i] - r) * k;
       if (Math.abs(tgt[i] - nr) > 0.05) moving = true;
       c.cur[i] = nr;
       const th = i * TAU / N;
-      return pt(nr + wob * Math.sin(3 * th + t * 2.2) + wob * 0.6 * Math.sin(5 * th - t * 1.7), i, 1);
+      return pt(nr + wob * Math.sin(3 * th + t * 2.2) + wob * 0.6 * Math.sin(5 * th - t * 1.7), i, beat);
     });
     c.path.setAttribute('d', smooth(pts));
     c.sparks.forEach((s, i) => { s.setAttribute('cx', f1(pts[TIP[i]][0])); s.setAttribute('cy', f1(pts[TIP[i]][1])); });
-    return moving || (c.live && !still());
+    return moving || beating || (c.live && !still());
   }
   function kick() { if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
   function frame(now) {
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0.016; lastT = now;
     let more = false;
-    cells.forEach(c => { if (c.host.isConnected && place(c, dt, now / 1000)) more = true; });
+    cells.forEach(c => { if (!c.host.isConnected) cells.delete(c); else if (place(c, dt, now / 1000)) more = true; });
     raf = more && document.visibilityState === 'visible' ? requestAnimationFrame(frame) : 0;
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });
@@ -129,7 +135,7 @@
 .ipsy-btn:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px;border-radius:50%}
 .ipsy-btn .ipsy-host{width:100%;height:100%}
 .ipsy-btn:active .ipsy-host{transform:scale(.92)}
-.ipsy-host{position:relative;display:block}
+:where(.ipsy-host){position:relative;display:block}
 .ipsy-cell{width:100%;height:100%;display:block;overflow:visible;stroke:none}
 .ipsy-cell *{stroke:none}
 .ipsy-glass .ipsy-cell{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
@@ -138,6 +144,10 @@
 .ipsy-vintage .i-body{fill:var(--mc-mustard,#E3A72F);transition:fill .5s}
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-body{fill:var(--mc-teal,#1F6F6B)}
 .ipsy-vintage .ipsy-cell[data-form="wbc"] .i-body{fill:var(--mc-card,#FBF5E9);stroke:var(--mc-on-mustard,#2B2522);stroke-width:2.5}
+.ipsy-vintage .ipsy-cell[data-form="rbc"] .i-body,.ipsy-vintage .ipsy-cell[data-form="heart"] .i-body{fill:var(--mc-orange,#D8572A)}
+.ipsy-vintage .ipsy-cell[data-form="muscle"] .i-body{fill:var(--mc-olive,#7E8C34)}
+.ipsy-vintage .ipsy-cell[data-form="rbc"] .i-cheek,.ipsy-vintage .ipsy-cell[data-form="heart"] .i-cheek{fill:var(--mc-mustard,#E3A72F)}
+.ipsy-cell[data-form="muscle"] .i-gloss{opacity:0}
 .i-nucleus{fill:#fff;opacity:.35;stroke:rgba(255,255,255,.85);stroke-width:1.5;transition:opacity .5s}
 .ipsy-vintage .i-nucleus{fill:var(--mc-on-mustard,#2B2522);opacity:.12;stroke:none}
 .ipsy-cell:not([data-form="stem"]) .i-nucleus{opacity:0}
@@ -494,5 +504,25 @@
     return { open, close, get busy() { return busy; } };
   }
 
-  AOS.ipsy = { mount, look: LOOK };
+  // A character on its own, for a page that only shows Ipsy (aOS's Meet Ipsy card and page):
+  //   const c = AllisonOS.ipsy.character(host, { look: 'vintage', mood: 'idle', form: 'heart', live: true })
+  //   c.mood('think'); c.form('rbc'); c.look('glass')
+  // form: stem, neuron, wbc, rbc, muscle or heart ('' follows the mood); live: a gentle wobble.
+  function character(host, o = {}) {
+    addStyle();
+    host.classList.add('ipsy-host');
+    const setLook = l => { host.classList.toggle('ipsy-vintage', l === 'vintage'); host.classList.toggle('ipsy-glass', l !== 'vintage'); };
+    setLook(o.look || LOOK);
+    const c = addCell(host);
+    c.live = !!o.live; c.form = FORMS[o.form] ? o.form : '';
+    setMood(c, o.mood || 'idle');
+    return {
+      mood: m => setMood(c, m),
+      form: f => { c.form = FORMS[f] ? f : ''; setMood(c, c.mood); },
+      look: setLook,
+      live: on => { c.live = !!on; kick(); },
+    };
+  }
+
+  AOS.ipsy = { mount, character, forms: Object.keys(FORMS), look: LOOK };
 })();

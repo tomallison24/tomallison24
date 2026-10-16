@@ -72,6 +72,7 @@
   //   cards       (major only) aOS's own setup cards after the new mark
   //   added       ['clock', ...] the apps this version brings to aOS: Today in aOS leads
   //               with them for 30 days after its date, until a newer version comes
+  //   intro       'ipsy': while the release is fresh, aOS's Today leads with Meet Ipsy (aOS/app.js)
   //   silent      true: logged here only, shown nowhere - not in aOS's What's new;
   //               the apps keep showing the last version that wasn't silent, and
   //               no update screen plays for it
@@ -84,6 +85,17 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.4', date: '2026-10-16', title: 'Meet Ipsy', intro: 'ipsy',
+      highlights: ['Meet Ipsy: a little stem cell you can chat with, in Orders',
+        'Ask about your orders and Ipsy finds, fixes, merges and deletes them, with Undo',
+        'Ipsy checks your Gmail and searches the web for you'],
+      notes: ['Orders and Orders Vintage: Ipsy, the little stem cell in the bottom left corner, is a helper you chat with, running on Claude Sonnet 5.5. Ask in your own words and it looks through your orders, fixes details, marks them delivered, adds, deletes and merges duplicates (each change shows in the chat with Undo, and is kept like your own edit), reads your Gmail (read-only) to check an order or find one that was missed, and searches the web. It asks once before your first question, and is for signed-in family',
+        'Ipsy changes shape as it works: a stem cell at rest, a nerve cell while it thinks, a white blood cell while it looks through your orders',
+        'aOS: Today leads with Meet Ipsy, Ipsy itself telling what it can do as it turns from one cell into the next; tap it for the whole story'],
+      apps: {
+        orders: { highlights: ['Meet Ipsy: tap the little stem cell, bottom left, and chat about your orders', 'Ipsy finds, fixes, merges and deletes orders for you, each with Undo', 'Ipsy checks your Gmail and searches the web too'] },
+        ordersvintage: { highlights: ['Meet Ipsy: tap the little stem cell, bottom left, and chat about your orders', 'Ipsy finds, fixes, merges and deletes orders for you, each with Undo', 'Ipsy checks your Gmail and searches the web too'] },
+      } },
     { v: '1.3', date: '2026-10-13', title: 'A look for every app', added: ['clock', 'orders'],
       highlights: ['Every app has a Vintage design: pick your look in aOS',
         'Clock is new: world time, alarms, a stopwatch and timers',
@@ -110,7 +122,6 @@
         'Orders: Whole Foods orders show as Whole Foods Market, not Amazon, and a booked pickup shows its day; an order that was only received is no longer shown as ready or out for delivery; Orders Vintage opens an order\'s email in Mail Vintage',
         'Orders: Fix details with Claude, on an order\'s page, sends that one email\'s text (links removed) to Claude to read again when the details look wrong; nothing is kept, and it is for signed-in family',
         'Orders: a one-off clean-up marks open orders nothing had been heard about for over 5 days as received (Undo in the toast)',
-        'Orders: Ipsy, a little stem cell in the bottom corner, is a helper you chat with. Ask about your orders and it looks through them, fixes details, merges duplicates and deletes what you ask (each change with Undo), checks your Gmail and searches the web (Claude Sonnet 5.5; signed-in family)',
         'aOS has the mid-century modern look too, the same as the Vintage designs of Mail, Home and Orders: cream (walnut in dark mode) instead of glass, mustard, teal and burnt orange, atomic shapes behind each title, flat round-cornered cards and buttons, a walnut pill for the tabs, Futura type, and a new aOS icon. The original Sea glass look is still there: choose Vintage or Sea glass before you add aOS to your Home Screen (its icon goes with it), or later under your account, in Look',
         'Calendar, Drinks, Fitness, News, Weather and Travel have a Vintage design too, in the same look: cream and walnut cards instead of glass, mustard, teal and burnt orange, atomic shapes behind the title, Futura, and a new geometric icon for each. Pick it from the Design menu on the app\'s page in aOS. Each is its own app, with its own settings and storage (the Vintage designs of Fitness and Travel can share the original\'s Google Sheet; Travel\'s needs its own Google sign-in address added once), so the originals stay as they are. In the Vintage look, aOS shows every app with a mid-century icon, including new ones for Notes, Podcasts, Places and Meals; Sea glass keeps the original icons',
         'Drinks (and its Vintage design) can back up to a Google Sheet of your own: More > Google Sheet sync. Its Log tab has the ABV Tracker\'s columns and goes both ways: change a row or add one in the Sheet and it comes back to the app, and a Qty of 0 removes a drink. Private to you; each person uses a Sheet of their own',
@@ -121,7 +132,7 @@
         house: { highlights: ['A Vintage design: the same app in a mid-century modern look. Pick it on the app\'s page in aOS', 'An "Away from the house" pill, and the room\'s temperature up front', 'Settings is laid out like every other app\'s'],
           notes: ['Small snowflakes fall while the thermostats cool, and a flame flickers while they heat'] },
         orders: { highlights: ['Orders is new: everything you\'ve bought and where it is, read from the emails in your Gmail', 'A Vintage design: the same app in a mid-century modern look. Pick it on the app\'s page in aOS', 'Settings is laid out like every other app\'s'],
-          notes: ['Ipsy, the stem cell in the corner: chat about your orders, and it finds, fixes, merges and deletes them, checks Gmail and searches the web', 'Fix details with Claude, on an order\'s page', 'Whole Foods orders show as Whole Foods Market, and a booked pickup shows its day'] },
+          notes: ['Fix details with Claude, on an order\'s page', 'Whole Foods orders show as Whole Foods Market, and a booked pickup shows its day'] },
         calendar: { highlights: ['A Vintage design: the same app in a mid-century modern look. Pick it on the app\'s page in aOS'], notes: ['The notes in Settings are left-aligned, like every other app\'s'] },
         drinks: { highlights: ['A Vintage design: the same app in a mid-century modern look. Pick it on the app\'s page in aOS', 'Back up your log to a Google Sheet of your own: More > Google Sheet sync'] },
         fitness: { highlights: ['A Vintage design: the same app in a mid-century modern look. Pick it on the app\'s page in aOS'] },

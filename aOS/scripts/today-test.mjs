@@ -1,7 +1,9 @@
 // aOS's Today tab, at iPhone size, on chosen days around the newest release in home/welcome.js
 // (RELEASES), so it holds whatever that release is and whatever today's date:
 //   - while the release is fresh (under 30 days old), an app it brought (its `added`) leads, big,
-//     with What's new beside it; with no app brought, What's new leads; every app brought is there
+//     with What's new beside it; with no app brought, What's new leads; every app brought is there.
+//     A release that introduces Ipsy (intro: 'ipsy') leads with Meet Ipsy instead, the stem cell
+//     drawn on the card and telling what it can do, with What's new beside it
 //   - after that, no "New in aOS" card, and the mix of apps changes from one day to the next
 //   - the same day gives the same mix; no app twice; What's new never squeezed into the wide card
 //   - in both looks, and a postcard opens its page
@@ -14,7 +16,7 @@ const require = createRequire(execSync('npm root -g').toString().trim() + '/'); 
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
 const W = fs.readFileSync(path.join(ROOT, 'home/welcome.js'), 'utf8');
 const RELEASES = Function('return ' + W.slice(W.indexOf('const RELEASES = [') + 17, W.indexOf('\n  ];', W.indexOf('const RELEASES = [')) + 4))();
-const rel = RELEASES.find(r => !r.silent), added = rel.added || [];
+const rel = RELEASES.find(r => !r.silent), added = rel.added || [], intro = rel.intro === 'ipsy';
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => { let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html'; const f = path.join(ROOT, p);
   if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); });
@@ -39,7 +41,7 @@ async function open(when, look = 'vintage') {
     return J({});
   });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.clock.setFixedTime(when);
+  await p.clock.install({ time: when });
   await p.goto(BASE + '/aOS/'); await p.waitForSelector('#stories .story');
   return { ctx, p, errs };
 }
@@ -61,7 +63,15 @@ const base = id => id.replace(/vintage$/, '');
   for (const n of [1, 2]) {
     const { ctx, p, errs } = await open(after(n)); pr.push(...errs);
     const c = await cards(p); common(c, pr); days.push(c);
-    if (added.length) {
+    if (intro) {
+      if (c[0].k !== 'Meet Ipsy' || c[0].wide) pr.push(`day ${n}: the first card is ${c[0].k}, not Meet Ipsy, big`);
+      if (!c[1].news) pr.push(`day ${n}: What's new is not beside Meet Ipsy: ${c[1].k}`);
+      if (!await p.locator('#stories .story.ipsy .ipsy-stage .ipsy-cell .i-body').count()) pr.push(`day ${n}: Ipsy isn't drawn on its card`);
+      const said = await p.locator('#stories .story.ipsy .ipsy-say').textContent();
+      await p.clock.runFor(3000);
+      const form = await p.locator('#stories .story.ipsy .ipsy-cell').getAttribute('data-form');
+      if (said === await p.locator('#stories .story.ipsy .ipsy-say').textContent() || form === 'stem') pr.push(`day ${n}: Ipsy doesn't move on to its next line and shape (${said}, ${form})`);
+    } else if (added.length) {
       if (c[0].k !== 'New in aOS' || !added.includes(base(c[0].app))) pr.push(`day ${n}: the first card is ${c[0].k} ${c[0].app}, not an app ${rel.v} brought (${added.join()})`);
       if (!c[1].news) pr.push(`day ${n}: What's new is not beside it: ${c[1].k}`);
       const shown = c.filter(x => x.k === 'New in aOS').map(x => base(x.app));
@@ -73,7 +83,7 @@ const base = id => id.replace(/vintage$/, '');
     await ctx.close();
   }
   if (added.length > 1 && days[0][0].app === days[1][0].app) pr.push('with ' + added.length + ' apps brought, the same one leads two days running');
-  report(`aOS${rel.v}, fresh: ${added.length ? added.join(' and ') + ' lead' : 'What\'s new leads'}, What's new up top, the same mix all day`, pr);
+  report(`aOS${rel.v}, fresh: ${intro ? 'Meet Ipsy leads, Ipsy telling what it can do' : added.length ? added.join(' and ') + ' lead' : 'What\'s new leads'}, What's new up top, the same mix all day`, pr);
 }
 
 // 2. a month on: no "New in aOS", and the apps change from day to day
@@ -96,6 +106,7 @@ const base = id => id.replace(/vintage$/, '');
   const { ctx, p, errs } = await open(after(1), 'glass'); const pr = [...errs];
   common(await cards(p), pr);
   await p.click('#stories .story:not(.plain)'); await p.waitForSelector('.page.on .approw');
+  if (intro && await p.locator('.page.on .ipsy-forms .ipsy-mini .ipsy-cell').count() !== 6) pr.push('Meet Ipsy\'s page doesn\'t show its six cells');
   if (!await p.locator('.page.on .approw [data-get]').count()) pr.push('the postcard\'s page has no Get');
   report('Sea glass: Today\'s postcards, and one opens its page', pr); await ctx.close();
 }
