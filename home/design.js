@@ -49,17 +49,21 @@
     const DONE = KEY + '.moved';
     try { if (ls.getItem(DONE)) return; } catch { return; }
     const all = []; for (let i = 0; i < ls.length; i++) all.push(ls.key(i));
-    const mine = all.some(k => keys.some(([, n]) => k.startsWith(n)));
     const old = all.filter(k => keys.some(([o]) => k.startsWith(o)));
     let seen = null; try { seen = JSON.parse(ls.getItem('aos.seen')); } catch {}
-    const wasHere = old.length || (seen && typeof seen === 'object' && data.was in seen);
+    if (!seen || typeof seen !== 'object') seen = null;
+    const wasHere = old.length || (seen && data.was in seen);
+    // Has this app been used here already? What each app has seen (welcome.js, aos.seen) says it best: shared
+    // scripts can write under this app's names in the old app too (Weather's data.js writes wx.pts in both).
+    // Only with nothing seen at all is it this app's keys.
+    const mine = seen && Object.keys(seen).length ? APP in seen : all.some(k => keys.some(([, n]) => k.startsWith(n)));
     try {
       if (wasHere && !mine) {
         for (const k of old) {
           const [o, n] = keys.find(([o]) => k.startsWith(o));
           ls.setItem(n + k.slice(o.length), ls.getItem(k));
         }
-        if (seen && typeof seen === 'object' && seen[data.was] && !seen[APP]) { seen[APP] = seen[data.was]; ls.setItem('aos.seen', JSON.stringify(seen)); }
+        if (seen && seen[data.was] && !seen[APP]) { seen[APP] = seen[data.was]; ls.setItem('aos.seen', JSON.stringify(seen)); }
         if (dbs.length) moved = Promise.all(dbs.map(([o, n]) => copyDB(o, n).catch(() => false))).then(() => true);
         else moved = Promise.resolve(true);
       }
