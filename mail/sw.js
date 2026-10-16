@@ -1,9 +1,10 @@
-// Offline shell for the Mail app. Same-origin files load network-first, so a
-// new deploy shows up on the next open and the cache is only the fallback.
+// Offline shell for the Mail app (both designs, and at the old Mail Vintage
+// address too). Same-origin files load network-first, so a new deploy shows
+// up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v33';
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
+const CACHE = 'mail-v34';
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=3', 'icon-glass-512.png?v=3', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -11,7 +12,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('mail-') && k !== CACHE).map(k => caches.delete(k))))
+    // (mailvintage-: the old Mail Vintage app's, whose address now opens this same app)
+    .then(keys => Promise.all(keys.filter(k => /^mail(vintage)?-/.test(k) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

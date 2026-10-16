@@ -69,7 +69,8 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     if (st.look !== design) pr.push(`${id}: data-look ${st.look}`);
     if (st.media !== (glass ? 'not all' : 'all')) pr.push(`${id}: the Vintage styles are "${st.media}"`);
     if (/icon-glass-/.test(st.icon) !== glass) pr.push(`${id}: icon ${st.icon}`);
-    if (st.bar !== (glass ? 'black-translucent' : 'default')) pr.push(`${id}: status bar ${st.bar}`);
+    const own = (/name="apple-mobile-web-app-status-bar-style" content="([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, id, 'index.html'), 'utf8')) || [])[1];   // Standard keeps the page's own (Mail's is default)
+    if (st.bar !== (glass ? own : 'default')) pr.push(`${id}: status bar ${st.bar}`);
     if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) pr.push(`${id}: the page scrolls sideways`);
     pr.push(...errs.map(e => id + ': ' + e));
     await ctx.close();
