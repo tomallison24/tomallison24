@@ -15,6 +15,8 @@
 //     label: (name, input) => 'Looking at your orders',   // what Ipsy says it's doing
 //   })
 //
+// Tapped, Ipsy's chat pops out of it as a speech bubble (not a page): the bubble rises from
+// above its head, tail pointing at it, and shrinks back into it when put away.
 // The chat lives on the phone (localStorage ipsy.<app>.chat). Each step sends the whole
 // conversation to the app's route; when Claude asks for one of the app's tools, it runs here (the
 // data lives here) and its result goes back with the next step. Web search and web pages run at
@@ -199,25 +201,34 @@
 @keyframes ipsySquash{to{transform:scale(1.035,.965)}}
 @keyframes ipsyJaw{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
 @keyframes ipsyFlash{50%{opacity:.25}}
-@media (prefers-reduced-motion:reduce){.ipsy-host *,.ipsy-sheet *{animation:none!important;transition:none!important}[data-mood="listen"] .i-ring{opacity:.5}}
+@media (prefers-reduced-motion:reduce){.ipsy-host *,.ipsy-wrap *{animation:none!important;transition:none!important}[data-mood="listen"] .i-ring{opacity:.5}}
 
-.ipsy-wrap{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.ipsy-wrap{position:fixed;inset:0;z-index:60}
 .ipsy-wrap[hidden]{display:none}
-.ipsy-scrim{position:absolute;inset:0;background:rgba(0,0,0,.28);animation:ipsyFade .3s both}
-.ipsy-sheet{position:relative;width:100%;max-width:560px;height:min(82dvh,760px);margin-bottom:var(--ipsy-kb,0px);display:flex;flex-direction:column;
-  color:var(--text,#10181A);border-radius:28px 28px 0 0;padding:14px 14px calc(12px + env(safe-area-inset-bottom,0px));animation:ipsyUp .45s cubic-bezier(.2,.9,.25,1) both}
-.ipsy-glass .ipsy-sheet{background:var(--sheet,rgba(248,250,249,.92));-webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 -10px 40px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.5)}
-.ipsy-vintage .ipsy-sheet{background:var(--mc-card,#FBF5E9);border-top:3px solid var(--mc-mustard,#E3A72F);box-shadow:0 -8px 30px rgba(43,37,34,.2)}
-.ipsy-peek{position:absolute;left:16px;top:-58px;width:84px;height:84px;pointer-events:none}
-.ipsy-peek .i-shadow{display:none}
-.ipsy-head{display:flex;align-items:center;gap:8px;min-height:40px;padding-left:94px}
+.ipsy-scrim{position:absolute;inset:0;background:rgba(0,0,0,.22);animation:ipsyFade .3s both}
+.ipsy-closing .ipsy-scrim{animation:ipsyFadeOut .22s ease-in both}
+/* Ipsy itself, over the dark, where its button is (lifted above the keyboard); a tap puts the bubble away */
+.ipsy-speaker{position:fixed;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transform:translateY(calc(-1 * var(--ipsy-kb,0px)));transition:transform .25s}
+/* the chat: a speech bubble that pops out of Ipsy, its tail pointing back at it */
+.ipsy-bubble{position:fixed;left:var(--bx,12px);bottom:calc(var(--by,96px) + var(--ipsy-kb,0px));width:var(--bw,360px);max-height:var(--bh,520px);display:flex;flex-direction:column;
+  color:var(--text,#10181A);border-radius:26px;padding:10px 12px 12px;transform-origin:var(--tail,40px) calc(100% + 16px);animation:ipsyPop .46s cubic-bezier(.2,1.3,.35,1) both}
+.ipsy-closing .ipsy-bubble{animation:ipsyShrink .22s ease-in both}
+.ipsy-bubble::after{content:"";position:absolute;bottom:-8px;left:calc(var(--tail,40px) - 9px);width:18px;height:18px;transform:rotate(45deg);border-radius:0 0 5px 0}
+.ipsy-glass .ipsy-bubble{background:var(--sheet,rgba(248,250,249,.94));-webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 18px 50px rgba(0,0,0,.24),inset 0 0 0 1px rgba(255,255,255,.45)}
+.ipsy-glass .ipsy-bubble::after{background:var(--sheet,rgba(248,250,249,.94))}
+.ipsy-vintage .ipsy-bubble{background:var(--mc-card,#FBF5E9);box-shadow:0 0 0 3px var(--mc-mustard,#E3A72F),0 16px 34px rgba(43,37,34,.26)}
+.ipsy-vintage .ipsy-bubble::after{background:var(--mc-card,#FBF5E9);box-shadow:3px 3px 0 0 var(--mc-mustard,#E3A72F)}
+@keyframes ipsyPop{from{opacity:0;transform:scale(.12)}60%{opacity:1}}
+@keyframes ipsyShrink{to{opacity:0;transform:scale(.12)}}
+@keyframes ipsyFadeOut{to{opacity:0}}
+.ipsy-head{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 0 0 4px}
 .ipsy-head h2{flex:1;margin:0;font-size:17px;font-weight:700}
 .ipsy-head h2 small{display:block;font-size:12px;font-weight:500;color:var(--muted,rgba(16,24,26,.64))}
 .ipsy-x,.ipsy-new{height:34px;border:0;border-radius:999px;padding:0 12px;font:inherit;font-size:14px;font-weight:600;color:var(--accent-text,var(--accent,#3B7366));background:var(--glass,rgba(127,127,127,.12));cursor:pointer}
 .ipsy-vintage .ipsy-x,.ipsy-vintage .ipsy-new{background:transparent;box-shadow:inset 0 0 0 2px var(--mc-edge,rgba(43,37,34,.14));color:var(--mc-teal,#1F6F6B)}
 .ipsy-x{width:34px;padding:0;font-size:18px;line-height:1}
 .ipsy-x:focus-visible,.ipsy-new:focus-visible,.ipsy-send:focus-visible,.ipsy-chip:focus-visible,.ipsy-undo:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px}
-.ipsy-log{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:14px 2px 10px;overscroll-behavior:contain}
+.ipsy-log{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:14px 2px 10px;overscroll-behavior:contain}
 .ipsy-msg{max-width:86%;padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.42;overflow-wrap:anywhere;white-space:pre-wrap}
 .ipsy-msg ul{margin:4px 0;padding-left:18px;white-space:normal}
 .ipsy-msg a{color:inherit}
@@ -291,7 +302,7 @@
   };
 
   // ---------------------------------------------------------------------------
-  // mount: the button, the chat sheet and the loop, for one app
+  // mount: the button, the chat bubble and the loop, for one app
   // ---------------------------------------------------------------------------
   function mount(o) {
     addStyle();
@@ -307,12 +318,12 @@
     else { btn.style.cssText = 'position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5'; document.body.appendChild(btn); }
     const btnCell = addCell(btn.firstChild);
 
-    // The sheet
+    // The chat: a bubble that pops out of Ipsy
     const wrap = document.createElement('div');
     wrap.className = 'ipsy-wrap'; follow(wrap); wrap.hidden = true;
     wrap.innerHTML = '<div class="ipsy-scrim" data-close></div>'
-      + '<section class="ipsy-sheet" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
-      + '<span class="ipsy-peek ipsy-host"></span>'
+      + '<button class="ipsy-speaker ipsy-host" type="button" aria-label="Put Ipsy away" data-close></button>'
+      + '<section class="ipsy-bubble" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
       + '<div class="ipsy-head"><h2 id="ipsyTitle">Ipsy<small id="ipsyStatus">Your ' + esc(o.name || 'aOS') + ' helper</small></h2>'
       + '<button class="ipsy-new" type="button" id="ipsyNew">New chat</button><button class="ipsy-x" type="button" aria-label="Close" data-close>×</button></div>'
       + '<div class="ipsy-log" id="ipsyLog" aria-live="polite"></div>'
@@ -322,21 +333,44 @@
     document.body.appendChild(wrap);
     const $ = id => wrap.querySelector('#' + id);
     const log = $('ipsyLog'), input = $('ipsyIn'), sendBtn = $('ipsySend'), status = $('ipsyStatus');
-    const peek = addCell(wrap.querySelector('.ipsy-peek'));
+    const speaker = wrap.querySelector('.ipsy-speaker'), peek = addCell(speaker);
     const mood = m => { setMood(peek, m); setMood(btnCell, m === 'listen' ? 'idle' : m); };
     const say = s => { status.textContent = s || 'Your ' + (o.name || 'aOS') + ' helper'; };
 
-    let lastFocus = null;
+    // Where the bubble goes: Ipsy stands in for its button (the same cell, in the same place, over the
+    // dark), and the bubble rises from just above its head, its tail pointing down at it.
+    const vv = window.visualViewport;
+    function place() {
+      const r = btn.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+      const kb = vv ? Math.max(0, H - vv.height - vv.offsetTop) : 0;
+      const box = r.width ? r : { left: 12, top: H - 90, width: 62, height: 62 };
+      Object.assign(speaker.style, { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' });
+      const w = Math.min(380, W - 24), cx = box.left + box.width / 2;
+      const left = Math.max(12, Math.min(cx - 44, W - w - 12)), by = H - box.top + 2;
+      wrap.style.setProperty('--ipsy-kb', kb + 'px');
+      wrap.style.setProperty('--bx', left + 'px'); wrap.style.setProperty('--by', by + 'px'); wrap.style.setProperty('--bw', w + 'px');
+      wrap.style.setProperty('--bh', Math.max(220, Math.min(560, (H - kb) * 0.68, H - by - kb - 64)) + 'px');   // it grows with the chat, up to about two thirds of the screen
+      wrap.style.setProperty('--tail', Math.max(22, Math.min(w - 22, cx - left)) + 'px');
+    }
+    let lastFocus = null, shut = 0;
     function open() {
+      clearTimeout(shut); wrap.classList.remove('ipsy-closing');
       lastFocus = document.activeElement;
+      place(); btn.style.visibility = 'hidden';
       wrap.hidden = false; document.documentElement.classList.add('locked');
       peek.live = true; mood(busy ? peek.mood : 'idle'); draw();
       setTimeout(() => { if (ls.get(K.ok, '')) input.focus(); }, 350);
     }
     function close() {
-      wrap.hidden = true; peek.live = false; kick();
-      if (![...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');
-      if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
+      if (wrap.hidden || wrap.classList.contains('ipsy-closing')) return;
+      input.blur(); wrap.classList.add('ipsy-closing');
+      const done = () => {
+        wrap.hidden = true; wrap.classList.remove('ipsy-closing'); btn.style.visibility = '';
+        peek.live = false; kick();
+        if (![...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');
+        if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
+      };
+      if (still()) done(); else shut = setTimeout(done, 220);
     }
     btn.addEventListener('click', open);
     wrap.addEventListener('click', e => { if (e.target.closest('[data-close]')) close(); });
@@ -347,12 +381,10 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
     $('ipsyForm').addEventListener('submit', e => { e.preventDefault(); submit(); });
     $('ipsyNew').addEventListener('click', () => { if (busy) return; messages = []; view = []; undos = new Map(); persist(); draw(); input.focus(); });
-    // The keyboard: keep the box above it.
-    if (window.visualViewport) {
-      const vv = window.visualViewport;
-      const fit = () => wrap.style.setProperty('--ipsy-kb', Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px');
-      vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
-    }
+    // The keyboard, a turned phone: Ipsy and its bubble move up above the keyboard, and fit the screen.
+    const refit = () => { if (!wrap.hidden) place(); };
+    if (vv) { vv.addEventListener('resize', refit); vv.addEventListener('scroll', refit); }
+    window.addEventListener('resize', refit);
 
     // What's in the chat, drawn from `view` (what the person saw), not from the raw messages.
     function draw() {

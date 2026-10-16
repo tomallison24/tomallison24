@@ -160,7 +160,19 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.$$eval('.dock > span .ipsy-btn', e => e.length), 1);
     assert.equal(await page.$eval('.ipsy-btn', (e, d) => e.classList.contains('ipsy-' + d), design), true, 'Ipsy wears the app\'s design');
     await page.click('.ipsy-btn');
-    await page.waitForSelector('.ipsy-sheet');
+    await page.waitForSelector('.ipsy-bubble');
+    await page.waitForFunction(() => document.querySelector('.ipsy-bubble').getAnimations().every(a => a.playState === 'finished'));   // it pops out, then holds
+    // a bubble out of Ipsy, not a page: Ipsy stays where its button was, the bubble just above it, its tail over Ipsy
+    const g = await page.evaluate(() => {
+      const b = document.querySelector('.ipsy-btn').getBoundingClientRect(), s = document.querySelector('.ipsy-speaker').getBoundingClientRect();
+      const u = document.querySelector('.ipsy-bubble').getBoundingClientRect(), tail = parseFloat(getComputedStyle(document.querySelector('.ipsy-wrap')).getPropertyValue('--tail'));
+      return { b: [b.left, b.top], s: [s.left, s.top], under: s.top - u.bottom, tailX: u.left + tail, mid: s.left + s.width / 2, w: u.width, page: innerWidth, hidden: getComputedStyle(document.querySelector('.ipsy-btn')).visibility };
+    });
+    assert.deepEqual(g.s, g.b, 'Ipsy stays where its button is');
+    assert.equal(g.hidden, 'hidden', 'the button gives way to Ipsy over the dark');
+    assert.ok(g.under >= -4 && g.under < 30, 'the bubble sits just above Ipsy: ' + g.under);
+    assert.ok(Math.abs(g.tailX - g.mid) < 2, 'the tail points at Ipsy');
+    assert.ok(g.w < g.page, 'a bubble, not the full width');
     assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*Undo/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-consent.png') });
@@ -242,7 +254,10 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await page.click('#ipsyNew');
     assert.equal(await page.$$eval('.ipsy-msg', e => e.length), 0);
     await page.keyboard.press('Escape');
-    assert.equal(await page.$eval('.ipsy-wrap', e => e.hidden), true);
+    await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden && getComputedStyle(document.querySelector('.ipsy-btn')).visibility === 'visible');
+    await page.click('.ipsy-btn');
+    await page.click('.ipsy-speaker');
+    await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden, null, { timeout: 2000 });
   });
 
   await step(tag + ': picking the other design in Settings changes Ipsy at once', async () => {

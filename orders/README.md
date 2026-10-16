@@ -232,6 +232,11 @@ in Vintage, pastel glass in Standard; it changes with the design at once). Ask i
   carrier's tracking page). It changes what you ask without asking first; it
   asks only when it isn't clear which orders you mean, or before deleting or
   merging more than five at once.
+- **A speech bubble, not a page.** Tap Ipsy and the chat pops out of it as a
+  bubble above it, its tail pointing back at it; it grows with the conversation
+  (up to about two thirds of the screen) and shrinks back into Ipsy when you tap
+  Ipsy, the ×, or anywhere outside it. With the keyboard up, Ipsy and the bubble
+  ride above it.
 - **Every change shows in the chat with Undo**, for as long as the app stays
   open. What Ipsy changes is kept like your own edits (a later email won't
   overwrite it), a deleted order doesn't come back from the email, and it all
