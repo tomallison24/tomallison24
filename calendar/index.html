@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Calendar</title>
-<meta name="description" content="The iCloud Family calendar as a home-screen web app, in the same frosted glass as Mail, Notes, News and Travel: day, week, month, year and list views, repeating events, alerts, and the other AllisonOS apps' dates alongside.">
+<meta name="description" content="The iCloud Family calendar as a home-screen web app, in a mid-century Vintage design or Sea glass: day, week, month, year and list views, repeating events, alerts, and the other AllisonOS apps' dates alongside.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Calendar">
 <meta name="referrer" content="no-referrer">
@@ -29,8 +30,12 @@
   Apple ID and its app-specific password as secrets; the phone keeps a copy
   of the events it last saw so the calendar opens at once and works offline
   for reading. Code: ical.js (reading and writing iCalendar) and app.js (the
-  app). The look is Notes' own style block, unchanged, plus Calendar's own
-  pieces at the end.
+  app).
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block)
+  and Standard (Sea glass: that block switched off; Notes' own style block,
+  unchanged, plus Calendar's own pieces at the end). The old Calendar Vintage
+  address opens this same app.
 -->
 <style>
 /* Allison OS family look, shared with Mail and News: frosted glass over a slow aurora. */
@@ -793,6 +798,226 @@ a.rowbtn{color:var(--text);text-decoration:none}
 :where(.iconbtn, .textbtn){position:relative}
 :where(.iconbtn, .textbtn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Calendar's Vintage look, from the aOS Design Styles canvas ("Mid-century
+   modern" + "Retro"), as in Mail, Home and Orders: flat, solid
+   shapes instead of glass; a cream ground (walnut in dark mode) with mustard,
+   teal, burnt orange and olive; atomic shapes behind the title that scroll
+   away; Futura (iOS's own, so nothing to download) for every word. The
+   calendars and layers keep their meaning but take Retro colours: the Family
+   calendar is mustard, US Holidays olive, Notes plum, Travel teal, Mail
+   denim, Fitness burnt orange, Drinks rose; today is a burnt-orange disc.
+   Last in the sheet so it wins over the glass above; Settings > Design
+   switches it off for the Standard (Sea glass) design (../home/design.js).
+   Only colours, shapes and type change: every view, sheet, drag and swipe
+   works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-ink:#1F6F6B; --accent-text:#1F6F6B; --sel-ink:#2B2522;
+  --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B; --today:#C9502A; --today-text:#B8452B;
+  --danger:#B8452B; --danger-ink:#9E3A1A; --danger-text:#9E3A1A; --flag:#C9781A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9; --toast:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
+  --tint-mix:14%; --tl:30%; --aurora:1; --mark:rgba(227,167,47,.45); --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --n-green:#1F6F6B; --sw-off:rgba(43,37,34,.22); --track:rgba(43,37,34,.16);
+  /* the calendars and layers: mustard Family, olive holidays, plum Notes, teal Travel, denim Mail, orange Fitness, rose Drinks */
+  --cal:#E3A72F; --hol:#7E8C34; --nt:#8A4B6E; --tr:#1F6F6B; --ml:#3F6E9A; --fit:#D8572A; --drk:#B5546A; --now:#C9502A;
+  --ok:#5F7A1E; --bad:#B02E1F; --ok-ink:#4A6016; --bad-ink:#9E2A1C;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#F4ECDD;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F; --today:#D8572A; --today-text:#F2906E;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E; --flag:#E3A72F;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --tl:78%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --n-green:#4FB3AB; --sw-off:rgba(244,236,221,.24); --track:rgba(244,236,221,.2);
+  --cal:#E3A72F; --hol:#A3B04A; --nt:#C98BB0; --tr:#4FB3AB; --ml:#7FA6CF; --fit:#E8764A; --drk:#E58B9C; --now:#FF7355;
+  --ok:#A3B04A; --bad:#E8684A; --ok-ink:#C5D071; --bad-ink:#F2906E;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#F4ECDD;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F; --today:#D8572A; --today-text:#F2906E;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E; --flag:#E3A72F;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --tl:78%; --aurora:.9; --mark:rgba(227,167,47,.35);
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --n-green:#4FB3AB; --sw-off:rgba(244,236,221,.24); --track:rgba(244,236,221,.2);
+  --cal:#E3A72F; --hol:#A3B04A; --nt:#C98BB0; --tr:#4FB3AB; --ml:#7FA6CF; --fit:#E8764A; --drk:#E58B9C; --now:#FF7355;
+  --ok:#A3B04A; --bad:#E8684A; --ok-ink:#C5D071; --bad-ink:#F2906E;
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page) */
+.ambient{position:absolute;inset:0 0 auto 0;height:150px;z-index:-1}
+.ambient i{filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-64px;top:-86px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:44px;height:44px;left:auto;right:160px;top:10px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:110px;height:32px;left:auto;right:-26px;top:66px;bottom:auto;border-radius:16px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+
+/* the title: big, tight, with the three little bars under it */
+.titlebtn .title{font-size:38px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.sechead,.label,.wkhead,.tghead .dh span,.strip span{font-weight:600;letter-spacing:.14em}
+.label{font-size:12px;color:var(--muted)}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.textbtn,.pillbtn,.search,.chip,.tabs,.seg,.quickadd,.arrow,.send,.fab,.btn{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2)}
+.textbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.danger,.btn.quiet.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);border-radius:999px}
+.lg .btn.danger{border-radius:999px}
+.fab{background:var(--cta);color:var(--cta-ink);box-shadow:0 8px 18px -8px rgba(43,37,34,.55)}
+.fab.small{background:var(--mc-card);color:var(--icon);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.search > svg{color:var(--icon)}
+.search .clear{background:var(--fill)}
+.arrow{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+
+/* the view bar: a cream pill with a mustard thumb under the chosen view */
+.tabs{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 24px -12px var(--lift-strong)}
+.slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.tab{font-weight:600}
+.tab svg{color:var(--icon)}
+.tab[aria-selected="true"],.tab[aria-selected="true"] svg{color:var(--mc-on-mustard)}
+.seg{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border:0}
+.seg button{font-weight:600;letter-spacing:.04em}
+.seg button[aria-pressed="true"],.seg button[aria-pressed="true"] b{color:var(--mc-on-mustard);font-weight:600}
+.seg.slides button[aria-pressed="true"]{background:none;box-shadow:none}
+.lg .seg{background:var(--fill);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.seg > .slthumb{border-radius:17px}
+
+/* the Day view's week strip: ink-on-mustard for the chosen day, an orange disc for today */
+.strip{border-radius:999px}
+.strip > .slthumb{background:var(--mc-mustard);box-shadow:none}
+.strip > .slthumb.today{background:var(--today);box-shadow:none}
+.strip button[aria-selected="true"] b{color:var(--mc-on-mustard)}
+.strip button.today b{color:var(--today-text)}
+.strip button.today[aria-selected="true"] b{color:var(--cta-ink)}
+.strip button[aria-selected="true"]:not(.today) b{background:var(--mc-mustard)}
+.strip.slides button[aria-selected="true"] b{background:none}
+.strip button.today[aria-selected="true"] b{background:var(--today)}
+.strip.slides button.today[aria-selected="true"] b{background:none}
+.strip i{background:var(--hol)}
+.strip i.none{background:transparent}
+
+/* today: a solid burnt-orange disc everywhere */
+.mday.today .n,.tghead .dh.today b,.ygrid .today{background:var(--today);color:var(--cta-ink)}
+.mday.today{background:color-mix(in srgb,var(--mc-mustard) 16%,transparent)}
+.mday.sel .n{box-shadow:inset 0 0 0 2px var(--accent)}
+.mday.sel.today .n{box-shadow:none}
+.tghead .dh.sel:not(.today) b{box-shadow:inset 0 0 0 2px var(--accent)}
+.dayhead.today b,.ymon.cur h4{color:var(--today-text)}
+.col.today{background-color:color-mix(in srgb,var(--mc-mustard) 6%,transparent)}
+.nowline{background:var(--now)}
+.nowline::before{background:var(--now)}
+.nowlbl{color:var(--today-text);background:var(--mc-card)}
+.dragtime{color:var(--accent-text);background:var(--mc-card)}
+
+/* the cards: solid cream, round-cornered, no rim light */
+.rgroup,.empty,.notice,.mgrid,.timeview,.strip,.ymon{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.strip{border-radius:999px}
+.mgrid,.timeview{border-radius:20px}
+.ymon{border-radius:18px}
+.card,.paper{box-shadow:none}
+.empty strong{font-weight:600}
+.dayhead b{font-weight:600;letter-spacing:-.01em}
+.evrow .t,.evhead h3,.kvrow,.lrow{font-weight:600}
+.kvrow{font-weight:500}
+.kvrow .v{font-weight:500}
+.evhead h3{font-weight:600;letter-spacing:-.02em}
+.evhead .cn{letter-spacing:.14em}
+.mev{background:color-mix(in srgb,var(--c) 30%,transparent);border-radius:6px}
+.mev.timed{background:none}
+.mev.more{background:none}
+.tev{background:color-mix(in srgb,var(--c) 32%,var(--mc-card));box-shadow:none;border-radius:8px}
+.tev.drag{box-shadow:0 10px 24px -8px var(--lift-strong)}
+.tev .rs::after{background:var(--text)}
+.evrow .bd{border-left-width:4px;border-radius:2px}
+.ygrid .has::after{background:var(--hol)}
+.wkhead .we{opacity:.8}
+.titlebtn svg{color:var(--icon)}
+
+/* the filter-style pills and options: cream pills, a teal ring when chosen */
+.chip,.opt{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
+.chip[aria-pressed="true"],.opt[aria-checked="true"],.opt[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 16%,var(--mc-card));box-shadow:inset 0 0 0 2px var(--accent);color:var(--text)}
+.badge{background:var(--mc-orange);color:#FFF8EC}
+.morebtn,.loadmore{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.tchip{border-color:transparent}
+
+/* the sheets: cream panels with round corners */
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.lg .sheethead h2{font-weight:600;letter-spacing:-.01em}
+.lg .okbtn,.lg .okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.lg .rgroup{background:var(--fill);box-shadow:none;border-radius:20px}
+.lg .rowbtn:active,.lg button.kvrow:active,.lg a.kvrow:active,.lg .pickrow:active{background:var(--fill)}
+.rowbtn .ic,.kvrow .ic,.frow .ic{color:var(--icon)}
+.lg .frow input[type="date"],.lg .frow input[type="datetime-local"],.lg .frow input[type="number"],.lg .frow select{
+  background-color:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .frow input:not(.txt):focus-visible,.lg .frow select:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.frow input[type="time"]{background-color:var(--bg)}
+.lg .frow.big input{font-weight:600}
+.lg .label{letter-spacing:.16em}
+.linkbtn,.pickrow{font-weight:600}
+.lrow i{box-shadow:none}
+.status i{box-shadow:none}
+.status.ok i{background:var(--ok)}
+
+/* the switches: teal when on, with a cream knob */
+.lg .switch,.switch{background:var(--sw-off);box-shadow:none;border:0}
+.switch::after,.lg .switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+.switch[aria-checked="true"],.lg .switch[aria-checked="true"]{background:var(--mc-teal)}
+.lg .switch:not([disabled]):active::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+.lg .wdays button{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--muted)}
+.lg .wdays button[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+
+/* the toast and the pills at the top */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:18px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.updpill{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.updpill svg{color:var(--mc-mustard)}
+</style>
+<script src="../home/design.js" data-app="calendar" data-was="calendarvintage" data-keys="allison-calendarv-=allison-calendar-"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 

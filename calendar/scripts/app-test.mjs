@@ -6,6 +6,13 @@
 // block), deleting one occurrence of a repeating event (an EXDATE), search,
 // the switches' sliding thumbs, the layers, settings, and that nothing
 // trips the page's Content Security Policy. Screenshots go to the folder given as the second argument.
+// Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (the sky held at day,
+// aos.sky): Futura, flat cream (walnut) cards, a mustard thumb, a burnt-orange new-event button and
+// today, the Family calendar in mustard and seven Retro colours for the calendars and layers; and
+// Standard (Sea glass), with iCloud's and Notes' own colours. Settings > Design switches between them
+// at once and keeps the choice; the old Calendar Vintage address (served from calendar/, as the
+// deploy does) moves that app's data on the phone over to Calendar's names, and calls only
+// /calendar/api/ and /aOS/api/.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node calendar/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -27,6 +34,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += 'index.html';
+  p = p.replace(/^\/calendarvintage\//, '/calendar/');   // the old Calendar Vintage address: the deploy copies calendar/ there (news.yml)
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
@@ -52,13 +60,21 @@ const files = new Map([
     + 'BEGIN:VEVENT\r\nUID:SWIM-1\r\nDTSTAMP:20260901T120000Z\r\nDTSTART;TZID=' + TZ + ':' + compact(ymd(day(-21))) + 'T170000\r\nDTEND;TZID=' + TZ + ':' + compact(ymd(day(-21))) + 'T180000\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Swimming\r\nEND:VEVENT\r\n'
     + 'BEGIN:VEVENT\r\nUID:SWIM-1\r\nDTSTAMP:20260901T120000Z\r\nRECURRENCE-ID;TZID=' + TZ + ':' + compact(ymd(day(-7))) + 'T170000\r\nDTSTART;TZID=' + TZ + ':' + compact(ymd(day(-7))) + 'T183000\r\nDTEND;TZID=' + TZ + ':' + compact(ymd(day(-7))) + 'T193000\r\nSUMMARY:Swimming (late)\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n' }],
 ]);
-const calls = [];
+const calls = [], apis = new Set();
 
 const browser = await chromium.launch();
 const violations = [], errors = [];
-async function newPage(scheme) {
+// design: 'glass' for Standard (nothing kept is Vintage); seed: what the phone had (else Calendar's walkthrough seen)
+async function newPage(scheme, { design = null, seed = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: TZ, locale: 'en-US', geolocation: { latitude: 39.74, longitude: -104.99 }, permissions: ['geolocation'] });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' })));   // no aOS walkthrough over the page
+  await ctx.addInitScript(([design, seed]) => {
+    if (sessionStorage.getItem('seeded')) return;   // once: a reload keeps what the app did
+    sessionStorage.setItem('seeded', '1');
+    if (seed) for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+    else localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' }));   // no aOS walkthrough over the page
+    localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still
+    if (design) localStorage.setItem('design.calendar', design);
+  }, [design, seed]);
   await ctx.route('**/calendar/api/**', async route => {
     const req = route.request(), u = new URL(req.url()), r = u.pathname.split('/api/')[1];
     const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
@@ -84,7 +100,8 @@ async function newPage(scheme) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ daily: { time, weather_code: code, temperature_2m_max: hi, temperature_2m_min: lo } }) });
   });
   await ctx.route('**/gmail.googleapis.com/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
-  await ctx.addInitScript(({ TODAY, TOMORROW, CHECKOUT }) => {
+  await ctx.addInitScript(({ TODAY, TOMORROW, YESTERDAY, CHECKOUT }) => {
+    if (localStorage.getItem('allison-notes-v1')) return;
     localStorage.setItem('allison-notes-v1', JSON.stringify({
       notes: [{ id: 'n9', title: 'Renew passports', body: 'Both of ours', tags: [], color: 'none', pinned: false, reminder: TOMORROW + 'T09:30', created: 1, updated: 1, archived: false, deletedAt: null }],
       lists: [{ id: 'l1', name: 'Home', color: '#F59E0B' }],
@@ -94,13 +111,56 @@ async function newPage(scheme) {
       { id: 'bk1', type: 'flight', airlineCode: 'UA', flightNo: '1234', from: 'DEN', to: 'BOS', fromName: 'Denver', toName: 'Boston', dep: TOMORROW + 'T07:05', depIso: '', arr: TOMORROW + 'T13:50', arrIso: '', conf: 'KQ7T2M' },
       { id: 'bk2', type: 'hotel', name: 'Courtyard Boston', checkIn: TOMORROW, checkOut: CHECKOUT, address: '275 Tremont St', city: 'Boston' },
     ], trips: [] }));
-  }, { TODAY, TOMORROW, CHECKOUT: ymd(day(3)) });
+    localStorage.setItem('allison-fitness-v1', JSON.stringify({ v: 2, logs: [{ id: 'f1', date: YESTERDAY, exercise: 'Bench press', group: 'chest', sets: 3, reps: 8, weight: 135 }], exercises: [] }));
+  }, { TODAY, TOMORROW, YESTERDAY: ymd(day(-1)), CHECKOUT: ymd(day(3)) });
   const page = await ctx.newPage();
+  page.on('request', r => { const u = new URL(r.url()); if (u.origin === BASE && u.pathname.includes('/api/')) apis.add(u.pathname.replace(/\/api\/.*/, '/api/')); });
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource|404/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   return { ctx, page };
 }
+// Vintage, the default: the Retro look: Futura, flat cream (walnut) cards, mustard, burnt orange.
+async function retroLook(page, scheme) {
+  const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+  const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
+  const orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.look), 'vintage');
+  assert.equal(await page.evaluate(() => document.getElementById('vintage').media), 'all');
+  assert.match((await q('body', ['fontFamily']))[0], /Futura/);
+  assert.equal((await q('body', ['backgroundColor']))[0], ground, 'the sky’s day ground');
+  const [bg, shadow, backdrop, radius] = await q('#mgrid', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+  assert.equal(bg, cream, 'a flat cream (walnut) card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
+  assert.equal((await q('.ambient i:nth-child(1)', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard sun');
+  assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
+  assert.equal((await q('#fab', ['backgroundColor']))[0], orange, 'the new-event button is solid orange');
+  assert.equal((await q('#tabThumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the chosen view');
+  assert.equal((await q('.mday.today .n', ['backgroundColor']))[0], orange, 'today is an orange disc');
+  assert.equal((await q('.title', ['fontSize']))[0], '38px');
+  assert.equal((await q('.dock .tabs', ['backdropFilter']))[0], 'none');
+  // the calendars and layers keep their own colour, from the Retro palette
+  const pal = await page.evaluate(() => { const c = getComputedStyle(document.documentElement); return ['--cal', '--hol', '--nt', '--tr', '--ml', '--fit', '--drk'].map(k => c.getPropertyValue(k).trim().toLowerCase()); });
+  assert.equal(new Set(pal).size, 7, 'seven different colours: ' + pal);
+  assert.equal(pal[0], '#e3a72f', 'the Family calendar is mustard');
+  assert.ok(!pal.some(c => /^#(ff2968|1f9d55|8b5cf6|18a58a|7b6cf6|f2780c|b0457a)$/.test(c)), 'none of the Sea glass colours: ' + pal);
+  assert.deepEqual(await colours(page), { family: 'var(--cal)', note: 'var(--nt)' }, 'not iCloud’s or the Notes list’s own colour');
+  assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'default');
+  assert.ok(!/glass/.test(await page.getAttribute('link[rel="apple-touch-icon"]', 'href')), 'the Vintage icon');
+}
+// Standard: Sea glass, the Vintage block switched off, no sky; the icon and the status bar follow.
+async function glassLook(page, scheme) {
+  const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
+  assert.ok(await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), 'data-look glass, the Vintage styles off, no sky');
+  assert.equal((await q('body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', 'the Sea glass ground');
+  assert.ok(!/Futura/.test((await q('body', ['fontFamily']))[0]), 'the system font');
+  assert.notEqual((await q('#tabThumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'no mustard thumb');
+  assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/);
+  assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
+  assert.equal(await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
+  assert.deepEqual(await colours(page), { family: '#FF2968', note: '#F59E0B' }, 'iCloud’s colour for the calendar, the Notes list’s own');
+}
+// The colour the Family calendar and a Notes reminder are drawn in.
+const colours = page => page.evaluate(() => { const o = window.__calendar.st.occ; return { family: o.find(x => x.kind === 'family').color, note: o.find(x => x.kind === 'note' && x.id.startsWith('todo|')).color }; });
 const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, name + '.png') }) : null;
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
@@ -109,6 +169,13 @@ const { ctx, page } = await newPage('light');
 await page.goto(BASE + '/calendar/');
 await page.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok' && window.__calendar.st.items.size === 3);
 await page.waitForTimeout(400);
+
+await test('Vintage, the default: drawn in the Retro look (light)', async () => { await retroLook(page, 'light'); });
+
+await test('Notes, Travel and Fitness in this storage show as layers', async () => {
+  const kinds = await page.evaluate(() => [...new Set(window.__calendar.st.occ.map(x => x.kind))]);
+  for (const k of ['note', 'travel', 'fitness', 'holiday', 'family']) assert.ok(kinds.includes(k), k + ': ' + kinds);
+});
 
 await test('the month grid shows the Family events, the layers and a holiday', async () => {
   const grid = await page.textContent('#mgrid');
@@ -156,6 +223,13 @@ await test('the week view lays events out and Travel’s flight is on tomorrow',
   assert.ok(titles.some(t => t.startsWith('UA 1234')), 'Travel flight: ' + titles.join());
   assert.ok((await page.textContent('.allday')).includes('Courtyard Boston'), 'Travel hotel as all-day');
   await shot(page, '03-week');
+  // Travel's flight opens in Travel (which carries both designs: not the old Travel Vintage address)
+  await page.click('.tev:has-text("UA 1234")');
+  await page.waitForSelector('#evSheet:not([hidden])');
+  assert.equal(await page.getAttribute('#evBody a.rowbtn', 'href'), '../travel/');
+  assert.ok((await page.textContent('#evBody a.rowbtn')).includes('Open in Travel'));
+  await page.click('#evSheet .iconbtn');
+  await page.waitForFunction(() => document.getElementById('evSheet').hidden);
   if (new Date(TOMORROW + 'T12:00').getDay() === 0) await page.click('[data-act="prev"]');   // back to this week, for the steps after
 });
 
@@ -313,12 +387,114 @@ await test('dark mode renders', async () => {
   await dark.page.goto(BASE + '/calendar/');
   await dark.page.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok');
   await dark.page.waitForTimeout(400);
+  await retroLook(dark.page, 'dark');
   await shot(dark.page, '10-month-dark');
   await dark.page.click('.tab[data-view="day"]'); await dark.page.waitForSelector('#timeview'); await shot(dark.page, '11-day-dark');
   await dark.page.click('.evrow, .tev'); await dark.page.waitForTimeout(300); await shot(dark.page, '12-event-dark');
   const csp = await dark.page.evaluate(() => window.__csp || []);
   violations.push(...csp);
   await dark.ctx.close();
+});
+
+await test('it keeps Calendar’s storage and cache, and talks only to Calendar’s server route and aOS’s', async () => {
+  const keys = await page.evaluate(() => Object.keys(localStorage));
+  assert.ok(keys.some(k => k.startsWith('allison-calendar-v1-')), keys.join());
+  assert.deepEqual(keys.filter(k => k.startsWith('allison-calendarv-')), [], 'nothing under the old Calendar Vintage keys');
+  assert.deepEqual([...apis].sort(), ['/aOS/api/', '/calendar/api/'], [...apis].join());
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  const caches = await page.evaluate(async () => { for (let i = 0; i < 40; i++) { const k = await window.caches.keys(); if (k.length) return k; await new Promise(r => setTimeout(r, 100)); } return []; });
+  assert.deepEqual(caches, ['calendar-v24']);
+});
+
+await test('Standard (Sea glass), light and dark: no Vintage, iCloud’s and Notes’ own colours', async () => {
+  for (const scheme of ['light', 'dark']) {
+    const g = await newPage(scheme, { design: 'glass' });
+    await g.page.goto(BASE + '/calendar/');
+    await g.page.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok' && window.__calendar.st.items.size > 0);
+    await g.page.waitForTimeout(400);
+    await glassLook(g.page, scheme);
+    await shot(g.page, '13-glass-month-' + scheme);
+    violations.push(...(await g.page.evaluate(() => window.__csp || [])));
+    await g.ctx.close();
+  }
+});
+
+await test('Settings > Design: Vintage, then Standard and back, at once and kept across a reload', async () => {
+  const { ctx: c, page: p } = await newPage('light');
+  await p.goto(BASE + '/calendar/');
+  await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok' && window.__calendar.st.items.size > 0);
+  await p.waitForTimeout(300);
+  const look = () => p.evaluate(() => document.documentElement.dataset.look);
+  const under = () => p.evaluate(() => { const t = document.getElementById('tabThumb').getBoundingClientRect(), c = document.querySelector('.tab[aria-selected="true"]').getBoundingClientRect(); return Math.abs(t.left - c.left) < 1 && Math.abs(t.width - c.width) < 1; });
+  assert.equal(await look(), 'vintage');
+  await p.click('#setBtn'); await p.waitForSelector('#setSheet:not([hidden])');
+  assert.equal(await p.textContent('#stBody .label'), 'Design', 'Design is the first section');
+  assert.equal(await p.getAttribute('#stBody [data-design="vintage"]', 'aria-checked'), 'true');
+  assert.equal(await p.getAttribute('#stBody [data-design="glass"]', 'aria-checked'), 'false');
+  assert.ok((await p.textContent('#stBody')).includes('Just on this phone, and at once.'));
+  await shot(p, '14-settings-vintage');
+  await p.click('#stBody [data-design="glass"]'); await p.waitForTimeout(250);
+  assert.equal(await look(), 'glass', 'Standard at once');
+  assert.equal(await p.getAttribute('#stBody [data-design="glass"]', 'aria-checked'), 'true');
+  assert.ok(await p.isVisible('#setSheet'), 'Settings stays open');
+  assert.deepEqual(await colours(p), { family: '#FF2968', note: '#F59E0B' }, 'drawn again in Standard’s colours');
+  assert.equal(await p.$eval('#stFamily', e => e.style.getPropertyValue('--c')), '#FF2968');
+  await shot(p, '15-settings-glass');
+  await p.click('#setSheet .sheethead [data-close]');
+  await p.waitForTimeout(300);
+  assert.ok(await under(), 'the view bar’s thumb measured again for the system font');
+  await p.reload(); await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok');
+  assert.equal(await look(), 'glass', 'Standard is kept');
+  assert.equal(await p.evaluate(() => localStorage.getItem('design.calendar')), 'glass');
+  await p.click('#setBtn'); await p.waitForSelector('#setSheet:not([hidden])');
+  await p.click('#stBody [data-design="vintage"]'); await p.waitForTimeout(250);
+  assert.equal(await look(), 'vintage', 'Vintage at once');
+  assert.equal(await p.evaluate(() => window.__calendar.st.occ.find(x => x.kind === 'family').color), 'var(--cal)');
+  await p.click('#setSheet .sheethead [data-close]');
+  await p.waitForTimeout(300);
+  assert.ok(await under(), 'the thumb measured again for Futura');
+  await p.reload(); await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok');
+  assert.equal(await look(), 'vintage', 'Vintage is kept');
+  assert.equal(await p.evaluate(() => localStorage.getItem('design.calendar')), 'vintage');
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await c.close();
+});
+
+await test('the old Calendar Vintage address: its data moves over to Calendar’s names, once', async () => {
+  apis.clear();
+  const seed = {
+    'aos.seen': JSON.stringify({ calendarvintage: '1.3' }),
+    'allison-calendarv-v1-view': 'week',
+    'allison-calendarv-v1-settings': JSON.stringify({ weekStart: 1, weekStartPicked: true }),
+  };
+  const { ctx: c, page: p } = await newPage('light', { seed });
+  await p.goto(BASE + '/calendarvintage/');
+  await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok' && window.__calendar.st.items.size > 0);
+  await p.waitForTimeout(300);
+  const got = await p.evaluate(() => ({ view: window.__calendar.st.view, weekStart: window.__calendar.settings.weekStart, newView: localStorage.getItem('allison-calendar-v1-view'), seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-calendarv-v1-view'), look: document.documentElement.dataset.look }));
+  assert.equal(got.view, 'week', 'it opens on the view it was on: ' + JSON.stringify(got));
+  assert.equal(got.newView, 'week'); assert.equal(got.weekStart, 1, 'its settings came too');
+  assert.equal(await p.$eval('.dh[data-day]', e => new Date(e.dataset.day + 'T12:00').getDay()), 1, 'its week starts on Monday');
+  assert.equal(got.seen.calendar, '1.3', 'what it had seen carries over (no walkthrough again)');
+  assert.equal(got.old, 'week', 'nothing old is deleted');
+  assert.equal(got.look, 'vintage');
+  assert.deepEqual([...apis].sort(), ['/aOS/api/', '/calendar/api/'], 'Calendar’s route from the old address too: ' + [...apis]);
+  // once only: a later change to the old keys is not copied again
+  await p.evaluate(() => localStorage.setItem('allison-calendarv-v1-view', 'year'));
+  await p.reload(); await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok');
+  assert.equal(await p.evaluate(() => localStorage.getItem('allison-calendar-v1-view')), 'week', 'moved once only');
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await c.close();
+});
+
+await test('a phone with both: Calendar’s own data is kept, the old app’s is not copied over it', async () => {
+  const seed = { 'aos.seen': JSON.stringify({ calendar: '999', calendarvintage: '999' }), 'allison-calendar-v1-view': 'day', 'allison-calendarv-v1-view': 'week' };
+  const { ctx: c, page: p } = await newPage('light', { seed });
+  await p.goto(BASE + '/calendarvintage/');
+  await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok');
+  assert.equal(await p.evaluate(() => localStorage.getItem('allison-calendar-v1-view')), 'day');
+  assert.equal(await p.evaluate(() => window.__calendar.st.view), 'day');
+  await c.close();
 });
 
 await test('nothing tripped the Content Security Policy and no script errors', async () => {

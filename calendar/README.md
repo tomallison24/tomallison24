@@ -1,13 +1,9 @@
 # Calendar
 
-The iCloud **Family** calendar as a home-screen web app, in the same frosted
-glass as Mail, Notes, News and Travel, with the everyday parts of iOS Calendar
-and Google Calendar, and the other AllisonOS apps' dates alongside.
-
-**Calendar Vintage** is the same app in a mid-century modern look, as its own app
-with its own settings ([`calendarvintage/`](../calendarvintage/README.md)). It uses
-this app's iCloud connection (`functions/calendar/api`), so there is nothing more to
-set up.
+The iCloud **Family** calendar as a home-screen web app, in a mid-century
+Vintage design or the same Sea glass as Mail, Notes, News and Travel (below),
+with the everyday parts of iOS Calendar and Google Calendar, and the other
+AllisonOS apps' dates alongside.
 
 - **Views**: Day, Week, Month, Year and List, in the bar along the bottom.
   Swipe left or right to move through days, weeks or months; **Today** brings
@@ -46,7 +42,7 @@ set up.
     Friday, Christmas Eve, New Year's Eve, the clock changes). Worked out on
     the phone; nothing is fetched.
   - **Notes**: reminders with a date, and notes with a nudge, in their list's
-    colour, with **Open in Notes**.
+    colour (plum in Vintage), with **Open in Notes**.
   - **Travel**: flights (departure to arrival), hotels (check-in to
     check-out, all-day) and car pick-ups and returns, with **Open in Travel**.
   - **Mail**: Remind Me days, as all-day items; each opens the
@@ -73,7 +69,7 @@ set up.
 
   Any layer item but Drinks has **Add to the Family calendar**, which opens
   the editor with it filled in.
-- **Settings**: the iCloud connection and a **Check for changes now** button,
+- **Settings**: the design (below), the iCloud connection and a **Check for changes now** button,
   the layers, week starts on Monday or Sunday (Monday by default), 12- or
   24-hour time, temperature units, when the Day view opens, and the length
   and alerts of new events.
@@ -87,6 +83,66 @@ set up.
 Alerts are the phone's own: an alert saved here is saved into the event in
 iCloud, and the iPhone's Calendar does the alerting, as it does for anything
 in the Family calendar. Notifications from this app itself are a later step.
+
+## The two designs
+
+One app, one calendar: the design changes only how Calendar looks, at once, and
+is kept on this phone (**Settings → Design**, the first section), as in Clock.
+`../home/design.js`, loaded in `<head>`, applies it before the page is drawn.
+Every view, sheet, drag and swipe works the same in both.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas. A cream ground and cards (walnut in dark mode), flat
+  and round-cornered, in place of glass: the month grid, the day and week
+  grids, the year's months, the lists and the sheets are all solid cards;
+  mustard, teal, burnt orange and olive (the view bar and the week strip have a
+  mustard thumb, today is a burnt-orange disc, the new-event button and the
+  tick are solid burnt orange, the secondary buttons are outlined teal); three
+  atomic shapes behind the title that scroll away with the page, and three
+  little bars under it; Futura (built into iOS, nothing downloaded).
+  **The calendars keep their meaning and take Retro colours**: the Family
+  calendar is mustard, US Holidays olive, Notes plum, Travel teal, Mail denim,
+  Fitness burnt orange, Drinks rose (each a lighter shade in dark mode). The
+  Family calendar is always mustard here, not the colour iCloud has for it,
+  which is not part of this palette; Notes items are plum whatever colour their
+  list has in Notes, with the list's name under the title (`app.js` picks these
+  by the design and draws again when it changes).
+  Behind the title is the shared **Vintage sky** (`../home/sky.js`, as in every
+  Vintage design): by day a ground washed with mustard, the sun and rays that
+  turn very slowly; after sunset deep teal, the moon and twinkling stars, over
+  cream (Light) or walnut (Dark), for the phone's place (to a tenth of a
+  degree, and only if the app already has location permission: it never
+  asks), else its time zone; it changes by itself while the app is open and
+  holds still with reduced motion. This app only gives its disc its colour
+  (`--sky-disc`) and keeps its own sizes and places for the shapes, tuned to
+  its header (checked by `aOS/scripts/sky-test.mjs`).
+- **Standard**: Sea glass: Notes' style block, unchanged, plus Calendar's own
+  pieces, frosted glass and Liquid Glass sheets as described above, the Family
+  calendar and Notes lists in their own colours, no sky.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. The choice is `localStorage` `design.calendar`. What iOS reads when
+Calendar is added to the Home Screen follows it: the icon (`icon-180.png`,
+Vintage: a cream calendar page on denim blue with a mustard sun and a
+burnt-orange pill; `icon-glass-180.png`, Standard), the status bar style
+(`default` in Vintage, where `black-translucent`'s white clock would vanish on
+the cream) and the bar colours.
+
+**The old Calendar Vintage app.** Calendar Vintage used to be an app of its own
+(`calendarvintage/`, with its own storage, `allison-calendarv-v1-…`). Its
+address now opens this same app (the deploy copies `calendar/` there,
+`.github/workflows/news.yml`), so a phone that added it keeps it. The first time
+it opens there, `design.js` moves that app's data on the phone over to
+Calendar's names (`allison-calendarv-…` → `allison-calendar-…`: settings,
+last-seen events, weather, view; and what it had seen, so no walkthrough
+again), unless Calendar already has data on that phone; nothing old is
+deleted. It had no IndexedDB. Its calls already went to `../calendar/api/`, as
+Calendar's now do from either address, so the iCloud connection is the same
+one, with nothing to set up. Its layer items opened the old Vintage apps
+(`../travelvintage/` and the rest); they now open Travel, Mail, Fitness and
+Drinks, which carry both designs too.
 
 ## How it reaches iCloud
 
@@ -170,8 +226,9 @@ it with a key of its own.
 
 ## How it's built
 
-- **No build step.** `index.html` is the page and its look (Notes' style
-  block, unchanged, plus Calendar's own pieces at the end), `app.js` the app,
+- **No build step.** `index.html` is the page and its two looks (Notes' style
+  block, unchanged, plus Calendar's own pieces, then the Vintage block),
+  `app.js` the app,
   `ical.js` the iCalendar reading and writing, `sw.js` the offline shell.
 - **`ical.js`** reads and writes the `.ics` text iCloud keeps for each event
   (RFC 5545), keeping everything it doesn't understand, so an event made on
@@ -195,11 +252,12 @@ it with a key of its own.
 node calendar/scripts/ical-test.mjs   # reading, writing, repeats, zones
 node calendar/scripts/api-test.mjs    # the CalDAV function, iCloud stubbed
 node calendar/scripts/access-test.mjs # the Access check in front of every function
-node calendar/scripts/app-test.mjs    # the app in headless Chromium, iCloud stubbed
-node calendar/scripts/make-icons.mjs  # redraws icon-512.png and icon-180.png from icon.svg
+node calendar/scripts/app-test.mjs    # the app in headless Chromium, iCloud stubbed, both designs, Settings > Design, the old Calendar Vintage address
+node calendar/scripts/layers-test.mjs # Notes, Travel, Fitness and Mail through the family account
+node calendar/scripts/make-icons.mjs  # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
-The last two need Playwright with Chromium (`npm i -g playwright`).
+The last three need Playwright with Chromium (`npm i -g playwright`).
 
 ## What I could not verify
 
