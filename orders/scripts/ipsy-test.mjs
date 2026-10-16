@@ -115,7 +115,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const app = 'orders', tag = 'orders (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.addInitScript(a => localStorage.setItem('aos.seen', JSON.stringify({ [a]: '999' })), app);
-  await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); }, design);
+  await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); }, design);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|429/.test(m.text())) problems.push(m.text()); });
@@ -271,6 +271,85 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await step(tag + ': no script errors and nothing blocked by the page policy', async () => {
     assert.deepEqual(problems, []);
   });
+  await ctx.close();
+}
+
+// ---- Ipsy checks To check by itself: offered once, then each order's email read again (verified on the
+// server), fixes with Undo in the chat, never the same email twice, and never a Face ID prompt ----
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => {
+    localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', 'glass');
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
+    localStorage.setItem('orders.token.ever', '1');
+    localStorage.setItem('aos.session', JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Sam' } }));
+  });
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'sam@example.com' } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: EMAILS.map(m => ({ id: m.id, threadId: m.threadId })), resultSizeEstimate: EMAILS.length } });
+    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  const reads = [];
+  await ctx.route('**/orders/api/read', route => {
+    reads.push({ auth: route.request().headers().authorization, b: JSON.parse(route.request().postData()) });
+    return route.fulfill({ json: { fact: { store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD', items: [{ name: 'Mini Fridge 4L Cooler' }] } } });
+  });
+  const page = await ctx.newPage();
+  const problems = [];
+  page.on('pageerror', e => problems.push(String(e)));
+  page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
+  await page.goto(BASE + '/orders/');
+  const walmart = () => page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Walmart'); return o && { guess: o.guess, issue: o.issue, items: o.items, total: o.total, check: window.__orders.needsCheck(o) }; });
+
+  await step('To check: Ipsy offers once, from its corner, before checking anything by itself', async () => {
+    await page.waitForSelector('.ipsy-hint', { timeout: 12000 });
+    assert.match(await page.textContent('.ipsy-hint'), /to check\. Want me to try fixing/);
+    assert.equal(reads.length, 0, 'nothing is sent before a yes');
+    assert.equal((await walmart()).check, true);
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-offer.png') });
+    await page.click('.ipsy-hint');
+    await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
+    assert.match(await page.textContent('.ipsy-ask'), /check the orders in To check by myself/);
+    await page.click('.ipsy-ask [data-ans="yes"]');
+  });
+
+  await step('To check: each order\'s email is read again, signed in quietly, and the fix lands with Undo in the chat', async () => {
+    await page.waitForFunction(() => /Checked \d+ orders? in To check/.test(JSON.parse(localStorage.getItem('ipsy.orders.chat') || '{"view":[]}').view.map(v => v.text).join('|')), null, { timeout: 15000 });
+    assert.ok(reads.length >= 1);
+    assert.equal(reads[0].auth, 'Bearer sess-1', 'the family session, never a Face ID prompt');
+    assert.ok(reads.some(r => /2000000-00000001/.test(r.b.text)), 'Walmart\'s email');
+    assert.ok(reads.every(r => !/https?:/.test(r.b.text)), 'no links are sent');
+    const w = await walmart();
+    assert.equal(w.check, false, 'fixed: out of To check'); assert.equal(w.items[0].name, 'Mini Fridge 4L Cooler'); assert.equal(w.total, 49.99);
+    await page.waitForFunction(() => /I fixed/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-fixed.png') });
+    await page.click('.ipsy-hint');
+    await page.waitForSelector('.ipsy-change');
+    assert.match((await texts(page, '.ipsy-change')).join('|'), /Fixed Walmart: .*Undo/);
+    await page.locator('.ipsy-change:has-text("Walmart") .ipsy-undo').first().click();
+    assert.equal((await walmart()).check, true, 'Undo puts it back in To check');
+    await page.keyboard.press('Escape');
+  });
+
+  await step('To check: the same email is never checked twice, and Settings turns it off', async () => {
+    const n = reads.length;
+    await page.reload();
+    await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
+    await page.waitForTimeout(4000);
+    assert.equal(reads.length, n, 'already checked: not sent again');
+    assert.equal(await page.$$eval('.ipsy-hint', e => e.length), 0);
+    await page.click('#setBtn');
+    assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'true');
+    await page.click('#stIpsyAuto');
+    assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false');
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-ipsy-auto')), '0');
+  });
+
+  await step('To check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
 

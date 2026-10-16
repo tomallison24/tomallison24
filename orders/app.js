@@ -49,7 +49,7 @@ if (window.top !== window.self) {
     token: 'orders.token', state: 'orders.state', silent: 'orders.silent', silentFail: 'orders.silentFail', lastAuth: 'orders.lastAuth', hint: 'orders.hint', me: 'orders.me',
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
-    aiOk: KEY + '-ai-ok',
+    aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
     cleanup: KEY + '-cleanup-5d',
   };
   const FIRST_SCAN = 'newer_than:1y';
@@ -100,6 +100,7 @@ if (window.top !== window.self) {
   let outbox = ls.json(K.log, []);                                            // log events not yet in the Sheet's Log tab
   if (!Array.isArray(outbox)) outbox = [];
   const shadow = new Map();
+  let ipsy = null;   // Ipsy's handle (home/ipsy.js), once it's in its corner (the end of this script)
   const st = { tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
   // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
@@ -529,11 +530,11 @@ if (window.top !== window.self) {
       acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
-    if (o.source && o.source.msgId) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Claude is reading it…' : 'Fix details with Claude') + '<span class="sub">Sends this one email’s text to Claude. Nothing is kept.</span></span></button>');
+    if (o.source && o.source.msgId) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Ipsy is reading it…' : 'Have Ipsy check this order') + '<span class="sub">Ipsy reads this one email again with Claude and fixes what’s wrong. Nothing is kept.</span></span></button>');
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');
     if (isOpen(o)) acts.push('<button class="rowbtn" type="button" id="opDelivered"><span class="ic">' + I.check + '</span><span>' + (o.kind === 'pickup' ? 'Mark as picked up' : 'Mark as delivered') + '</span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
-    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed with Claude.' : '') + (o.auto ? ' Marked as received in a one-off clean-up: nothing had been heard for over ' + CLEANUP_DAYS + ' days.' : '') + '</p>';
+    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed by Ipsy, with Claude.' : '') + (o.auto ? ' Marked as received in a one-off clean-up: nothing had been heard for over ' + CLEANUP_DAYS + ' days.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;
   }
@@ -579,11 +580,13 @@ if (window.top !== window.self) {
     offline: 'No connection. Try again when you’re online.',
   };
   const AI_LABEL = { store: 'store', kind: 'kind', orderNo: 'order number', items: 'items', total: 'total', carrier: 'courier', tracking: 'tracking number', eta: 'expected date', etaEnd: 'expected date', pickupBy: 'pickup date', status: 'status' };
-  async function aiCall(body) {
+  // quiet (Ipsy checking by itself): never asks for Face ID; signed out, it just says so.
+  async function aiCall(body, quiet) {
     const opts = { method: 'POST', cache: 'no-store', headers: { 'X-Orders': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
     const acct = window.AllisonOS && window.AllisonOS.account;
+    if (quiet && acct) { const tok = acct.token && acct.token(); if (!tok) throw Object.assign(new Error('signin'), { code: 'signin' }); opts.headers.Authorization = 'Bearer ' + tok; }
     let r;
-    try { r = acct ? await acct.fetch('../orders/api/read', opts) : await fetch('../orders/api/read', opts); }
+    try { r = acct && !quiet ? await acct.fetch('../orders/api/read', opts) : await fetch('../orders/api/read', opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
     if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'no-ai' : 'server') });
@@ -616,42 +619,94 @@ if (window.top !== window.self) {
     return changed;
   }
   // The email of an order, fetched again from Gmail, read by Claude: its facts, or null for "not an order".
-  async function aiRead(o) {
+  async function aiRead(o, quiet) {
     const msg = await gmail('/messages/' + o.source.msgId, { format: 'full' });
     const { html, text } = bodies(msg.payload);
     const fromHtml = html ? P.htmlToText(html) : '';
     const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
       .replace(/https?:\/\/\S+/g, '[link]').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000);
-    const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body });
+    const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body }, quiet);
     return j.fact || null;
   }
-  // The first time Claude is used, say what is sent and ask. False if the answer is no.
-  function aiAsk() {
+  // Ipsy checks an order: its email read again by Claude (functions/orders/api read: Haiku 5.5, every
+  // number checked against the email's own words), what it found put onto the order, with Undo in
+  // Ipsy's chat. Asked once first (in Ipsy's chat), for this and for Ipsy's own checking of To check.
+  const ipsyAsked = async () => {
     if (ls.get(K.aiOk, '')) return true;
-    if (!confirm('Claude will read the email of an order to fix its details. The text, without links, goes to Anthropic through the family server. It isn’t kept, and nothing else is sent.\n\nContinue?')) return false;
-    ls.set(K.aiOk, '1'); return true;
+    if (!ipsy) return false;
+    const ok = await ipsy.ask('Ipsy reads an order’s email again with Claude to fix its details. The email’s text, without links, goes to Anthropic through the family server; nothing is kept. OK?', { yes: 'OK', no: 'Not now' });
+    if (ok) ls.set(K.aiOk, '1');
+    return ok;
+  };
+  const undoTo = (o, before) => () => { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); if (!orders.includes(o)) orders.push(o); save(); if (st.order === o) renderOrder(); render(); };
+  // One order: { changed: [...] } or { none: true } (not an order email) or { error }.
+  async function checkOrder(o, quiet) {
+    const before = JSON.parse(JSON.stringify(o));
+    try {
+      const f = await aiRead(o, quiet);
+      if (!f) return { none: true };
+      const changed = [...new Set(applyAi(o, f))];
+      save();
+      if (changed.length && ipsy) ipsy.change('Fixed ' + (o.store || 'an order') + ': ' + changed.slice(0, 4).join(', '), undoTo(o, before));
+      return { changed, undo: undoTo(o, before) };
+    } catch (e) {
+      return { error: e instanceof AuthError ? 'auth' : e.code || 'server', message: e.message };
+    }
   }
+  // "Have Ipsy check this order", on its page.
   async function aiFix(o) {
     if (st.aiBusy || st.sorting || !o.source || !o.source.msgId) return;
     if (!getToken()) { toast('Connect Gmail in Settings first, so Orders can open the email.'); return; }
-    if (!aiAsk()) return;
-    st.aiBusy = true; renderOrder();
-    const before = JSON.parse(JSON.stringify(o));
-    try {
-      const f = await aiRead(o);
-      if (!f) toast('Claude doesn’t think that email is about an order.');
-      else {
-        const changed = applyAi(o, f);
-        save();
-        toast(changed.length ? 'Claude updated the ' + [...new Set(changed)].slice(0, 4).join(', ') + '.' : 'Claude agrees with what’s there.',
-          changed.length ? () => { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); save(); if (st.order === o) renderOrder(); render(); } : null, 6000);
-      }
-    } catch (e) {
-      if (e instanceof AuthError) { toast('Gmail needs you to sign in again.'); openSettings(); }
-      else toast(AI_SAY[e.code] || (e.code ? 'Something went wrong. Try again in a minute.' : e.message));
-    } finally {
-      st.aiBusy = false; if (st.order === o) renderOrder(); render();
+    if (!(await ipsyAsked())) return;
+    if (ipsy) ipsy.close();
+    st.aiBusy = true; renderOrder(); if (ipsy) ipsy.working(true);
+    const r = await checkOrder(o);
+    st.aiBusy = false; if (ipsy) ipsy.working(false); if (st.order === o) renderOrder(); render();
+    if (r.error === 'auth') { toast('Gmail needs you to sign in again.'); openSettings(); }
+    else if (r.error) toast(AI_SAY[r.error] || (r.error !== 'server' ? 'Something went wrong. Try again in a minute.' : r.message));
+    else if (r.none) toast('Ipsy doesn’t think that email is about an order.');
+    else toast(r.changed.length ? 'Ipsy fixed the ' + r.changed.slice(0, 4).join(', ') + '.' : 'Ipsy agrees with what’s there.', r.changed.length ? r.undo : null, 6000);
+  }
+
+  // Ipsy checks To check by itself: after each read of Gmail (and when Orders opens), every order
+  // marked Check details that came from an email is checked once (per email), at most 10 at a time,
+  // quietly. Asked once first, from Ipsy's corner; Settings > Ipsy turns it on or off. A fix shows in
+  // Ipsy's chat with Undo, and Ipsy says in its corner what it did. What it can't fix stays in To check.
+  let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
+  const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy'];
+  async function autoCheck() {
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
+    const tried = new Set(ls.json(K.ipsyTried, []));
+    const todo = orders.filter(o => kindOn(o) && needsCheck(o) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId)).slice(0, 10);
+    if (!todo.length) return;
+    const mode = ls.get(K.ipsyAuto, '');
+    if (mode === '0') return;
+    if (mode !== '1') {
+      if (autoOffered) return;
+      autoOffered = true;
+      ipsy.hint(plural(todo.length, 'order') + ' to check. Want me to try fixing ' + (todo.length === 1 ? 'it' : 'them') + '?', async () => {
+        const ok = await ipsy.ask('Want me to check the orders in **To check** by myself? I’ll read each one’s email again with Claude (through the family server; nothing is kept) and fix what I can, now and whenever Gmail brings something unsure. Each fix shows here with Undo, and you can turn this off in Settings.', { yes: 'Yes, check them', no: 'Not now' });
+        ls.set(K.ipsyAuto, ok ? '1' : '0');
+        if (ok) { ls.set(K.aiOk, '1'); ipsy.close(); autoCheck(); }
+      });
+      return;
     }
+    autoBusy = true; ipsy.working(true);
+    let fixed = 0, left = 0, stop = '';
+    for (const o of todo) {
+      if (!orders.includes(o)) continue;
+      const r = await checkOrder(o, true);
+      if (r.error && AUTO_STOP.includes(r.error)) { stop = r.error; break; }      // not marked tried: next time
+      tried.add(o.id + ':' + o.source.msgId);
+      if (needsCheck(o)) left++; else fixed++;
+    }
+    ls.set(K.ipsyTried, JSON.stringify([...tried].slice(-500)));
+    autoBusy = false; ipsy.working(false); render();
+    if (fixed || left) {
+      const line = 'Checked ' + plural(fixed + left, 'order') + ' in To check: ' + (fixed ? 'fixed ' + fixed : 'nothing to fix') + (left ? ', ' + left + ' still need' + (left === 1 ? 's' : '') + ' you' : '') + '.';
+      ipsy.note(line);
+      ipsy.hint(fixed ? 'I fixed ' + plural(fixed, 'order') + ' in To check' + (left ? '; ' + left + ' still need' + (left === 1 ? 's' : '') + ' you.' : '.') : left === 1 ? 'I couldn’t fix the one in To check: it needs you.' : 'I couldn’t fix those in To check: they need you.');
+    } else if (stop === 'signin') ipsy.hint('Sign in with Face ID in aOS and I can check To check for you.');
   }
 
   // ---------------------------------------------------------------------
@@ -940,7 +995,7 @@ if (window.top !== window.self) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
       saveSeen(); save(); revive = new Set();
-      if (!scanErr && !more) cleanupOnce();
+      if (!scanErr && !more) { cleanupOnce(); setTimeout(autoCheck, 600); }
       st.scanning = false;
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
@@ -978,6 +1033,7 @@ if (window.top !== window.self) {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Orders can read email, never send, change or delete it</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
+    $('stIpsy').innerHTML = '<button class="swrow" type="button" role="switch" id="stIpsyAuto" aria-checked="' + (ls.get(K.ipsyAuto, '') === '1') + '"><span class="grow">Ipsy checks To check<span class="sub">By itself, after each read of Gmail</span></span><span class="switch" aria-hidden="true"></span></button>';
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Orders only reads.'
       : 'Orders looks for order, shipping and pickup emails in the last year of email (Mail’s Orders tag, and the big stores and carriers), then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
@@ -987,6 +1043,13 @@ if (window.top !== window.self) {
   if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }
   else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = $('stDesign').nextElementSibling.hidden = true;
   $('setBtn').onclick = openSettings;
+  $('stIpsy').addEventListener('click', e => {
+    if (!e.target.closest('#stIpsyAuto')) return;
+    const on = ls.get(K.ipsyAuto, '') !== '1';
+    ls.set(K.ipsyAuto, on ? '1' : '0'); if (on) ls.set(K.aiOk, '1');
+    renderSettings();
+    if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); autoCheck(); }
+  });
   $('stKinds').addEventListener('click', e => {
     const b = e.target.closest('[data-kind]'); if (!b) return;
     const k = b.dataset.kind, on = !(kinds[k] !== false);
@@ -1224,7 +1287,7 @@ if (window.top !== window.self) {
   // orders and this same Gmail sign-in; Claude answers through functions/orders/api (ipsy).
   if (window.AllisonOS && window.AllisonOS.ipsy && window.OrdersIpsy) {
     const TAB_NAMES = { way: 'the On the way list', done: 'the Delivered list', check: 'the To check list' };
-    window.AllisonOS.ipsy.mount({
+    ipsy = window.AllisonOS.ipsy.mount({
       app: 'orders', name: 'Orders', endpoint: '../orders/api/ipsy', headers: { 'X-Orders': '1' }, slot: document.querySelector('.dock > span'),
       ...window.OrdersIpsy({
         P, get orders() { return orders; }, set orders(v) { orders = v; }, save, render, todayStr, isOpen, needsCheck, checkReason, kindOn,
@@ -1234,6 +1297,7 @@ if (window.top !== window.self) {
         screen: () => st.q ? 'search results for "' + st.q + '"' : TAB_NAMES[st.tab] || 'the order list',
       }),
     });
+    setTimeout(autoCheck, 2500);   // anything already in To check (a read of Gmail checks again when it's done)
   }
 
   // For the tests (orders/scripts/app-test.mjs) only.

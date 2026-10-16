@@ -30,7 +30,7 @@
     podcasts: [['ok', 'Nothing']],
     travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
     places: [['once', 'The family Google Sheet, to share lists (optional)']],
-    orders: [['ok', 'Your family account (Face ID), only to use Fix with Claude'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
+    orders: [['ok', 'Your family account (Face ID), only for Ipsy'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     drinks: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
     meals: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],
@@ -117,21 +117,22 @@
   // Meet Ipsy: the helper you chat with (home/ipsy.js), a little stem cell that changes shape as it works.
   // While a release that introduces it is fresh (its intro: 'ipsy'), it leads Today, big, telling what it can
   // do in a speech bubble as it turns from one cell into the next; after that it joins the mix.
+  const IPSY_APPS = ['orders', 'travel', 'meals', 'calendar', 'notes', 'news'];   // the apps Ipsy is in
   const IPSY_SAYS = [
-    ['stem', 'Hi! I’m Ipsy, a little stem cell.'], ['wbc', 'I hunt down any order you ask about.'],
-    ['rbc', 'I fix details and merge duplicates.'], ['neuron', 'I check your Gmail and the web.'],
-    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me in Orders, bottom left!'],
+    ['stem', 'Hi! I’m Ipsy, a little stem cell.'], ['wbc', 'I track down orders and trips.'],
+    ['neuron', 'I check flights, Gmail and the web.'], ['rbc', 'I plan dinners and tidy your lists.'],
+    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me in six apps, bottom left!'],
   ];
-  const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt in your orders'],
+  const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt through your things'],
     ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
-      <p>Ipsy is a little stem cell you can chat with about your orders. It lives in the bottom left corner of Orders, and it runs on Claude, by Anthropic.</p>
-      <h3>Ask in your own words</h3><p>“What’s arriving this week?” “Merge my duplicate orders.” “The Walmart total should be $49.99.” “Delete everything from that pizza place.” “Is anything late?”</p>
-      <h3>It does the work</h3><p>Ipsy finds any order, fixes its details, marks it delivered, adds, deletes and merges duplicates into one. <b>Every change shows in the chat with Undo.</b></p>
-      <h3>Gmail and the web</h3><p>It reads your Gmail to check an order against its emails or find one that was missed (it can’t send, change or delete email), and searches the web for things like a store’s return policy.</p>
+      <p>Ipsy is a little stem cell you can chat with. It lives in the bottom left corner of ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}, and it runs on Claude, by Anthropic.</p>
+      <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
+      <h3>It does the work</h3><p>Ipsy finds things, fixes details, adds and tidies, in the app you’re in. <b>Every change shows in the chat with Undo.</b> In Calendar, the family’s shared calendar, it asks you first before adding, changing or deleting anything, one event at a time.</p>
+      <h3>Gmail, flights and the web</h3><p>In Orders and Travel it reads your Gmail (it can’t send, change or delete email). Travel’s Ipsy looks up live flight status, even for flights that aren’t in your email, and every Ipsy can search the web for anything current.</p>
       <h3>A cell of many shapes</h3><div class="ipsy-forms">${IPSY_FORMS.map(([f, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-form="${f}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
-      <h3>What it shares</h3><p>Your question, and whatever Ipsy looks at to answer it, goes to Claude through the family server, which keeps only a count of questions. Ipsy is for signed-in family and asks once before your first question.</p>
-      <h3>Where to find it</h3><p>Open Orders and tap the little cell in the bottom left corner. Orders is the first app with Ipsy.</p>` };
+      <h3>What it shares</h3><p>Your question, and whatever Ipsy looks at in that app to answer it, goes to Claude through the family server, which keeps only a count of questions. Ipsy only has what its app already has: no new passwords or access. It’s for signed-in family and asks once in each app before your first question.</p>
+      <h3>Where to find it</h3><p>Open any of those apps and tap the little cell in the bottom left corner.</p>` };
   const ipsyStage = (cls, line) => `<div class="${cls}" data-ipsy-stage></div><p class="ipsy-say" aria-hidden="true"><span>${esc(line)}</span></p>`;
   // Brings every Ipsy on the page to life: the card's and the page's tell what it can do, one shape at a time.
   let ipsyTimer = 0;
@@ -171,7 +172,7 @@
   $('stories').innerHTML = STORIES.map((s, i) => s.ipsy
     ? `<div class="story ipsy ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:129,147,188"><div class="art">${ipsyStage('ipsy-stage', IPSY_SAYS[0][1])}</div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
-       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy lives in ${esc(D.NAMES[s.id])}</b><i>Tap the little cell, bottom left</i></span>${getBtn(appOf(s.id))}</div></div>`
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy is in ${IPSY_APPS.length} apps</b><i>Tap the little cell, bottom left</i></span>${getBtn(appOf(s.id))}</div></div>`
     : s.plain
     ? `<div class="story plain ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
     : `<div class="story ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>

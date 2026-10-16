@@ -992,23 +992,26 @@
     return true;
   }
 
+  // ESPN's scoreboards for some leagues, read into `scores`; how many answered. (Scores, and Ipsy.)
+  async function fetchBoards(list) {
+    const got = await Promise.allSettled(list.map(l =>
+      fetch(`${ESPN}/${l.path}/scoreboard`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+        .then(json => [l.id, normalize(json, l)])));
+    const ok = got.filter(r => r.status === 'fulfilled');
+    for (const r of ok) scores[r.value[0]] = r.value[1];
+    if (ok.length) { scoresAt = Date.now(); scoresSource = 'live'; }
+    return ok.length;
+  }
+
   async function fetchScores() {
     clearTimeout(scoresTimer);
     if (scoresLoading || !leagues) return;
     scoresLoading = true;
     if (topic === SPORT && sportMode === 'scores') renderFeed();
     const list = relevantLeagues();
-    const [got] = await Promise.all([
-      Promise.allSettled(list.map(l =>
-        fetch(`${ESPN}/${l.path}/scoreboard`, { cache: 'no-store' })
-          .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-          .then(json => [l.id, normalize(json, l)]))),
-      getSnapshot(15 * 60e3),
-    ]);
-    const ok = got.filter(r => r.status === 'fulfilled');
-    for (const r of ok) scores[r.value[0]] = r.value[1];
-    if (ok.length) { scoresAt = Date.now(); scoresSource = 'live'; }
-    else if (list.length) await loadSnapshot();
+    const [ok] = await Promise.all([fetchBoards(list), getSnapshot(15 * 60e3)]);
+    if (!ok && list.length) await loadSnapshot();
     scoresLoading = false;
     renderFilterbar();
     if (topic === SPORT && sportMode === 'scores') renderFeed();
@@ -1097,10 +1100,18 @@
     const run = ++tableRun;
     tableBusy = true;
     if (topic === SPORT && sportMode === 'table') renderFeed();
-    const get = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)));
-    const [st, sb] = await Promise.allSettled([espnGet(`/v2/sports/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
+    await loadTable(l);
     if (run !== tableRun) return;                 // another league was picked meanwhile
     tableBusy = false;
+    if (topic === SPORT && sportMode === 'table') renderFeed();
+    scheduleScores();
+  }
+
+  // One league's table from ESPN into `tables` (kept on the phone), with who's playing now; the
+  // table, or null when there's none to show. (Table, and Ipsy.)
+  async function loadTable(l) {
+    const get = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)));
+    const [st, sb] = await Promise.allSettled([espnGet(`/v2/sports/${l.path}/standings`), get(`${ESPN}/${l.path}/scoreboard`)]);
     const cur = tables[l.id];
     if (st.status === 'fulfilled') {
       tableFailed.delete(l.id);
@@ -1111,8 +1122,7 @@
     if (sb.status === 'fulfilled' && tables[l.id]) {
       tables[l.id].live = normalize(sb.value, l).filter(g => g.state === 'in').flatMap(g => [g.home.name, g.home.short, g.away.name, g.away.short]).filter(Boolean);
     }
-    if (topic === SPORT && sportMode === 'table') renderFeed();
-    scheduleScores();
+    return tables[l.id] || null;
   }
 
   // Are you following this team (a one-tap team, or your own picks)?
@@ -1630,8 +1640,10 @@
   }
 
   // ---- data ----
-  async function load() {
-    if (loading) return;
+  // One fetch at a time; a second call (Refresh, Ipsy) waits for the one under way.
+  let loadP = null;
+  function load() { return loadP || (loadP = fetchNews().finally(() => { loadP = null; })); }
+  async function fetchNews() {
     loading = true;
     refreshBtn.classList.add('spinning');
     if (!data) renderFeed();
@@ -1785,6 +1797,7 @@
     searchEl.blur();
   });
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.querySelector('.ipsy-wrap:not([hidden])')) return;   // Escape puts Ipsy's chat away first
     if (e.key === 'Escape' && sheetOpen) closeSheet();
     if (e.key === 'Escape' && srcOpen) closeSrcSheet();
     if (e.key === 'Escape' && aiOpen) closeAi();
@@ -1845,8 +1858,53 @@
   refreshPicks();
   render();
   load();
-  loadCatalog();
-  loadLeagues();
+  const catalogP = loadCatalog(), leaguesP = loadLeagues();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: its tools (ipsy-tools.js) read these same
+  // headlines, scores and tables, summarize through the same route, and change only what you can
+  // change here (the teams you follow, the one-tap team, Stem cells' filters), each with Undo.
+  // Claude answers through functions/news/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.NewsIpsy) {
+    // What's on screen, for Ipsy's note on each question.
+    const screen = () => {
+      if (aiOpen && ai) return 'the summary of the story "' + ai.title + '"' + (ai.source ? ' (' + ai.source + ')' : '');
+      if (matchOpen && match) return 'the match page for ' + (match.game.home.name || '?') + ' v ' + (match.game.away.name || '?') + ' (' + match.l.label + ')';
+      if (sheetOpen) return 'the Sport filters panel';
+      if (srcOpen) return 'the ' + topicLabel(topic) + ' sources panel';
+      if (topic !== SPORT) {
+        const f = hasFilters(topic) ? filtersOf(topic) : null;
+        return 'the ' + (topic === LATEST.id ? 'Latest' : topicLabel(topic)) + ' tab'
+          + (f && f.days ? ', ' + (f.days === 1 ? 'today' : 'the last ' + f.days + ' days') : '')
+          + (f && f.sources.length ? ', only ' + f.sources.join(', ') : '');
+      }
+      const lg = id => id === LEAGUE_ALL ? 'all leagues' : ((leagues || []).find(l => l.id === id) || {}).label || id;
+      if (sportMode === 'scores') return 'the Sport tab, Scores' + (pickedLeague.scores ? ' (' + lg(pickedLeague.scores) + ')' : '');
+      if (sportMode === 'table') { const l = tableLeagueNow(); return 'the Sport tab, Table' + (l ? ' (' + l.label + ')' : ''); }
+      return 'the Sport tab, News';
+    };
+    // A sheet of News' own stays dimmed (html.locked) while it's open, even after Ipsy's chat closes over it.
+    const sheetUp = () => aiOpen || matchOpen || sheetOpen || srcOpen || setOpen;
+    new MutationObserver(() => { if (sheetUp() && !document.documentElement.classList.contains('locked')) document.documentElement.classList.add('locked'); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    window.AllisonOS.ipsy.mount({
+      app: 'news', name: 'News', endpoint: '../news/api/ipsy', headers: { 'X-News': '1' },
+      ...window.NewsIpsy({
+        get data() { return data; }, load, topics, topicLabel, storiesFor, LATEST, SPORT, select, safeUrl, ago,
+        get topic() { return topic; }, get sportMode() { return sportMode; },
+        summarize: url => aiCall('summarize', { url }), aiSay, openAi,
+        ready: () => Promise.all([catalogP, leaguesP]),
+        get leagues() { return leagues || []; }, get scores() { return scores; }, get fixtures() { return fixtures; },
+        get scoresAt() { return scoresAt; }, get scoresSource() { return scoresSource; },
+        fetchBoards, loadSnapshot, getSnapshot, get snapAt() { return snap ? Date.parse(snap.generatedAt) || 0 : 0; },
+        relevantLeagues, gameMatches, sameTeam, hasPage: l => !!matchKind(l), loadTable, followed,
+        setMode, setLeague, openMatch,
+        get catalog() { return catalog; }, get picks() { return picks; }, pickEntry, setPicks,
+        get quick() { return quick; }, quickTeam, setQuick,
+        hasFilters, filtersOf, sourceList, setListFilters, filteredStories, WINDOWS: WINDOWS.map(([d]) => d),
+        screen,
+      }),
+    });
+  }
 })();

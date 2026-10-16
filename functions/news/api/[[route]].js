@@ -14,6 +14,16 @@
 //                     second reader costs nothing.
 //   POST ask        { url, question, history: [{ q, a }] } -> { answer }
 //                     a question about that story, answered from its text alone.
+//   POST ipsy       { messages } -> Anthropic's answer, as it comes (one step of Ipsy's chat)
+//                     messages: the whole conversation so far, as the Messages API takes it, kept on
+//                     the phone (home/ipsy.js). This adds Ipsy's instructions and tools (IPSY_SYSTEM,
+//                     IPSY_CLIENT_TOOLS), asks Claude Sonnet 5.5 (NEWS_IPSY_MODEL names another) and
+//                     passes the answer back untouched (server/ipsy.js): the phone runs the tools that
+//                     read the headlines, scores and tables (news/ipsy-tools.js; its summaries come
+//                     through summarize above, so only a published story is read), adds their results
+//                     and asks again. Web search and web pages run at Anthropic. Nothing about the
+//                     conversation is kept here: only a count, news:ipsy:<user id>:<day>, of IPSY_DAILY
+//                     questions a person a day (the steps a question takes aren't counted).
 //
 // The model: Claude Opus 5.5, at low effort, through Anthropic's API with the key the owner
 // adds as a Pages secret, ANTHROPIC_API_KEY (the same one Meals uses; news.yml puts it).
@@ -30,6 +40,7 @@
 // The X-News header stops other web pages calling this (as X-Meals does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
+import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-opus-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -166,6 +177,78 @@ export async function answer(env, story, read, question, history, f = fetch) {
   return text;
 }
 
+// ---- Ipsy: the helper you chat with (server/ipsy.js, shared by every app with Ipsy) ----
+// The phone keeps the conversation and runs News' tools; Anthropic runs web search and web fetch.
+export { IPSY_MODEL, IPSY_DAILY };
+export const ipsyModelOf = env => ipsyModelFor(env, 'NEWS_IPSY_MODEL');
+const STR = description => ({ type: 'string', ...(description ? { description } : {}) });
+export const IPSY_CLIENT_TOOLS = [
+  T('find_stories', 'Find stories in the headlines News has published (refreshed about every 30 minutes from the feeds of BBC News, The Guardian, NPR, Sky News and others; Sport and Stem cells have their own sources). With no filters, the newest. Returns each story\'s id, headline, source, topic, when it was published and the feed\'s short description.', {
+    query: STR('Words that must all appear in the headline, description, source or tags'),
+    topic: STR('A topic id or name: latest, uk, world, us, business, tech, ai, science, sport, stemcells'),
+    source: STR('Part of a source\'s name, e.g. "BBC" or "Guardian"'),
+    days: { type: 'integer', description: 'Only stories from today (1) or today and the days before it' },
+    limit: { type: 'integer', description: 'Most to return (default 20, at most 60)' },
+  }),
+  T('get_story', 'Everything News has on some stories: headline, source, topic, when, the feed\'s description, the address, tags and DOI, and whether the person\'s filters hide it on its tab.', {
+    ids: { type: 'array', items: { type: 'string' }, description: 'Story ids from find_stories, at most 10' },
+  }, ['ids']),
+  T('summarize_story', 'Claude\'s summary of one story in the headlines (two sentences and three to five takeaways), made by reading the publisher\'s page. Only stories in the published headlines can be summarized. Each counts toward the person\'s daily limit unless someone in the family already summarized it this week, so summarize one or two, not many.', {
+    id: STR('A story id from find_stories'),
+  }, ['id']),
+  T('show_story', 'Show one story on the person\'s screen, behind the chat: its topic\'s list, scrolled to it and marked; or, with summary: true, its summary sheet (the one the sparkle opens, with the link to the full article).', {
+    id: STR(), summary: { type: 'boolean' },
+  }, ['id']),
+  T('sport_scores', 'Today\'s games (live, finished, still to come, with scores and where to watch in the US) and the fixtures coming up in the next two weeks, from ESPN, for the leagues News covers (football in England, Scotland and Europe, the NFL, NBA, MLB, NHL, rugby union and league). Kick-off times are in the person\'s own time zone. Give a league, a team, or both; with neither, every league.', {
+    league: STR('A league id or name, e.g. eng.1 or "Premier League", "Champions League", "Premiership Rugby", "NFL"'),
+    team: STR('A team name, e.g. "Liverpool", "Northampton", "Chiefs"'),
+    mine: { type: 'boolean', description: 'Only the games of the sports and teams the person follows in News' },
+    coming_up: { type: 'integer', description: 'How many fixtures to list a league (default 5 with a league or team, else 2; at most 10)' },
+  }),
+  T('league_table', 'A league\'s standings from ESPN, as the Table view shows them: rank, team and the main columns (for football: played, won, drawn, lost, goal difference, points), each group or conference on its own, with ESPN\'s zones (Champions League, relegation), who\'s playing now and the teams the person follows. Many cups and rugby competitions have no table.', {
+    league: STR('A league id or name (default: Premier League)'),
+  }),
+  T('show_sport', 'Open Sport on the person\'s screen, behind the chat: its News, Scores or Table view, on a league; or a football or rugby game\'s own match page (game_id from sport_scores, where has_match_page is true).', {
+    view: { type: 'string', enum: ['news', 'scores', 'table'] }, league: STR('A league id or name'), game_id: STR(),
+  }),
+  T('find_sport_options', 'The sports, competitions and teams the person follows in News (the Sport filters, on this phone), the one-tap teams and which is on, and, with a query, the entries in News\' lists of sports, competitions and teams that match it, with their ids.', {
+    query: STR('Part of a sport, competition or team name'),
+  }),
+  T('set_sport_filters', 'Change what the person follows in Sport (on this phone): the Sport tab, Scores and Table then show only that. Each item is an id from find_sport_options, or a name; a name not in the lists is followed as a word in headlines (a player, a driver). clear: true removes everything first.', {
+    follow: { type: 'array', items: { type: 'string' } },
+    unfollow: { type: 'array', items: { type: 'string' } },
+    clear: { type: 'boolean' },
+  }),
+  T('set_my_team', 'Turn on one of the one-tap teams (Sport then shows only that team, men\'s games only), or turn it off with an empty team to go back to the person\'s filters. Use the key or the name from find_sport_options.', {
+    team: STR('A one-tap team\'s key or name, or "" for none'),
+  }, ['team']),
+  T('set_story_filters', 'Narrow a topic that has its own filters (Stem cells) to some sources and/or a time range, on this phone. sources: names from that topic\'s stories ([] shows every source); days: 0 (all), 1 (today), 7 or 30.', {
+    topic: STR('Default stemcells'), sources: { type: 'array', items: { type: 'string' } }, days: { type: 'integer', enum: [0, 1, 7, 30] },
+  }),
+];
+
+export const IPSY_SYSTEM = persona({
+  app: 'News',
+  about: 'an iPhone app a family uses to read the day\'s headlines by topic (UK, World, US, Business, Tech, AI, Science, Sport, Stem cells) and follow sport scores, fixtures and tables',
+  can: [
+    'Look through the headlines News has published (find_stories, get_story) and summarize one by reading its page (summarize_story).',
+    'Check today\'s scores, the fixtures coming up and league tables, from ESPN (sport_scores, league_table).',
+    'Show a story or a sport page on their screen (show_story, show_sport).',
+    'Change, on this phone, the sports and teams they follow, the one-tap team, and Stem cells\' source and time filters (find_sport_options, set_sport_filters, set_my_team, set_story_filters).',
+  ],
+  rules: [
+    'Answer from News\' own headlines first, and say where each story comes from ("BBC News reports…"). The headlines are refreshed about every 30 minutes; when something isn\'t in them, or the question needs anything newer, search the web and say that you did ("I searched the web…").',
+    'Report what the stories say, plainly and neutrally; on contested or political matters, give what each side says as reported, not your own view.',
+    'Scores, fixtures and tables come from ESPN through the app: give them as they are, say how fresh they are, and say when they come from the saved copy. Kick-off times are already in the person\'s time zone.',
+    'Use summarize_story when asked what a story says; it only reads stories in the published headlines. Say when a summary came from the headline only (a paywall, perhaps).',
+    'When the person asks to change what they follow, do it: it\'s only on their phone and shows in the chat with an Undo, so you don\'t need to ask first. Ask only when it\'s unclear which team they mean.',
+    'Show a story or a page on their screen when they ask, or when it plainly helps.',
+  ],
+  bold: 'a headline, a team or a score',
+});
+
+export const ipsyRequestHead = env => requestHead({ model: ipsyModelOf(env), system: IPSY_SYSTEM, tools: IPSY_CLIENT_TOOLS });
+
 // ---- the route ----
 async function body(request) {
   const t = await request.text();
@@ -178,13 +261,14 @@ const day = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: '
 export async function onRequest({ request, params, env }, f = fetch) {
   if (request.headers.get('X-News') !== '1') return reply({ error: 'not-found' }, 404);
   const route = [].concat(params.route || []).join('/');
-  if (request.method.toUpperCase() !== 'POST' || !['summarize', 'ask'].includes(route)) return reply({ error: 'not-found' }, 404);
+  if (request.method.toUpperCase() !== 'POST' || !['summarize', 'ask', 'ipsy'].includes(route)) return reply({ error: 'not-found' }, 404);
   const db = kv(env);
   if (!db || !(await db.get('owner'))) return reply({ error: 'accounts-off' }, 503);
   const me = await sessionUser(db, request);
   if (!me) return reply({ error: 'signin' }, 401);
   try {
     if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
+    if (route === 'ipsy') return await ipsyStep({ env, request, db, me, app: 'news', head: ipsyRequestHead(env) }, f);
     const b = await body(request);
     const story = await findStory(request, env, str(b.url, 1000), f);
     if (!story) return reply({ error: 'unknown-story' }, 404);

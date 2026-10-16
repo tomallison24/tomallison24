@@ -35,6 +35,8 @@
 //                    (functions/news/api)
 //   orders:ai:<id>:<day>, orders:ipsy:<id>:<day>   how many emails that person had Claude read
 //                    today, and how many questions they asked Ipsy (functions/orders/api)
+//   <app>:ipsy:<id>:<day>   how many questions that person asked Ipsy in that app today
+//                    (server/ipsy.js, for travel, meals, calendar, notes and news too)
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry, s: sign-out
 // count }; it holds only while the user is still in the family and their sign-out
 // count (sv:<id>, kept apart from the user record so it never rewrites it) still

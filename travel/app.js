@@ -49,6 +49,7 @@ if (window.top !== window.self) {
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
+    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
   };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 400;              // messages read in one go at most
@@ -107,6 +108,7 @@ if (window.top !== window.self) {
   let live = ls.json(K.live, {});                                            // booking id -> {at, leg, error}
   let syncCfg = ls.json(K.sync, null);
   const shadow = new Map();
+  let ipsy = null;      // Ipsy's handle (../home/ipsy.js), once it is mounted at the bottom of this file
   const st = { tab: ls.get(K.tab, 'trips'), when: ls.get(K.when, 'upcoming'), trip: null, booking: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
   // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
@@ -288,7 +290,7 @@ if (window.top !== window.self) {
       g.endT = Math.max(...g.items.map(endT).filter(x => !isNaN(x)));
       g.past = g.endT < Date.now() - 6 * H;
       g.check = g.items.filter(b => b.guess && !isPast(b)).length;
-      g.gaps = g.items.filter(b => !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length).length;     // something a Check with AI could be asked for
+      g.gaps = g.items.filter(b => !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length).length;     // something Have Ipsy check could be asked for
     });
     return groups;
   }
@@ -500,7 +502,7 @@ if (window.top !== window.self) {
       + '<div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div>'
       + '<div class="icons">' + counts + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
       + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' canceled') + '</span>' : '') + '</div></button>'
-      + (ai ? '<button class="chip glass aibtn" type="button" data-ai="' + esc(g.id) + '" aria-label="Check ' + esc(g.name) + ' with AI">' + I.spark + 'Check with AI</button>' : '') + '</div>';
+      + (ai ? '<button class="chip glass aibtn" type="button" data-ai="' + esc(g.id) + '" aria-label="Have Ipsy check ' + esc(g.name) + '">' + I.spark + 'Have Ipsy check</button>' : '') + '</div>';
   }
   function render() {
     const groups = groupTrips();
@@ -535,8 +537,7 @@ if (window.top !== window.self) {
       else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong>'
         + (st.when === 'past' ? 'Trips move here the day after they end.' : 'New bookings in Gmail show up here after the next check (the envelope, top right).') + '</div>';
     }
-    $('askForm').hidden = !askShown();
-    $('list').innerHTML = askHTML() + editHTML() + h;
+    $('list').innerHTML = h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
     if (!$('tripPage').hidden && st.trip) renderTrip();
@@ -1078,22 +1079,42 @@ if (window.top !== window.self) {
     if (!force && lookupsThisMonth() >= LOOKUPS_A_MONTH) return Promise.resolve();
     if (inflight.has(b.id)) return inflight.get(b.id);
     const p = (async () => {
-      let r, data;
-      try {
-        r = await aosFetch(API + 'flight?' + new URLSearchParams({ no: b.airlineCode + b.flightNo, date: b.dep.slice(0, 10) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
-        data = await r.json();
-      } catch { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; return; }   // no server here (e.g. GitHub Pages)
-      liveAvail = true;
-      if (data.error === 'no-key') { liveAvail = false; return; }
+      let data;
+      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10)); } catch { return; }
+      if (data.error === 'no-key') return;
       countLookup();
-      if (data.error) { live[b.id] = { at: Date.now(), error: data.error }; saveLive(); return; }
-      const legs = (data.legs || []).filter(l => !l.cargo);
-      const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
-      live[b.id] = { at: Date.now(), leg, found: !!leg };
-      saveLive();
+      keepLive(b, data);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
     inflight.set(b.id, p);
     return p;
+  }
+  // One flight on one day, from travel/api/flight: {ok, found, legs} or {error}. Throws when nothing answers; no server here
+  // at all (e.g. GitHub Pages), or no key there, turns live status off. Used by refreshLive, and by Ipsy (ipsy-tools.js).
+  async function flightData(no, date) {
+    let r, data;
+    try {
+      r = await aosFetch(API + 'flight?' + new URLSearchParams({ no, date }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+      data = await r.json();
+    } catch (e) { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; throw e; }
+    if (!data || typeof data !== 'object') throw new Error('bad answer');
+    liveAvail = data.error !== 'no-key';
+    return data;
+  }
+  // What came back for a booking's flight, kept for the app to show (its leg: the one from or to the booking's airports).
+  function keepLive(b, data) {
+    if (data.error) live[b.id] = { at: Date.now(), error: data.error };
+    else {
+      const legs = (data.legs || []).filter(l => !l.cargo);
+      const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
+      live[b.id] = { at: Date.now(), leg, found: !!leg };
+    }
+    saveLive();
+  }
+  // The airport's departure board, from travel/api/find: {ok, candidates: [{number, to, local}]} or {error}. Used by
+  // findNumbers, and by Ipsy.
+  async function boardData(q) {
+    const r = await aosFetch(API + 'find?' + new URLSearchParams(q), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+    return r.json();
   }
   const utc = s => { const t = Date.parse(String(s || '').replace(' ', 'T').replace(/Z$/, ':00Z').replace(/:(\d\d):00Z$/, ':$1:00Z')); return isNaN(t) ? Date.parse(String(s || '').replace(' ', 'T')) : t; };
   const localHM = s => { const m = /\d\d:\d\d/.exec(String(s || '')); if (!m) return ''; const [h, mi] = m[0].split(':').map(Number); return new Date(2000, 0, 1, h, mi).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
@@ -1309,14 +1330,15 @@ if (window.top !== window.self) {
   // -- the AI and the flight board --
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
-  // Which models answer: what the function says it is set to use, and what the last answer said it came from (kept on this phone).
+  // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
+  // on this phone). Ipsy's answers go to the chat as they come, so only the model it is set to use is named.
   const modelName = id => { const m = /claude-(haiku|sonnet|opus|fable)-(\d+)-(\d+)/i.exec(String(id || '')); return m ? m[1][0].toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2] + '.' + m[3] : String(id || '').slice(0, 40); };
   function noteModel(which, id) { if (!id) return; const o = ls.json(K.aiLast, {}); o[which] = String(id).slice(0, 60); ls.set(K.aiLast, JSON.stringify(o)); }
   function modelsLine() {
     if (!aiModels) return '';
     const last = ls.json(K.aiLast, {});
     const bit = (label, cfg, served) => label + ' ' + modelName(cfg) + (served ? (modelName(served) === modelName(cfg) ? ' (the last answer came from it)' : ' (but the last answer came from ' + modelName(served) + ')') : '');
-    return '\nModels: ' + bit('Check', aiModels.check, last.check) + '; ' + bit('Ask and Change', aiModels.ask, last.ask) + '.';
+    return '\nModels: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
   }
   const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
@@ -1353,139 +1375,161 @@ if (window.top !== window.self) {
     }
     return any;
   }
-  // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. Only a press of
-  // Check with AI gets here (nothing runs this by itself). Returns {asked, filled, nothing}: calls made, details
-  // filled in, and bookings whose email does not state what is missing.
-  async function aiPass(queue) {
-    const out = { asked: 0, filled: 0, nothing: 0 };
+  // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. A press of Have Ipsy
+  // check gets here, and Ipsy's own check (ipsyAutoCheck, once you have said yes). Returns {asked, filled, nothing, done,
+  // changes, stop}: calls made, details filled in, bookings whose email does not state what is missing, the bookings
+  // looked at, what changed ({id, before, after} for Undo), and why it stopped early ('' if it didn't). quiet: no Face ID
+  // prompt (Ipsy's own check uses the session it has, or stops).
+  async function aiPass(queue, quiet) {
+    const out = { asked: 0, filled: 0, nothing: 0, done: new Set(), changes: [], stop: '' };
     if (!aiOn() || !queue.length) return out;
     if (aiAvail === null) await pingLive();
     if (!aiAvail) return out;
     const use = aiUse();
     let changed = false;
+    const acct = window.AllisonOS && window.AllisonOS.account;
     for (const q of queue) {
       const b = bookings.find(x => x.id === q.bid);
-      if (!b || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) continue;     // history isn't looked up
-      const map = ASK[b.type]; if (!map) continue;
+      if (!b || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) { out.done.add(q.bid); continue; }     // history isn't looked up
+      const map = ASK[b.type]; if (!map) { out.done.add(q.bid); continue; }
       let miss = P.missingFields(b);                       // nothing missing: nothing is asked, nothing is sent
-      if (!miss.length) continue;
+      if (!miss.length) { out.done.add(q.bid); continue; }
       // A date the email never states can't be read out of it: ask for the date only if the text has one.
       if (!P.realDates(q.text, q.date).length) miss = miss.filter(m => m !== 'date' && m !== 'checkOut');
       const ask = [...new Set(miss.map(m => map[m]).filter(Boolean))];
-      if (!ask.length) { out.nothing++; continue; }
+      if (!ask.length) { out.nothing++; out.done.add(q.bid); continue; }
+      const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
+        body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 12000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) };
+      const tok = quiet && acct && acct.token && acct.token();      // no session: tried as is (a 401 stops it), never a Face ID prompt
+      if (tok) init.headers.Authorization = 'Bearer ' + tok;
       out.asked++;
       let res, d = null;
       try {
-        res = await aosFetch(API + 'extract', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
-          body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 12000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) });
+        res = await (quiet ? fetch(API + 'extract', init) : aosFetch(API + 'extract', init));
+        if (quiet && res.status === 401) { out.stop = 'signin'; break; }
         d = await res.json();
-      } catch { continue; }
-      if (d && d.error === 'no-key') { aiAvail = false; break; }
-      if (!d || d.error === 'limit') break;
-      const before = Object.keys(b.filled || {}).length;
+      } catch { if (quiet) { out.stop = 'offline'; break; } continue; }
+      if (d && d.error === 'no-key') { aiAvail = false; out.stop = 'no-key'; break; }
+      if (!d || d.error === 'limit') { out.stop = 'limit'; break; }
+      out.done.add(q.bid);
+      const before = JSON.parse(JSON.stringify(b)), had = Object.keys(b.filled || {}).length;
       if (d.ok) noteModel('check', d.model);
-      if (d.ok && applyAi(b, d.fields || {})) { changed = true; out.filled += Math.max(1, Object.keys(b.filled || {}).length - before); }
+      if (d.ok && applyAi(b, d.fields || {})) {
+        changed = true; out.filled += Math.max(1, Object.keys(b.filled || {}).length - had);
+        out.changes.push({ id: b.id, before, after: sameAs(b) });
+      }
     }
     if (changed) { save(); render(); }
     return out;
   }
-  // The Check with AI button on a trip card: reads the emails behind the trip's bookings that still lack something
-  // and asks Claude only about what they lack. You press it, so you decide when anything is sent.
+  // The emails behind some bookings, read again from Gmail (each email once): the queue aiPass takes, and how many
+  // bookings didn't come from an email. Throws AuthError when Gmail needs a sign-in.
+  async function mailQueue(list) {
+    const mails = new Map(), queue = [];
+    let noMail = 0;
+    for (const b of list) {
+      const mid = b.source && b.source.msgId;
+      if (!mid) { noMail++; continue; }
+      if (!mails.has(mid)) {
+        try {
+          const msg = await gmail('/messages/' + mid, { format: 'full' });
+          const { html, text } = bodies(msg.payload);
+          mails.set(mid, { text: P.htmlToText(html) || text || '', subject: header(msg, 'subject'), date: +msg.internalDate || Date.now() });
+        } catch (e) { if (e instanceof AuthError) throw e; mails.set(mid, null); }
+      }
+      const m = mails.get(mid);
+      if (m) queue.push({ bid: b.id, msgId: mid, ...m });
+    }
+    return { queue, noMail };
+  }
+  // Undo for what a check filled in: each booking goes back to how it was, unless it has changed again since.
+  const sameAs = b => { const { updated, ...rest } = b; return JSON.stringify(rest); };     // save() stamps updated
+  const undoChanges = changes => () => {
+    let any = false;
+    for (const c of changes) {
+      const i = bookings.findIndex(x => x.id === c.id);
+      if (i < 0 || sameAs(bookings[i]) !== c.after) continue;
+      bookings[i] = c.before; any = true;
+    }
+    if (any) { save(); render(); smartSoon(); }
+  };
+  const filledLine = r => 'Filled in ' + plural(r.filled, 'detail') + ' on ' + (r.changes.length === 1 ? titleOf(bookings.find(b => b.id === r.changes[0].id) || {}) : plural(r.changes.length, 'booking')) + '. Marked Check.';
+  // Have Ipsy check, on a trip card: reads the emails behind the trip's bookings that still lack something and
+  // asks Claude only about what they lack. You press it, so you decide when anything is sent.
   async function checkTripWithAI(id, btn) {
     if (st.aiBusy) return;
     const g = tripById(id); if (!g) return;
-    const label = btn && btn.innerHTML;
     st.aiBusy = true;
     if (btn) { btn.disabled = true; btn.innerHTML = I.spark + 'Checking…'; }
+    if (ipsy) ipsy.working(true);
     try {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { toast('AI isn’t set up on this copy of the site (Travel README, “Smart help”).'); return; }
       if (!getToken()) { toast('Connect Gmail first, so Travel can read the emails.'); return; }
       const todo = g.items.filter(b => !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length);
-      const mails = new Map(), queue = [];
-      let noMail = 0;
-      for (const b of todo) {
-        const mid = b.source && b.source.msgId;
-        if (!mid) { noMail++; continue; }
-        if (!mails.has(mid)) {
-          try {
-            const msg = await gmail('/messages/' + mid, { format: 'full' });
-            const { html, text } = bodies(msg.payload);
-            mails.set(mid, { text: P.htmlToText(html) || text || '', subject: header(msg, 'subject'), date: +msg.internalDate || Date.now() });
-          } catch (e) { if (e instanceof AuthError) throw e; mails.set(mid, null); }
-        }
-        const m = mails.get(mid);
-        if (m) queue.push({ bid: b.id, msgId: mid, ...m });
-      }
+      const { queue, noMail } = await mailQueue(todo);
       const r = await aiPass(queue);
       await findNumbers();
       const bits = [];
-      if (r.filled) bits.push('Filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
-      else if (r.asked) bits.push('Asked AI. The email doesn’t say anything more.');
-      else if (r.nothing) bits.push('The email doesn’t state what’s missing, so AI has nothing to read. Your calendar, or you, can add it.');
+      if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
+      else if (r.asked) bits.push('Ipsy read the email. It doesn’t say anything more.');
+      else if (r.nothing) bits.push('The email doesn’t state what’s missing, so Ipsy has nothing to read. Your calendar, or you, can add it.');
       if (noMail) bits.push(plural(noMail, 'booking') + ' didn’t come from an email.');
-      toast(bits.join(' ') || 'Nothing is missing.');
+      const undo = r.changes.length ? undoChanges(r.changes) : null;
+      if (undo && ipsy) ipsy.change(filledLine(r), undo);
+      toast(bits.join(' ') || 'Nothing is missing.', undo, undo ? 6000 : 0);
     } catch (e) {
       toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
-    } finally { st.aiBusy = false; render(); }
+    } finally { st.aiBusy = false; if (ipsy) ipsy.working(false); render(); }
   }
-  // -- Ask AI: a question about your trips (the bar under the filters on Trips) --
-  // Only when you ask. The question goes with your trip list (dates, places, flight numbers and confirmation codes; no
-  // names, seats, notes or emails) to the function, and Claude answers from that list alone, naming the bookings it used.
-  const askItem = b => {
-    const o = { id: b.id, kind: b.ride ? 'ride' : b.type };
-    if (b.status === 'cancelled') o.status = 'cancelled';
-    if (b.guess || !startOf(b) || b.fromCal) o.check = true;
-    if (b.type === 'flight') Object.assign(o, { flight: flightName(b), from: b.from, to: b.to, dep: b.dep || b.depTime, arr: b.arr, conf: b.conf });
-    else if (b.type === 'hotel') Object.assign(o, { name: b.name, city: b.city, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, conf: b.conf });
-    else if (b.type === 'car') Object.assign(o, { company: b.company, pickupPlace: b.pickupPlace, pickup: b.pickup, dropoff: b.dropoff, conf: b.conf });
-    else Object.assign(o, { title: b.title, place: b.place, start: b.start, end: b.end, conf: b.conf });
-    return o;
-  };
-  function askPayload(question) {
-    const groups = groupTrips();
-    const trips = groups.map(g => ({ name: g.name, tid: g.id, when: g.past ? 'past' : 'upcoming', items: g.items.map(askItem) }));
-    const open = undated();
-    if (open.length) trips.push({ name: 'Needs a date', when: 'to check', items: open.map(askItem) });
-    return { question, today: todayStr(), trips };
-  }
-  const askShown = () => aiOn() && aiAvail !== false;     // even with no bookings yet
-  function askHTML() {
-    const a = st.ask;
-    if (!a || !askShown()) return '';
-    let h = '<div class="askout glass"><div class="askq">' + esc(a.q) + '</div>';
-    if (a.busy) h += '<div class="aska">Looking through your trips…</div>';
-    else if (a.err) h += '<div class="aska err">' + esc(a.err) + '</div>';
-    else {
-      h += '<div class="aska">' + esc(a.a) + '</div>';
-      const used = (a.ids || []).map(id => bookings.find(b => b.id === id)).filter(Boolean);
-      if (used.length) h += '<div class="tl">' + used.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
+  // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
+  // flight board have had their go), every upcoming booking still missing something that came from an email is
+  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. Asked once first, from Ipsy's
+  // corner; Settings > Smart help turns it on or off. What it fills in is marked Check (To check), with Undo in Ipsy's chat.
+  let autoBusy = false, autoOffered = false;
+  async function ipsyAutoCheck() {
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken()) return;
+    const mode = ls.get(K.ipsyAuto, '');
+    if (mode === '0') return;
+    const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
+    const todo = bookings.filter(b => b.source && b.source.msgId && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
+      && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
+    if (!todo.length) return;
+    if (aiAvail === null) await pingLive();
+    if (!aiAvail) return;
+    if (mode !== '1') {
+      if (autoOffered) return;
+      autoOffered = true;
+      ipsy.hint(plural(todo.length, 'booking') + (todo.length === 1 ? ' is' : ' are') + ' missing details. Want me to look?', async () => {
+        const ok = await ipsy.ask('Want me to fill in what your upcoming bookings are missing, by myself? I’ll read each one’s email again (a short excerpt, without names, numbers or prices, goes to Claude through the family server; nothing is kept), now and whenever Gmail brings a booking that’s missing something. What I fill in is marked **Check**, with Undo here, and you can turn this off in Settings.', { yes: 'Yes, check them', no: 'Not now' });
+        ls.set(K.ipsyAuto, ok ? '1' : '0');
+        if (ok) { ipsy.close(); ipsyAutoCheck(); }
+      });
+      return;
     }
-    return h + (a.busy ? '' : '<button class="textbtn askclear" type="button" id="askClear">Clear</button>') + '</div>';
-  }
-  async function askAI(question) {
-    question = String(question || '').trim().slice(0, 300);
-    if (question.length < 3 || st.askBusy) return;
-    // Nothing to look through: answer here, without asking Claude (and without using up a question).
-    if (!bookings.length) { st.ask = { q: question, a: 'There are no bookings to look through yet. Connect Gmail or add one with the + button, and I can answer questions about your trips.', ids: [] }; render(); return; }
-    st.askBusy = true;
-    st.ask = { q: question, busy: true }; render();
+    autoBusy = true; ipsy.working(true);
+    let r = null, stop = '';
     try {
-      if (aiAvail === null) await pingLive();
-      if (!aiAvail) { st.ask = { q: question, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
-      const r = await aosFetch(API + 'ask', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(question)) });
-      let d = null; try { d = await r.json(); } catch {}
-      if (d && d.ok) { noteModel('ask', d.model); st.ask = { q: question, a: String(d.answer || ''), ids: Array.isArray(d.bookingIds) ? d.bookingIds : [] }; }
-      else if (d && d.error === 'no-key') { aiAvail = false; st.ask = null; }
-      else st.ask = { q: question, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t get an answer just now. Try again in a moment.' };
-    } catch { st.ask = { q: question, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
-    finally { st.askBusy = false; render(); }
+      const { queue } = await mailQueue(todo);
+      r = await aiPass(queue, true);
+      stop = r.stop;
+    } catch (e) { stop = e instanceof AuthError ? 'auth' : 'error'; }
+    if (r) {
+      // looked at: marked tried. Stopped early (no sign-in, offline, the limit): the rest waits for next time.
+      todo.forEach(b => { if (!stop || r.done.has(b.id)) tried.add(tag(b)); });
+      ls.set(K.ipsyTried, JSON.stringify([...tried].slice(-500)));
+    }
+    autoBusy = false; ipsy.working(false); render();
+    if (r && r.changes.length) {
+      ipsy.change(filledLine(r), undoChanges(r.changes));
+      ipsy.hint('I filled in ' + plural(r.filled, 'detail') + ' on ' + plural(r.changes.length, 'booking') + '. They’re in To check for you to look over.');
+    } else if (r && r.done.size) ipsy.note('Checked ' + plural(r.done.size, 'booking') + ' missing details: ' + (r.done.size === 1 ? 'its email doesn’t' : 'their emails don’t') + ' say any more.');
+    else if (stop === 'signin') ipsy.hint('Sign in with Face ID in aOS and I can fill in what your bookings are missing.');
   }
-  // -- Change by asking: "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
-  // The same bar, in Change mode. Claude proposes changes from a list (set or clear a field, add a booking, delete, cancel or bring
-  // back, mark checked, join trips, take a booking out of its trip, rename a trip); every one is checked again here and shown as a
-  // preview, and nothing changes until you tap Apply. Undo puts it all back.
-  // The trip list that goes is the one Ask AI sends (dates, places, flight numbers, codes; no names, seats, notes or emails).
+  // -- Changes Ipsy makes (ipsy-tools.js): "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
+  // A short list of changes (set or clear a field, add a booking, delete, cancel or bring back, mark checked, join trips, take a
+  // booking out of its trip, rename a trip), each checked here against what is in the app, and made the way the booking sheet
+  // makes them: what is changed is yours (an email never overwrites it again), and a deleted booking stays deleted.
   const DT = /^20\d\d-\d\d-\d\d(?:T\d\d:\d\d)?$/, D8 = /^20\d\d-\d\d-\d\d$/, HM = /^\d\d:\d\d$/, CONFRE = /^[A-Za-z0-9]{0,12}$/;
   const tx = n => new RegExp('^.{0,' + n + '}$'), wd = (lo, hi) => new RegExp('^.{' + lo + ',' + hi + '}$');
   // Every field you can edit by hand, by kind, and the shape its value must have; an empty value clears it, except the ones in EDIT_NEEDED.
@@ -1547,26 +1591,30 @@ if (window.top !== window.self) {
     if (bookings.some(x => x.id === b.id)) b.id += '-' + Date.now().toString(36);
     return b;
   }
+  // A change in words, for Ipsy's chat (worked out before it is made).
   function editText(o) {
     const b = bookings.find(x => x.id === o.id), w = o.with && bookings.find(x => x.id === o.with);
     const nm = x => titleOf(x) + (startOf(x) ? ' (' + startOf(x).slice(0, 10) + ')' : '');
-    if (o.op === 'set') return 'Change ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(b[o.field]) + ' to ' + dayWords(keepTime(o.field, o.value, b[o.field] || ''));
-    if (o.op === 'add') { const t = { type: o.kind }; o.pairs.forEach(p => { t[p.field] = p.value; }); return 'Add ' + TYPE_NAME[o.kind].toLowerCase() + ': ' + nm(t) + (t.checkOut ? ' to ' + t.checkOut : ''); }
-    if (o.op === 'delete') return 'Delete ' + nm(b);
-    if (o.op === 'status') return (o.value === 'cancelled' ? 'Cancel ' : 'Bring back ') + nm(b);
-    if (o.op === 'check') return 'Mark ' + titleOf(b) + ' as checked';
-    if (o.op === 'detach') return 'Take ' + titleOf(b) + ' out of its trip, into a trip of its own';
+    if (o.op === 'set') return 'Changed ' + titleOf(b) + ': ' + EDIT_LABEL[o.field] + ' from ' + dayWords(b[o.field]) + ' to ' + dayWords(keepTime(o.field, o.value, b[o.field] || ''));
+    if (o.op === 'add') { const t = { type: o.kind }; o.pairs.forEach(p => { t[p.field] = p.value; }); return 'Added ' + nm(t) + (t.checkOut ? ' to ' + t.checkOut : ''); }
+    if (o.op === 'delete') return 'Deleted ' + nm(b);
+    if (o.op === 'status') return (o.value === 'cancelled' ? 'Marked ' + nm(b) + ' as canceled' : 'Brought back ' + nm(b));
+    if (o.op === 'check') return 'Marked ' + titleOf(b) + ' as checked';
+    if (o.op === 'detach') return 'Took ' + titleOf(b) + ' out of its trip, into a trip of its own';
     if (o.op === 'join') return 'Put ' + titleOf(b) + ' in the same trip as ' + titleOf(w);
     const g = tripById(o.id);
-    return 'Rename the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
+    return 'Renamed the trip' + (g ? ' “' + g.name + '”' : '') + ' to “' + o.name + '”';
   }
+  // Makes changes that checked out (checkEdit). Returns how many, the ids of bookings it added, and an undo that puts back just
+  // the bookings and trip names these changes touched (Ipsy shows each change in its chat with Undo).
   function applyEdits(ops) {
-    const snap = { bookings: JSON.parse(JSON.stringify(bookings)), trips: JSON.parse(JSON.stringify(trips)) };
-    const gone = [];
+    const copy = x => JSON.parse(JSON.stringify(x));
+    const before = new Map(), names = new Map(), added = [], gone = [];
     let n = 0;
     for (const o of ops) {
-      const b = bookings.find(x => x.id === o.id);
-      if (o.op === 'add') { bookings.push(newBooking(o.kind, o.pairs)); n++; }
+      const b = o.op === 'add' || o.op === 'rename' ? null : bookings.find(x => x.id === o.id);
+      if (b && !before.has(b.id)) before.set(b.id, copy(b));
+      if (o.op === 'add') { const nb = newBooking(o.kind, o.pairs); bookings.push(nb); added.push(nb.id); n++; }
       else if (o.op === 'set' && b) { setField(b, o.field, o.value); n++; }
       else if (o.op === 'delete' && b) { bookings = bookings.filter(x => x !== b); gone.push(b); n++; }
       else if (o.op === 'status' && b) { b.status = o.value; b.edited = true; n++; }
@@ -1575,69 +1623,36 @@ if (window.top !== window.self) {
       else if (o.op === 'detach' && b) { b.tripApart = true; delete b.tripWith; n++; }
       else if (o.op === 'rename') {
         const g = tripById(o.id);
-        if (g) { const cur = trips.find(t => t.id === g.id); if (cur) cur.name = o.name; else trips.push({ id: g.id, name: o.name }); n++; }
+        if (g) {
+          const cur = trips.find(t => t.id === g.id);
+          if (!names.has(g.id)) names.set(g.id, cur ? copy(cur) : null);
+          if (cur) cur.name = o.name; else trips.push({ id: g.id, name: o.name });
+          n++;
+        }
       }
     }
-    save(); smartSoon(); gone.forEach(dropFromCalendar); render();
-    toast('Done: ' + plural(n, 'change') + '.', () => {
-      bookings = snap.bookings; trips = snap.trips;
-      gone.forEach(g => { const r = bookings.find(x => x.id === g.id); if (r) delete r.calSig; });   // back in the calendar on the next sync
-      save(); smartSoon(); render();
-    }, 9000);
+    save(); smartSoon(); gone.forEach(dropFromCalendar); render(); refreshOpen();
+    const undo = () => {
+      bookings = bookings.filter(x => !added.includes(x.id));
+      before.forEach((was, id) => {
+        const i = bookings.findIndex(x => x.id === id), b = copy(was);
+        // the calendar as it is now: one taken out of it (deleted or canceled) is written to it again on the next sync
+        if (i >= 0 && bookings[i].calSig) b.calSig = bookings[i].calSig; else delete b.calSig;
+        if (i >= 0) bookings[i] = b; else bookings.push(b);
+      });
+      names.forEach((was, id) => { trips = trips.filter(t => t.id !== id); if (was) trips.push(was); });
+      save(); smartSoon(); render(); refreshOpen();
+    };
+    return { n, added, undo };
   }
-  function editHTML() {
-    const e = st.edit;
-    if (!e || !askShown()) return '';
-    let h = '<div class="askout glass"><div class="askq">' + esc(e.q) + '</div>';
-    if (e.busy) h += '<div class="aska">Working out the changes…</div>';
-    else if (e.err) h += '<div class="aska err">' + esc(e.err) + '</div>';
-    else if (!e.ops.length) h += '<div class="aska">' + esc(e.question || 'I couldn’t find a change to make for that. Try naming the booking and what to change.') + '</div>';
-    else {
-      h += '<div class="aska">' + esc(e.summary || 'Here is what I would change:') + '</div><ul class="editlist">'
-        + e.ops.map(o => '<li' + (o.op === 'delete' ? ' class="del"' : '') + '>' + esc(editText(o)) + '</li>').join('') + '</ul>';
-      if (e.dropped) h += '<div class="askq">' + plural(e.dropped, 'change') + ' left out because ' + (e.dropped === 1 ? 'it' : 'they') + ' didn’t check out.</div>';
-      h += '<div class="editbtns"><button class="textbtn" type="button" id="askClear">Cancel</button><button class="btn" type="button" id="editYes">Apply</button></div>';
-      return h + '</div>';
-    }
-    return h + (e.busy ? '' : '<button class="textbtn askclear" type="button" id="askClear">Clear</button>') + '</div>';
+  // The booking sheet edits its own copy: after a change made from the chat, it shows the booking as it is now (or
+  // closes, if it was deleted), so closing it can't write the old copy back.
+  function refreshOpen() {
+    if ($('bkSheet').hidden || !st.booking || st.isNew) return;
+    const b = bookings.find(x => x.id === st.booking.id);
+    if (b) { st.booking = JSON.parse(JSON.stringify(b)); renderBooking(); }
+    else { st.booking = null; closeSheet('bkSheet'); }
   }
-  async function editAI(instruction) {
-    instruction = String(instruction || '').trim().slice(0, 300);
-    if (instruction.length < 3 || st.askBusy) return;
-    st.ask = null;
-    if (!bookings.length) { st.edit = { q: instruction, ops: [], question: 'There are no bookings to change yet. To add one, switch to Change and say what it is, or use the + button.' }; render(); return; }
-    st.askBusy = true;
-    st.edit = { q: instruction, busy: true }; render();
-    try {
-      if (aiAvail === null) await pingLive();
-      if (!aiAvail) { st.edit = { q: instruction, err: 'AI isn’t set up on this copy of the site (Travel README, “Smart help”).' }; return; }
-      const r = await aosFetch(API + 'edit', { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(askPayload(instruction)) });
-      let d = null; try { d = await r.json(); } catch {}
-      if (d && d.ok) {
-        noteModel('ask', d.model);
-        const tids = new Set(groupTrips().map(g => g.id)), got = Array.isArray(d.ops) ? d.ops : [];
-        const ops = got.map(o => checkEdit(o, tids)).filter(Boolean).slice(0, 30);
-        st.edit = { q: instruction, ops, summary: clipS(d.summary, 300), question: clipS(d.question, 300), dropped: Math.max(0, got.length - ops.length) + (+d.dropped || 0) };
-      } else if (d && d.error === 'no-key') { aiAvail = false; st.edit = null; }
-      else st.edit = { q: instruction, err: d && d.error === 'limit' ? 'AI is busy just now. Try again in a minute.' : 'Couldn’t work that out just now. Try again in a moment.' };
-    } catch { st.edit = { q: instruction, err: 'Couldn’t reach the AI just now. Check your connection.' }; }
-    finally { st.askBusy = false; render(); }
-  }
-  const setMode = mode => {
-    st.mode = mode === 'edit' ? 'edit' : 'ask'; st.ask = null; st.edit = null;
-    const i = $('askInput'), m = $('askMode');
-    i.placeholder = st.mode === 'edit' ? 'Tell Travel what to change' : 'Ask AI about your trips';
-    i.setAttribute('aria-label', i.placeholder);
-    m.textContent = st.mode === 'edit' ? 'Change' : 'Ask';
-    m.setAttribute('aria-label', st.mode === 'edit' ? 'Changing trips by asking. Switch to asking questions' : 'Asking questions. Switch to changing trips');
-    i.value = ''; render();
-  };
-  $('askMode').addEventListener('click', () => setMode(st.mode === 'edit' ? 'ask' : 'edit'));
-  $('askForm').addEventListener('submit', e => { e.preventDefault(); const i = $('askInput'); const q = i.value; if (q.trim().length >= 3) { (st.mode === 'edit' ? editAI : askAI)(q); i.blur(); } });
-  $('list').addEventListener('click', e => {
-    if (e.target.closest('#askClear')) { st.ask = null; st.edit = null; $('askInput').value = ''; render(); }
-    else if (e.target.closest('#editYes') && st.edit && st.edit.ops && st.edit.ops.length) { const ops = st.edit.ops; st.edit = null; $('askInput').value = ''; applyEdits(ops); }
-  });
 
   // A flight with an airline, the airports, the day and the time but no number: the airport's departure board has it.
   async function findNumbers() {
@@ -1652,8 +1667,7 @@ if (window.top !== window.self) {
       if (use.find >= FIND_A_MONTH) break;
       use.tried[tried] = Date.now(); use.find++; aiSave(use);
       try {
-        const r = await aosFetch(API + 'find?' + new URLSearchParams({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
-        const d = await r.json();
+        const d = await boardData({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) });
         if (d && d.error === 'no-key') { findAvail = false; break; }
         if (d && d.error === 'limit') break;
         if (d && d.ok && d.candidates && d.candidates.length === 1 && /^\d{1,4}[A-Z]?$/.test(d.candidates[0].number)) { b.flightNo = d.candidates[0].number; fill(b, 'flightNo', 'board'); changed = true; }
@@ -1671,6 +1685,7 @@ if (window.top !== window.self) {
       await syncCalendar();
       await findNumbers();
     } catch {} finally { smartBusy = false; }
+    ipsyAutoCheck();                // last: what the calendar and the flight board fill in isn't asked of Claude
   }
   let calTimer = 0;
   const smartSoon = () => { clearTimeout(calTimer); calTimer = setTimeout(() => smartPass(), 3000); };
@@ -1748,7 +1763,11 @@ if (window.top !== window.self) {
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
     $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Check with AI button, and Trips has an Ask AI bar that can also change your trips (you see what it would change and tap Apply). Nothing is sent until you press or ask. Check sends a short excerpt of that one email (no names, numbers or prices); Ask and Change send your trip list (dates, places, flight numbers, confirmation codes; no names, seats, notes or emails) with your question. Answers are marked “Check”.' + modelsLine() : 'Off. No button and no bar.';
+    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Have Ipsy check button. Only a short excerpt of that booking’s email is sent (no names, numbers or prices). What Ipsy fills in is marked “Check”, with Undo. To ask about your trips or change them, chat with Ipsy, the little stem cell at the bottom left.' + modelsLine() : 'Off. No Have Ipsy check button, and Ipsy doesn’t check by itself. Ipsy, at the bottom left, is still there to chat with.';
+    const auto = ls.get(K.ipsyAuto, '');
+    $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
+    $('stIpsyAutoSub').textContent = auto === '1' ? 'On. After each read of Gmail, Ipsy checks the upcoming bookings that are missing something, once per email, up to 10 at a time.'
+      : auto === '0' ? 'Off. Ipsy checks a trip only when you press Have Ipsy check.' : 'Ipsy asks you first, the next time a booking is missing something.';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
       : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
@@ -1762,7 +1781,7 @@ if (window.top !== window.self) {
     try {
       const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
       const d = await r.json();
-      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.ask ? d.models : null;
+      liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.check ? d.models : null;
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
@@ -1773,6 +1792,11 @@ if (window.top !== window.self) {
   }
   $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
   $('stAiOpt').onclick = () => { ls.set(K.aiOn, aiOn() ? '0' : '1'); renderSettings(); render(); };
+  $('stIpsyAutoOpt').onclick = () => {
+    const on = ls.get(K.ipsyAuto, '') !== '1';
+    ls.set(K.ipsyAuto, on ? '1' : '0'); renderSettings();
+    if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); ipsyAutoCheck(); }
+  };
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
     else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
@@ -1972,6 +1996,7 @@ if (window.top !== window.self) {
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
+  else setTimeout(() => ipsyAutoCheck(), 2500);
   if (aiOn()) setTimeout(() => pingLive().then(render), 1500);
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
@@ -1995,6 +2020,31 @@ if (window.top !== window.self) {
   })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with, above the tabs at the bottom left: its tools (ipsy-tools.js) work on
+  // these same bookings, through the same checks and saves, this same Gmail sign-in and this app's own flight look-ups;
+  // Claude answers through functions/travel/api (ipsy).
+  if (window.AllisonOS && window.AllisonOS.ipsy && window.TravelIpsy) {
+    const WHEN_NAMES = { upcoming: 'the Upcoming trips', past: 'the Past trips', check: 'the To check list' };
+    ipsy = window.AllisonOS.ipsy.mount({
+      app: 'travel', name: 'Travel', endpoint: '../travel/api/ipsy', headers: { 'X-Travel': '1' }, slot: $('ipsySlot'),
+      ...window.TravelIpsy({
+        P, get bookings() { return bookings; }, groupTrips, checkList, tripById, startOf, endOf, isPast, titleOf, fillText, liveView, liveWindow,
+        checkField, checkEdit, applyEdits, editText, EDIT_FIELDS, EDIT_NEEDED, EDIT_LABEL, render, openTrip, openBooking,
+        flightData, keepLive, boardData,
+        // the same monthly allowances on this phone as the app's own look-ups
+        allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
+        gmail, bodies, header, getToken, AuthError,
+        screen() {
+          if (!$('bkSheet').hidden && st.booking && !st.isNew) return 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
+          const g = !$('tripPage').hidden && st.trip && tripById(st.trip);
+          if (g) return 'the trip ' + g.id + ' ("' + g.name + '")';
+          if (st.tab === 'explore') return 'Explore, which opens Google Flights, Google Hotels and others with a search filled in';
+          return WHEN_NAMES[st.when] || 'the trips';
+        },
+      }),
+    });
+  }
 
   // For the tests (travel/scripts/app-test.mjs) only.
   window.__travel = { layer: LAYER, get bookings() { return bookings; }, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };

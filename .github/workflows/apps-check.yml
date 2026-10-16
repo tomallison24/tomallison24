@@ -26,7 +26,7 @@ jobs:
       # the family accounts' safety rules and the plan: plain Node, no network
       - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node aOS/scripts/push-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
       # Meals: the server (the allergy check above all) and its sums
-      - run: node meals/scripts/api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs && node news/scripts/ai-test.mjs
+      - run: node meals/scripts/api-test.mjs && node notes/scripts/ipsy-api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs && node news/scripts/ai-test.mjs
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs
@@ -102,7 +102,7 @@ jobs:
               news/scripts/table-test.mjs
               news/scripts/match-test.mjs
               calendar/scripts/app-test.mjs
-          # Fitness, Clock, Notes
+          # Fitness, Clock, Notes, and Ipsy in Travel
           - group: apps
             tests: |
               fitness/scripts/app-test.mjs
@@ -110,6 +110,7 @@ jobs:
               notes/scripts/aisles-app-test.mjs
               notes/scripts/push-app-test.mjs
               notes/scripts/security-test.mjs
+              travel/scripts/ipsy-test.mjs
           # Notes, Places, Travel, Weather, News
           - group: apps-more
             tests: |
@@ -125,6 +126,10 @@ jobs:
             tests: |
               orders/scripts/app-test.mjs
               orders/scripts/ipsy-test.mjs
+              news/scripts/ipsy-test.mjs
+              meals/scripts/ipsy-test.mjs
+              notes/scripts/ipsy-test.mjs
+              calendar/scripts/ipsy-test.mjs
               mail/scripts/security-test.mjs
               mail/scripts/design-test.mjs
     steps:

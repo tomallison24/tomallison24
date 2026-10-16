@@ -107,6 +107,7 @@ for (const scheme of ['light', 'dark']) {
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem('orders.token.ever', '1');
+    localStorage.setItem('allison-orders-v1-ipsy-auto', '0');   // Ipsy's own To check pass: orders/scripts/ipsy-test.mjs
   });
   await page.goto(BASE + '/orders/');
 
@@ -271,23 +272,24 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForFunction(() => window.__orders);
   });
 
-  await step(scheme + ': Fix details with Claude sends one email (no links) to the family server, and the answer lands on the order, with Undo', async () => {
+  await step(scheme + ': Have Ipsy check this order sends one email (no links) to the family server, asks first once in Ipsy\'s chat, and the answer lands on the order, with Undo', async () => {
     const sent = [];
     await ctx.route('**/orders/api/read', route => { sent.push({ h: route.request().headers(), b: JSON.parse(route.request().postData()) }); return route.fulfill({ json: { fact: {
       store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD', items: [{ name: 'Mini Fridge 4L Cooler', qty: 1 }] } } }); });
-    page.once('dialog', d => d.accept());
     await page.click('#whenChips [data-when="way"]');
     await page.click('#list .ocard:has(.ostore:text("Walmart"))');
     await page.waitForSelector('#opage:not([hidden]) #opAi');
     await page.click('#opAi');
-    await page.waitForFunction(() => /Claude updated/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    await page.click('.ipsy-ask [data-ans="yes"]');                // asked once, in Ipsy's chat
+    await page.waitForFunction(() => /Ipsy fixed/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
     assert.equal(sent.length, 1);
     assert.equal(sent[0].h['x-orders'], '1');
     assert.match(sent[0].b.subject, /Review your order updates/); assert.match(sent[0].b.text, /2000000-00000001/);
     assert.ok(!/https?:/.test(sent[0].b.text), 'no links are sent');
     const o = await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart'));
     assert.equal(o.items[0].name, 'Mini Fridge 4L Cooler'); assert.equal(o.ai, true); assert.equal(o.guess, false);
-    assert.match(await page.textContent('#opBody .srcnote'), /fixed with Claude/);
+    assert.match(await page.textContent('#opBody .srcnote'), /fixed by Ipsy/);
+    assert.match(await page.evaluate(() => JSON.parse(localStorage.getItem('ipsy.orders.chat')).view.map(v => v.text).join('|')), /Fixed Walmart: items/, 'the fix is in Ipsy\'s chat too');
     await page.click('#toastAct');
     const back = await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart'));
     assert.equal(back.ai, undefined); assert.match(back.items[0].name, /Mini Fridge, 4L/);
@@ -355,7 +357,8 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': settings open and show Gmail', async () => {
     await page.click('#setBtn');
     assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
-    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'What counts as an order', 'Backup Log', 'Backup'], 'Design is the first section');
+    assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
+    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Backup Log', 'Backup'], 'Design is the first section');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });
