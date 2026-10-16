@@ -1,6 +1,6 @@
 // Offline shell for the Podcasts app. Same-origin files load network-first so
 // a new deploy shows up on the next open; the cache is only the fallback when
-// offline. Feeds (./api/) are never cached here: the app keeps each show's
+// offline. Feeds (../podcasts/api/) are never cached here: the app keeps each show's
 // episodes itself. Episodes and artwork come from the podcasts' own servers
 // and are left to the browser.
 const CACHE = 'podcasts-v23';

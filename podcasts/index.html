@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https: http:; media-src 'self' blob: https: http:; connect-src 'self' https:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Podcasts</title>
-<meta name="description" content="Follow podcasts, play audio and video episodes, and pick up where you left off, in the same frosted glass as Mail, Notes and News.">
+<meta name="description" content="Follow podcasts, play audio and video episodes, and pick up where you left off, in a mid-century Vintage design or Sea glass.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Podcasts">
 <link rel="apple-touch-icon" href="icon-180.png?v=3">
@@ -29,11 +30,16 @@
 
   Feeds: podcast feeds don't let pages on other sites read them (CORS), so
   the app asks ../functions/podcasts/api (a Cloudflare Pages Function on this
-  same site) to fetch them, and reads a feed directly where that isn't there
+  same site, ../podcasts/api/ from either address) to fetch them, and reads a
+  feed directly where that isn't there
   and the feed allows it.
 
-  Look: the same frosted glass over a drifting aurora, icons and Liquid
-  Glass buttons as Notes and Mail.
+  Two designs, picked in Settings > Design (../home/design.js, as in Clock):
+  Vintage (mid-century modern, the default: the <style id="vintage"> block,
+  with the shared Vintage sky, ../home/sky.js) and Standard (Sea glass: that
+  block switched off; the same frosted glass over a drifting aurora, icons and
+  Liquid Glass buttons as Notes and Mail). The old Podcasts Vintage address
+  opens this same app.
 -->
 <style>
 /* Allison OS family look, shared with Mail, Notes and News: frosted glass over a slow aurora. */
@@ -553,6 +559,229 @@ svg.fs{fill:currentColor}
 .btn[disabled]{opacity:.45;pointer-events:none}
 #epLbl,#setLbl,#actLbl,#syLbl{padding-left:8px}
 </style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Podcasts' look, from the aOS Design Styles canvas ("Mid-century modern" +
+   "Retro"), as in Mail, Home and Orders: flat, solid
+   shapes instead of glass; a cream ground (walnut in dark mode) with mustard,
+   teal, burnt orange and olive; atomic shapes behind the title that scroll
+   away; Futura (iOS's own, so nothing to download) for every word. Last in
+   the sheet so it wins over the glass above; Settings > Design switches it
+   off for the Standard (Sea glass) design (../home/design.js). Only colours,
+   shapes and type change: every button, sheet, player and swipe works the
+   same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-ink:#1F6F6B; --accent-text:#1F6F6B; --sel-ink:#2B2522;
+  --cta:#C9502A; --cta-ink:#FFF8EC; --icon:#1F6F6B;
+  --danger:#B8452B; --danger-ink:#9E3A1A; --danger-text:#9E3A1A;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9; --toast:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none; --gb-shadow:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --pill:#F0E5D0; --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28); --ring:rgba(43,37,34,.38);
+  --tint-mix:14%; --aurora:1; --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --art-a:#E3A72F; --art-b:#D8572A; --track:rgba(43,37,34,.16);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --art-a:#C58F25; --art-b:#B84A25; --track:rgba(244,236,221,.2);
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-ink:#F4ECDD; --accent-text:#5CBDB5; --sel-ink:#2B2522;
+  --cta:#D8572A; --cta-ink:#FFF8EC; --icon:#E3A72F;
+  --danger:#E8684A; --danger-ink:#F2906E; --danger-text:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25; --toast:#3D332C;
+  --gb-edge:rgba(244,236,221,.14); --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --pill:#3D332C;
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28); --ring:rgba(244,236,221,.4);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --art-a:#C58F25; --art-b:#B84A25; --track:rgba(244,236,221,.2);
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+.glass,.glass-strong{box-shadow:none}
+
+/* the atomic shapes behind the title (they scroll away with the page) */
+.ambient{position:absolute;inset:0 0 auto 0;height:270px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:190px;height:190px;left:auto;right:-80px;top:-80px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:56px;height:56px;left:auto;right:150px;top:56px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:120px;height:34px;left:auto;right:-30px;top:100px;bottom:auto;border-radius:17px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+.title small{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;max-width:210px}
+.sechead,.label{font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--muted)}
+.epm,.upm,.npd,.hero .hm{font-weight:600;letter-spacing:.12em}
+
+/* buttons: flat cream discs, outlined teal, solid orange - no blur anywhere */
+.iconbtn,.textbtn,.pillbtn,.search,.chip,.fab,.tabs,.mbar,.playpill,.fbtn,.morebtn,.btn{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.iconbtn[aria-pressed="true"]{color:var(--accent-text)}
+.textbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600}
+.pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text);font-weight:600;letter-spacing:.02em}
+.pillbtn:active{background:var(--mc-card-2)}
+.pillbtn.bluec{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.pillbtn.bluec svg{color:var(--cta-ink)}
+.pillbtn.follow:not(.bluec){background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.pillbtn.follow:not(.bluec) svg{color:var(--accent-text)}
+.btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
+.btn::after{display:none}
+.btn:active{filter:brightness(.92)}
+.btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);font-weight:600}
+.morebtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600;letter-spacing:.02em}
+.morebtn:active{background:var(--mc-card-2)}
+.linkbtn{font-weight:600}
+.search{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
+.search .clear{background:var(--fill)}
+
+/* the dock: a cream pill with a mustard thumb under the chosen section, and the search button beside it */
+.tabs{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 22px -12px var(--lift-strong)}
+.tab{color:var(--muted);letter-spacing:.02em}
+.tab svg{color:var(--icon)}
+.tabs > .slthumb,.tab[aria-selected="true"]{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.tabs.slides .tab[aria-selected="true"]{background:none}
+.tab[aria-selected="true"],.tab[aria-selected="true"] svg{color:var(--mc-on-mustard)}
+.fab{background:var(--mc-card);color:var(--icon);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 10px 22px -12px var(--lift-strong)}
+.fab[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard)}
+
+/* the filters: cream pills, with a mustard thumb under the chosen one */
+.chip{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
+.chip svg{opacity:1;color:var(--icon)}
+.chip[aria-pressed="true"]{color:var(--mc-on-mustard);font-weight:600;background:var(--mc-mustard);border-color:transparent;box-shadow:none}
+.chip[aria-pressed="true"] svg{color:var(--mc-on-mustard)}
+.chips.slides .chip[aria-pressed="true"]{background:none}
+.chips > .slthumb,.opts > .slthumb{background:var(--mc-mustard);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* the cards: solid cream, round-cornered, no rim light */
+.rgroup,.upcard,.notes,.notice,.empty,.lg .rgroup,.lg .notes{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.empty{padding:26px 20px 22px}
+.empty strong{font-weight:600;letter-spacing:-.01em}
+.skel{border-radius:20px}
+.ept,.upt,.stx b,.stile .sn,.eph,.npt,.hero h2{font-weight:600}
+.ept,.upt,.stx b{letter-spacing:-.005em}
+.eph,.npt,.hero h2{letter-spacing:-.025em}
+.ep.played .ept{color:var(--muted)}
+.dot{background:var(--mc-orange)}
+.rank{font-weight:600;color:var(--mc-orange)}
+
+/* artwork: a flat mustard tile until the picture loads */
+.art{background:var(--art-a);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border-radius:min(calc(var(--s,56px) * .2),16px)}
+.art.fill{border-radius:16px}
+.stile .art,.hero .art{box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.mopen .art{border-radius:12px}
+
+/* the play button on every episode: outlined teal, with a teal bar for how far you got; the big one is solid orange */
+.playpill{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:600;letter-spacing:.02em}
+.playpill .pbar{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+.playpill.done{color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.playpill.big{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.playpill.big .pbar{background:color-mix(in srgb,var(--cta-ink) 30%,transparent)}
+.icbtn[aria-pressed="true"]{color:var(--mc-orange)}
+.fbtn{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.fbtn[aria-pressed="true"]{background:var(--mc-teal);color:#FFF8EC;box-shadow:none}
+
+/* the mini player: a flat cream pill above the dock */
+.mbar{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 24px -12px var(--lift-strong)}
+.mt{font-weight:600}
+.mbtn{color:var(--text)}
+#miniPlay{background:var(--cta);color:var(--cta-ink);width:42px;height:42px}
+#miniPlay svg{width:22px;height:22px}
+.mprog{background:var(--track)}
+.mprog i{background:var(--mc-teal)}
+
+/* the sheets: cream panels with round corners */
+.lg .scrim{background:var(--lgs-scrim)}
+.lg .sheet,.lg .sheet.glass-strong{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.lg .sheethead h2{font-weight:600;letter-spacing:-.01em}
+.lg .okbtn,.lg .okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.lg .rowbtn:active,.lg .qrow:active{background:var(--fill)}
+.rowbtn{font-weight:600}
+.rowbtn .ic,.rowbtn .tick{color:var(--icon)}
+.rowbtn .tick{color:var(--accent-text)}
+.lg .rgroup,.lg .notes{background:var(--fill)}
+.lg .label{letter-spacing:.2em}
+.lg .opt{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.02em;color:var(--text)}
+.lg .opt[aria-checked="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);box-shadow:none}
+.lg .opts.slides .opt[aria-checked="true"]{background:none;box-shadow:none}
+.opt{font-weight:600}
+.notes a,.notes .ts,.epshow{color:var(--accent-text)}
+.notes blockquote{border-left-color:var(--mc-mustard)}
+.frow input.txt{font-family:inherit}
+.frow{border-top-color:var(--hair-2)}
+
+/* Now Playing: the ground colour, a mustard sun in the corner, flat artwork, a solid orange play button */
+.lg .sheet.np{background:var(--bg)}
+.lg .sheet.np::before{content:'';position:absolute;z-index:0;width:190px;height:190px;border-radius:50%;right:-60px;top:-110px;background:var(--sky-disc,var(--mc-mustard));opacity:var(--aurora);pointer-events:none}
+.npbg{display:none}
+.npmedia{border-radius:20px;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.npmedia.isvideo{border-radius:16px}
+.npshow{font-weight:600;color:var(--accent-text)}
+.nptimes{font-weight:600}
+.ctl{color:var(--text)}
+.ctl.main{background:var(--cta);color:var(--cta-ink)}
+.lg .ctl:active{background:var(--fill);box-shadow:none}
+.lg .ctl.main:active{background:var(--cta);filter:brightness(.92)}
+.lg .pillbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.lg .pillbtn:active{background:var(--mc-card-2)}
+.lg .pillbtn[aria-pressed="true"]{background:color-mix(in srgb,var(--mc-mustard) 26%,var(--mc-card));box-shadow:inset 0 0 0 1.5px var(--mc-mustard);color:var(--text)}
+.lg .pillbtn[aria-pressed="true"] svg{color:var(--icon)}
+/* the scrubber: a teal fill on a flat track, with a mustard pill for a knob that turns orange while it is dragged */
+.scrub::-webkit-slider-runnable-track{height:8px;background:linear-gradient(90deg,var(--mc-teal) var(--p),var(--track) var(--p));box-shadow:none}
+.scrub::-webkit-slider-thumb{width:30px;height:22px;margin-top:-7px;background:var(--mc-mustard);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:not(:disabled):active::-webkit-slider-thumb{transform:scale(1.15);background:var(--mc-orange);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:focus-visible::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #2B2522,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+.scrub::-moz-range-track{height:8px;background:linear-gradient(90deg,var(--mc-teal) var(--p),var(--track) var(--p));box-shadow:none}
+.scrub::-moz-range-thumb{width:30px;height:22px;background:var(--mc-mustard);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:not(:disabled):active::-moz-range-thumb{transform:scale(1.15);background:var(--mc-orange);box-shadow:inset 0 0 0 2px #2B2522}
+.scrub:focus-visible::-moz-range-thumb{box-shadow:inset 0 0 0 2px #2B2522,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+
+/* the toast and the pills at the top */
+.toast{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:18px;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+.toast button{color:var(--accent-text)}
+.updpill{background:var(--mc-card-2);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600}
+.updpill svg{color:var(--mc-mustard)}
+.syncpill svg{color:var(--icon)}
+@keyframes syncPulse{50%{transform:translate(-50%,0) scale(1.05);box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 0 0 6px color-mix(in srgb,var(--mc-mustard) 30%,transparent)}}
+.pushhead::before{box-shadow:0 1px 0 var(--hair)}
+</style>
+<script src="../home/design.js" data-app="podcasts" data-was="podcastsvintage" data-keys="allison-podcastsv-=allison-podcasts-" data-dbs="allison-podcastsv=allison-podcasts,allison-podcastsv-sheet=allison-podcasts-sheet"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
 </head>
 <body>
 

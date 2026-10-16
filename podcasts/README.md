@@ -1,7 +1,7 @@
 # Podcasts
 
 Podcasts as a home-screen web app, laid out like the iPhone's Podcasts app,
-in the same frosted glass as Mail, Notes and News.
+in a mid-century Vintage design or the same frosted glass as Mail, Notes and News.
 
 - **Home**: **Up Next** (what's playing, your queue, episodes you're part way
   through, then the newest unplayed episode of each show you follow) and
@@ -32,15 +32,13 @@ in the same frosted glass as Mail, Notes and News.
 - **Picks up where you left off**, episode by episode. The last 15 seconds
   count as played. When an episode ends, the next one in Up Next plays
   (Settings can switch that off).
-- **Settings**: skip back (10/15/30 s) and forward (15/30/45/60 s), what
-  happens when an episode ends, the country for Top shows, **Import /
+- **Settings**: the design (Vintage or Standard, below), skip back
+  (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, **Import /
   Export** your shows as OPML (the file other podcast apps use), and an
   optional **Google Sheet backup** (below).
 
-**Podcasts Vintage** is the same app in a mid-century modern look, as its own
-app with its own shows and settings ([`podcastsvintage/`](../podcastsvintage/README.md)).
-It starts empty: **Export shows** here and **Import shows** there moves your
-shows over.
+It has two designs, Vintage (mid-century modern, the default) and Standard
+(Sea glass), picked in **Settings → Design** ("The two designs", below).
 
 Episodes stream from each podcast's own servers; nothing is downloaded, so
 they need a connection.
@@ -125,9 +123,72 @@ cleared `localStorage`. It uses the same design as Drinks' (read
 lists only; the script's logic is tested on an in-memory Sheet
 (`scripts/sheet-test.mjs`).
 
+## The two designs
+
+One app, one library: the design changes only how Podcasts looks, at once, and
+is kept on this phone (**Settings → Design**, the first section), as in Clock.
+`../home/design.js`, loaded in `<head>`, applies it before the page is drawn.
+
+- **Vintage** (the default): mid-century modern in the Retro colours, from the
+  aOS Design Styles canvas, as in Mail, Home and Orders. A cream ground and
+  cards (walnut in dark mode), flat and round-cornered, in place of glass;
+  mustard, teal, burnt orange and olive: the tabs and the filter chips have a
+  mustard thumb, the play buttons are outlined teal (with a teal bar for how
+  far you got), the big play buttons and Done are solid orange, a followed
+  show's button is outlined teal, and an artwork that hasn't loaded is a flat
+  mustard tile; three atomic shapes (a mustard sun, a teal dot, an orange pill)
+  behind each page's title that scroll away with the page, and three little
+  bars under it; the mini player is a flat cream pill with a solid orange play
+  button; Now Playing is on the ground colour with a mustard sun in the corner
+  (no blurred artwork glow), flat artwork, a big orange play button, and a
+  scrubber with a teal fill and a mustard knob that turns orange while you drag
+  it; Futura, which iOS has built in, so no font is downloaded.
+- **Standard**: Sea glass, everything under "Look" below, no sky.
+
+**The sky.** In Vintage, the page behind the title is the shared Vintage sky
+(`../home/sky.js`, as in every Vintage design), with the real sun: by day a
+ground washed with mustard, the sun and rays that turn very slowly; after
+sunset a ground washed with deep teal, the moon and twinkling stars; each over
+cream (Light) or walnut (Dark). Sunrise and sunset are for the phone's place
+(kept on the phone, to a tenth of a degree, and only if the app already has
+location permission: it never asks), else the time zone, and the sky changes by
+itself while the app is open. It holds still with reduced motion. This app only
+gives its disc its colour (`--sky-disc`) and keeps its own sizes and places for
+the shapes, tuned to its header; the sun in Now Playing's corner is the moon at
+night too. Checked by `aOS/scripts/sky-test.mjs`.
+
+How: the Vintage look is the `<style id="vintage">` block after the glass
+styles in `index.html`; Standard is that block switched off (`media="not
+all"`), with `data-look="glass"` on `<html>`, which `sky.js` reads to draw no
+sky. Nothing else differs: no colour is drawn in `app.js` (the player and the
+artwork tiles take theirs from the style sheet), so every button, sheet, player
+and swipe works the same in both; only the sliding thumbs are measured again on
+a switch, as Futura and the system font are different widths. The choice is
+`localStorage` `design.podcasts`, set at once and not part of the other
+settings. What iOS reads when Podcasts is added to the Home Screen follows it:
+the icon (`icon-180.png`, Vintage: a cream broadcast signal on aubergine with a
+mustard sun and a burnt-orange pill; `icon-glass-180.png`, Standard: a white
+signal on a pink-to-violet gradient), the status bar style (`default` in
+Vintage, where `black-translucent`'s white clock would vanish on the cream) and
+the bar colours.
+
+**The old Podcasts Vintage app.** Podcasts Vintage used to be an app of its own
+(`podcastsvintage/`, with its own storage). Its address now opens this same app
+(the deploy copies `podcasts/` there, `.github/workflows/news.yml`), so a phone
+that added it keeps it. The first time it opens there, `design.js` moves that
+app's data on the phone over to Podcasts' names (`allison-podcastsv-…` →
+`allison-podcasts-…` in `localStorage`; the IndexedDB episode lists
+`allison-podcastsv` → `allison-podcasts` and the Sheet backup copy
+`allison-podcastsv-sheet` → `allison-podcasts-sheet`, which the app opens only
+after the move; and what it had seen, so no walkthrough again), unless Podcasts
+already has data on that phone; nothing old is deleted. Its feed requests go
+to `../podcasts/api/` (not `api/`), so they reach the route from either
+address. A Sheet backup set up there keeps its phone id, so the Sheet sees the
+same phone.
+
 ## Look
 
-Everything from Notes: the same colours for light and dark, the drifting
+The Standard (Sea glass) design: everything from Notes: the same colours for light and dark, the drifting
 aurora, the Liquid Glass buttons (`--lg-bg`, `--lg-filter`, `--lg-rim`), line
 icons in slate-teal on a 24px grid, the sheets you drag down, the toast with
 Undo and the "Updated" pill. Now Playing takes its glow from the episode's
@@ -140,15 +201,18 @@ choices have one glass thumb that slides to the chosen option
 glass as the sheets, and "Show more" and "Clear history" are small glass
 pills like the other buttons.
 
-The icon (`icon.svg`, drawn as `icon-512.png` and `icon-180.png`) is a white
-signal on a pink-to-violet gradient.
+The icons: `icon.svg` (Vintage) is drawn as `icon-512.png` and `icon-180.png`,
+`icon-glass.svg` (Standard) as `icon-glass-512.png` and `icon-glass-180.png`
+(`scripts/make-icons.mjs`).
 
 ## Tests
 
 ```
 node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
 node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library,
-                                       # and the Sheet backup end to end, on the real script
+                                       # the Sheet backup end to end, on the real script, both designs,
+                                       # Settings > Design, the old Podcasts Vintage address
+node podcasts/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
 ## Keep in mind

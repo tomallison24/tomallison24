@@ -1580,7 +1580,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: 'TODO', notes: 'TODO', places: 'TODO' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: 'TODO', notes: 'TODO', places: 'TODO' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {
