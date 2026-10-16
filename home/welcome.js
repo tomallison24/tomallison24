@@ -91,6 +91,7 @@
         'Ipsy checks your Gmail and searches the web for you'],
       notes: ['Orders: Ipsy, the little stem cell in the bottom left corner, is a helper you chat with, running on Claude Sonnet 5.5. Ask in your own words and it looks through your orders, fixes details, marks them delivered, adds, deletes and merges duplicates (each change shows in the chat with Undo, and is kept like your own edit), reads your Gmail (read-only) to check an order or find one that was missed, and searches the web. It asks once before your first question, and is for signed-in family',
         'Ipsy changes shape as it works: a stem cell at rest, a nerve cell while it thinks, a white blood cell while it looks through your orders',
+        'Ipsy\'s chat pops out of Ipsy as a speech bubble, its tail pointing back at it, instead of a sheet that covers the app; it grows with the conversation and shrinks back into Ipsy when you put it away (tap Ipsy, the ×, or outside it)',
         'aOS: Today leads with Meet Ipsy, Ipsy itself telling what it can do as it turns from one cell into the next; tap it for the whole story'],
       apps: {
         orders: { highlights: ['Meet Ipsy: tap the little stem cell, bottom left, and chat about your orders', 'Ipsy finds, fixes, merges and deletes orders for you, each with Undo', 'Ipsy checks your Gmail and searches the web too'] },
