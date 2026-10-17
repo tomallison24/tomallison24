@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { tools, save, session, SCOPE, bodyText, redact } from '../ipsy-gmail.js';
+const store = new Map(); globalThis.sessionStorage = { getItem: k => store.get(k), setItem: (k,v) => store.set(k,v), removeItem: k => store.delete(k) };
+let calls = [];
+globalThis.fetch = async (u, init) => { calls.push({u,init}); return Response.json(u.pathname.endsWith('/messages') ? {messages:[{id:'abc'}],nextPageToken:'page2'} : {id:'abc',snippet:'https://example.com/cancel?SECRET',payload:{mimeType:'text/plain',headers:[{name:'Subject',value:'Appointment'}],body:{data:Buffer.from('Meet at 2 PM').toString('base64url')}}}); };
+await assert.rejects(tools.search_gmail({query:'dentist'}), /Connect Gmail/);
+assert.throws(() => save({scope:'https://www.googleapis.com/auth/gmail.modify',access_token:'X',expires_in:3600}), /read-only/);
+save({scope:SCOPE,access_token:'TEST_TOKEN',expires_in:3600});
+assert.equal((await tools.search_gmail({query:'dentist'},{confirm:async()=>false})).content.declined,true); assert.equal(calls.length,0);
+const r = await tools.search_gmail({query:'dentist',max:99},{confirm:async()=>true}); assert.equal(r.content.next_page_token,'page2'); assert.equal(calls[0].u.searchParams.get('maxResults'),'25');
+const full = await tools.read_email({message_id:'abc'}); assert.equal(full.content.text,'Meet at 2 PM'); assert.ok(!JSON.stringify(full).includes('SECRET')); assert.ok(!JSON.stringify(full).includes('TEST_TOKEN'));
+assert.ok(calls.every(c=>c.init.method==='GET'&&c.init.cache==='no-store'&&c.init.redirect==='error'));
+assert.equal(bodyText({mimeType:'text/plain',filename:'attachment.txt',body:{data:Buffer.from('SECRET').toString('base64url')}}),'');
+assert.equal(redact('https://example.com/private?secret=1'),'[link to example.com]');
+await assert.rejects(tools.read_email({message_id:'../send'}),/message_id/);
+globalThis.fetch=async()=>new Response('',{status:401}); await assert.rejects(tools.read_email({message_id:'abc'}),/expired/); assert.equal(session(),null);
+console.log('Calendar Gmail tests passed: consent, read-only requests, pagination, redaction, attachments and expiry.');
