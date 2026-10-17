@@ -378,6 +378,15 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     await page.screenshot({ path: path.join(SHOTS, design + '-' + scheme + '-chat.png') });
   }
 
+  await step(tag + ': Gmail HTML is inert', async () => {
+    const out = await page.evaluate(async () => {
+      const m = await import('../calendar/ipsy-gmail.js');
+      const html = '<p>Appointment at 2 PM</p><script>window.__emailRan=true</script><img src="https://email-image.invalid/tracker"><a href="https://example.com/cancel?SECRET">Cancel</a>';
+      return { text: m.bodyText({ mimeType: 'text/html', body: { data: btoa(html) } }), ran: !!window.__emailRan, settings: !!document.querySelector('#setSheet [data-gmail]') };
+    });
+    assert.match(out.text,/Appointment at 2 PM/); assert.ok(!out.text.includes('SECRET')); assert.equal(out.ran,false); assert.equal(out.settings,true);
+  });
+
   await step(tag + ': no script errors and nothing blocked by the page policy', async () => {
     assert.deepEqual(await page.evaluate(() => window.__csp || []), []);
     assert.deepEqual(problems, []);

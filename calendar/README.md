@@ -349,3 +349,9 @@ This was built where iCloud could not be reached, so:
   purpose for now).
 - **Safari on an iPhone** was not tested; the app was checked in Chromium at
   iPhone size, light and dark, with touch.
+
+## Gmail in Ipsy
+
+Connect Gmail in Calendar Settings > Gmail for Ipsy. Access is read-only with Gmail search syntax and pagination. Ipsy asks separately before email details go to Claude; results remain in the local chat until New chat. Tokens stay in sessionStorage and expire within about an hour. Disconnect clears this sign-in and Calendar Ipsy chat, not Mail or Orders authorization. Attachments are skipped and links redacted, never opened. Calendar changes retain their confirmations.
+
+The production origin must be in the existing Google OAuth client Authorized JavaScript origins; preview origins require separate authorization. Real Google consent and installed iPhone Safari still need device verification.

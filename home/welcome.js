@@ -97,6 +97,7 @@
         'Calendar: Ipsy finds what\'s on and free time, and adds, moves or deletes an event in the Family calendar. It asks you first before every change, one event at a time, never touches a repeating event, and only reads the other layers',
         'Notes: Ipsy finds and writes notes, adds to lists, checks things off, sorts groceries into store sections and sets reminders. It never sees private notes, and asks before deleting one',
         'News: Ipsy finds and sums up stories in today\'s headlines, checks scores, fixtures and tables, changes the teams you follow, and looks up anything newer on the web',
+        'Calendar: connect Gmail in Settings so Ipsy can search appointment emails, read-only, with separate email-sharing consent; every calendar change still asks first',
         'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps'],
       apps: {
         travel: { highlights: ['Meet Ipsy: tap the little stem cell and chat about your trips', 'Ipsy checks any flight live and finds flight numbers', 'Ipsy fills in what your bookings are missing, with Undo'] },

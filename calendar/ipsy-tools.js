@@ -169,7 +169,11 @@ window.CalendarIpsy = function (app) {
     return { allDay, start, end };
   }
 
+  const gmailModule = import(new URL('../calendar/ipsy-gmail.js', location.href).href);
+  gmailModule.then(m => m.mount()).catch(() => {});
   const tools = {
+    async search_gmail(q, ctx) { return (await gmailModule).tools.search_gmail(q, ctx); },
+    async read_email(q, ctx) { return (await gmailModule).tools.read_email(q, ctx); },
     async find_events(q) {
       await fresh();
       const words = line(q.query, 200).toLowerCase().split(/\s+/).filter(Boolean);
@@ -393,6 +397,7 @@ window.CalendarIpsy = function (app) {
     find_events: i => i.query ? 'Searching the calendar: ' + line(i.query, 50) : 'Looking at the calendar', get_event: () => 'Reading an event',
     free_time: () => 'Looking for free time', create_event: () => 'Adding an event', update_event: () => 'Changing an event', delete_event: () => 'Deleting an event',
     show_day: () => 'Opening the day',
+    search_gmail: () => 'Searching Gmail', read_email: () => 'Reading an email',
   };
   const ON = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness' };
 
@@ -409,9 +414,9 @@ window.CalendarIpsy = function (app) {
         + (st.api !== 'ok' && st.api !== 'checking' ? ' The Family calendar can’t be reached right now, so nothing can be changed.' : '')
         + (st.offline ? ' The phone is offline.' : '');
     },
-    intro: 'Hi, I’m Ipsy! I can find what’s on, look for free time, and add, move or delete an event in the Family calendar. I always ask you first before I change anything.',
+    intro: 'Hi, I’m Ipsy! I can search your Gmail for appointments, find what’s on, look for free time, and add, move or delete an event in the Family calendar. I always ask you first before I change anything.',
     placeholder: 'Ask Ipsy about the calendar',
-    suggestions: ['What’s on this week?', 'Find us a free evening next week', 'When is our next dentist appointment?', 'What can you change here?'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the events Ipsy looks at to answer it (the Family calendar and the layers you have on, but not Drinks) go to Claude through the family server, which keeps only a count of questions. Ipsy asks you before every change, one event at a time, and each change shows here with Undo. It doesn’t change repeating events.',
+    suggestions: ['What’s on this week?', 'Find us a free evening next week', 'Find appointment emails in Gmail', 'What can you change here?'],
+    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the events Ipsy looks at to answer it (the Family calendar and the layers you have on, but not Drinks) go to Claude through the family server, which keeps only a count of questions. Ipsy asks you before every change, one event at a time, and each change shows here with Undo. It doesn’t change repeating events. Connect Gmail in Calendar Settings; Ipsy asks separately before sharing email subjects, snippets or text with Claude. Email results remain in this device’s chat until New chat.',
   };
 };
