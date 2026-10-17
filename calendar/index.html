@@ -247,10 +247,10 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .fab:active{transform:scale(.9)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
 .dockr{display:flex;align-items:center;gap:8px}
-/* Ipsy beside the new-event button, a little smaller than its own 62px so the view bar keeps its room */
+/* Larger Ipsy, kept compact here so the view bar retains its room. */
 .dockr .ipsyslot{display:flex;margin-right:-4px}
 .dockr .ipsyslot:empty{display:none}
-.dockr .ipsy-btn{width:50px;height:50px}
+.dockr .ipsy-btn{width:64px;height:64px}
 @media (max-width:389px){.tab svg{display:none}.tab{padding:0 14px}}
 .fab.small{width:46px;height:46px}
 .fab.small svg{width:21px;height:21px;stroke-width:1.9}
@@ -1022,6 +1022,9 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 </style>
 <script src="../home/design.js" data-app="calendar" data-was="calendarvintage" data-keys="allison-calendarv-=allison-calendar-"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
+<style id="ipsy-room">
+@media(max-width:420px){.dock{gap:6px;padding-left:12px;padding-right:12px}.dockr{gap:4px}.dockr .ipsyslot{margin-right:0}.dock .tabs{min-width:0;flex:1}.dock .tabs .tab{flex:1;min-width:0;width:40px;padding-left:0;padding-right:0}}
+</style>
 </head>
 <body>
 
