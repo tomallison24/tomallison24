@@ -1,0 +1,158 @@
+name: Ipsy presence
+on:
+  push:
+    branches: [feature/ipsy-larger-livelier, claude/custom-iphone-photos-app-0ubcek]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/ipsy-larger-livelier' && github.event.head_commit.message == 'Prepare larger and livelier Ipsy'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22
+      - run: test "$(git rev-parse HEAD^)" = 03cc74353422e2a9c4d14a3dedeb4d4bea760920
+      - name: Apply scoped visual changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          edits = [
+          ('home/ipsy.js','.ipsy-btn{position:relative;width:62px;height:62px;','.ipsy-btn{position:relative;width:78px;height:78px;'),
+          ('home/ipsy.js','.i-bob{animation:ipsyBob 3.2s ease-in-out infinite}','.i-bob{animation:ipsyBob 5.6s ease-in-out infinite}'),
+          ('home/ipsy.js','animation:ipsyShade 3.2s ease-in-out infinite','animation:ipsyShade 5.6s ease-in-out infinite'),
+          ('home/ipsy.js','animation:ipsyBlink 4.8s infinite','animation:ipsyBlink 9s infinite'),
+          ('home/ipsy.js','@keyframes ipsyBob{50%{transform:translateY(-7px)}}','@keyframes ipsyBob{50%{transform:translateY(-5px)}}'),
+          ('home/ipsy.js','@keyframes ipsyShade{50%{transform:scaleX(.84);opacity:.7}}','@keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.82}}'),
+          ('home/ipsy.js','@keyframes ipsyBlink{0%,91%,97%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}','@keyframes ipsyBlink{0%,28%,30%,69%,71%,76%,78%,100%{transform:scaleY(1)}29%,70%,77%{transform:scaleY(.12)}}'),
+          ('home/ipsy.js','@media (prefers-reduced-motion:reduce){.ipsy-host *','\n.ipsy-host:not([data-mood]) .i-body-g,.ipsy-host[data-mood="idle"] .i-body-g{animation:ipsyBreathe 5.6s ease-in-out infinite}\n.ipsy-host:not([data-mood]) .i-look,.ipsy-host[data-mood="idle"] .i-look{animation:ipsyGlance 13s ease-in-out infinite}\n@keyframes ipsyBreathe{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.025,1.015) rotate(.7deg)}}\n@keyframes ipsyGlance{0%,72%,88%,100%{transform:translate(0,0)}77%,81%{transform:translate(4px,-1px)}92%,95%{transform:translate(-3px,0)}}\n.ipsy-paused .ipsy-host *{animation-play-state:paused!important}\n@media (prefers-reduced-motion:reduce){.ipsy-host *'),
+          ('home/ipsy.js',"  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });","  function syncIpsyVisibility() {\n    document.documentElement.classList.toggle('ipsy-paused', document.visibilityState !== 'visible');\n    if (document.visibilityState === 'visible') kick();\n  }\n  document.addEventListener('visibilitychange', syncIpsyVisibility);\n  syncIpsyVisibility();"),
+          ('calendar/index.html','.dockr .ipsy-btn{width:50px;height:50px}','.dockr .ipsy-btn{width:64px;height:64px}'),
+          ('calendar/index.html','</head>','<style id="ipsy-room">\n@media(max-width:420px){.dock{gap:6px;padding-left:12px;padding-right:12px}.dockr{gap:4px}.dockr .ipsyslot{margin-right:0}.dock .tabs{min-width:0;flex:1}.dock .tabs .tab{flex:1;min-width:0;width:40px;padding-left:0;padding-right:0}}\n</style>\n</head>'),
+          ('notes/index.html','.dock > .ipsyslot{position:absolute;left:12px;bottom:calc(100% + 8px);width:62px;height:62px}','.dock > .ipsyslot{position:absolute;left:12px;bottom:calc(100% + 8px);width:78px;height:78px}'),
+          ('notes/index.html','.list{padding:6px 14px calc(164px + env(safe-area-inset-bottom,0px));','.list{padding:6px 14px calc(180px + env(safe-area-inset-bottom,0px));'),
+          ('travel/index.html','.ipsyslot{position:absolute;left:14px;bottom:calc(100% + 8px);width:62px;height:62px}','.ipsyslot{position:absolute;left:14px;bottom:calc(100% + 8px);width:78px;height:78px}'),
+          ('travel/index.html','.list{padding:6px 14px calc(176px + env(safe-area-inset-bottom,0px));','.list{padding:6px 14px calc(192px + env(safe-area-inset-bottom,0px));'),
+          ('home/welcome.js',"        'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps'],","        'Ipsy: larger across all six apps, with quiet breathing, occasional glances and softer idle movement; Reduce Motion is respected',\n        'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps'],"),
+          ('calendar/index.html','/* Ipsy beside the new-event button, a little smaller than its own 62px so the view bar keeps its room */','/* Larger Ipsy, kept compact here so the view bar retains its room. */')
+          ]
+          for name,before,after in edits:
+           p=Path(name);s=p.read_text()
+           assert s.count(before)==1,name+': patch anchor changed'
+           p.write_text(s.replace(before,after,1))
+          PY
+      - name: Add cross-app visual regression coverage
+        run: |
+          test ! -e home/scripts/ipsy-presence-test.mjs
+          cat > home/scripts/ipsy-presence-test.mjs <<'JS'
+          import { createRequire } from 'node:module';
+          import { execSync } from 'node:child_process';
+          import http from 'node:http';
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import assert from 'node:assert/strict';
+          const require = createRequire(execSync('npm root -g').toString().trim() + '/');
+          const { chromium } = require('playwright');
+          const root = process.cwd(), apps = ['orders','travel','meals','calendar','notes','news'];
+          const server = http.createServer((req,res) => {
+            let name = decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+            if (name.endsWith('/')) name += 'index.html';
+            const file = path.resolve(root,'.' + name);
+            if (!file.startsWith(root + path.sep) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+            const html = name.endsWith('.html');
+            res.setHeader('Content-Type',html ? 'text/html' : name.endsWith('.js') ? 'text/javascript' : 'application/octet-stream');
+            let content = fs.readFileSync(file);
+            if (html) content = content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi,'');
+            res.end(content);
+          });
+          await new Promise(r => server.listen(0,'127.0.0.1',r));
+          const base = 'http://127.0.0.1:' + server.address().port, browser = await chromium.launch();
+          let tested = 0;
+          try {
+            for (const width of [375,390,768]) for (const design of ['glass','vintage']) for (const scheme of ['light','dark']) {
+              const ctx = await browser.newContext({viewport:{width,height:844},colorScheme:scheme,serviceWorkers:'block'});
+              await ctx.route(u => !u.href.startsWith(base),route => route.abort());
+              for (const app of apps) {
+                const page = await ctx.newPage(), errors = [];
+                page.on('pageerror',e => errors.push(e.message));
+                await page.goto(base + '/' + app + '/');
+                await page.evaluate(({app,design}) => {
+                  document.documentElement.dataset.look = design;
+                  const style = document.getElementById('vintage'); if (style) style.media = design === 'vintage' ? 'all' : 'not all';
+                  localStorage.setItem('ipsy.' + app + '.ok','yes');
+                },{app,design});
+                await page.addScriptTag({url:base + '/home/ipsy.js'});
+                await page.evaluate(app => {
+                  const selectors = {calendar:'.dockr .ipsyslot',notes:'.dock > .ipsyslot',travel:'#ipsySlot',meals:'.dock > span'};
+                  window.AllisonOS.ipsy.mount({app,name:app,endpoint:'../' + app + '/api/ipsy',headers:{},intro:'Visual test',placeholder:'Ask Ipsy',suggestions:[],consent:'Visual test only; nothing is sent.',label:()=>'',tools:{},context:()=> 'Visual test',slot:selectors[app] ? document.querySelector(selectors[app]) : null});
+                },app);
+                const label = [app,width,design,scheme].join('/');
+                const rect = await page.locator('.ipsy-btn').boundingBox();
+                assert.equal(Math.round(rect.width),app === 'calendar' ? 64 : 78,label + ': width');
+                assert.equal(Math.round(rect.height),app === 'calendar' ? 64 : 78,label + ': height');
+                assert.ok(rect.x >= 0 && rect.x + rect.width <= width && rect.y >= 0 && rect.y + rect.height <= 844,label + ': viewport');
+                if (app === 'calendar') {
+                  const tabs = await page.locator('.dock .tabs').boundingBox(), fab = await page.locator('#fab').boundingBox();
+                  assert.ok(rect.x >= tabs.x + tabs.width + 2,label + ': clear of tabs');
+                  assert.ok(rect.x + rect.width <= fab.x,label + ': clear of new event');
+                }
+                if (['notes','travel'].includes(app)) {
+                  const slot = await page.locator(app === 'notes' ? '.dock > .ipsyslot' : '#ipsySlot').boundingBox();
+                  assert.ok(slot.width >= rect.width && slot.height >= rect.height,label + ': slot fits');
+                }
+                const idle = await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationName);
+                assert.ok(idle.includes('ipsyBreathe'),label + ': breathes at rest');
+                assert.ok((await page.locator('.ipsy-btn .i-look').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsyGlance'),label + ': idle glance');
+                await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='talk');
+                assert.ok((await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsySquash'),label + ': talking preserved');
+                await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='idle');
+                await page.emulateMedia({reducedMotion:'reduce'});
+                for (const selector of ['.i-body-g','.i-look','.i-bob','.i-eyes']) assert.equal(await page.locator('.ipsy-btn ' + selector).evaluate(e=>getComputedStyle(e).animationName),'none',label + ': reduced motion ' + selector);
+                await page.emulateMedia({reducedMotion:'no-preference'});
+                await page.evaluate(() => { Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'}); document.dispatchEvent(new Event('visibilitychange')); });
+                assert.equal(await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationPlayState),'paused',label + ': background pause');
+                await page.evaluate(() => { Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'visible'}); document.dispatchEvent(new Event('visibilitychange')); });
+                await page.click('.ipsy-btn');
+                await page.waitForFunction(() => Math.abs(document.querySelector('.ipsy-speaker').getBoundingClientRect().width - document.querySelector('.ipsy-btn').getBoundingClientRect().width) < 1);
+                const speaker = await page.locator('.ipsy-speaker').boundingBox();
+                assert.equal(Math.round(speaker.width),Math.round(rect.width),label + ': open chat character fits');
+                assert.deepEqual(errors,[],label + ': script errors');
+                tested++; await page.close();
+              }
+              await ctx.close();
+            }
+            console.log('Ipsy presence: ' + tested + ' app/size/design/theme combinations passed.');
+          } finally { await browser.close(); await new Promise(r=>server.close(r)); }
+          JS
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Validate shared appearance and existing chat behavior
+        run: |
+          git diff --check
+          node aOS/scripts/check-apps.mjs
+          node home/scripts/ipsy-presence-test.mjs
+          node calendar/scripts/ipsy-test.mjs
+          node notes/scripts/ipsy-test.mjs
+          node travel/scripts/ipsy-test.mjs
+      - name: Commit tested visuals to feature branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add home/ipsy.js home/welcome.js home/scripts/ipsy-presence-test.mjs calendar/index.html notes/index.html travel/index.html
+          git commit -m 'Ipsy: larger presence and subtle idle animations'
+          git push origin HEAD:refs/heads/feature/ipsy-larger-livelier
+  check:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/claude/custom-iphone-photos-app-0ubcek'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      - run: node home/scripts/ipsy-presence-test.mjs
