@@ -137,7 +137,12 @@
     cells.forEach(c => { if (!c.host.isConnected) cells.delete(c); else if (place(c, dt, now / 1000)) more = true; });
     raf = more && document.visibilityState === 'visible' ? requestAnimationFrame(frame) : 0;
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });
+  function syncIpsyVisibility() {
+    document.documentElement.classList.toggle('ipsy-paused', document.visibilityState !== 'visible');
+    if (document.visibilityState === 'visible') kick();
+  }
+  document.addEventListener('visibilitychange', syncIpsyVisibility);
+  syncIpsyVisibility();
 
   // ---------------------------------------------------------------------------
   // The look: the app's own tokens, so it's Sea glass or Vintage, light or dark, as the app is
@@ -148,7 +153,7 @@
 .ipsy-glass.ipsy-hint{background:var(--sheet,rgba(248,250,249,.95));color:var(--text,#10181A);box-shadow:0 8px 24px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.5);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .ipsy-vintage.ipsy-hint{background:var(--mc-card,#FBF5E9);color:var(--mc-ink,#2B2522);box-shadow:0 0 0 2.5px var(--mc-mustard,#E3A72F),0 8px 20px rgba(43,37,34,.2)}
 .ipsy-hint.out{animation:ipsyShrink .2s ease-in both}
-.ipsy-btn{position:relative;width:62px;height:62px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.ipsy-btn{position:relative;width:78px;height:78px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .ipsy-btn:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px;border-radius:50%}
 .ipsy-btn .ipsy-host{width:100%;height:100%}
 .ipsy-btn:active .ipsy-host{transform:scale(.92)}
@@ -186,9 +191,9 @@
 .i-mouth{fill:#1E2A2C;opacity:0;transform-box:fill-box;transform-origin:center}
 .i-ring{fill:none;stroke:rgba(129,147,188,.6);stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center}
 .ipsy-vintage .i-ring{stroke:var(--mc-teal,#1F6F6B);stroke-width:3}
-.i-bob{animation:ipsyBob 3.2s ease-in-out infinite}
-.i-shadow{transform-box:fill-box;transform-origin:center;animation:ipsyShade 3.2s ease-in-out infinite}
-.i-eyes{transform-box:fill-box;transform-origin:center;animation:ipsyBlink 4.8s infinite}
+.i-bob{animation:ipsyBob 5.6s ease-in-out infinite}
+.i-shadow{transform-box:fill-box;transform-origin:center;animation:ipsyShade 5.6s ease-in-out infinite}
+.i-eyes{transform-box:fill-box;transform-origin:center;animation:ipsyBlink 9s infinite}
 .i-look,.i-body-g{transform-box:fill-box;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
 .i-body-g{transform-origin:50% 100%}
 .i-look{transform-origin:center}
@@ -202,13 +207,19 @@
 [data-mood="talk"] .i-body-g{animation:ipsySquash .34s ease-in-out infinite alternate}
 [data-mood="talk"] .i-smile{opacity:0}
 [data-mood="talk"] .i-mouth{opacity:1;animation:ipsyJaw .22s ease-in-out infinite alternate}
-@keyframes ipsyBob{50%{transform:translateY(-7px)}}
-@keyframes ipsyShade{50%{transform:scaleX(.84);opacity:.7}}
-@keyframes ipsyBlink{0%,91%,97%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+@keyframes ipsyBob{50%{transform:translateY(-5px)}}
+@keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.82}}
+@keyframes ipsyBlink{0%,28%,30%,69%,71%,76%,78%,100%{transform:scaleY(1)}29%,70%,77%{transform:scaleY(.12)}}
 @keyframes ipsyRing{0%{transform:scale(.82);opacity:.7}100%{transform:scale(1.22);opacity:0}}
 @keyframes ipsySquash{to{transform:scale(1.035,.965)}}
 @keyframes ipsyJaw{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
 @keyframes ipsyFlash{50%{opacity:.25}}
+
+.ipsy-host:not([data-mood]) .i-body-g,.ipsy-host[data-mood="idle"] .i-body-g{animation:ipsyBreathe 5.6s ease-in-out infinite}
+.ipsy-host:not([data-mood]) .i-look,.ipsy-host[data-mood="idle"] .i-look{animation:ipsyGlance 13s ease-in-out infinite}
+@keyframes ipsyBreathe{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.025,1.015) rotate(.7deg)}}
+@keyframes ipsyGlance{0%,72%,88%,100%{transform:translate(0,0)}77%,81%{transform:translate(4px,-1px)}92%,95%{transform:translate(-3px,0)}}
+.ipsy-paused .ipsy-host *{animation-play-state:paused!important}
 @media (prefers-reduced-motion:reduce){.ipsy-host *,.ipsy-wrap *{animation:none!important;transition:none!important}[data-mood="listen"] .i-ring{opacity:.5}}
 
 .ipsy-wrap{position:fixed;inset:0;z-index:60}
