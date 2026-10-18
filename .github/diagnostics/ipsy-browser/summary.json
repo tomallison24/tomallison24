@@ -1,0 +1,85 @@
+{
+  "candidate_sha": "3bf8a2440cb6a808a8bee598b648878e73839753",
+  "baseline_sha": "03cc74353422e2a9c4d14a3dedeb4d4bea760920",
+  "generated_at": "2026-10-18T01:31:27.800036+00:00",
+  "tests": [
+    {
+      "test": "orders/scripts/app-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 82.8,
+        "log": "orders-app-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "orders/scripts/ipsy-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 18.6,
+        "log": "orders-ipsy-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "news/scripts/ipsy-test.mjs",
+      "candidate": {
+        "exit": 1,
+        "seconds": 13.7,
+        "log": "news-ipsy-test-candidate.log",
+        "failure_excerpts": "FAIL - news (vintage, light): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (vintage, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (glass, light): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (glass, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nok - news (glass, light): the chat asks once before the first question\nok - news (glass, light): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search\nok - news (glass, light): a team\u2019s scores and the table from ESPN, and its match page opened behind the chat\nok - news (glass, light): following teams and the one-tap team, each with an Undo that works\n   the Undo toast is clear of Ipsy\nFAIL - news (vintage, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (glass, light): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (glass, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nok - news (glass, light): the chat asks once before the first question\nok - news (glass, light): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search\nok - news (glass, light): a team\u2019s scores and the table from ESPN, and its match page opened behind the chat\nok - news (glass, light): following teams and the one-tap team, each with an Undo that works\nok - news (glass, light): Stem cells\u2019 filters, with Undo\nok - news (glass, light): a question that fails says so and is taken back out of the conversation\n   the Undo toast is clear of Ipsy\nFAIL - news (glass, light): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nFAIL - news (glass, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nok - news (glass, light): the chat asks once before the first question\nok - news (glass, light): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search\nok - news (glass, light): a team\u2019s scores and the table from ESPN, and its match page opened behind the chat\nok - news (glass, light): following teams and the one-tap team, each with an Undo that works\nok - news (glass, light): Stem cells\u2019 filters, with Undo\nok - news (glass, light): a question that fails says so and is taken back out of the conversation\nok - news (glass, light): the chat is kept when the app opens again, and the design changes Ipsy at once\nok - news (glass, light): no script errors and nothing blocked by the page policy\n   the Undo toast is clear of Ipsy\nFAIL - news (glass, dark): Ipsy floats bottom left, wearing the design, and covers no control \n   the Undo toast is clear of Ipsy\nok - news (glass, light): the chat asks once before the first question\nok - news (glass, light): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search\nok - news (glass, light): a team\u2019s scores and the table from ESPN, and its match page opened behind the chat\nok - news (glass, light): following teams and the one-tap team, each with an Undo that works\nok - news (glass, light): Stem cells\u2019 filters, with Undo\nok - news (glass, light): a question that fails says so and is taken back out of the conversation\nok - news (glass, light): the chat is kept when the app opens again, and the design changes Ipsy at once\nok - news (glass, light): no script errors and nothing blocked by the page policy\nok - news (vintage, dark): the chat asks once before the first question\nok - news (vintage, dark): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search"
+      },
+      "baseline": {
+        "exit": 0,
+        "seconds": 16.4,
+        "log": "news-ipsy-test-baseline.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "meals/scripts/ipsy-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 13.8,
+        "log": "meals-ipsy-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "notes/scripts/ipsy-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 20.1,
+        "log": "notes-ipsy-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "calendar/scripts/ipsy-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 109.7,
+        "log": "calendar-ipsy-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "mail/scripts/security-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 42.8,
+        "log": "mail-security-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    },
+    {
+      "test": "mail/scripts/design-test.mjs",
+      "candidate": {
+        "exit": 0,
+        "seconds": 23.5,
+        "log": "mail-design-test-candidate.log",
+        "failure_excerpts": ""
+      }
+    }
+  ]
+}

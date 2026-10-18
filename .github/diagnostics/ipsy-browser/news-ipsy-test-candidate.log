@@ -1,0 +1,25 @@
+FAIL - news (vintage, light): Ipsy floats bottom left, wearing the design, and covers no control 
+   the Undo toast is clear of Ipsy
+FAIL - news (vintage, dark): Ipsy floats bottom left, wearing the design, and covers no control 
+   the Undo toast is clear of Ipsy
+FAIL - news (glass, light): Ipsy floats bottom left, wearing the design, and covers no control 
+   the Undo toast is clear of Ipsy
+FAIL - news (glass, dark): Ipsy floats bottom left, wearing the design, and covers no control 
+   the Undo toast is clear of Ipsy
+ok - news (glass, light): the chat asks once before the first question
+ok - news (glass, light): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search
+ok - news (glass, light): a team’s scores and the table from ESPN, and its match page opened behind the chat
+ok - news (glass, light): following teams and the one-tap team, each with an Undo that works
+ok - news (glass, light): Stem cells’ filters, with Undo
+ok - news (glass, light): a question that fails says so and is taken back out of the conversation
+ok - news (glass, light): the chat is kept when the app opens again, and the design changes Ipsy at once
+ok - news (glass, light): no script errors and nothing blocked by the page policy
+ok - news (vintage, dark): the chat asks once before the first question
+ok - news (vintage, dark): a story found in the headlines, summarized through the summaries route and shown in its list, with a web search
+ok - news (vintage, dark): a team’s scores and the table from ESPN, and its match page opened behind the chat
+ok - news (vintage, dark): following teams and the one-tap team, each with an Undo that works
+ok - news (vintage, dark): Stem cells’ filters, with Undo
+ok - news (vintage, dark): a question that fails says so and is taken back out of the conversation
+ok - news (vintage, dark): the chat is kept when the app opens again, and the design changes Ipsy at once
+ok - news (vintage, dark): no script errors and nothing blocked by the page policy
+4 failed

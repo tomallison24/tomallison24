@@ -1,0 +1,43 @@
+ok - light: reads Gmail into orders; food waits, offers are skipped
+ok - light: Vintage by default, drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes
+ok - light: On the way: sections, cards with the courier and tracking number
+ok - light: switches: a glass thumb slides under the chosen filter
+ok - light: Delivered, and an order page with a Track button
+ok - light: an order that is unsure waits under To check until you say it looks right
+ok - light: mark as delivered, and undo
+ok - light: search finds a store, an item or a tracking number
+ok - light: edits stick, and an email read again doesn’t undo them
+ok - light: add an order by hand
+ok - light: turning on Food orders reads what was passed over
+ok - light: Have Ipsy check this order sends one email (no links) to the family server, asks first once in Ipsy's chat, and the answer lands on the order, with Undo
+ok - light: Claude not set up, or not signed in: the order page says so and nothing changes
+ok - light: the one-off clean-up marks old open orders as received once, with Undo; recent, expected and edited ones are left alone
+ok - light: a deleted order stays deleted when Gmail is read again
+ok - light: settings open and show Gmail
+ok - light: no script errors and nothing blocked by the page policy
+ok - dark: reads Gmail into orders; food waits, offers are skipped
+ok - dark: Vintage by default, drawn in the Retro look: Futura, flat cream or walnut, mustard, orange, atomic shapes
+ok - dark: On the way: sections, cards with the courier and tracking number
+ok - dark: switches: a glass thumb slides under the chosen filter
+ok - dark: Delivered, and an order page with a Track button
+ok - dark: an order that is unsure waits under To check until you say it looks right
+ok - dark: mark as delivered, and undo
+ok - dark: search finds a store, an item or a tracking number
+ok - dark: edits stick, and an email read again doesn’t undo them
+ok - dark: add an order by hand
+ok - dark: turning on Food orders reads what was passed over
+ok - dark: Have Ipsy check this order sends one email (no links) to the family server, asks first once in Ipsy's chat, and the answer lands on the order, with Undo
+ok - dark: Claude not set up, or not signed in: the order page says so and nothing changes
+ok - dark: the one-off clean-up marks old open orders as received once, with Undo; recent, expected and edited ones are left alone
+ok - dark: a deleted order stays deleted when Gmail is read again
+ok - dark: settings open and show Gmail
+ok - dark: no script errors and nothing blocked by the page policy
+ok - another app’s Sheet link is recognised, and an old Orders script is named
+ok - Sheet sync sends this phone’s orders and merges the other phone’s
+ok - Sheet Log: every order added, every status change, deletion and left-out email is sent once and acknowledged
+ok - light Standard: Sea glass, the Vintage block switched off, no sky; the icon, status bar and bar colour follow
+ok - dark Standard: Sea glass, the Vintage block switched off, no sky; the icon, status bar and bar colour follow
+ok - Settings > Design: Vintage, then Standard and back, at once (the filter thumb follows the new widths), kept across a reload
+ok - the old Orders Vintage address: its orders, sign-in, settings and Sheet copy move over once, and what it had seen
+ok - a phone with both: Orders' own orders are kept, the old app's are not copied over them
+all passed

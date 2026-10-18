@@ -1,0 +1,21 @@
+ok - orders (glass): Ipsy sits in the dock, and opens a chat that asks once before the first question
+ok - orders (glass): one question: Ipsy finds the orders, merges the duplicate and fixes a total, with web sources
+ok - orders (glass): Undo on a change puts the order back
+ok - orders (glass): a question that reads Gmail, deletes an order and waits out a paused web look-up
+ok - orders (glass): a question that fails says so and is taken back out of the conversation
+ok - orders (glass): the chat is kept when the app opens again, and New chat clears it
+ok - orders (glass): picking the other design in Settings changes Ipsy at once
+ok - orders (glass): no script errors and nothing blocked by the page policy
+ok - orders (vintage): Ipsy sits in the dock, and opens a chat that asks once before the first question
+ok - orders (vintage): one question: Ipsy finds the orders, merges the duplicate and fixes a total, with web sources
+ok - orders (vintage): Undo on a change puts the order back
+ok - orders (vintage): a question that reads Gmail, deletes an order and waits out a paused web look-up
+ok - orders (vintage): a question that fails says so and is taken back out of the conversation
+ok - orders (vintage): the chat is kept when the app opens again, and New chat clears it
+ok - orders (vintage): picking the other design in Settings changes Ipsy at once
+ok - orders (vintage): no script errors and nothing blocked by the page policy
+ok - To check: Ipsy offers once, from its corner, before checking anything by itself
+ok - To check: each order's email is read again, signed in quietly, and the fix lands with Undo in the chat
+ok - To check: the same email is never checked twice, and Settings turns it off
+ok - To check: no script errors and no browser dialogs
+all passed

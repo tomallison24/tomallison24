@@ -1,0 +1,53 @@
+ok - calendar (glass, light): Ipsy stands in the dock beside the new-event button, covering nothing
+ok - calendar (glass, light): the first time, it says what is sent where and that it asks before every change
+ok - calendar (glass, light): reading is free: events in a range (layers marked read only, event text as it is), free evenings, the weather
+ok - calendar (glass, light): adding asks first with exactly what will happen; Yes adds it as a new file; Undo deletes it with its etag
+ok - calendar (glass, light): changing asks first with before → after; No writes nothing and Claude is told
+ok - calendar (glass, light): Yes changes it with its etag; Undo puts the old event back, with the new etag
+ok - calendar (glass, light): deleting asks first; Yes deletes with the etag; Undo brings it back only if nothing took its place
+ok - calendar (glass, light): repeating events and other apps’ items are refused: nothing asked, nothing written
+ok - calendar (glass, light): an event changed elsewhere first is reported, not written over
+ok - calendar (glass, light): at most 5 changes asked about in one question; the 6th is refused without a card; the next question starts again
+ok - calendar (glass, light): the conversation is only ever added to
+ok - calendar (glass, light): Gmail HTML is inert
+ok - calendar (glass, light): no script errors and nothing blocked by the page policy
+ok - calendar (vintage, dark): Ipsy stands in the dock beside the new-event button, covering nothing
+ok - calendar (vintage, dark): the first time, it says what is sent where and that it asks before every change
+ok - calendar (vintage, dark): reading is free: events in a range (layers marked read only, event text as it is), free evenings, the weather
+ok - calendar (vintage, dark): adding asks first with exactly what will happen; Yes adds it as a new file; Undo deletes it with its etag
+ok - calendar (vintage, dark): changing asks first with before → after; No writes nothing and Claude is told
+ok - calendar (vintage, dark): Yes changes it with its etag; Undo puts the old event back, with the new etag
+ok - calendar (vintage, dark): deleting asks first; Yes deletes with the etag; Undo brings it back only if nothing took its place
+ok - calendar (vintage, dark): repeating events and other apps’ items are refused: nothing asked, nothing written
+ok - calendar (vintage, dark): an event changed elsewhere first is reported, not written over
+ok - calendar (vintage, dark): at most 5 changes asked about in one question; the 6th is refused without a card; the next question starts again
+ok - calendar (vintage, dark): the conversation is only ever added to
+ok - calendar (vintage, dark): Gmail HTML is inert
+ok - calendar (vintage, dark): no script errors and nothing blocked by the page policy
+ok - calendar (glass, dark): Ipsy stands in the dock beside the new-event button, covering nothing
+ok - calendar (glass, dark): the first time, it says what is sent where and that it asks before every change
+ok - calendar (glass, dark): reading is free: events in a range (layers marked read only, event text as it is), free evenings, the weather
+ok - calendar (glass, dark): adding asks first with exactly what will happen; Yes adds it as a new file; Undo deletes it with its etag
+ok - calendar (glass, dark): changing asks first with before → after; No writes nothing and Claude is told
+ok - calendar (glass, dark): Yes changes it with its etag; Undo puts the old event back, with the new etag
+ok - calendar (glass, dark): deleting asks first; Yes deletes with the etag; Undo brings it back only if nothing took its place
+ok - calendar (glass, dark): repeating events and other apps’ items are refused: nothing asked, nothing written
+ok - calendar (glass, dark): an event changed elsewhere first is reported, not written over
+ok - calendar (glass, dark): at most 5 changes asked about in one question; the 6th is refused without a card; the next question starts again
+ok - calendar (glass, dark): the conversation is only ever added to
+ok - calendar (glass, dark): Gmail HTML is inert
+ok - calendar (glass, dark): no script errors and nothing blocked by the page policy
+ok - calendar (vintage, light): Ipsy stands in the dock beside the new-event button, covering nothing
+ok - calendar (vintage, light): the first time, it says what is sent where and that it asks before every change
+ok - calendar (vintage, light): reading is free: events in a range (layers marked read only, event text as it is), free evenings, the weather
+ok - calendar (vintage, light): adding asks first with exactly what will happen; Yes adds it as a new file; Undo deletes it with its etag
+ok - calendar (vintage, light): changing asks first with before → after; No writes nothing and Claude is told
+ok - calendar (vintage, light): Yes changes it with its etag; Undo puts the old event back, with the new etag
+ok - calendar (vintage, light): deleting asks first; Yes deletes with the etag; Undo brings it back only if nothing took its place
+ok - calendar (vintage, light): repeating events and other apps’ items are refused: nothing asked, nothing written
+ok - calendar (vintage, light): an event changed elsewhere first is reported, not written over
+ok - calendar (vintage, light): at most 5 changes asked about in one question; the 6th is refused without a card; the next question starts again
+ok - calendar (vintage, light): the conversation is only ever added to
+ok - calendar (vintage, light): Gmail HTML is inert
+ok - calendar (vintage, light): no script errors and nothing blocked by the page policy
+all passed
