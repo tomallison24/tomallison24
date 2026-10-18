@@ -1,4 +1,4 @@
-name: Diagnose Ipsy browser regression
+name: Repair Ipsy News toast clearance
 on:
   push:
     branches: [feature/ipsy-larger-livelier]
@@ -6,59 +6,43 @@ on:
 permissions:
   contents: read
 jobs:
-  diagnose:
-    if: github.event.head_commit.message == 'Diagnose Ipsy browser regression'
+  repair:
+    if: github.event.head_commit.message == 'Fix News toast clearance for larger Ipsy'
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          ref: 3bf8a2440cb6a808a8bee598b648878e73839753
-          fetch-depth: 0
+          fetch-depth: 2
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22
-      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
-      - name: Reproduce failures and compare with production baseline
+      - name: Require the diagnosed feature commit
+        run: test "$(git rev-parse HEAD^)" = 2c09fbf38f88eb0f6d4202f47d8698f8aee8aff1
+      - name: Raise only the News Undo notification
         run: |
           python3 - <<'PY'
-          import json, os, signal, subprocess, time
-          from datetime import datetime, timezone
           from pathlib import Path
-          candidate='3bf8a2440cb6a808a8bee598b648878e73839753'
-          baseline='03cc74353422e2a9c4d14a3dedeb4d4bea760920'
-          tests=['orders/scripts/app-test.mjs','orders/scripts/ipsy-test.mjs','news/scripts/ipsy-test.mjs','meals/scripts/ipsy-test.mjs','notes/scripts/ipsy-test.mjs','calendar/scripts/ipsy-test.mjs','mail/scripts/security-test.mjs','mail/scripts/design-test.mjs']
-          out=Path(os.environ['RUNNER_TEMP'])/'ipsy-browser-diagnostics';out.mkdir(exist_ok=True)
-          results=[]
-          def run(test,version):
-           start=time.monotonic()
-           proc=subprocess.Popen(['node',test],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
-           try: log=proc.communicate(timeout=180)[0];code=proc.returncode
-           except subprocess.TimeoutExpired:
-            os.killpg(proc.pid,signal.SIGKILL);log=proc.communicate()[0];code=124
-           name=test.split('/')[0]+'-'+Path(test).stem+'-'+version+'.log'
-           (out/name).write_text(log[-24000:])
-           lines=log.splitlines();fail=[]
-           for i,line in enumerate(lines):
-            if 'FAIL' in line or 'AssertionError' in line or 'Error:' in line: fail.extend(lines[max(0,i-1):i+12])
-           return {'exit':code,'seconds':round(time.monotonic()-start,1),'log':name,'failure_excerpts':'\n'.join(fail)[:8000]}
-          for test in tests: results.append({'test':test,'candidate':run(test,'candidate')})
-          failed=[r for r in results if r['candidate']['exit']!=0]
-          if failed:
-           subprocess.run(['git','checkout','--detach',baseline],check=True)
-           for result in failed: result['baseline']=run(result['test'],'baseline')
-          (out/'summary.json').write_text(json.dumps({'candidate_sha':candidate,'baseline_sha':baseline,'generated_at':datetime.now(timezone.utc).isoformat(),'tests':results},indent=2))
+          p=Path('news/index.html');s=p.read_text()
+          old='bottom: calc(env(safe-area-inset-bottom) + 76px); z-index: 40;'
+          new='bottom: calc(env(safe-area-inset-bottom) + 108px); z-index: 40;'
+          assert s.count(old)==1,'News toast anchor changed; no replacement made'
+          p.write_text(s.replace(old,new,1))
           PY
-      - name: Save diagnostic reports on feature branch only
+      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Keep all existing assertions and validate before committing
         run: |
-          git fetch origin feature/ipsy-larger-livelier
-          git checkout -B feature/ipsy-larger-livelier origin/feature/ipsy-larger-livelier
-          mkdir -p .github/diagnostics/ipsy-browser
-          cp "$RUNNER_TEMP/ipsy-browser-diagnostics/"* .github/diagnostics/ipsy-browser/
+          git diff --check
+          node aOS/scripts/check-apps.mjs
+          node news/scripts/ipsy-test.mjs
+          node home/scripts/ipsy-presence-test.mjs
+      - name: Commit the validated fix and remove temporary diagnostic reports
+        run: |
+          git rm -r --ignore-unmatch .github/diagnostics/ipsy-browser
+          git add news/index.html
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/diagnostics/ipsy-browser
-          git commit -m 'Ipsy: record browser regression diagnostics'
+          git commit -m 'News: keep Undo toast clear of larger Ipsy'
           git push origin HEAD:refs/heads/feature/ipsy-larger-livelier
