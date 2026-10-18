@@ -1,48 +1,17 @@
-name: Repair Ipsy News toast clearance
+name: News Ipsy clearance
 on:
   push:
-    branches: [feature/ipsy-larger-livelier]
-    paths: [.github/workflows/ipsy-diagnostics.yml]
+    branches: [feature/ipsy-larger-livelier, claude/custom-iphone-photos-app-0ubcek]
+  pull_request:
 permissions:
   contents: read
 jobs:
-  repair:
-    if: github.event.head_commit.message == 'Fix News toast clearance for larger Ipsy'
-    permissions:
-      contents: write
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          fetch-depth: 2
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22
-      - name: Require the diagnosed feature commit
-        run: test "$(git rev-parse HEAD^)" = 2c09fbf38f88eb0f6d4202f47d8698f8aee8aff1
-      - name: Raise only the News Undo notification
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('news/index.html');s=p.read_text()
-          old='bottom: calc(env(safe-area-inset-bottom) + 76px); z-index: 40;'
-          new='bottom: calc(env(safe-area-inset-bottom) + 108px); z-index: 40;'
-          assert s.count(old)==1,'News toast anchor changed; no replacement made'
-          p.write_text(s.replace(old,new,1))
-          PY
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
-      - name: Keep all existing assertions and validate before committing
-        run: |
-          git diff --check
-          node aOS/scripts/check-apps.mjs
-          node news/scripts/ipsy-test.mjs
-          node home/scripts/ipsy-presence-test.mjs
-      - name: Commit the validated fix and remove temporary diagnostic reports
-        run: |
-          git rm -r --ignore-unmatch .github/diagnostics/ipsy-browser
-          git add news/index.html
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'News: keep Undo toast clear of larger Ipsy'
-          git push origin HEAD:refs/heads/feature/ipsy-larger-livelier
+      - run: node news/scripts/ipsy-test.mjs
