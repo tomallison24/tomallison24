@@ -4,10 +4,12 @@ on:
     branches: [feature/ipsy-warrior-mvp]
     paths:
       - 'labs/ipsy-warrior/**'
+      - 'functions/games/**'
       - '.github/workflows/ipsy-warrior.yml'
   pull_request:
     paths:
       - 'labs/ipsy-warrior/**'
+      - 'functions/games/**'
       - '.github/workflows/ipsy-warrior.yml'
 permissions:
   contents: read
@@ -20,6 +22,7 @@ jobs:
         with:
           node-version: 22
       - run: node --check labs/ipsy-warrior/engine.mjs && node --check labs/ipsy-warrior/town.mjs && node --check labs/ipsy-warrior/town.browser.mjs
-      - run: node --test labs/ipsy-warrior/engine.test.mjs
+      - run: node --check labs/ipsy-warrior/cloud/store.mjs && node --check labs/ipsy-warrior/cloud/gateway.mjs && node --check labs/ipsy-warrior/cloud/worker.mjs && node --check 'functions/games/api/[[route]].js'
+      - run: node --test labs/ipsy-warrior/engine.test.mjs labs/ipsy-warrior/cloud/cloud.test.mjs
       - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
       - run: NODE_PATH="$(npm root -g)" node labs/ipsy-warrior/town.browser.mjs
