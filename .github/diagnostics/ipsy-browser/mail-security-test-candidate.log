@@ -1,0 +1,31 @@
+PASS page has a CSP that only runs the app's own script: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src data:; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'
+PASS the offline service worker still registers
+PASS the email renders in its sandboxed frame
+PASS remote images stay off until Show
+PASS https, mailto and tel links are kept
+PASS javascript:, data:, relative and SVG script links lose their address
+PASS SVG animation that could rewrite a link is removed
+PASS the animated link keeps its checked https address
+PASS tapping Show loads remote images
+PASS invoice.html: no Open button
+PASS invoice.html: kept as a download, not a page (blob type application/octet-stream)
+PASS invoice.html: forced open as HTML, its script still can't run (CSP inherited)
+PASS logo.svg: no Open button
+PASS logo.svg: kept as a download, not a page (blob type application/octet-stream)
+PASS logo.svg: forced open as HTML, its script still can't run (CSP inherited)
+PASS photo.png: preview and Open still work (blob type image/png)
+PASS sneaky.png: preview and Open still work (blob type image/png)
+PASS scan.pdf: Open still works (blob type application/pdf)
+PASS one-click unsubscribe is sent
+PASS unsubscribe carries no cookie or referrer
+PASS Settings is a sheet titled Settings, with a Done tick
+PASS Done closes Settings
+PASS compose with an attachment still sends
+PASS framed by another page, the app refuses to draw
+PASS framed, the app makes no Gmail requests
+PASS Sign Out asks Google to cancel the token
+PASS Sign Out forgets the token and account
+PASS after Sign Out, reopening the app stays signed out
+PASS nothing the app does is blocked by the CSP
+
+all passed
