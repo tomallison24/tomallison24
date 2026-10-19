@@ -280,7 +280,9 @@ dashboard's comments record a quirk, the app keeps it:
 - **Heaters** (HT1 "Ember", `climate.yaml`): seven glass fins behind the
   target. They have no thermometer, so the target is the hero; heating means
   drawing over 20 W. Power, target (50-86), Level Low / High, Child lock,
-  Backlight, today's power, hours and kWh.
+  Backlight, today's power, hours and kWh. Since Home Assistant 2026.10 an on
+  heater reads `unknown` (Tuya's `eco` mode has no hvac_mode), so `unknown` is
+  on; offline is only `unavailable`, or `unknown` with the power plug unreadable.
 - **Air Purifiers** (DY1 rotor, `climate.yaml`): ten blades lit to the speed
   (1-10), turning faster with it, the room temperature in the hub. Speed,
   Mode Off / Cool / Heat and the heat target, Auto / Manual, Airflow (Focus /
