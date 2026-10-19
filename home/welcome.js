@@ -100,7 +100,8 @@
         'Calendar: connect Gmail in Settings so Ipsy can search appointment emails, read-only, with separate email-sharing consent; every calendar change still asks first',
         'Ipsy: larger across all six apps, with quiet breathing, occasional glances and softer idle movement; Reduce Motion is respected',
         'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps',
-        'Notes and Places: the Google Sheet connection form uses the new shared sync link; the shared Apps Script initializes Places data correctly'],
+        'Notes and Places: the Google Sheet connection form uses the new shared sync link; the shared Apps Script initializes Places data correctly',
+        'Home: the Office and M&D heaters no longer say Unavailable while they are on (Home Assistant now reports an on heater as unknown); Power and the target work again'],
       apps: {
         travel: { highlights: ['Meet Ipsy: tap the little stem cell and chat about your trips', 'Ipsy checks any flight live and finds flight numbers', 'Ipsy fills in what your bookings are missing, with Undo'] },
         meals: { highlights: ['Meet Ipsy: tap the little stem cell and chat about dinner', 'Ipsy swaps a night or plans a week around the deals', 'It always keeps to what the family never eats'] },

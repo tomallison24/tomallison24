@@ -5,6 +5,10 @@
 // says), otherwise on is "holding"; seven glass fins fill 88% on High, 52% on
 // Low, 18% while holding. Level is a select: '2' is High, anything else Low.
 // The target is 50-86 and moves by 1.
+// Since Home Assistant 2026.10 the Tuya integration reports an ON heater as
+// 'unknown' (the unit's 'eco' mode maps to no hvac_mode), so 'unknown' is on,
+// as in the Signal card (ht_mood): the heater is offline only when it is
+// 'unavailable', or 'unknown' with its power plug unreadable too.
 'use strict';
 const HEATERS = [
   { id: 'of', name: 'Office Heater', ent: 'climate.office_heater', power: 'sensor.office_heater_power', level: 'select.office_heater_temperature_level',
@@ -23,8 +27,8 @@ const heaters = family({
 
   read(h) {
     const d = dv('heat', h.id, h.name), e = st(h.ent), A = e ? e.attributes : {};
-    const offline = gone(h.ent);
-    const s = offline ? 'unavailable' : held(d, 'mode', e.state);
+    const offline = !e || e.state === 'unavailable' || (e.state === 'unknown' && gone(h.power));
+    const s = offline ? 'unavailable' : held(d, 'mode', e.state === 'unknown' ? 'heat' : e.state);   // so a tapped Heat settles when 'unknown' comes back
     const w = num(h.power);
     const high = held(d, 'level', val(h.level)) === '2';
     const tgt = held(d, 'temperature', A.temperature);
@@ -107,7 +111,7 @@ const heaters = family({
   },
 
   samples: e => ({
-    'climate.office_heater': e('heat', { hvac_modes: ['off', 'heat'], temperature: 70, min_temp: 50, max_temp: 86 }),
+    'climate.office_heater': e('unknown', { hvac_modes: ['off', 'heat'], temperature: 70, min_temp: 50, max_temp: 86 }),
     'sensor.office_heater_power': e(1460, { unit_of_measurement: 'W' }),
     'select.office_heater_temperature_level': e('2', { options: ['1', '2'] }),
     'switch.office_heater_child_lock': e('on'), 'light.office_heater_backlight': e('on', { brightness: 255 }),
@@ -119,9 +123,10 @@ const heaters = family({
     'sensor.md_heater_heated_today': e(0.4, { unit_of_measurement: 'h' }), 'sensor.md_heater_daily_energy': e(0.52, { unit_of_measurement: 'kWh' }),
   }),
   // In the preview the plug follows the heater: about 1450 W on High, 750 on Low.
+  // An ON heater reads 'unknown', as the real ones do.
   preview(domain, service, d) {
     const h = HEATERS.find(x => x.ent === d.entity_id || x.level === d.entity_id); if (!h) return false;
-    if (service === 'set_hvac_mode') patchEnt(h.ent, d.hvac_mode);
+    if (service === 'set_hvac_mode') patchEnt(h.ent, d.hvac_mode === 'off' ? 'off' : 'unknown');
     else if (service === 'select_option') patchEnt(h.level, d.option);
     else if (service === 'set_temperature') patchEnt(h.ent, null, { temperature: d.temperature });
     else return false;
