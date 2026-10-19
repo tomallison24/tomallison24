@@ -279,8 +279,11 @@ dashboard's comments record a quirk, the app keeps it:
 
 - **Heaters** (HT1 "Ember", `climate.yaml`): seven glass fins behind the
   target. They have no thermometer, so the target is the hero; heating means
-  drawing over 20 W. Power, target (50-86), Level Low / High, Child lock,
-  Backlight, today's power, hours and kWh. Since Home Assistant 2026.10 an on
+  drawing over 20 W. Power, target (50-86), Wattage 750 W / 1500 W (the
+  level), Mode Eco / Comfort / Boost (the climate's presets), a Countdown
+  (1, 2, 4 or 8 h: Home Assistant's `timer.*_heater_countdown`, which turns
+  the heater off when it ends; the unit's own countdown isn't in Home
+  Assistant), Child lock, Backlight, today's power, hours and kWh. Since Home Assistant 2026.10 an on
   heater reads `unknown` (Tuya's `eco` mode has no hvac_mode), so `unknown` is
   on; offline is only `unavailable`, or `unknown` with the power plug unreadable.
 - **Air Purifiers** (DY1 rotor, `climate.yaml`): ten blades lit to the speed
