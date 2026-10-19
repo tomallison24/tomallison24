@@ -94,7 +94,7 @@ function rebuildTabs() {
 // ---------- reading and writing the hidden data tabs ----------
 
 function load(ss) {
-  const db = {notes: new Map(), todos: new Map(), lists: new Map(), graves: new Map()};
+  const db = {notes: new Map(), todos: new Map(), lists: new Map(), places: new Map(), graves: new Map()};
   Object.keys(DATA).forEach(kind => {
     rows(ss, DATA[kind]).forEach(r => {
       const id = String(r[0] || ''); if (!id) return;

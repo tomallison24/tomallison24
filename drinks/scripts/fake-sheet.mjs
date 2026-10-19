@@ -28,6 +28,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
         setValue: v => { sh.cells[r - 1] = sh.cells[r - 1] || []; sh.cells[r - 1][c - 1] = v; },
         getValues: () => Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => { const v = (sh.cells[r - 1 + i] || [])[c - 1 + j]; return v === undefined ? '' : v; })),
         setNumberFormat: f => { sh.formats.add(c + ':' + f); },
+        setWrap: () => {},
         getSheet: () => sh, getRow: () => r, getNumRows: () => nr,
       }),
       hideSheet: () => { sh.hidden = true; },
