@@ -29,8 +29,8 @@ try{
   await page.reload();
   await page.locator('#player').fill('Test warrior');await page.locator('#start').click();
   await page.locator('[data-act="hatch"]').click();
-  for(const k of ['feed','pet','wash'])await page.locator(`[data-care="${k}"]`).click();
-  await page.locator('#close').click();await page.locator('[data-open="park"]').click();
+  for(const k of ['feed','pet','wash']){await page.locator(`[data-care="${k}"]`).click();if(k==='feed')await page.locator('[data-food="berries"]').click();}
+  await page.locator('#close').click();await page.locator('.travel-menu summary').click();await page.locator('[data-open="park"]').click();
   await page.locator('[data-clue="park"]').click();await page.locator('[data-act="practice-start"]').click();
   for(let i=0;i<10;i++)await page.locator('#target').click();
   assert.equal(await page.getByText('Practice complete',{exact:true}).count(),1);
@@ -41,14 +41,14 @@ try{
    r.state.hatchedAt=Date.now()-10000;localStorage.setItem(key,JSON.stringify(r));
   });
   await page.reload();await page.locator('#player').fill('Test warrior');await page.locator('#start').click();
-  await page.locator('#close').click();await page.locator('.place[data-open="board"]').click();
+  await page.locator('#close').click();await page.locator('.travel-menu summary').click();await page.locator('.place[data-open="board"]').click();
   await page.locator('[data-clue="board"]').click();await page.locator('[data-book="600000"]').click();
   await page.evaluate(()=>{
    const key='ipsy.warrior.lab.v1.pet.test%20warrior',r=JSON.parse(localStorage.getItem(key));
    r.state.fight.at=Date.now()-1000;localStorage.setItem(key,JSON.stringify(r));
   });
   await page.reload();await page.locator('#player').fill('Test warrior');await page.locator('#start').click();
-  await page.locator('#close').click();await page.locator('.place[data-open="arena"]').click();
+  await page.locator('#close').click();await page.locator('.travel-menu summary').click();await page.locator('.place[data-open="arena"]').click();
   await page.locator('[data-act="battle-start"]').click();
   for(let i=0;i<15&&await page.locator('[data-move="attack"]').count();i++){
    const intent=await page.locator('.intent').textContent(),skill=page.locator('[data-move="skill"]');
