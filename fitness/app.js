@@ -1013,8 +1013,9 @@ if (window.top !== window.self) {
   // The Sheet's script was deployed anew (with Meds and Steps), so its link changed: a phone still on an earlier one
   // hands over the newest, with the phrase it kept (the same Sheet's script).
   const OLD_SHEET_URLS = ['https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec',
-    'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec'];
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec';
+    'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec',
+    'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec'];
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/exec';
   async function handOver() {
     const old = ls.json(K.sync, null) || await keep.get('sync');
     if (!old || !old.secret || !SH() || !signedIn()) return;

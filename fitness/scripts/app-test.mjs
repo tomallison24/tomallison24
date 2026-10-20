@@ -393,7 +393,7 @@ await test('the owner\'s phone hands the Sheet link and phrase it kept over to a
   const p = await newPage('light', SEED, { 'aos.session': session('tok-tom'), 'allison-fitness-v1-sync': JSON.stringify({ url: OLD, secret: SECRET }) });
   await p.page.goto(BASE + '/fitness/'); await p.page.waitForFunction(() => window.__fitness);
   await p.page.waitForFunction(() => !localStorage.getItem('allison-fitness-v1-sync'), null, { timeout: 8000 });
-  assert.match(claims.at(-1).url, /AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/);
+  assert.match(claims.at(-1).url, /AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/);
   await p.ctx.close();
 });
 

@@ -94,6 +94,15 @@ await test('the owner\'s phone hands over the phrase it had, once; never over on
   assert.equal(db.m.get('config:sheet:fitness'), before);
 });
 
+await test('a link the owner has since replaced (an earlier deployment of the same script) moves to the usual one', async () => {
+  const RETIRED = 'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec';
+  await putJSON(db, 'config:sheet:fitness', { url: RETIRED, secret: PHRASE, at: 1 });
+  assert.match((await call('fitness', undefined, TOM)).body.url, /AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/);
+  const n = seen.length;
+  await call('fitness', { action: 'sync', graves: {} }, ELLA);
+  assert.match(seen[n].path, /AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/, 'synced through the new deployment');
+});
+
 await test('Places is on Notes\' Sheet', async () => {
   await putJSON(db, 'config:sheet:notes', { url: LINK, secret: PHRASE, at: 1 });
   assert.equal((await call('places', undefined, ELLA)).body.configured, true);
