@@ -625,8 +625,9 @@ if (window.top !== window.self) {
       return { entries: (res.entries || []).filter(C.okEntry), days: (res.days || []).filter(okDay) };
     } catch { return null; }
   }
-  const sheetLine = () => !signedIn() ? 'Sign in to sync' : syncState === 'error' ? 'Couldn’t sync just now' : syncState === 'syncing' ? 'Syncing…'
-    : syncState === 'offline' ? 'Offline: will sync when you’re back online' : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
+  // More's row: while a sync runs (opening More starts one), the last outcome, as in the account box above it
+  const sheetLine = (s = syncState === 'syncing' && settled !== 'idle' ? settled : syncState) => !signedIn() ? 'Sign in to sync' : s === 'error' ? 'Couldn’t sync just now' : s === 'syncing' ? 'Syncing…'
+    : s === 'offline' ? 'Offline: will sync when you’re back online' : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
   function renderSyncStatus() {
     const signed = signedIn();
     $('syStatus').textContent = !signed ? SYNC_ERRORS.signin

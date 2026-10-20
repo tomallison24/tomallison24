@@ -83,7 +83,7 @@ async function api(route) {
 const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
 const sheet = fakeSheet(undefined, SECRET);
 const sheetCalls = [], claims = [], google = [];
-let sheetOn = true, slowNoSheet = false;
+let sheetOn = true, slowNoSheet = false, slowSheet = 0;
 await putJSON(KV, 'user:KID1', { id: 'KID1', name: 'Sam', role: 'member', creds: [] });
 const SAM_TOKEN = await issue(KV, 'KID1');
 const SAM_SESSION = JSON.stringify({ token: SAM_TOKEN, user: { id: 'KID1', name: 'Sam', role: 'member' }, at: Date.now() });
@@ -91,6 +91,7 @@ const PEOPLE = { [TOKEN]: { id: 'OWNER1', name: 'Tom', role: 'owner' }, [SAM_TOK
 const asked = who => ({ key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) });
 const TOMQ = asked(PEOPLE[TOKEN]), SAMQ = asked(PEOPLE[SAM_TOKEN]);
 async function sheetApi(route) {
+  if (slowSheet) await new Promise(r => setTimeout(r, slowSheet));   // a phone's slower answer
   if (!sheetOn && slowNoSheet) await new Promise(r => setTimeout(r, 4000));   // a sync still on its way
   const req = route.request(), u = new URL(req.url()), who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
   const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
@@ -639,10 +640,12 @@ await test('the family’s Google Sheet: More has its row and its sheet (status 
   await sp.waitForTimeout(3500);
   const calls = sheetCalls.length; await sp.waitForTimeout(3500);
   assert.equal(sheetCalls.length, calls, 'no sync after sync');
+  slowSheet = 1500;   // opening More starts a sync: its row still says when it last synced, not "Syncing…"
   await sp.click('#moreBtn');
   assert.match(await sp.textContent('#sheetBtn'), /The family’s Google Sheet\s*Last synced/);
   await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await sp.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced/);
+  await sp.waitForFunction(() => /In the family’s Google Sheet\. Last synced/.test(document.getElementById('syStatus').textContent));   // once the sync opening More started is done
+  slowSheet = 0;
   assert.equal(await sp.textContent('#syNow .t'), 'Sync now');
   for (const gone of ['#syForm', '#syUrl', '#sySecret', '#syShare', '#syOff']) assert.equal(await sp.$(gone), null, gone + ' is gone');
   await shot(sp, '10-sheet');
