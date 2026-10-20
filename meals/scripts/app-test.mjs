@@ -52,6 +52,8 @@ const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET =
 const GS = path.join(R, 'meals/google-sheet-sync.gs');
 let sheet = fakeSheet(GS, SHEET_SECRET), sheetSet = true;
 const sheetCalls = [], claims = [];
+let sheetRefused = 0;   // syncs aOS answered 'no-sheet' (not set up in aOS yet)
+let sheetFail = '';     // when set, the Sheet answers every sync with this error
 
 // The stand-in AI (Anthropic's Messages API shape): deals, or a plan, by what it's asked.
 const DEALS = { validFrom: '', validTo: '', items: [
@@ -91,7 +93,8 @@ async function phone(scheme = 'light', { design = null, seed = null, at = '/meal
     if (!who) return json({ error: 'signin' }, 401);
     if (rq.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(rq.postData()) }); sheetSet = true; return json({ configured: true }); }
     if (rq.method() === 'GET') return json({ configured: sheetSet });
-    if (!sheetSet) return json({ ok: false, error: 'no-sheet' }, 409);
+    if (sheetFail && rq.method() === 'POST') return json({ ok: false, error: sheetFail });
+    if (!sheetSet) { sheetRefused++; return json({ ok: false, error: 'no-sheet' }, 409); }
     sheetCalls.push({ who: who.id, body: JSON.parse(rq.postData()) });
     return json(sheet.post(rq.postData(), { key: SHEET_SECRET, who: who.id, name: who.name.split(' ')[0], ...(who.role === 'owner' ? { owner: '1' } : {}) }));
   });
@@ -268,25 +271,38 @@ const until = async (fn, ms = 12000) => { const t = Date.now(); while (Date.now(
 const logCalls = page => { const a = []; page.on('request', r => { if (/\/meals\/api\/log\//.test(r.url())) a.push(r.url()); }); return a; };
 const hiddenRows = tab => sheet.tab(tab).slice(1).map(r => JSON.parse(r.slice(2).join('')));
 const ymd = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-const synced = page => until(() => page.evaluate(() => /Last synced/.test(document.getElementById('syStatus').textContent) || +localStorage.getItem('allison-meals-v1-sheet-synced') > 0));
+const synced = page => until(() => page.evaluate(() => +localStorage.getItem('allison-meals-v1-sheet-synced') > 0));
+// the Sheet is set up in aOS, not in Meals: Settings have no Sheet row, and there's no Sheet sheet
+const noSheetUI = page => page.evaluate(() => ['sheetBtn', 'sheetSub', 'syncSheet', 'syStatus', 'syNow', 'syLbl'].every(id => !document.getElementById(id))
+  && !/The family’s record/.test(document.getElementById('setBody').textContent));
 const SHEET_STEP = async () => {
   sheet = fakeSheet(GS, SHEET_SECRET); sheetCalls.length = 0; sheetSet = false;
-  { // not set up in aOS yet, then signed out: the Sheet sheet says so; no link or phrase anywhere on a phone
+  { // not set up in aOS yet, then signed out: Meals syncs by itself and says nothing (the owner sets it up in aOS); no Sheet UI or link or phrase on a phone
     const { ctx, page, errs } = await phone();
-    await page.evaluate(() => window.__meals.sheetSync(false));
+    sheetRefused = 0;
+    await page.evaluate(() => window.__meals.sheetSync());
+    ok('Sheet: it tried, through aOS, which says the Sheet isn’t set up yet', sheetRefused > 0, String(sheetRefused));
     await page.click('#setBtn'); await page.waitForTimeout(300);
-    ok('Sheet: the gear says the family’s Sheet isn’t set up yet', /Google Sheet\s*Not set up yet/.test(await page.textContent('#sheetBtn')), await page.textContent('#sheetBtn'));
     ok('Sheet: quietly, with no toast', await page.isHidden('#toast'));
-    await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
-    ok('Sheet: its status says the owner sets it up in aOS', /isn’t set up yet.*aOS: Account → Google Sheets/.test(await page.textContent('#syStatus')));
+    ok('Sheet: Settings have no Sheet row, and there’s no Sheet sheet (aOS → Account → Google Sheets has it)', await noSheetUI(page));
     ok('Sheet: no link, phrase, setup link or Disconnect on a phone', !(await page.$('#syUrl')) && !(await page.$('#sySecret')) && !(await page.$('#syShare')) && !(await page.$('#syOff')));
-    await shot(page, 'sheet-not-set-up');
-    await page.click('#syNow'); await page.waitForSelector('#toast:not([hidden])');
-    ok('Sheet: Sync now says why', /isn’t set up yet/.test(await page.textContent('#toastMsg')));
-    await page.click('#syncSheet .iconbtn[data-close]');
+    await shot(page, 'settings-no-sheet');
+    await page.click('#sSave'); await page.waitForTimeout(300);
+    await page.evaluate(() => window.__meals.sheetSync()); await page.waitForTimeout(300);
+    ok('Sheet: again, still no toast (not set up yet is never a pop-up)', await page.isHidden('#toast'));
+    sheetFail = 'busy';
+    await page.evaluate(() => window.__meals.sheetSync()); await page.waitForTimeout(300);
+    ok('Sheet: a real error says so, once', await page.isVisible('#toast') && /The Sheet was busy/.test(await page.textContent('#toastMsg')), await page.textContent('#toastMsg'));
+    await page.evaluate(() => { document.getElementById('toast').hidden = true; });
+    await page.evaluate(() => window.__meals.sheetSync()); await page.waitForTimeout(300);
+    ok('Sheet: and not again in the same session', await page.isHidden('#toast'));
+    sheetFail = '';
     await page.evaluate(() => window.AllisonOS.account.signOut());
-    await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
-    ok('Sheet: signed out, it says to sign in, and Sync now signs in first', /Sign in to sync with the family’s Google Sheet/.test(await page.textContent('#syStatus')) && (await page.textContent('#syNow .t')) === 'Sign in and sync');
+    const tried = sheetRefused;
+    ok('Sheet: signed out, a sync sends nothing and says nothing', (await page.evaluate(() => window.__meals.sheetSync())) === false && sheetRefused === tried && await page.isHidden('#toast'));
+    await page.click('#setBtn'); await page.waitForTimeout(300);
+    ok('Sheet: signed out, Settings still offer Sign in with Face ID', await page.isVisible('#setBody [data-act="signin"]'));
+    await page.click('#sSave'); await page.waitForTimeout(300);
     ok('Sheet: nothing was sent', sheetCalls.length === 0);
     ok('no script errors', !errs.length, errs.join(' | '));
     await ctx.close();
@@ -313,11 +329,10 @@ const SHEET_STEP = async () => {
     ok('Sheet: Plans has a row a night, Planned by Tom; Shopping list, Deals (with Who) and Settings are readable', plansTab.length === 1 + 4 && plansTab[0][0] === 'Planned by' && plansTab.slice(1).every(r => r[0] === 'Tom')
       && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '6 lb') && sheet.tab('Deals').some(r => r[0] === 'Tom' && r[2] === 'Publix') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
     ok('Sheet: each row says whose (the owner’s), and the Sheet knows the people', hiddenRows('_plans').every(p => p.by === 'O1') && JSON.stringify(sheet.tab('_people').slice(1)) === JSON.stringify([['(owner)', 'O1'], ['O1', 'Tom']]));
-    await synced(page);
-    await page.click('#setBtn'); await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
-    ok('Sheet: the status says it’s in the family’s Sheet', /In the family’s Google Sheet\. Last synced/.test(await page.textContent('#syStatus')), await page.textContent('#syStatus'));
-    await shot(page, 'sheet-on');
-    await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#sSave'); await page.waitForTimeout(300);
+    ok('Sheet: synced, the phone notes when', await synced(page));
+    await page.click('#setBtn'); await page.waitForTimeout(300);
+    ok('Sheet: signed in and synced, Settings still have no Sheet row', await noSheetUI(page));
+    await page.click('#sSave'); await page.waitForTimeout(300);
     // a second plan accepted: only it goes (the first is in the Sheet already, and is not fetched again)
     const n0 = sheetCalls.length, l0 = logs.length;
     await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');

@@ -471,9 +471,10 @@ count toward the same two caps.
 
 ## The family's Google Sheet
 
-One Sheet for the whole family, the record of everyone's trips, through aOS
-(the design, and the owner's setup, are in `aOS/SHEETS.md`; Travel is a
-`family` Sheet):
+One Sheet for the whole family, the record of everyone's trips. Travel syncs
+with it by itself, through aOS; the owner sets it up in **aOS → Account →
+Google Sheets**, so Travel's Settings have nothing about it (the design is in
+`aOS/SHEETS.md`; Travel is a `family` Sheet):
 
 - **Whose**: each booking and trip name is its own person's (`by`, written by
   the Sheet), and the family sees it, unless that person made it **Just me**
@@ -482,10 +483,11 @@ One Sheet for the whole family, the record of everyone's trips, through aOS
   with its id. Rows from before aOS are the owner's.
 - **No link or phrase on the phone.** Every sync goes through aOS
   (`../home/sheet.js`, `functions/sheet/api`), signed in with your family
-  account, and aOS adds the Sheet's phrase and who's asking. Settings → **The
-  family's Google Sheet** shows how it's going and **Sync now** (which signs you
-  in if it has to). Signed out, Travel works on the phone as before, and that
-  sheet says to sign in. A phone that kept the old link and phrase hands them
+  account, and aOS adds the Sheet's phrase and who's asking. The trips'
+  subtitle says how it's going (Synced, Syncing…, Not synced, Offline). Signed
+  out, Travel works on the phone as before and sends nothing. A real error shows
+  one toast a session at most; none while you're signed out or the Sheet isn't
+  set up in aOS yet. A phone that kept the old link and phrase hands them
   to aOS once (the owner's phone; aOS keeps them from then on) and forgets
   them; an old setup link (`#sync=…`) is only taken off the address, and a
   pasted one says there's nothing to set up.

@@ -296,7 +296,6 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 .backbtn svg{width:24px;height:24px;stroke-width:2.2}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @keyframes pageIn{from{transform:translateX(100%)}to{transform:none}}
-.field{display:flex;flex-direction:column;gap:8px}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 4px}
 .box{border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .opts{display:flex;flex-wrap:wrap;gap:8px}
@@ -415,7 +414,7 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .updpill.out{animation:updOut .45s ease both}
 @keyframes updIn{from{opacity:0;transform:translate(-50%,-14px) scale(.94)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes updOut{to{opacity:0;transform:translate(-50%,-10px) scale(.96)}}
-/* ---- "Syncing" pill: pulses, with the sync arrows turning, while the Sheet sync runs ---- */
+/* ---- the busy pill: pulses, with the arrows turning, while Gmail is read ---- */
 .syncpill{pointer-events:none;animation:updIn .5s var(--ease) both,syncPulse 1.6s ease-in-out .5s infinite}
 .updpill:not([hidden]) + .syncpill{top:calc(env(safe-area-inset-top,0px) + 52px)}
 .syncpill .spin{animation:syncTurn 1.1s linear infinite}
@@ -632,7 +631,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift)}
 
 /* ---- the sheets: Liquid Glass ----
-   A booking, Add, Settings, the Google Sheet and Paste are each one sheet of
+   A booking, Add, Settings, What Travel read and Paste are each one sheet of
    clear glass floating just inside the screen's edges: the trips blur and
    brighten through it, a lit rim runs round it, the rows sit on it as the
    same faint tiles as the cards, and the fields and buttons are lighter
@@ -654,7 +653,7 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .lg .sheethead{padding:6px 12px 10px}
 .lg .pagehead{padding:6px 12px}
 .lg .sheethead h2{font-size:17px;font-weight:600}
-#bkLbl,#adLbl,#stLbl,#syLbl{padding-left:8px}
+#bkLbl,#adLbl,#stLbl{padding-left:8px}
 .lg .sheethead .iconbtn{width:44px;height:44px}
 .lg .sheethead .iconbtn svg{width:22px;height:22px}
 .lg .okbtn{color:var(--cta-ink);background:var(--cta);
@@ -1047,13 +1046,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <span>Ipsy can search Gmail<span class="sub" id="stIpsyGmailSub"></span></span>
           </button>
         </div>
-        <p class="label">Sync</p>
-        <div class="rgroup glass">
-          <button class="rowbtn" type="button" id="stSheet">
-            <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
-            <span>The family’s Google Sheet<span class="sub" id="stSheetSub"></span></span>
-          </button>
-        </div>
         <p class="label">Backup</p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="stExport">
@@ -1067,27 +1059,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         </div>
         <input type="file" id="stFile" accept=".json,application/json" hidden>
         <p class="hint">Emails are read on this phone, straight from Gmail. Only the bookings found in them are kept, here and, once you’re signed in, in the family’s Google Sheet.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- The family’s Google Sheet, through aOS -->
-  <div class="sheetwrap lg" id="syncSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
-      <div class="sheetbody">
-        <p class="hint" id="syStatus"></p>
-        <div class="field">
-          <div class="rgroup glass">
-            <button class="rowbtn" type="button" id="syNow">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
-              <span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets the family’s latest from the Sheet</span></span>
-            </button>
-          </div>
-          <p class="hint">One Sheet for the family, the record of everyone’s trips: each booking says whose it is, and the family sees it, unless it’s marked Just me, which only its own person sees. This phone keeps every trip still to come and the last 90 days of the rest; older trips come from the Sheet when you look at Past. The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-        </div>
       </div>
     </div>
   </div>
