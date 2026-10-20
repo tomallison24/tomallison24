@@ -163,7 +163,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
-    localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: 'https://script.google.com/macros/s/AKfyTEST/exec', secret: 'test-secret' }));
+    localStorage.setItem('aos.session', JSON.stringify({ token: 'tok-test', user: { id: 'u1', name: 'Tom', role: 'owner' }, at: 1 }));   // signed in: syncs with the family's Sheet
     localStorage.setItem('allison-notes-v1-backup', String(Date.now()));
   }, [design, SEED]);
   const page = await ctx.newPage();
@@ -171,11 +171,12 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
   page.on('console', m => { if (m.type() === 'warning' && /Ipsy/.test(m.text())) problems.push(m.text()); });
-  // The Google Sheet: takes what the phone sends and hands it back, as the script does with one phone.
+  // The family's Google Sheet, through aOS: takes what the phone sends and hands it back, as the script does with one phone.
   const synced = [];
-  await ctx.route('https://script.google.com/**', async route => {
+  await ctx.route('**/sheet/api/**', async route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { configured: true } });
     const b = JSON.parse(route.request().postData()); synced.push(b);
-    return route.fulfill({ json: { ok: true, notes: b.notes, todos: b.todos, lists: b.lists, graves: b.graves } });
+    return route.fulfill({ json: { ok: true, app: 'allison-notes-sync', v: 2, aos: true, notes: b.notes, todos: b.todos, lists: b.lists, graves: b.graves } });
   });
   const sent = [];
   await ctx.route('**/notes/api/ipsy', async route => {

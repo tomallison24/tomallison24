@@ -1,6 +1,6 @@
-// Notes, against hostile data: nothing from a backup file, the Sheet or what
-// is already stored can become part of the page, and a setup link says where
-// it points and doesn't change anything until Connect works. In Vintage (the
+// Notes, against hostile data: nothing from a backup file, the family's Sheet
+// or what is already stored can become part of the page, and an old setup
+// link (from before aOS kept the Sheet) is refused and changes nothing. In Vintage (the
 // default design) and, for what is drawn differently (a list's colour), in
 // Standard too.
 //
@@ -100,12 +100,12 @@ for (const [design, want] of [['vintage', '--lc:var(--lc0);--lci:var(--lci0)'], 
   await page.close();
 }
 
-// 3. The Sheet's answer.
+// 3. The family Sheet's answer (through aOS, signed in).
 {
   const page = await fresh();
-  const SHEET = 'https://script.google.com/macros/s/TESTSHEET/exec';
-  await page.route(SHEET + '**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, graves: {}, ...evil('sheet') }) }));
-  await page.evaluate(url => localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url, secret: 's' })), SHEET);
+  await page.route('**/sheet/api/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, app: 'allison-notes-sync', v: 2, aos: true, graves: {}, ...evil('sheet') }) }));
+  await page.evaluate(() => localStorage.setItem('aos.session', JSON.stringify({ token: 'tok', user: { id: 'u1', name: 'Tom', role: 'owner' }, at: 1 })));
+  await page.reload();
   await showReminders(page);
   await page.waitForTimeout(1200);   // the sync on open
   await showReminders(page);
@@ -114,18 +114,18 @@ for (const [design, want] of [['vintage', '--lc:var(--lc0);--lci:var(--lci0)'], 
   await page.close();
 }
 
-// 4. A setup link: says where it points, changes nothing until Connect.
+// 4. An old setup link (#sync=…, from before aOS kept the Sheet): nothing in it is kept, and it says so.
 {
   const page = await fresh();
   const link = { u: 'https://script.google.com/macros/s/EVILSCRIPTID123/exec', s: 'x', p: 'https://evil.example' };
   await page.goto(BASE + '/notes/#sync=' + Buffer.from(JSON.stringify(link)).toString('base64url'));
   await page.waitForTimeout(700);
-  const said = await page.textContent('#syStatus');
-  ok('setup link: names where it points', /script\.google\.com\/macros\/s\/EVILSC…\/exec/.test(said), said);
-  ok('setup link: warns before Connect', /Only tap Connect if the link came from your own Notes/.test(said), said);
+  const said = await page.textContent('#toastMsg');
+  ok('setup link: says setup links aren\'t needed any more', /Setup links aren’t needed any more/.test(said), said);
+  ok('setup link: taken out of the address', !(await page.evaluate(() => location.hash)));
   const server = await page.evaluate(() => (JSON.parse(localStorage.getItem('allison-notes-v1-push')) || {}).server || '');
-  ok('setup link: notification server not changed before Connect', server !== link.p, server);
-  ok('setup link: not connected yet', !(await page.evaluate(() => localStorage.getItem('allison-notes-v1-sync'))));
+  ok('setup link: notification server not changed', server !== link.p, server);
+  ok('setup link: no link or phrase kept', !(await page.evaluate(() => localStorage.getItem('allison-notes-v1-sync'))));
   await page.close();
 }
 

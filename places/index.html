@@ -20,8 +20,8 @@
 <!--
   Places - where you want to go and where you've been, as a home-screen web app.
 
-  Data: your places live in this browser's localStorage and, once connected,
-  in the same Google Sheet as Notes. Search and place details come from
+  Data: your places live in this browser's localStorage and, signed in,
+  in the family's Google Sheet, Notes', through aOS. Search and place details come from
   OpenStreetMap (Photon for search, Overpass for opening hours, phone and
   website); the map is CARTO's, drawn by Leaflet (vendor/). Directions open
   in Apple Maps. See README.md.
@@ -524,26 +524,14 @@ path.osm-dot{stroke:#FBF5E9}
   <div class="scrim" data-close></div>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
     <div class="grab" aria-hidden="true"></div>
-    <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sheetbody">
       <p class="hint" id="syStatus"></p>
-      <button class="btn" id="syNotes" type="button" hidden>Use the same Sheet as Notes</button>
-      <form id="syForm" class="field" autocomplete="on" action="#">
-        <div class="box">
-          <label class="label" for="syUrl" style="margin:0">Web app link</label>
-          <input class="plain" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false">
-          <label class="label" for="sySecret" style="margin:8px 0 0">Secret code</label>
-          <input class="plain" id="sySecret" name="password" type="password" placeholder="The SECRET in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false">
-        </div>
-        <button class="btn" id="syConnect" type="submit">Connect and sync</button>
-        <button class="btn quiet" id="syPaste" type="button">Paste a setup link</button>
-        <p class="hint">Places keeps its lists in the same Google Sheet as Notes, with the same link and secret. In Notes: the download button, Google Sheet sync, Copy setup link. Then come back and tap Paste a setup link.</p>
-      </form>
-      <div id="syOn" class="field" hidden>
+      <div class="field">
         <div class="rgroup">
-          <button class="rowbtn" type="button" id="syNow"><span class="ic">🔄</span><span>Sync now<span class="sub">Sends this phone's changes and loads the other phone's</span></span></button>
+          <button class="rowbtn" type="button" id="syNow"><span class="ic">🔄</span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets the family’s latest from the Sheet</span></span></button>
         </div>
-        <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+        <p class="hint">Places keeps its lists in the family’s Google Sheet, Notes’ Sheet: one for the whole family, where every place is shared and each row says who added it. The owner sets it up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
       </div>
     </div>
   </div>
@@ -569,6 +557,8 @@ path.osm-dot{stroke:#FBF5E9}
 
 <script src="vendor/leaflet.js"></script>
 <script src="../home/slide.js"></script>
+<script src="../home/account.js"></script>   <!-- family accounts: signs the family's Google Sheet in -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet (Notes'), through aOS (aOS/SHEETS.md) -->
 <script src="parse.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="places" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
