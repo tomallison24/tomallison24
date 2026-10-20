@@ -607,6 +607,18 @@ await step('Ella\'s phone gets the family\'s notes, lists and reminders; Just me
   await ella.page.click('#edDone');
 });
 
+await step('a new phone, signed in before its first save: the samples never reach the family Sheet; it takes the family\'s', async () => {
+  const n = sheetCalls.length;
+  const fresh = await phone('light', { seed: { 'aos.seen': JSON.stringify({ notes: '999' }), 'aos.session': session('tok-ella') } });
+  await lastSynced(fresh.page);
+  const mine = sheetCalls.slice(n).filter(c => c.action === 'sync');
+  assert.ok(mine.length && mine.every(c => !c.notes.some(x => x.title === 'Welcome to Notes')), 'no sample note sent');
+  assert.ok(!sheet.tab('Notes') || !JSON.stringify(sheet.tab('Notes')).includes('Welcome to Notes'), 'and none in the Sheet');
+  const got = await stored(fresh.page);
+  assert.ok(got.notes.some(x => x.title === 'Family dinner') && !got.notes.some(x => x.title === 'Welcome to Notes'), 'the family\'s notes, not the samples');
+  await fresh.ctx.close();
+});
+
 await step('Just me on a note: Ella\'s phones only; marked on it; Private stays a separate thing (hidden from Ipsy)', async () => {
   const p = ella.page;
   await p.click('#fab');

@@ -1537,15 +1537,20 @@
     syncing = true; syncState = 'syncing'; renderSyncStatus();
     let ok = false;
     try {
-      privateOnce(); track(); persist();
-      const sent = new Set([].concat(notes.map(x => 'notes:' + x.id), todos.map(x => 'todos:' + x.id), lists.map(x => 'lists:' + x.id)));
-      const res = await SH().sync('notes', {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes, todos, lists, graves}, {ask:loud});
+      // still the samples shown before your first save: they never go to the family's Sheet (or Calendar);
+      // the first sync just takes what the Sheet has
+      let fresh = false; try { fresh = !localStorage.getItem(KEY); } catch(e) {}
+      if (!fresh) { privateOnce(); track(); persist(); }
+      const sent = fresh ? new Set() : new Set([].concat(notes.map(x => 'notes:' + x.id), todos.map(x => 'todos:' + x.id), lists.map(x => 'lists:' + x.id)));
+      const res = await SH().sync('notes', fresh ? {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes:[], todos:[], lists:[], graves:{}}
+        : {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes, todos, lists, graves}, {ask:loud});
       if (res.app && res.app !== APP_ID) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       if (![res.notes, res.todos, res.lists].every(Array.isArray)) throw new Error('not-json');   // never take a partial answer as "gone"
       lastSyncAt = Date.now(); try { localStorage.setItem(SYNC_KEY + '-at', String(lastSyncAt)); } catch(e) {}
       if (!familySynced) { familySynced = true; try { localStorage.setItem(KEY + '-family', '1'); } catch(e) {} }
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      if (fresh) { let still = true; try { still = !localStorage.getItem(KEY); } catch(e) {} if (still) { notes = []; todos = []; lists = []; } else syncAgain = true; }   // unless you saved something meanwhile
       applyRemote(res, sent);
       if (pushDirty) { pushDirty = false; pokePush(); }
       if (pendingOpen) { const w = pendingOpen; pendingOpen = null; openFrom(w, true); }
