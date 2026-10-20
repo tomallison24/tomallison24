@@ -105,13 +105,34 @@
         'Orders: the Private switch is on an order\'s page, and a lock shows on its card',
         'Travel: the Private pill is on a booking, and Private trip on a trip\'s page; a trip with some private bookings is shown to Ipsy with the others only, named and dated by them, and its Family calendar events are marked private',
         'Calendar: the Private switch is in an event, kept in iCloud so every phone knows (an event marked private by another calendar app counts too); looking for free time, Ipsy only knows that time is taken. Private notes and bookings in the layers are hidden from Ipsy, and so are the emails behind private bookings'],
+      // Every app this release changed shows What's new; each one whose controls are new or changed then
+      // walks through them (tour: stops as in SPOTS, played by "Show me"; one not on screen is passed over).
       apps: {
-        fitness: { highlights: ['Meds: list what you take once, then tick it off each day', 'Your steps on every day, from your iPhone or typed in', 'Meds and Steps back up to your Google Sheet'] },
-        house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'] },
-        calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Connect Gmail so Ipsy can find appointment emails', 'Turn Ipsy\'s Gmail off any time in Settings'] },
-        notes: { highlights: ['Private notes now sync like any other note', 'Private only hides a note from Ipsy', 'Their nudges notify now, too'] },
-        orders: { highlights: ['Mark an order Private to hide it from Ipsy', 'Ipsy can\'t read its emails either', 'Turn off Ipsy\'s Gmail in Settings'] },
-        travel: { highlights: ['Mark a booking or a whole trip Private', 'Ipsy can\'t see it, or its emails', 'Turn off Ipsy\'s Gmail in Settings'] },
+        aos: { highlights: ['Lost a phone? Your account has the steps to erase aOS from it', 'Sign out and erase your other devices in one tap', 'The owner can erase a family member\'s lost phone'],
+          tour: [{ sel: '[data-acct]', t: 'Lost a phone?', d: 'Tap your account, then Erase aOS from a lost phone: the steps, and a button that erases aOS from your other devices.', g: 'tap' }] },
+        fitness: { highlights: ['Meds: list what you take once, then tick it off each day', 'Your steps on every day, from your iPhone or typed in', 'Meds and Steps back up to your Google Sheet'],
+          tour: [
+            { sel: '#viewBtn', t: 'Meds', d: 'Pick Meds here: list your medications and supplements once, then tick them off each day. It\'s private to you.', g: 'tap' },
+            { sel: ['#main .drow.today', '#main .week'], t: 'Steps on every day', d: 'Each day shows its steps. Tap a day to type them in at the top, with a bar to your goal.', g: 'tap' },
+            { sel: '#setBtn', t: 'Steps and Sign out', d: 'Settings has your daily step goal, linking your own iPhone\'s steps, and Sign out and erase.', g: 'tap' },
+            { sel: '#syncBtn', t: 'Backed up to your Sheet', d: 'Your Google Sheet keeps Meds and Steps too, once you paste in its new script.', g: 'tap' },
+          ] },
+        house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'],
+          tour: [{ sel: ['[data-dv^="heat:"]', '#viewBtn'], t: 'Heaters, like the Tuya app', d: 'On Climate (pick it here), each heater has its wattage, Eco, Comfort or Boost, and a timer that turns it off in 1, 2, 4 or 8 hours.', g: 'tap' }] },
+        calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Connect Gmail so Ipsy can find appointment emails', 'Turn Ipsy\'s Gmail off any time in Settings'],
+          tour: [{ sel: '#fab', t: 'Private events', d: 'Open or add an event and switch on Private: Ipsy can\'t see it, and when it looks for free time it only knows the time is taken.', g: 'tap' },
+            { sel: '#setBtn', t: 'Gmail for Ipsy', d: 'In Settings, connect Gmail so Ipsy can search appointment emails (read-only), or turn it off any time.', g: 'tap' }, { sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
+        notes: { highlights: ['Private notes now sync like any other note', 'Private only hides a note from Ipsy', 'Their nudges notify now, too'],
+          tour: [{ sel: ['#list .grid .card', '#list .card', '#list .nrow', '#fab'], t: 'Private notes', d: 'Private in a note now only hides it from Ipsy: it syncs to your Sheet and other phones, and its nudges notify.', g: 'tap' },
+            { sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }, { sel: ['#setBtn', '#remSetBtn'], t: 'Your Google Sheet', d: 'In Settings, connecting your Google Sheet now fills in the shared link: just add your secret code.', g: 'tap' }] },
+        places: { highlights: ['Connecting your Google Sheet fills in the shared link for you', 'A new Sheet sets itself up properly for your places'],
+          tour: [{ sel: '#syncBtn', t: 'Your Google Sheet', d: 'Connecting your Google Sheet now fills in the shared link: just add your secret code.', g: 'tap' }] },
+        orders: { highlights: ['Mark an order Private to hide it from Ipsy', 'Ipsy can\'t read its emails either', 'Turn off Ipsy\'s Gmail in Settings'],
+          tour: [{ sel: ['#list .ocard', '#fab'], t: 'Private orders', d: 'Open an order: its Private switch hides it, and its emails, from Ipsy. A lock shows on its card.', g: 'tap' }, { sel: '#setBtn', t: 'Ipsy\'s Gmail', d: 'In Settings, Ipsy can search Gmail is a switch now, on this phone. Off, Ipsy can\'t search or read any email.', g: 'tap' }, { sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
+        travel: { highlights: ['Mark a booking or a whole trip Private', 'Ipsy can\'t see it, or its emails', 'Turn off Ipsy\'s Gmail in Settings'],
+          tour: [{ sel: ['#list .hero', '#list .trip', '#fab'], t: 'Private trips', d: 'Open a booking for its Private pill, or a trip for Private trip: Ipsy can\'t see them, or their emails.', g: 'tap' }, { sel: '#setBtn', t: 'Ipsy\'s Gmail', d: 'In Settings, Ipsy can search Gmail is a switch now, on this phone. Off, Ipsy can\'t search or read any email.', g: 'tap' }, { sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
+        meals: { highlights: ['Ipsy is bigger, and breathes and glances while it waits'], tour: [{ sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
+        news: { highlights: ['Ipsy is bigger, and breathes and glances while it waits'], tour: [{ sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
       } },
     { v: '1.6', date: '2026-10-16', title: 'Ipsy, everywhere', intro: 'ipsy',
       highlights: ['Ipsy is now in Travel, Meals, Calendar, Notes and News',
@@ -1448,7 +1469,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   }
   // The glass panel and its cards. A card: { t, d, i (drawing) | noart, x: special
   // ('theme' | 'install' | 'look' | 'store' | 'notes'), name (install), notes (notes) }.
-  async function tour(o, cards, last = 'Get started') {
+  async function tour(o, cards, last = 'Get started', next = null) {
     const { el, q, close } = o, body = q('.c-body');
     let i = 0;
     q('.w-dots').innerHTML = cards.length > 1 ? cards.map((_, j) => `<i class="${j ? '' : 'on'}"></i>`).join('') : '';
@@ -1484,7 +1505,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     addEventListener('resize', fit);
     const go = async d => {
       if (cards[i].stay && i + d >= cards.length) return;
-      if (i + d >= cards.length) return close();
+      if (i + d >= cards.length) return next ? next() : close();
       if (i + d < 0) return;
       body.classList.add('fade'); await wait(260);
       i += d; draw(); body.classList.remove('fade');
@@ -1677,9 +1698,10 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     return S.stops.filter(s => s.pre || s.demo || spotFind(s.sel)).length >= 2;
   }
 
-  function spotTour(o, id) {
-    const { el, q, close } = o, S = SPOTS[id], name = NAMES[id];
-    const list = [...S.stops, ...(DARK_ONLY.includes(id) ? [] : [{ theme: true, t: 'Light or dark', d: `Follow your ${ios ? 'iPhone' : 'device'}, or keep ${name} always light or always dark. Try it: ${name} changes behind this.` }])];
+  // opts.stops: just these (an update's walkthrough of what changed), with no Light or dark at the end
+  function spotTour(o, id, opts = {}) {
+    const { el, q, close } = o, S = opts.stops ? {} : SPOTS[id], name = NAMES[id];
+    const list = opts.stops ? opts.stops.slice() : [...S.stops, ...(DARK_ONLY.includes(id) ? [] : [{ theme: true, t: 'Light or dark', d: `Follow your ${ios ? 'iPhone' : 'device'}, or keep ${name} always light or always dark. Try it: ${name} changes behind this.` }])];
     el.insertAdjacentHTML('beforeend', `<div class="s-hole"></div><div class="s-ripple"></div><div class="s-hand"></div>
       <div class="s-card" role="group" aria-live="polite"><h3></h3><p></p><div class="s-x"></div>
         <div class="s-row"><div class="w-dots"></div><button class="s-back" type="button" aria-label="Back" hidden>‹</button><button class="s-next" type="button">Next</button></div></div>`);
@@ -1747,7 +1769,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       for (const b of card.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); card.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
       card.querySelector('.w-dots').innerHTML = list.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('');
       q('.s-back').hidden = i === 0;
-      q('.s-next').textContent = i === list.length - 1 ? 'Get started' : 'Next';
+      q('.s-next').textContent = i === list.length - 1 ? (opts.last || 'Get started') : 'Next';
     };
     async function show(s) {
       cur = null; card.classList.remove('on'); stopHand();
@@ -1823,6 +1845,11 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     const fresh = RELEASES.filter(r => !r.silent && cmp(r.v, from || '0') > 0 && cmp(r.v, to) <= 0);   // a silent release is only logged here
     const notes = big ? top(fresh) : top(fresh.map(r => (r.apps || {})[id]).filter(Boolean));
     if (!big && !notes.length) { markSeen(id, to); return Promise.resolve(); }   // nothing new to say
+    // A walkthrough of what changed: the release's apps.<id>.tour, stops as in SPOTS (sel, t, d, g),
+    // each at the control that is new or changed. After What's new, "Show me" plays it; a control
+    // that isn't on screen is passed over, and with none on screen it simply ends.
+    const stops = big ? [] : fresh.flatMap(r => { const e = (r.apps || {})[id]; return e && Array.isArray(e.tour) ? e.tour : []; }).map(x => Object.assign({}, x));
+    const canShow = () => stops.some(x => spotFind(x.sel));
     const base = big ? '' : String(major(v)), newT = String(v).slice(base.length), oldT = big ? String(from) : String(from).slice(base.length);
     const ver = `<sup class="v-ver"><span class="v-ink">${esc(base)}</span><span class="v-tail"><span class="v-old v-ink">${esc(oldT)}</span><span class="v-new"><i class="v-halo"></i>${[...newT].map(ch => `<i>${esc(ch)}</i>`).join('')}</span></span></sup>`;
     const deco = `<i class="v-ring"></i><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span><span class="v-star">${STAR}</span>`;
@@ -1832,7 +1859,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     const first = big
       ? { x: 'notes', noart: true, h: `${name} is on ${lit}`, notes, more: 'Open aOS for everything new' }
       : { x: 'notes', noart: true, h: `What's new in ${name}`, dh: `${lit} · More power in your palm.`, notes, more: `Everything in aOS${esc(v)}` };
-    return run(first.h.replace(/<[^>]+>/g, ''), head, () => markSeen(id, to), async o => {
+    return run(first.h.replace(/<[^>]+>/g, ''), head, () => { markSeen(id, to); if (spotEnd) spotEnd(); }, async o => {
       const m = o.el.querySelector('.v-mark.minor');
       const nw = m.querySelector('.v-new'), ow = m.querySelector('.v-old'), sup = m.querySelector('.v-ver');
       ow.style.width = ow.scrollWidth + 'px'; const w = [...nw.querySelectorAll('i:not(.v-halo)')].reduce((a, i) => a + i.offsetWidth, 0);
@@ -1840,7 +1867,8 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       m.style.setProperty('--rx', (sup.offsetLeft + sup.offsetWidth - ow.offsetWidth + w - nw.offsetWidth) + 'px');
       nw.style.width = w + 'px'; ow.style.width = '0px'; m.classList.add('grow');
       await wait(still() ? 0 : 1300); m.classList.add('lit');
-      await tour(o, [first], 'Done');
+      if (!stops.length) return tour(o, [first], 'Done');
+      await tour(o, [first], canShow() ? 'Show me' : 'Done', () => canShow() ? spotTour(o, id, { stops, last: 'Done' }) : o.close());
     });
   }
   // An app opened in Safari on iPhone, not from its Home Screen icon: how to add it.
@@ -2081,7 +2109,7 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
       if (!standalone() && /[#&]invite=/.test(location.hash)) return;
       if (!s) return play();
       if (major(v) > major(s)) return playMajor();
-      if (cmp(v, s) > 0) markSeen('aos', v);   // a minor one: aOS says nothing, the apps do
+      if (cmp(v, s) > 0) return playUpdate('aos', s, v);   // a minor one: nothing, unless the release names aOS in its apps
       return;
     }
     if (!TOURS[APP]) return;

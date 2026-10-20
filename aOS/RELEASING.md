@@ -22,9 +22,15 @@ At the top of `RELEASES` in `home/welcome.js` (newest first):
   } },
 ```
 
-- **Minor** (`1.1`): aOS shows nothing. Each app named in `apps` shows aOS with
+- **Minor** (`1.1`): each app named in `apps` (aOS too, as `aos`) shows aOS with
   the new .1 rising in, its highlights (or its first three notes) and a link
   to the full log. An app not named shows nothing.
+- **Walkthroughs**: an app whose controls are new or changed gets a `tour` beside
+  its highlights, stops as in the app's own walkthrough (`SPOTS` in `welcome.js`:
+  `sel`, `t`, `d`, `g`), each at the control that changed:
+  `fitness: { highlights: [...], tour: [{ sel: '#viewBtn', t: 'Meds', d: 'Pick Meds here…', g: 'tap' }] }`.
+  Its update screen then says **Show me** and walks through them; a control that
+  isn't on screen is passed over. `release-test.mjs` plays each one.
 - **Major** (`2`): aOS replays the name and the new mark, then the release's
   `cards` (or its highlights). Every app shows the new number rising in, the
   release's highlights and **Open aOS** for the rest.
