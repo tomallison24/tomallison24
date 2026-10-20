@@ -141,5 +141,11 @@ Afterwards, change each Sheet's `SECRET` to a new phrase:
 2. Deploy a new version again.
 3. Give aOS the new phrase in **Account → Google Sheets**.
 
+For Notes, two other things read its Sheet with the phrase, so give them the new one too
+(`notes/README.md`): the notification server (Cloudflare → its Worker → **Settings → Variables and
+Secrets**: `NOTES_SHEET_SECRET`, and `NOTES_SHEET_URL` the first time), and Places' calendar workflow
+(GitHub → **Settings → Secrets and variables → Actions**: `NOTES_SHEET_SECRET`). Until then, Notes'
+notifications stop.
+
 The old phrase has been on every phone that synced, and this way it opens nothing any more. Nobody
 else has to do anything: each phone syncs through aOS once its app is signed in.
