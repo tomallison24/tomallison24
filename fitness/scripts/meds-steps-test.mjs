@@ -69,6 +69,7 @@ async function phone({ seed = null, session = SESSION, state = { storage: true, 
   });
   // the family's Sheet, through aOS (functions/sheet/api, stood in for): who's asking comes from the session
   await ctx.route('**/sheet/api/**', r => {
+    calls.push({ url: r.request().url(), body: r.request().postData() });
     const json = (b, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
     if (noSheet) return json({ ok: false, error: 'no-sheet' }, 409);
     if (!sheet) return json({ ok: false, error: 'sheet-unreachable' }, 502);
@@ -226,7 +227,7 @@ await test('the family Sheet takes Meds and Steps; the phone keeps only the last
     meds: [{ id: 'm1', name: 'Vitamin D', dose: '1000 IU', kind: 'supp', slots: ['am'], days: [], since: OLD, updated: 5 }],
     doses: [{ id: 'old', med: 'm1', date: OLD, slot: 'am', at: 1, updated: 5 }, { id: 'new', med: 'm1', date: YESTERDAY, slot: 'am', at: 1, updated: 5 }],
     steps: [{ id: OLD, date: OLD, n: 9000, src: 'you', updated: 5 }, { id: YESTERDAY, date: YESTERDAY, n: 7000, src: 'you', updated: 5 }] };
-  const { ctx, page } = await phone({ seed, sheet });
+  const { ctx, page, calls } = await phone({ seed, sheet });
   await open(page);
   await page.waitForFunction(() => __fitness.data.doses.length === 1, null, { timeout: 8000 });
   const d = await meds(page);
@@ -245,6 +246,10 @@ await test('the family Sheet takes Meds and Steps; the phone keeps only the last
   await page.evaluate(d => { __fitness.st.view = 'week'; __fitness.st.week = __fitness.weekStartOf(d); __fitness.render(); }, OLD);
   await page.waitForFunction(() => __fitness.data.logs.some(x => x.id === 'w1'), null, { timeout: 8000 });
   assert.match(await page.textContent(`[data-day="${OLD}"]`), /Chest/);
+  // and having looked back doesn't set off sync after sync (older days aren't "new on this phone")
+  const before = calls.filter(c => c.url.includes('/sheet/api/')).length;
+  await page.evaluate(() => __fitness.sync(false)); await page.waitForTimeout(2500);
+  assert.ok(calls.filter(c => c.url.includes('/sheet/api/')).length - before <= 2, 'one sync, not a loop');
   await page.click('#syncBtn');
   assert.match(await page.textContent('#syStatus'), /In the family’s Google Sheet/);
   await ctx.close();

@@ -1027,7 +1027,9 @@ if (window.top !== window.self) {
         else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
       });
       const remoteIds = new Set(remote.map(r => r.id));
-      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
+      // here and not in the answer: new on this phone, so send it (not an older day fetched from the
+      // Sheet, which the 90-day answer leaves out; counting those would sync again and again)
+      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id] && !(from && l.date && l.date < from)) localNewer = true; });
       return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
     // older dated items went to the Sheet with this sync: kept there, not here (initShadow below leaves no graves)
