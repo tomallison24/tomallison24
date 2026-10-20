@@ -144,7 +144,8 @@
         'Notes: a private note now syncs to the Google Sheet and the other phones like any other note, and its nudge notifies; before, private notes stayed on the phone. The first sync since sends them',
         'Orders: the Private switch is on an order\'s page, and a lock shows on its card',
         'Travel: the Private pill is on a booking, and Private trip on a trip\'s page; a trip with some private bookings is shown to Ipsy with the others only, named and dated by them, and its Family calendar events are marked private',
-        'Calendar: the Private switch is in an event, kept in iCloud so every phone knows (an event marked private by another calendar app counts too); looking for free time, Ipsy only knows that time is taken. Private notes and bookings in the layers are hidden from Ipsy, and so are the emails behind private bookings'],
+        'Calendar: the Private switch is in an event, kept in iCloud so every phone knows (an event marked private by another calendar app counts too); looking for free time, Ipsy only knows that time is taken. Private notes and bookings in the layers are hidden from Ipsy, and so are the emails behind private bookings',
+        'Fitness: the Google Sheet link is the new deployment of the script with Meds and Steps; a phone on the old link moves to it by itself, keeping its phrase'],
       // Every app this release changed shows What's new; each one whose controls are new or changed then
       // walks through them (tour: stops as in SPOTS, played by "Show me"; one not on screen is passed over).
       apps: {

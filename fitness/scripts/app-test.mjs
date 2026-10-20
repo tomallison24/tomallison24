@@ -388,6 +388,13 @@ await test('the owner\'s phone hands the Sheet link and phrase it kept over to a
   await o.page.waitForFunction(() => !localStorage.getItem('allison-fitness-v1-sync'), null, { timeout: 8000 });
   assert.deepEqual(claims.at(-1), { who: 'tom', url: SHEET_URL, secret: SECRET });
   await o.ctx.close();
+  // a phone still on the script's old deployment hands over the new one, with its phrase
+  const OLD = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
+  const p = await newPage('light', SEED, { 'aos.session': session('tok-tom'), 'allison-fitness-v1-sync': JSON.stringify({ url: OLD, secret: SECRET }) });
+  await p.page.goto(BASE + '/fitness/'); await p.page.waitForFunction(() => window.__fitness);
+  await p.page.waitForFunction(() => !localStorage.getItem('allison-fitness-v1-sync'), null, { timeout: 8000 });
+  assert.match(claims.at(-1).url, /AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/);
+  await p.ctx.close();
 });
 
 await test('Analysis: from the glass pill at the bottom; stronger, weaker, new and missed', async () => {

@@ -34,7 +34,7 @@ export const SHEETS = {
 };
 // The owner's own Sheets, as the apps had them filled in: the link alone opens nothing (it needs the phrase).
 const USUAL = {
-  fitness: 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec',
+  fitness: 'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec',   // deployed anew with Meds and Steps
   drinks: 'https://script.google.com/macros/s/AKfycbxzpSXXD2t-j7kaNrA3S-kK74uaxC5J6P_OykrOQrdYYww4JCViMrwMnXSVo4Qn3nOO/exec',
   podcasts: 'https://script.google.com/macros/s/AKfycbzyRxvnOvC97ByhaBJ0_Oc1Z-pP_SBIA9rZPEa5dyvvn1c4W1tGcOyM8LG4XXXbf7Vb/exec',
   orders: 'https://script.google.com/macros/s/AKfycbxj_O0w_Q30WKA-AfWXh86ZyspCG2JsxtsSal_pO8_rpz1xQbbDRNx0L_LY-2ylKJgT/exec',
