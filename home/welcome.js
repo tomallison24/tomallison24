@@ -731,7 +731,7 @@
         {
           "i": "lock",
           "t": "Private to you",
-          "d": "Signed in, your log is kept in your family account where only you can see it, and follows you to another phone."
+          "d": "Signed in, your log is kept in the family's Google Sheet, where only you can see yours, and follows you to another phone."
         },
         {
           "i": "star",
@@ -1646,7 +1646,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#sumBtn', t: 'Your week in one number', d: 'The week adds up here against the limit you set.' },
     { sel: '#fab', t: 'One tap to log', d: 'Your usual drinks sit in each day as tiles. Tap one to log it, or Something else for anything new.', g: 'tap' },
     { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which.', g: 'tap' },
-    { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in your family account where only you can see it, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in the family\'s Google Sheet, where only you can see yours, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
   SPOTS.meals = { stops: [
     { sel: ['#main .card', '#tabs'], t: 'Shared with the family', d: 'Your family’s dinners: everyone signed in sees the same plan and deals.' },

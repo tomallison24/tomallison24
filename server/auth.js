@@ -29,8 +29,8 @@
 //   secret           the key sessions are signed with, made on first use
 //   config:home      the family's Home Assistant address (an https origin), set by
 //                    the owner in aOS; only signed-in family can read it
-//   drinks:<id>      that person's Drinks log (functions/drinks/api); only they can
-//                    read it, and it stays when they are removed (for an invite back)
+//   drinks:<id>      that person's Drinks log as it was before the family's Google
+//                    Sheet took over (aOS 1.7.1); nothing reads or writes it now
 //   config:plan, config:trial   the family's plan (functions/aOS/api, planView)
 //   config:announced   the newest aOS version the family was told about (notifications)
 //   push:<id>, config:vapid   that person's phones for notifications, and the server's push
