@@ -55,8 +55,8 @@ standard drinks or "alcohol-free".
   with gaps can read low; each view says how many there were. There are no tips
   for cutting down yet.
 - **More** (the person button): the design (Vintage or Standard), your
-  account, your goals (a week at most, a day at most, alcohol-free days a week), **Bring in ABV Tracker history**,
-  **Export** (CSV) and **Delete all data**.
+  account, your goals (a week at most, a day at most, alcohol-free days a week), **The family’s Google Sheet**,
+  **Bring in ABV Tracker history**, **Export** (CSV) and **Delete all data**.
 
 ## The two designs
 
@@ -118,13 +118,13 @@ already going to this app's route). Its address now opens this same app (the
 deploy copies `drinks/` there, `.github/workflows/news.yml`), so a phone that
 added it keeps it. The first time it opens there, `design.js` moves that app's
 data on the phone over to Drinks' names (`allison-drinksv-v1…` →
-`allison-drinks-v1…`: the log, its graves, the sync marker, the Google Sheet
-link and code, the Analysis view and switches; the IndexedDB copy of the Sheet
-link `allison-drinksv` → `allison-drinks`; and what it had seen, so no
-walkthrough again), unless Drinks already has data on that phone; nothing old
-is deleted. Signed in, the log was the same private log in your account in
-both, so nothing is lost either way. Its calls go to `../drinks/api/` (not
-`api/`), so they reach your account from either address.
+`allison-drinks-v1…`: the log, its graves, the sync marker, the old Google
+Sheet link and phrase, the Analysis view and switches; the IndexedDB copy of
+the Sheet link `allison-drinksv` → `allison-drinks`; and what it had seen, so
+no walkthrough again), unless Drinks already has data on that phone; nothing
+old is deleted. Signed in, both sync with the same family Sheet, so nothing is
+lost either way. Its calls go to `../sheet/api/drinks` (`../home/sheet.js`),
+so they reach the Sheet from either address.
 
 ## The sums
 
@@ -142,50 +142,109 @@ break it until the day is over (the ABV Tracker's streak read 0 every morning).
 `calc.js` has the sums, with no page (the weeks, top drinks and weekdays of
 the Analysis charts too), so they're tested in Node (`scripts/calc-test.mjs`).
 
-## Your account: private to you
+## The family's Google Sheet
 
-Each person in the family keeps their own log. Signed in to the family account
-(Face ID, as Calendar and Travel), the log is kept in that account too, as
-`drinks:<your id>` in the accounts' Workers KV (`functions/drinks/api`,
-`server/auth.js`), so it follows you to another phone. Nobody else can read
-it: every call needs your own session, and there is no call for anyone else's
-log, not even in the owner's tools. When the owner removes someone from the
-family, aOS deletes their log.
+Drinks keeps its log in **one Google Sheet for the whole family**, the record of
+everyone's Drinks (`aOS/SHEETS.md`, the same design as Fitness's). Each row says
+whose it is, and each phone only ever gets its own person's: nobody can see
+anyone else's drinks. It replaced the copy each person's log used to have in
+the family account (below, "Before the Sheet").
 
-- **Signed out**, More says so and offers **Sign in with Face ID**; the log is
-  kept on the phone meanwhile, and goes to your account once you sign in.
-- **Before family accounts are switched on** (aOS/RELEASING.md, "Family
-  accounts"), or on GitHub Pages (no server there), the log simply stays on the
-  phone.
+- **No link or phrase on a phone.** The owner gives aOS the Sheet's link and
+  phrase once (**aOS → Account → Google Sheets → Drinks**). Every sync goes
+  through aOS (`../home/sheet.js`, `functions/sheet/api`), signed in with your
+  family account (Face ID), and aOS passes it on to the Sheet's script with
+  who's asking. **More → The family’s Google Sheet** shows how the last sync
+  went and has **Sync now** (**Sign in and sync** when you're signed out).
+- **Signed out**, Drinks works on the phone alone: More says so and offers
+  **Sign in with Face ID**, and the log goes to the Sheet once you sign in.
+- **The owner's phone hands over** the link and phrase it used to keep (when
+  each person had a Sheet of their own): the first time it opens signed in, it
+  gives them to aOS (only while aOS has none) and forgets them. Any phone
+  forgets its own once aOS has one. An old `#sync=` setup link is only taken off
+  the address.
+- **When it syncs**: when the app opens, a couple of seconds after any change,
+  when it comes back to the front, when the phone comes back online, and when
+  you sign in.
+- **The last 90 days on the phone.** Once it has synced, the phone keeps your
+  goals and the last 90 days of drinks and alcohol-free days; older ones go
+  from the phone after each sync, with no grave (the Sheet keeps them).
+  Analysis only looks at the last twelve weeks, so it is all there; the
+  alcohol-free streak's "best" only counts what is on the phone. Going back a
+  week past the 90 days, or opening an older day from Calendar, fetches that
+  week from the Sheet; it stays while Drinks is open.
+- **Export** asks the Sheet for everything of yours (signed in and online),
+  else exports what is on the phone. **Delete all data** deletes everything of
+  yours in the Sheet too, the older days as well (each leaves a grave, so your
+  other phones delete them); signed out or offline, once the phone has synced,
+  it says so and deletes nothing.
 - If someone else signs in on the same phone, the last person's log is cleared
-  from the phone (it's safe in their account) before the new person's comes in.
+  from the phone (it's safe in the Sheet) before the new person's comes in.
 
-It is built for Cloudflare's free plan:
+Merging is as in Fitness: every item carries when it last changed and anything
+deleted leaves a grave, so the newer copy wins and a phone that hasn't heard of
+a delete can't bring the drink back.
 
-- **Writes**: Workers KV allows 1,000 a day across the whole account, and
-  Mail's and Notes' push workers use some. Drinks waits 4 seconds after your
-  last change before it saves, and the server writes only when something
-  changed, so a night's drinks are a few writes, and opening the app writes
-  nothing.
-- **CPU**: a request gets 10 ms. A phone sends only what changed since it last
-  saved, and hears everything back only when another phone has changed the log
-  since. Merging into a log of 1,000 drinks took 2–6 ms in Node on the machine it was built on; that is
-  a guide, not a measurement on Cloudflare.
-- **Reads** (100,000 a day) and **requests** (100,000 a day) are far from the
-  limit.
+**Setting it up** (the owner, once): steps in `aOS/SHEETS.md`. Open the Drinks
+Sheet (the one the owner's Drinks already synced with) → **Extensions → Apps
+Script**, paste in the whole of [`google-sheet-sync.gs`](google-sheet-sync.gs)
+keeping your `SECRET` line, **Deploy → Manage deployments → ✏️ → Version: New
+version → Deploy**, then open Drinks signed in (it hands the link and phrase
+to aOS), or give aOS the phrase in **Account → Google Sheets**. Rows already in
+the Sheet become the owner's. A new Sheet: [sheets.new](https://sheets.new), the
+same script, **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has
+access: Anyone*, and give aOS its link and phrase.
 
-Every item carries when it last changed and anything deleted leaves a grave,
-as in Fitness's Google Sheet sync, so the newer copy wins and a phone that
-hasn't heard of a delete can't bring the drink back. **Delete all data**
-deletes everything that way, so your other phones delete it too.
+**The Sheet's tabs**: `Log` (below), and hidden tabs the script reads back
+(`_entries`, `_days`, `_prefs`, `_deleted`, `_rows`, `_people`), one row per item
+as JSON with whose it is (`by`). An alcohol-free day's id is its date and goals
+are `goals`, so two people can have the same one: the script keeps those by
+person (`who~id`).
 
-## Calendar
+**The Log tab** has a `Who` column (the person's first name) and then the ABV
+Tracker's columns, newest first: `Who, Timestamp, Date, Time, Name, Category,
+Volume, Unit, ABV, Qty, StandardDrinks, GramsAlcohol, Note, EntryID`, and a
+`Check` column that only has something in it when a row you typed needs
+fixing. An alcohol-free day is a row whose Category is `alcohol-free` (its
+EntryID is `af-<date>`, with `-<id>` after it when it isn't the owner's).
+
+**What you can do in the Log tab** (whoever can edit the Sheet: the owner)
+- **Change a row**: the app takes the change if it is newer than the app's own copy (the Timestamp fills itself in
+  when you edit). StandardDrinks and GramsAlcohol are worked out for you. The row stays its person's, whatever its
+  Who says.
+- **Add a row**: fill in Who (a first name, as other rows have it; left empty, it's the owner's), Date (`2026-10-12`
+  or `10/12/2026`), Name, Category, Volume, Unit (`oz` or `ml`) and ABV; Qty is 1 if left empty, Time is optional.
+  The EntryID and sums fill themselves in.
+- **Remove a drink**: set its Qty to **0** (an alcohol-free day too). Deleting a row does not remove the drink: the
+  app puts it back at the next sync, because a deleted row looks the same as one the Sheet hasn't heard of.
+- A row that can't be read (no date, no size, a strength outside 0 to 100, a Who the Sheet doesn't know) stays where
+  it is with a note in `Check`, and is not sent to the app until you fix it.
+
+A change typed in the Sheet is picked up at the next sync (any phone's, or **Sync now**), not the moment you type it.
+
+## Fitness and Calendar
 
 Calendar has a **Drinks** layer, off until you turn it on in its settings: your
-own standard drinks each day and your alcohol-free days, read from your account
-(`GET /drinks/api/summary`), so it works even though each Home Screen app keeps
-its own storage. Calendar keeps it in memory only, and it has no **Add to the
+own standard drinks each day and your alcohol-free days. Fitness shows your
+drinks beside your training (its week and Analysis). Both read them from
+`GET /drinks/api/summary?from&to` (`functions/drinks/api`), with your own
+session, so it works even though each Home Screen app keeps its own storage.
+That route asks the family's Sheet for your days only (`{ action: 'summary' }`,
+with aOS's phrase and who's asking, as a sync is passed on) and answers
+`{ days: { date: { sd, n } | { status: 'af' } } }`; with no Sheet set up yet it
+answers no days, and when the Sheet can't be reached, an error, so the apps
+try again later. Calendar keeps it in memory only, and it has no **Add to the
 Family calendar**. **Open in Drinks** opens that day (`?date=YYYY-MM-DD`).
+
+## Before the Sheet
+
+Each person's log used to be kept in the family account too (`drinks:<id>` in
+the accounts' Workers KV), synced by `functions/drinks/api`, and an optional
+Google Sheet of your own on top. The family Sheet replaced both: Drinks no
+longer syncs to the account, and that route only answers the summary. Every
+phone that synced with the account had the whole log, and its first sync with
+the family Sheet sends all of it, so nothing is lost. The values already in
+the account are left where they are (nothing reads or deletes them).
 
 ## Bringing in the ABV Tracker
 
@@ -207,46 +266,6 @@ After that the ABV Tracker can be retired: in its Sheet, **Extensions → Apps
 Script → Deploy → Manage deployments**, archive the web app, so nothing can
 write to the Sheet any more.
 
-## Google Sheet sync
-
-Optional. **More → Google Sheet sync** backs your log up to a Google Sheet of your own, and the Sheet's
-**Log** tab goes both ways: almost every drink comes from the app, but a row changed or added in the Sheet
-comes back. Your log is already kept in your family account; the Sheet is a second copy you can read, filter
-and edit. It is private to you like the account: each person uses a Sheet of their own, and another person
-who signs in on the same phone is not connected to yours (their log replaces it, and the link is forgotten).
-It uses the same design as Fitness's (read `fitness/README.md`, "Google Sheet sync").
-
-1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Drinks**. Use a new Sheet, not your old ABV
-   Tracker's: the Log tab is rebuilt in place (rows it can read are kept, rows it can't are left with a note, and
-   the ABV Tracker's own "Unknown day" and connection-test rows are dropped).
-2. **Extensions → Apps Script**, replace `Code.gs` with the whole of [`google-sheet-sync.gs`](google-sheet-sync.gs),
-   and change `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it up: there is nothing to look up).
-3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone* → **Deploy** → authorise →
-   copy the **Web app URL**.
-4. Drinks → **More → Google Sheet sync** → the link is already filled in (`SHEET_URL` in `app.js`: the owner's Sheet; to
-   use another, paste its URL over it) → type the phrase → **Connect and sync**. The phrase is never in the code. **Copy setup
-   link** sets up your other phone.
-
-**The Log tab** has the ABV Tracker's columns, newest first: `Timestamp, Date, Time, Name, Category, Volume, Unit,
-ABV, Qty, StandardDrinks, GramsAlcohol, Note, EntryID`, and a `Check` column that only has something in it when a
-row you typed needs fixing. An alcohol-free day is a row whose Category is `alcohol-free`. The Sheet also holds
-hidden tabs (`_entries`, `_days`, `_prefs`, `_deleted`, `_rows`) that the app reads back.
-
-**What you can do in the Log tab**
-- **Change a row**: the app takes the change if it is newer than the app's own copy (the Timestamp fills itself in
-  when you edit). StandardDrinks and GramsAlcohol are worked out for you.
-- **Add a row**: fill in Date (`2026-10-12` or `10/12/2026`), Name, Category, Volume, Unit (`oz` or `ml`) and ABV;
-  Qty is 1 if left empty, Time is optional. The EntryID and sums fill themselves in.
-- **Remove a drink**: set its Qty to **0** (an alcohol-free day too). Deleting a row does not remove the drink: the
-  app puts it back at the next sync, because a deleted row looks the same as one the Sheet hasn't heard of.
-- A row that can't be read (no date, no size, a strength outside 0 to 100) stays where it is with a note in
-  `Check`, and is not sent to the app until you fix it.
-
-**When it syncs**: when you connect, a couple of seconds after any change, when the app is opened or comes back to
-the front, and when the phone comes back online. A change typed in the Sheet is picked up at the next sync (any
-phone's, or **Sync now**), not the moment you type it. How changes merge is as in Fitness: the newest change to a
-drink wins, wherever it was made, and a deletion reaches the other phones.
-
 ## Files
 
 - `index.html`: the page and its two looks: Standard (Fitness's tokens, tiles
@@ -259,22 +278,33 @@ drink wins, wherever it was made, and a deletion reaches the other phones.
   olive), and `icon-glass.svg` → `icon-glass-180.png`, `icon-glass-512.png`
   (Standard, "Plum": a white wine glass on dusty plum, one of the Sea glass
   tints), drawn by `scripts/make-icons.mjs`.
-- `google-sheet-sync.gs`: the Apps Script that goes in your Sheet.
-- `../functions/drinks/api/[[route]].js`: your log in your account.
+- `google-sheet-sync.gs`: the Apps Script that goes in the family's Sheet.
+- `../functions/drinks/api/[[route]].js`: your days, from the Sheet, for
+  Fitness and Calendar.
 
 ## Tests
 
 ```
 node drinks/scripts/calc-test.mjs    # the sums and the import
-node drinks/scripts/api-test.mjs     # the server route, on Workers KV in memory
+node drinks/scripts/api-test.mjs     # the summary route, on Workers KV in memory and the script on a fake Sheet
 node drinks/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (fake-sheet.mjs)
 node drinks/scripts/app-test.mjs     # the app in Chromium at iPhone size, both designs, the old Drinks Vintage address (needs Playwright)
 node drinks/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
-`app-test.mjs` runs the real server route behind the page, so it covers two
-phones kept in step, a delete travelling between them, signed out, accounts
-not yet on, Calendar's layer, and the Google Sheet (the real script, on a fake Sheet).
+`sheet-test.mjs` checks who gets in (only aOS, with the phrase and who's
+asking), that each person gets only their own (alcohol-free days and goals on
+the same dates too), that nobody can change or delete another's, that rows from
+before aOS become the owner's, the 90 days and `range`, the summary, and the
+Log tab both ways, its Who column included.
+
+`app-test.mjs` answers `../sheet/api/drinks` itself with the real script on a
+fake Sheet, who's asking taken from the page's session (no phone talks to
+Google), so it covers two phones kept in step, a delete travelling between
+them, another person's phone getting none of it, the 90 days kept and older
+weeks fetched, the Log tab both ways, the old link handed to aOS, someone else
+signing in on the phone, signed out, the Sheet not set up yet, Delete all
+data, and Calendar's layer through the real `functions/drinks/api` route.
 It runs in Vintage, the default, and also checks: the Retro look in light and
 dark (Futura, the ground, flat cream or walnut cards and sheets, the shapes
 behind the title, orange buttons, mustard thumbs, the walnut view pill, teal,

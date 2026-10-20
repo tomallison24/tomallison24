@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Drinks</title>
 <meta name="description" content="A simple log of what you drink, in a mid-century Vintage design or Sea glass: each day's standard drinks, alcohol-free days, and how this week or month compares with the one before.">
@@ -24,10 +24,12 @@
   number opens Analysis: one page, with a pill at the bottom to pick its view
   (this week or month against the one before, then twelve weeks of charts).
 
-  Data: on this phone (localStorage allison-drinks-v1) and, signed in, in
-  your family account, private to you (functions/drinks/api), so it follows
-  you to another phone and Calendar can show it. Code: app.js, and calc.js
-  for the sums.
+  Data: on this phone (localStorage allison-drinks-v1: the last 90 days once
+  it has synced) and, signed in, in the family's Google Sheet, where each row
+  says whose it is and each phone only gets its own person's (through aOS,
+  ../home/sheet.js; aOS/SHEETS.md), so it follows you to another phone, and
+  Fitness and Calendar can show it (functions/drinks/api). Code: app.js, and
+  calc.js for the sums.
   Two designs, picked in Settings > Design (../home/design.js, as in Clock):
   Vintage (mid-century modern, the default: the <style id="vintage"> block)
   and Standard (Sea glass: that block switched off, Fitness's tokens, tiles
@@ -689,24 +691,14 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
     <div class="scrim" data-close></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
+      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
-        <form id="syForm" autocomplete="on" action="#" class="stackform">
+        <div class="stackform">
           <div class="rgroup">
-            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="Paste the link" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
-            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="Your phrase" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets your latest from the Sheet</span></span></button>
           </div>
-          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
-          <p class="hint">Set up the Sheet first (steps in the Drinks README; it is a Sheet of your own, and its Log tab holds your log). On a second phone, open the setup link from the first instead.</p>
-        </form>
-        <div id="syOn" class="stackform" hidden>
-          <div class="rgroup">
-            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Sync now<span class="sub">Sends your log to the Sheet and brings back rows you changed or added there</span></span></button>
-            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
-          </div>
-          <p class="hint">In the Sheet’s Log tab: change a row or add one and it comes back here. Set a drink’s Qty to 0 to remove it.</p>
-          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+          <p class="hint">One Sheet for the family, the record of everyone’s Drinks: each row says whose it is, and each phone only ever gets its own person’s. This phone keeps the last 90 days and fetches older weeks when you look back. In its Log tab, a row changed or added comes back here (Qty 0 removes a drink). The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
         </div>
       </div>
     </div>
@@ -718,7 +710,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 </div>
 
 <script src="../home/slide.js"></script>
-<script src="../home/account.js"></script>   <!-- family accounts: your log, in your account -->
+<script src="../home/account.js"></script>   <!-- family accounts: signing in, for the family's Google Sheet -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="calc.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="drinks" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->

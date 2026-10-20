@@ -70,6 +70,8 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
       ctx.__api.onEdit({ range: { getSheet: () => sh, getRow: () => row, getNumRows: () => 1 } });
     },
     rebuild: () => ctx.__api.rebuildTabs(),
+    // a tab as an older script left it (rows as read back, the header first)
+    put(name, rows) { const sh = sheets.get(name) || ss.insertSheet(name); sh.cells = rows.map(r => r.slice()); return sh; },
   };
   return api;
 }
