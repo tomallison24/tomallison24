@@ -9,8 +9,10 @@ Dinner for the family, for less. One screen, three tabs:
   (from today, or a day you pick) saves it for the family with each night's
   date and the sale prices it was planned with, so its shopping list stays as
   it was; **Try again** makes different dinners; **Discard** drops it. Every
-  accepted plan is kept under **Past plans** (the last 52), each opening to its
-  dinners, recipes and shopping list - as Fitness keeps every workout.
+  accepted plan is kept under **Past plans**, each opening to its dinners,
+  recipes and shopping list - as Fitness keeps every workout: the last 52 from
+  the family server, and older ones from the family's Google Sheet (**Older
+  plans**, below).
   Meals plans that many different dinners: every night a different cuisine
   and way of cooking, and different from what the family had lately. Tap a
   night for its recipe: ingredients (with what's on sale) and steps.
@@ -33,13 +35,12 @@ Dinner for the family, for less. One screen, three tabs:
 
 The gear: which stores to follow, the family's member cards (Prime, VIC), what
 the family never eats (tree nuts and coconut to start; peanuts are fine), your
-account, and an optional **Google Sheet** that keeps a readable copy of it all
-(below).
+account, and the family's **Google Sheet**, the record of every plan (below).
 Tap the tick (Done) to save what you changed for the family; with nothing changed it just closes.
 
 **Meals Vintage** is the same app in a mid-century modern look, as its own app
 ([`mealsvintage/`](../mealsvintage/README.md)). It uses this app's server route
-and the same Google Sheet script, so a plan made in either shows in both.
+and the same Google Sheet, so a plan made in either shows in both.
 
 ## The two designs
 
@@ -78,8 +79,8 @@ vanish on the cream) and the bar colours.
 (the deploy copies `meals/` there, `.github/workflows/news.yml`), so a phone
 that added it keeps it. The first time it opens there, `design.js` moves that
 app's data on the phone over to Meals' names (`allison-mealsv-…` →
-`allison-meals-…`, the IndexedDB copy of the Sheet link `allison-mealsv` →
-`allison-meals`, and what it had seen, so no walkthrough again), unless Meals
+`allison-meals-…`, the IndexedDB copy of the old Sheet link `allison-mealsv` →
+`allison-meals` (handed to aOS from there, below), and what it had seen, so no walkthrough again), unless Meals
 already has data on that phone; nothing old is deleted. Its calls go to
 `../meals/api/` (not `api/`), so they reach the family's route from either
 address.
@@ -94,7 +95,11 @@ of settings, in the accounts' Workers KV (`meals:settings`,
 (`functions/meals/api/_middleware.js`). The last plan and deals are kept on
 the phone too (`allison-meals-v2`), so the list opens in the store with no
 signal. Needs family accounts switched on. Ipsy keeps only a count of questions
-there (`meals:ipsy:<user id>:<day>`, gone after two days).
+there (`meals:ipsy:<user id>:<day>`, gone after two days). That is the working
+copy; the family's Google Sheet is the record of every plan (below). On the
+phone, for the Sheet: when it last synced (`allison-meals-v1-sheet-synced`), the
+ids of the plans it holds (`allison-meals-v1-sheet-has`) and the plans taken back
+here (`allison-meals-v1-sheet-graves`); never its link or phrase.
 
 ## The AI
 
@@ -173,7 +178,8 @@ the deals*, *Tick off the broccoli*.
   can't change them, the stores or the member cards (that's Settings, the gear).
 - **The family's, so everyone sees it.** The plan, the new plan waiting and the
   deals are the family's (Data, above): what Ipsy changes, everyone signed in
-  sees, and it goes to the Google Sheet like any other change.
+  sees, and it goes to the family's Google Sheet like any other change (an
+  accept taken back with Undo leaves it too).
 - **Asked first for a whole week.** One night's dinner changes without asking
   (it shows with Undo). Making a new plan in place of one already waiting,
   accepting a plan and discarding one ask first, with a Yes / No card in the
@@ -218,56 +224,77 @@ the deals*, *Tick off the broccoli*.
   Claude (`node meals/scripts/ipsy-test.mjs`, `node meals/scripts/api-test.mjs`),
   so the first real questions are the real test of the instructions.
 
-## Google Sheet
+## The family's Google Sheet
 
-Optional. **Gear → Google Sheet** keeps a **readable copy** of Meals in a Google Sheet. It goes **one way**: Meals
-writes, nothing is read back, so nothing typed in the Sheet comes back (and anything you change in the Deals, Shopping
-list or Settings tabs is replaced the next time the app sends). The family's plans, deals and settings are already
-kept in the family account; the Sheet is a copy you can read, filter and keep. It is the family's, like the data: it
-stays connected for whoever signs in on that phone, and **Disconnect this phone** only forgets the link on that phone.
+One Sheet for the family, the **record of the family's dinners**: every plan ever accepted (and who planned it), the
+deals of the last weeks, the shopping list and the settings. It works the way every aOS app's Sheet does
+(`aOS/SHEETS.md`), in `family` mode: the dinners are the family's, so everyone signed in sees all of it (Meals has no
+"Just me" items).
+
+**Two copies, one record.** The family server (Data, above) stays the working copy: Claude plans against it, and the
+phones use it for this week's plan, the deals and the list. Meals copies all of it to the Sheet, which keeps every plan
+for good; the server keeps only the last 52. So Meals also **reads from the Sheet** what the server no longer has:
+
+- **Past plans** shows the server's 52, then any plan the Sheet holds that the server doesn't: the last 90 days of
+  plans come back with every sync.
+- **Past plans → Older plans** asks the Sheet for the year before (a `range` of days; if a year has none, everything
+  before it at once), until there are no older ones. Each opens with its dinners, recipes and shopping list, as any past
+  plan does (without the sale prices: the Sheet doesn't keep them).
+
+**Through aOS, signed in.** No phone holds the Sheet's link or phrase: the owner gives them to aOS once (**aOS →
+Account → Google Sheets**), and every sync goes through aOS's `/sheet/api/meals` (`../home/sheet.js`) with your family
+session, which adds who's asking. **Gear → Google Sheet** shows how it's doing and **Sync now** (which signs you in
+first, if it has to); there is no form, setup link or Disconnect any more. Signed out, Meals still shows what the family
+server has. A phone that kept the old link and phrase (`allison-meals-v1-sheet`, its IndexedDB copy in `allison-meals`,
+or a `#sync=` setup link opened in Meals) hands them to aOS once on the owner's phone, and forgets them on every phone
+once aOS has one.
+
+**When it syncs**: a couple of seconds after the app opens or comes back to the front, after a plan is accepted or
+discarded, after deals are found or pasted, after settings are saved, after Ipsy changes something, and when the phone
+comes back online. A sync goes only when something changed since the last one. It sends the current plan, the deals,
+the shopping list, the settings and any plan taken back (below); the Sheet answers with the plans of the last 90 days
+and the ids of every plan it holds, and the phone then sends any of the server's 52 the Sheet lacks, each fetched whole
+once.
+
+**How copies merge.** Each plan and each store's week of deals is a picture of the family server, stamped with when the
+phone read it from there, so the newest picture wins, and the same picture again changes nothing. A plan **taken back**
+(Ipsy's Undo of an accept) goes to the Sheet as a short record in `_deleted`, so it leaves Plans and a phone that still
+has it doesn't bring it back. Edits made in the Sheet itself are overwritten: change things in Meals.
 
 The tabs:
-- **Plans**: one row per planned night, for **every plan ever accepted**, newest first (date accepted, the plan, night
-  number, date, dinner, cuisine, method, minutes, store, people, planned by, why, what's on sale in it, ingredients,
-  steps, tip, and the plan's id). Meals itself keeps only the last 52 plans; **Plans never drops one**, so it grows
-  for good. A plan is only ever added (a plan the app has dropped stays).
-- **Shopping list**: the current plan's list as the List tab shows it, in the same sections, with how much, which nights,
-  the sale price, and the staples ("You probably have") at the end. It is a picture of the latest copy.
-- **Deals**: each store's deals by week (the last 8 weeks are kept), with the store, price, usual price, member price
-  and note.
+- **Plans**: one row per planned night, for **every plan ever accepted**, newest first. **Planned by** comes first (who
+  accepted it, as the family server recorded it from their sign-in; for a plan without that, whose row it is), then the
+  date accepted, the plan, night number, date, dinner, cuisine, method, minutes, store, people, why, what's on sale in
+  it, ingredients, steps, tip, and the plan's id.
+- **Shopping list**: the current plan's list as the List tab shows it, in the same sections, with how much, which
+  nights, the sale price, and the staples ("You probably have") at the end. A picture of the latest copy.
+- **Deals**: each store's deals by week (the last 8 weeks are kept), with **Who** (whose phone first sent that week),
+  the store, price, usual price, member price and note.
 - **Settings**: the stores, member cards and foods the family avoids, and the AI model. A picture of the latest copy.
-- Two hidden tabs (`_plans`, `_deals`) that the readable tabs are rebuilt from, and a **Meals** menu in the Sheet
-  (**Rebuild Plans tab**).
+- Hidden tabs the readable ones are rebuilt from: `_plans` and `_deals` (one row per item, as JSON, each with `by`,
+  whose it is), `_deleted` and `_people` (each person's first name, for the Who columns, and the owner). A **Meals**
+  menu in the Sheet rebuilds the tabs.
 
-1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Meals**.
-2. **Extensions → Apps Script**, replace `Code.gs` with the whole of [`google-sheet-sync.gs`](google-sheet-sync.gs),
-   and change `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it up: there is nothing to look up).
-3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone* → **Deploy** → authorise →
-   copy the **Web app URL**.
-4. Meals → **gear → Google Sheet** → the link is already filled in (`SHEET_URL` in `app.js`: the owner's Sheet; to use
-   another, paste its URL over it) → type the phrase → **Connect and sync**. The phrase is never in the code. **Copy
-   setup link** sets up your other phone.
+Rows from before aOS (the old one-way script) become the owner's the first time the owner syncs; their Planned by stays
+whoever accepted them.
 
-**When it syncs**: when you connect, a couple of seconds after the app is opened or comes back to the front, after a
-plan is accepted or discarded, after deals are found or pasted, after settings are saved, and when the phone comes back
-online (**Sync now** does it by hand). The app sends only when it is connected and something changed since the last
-copy. The first time (for a link it has not sent to), it fetches each past plan whole (at most 52, three at a time),
-remembers which it has sent (`allison-meals-v1-sheet-sent`), and after that sends only the current plan and any new one.
-The link and code are kept in `allison-meals-v1-sheet` and a backup copy in IndexedDB (`allison-meals`), so a phone
-that lost its storage reconnects by itself.
+**Setting it up** (the owner, once): paste the new [`google-sheet-sync.gs`](google-sheet-sync.gs) into the Meals Sheet's
+Apps Script (keeping your `SECRET` line), deploy a new version, then open Meals signed in (it hands over the link and
+phrase it had) or give aOS the phrase in **Account → Google Sheets**. Then change the phrase. Full steps:
+`aOS/SHEETS.md`, "Setting it up".
 
-**Errors** are named in the form: the secret doesn't match, an old copy of the script, `SECRET` still `CHANGE-ME`, the
-Sheet was busy, the Sheet didn't understand the request, couldn't reach the Sheet, the link didn't answer like the Meals
-script, and another AllisonOS app's Sheet link. Its test is `meals/scripts/sheet-test.mjs` (the script on a fake Sheet)
-and a step in `app-test.mjs` (what the app sends).
+**Errors** say what to do: the Sheet isn't set up in aOS yet (shown in its status, not as a pop-up, unless you tapped
+Sync now), aOS's phrase no longer matches the script, the Sheet still has its old script, `SECRET` still `CHANGE-ME`,
+the Sheet was busy, couldn't reach it, or it didn't answer as expected. Tests: `meals/scripts/sheet-test.mjs` (the
+script on a fake Sheet), and steps in `app-test.mjs` and `ipsy-test.mjs` (what the app sends, reads back and shows).
 
 ## Tests
 
 ```
 node meals/scripts/api-test.mjs     # the server: sign-in, both AI services (stand-ins), deals, plans, the allergy check, and Ipsy's step and routes
 node meals/scripts/logic-test.mjs   # sections, the shopping list, matching sales, the week
-node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
-node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, the Google Sheet copy, both designs, Settings > Design, the old Meals Vintage address
-node meals/scripts/ipsy-test.mjs    # Ipsy in both designs, light and dark, on the real server code with a stand-in Claude: every tool, the allergy check, ask-first, Undo
+node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs): who gets in, whose rows, Planned by and Who, rows from before aOS, the 90 days and range, newest copy, a plan taken back
+node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI, the family's Google Sheet through a stand-in for aOS (who's asking from each phone's session), both designs, Settings > Design, the old Meals Vintage address
+node meals/scripts/ipsy-test.mjs    # Ipsy in both designs, light and dark, on the real server code with a stand-in Claude: every tool, the allergy check, ask-first, Undo, its changes reaching the Sheet
 node meals/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
