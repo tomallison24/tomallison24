@@ -3,8 +3,10 @@
 // stand-in for the AI service (no network, no key): no key yet, finding the
 // week's deals (sorted into grocery sections), planning dinners, a recipe, the
 // shopping list (ticks kept, the list there offline), a plan that keeps using
-// coconut never saved, settings, the Google Sheet copy (the real google-sheet-sync.gs
-// on a fake Sheet: the form, the errors, what is sent and when), and no script errors
+// coconut never saved, settings, the family's Google Sheet through aOS (the real
+// google-sheet-sync.gs on a fake Sheet, with who's asking from each phone's session:
+// not set up, signed out, the old link handed over, what is sent and when, whose rows,
+// plans read back from it, a plan taken back), and no script errors
 // or sideways scrolling in light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (the sky held at day,
 // aos.sky), and Standard (Sea glass); Settings > Design switches between them at once and keeps the
@@ -40,7 +42,16 @@ const BASE = 'http://localhost:' + server.address().port;
 const m = new Map();
 const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); } };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
-const tok = await issue(db, 'O1');
+await putJSON(db, 'user:E1', { id: 'E1', name: 'Ella Allison', role: 'member', creds: [], created: Date.now() - 864e5 });
+const tok = await issue(db, 'O1'), tok2 = await issue(db, 'E1');
+const PEOPLE = { [tok]: { id: 'O1', name: 'Tom', role: 'owner' }, [tok2]: { id: 'E1', name: 'Ella Allison', role: 'member' } };
+
+// The family's Google Sheet: the real Apps Script, on an in-memory Sheet, reached through aOS
+// (functions/sheet/api, stood in for here): each phone's session says who's asking.
+const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET = 'test-secret-phrase';
+const GS = path.join(R, 'meals/google-sheet-sync.gs');
+let sheet = fakeSheet(GS, SHEET_SECRET), sheetSet = true;
+const sheetCalls = [], claims = [];
 
 // The stand-in AI (Anthropic's Messages API shape): deals, or a plan, by what it's asked.
 const DEALS = { validFrom: '', validTo: '', items: [
@@ -65,7 +76,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const ok = (label, cond, extra) => { if (!cond) failed++; console.log((cond ? 'ok - ' : 'not ok - ') + label + (extra ? '  ' + extra : '')); };
 
-async function phone(scheme = 'light', { design = null, seed = null, at = '/meals/' } = {}) {
+async function phone(scheme = 'light', { design = null, seed = null, at = '/meals/', as = tok } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.route('**/meals/api/**', async route => {
     if (down) return route.abort('internetdisconnected');
@@ -73,17 +84,28 @@ async function phone(scheme = 'light', { design = null, seed = null, at = '/meal
     const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.split('/meals/api/')[1].split('/') }, env }, ai);
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
   });
-  await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
-  await ctx.addInitScript(([t, design, seed]) => {
+  await ctx.route('**/sheet/api/**', route => {
+    const rq = route.request(), who = PEOPLE[(rq.headers().authorization || '').replace('Bearer ', '')];
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (rq.headers()['x-sheet'] !== '1') return json({ error: 'header' }, 400);
+    if (!who) return json({ error: 'signin' }, 401);
+    if (rq.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(rq.postData()) }); sheetSet = true; return json({ configured: true }); }
+    if (rq.method() === 'GET') return json({ configured: sheetSet });
+    if (!sheetSet) return json({ ok: false, error: 'no-sheet' }, 409);
+    sheetCalls.push({ who: who.id, body: JSON.parse(rq.postData()) });
+    return json(sheet.post(rq.postData(), { key: SHEET_SECRET, who: who.id, name: who.name.split(' ')[0], ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+  });
+  await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());   // no phone talks to Google itself any more
+  await ctx.addInitScript(([t, user, design, seed]) => {
     if (!sessionStorage.getItem('seeded')) {
       if (seed) for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
       else localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
       localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.sky', 'day');
       if (design) localStorage.setItem('design.meals', design);
-      localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
+      localStorage.setItem('aos.session', JSON.stringify({ token: t, user, at: Date.now() }));
       sessionStorage.setItem('seeded', '1');
     }
-  }, [tok, design, seed]);
+  }, [as, PEOPLE[as], design, seed]);
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
@@ -241,132 +263,134 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await ctx.close();
 }
 
-// ---- The Google Sheet: a readable copy, one way ----
-const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET = 'test-secret-phrase';
-const GS = path.join(R, 'meals/google-sheet-sync.gs');
+// ---- The family's Google Sheet, through aOS: the record of every plan ----
 const until = async (fn, ms = 12000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise(r => setTimeout(r, 100)); } return false; };
-const withSheet = async (ctx, sheet, posts) => {
-  await ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => {
-    const req = route.request(), cors = { 'access-control-allow-origin': '*' };
-    if (req.method() === 'POST') { posts.push(JSON.parse(req.postData())); return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.post(req.postData())) }); }
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.get()) });
-  });
-};
 const logCalls = page => { const a = []; page.on('request', r => { if (/\/meals\/api\/log\//.test(r.url())) a.push(r.url()); }); return a; };
+const hiddenRows = tab => sheet.tab(tab).slice(1).map(r => JSON.parse(r.slice(2).join('')));
+const ymd = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const synced = page => until(() => page.evaluate(() => /Last synced/.test(document.getElementById('syStatus').textContent) || +localStorage.getItem('allison-meals-v1-sheet-synced') > 0));
 const SHEET_STEP = async () => {
-  const sheet = fakeSheet(GS, SHEET_SECRET), posts = [];
-  const { ctx, page, errs } = await phone();
-  await withSheet(ctx, sheet, posts);
-  const logs = logCalls(page);
-  await page.click('#setBtn'); await page.waitForTimeout(300);
-  ok('Sheet: the gear has the row, not connected', /Google Sheet\s*Not connected/.test(await page.textContent('#sheetBtn')));
-  await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
-  ok('Sheet: the form shows, with the owner\'s link filled in and no secret', await page.isVisible('#syForm') && await page.isHidden('#syOn')
-    && /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(await page.inputValue('#syUrl')) && (await page.inputValue('#sySecret')) === '');
-  await page.fill('#syUrl', 'https://example.com/x'); await page.fill('#sySecret', 'abc'); await page.click('#syConnect');
-  ok('Sheet: a link that is not Apps Script\'s is refused before anything is sent', /starts with https:\/\/script\.google\.com/.test(await page.textContent('#syStatus')) && posts.length === 0);
-  await page.fill('#syUrl', SHEET_URL); await page.fill('#sySecret', 'wrong'); await page.click('#syConnect');
-  await page.waitForFunction(() => /secret code doesn.t match/.test(document.getElementById('syStatus').textContent));
-  ok('Sheet: a wrong secret says so, and nothing is kept', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-sheet'))) === null);
-  await shot(page, 'sheet-form');
-  await page.fill('#sySecret', SHEET_SECRET); await page.click('#syConnect');
-  await page.waitForSelector('#syOn:not([hidden])', { timeout: 12000 });
-  const first = posts[posts.length - 1];
-  ok('Sheet: connecting sends a snapshot: the whole current plan, deals, shopping list, settings', first.action === 'sync' && first.v === 1 && first.secret === SHEET_SECRET && first.plans.length >= 1 && first.deals.length > 0 && first.shopping.buy.length > 0 && !!first.settings.stores.length, Object.keys(first).join());
-  const cur = first.plans.find(p => p.meals.length === 4);
-  ok('Sheet: the plan is whole (id, who, when, dates, store name, meals with ingredients and steps), without the sale prices kept for the list', !!cur && /^p/.test(cur.id) && cur.acceptedBy === 'Tom' && cur.acceptedAt > 0 && cur.dates.length === 4 && cur.shopName === 'Best deals' && cur.meat === 'beef'
-    && cur.meals[0].ingredients[0].item === 'ground beef' && cur.meals[0].steps.length === 2 && cur.sales === undefined && cur.tip === 'Buy the beef in one family pack.', JSON.stringify(cur && Object.keys(cur)));
-  const beefRow = first.shopping.buy.find(x => x.item === 'Ground beef');
-  ok('Sheet: the shopping list is as the List tab shows it (section, amount, nights, sale)', !!beefRow && beefRow.section === 'Meat' && beefRow.amount === '6 lb' && beefRow.nights === 'nights 1, 2, 3, 4' && /^\$5\.99\/lb at /.test(beefRow.sale) && first.shopping.pantry.some(x => x.item === 'Olive oil' && x.amount === '4 tbsp'), JSON.stringify(beefRow));
-  const d0 = first.deals.find(d => d.store === 'Publix');
-  ok('Sheet: deals go with the store\'s name and week', !!d0 && /^\d{4}-\d\d-\d\d$/.test(d0.week) && d0.items.length === 5 && d0.items[0].name && typeof d0.items[0].member === 'boolean', JSON.stringify(d0 && d0.items[0]));
-  ok('Sheet: settings are the stores and cards by name, and what is avoided', first.settings.stores.includes('Harris Teeter') && !first.settings.stores.includes('Target') && first.settings.cards.join() === 'VIC (Harris Teeter)' && first.settings.avoid.join() === 'tree nuts,shellfish' && /^Claude /.test(first.settings.model), JSON.stringify(first.settings));
-  const plansTab = sheet.tab('Plans');
-  ok('Sheet: Plans has a row a night, Shopping list and Deals are readable', plansTab.length === 1 + 4 * first.plans.length && plansTab[1][4] && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '6 lb') && sheet.tab('Deals').some(r => r[1] === 'Publix') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
-  ok('Sheet: the status says connected', /Connected/.test(await page.textContent('#syStatus')), await page.textContent('#syStatus'));
-  await shot(page, 'sheet-on');
-  // a second plan accepted: only it goes (the first was sent as the current plan, and is not fetched again)
-  await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#sSave'); await page.waitForTimeout(300);
-  const n0 = posts.length, l0 = logs.length;
-  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
-  await page.waitForSelector('[data-act="accept"]', { timeout: 8000 });
-  await page.click('[data-act="accept"]');
-  ok('Sheet: accepting a plan sends it a moment later, and nothing old again', await until(() => posts.length > n0));
-  const second = posts[posts.length - 1], newId = JSON.parse(m.get('meals:plan')).id;
-  ok('Sheet: that send has just the new plan, with no fetch of the older one', second.plans.length === 1 && second.plans[0].id === newId && logs.length === l0, second.plans.map(p => p.id).join() + ' ' + (logs.length - l0));
-  ok('Sheet: Plans now holds both plans, newest first', sheet.tab('Plans').length === 1 + 4 * 2 && sheet.tab('Plans')[1][16] === newId);
-  // discarding a draft changes nothing the Sheet shows: no send
-  const n1 = posts.length;
-  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo'); await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
-  await page.click('[data-act="discard"]'); await page.waitForTimeout(3800);
-  ok('Sheet: nothing changed, nothing sent', posts.length === n1);
-  // settings saved: the Settings tab follows
-  await page.click('#setBtn'); await page.waitForTimeout(300); await page.fill('#sAdd', 'Mushrooms'); await page.click('#sAddGo'); await page.click('#sSave');
-  ok('Sheet: saving settings sends them', await until(() => sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && /mushrooms/.test(r[1]))));
-  ok('no script errors', !errs.length, errs.join(' | '));
-  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-meals-v1-sheet')));
-  ok('Sheet: the link and code are kept on this phone', kept && kept.url === SHEET_URL && kept.secret === SHEET_SECRET);
-  await ctx.close();
-
-  // a fresh phone: connecting fetches the plans the list only summarised, once, and sends all of them
-  const sheet2 = fakeSheet(GS, SHEET_SECRET), posts2 = [];
-  const B = await phone('dark');
-  await withSheet(B.ctx, sheet2, posts2);
-  const logs2 = logCalls(B.page);
-  await B.page.click('#setBtn'); await B.page.click('#sheetBtn');
-  await B.page.fill('#syUrl', SHEET_URL); await B.page.fill('#sySecret', SHEET_SECRET); await B.page.click('#syConnect');
-  await B.page.waitForSelector('#syOn:not([hidden])', { timeout: 15000 });
-  const all = posts2[posts2.length - 1];
-  const logLen = JSON.parse(await B.page.evaluate(() => localStorage.getItem('allison-meals-v2'))).log.length;
-  ok('Sheet: a new connection sends every plan, fetching each past one whole once', all.plans.length === logLen && logLen >= 2 && logs2.length === logLen - 1 && new Set(all.plans.map(p => p.id)).size === logLen && all.plans.every(p => p.meals.length && p.meals[0].steps.length), logLen + ' ' + logs2.length);
-  ok('Sheet: and Plans has them all', sheet2.tab('Plans').length === 1 + 4 * logLen);
-  await shot(B.page, 'sheet-on-dark');
-  // later sends: only the current plan
-  await B.page.evaluate(() => window.__meals.load()); await B.page.waitForTimeout(3500);
-  ok('Sheet: opening again with nothing new sends nothing', posts2.length === 1);
-  // disconnecting forgets the link here and leaves the Sheet as it is
-  await B.page.click('#syOff'); await B.page.click('#syOff');
-  ok('Sheet: Disconnect forgets the link and code on this phone', (await B.page.evaluate(() => localStorage.getItem('allison-meals-v1-sheet'))) === null && await B.page.isVisible('#syForm') && sheet2.tab('Plans').length === 1 + 4 * logLen);
-  ok('Sheet: no script errors, nothing blocked by the page policy', !B.errs.length, B.errs.join(' | '));
-  await B.ctx.close();
-
-  // the other errors, in words
-  const E = await phone();
-  let app = 'allison-drinks-sync', reply = null;
-  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.request().method() === 'POST'
-    ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(reply || { ok: false, error: 'wrong-secret' }) })
-    : route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, app, v: 1 }) }));
-  await E.page.click('#setBtn'); await E.page.click('#sheetBtn');
-  const tryConnect = async re => { await E.page.evaluate(() => { document.getElementById('toast').hidden = true; }); await E.page.fill('#syUrl', SHEET_URL); await E.page.fill('#sySecret', 'x'); await E.page.click('#syConnect'); await E.page.waitForFunction(r => new RegExp(r).test(document.getElementById('syStatus').textContent), re.source); };
-  await tryConnect(/another AllisonOS app/);
-  app = 'allison-meals-sync'; await tryConnect(/old copy of the script/);
-  reply = { ok: false, error: 'secret-not-set' }; await tryConnect(/still says SECRET/);
-  reply = { ok: false, error: 'busy' }; await tryConnect(/Sheet was busy/);
-  reply = { ok: false, error: 'bad-request' }; await tryConnect(/didn.t understand/);
-  reply = { ok: true, app: 'allison-orders-sync' }; await tryConnect(/another AllisonOS app/);
-  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.request().method() === 'POST' ? route.fulfill({ status: 200, contentType: 'text/html', body: '<html>sign in</html>' }) : route.abort());
-  await tryConnect(/didn.t answer like the Meals script/);
-  await E.ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => route.abort());
-  await tryConnect(/Couldn.t reach the Sheet/);
-  ok('Sheet: every error says what to do', true);
-  await E.ctx.close();
-
-  // a setup link from another phone fills the form; the backup copy in IndexedDB reconnects a phone that lost its storage
-  const sheet3 = fakeSheet(GS, SHEET_SECRET), posts3 = [];
-  const S = await phone();
-  await withSheet(S.ctx, sheet3, posts3);
-  const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  await S.page.goto('about:blank'); await S.page.goto(BASE + '/meals/' + link);
-  await S.page.waitForSelector('#syncSheet:not([hidden])');
-  ok('Sheet: a setup link opens the form filled in', (await S.page.inputValue('#syUrl')) === SHEET_URL && (await S.page.inputValue('#sySecret')) === SHEET_SECRET && !(await S.page.evaluate(() => location.hash)));
-  await S.page.click('#syConnect'); await S.page.waitForSelector('#syOn:not([hidden])', { timeout: 15000 });
-  const idb = await S.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-meals', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => res(q.result); }; }));
-  ok('Sheet: the link and code are also kept in IndexedDB', !!idb && idb.url === SHEET_URL && idb.secret === SHEET_SECRET);
-  const n3 = posts3.length;
-  await S.page.evaluate(() => localStorage.removeItem('allison-meals-v1-sheet'));
-  await S.page.reload(); await S.page.waitForTimeout(500);
-  ok('Sheet: a phone that lost its storage reconnects from the IndexedDB copy', await until(() => posts3.length > n3), String(posts3.length - n3));
-  await S.ctx.close();
+  sheet = fakeSheet(GS, SHEET_SECRET); sheetCalls.length = 0; sheetSet = false;
+  { // not set up in aOS yet, then signed out: the Sheet sheet says so; no link or phrase anywhere on a phone
+    const { ctx, page, errs } = await phone();
+    await page.evaluate(() => window.__meals.sheetSync(false));
+    await page.click('#setBtn'); await page.waitForTimeout(300);
+    ok('Sheet: the gear says the family’s Sheet isn’t set up yet', /Google Sheet\s*Not set up yet/.test(await page.textContent('#sheetBtn')), await page.textContent('#sheetBtn'));
+    ok('Sheet: quietly, with no toast', await page.isHidden('#toast'));
+    await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
+    ok('Sheet: its status says the owner sets it up in aOS', /isn’t set up yet.*aOS: Account → Google Sheets/.test(await page.textContent('#syStatus')));
+    ok('Sheet: no link, phrase, setup link or Disconnect on a phone', !(await page.$('#syUrl')) && !(await page.$('#sySecret')) && !(await page.$('#syShare')) && !(await page.$('#syOff')));
+    await shot(page, 'sheet-not-set-up');
+    await page.click('#syNow'); await page.waitForSelector('#toast:not([hidden])');
+    ok('Sheet: Sync now says why', /isn’t set up yet/.test(await page.textContent('#toastMsg')));
+    await page.click('#syncSheet .iconbtn[data-close]');
+    await page.evaluate(() => window.AllisonOS.account.signOut());
+    await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
+    ok('Sheet: signed out, it says to sign in, and Sync now signs in first', /Sign in to sync with the family’s Google Sheet/.test(await page.textContent('#syStatus')) && (await page.textContent('#syNow .t')) === 'Sign in and sync');
+    ok('Sheet: nothing was sent', sheetCalls.length === 0);
+    ok('no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
+  { // the owner's phone hands the link and phrase it kept over to aOS, forgets them, and syncs through aOS
+    const seed = { 'aos.seen': JSON.stringify({ meals: '999' }), 'allison-meals-v1-sheet': JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }), 'allison-meals-v1-sheet-sent': JSON.stringify({ url: SHEET_URL, ids: [] }) };
+    const { ctx, page, errs } = await phone('light', { seed });
+    const logs = logCalls(page);
+    ok('Sheet: the owner’s phone hands its old link and phrase to aOS, once, and forgets them', await until(() => page.evaluate(() => !localStorage.getItem('allison-meals-v1-sheet') && !localStorage.getItem('allison-meals-v1-sheet-sent')))
+      && claims.length === 1 && JSON.stringify(claims[0]) === JSON.stringify({ who: 'O1', url: SHEET_URL, secret: SHEET_SECRET }), JSON.stringify(claims));
+    ok('Sheet: then it syncs, through aOS', await until(() => sheetCalls.length > 0));
+    const first = sheetCalls[0].body;
+    ok('Sheet: a sync is the plan, deals, list, settings and graves, keeping 90 days; never a phrase', first.action === 'sync' && first.v === 3 && first.window === 90 && /^\d{4}-\d\d-\d\d$/.test(first.today)
+      && !('secret' in first) && first.plans.length === 1 && first.deals.length > 0 && first.shopping.buy.length > 0 && !!first.settings.stores.length && JSON.stringify(first.graves) === '{}', Object.keys(first).join());
+    const cur = first.plans[0];
+    ok('Sheet: the plan is whole (id, who, when read, dates, store, meals with ingredients and steps), without the sale prices kept for the list', /^p/.test(cur.id) && cur.acceptedBy === 'Tom' && cur.acceptedAt > 0 && cur.updated >= cur.acceptedAt
+      && cur.dates.length === 4 && cur.shopName === 'Best deals' && cur.meat === 'beef' && cur.meals[0].ingredients[0].item === 'ground beef' && cur.meals[0].steps.length === 2 && cur.sales === undefined && cur.by === undefined && cur.tip === 'Buy the beef in one family pack.', JSON.stringify(Object.keys(cur)));
+    const beefRow = first.shopping.buy.find(x => x.item === 'Ground beef');
+    ok('Sheet: the shopping list is as the List tab shows it (section, amount, nights, sale)', !!beefRow && beefRow.section === 'Meat' && beefRow.amount === '6 lb' && beefRow.nights === 'nights 1, 2, 3, 4' && /^\$5\.99\/lb at /.test(beefRow.sale) && first.shopping.pantry.some(x => x.item === 'Olive oil' && x.amount === '4 tbsp'), JSON.stringify(beefRow));
+    const d0 = first.deals.find(d => d.store === 'Publix');
+    ok('Sheet: deals go with the store’s name and week', !!d0 && /^\d{4}-\d\d-\d\d$/.test(d0.week) && d0.items.length === 5 && d0.items[0].name && typeof d0.items[0].member === 'boolean', JSON.stringify(d0 && d0.items[0]));
+    ok('Sheet: settings are the stores and cards by name, and what is avoided', first.settings.stores.includes('Harris Teeter') && !first.settings.stores.includes('Target') && first.settings.cards.join() === 'VIC (Harris Teeter)' && first.settings.avoid.join() === 'tree nuts,shellfish' && /^Claude /.test(first.settings.model), JSON.stringify(first.settings));
+    const plansTab = sheet.tab('Plans');
+    ok('Sheet: Plans has a row a night, Planned by Tom; Shopping list, Deals (with Who) and Settings are readable', plansTab.length === 1 + 4 && plansTab[0][0] === 'Planned by' && plansTab.slice(1).every(r => r[0] === 'Tom')
+      && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '6 lb') && sheet.tab('Deals').some(r => r[0] === 'Tom' && r[2] === 'Publix') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
+    ok('Sheet: each row says whose (the owner’s), and the Sheet knows the people', hiddenRows('_plans').every(p => p.by === 'O1') && JSON.stringify(sheet.tab('_people').slice(1)) === JSON.stringify([['(owner)', 'O1'], ['O1', 'Tom']]));
+    await synced(page);
+    await page.click('#setBtn'); await page.click('#sheetBtn'); await page.waitForSelector('#syncSheet:not([hidden])');
+    ok('Sheet: the status says it’s in the family’s Sheet', /In the family’s Google Sheet\. Last synced/.test(await page.textContent('#syStatus')), await page.textContent('#syStatus'));
+    await shot(page, 'sheet-on');
+    await page.click('#syncSheet .iconbtn[data-close]'); await page.click('#sSave'); await page.waitForTimeout(300);
+    // a second plan accepted: only it goes (the first is in the Sheet already, and is not fetched again)
+    const n0 = sheetCalls.length, l0 = logs.length;
+    await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
+    await page.waitForSelector('[data-act="accept"]', { timeout: 8000 });
+    await page.click('[data-act="accept"]');
+    ok('Sheet: accepting a plan sends it a moment later', await until(() => sheetCalls.length > n0));
+    const second = sheetCalls[sheetCalls.length - 1].body, newId = JSON.parse(m.get('meals:plan')).id;
+    ok('Sheet: that sync has just the new plan, with no fetch of the older one', second.plans.length === 1 && second.plans[0].id === newId && logs.length === l0, second.plans.map(p => p.id).join() + ' ' + (logs.length - l0));
+    ok('Sheet: Plans now holds both plans, newest first', sheet.tab('Plans').length === 1 + 4 * 2 && sheet.tab('Plans')[1][16] === newId);
+    // discarding a draft changes nothing the Sheet shows: no sync
+    const n1 = sheetCalls.length;
+    await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo'); await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
+    await page.click('[data-act="discard"]'); await page.waitForTimeout(3800);
+    ok('Sheet: nothing changed, nothing sent', sheetCalls.length === n1);
+    // settings saved: the Settings tab follows
+    await page.click('#setBtn'); await page.waitForTimeout(300); await page.fill('#sAdd', 'Mushrooms'); await page.click('#sAddGo'); await page.click('#sSave');
+    ok('Sheet: saving settings sends them', await until(() => sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && /mushrooms/.test(r[1]))));
+    ok('no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
+  { // Ella's phone, and a Sheet that lacks one of the family's plans: it sends it, fetched whole once
+    sheet = fakeSheet(GS, SHEET_SECRET); sheetCalls.length = 0;
+    const B = await phone('dark', { as: tok2 });
+    const logs = logCalls(B.page);
+    ok('Sheet: a phone whose Sheet lacks a plan the family server keeps sends it next (with the current plan), fetched whole once', await until(() => sheet.tab('Plans') && sheet.tab('Plans').length === 1 + 8)
+      && sheetCalls.length === 2 && sheetCalls[0].body.plans.length === 1 && sheetCalls[1].body.plans.length === 2 && logs.length === 1 && sheetCalls.every(c => c.who === 'E1'), sheetCalls.map(c => c.body.plans.length).join() + ' ' + logs.length);
+    ok('Sheet: from Ella’s phone the rows are hers (by), and Planned by still says who accepted each (Tom)', hiddenRows('_plans').every(p => p.by === 'E1') && sheet.tab('Plans').slice(1).every(r => r[0] === 'Tom')
+      && sheet.tab('_people').slice(1).some(r => r[0] === 'E1' && r[1] === 'Ella'));
+    await shot(B.page, 'sheet-dark');
+    const n = sheetCalls.length;
+    await B.page.evaluate(() => window.__meals.load()); await B.page.waitForTimeout(3500);
+    ok('Sheet: opening again with nothing new sends nothing', sheetCalls.length === n);
+    ok('Sheet: no script errors, nothing blocked by the page policy', !B.errs.length, B.errs.join(' | '));
+    await B.ctx.close();
+  }
+  { // reading back: the plans the family server doesn't keep come from the Sheet, the last 90 days at once, older ones on asking
+    const old = (id, start, title) => ({ id, acceptedAt: Date.parse(start + 'T18:00:00Z'), acceptedBy: 'Mum Allison', start, dates: [start], meat: 'pork', shop: 'publix', shopName: 'Publix', people: 4, tip: '',
+      meals: [{ day: 1, title, cuisine: 'Italian', method: 'braise', minutes: 90, why: '', uses: [], ingredients: [{ item: 'pork shoulder', qty: '3 lb' }], steps: ['Brown the pork.', 'Braise for two hours.'] },
+        { day: 2, title: title + ' sandwiches', cuisine: 'American', method: 'no-cook', minutes: 10, why: '', uses: [], ingredients: [{ item: 'rolls', qty: '4' }], steps: ['Fill the rolls.'] }] });
+    sheet.post({ action: 'sync', plans: [old('phole1', ymd(-10), 'Pork stew'), old('pold2', ymd(-200), 'Pork ragù'), old('pold1', ymd(-600), 'Pulled pork')] }, { key: SHEET_SECRET, who: 'O1', name: 'Tom', owner: '1' });
+    const { ctx, page, errs } = await phone();
+    ok('Sheet: a plan of the last 90 days the family server doesn’t keep shows under Past plans, from the Sheet', await until(() => page.locator('[data-past="phole1"]').count().then(c => c === 1)));
+    ok('Sheet: older ones aren’t on the phone until you look back', (await page.locator('[data-past="pold2"], [data-past="pold1"]').count()) === 0 && await page.isVisible('[data-act="older"]'));
+    await shot(page, 'past-older');
+    const n0 = sheetCalls.length;
+    await page.click('[data-act="older"]');
+    ok('Sheet: Older plans asks the Sheet for the year before', await until(() => page.locator('[data-past="pold2"]').count().then(c => c === 1)) && sheetCalls.slice(n0).every(c => c.body.action === 'range' && !c.body.plans)
+      && sheetCalls[n0].body.to === ymd(-90) && sheetCalls[n0].body.from === ymd(-454) && (await page.locator('[data-past="pold1"]').count()) === 0, JSON.stringify(sheetCalls.slice(n0).map(c => c.body)));
+    await page.click('[data-act="older"]');
+    ok('Sheet: and the year before that', await until(() => page.locator('[data-past="pold1"]').count().then(c => c === 1)));
+    await page.click('[data-act="older"]');
+    ok('Sheet: until there are none older (then the button goes)', await until(() => page.evaluate(() => /No older plans/.test(document.getElementById('toastMsg').textContent))) && await until(() => page.locator('[data-act="older"]').count().then(c => c === 0)));
+    await page.click('[data-past="pold1"]'); await page.waitForSelector('#pastSheet:not([hidden])');
+    const t = await page.textContent('#pastBody');
+    ok('Sheet: an old plan from the Sheet opens with its dinners, who accepted it, its store and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 2 && /accepted by Mum Allison/.test(t) && /Publix/.test(t) && t.includes('Shopping list') && t.includes('Pork shoulder'), t.slice(0, 200));
+    await page.click('#pastBody [data-meal="0"]'); await page.waitForSelector('#recipeSheet:not([hidden])');
+    ok('Sheet: and its recipe', (await page.textContent('#recipeBody')).includes('Braise for two hours.'));
+    ok('no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
+  { // a plan taken back (Undo of Accept, as Ipsy does it): its grave reaches the Sheet, and it leaves Plans
+    const { ctx, page, errs } = await phone();
+    await synced(page);
+    const id = await page.evaluate(async () => {
+      const t = JSON.parse(localStorage.getItem('aos.session')).token, id = window.__meals.data().plan.id;
+      const r = await fetch('../meals/api/unaccept', { method: 'POST', headers: { 'X-Meals': '1', 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ id }) });
+      const j = await r.json(); window.__meals.keep({ plan: j.plan, log: j.log, draft: j.draft }); return id;
+    });
+    ok('Sheet: a plan taken back goes to the Sheet as a grave, and leaves Plans', await until(() => sheetCalls.some(c => c.body.graves && c.body.graves['plans:' + id])) && await until(() => !sheet.tab('Plans').some(r => r[16] === id))
+      && sheet.tab('_deleted').some(r => r[0] === 'plans:' + id) && sheet.tab('Plans').some(r => r[16] === 'phole1'), id);
+    ok('no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
 };
 { // Vintage, the default design, drawn in the Retro look, light and dark: Futura, flat cream or walnut, mustard, teal, orange, atomic shapes
   for (const scheme of ['light', 'dark']) {
