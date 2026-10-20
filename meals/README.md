@@ -241,11 +241,11 @@ for good; the server keeps only the last 52. So Meals also **reads from the Shee
   before it at once), until there are no older ones. Each opens with its dinners, recipes and shopping list, as any past
   plan does (without the sale prices: the Sheet doesn't keep them).
 
-**Through aOS, signed in.** No phone holds the Sheet's link or phrase: the owner gives them to aOS once (**aOS →
-Account → Google Sheets**), and every sync goes through aOS's `/sheet/api/meals` (`../home/sheet.js`) with your family
-session, which adds who's asking. **Gear → Google Sheet** shows how it's doing and **Sync now** (which signs you in
-first, if it has to); there is no form, setup link or Disconnect any more. Signed out, Meals still shows what the family
-server has. A phone that kept the old link and phrase (`allison-meals-v1-sheet`, its IndexedDB copy in `allison-meals`,
+**It syncs by itself, through aOS, signed in.** The owner sets the Sheet up in **aOS → Account → Google Sheets** (the
+link and phrase, once), so Meals' Settings have nothing about it: no status, no Sync now, no form, setup link or
+Disconnect. No phone holds the Sheet's link or phrase; every sync goes through aOS's `/sheet/api/meals`
+(`../home/sheet.js`) with your family session, which adds who's asking. Signed out, Meals still shows what the family
+server has, and sends nothing. A phone that kept the old link and phrase (`allison-meals-v1-sheet`, its IndexedDB copy in `allison-meals`,
 or a `#sync=` setup link opened in Meals) hands them to aOS once on the owner's phone, and forgets them on every phone
 once aOS has one.
 
@@ -283,8 +283,8 @@ Apps Script (keeping your `SECRET` line), deploy a new version, then open Meals 
 phrase it had) or give aOS the phrase in **Account → Google Sheets**. Then change the phrase. Full steps:
 `aOS/SHEETS.md`, "Setting it up".
 
-**Errors** say what to do: the Sheet isn't set up in aOS yet (shown in its status, not as a pop-up, unless you tapped
-Sync now), aOS's phrase no longer matches the script, the Sheet still has its old script, `SECRET` still `CHANGE-ME`,
+**Errors** say what to do, in one toast a session at most, and none while you're signed out or the Sheet isn't set up in
+aOS yet (the owner sets it up there; nobody else is asked): aOS's phrase no longer matches the script, the Sheet still has its old script, `SECRET` still `CHANGE-ME`,
 the Sheet was busy, couldn't reach it, or it didn't answer as expected. Tests: `meals/scripts/sheet-test.mjs` (the
 script on a fake Sheet), and steps in `app-test.mjs` and `ipsy-test.mjs` (what the app sends, reads back and shows).
 

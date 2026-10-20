@@ -411,7 +411,7 @@
         <li>If you won't get it back, choose <b>Erase This Device</b>. That erases the whole phone, aOS with it, the next time it's online.</li></ol></div></div>
       <div class="glbl">2. Erase aOS from your other devices</div>
       <div class="group acct lost"><div><ol>
-        <li>Back up first, from a phone you still have: in <b>Fitness</b>, tap the cloud, then <b>Sync now</b>. Notes and Travel do the same from their Google Sheet button.</li>
+        <li>Back up first, from a phone you still have: open each app there, signed in and online. It syncs with the family's Google Sheet by itself, so whatever the lost phone had sent is safe there.</li>
         <li>Here in aOS, signed in, tap <b>Sign out and erase my other devices</b>.</li>
         <li>Every aOS app of yours, on every other device, erases what it keeps on that phone the next time it opens with internet, and signs out.</li>
         <li>That includes the other aOS apps on <b>this</b> phone (an iPhone keeps each Home Screen app apart, so aOS can't tell them from the lost phone's). Open each one, sign in with Face ID, and its Google Sheet or family account fills it back in.</li></ol>

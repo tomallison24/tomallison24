@@ -400,7 +400,7 @@ if (window.top !== window.self) {
   }
   function animateIn(el) { el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
-  // The pill at the top while Gmail is read or the Sheet syncs.
+  // The pill at the top while Gmail is read.
   let pillAt = 0, pillTimer = null;
   function busyPill(text) {
     const p = $('syncPill');
@@ -1850,7 +1850,6 @@ if (window.top !== window.self) {
     $('stGmail').innerHTML = rows;
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
-    $('stSheetSub').textContent = !signedIn() ? 'Sign in to sync. Until then, Travel keeps everything on this phone.' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
     $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Have Ipsy check button. Only a short excerpt of that booking’s email is sent (no names, numbers or prices). What Ipsy fills in is marked “Check”, with Undo. To ask about your trips or change them, chat with Ipsy, the little stem cell at the bottom left.' + modelsLine() : 'Off. No Have Ipsy check button, and Ipsy doesn’t check by itself. Ipsy, at the bottom left, is still there to chat with.';
     const auto = ls.get(K.ipsyAuto, '');
@@ -1907,7 +1906,6 @@ if (window.top !== window.self) {
     }
     else if (e.target.closest('#stOut')) signOut();
   });
-  $('stSheet').onclick = () => { closeSheet('setSheet'); openSyncSheet(); };
   $('stExport').onclick = async () => {
     const file = new File([JSON.stringify({ app: 'allison-travel', v: 1, kind: 'backup', saved: new Date().toISOString(), bookings, trips }, null, 2)], 'travel-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Travel backup');
@@ -1941,6 +1939,8 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const APP = 'allison-travel-sync';
   const SH = () => window.AllisonOS && AllisonOS.sheet;
+  // errShown: a quiet sync shows one toast a session at most, for a real error (aOS sets the Sheet up, so not
+  // for 'signin' or 'no-sheet').
   let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
   // Synced with the family Sheet at least once: from then on the phone keeps 90 days of past trips.
   let synced = ls.get(K.family, '') === '1';
@@ -2015,37 +2015,35 @@ if (window.top !== window.self) {
     if (localNewer) syncAgain = true;
     render();
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sync(loud) {
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+  // Always quietly, when signed in: aOS sets the Sheet up, and Travel syncs by itself.
+  async function sync() {
+    if (!SH() || !signedIn()) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
     if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
     syncing = true; syncState = 'syncing';
-    if (loud) busyPill('Syncing');
     let ok = false;
     try {
       track(); persist();
       const sent = new Map();
       kinds().forEach(([kind, arr]) => arr.forEach(it => sent.set(kind + ':' + it.id, +it.updated || 0)));
-      const res = await SH().sync('travel', { action: 'sync', v: 2, window: KEEP_DAYS, today: todayStr(), bookings, trips, graves }, { ask: loud });
+      const res = await SH().sync('travel', { action: 'sync', v: 2, window: KEEP_DAYS, today: todayStr(), bookings, trips, graves });
       if (res.app && res.app !== APP) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       if (!synced) { synced = true; ls.set(K.family, '1'); }
-      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      syncState = 'ok'; syncErr = ''; ok = true;
       applyRemote(res, sent);
       prune();
-      if (loud) pillDone('Synced');
     } catch (e) {
-      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message; busyPill();
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
+      if (!errShown && syncState === 'error' && syncErr !== 'no-sheet') { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
+  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? 2000 : ms); }
   // Looking back (Past): the trips that ended before the 90 days this phone keeps come from the Sheet, once a
   // session when Past is shown (or when you tap Show older trips), and go from the phone at the next tidy-up.
   let older = '';   // '', 'loading', 'done' or 'failed'
@@ -2080,17 +2078,10 @@ if (window.top !== window.self) {
     return '<button class="btn quiet" type="button" id="olderBtn">Show older trips from the Sheet</button><p class="hint" id="olderHint">Trips that ended before ' + since
       + ' are kept in the family’s Google Sheet' + (signedIn() ? '.' : '. Sign in to see them here.') + '</p>';
   }
+  // The sync's state shows only in the trips' subtitle (Synced, Syncing…, Not synced, Offline).
   function renderSyncStatus() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-    if (!$('setSheet').hidden) renderSettings();
     if (!$('tripsView').hidden) render();
   }
-  function openSyncSheet() { renderSyncStatus(); openSheet('syncSheet'); }
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   // An old setup link (#sync=…, pasted): aOS keeps the family's Sheet now, so there's nothing to set up.
   function oldSetupLink(text) {
     if (!/#sync=[\w-]+/.test(String(text))) return false;
@@ -2099,13 +2090,13 @@ if (window.top !== window.self) {
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (Date.now() - lastSyncAt > 30000) sync(false);
+    if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
   });
-  window.addEventListener('online', () => sync(false));
-  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync(false)); else { syncState = 'signin'; renderSyncStatus(); } });
+  window.addEventListener('online', () => sync());
+  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); else { syncState = 'signin'; renderSyncStatus(); } });
 
   // ---------------------------------------------------------------------
   // Start
@@ -2126,7 +2117,7 @@ if (window.top !== window.self) {
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
   else setTimeout(() => ipsyAutoCheck(), 2500);
   if (aiOn()) setTimeout(() => pingLive().then(render), 1500);
-  setTimeout(() => handOver().finally(() => sync(false)), 600);
+  setTimeout(() => handOver().finally(() => sync()), 600);
   // Refresh "in 3 h" labels and live status while open.
   setInterval(() => { if (document.visibilityState === 'visible') { alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b)); render(); } }, 5 * 6e4);
   // "Updated" pill, once, when a new version arrives (as in Notes).

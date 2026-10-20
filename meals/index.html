@@ -538,22 +538,6 @@ textarea.paste:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accen
     </div>
   </div>
 
-  <!-- The family's Google Sheet, through aOS: the status and Sync now (no link or phrase on a phone) -->
-  <div class="sheetwrap" id="syncSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
-      <div class="sheetbody">
-        <p class="hint" id="syStatus"></p>
-        <div class="rgroup">
-          <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span><span class="t">Sync now</span><span class="sub">Sends the plans, the shopping list, the deals and the settings, and gets the plans the Sheet keeps</span></span></button>
-        </div>
-        <p class="hint">One Sheet for the family: every plan the family accepts and who planned it, with the deals, the shopping list and the settings. Plans older than the family server keeps come back from it under Past plans. The owner sets it up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-      </div>
-    </div>
-  </div>
-
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 

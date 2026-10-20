@@ -21,9 +21,10 @@
 //   exercises getting stronger or weaker, and muscle groups missed or cut
 //   back. The comparisons are analysis.js's. Week and Analysis are picked
 //   from a Liquid Glass pill at the bottom of the screen, as in Home.
-// - Optionally it syncs with a Google Sheet of your own through a small
-//   Apps Script (google-sheet-sync.gs), the same design as Travel's: a
-//   backup, a readable Workouts tab, and a second phone kept in step.
+// - Signed in, it syncs by itself with the family's Google Sheet through aOS
+//   (aOS/SHEETS.md; google-sheet-sync.gs): a backup, a readable Workouts tab,
+//   and your other phones kept in step. The owner sets the Sheet up in
+//   aOS -> Account -> Google Sheets; Fitness has no Sheet settings of its own.
 // - Signed in to the family account and logging in Drinks, Analysis also shows
 //   your standard drinks and alcohol-free days over the same two windows,
 //   read from your own Drinks log (drinks/api/summary; only you can read it).
@@ -36,8 +37,8 @@
 //   the family's Home Assistant through ../fitness/api (functions/fitness/api),
 //   which keeps the Home Assistant token off the phone and gives each person
 //   only their own phone's steps. A daily goal, set in Settings.
-// - With the Google Sheet connected, taken doses and steps older than 30 days
-//   are kept in the Sheet only, not on the phone.
+// - Once synced, dated items older than 90 days are kept in the Sheet only,
+//   not on the phone; looking back fetches them.
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -814,7 +815,7 @@ if (window.top !== window.self) {
       + '<button class="xrow add" type="button" data-madd><span class="xt">Add a medication or supplement</span>' + ICON.plus + '</button></div>'
       + medsHint();
   }
-  const medsHint = () => '<p class="hint">' + (lastSyncAt ? 'In the family’s Google Sheet, where only you see yours. This phone keeps the last 90 days.' : 'Only on this phone until it syncs with the family’s Google Sheet (the cloud at the top).') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
+  const medsHint = () => '<p class="hint">' + (lastSyncAt ? 'In the family’s Google Sheet, where only you see yours. This phone keeps the last 90 days.' : 'Only on this phone until it syncs with the family’s Google Sheet: sign in, and it syncs by itself.') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
   function toggleDose(mid, slot) {
     const day = st.medDay, x = doseOf(mid, day, slot), m = data.meds.find(y => y.id === mid);
     if (x) data.doses.splice(data.doses.indexOf(x), 1);
@@ -965,7 +966,7 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const APP = 'allison-fitness-sync';
   const SH = () => window.AllisonOS && AllisonOS.sheet;
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
+  let syncing = false, syncAgain = false, syncTimer = null, errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   // Synced with the family Sheet at least once: from then on the phone keeps 90 days of dated items.
   let synced = ls.get(K.health, '') === 'family';
@@ -1049,12 +1050,16 @@ if (window.top !== window.self) {
     render();
     if (st.day) { if (st.form.editing && !data.logs.some(l => l.id === st.form.editing)) st.form = blankForm(); renderDay(); }
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
+  // Quietly, when signed in: on start, after a change, back in front and back online. The Sheet is set
+  // up in aOS (Account → Google Sheets), so a quiet sync never nags about signing in or setting it up
+  // (QUIET), and shows a real error once a session. loud: Sign out and erase sending the last changes
+  // first (Face ID if you're signed out; any error says so).
+  const QUIET = new Set(['signin', 'no-sheet', 'offline']);
   async function sync(loud) {
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+    if (!SH() || (!loud && !signedIn())) return false;
     if (syncing) { syncAgain = true; return false; }
-    if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
-    syncing = true; syncState = 'syncing';
+    if (!navigator.onLine) return false;
+    syncing = true;
     if (loud) busyPill('Syncing');
     let ok = false;
     try {
@@ -1064,14 +1069,14 @@ if (window.top !== window.self) {
       if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       if (!synced) { synced = true; ls.set(K.health, 'family'); }
-      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      ok = true;
       applyRemote(res);
       if (loud) pillDone('Synced');
     } catch (e) {
-      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message; busyPill();
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
+      busyPill();
+      if (loud || (!errShown && !QUIET.has(e.message))) { errShown = true; toast(SYNC_ERRORS[e.message] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
-      syncing = false; renderSyncStatus();
+      syncing = false;
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
@@ -1096,16 +1101,6 @@ if (window.top !== window.self) {
     } catch { olderAsked.delete(key); }
   }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
-  const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
-  function renderSyncStatus() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-    $('syncBtn').classList.toggle('warn', signed && syncState === 'error');
-  }
-  $('syncBtn').onclick = () => { renderSyncStatus(); openSheet('syncSheet'); };
   // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js);
   // Steps (the daily goal, and linking your own iPhone); and signing out and erasing this phone.
   $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
@@ -1169,7 +1164,6 @@ if (window.top !== window.self) {
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
     }
   });
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   // The pill at the top while the Sheet syncs (as in Travel).
   let pillAt = 0, pillTimer = null;
   function busyPill(text) {

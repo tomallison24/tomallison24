@@ -217,15 +217,17 @@ Places keeps its lists in **the family's Notes Sheet** (aOS/SHEETS.md;
 family, where every place is shared (Places has no Just me), and each row says
 who added it.
 
-- **Through aOS, signed in.** No phone keeps the Sheet's link or phrase:
-  every sync goes to `../sheet/api/places` (`functions/sheet/api`, which sends
+- **It syncs by itself, through aOS.** Places has no Sheet button or settings
+  of its own: the owner sets the Sheet up once in **aOS → Account → Google
+  Sheets** (Notes'), and no phone keeps its link or phrase. Every sync goes to `../sheet/api/places` (`functions/sheet/api`, which sends
   Places to Notes' Sheet) with the phone's family session (`../home/account.js`
   and `../home/sheet.js`), as `{ action: 'places', places, graves }`; the
   script sends back every place and Places' deletion marks, nothing of Notes'.
   Signed in, Places syncs on opening, a moment after each change, when it
-  comes back to the front and when the phone is back online. Signed out, it
-  works on the phone as before, and the cloud button's sheet says to sign in
-  (**Sign in and sync** asks for Face ID).
+  comes back to the front and when the phone is back online; the title says
+  **Synced** or **Not synced**, and a sync that goes wrong says why once a
+  visit (never for a Sheet that isn't set up yet, or a sign-in that has run
+  out). Signed out, it works on the phone as before.
 - **Handing over the old link.** A phone that kept the Sheet's link and phrase
   (Places' own, `allison-places-v1-sync`, or Notes' where they share storage)
   passes them to aOS once, on the owner's phone and only while aOS has none,

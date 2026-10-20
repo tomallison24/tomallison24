@@ -150,14 +150,19 @@ whose it is, and each phone only ever gets its own person's: nobody can see
 anyone else's drinks. It replaced the copy each person's log used to have in
 the family account (below, "Before the Sheet").
 
-- **No link or phrase on a phone.** The owner gives aOS the Sheet's link and
-  phrase once (**aOS → Account → Google Sheets → Drinks**). Every sync goes
-  through aOS (`../home/sheet.js`, `functions/sheet/api`), signed in with your
-  family account (Face ID), and aOS passes it on to the Sheet's script with
-  who's asking. **More → The family’s Google Sheet** shows how the last sync
-  went and has **Sync now** (**Sign in and sync** when you're signed out).
+- **It syncs by itself through aOS; set up in aOS → Account → Google
+  Sheets.** The owner gives aOS the Sheet's link and phrase once (**aOS →
+  Account → Google Sheets → Drinks**); no phone keeps them, and Drinks has no
+  Sheet settings of its own (no Sheet row in More, no status, no Sync now).
+  Every sync goes through aOS (`../home/sheet.js`, `functions/sheet/api`),
+  signed in with your family account (Face ID), and aOS passes it on to the
+  Sheet's script with who's asking. More's account box says how the last sync
+  went.
 - **Signed out**, Drinks works on the phone alone: More says so and offers
   **Sign in with Face ID**, and the log goes to the Sheet once you sign in.
+- **Errors**: a quiet sync shows at most one toast a session for a real error
+  (a wrong phrase, an old script, an unreachable Sheet), and none while signed
+  out or before the owner has set the Sheet up in aOS.
 - **The owner's phone hands over** the link and phrase it used to keep (when
   each person had a Sheet of their own): the first time it opens signed in, it
   gives them to aOS (only while aOS has none) and forgets them. Any phone
@@ -220,7 +225,7 @@ EntryID is `af-<date>`, with `-<id>` after it when it isn't the owner's).
 - A row that can't be read (no date, no size, a strength outside 0 to 100, a Who the Sheet doesn't know) stays where
   it is with a note in `Check`, and is not sent to the app until you fix it.
 
-A change typed in the Sheet is picked up at the next sync (any phone's, or **Sync now**), not the moment you type it.
+A change typed in the Sheet is picked up at the next sync (any phone's: opening Drinks or its More syncs), not the moment you type it.
 
 ## Fitness and Calendar
 

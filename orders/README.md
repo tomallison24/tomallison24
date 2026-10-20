@@ -27,7 +27,9 @@ tracking number, and opens the carrier's own tracking page with one tap.
   (from any inbox, e.g. one forwarded by someone else) the same way Gmail's
   are read.
 - **The family's Google Sheet** is the record: one Sheet for everyone's orders,
-  each person's phone getting only their own, through aOS (below).
+  each person's phone getting only their own, through aOS (below). It syncs by
+  itself through aOS; set up in **aOS → Account → Google Sheets**. Settings has
+  no Sheet controls.
 
 ## The two designs
 
@@ -363,7 +365,10 @@ this Gmail); forwarded mail is read as if it had come straight here.
 
 One Sheet for the whole family, the record of everyone's orders, the same
 design as Fitness' (`aOS/SHEETS.md` has it, with the contract every app's
-script and app follow, and the owner's set-up):
+script and app follow, and the owner's set-up). It syncs by itself through
+aOS; set up in **aOS → Account → Google Sheets** (the owner, once). Orders has
+no Sheet controls of its own: no status sheet, Sync now, form or setup link in
+Settings.
 
 - **Each order is someone's.** Every row carries `by`, the family id of the
   person whose Gmail (or hands) it came from, and each phone only ever gets its
@@ -373,8 +378,11 @@ script and app follow, and the owner's set-up):
   to aOS once (**aOS → Account → Google Sheets → Orders**). Every sync goes
   through aOS (`../home/sheet.js`, `functions/sheet/api`), signed in with Face
   ID, which passes it on to the script with who's asking. Signed out, Orders
-  works on the phone as before; its Sheet sheet (Settings → **The family's
-  Google Sheet**) says to sign in, and **Sign in and sync** does.
+  works on the phone as before, and sends nothing.
+- **Quietly.** It syncs on start, a moment after a change, when it comes back
+  to the front, when the phone is back online, and on sign-in; a sync never
+  asks for Face ID. A real error shows one toast a session; signed out, or no
+  Sheet in aOS yet, shows none (the line under the title says "Not synced").
 - **Handed over once.** A phone that still has the old link and phrase (in
   `localStorage` or its IndexedDB copy) hands them to aOS on the owner's phone,
   and forgets them on every phone once aOS has them. An old `#sync=` setup link
@@ -428,7 +436,7 @@ and order numbers are kept as text.
 [`google-sheet-sync.gs`](google-sheet-sync.gs) over `Code.gs`, keeping your
 `SECRET` line, then **Deploy → Manage deployments → ✏️ → Version: New version →
 Deploy**, and give aOS the phrase (`aOS/SHEETS.md`, "Setting it up"). Until then
-Orders says the Sheet is still on its old script, and keeps its Log events
+Orders says (once) the Sheet is still on its old script, and keeps its Log events
 queued.
 
 ## How it's built

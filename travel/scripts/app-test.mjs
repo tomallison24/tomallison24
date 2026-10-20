@@ -329,6 +329,8 @@ for (const scheme of ['light', 'dark']) {
 const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
 const sheet = fakeSheet(path.join(ROOT, 'travel', 'google-sheet-sync.gs'), SECRET);
 const sheetCalls = [], claims = [];
+let sheetFail = '';   // when set, aOS (or the Sheet) answers every sync with this error
+const refused = [];
 const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
 const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
 const stay = (id, name, a, b, extra) => ({ type: 'hotel', status: 'confirmed', conf: id.toUpperCase(), name, city: name.split(' ')[0], checkIn: iso(day(a)), checkOut: iso(day(b)), guess: false, edited: true, id, created: 1, updated: 1, notes: '', ...extra });
@@ -347,6 +349,7 @@ async function famPhone(tok, bookings = [], extra = {}) {
     if (!who) return json({ error: 'signin' }, 401);
     if (u.pathname.endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
     if (req.method() === 'GET') return json({ configured: true });
+    if (sheetFail) { refused.push(sheetFail); return sheetFail === 'no-sheet' ? json({ ok: false, error: 'no-sheet' }, 409) : json({ ok: false, error: sheetFail }); }
     sheetCalls.push({ who: who.id, ...JSON.parse(req.postData()) });
     return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
   });
@@ -367,22 +370,45 @@ const synced = page => page.waitForFunction(() => /Synced/.test(document.getElem
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('allison-travel-v1')));
 // the sync after a change waits 2 s: wait for what the Sheet was sent
 const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('timed out waiting for the Sheet'); await new Promise(r => setTimeout(r, 100)); } };
+// the Sheet is set up in aOS, not in Travel: Settings have no Sync row, and there's no Sheet sheet
+const noSheetUI = page => page.evaluate(() => ['stSheet', 'stSheetSub', 'syncSheet', 'syStatus', 'syNow', 'syLbl'].every(id => !document.getElementById(id))
+  && ![...document.querySelectorAll('#setSheet .label')].some(l => /^(Sync|The family’s Google Sheet)$/.test(l.textContent.trim())));
 const sentLast = id => { const c = sheetCalls.filter(c => c.action === 'sync').at(-1); return c && (c.bookings || []).find(b => b.id === id); };
 
-await step('the family\'s Google Sheet: signed out, Travel works on the phone and the Sheet sheet asks to sign in; no link or phrase', async () => {
+await step('the family\'s Google Sheet: signed out, Travel works on the phone, sends nothing and says nothing; no Sheet UI, link or phrase', async () => {
   const { ctx, page, errs } = await famPhone(null, [stay('h-solo', 'Austin Motel', 20, 22)]);
   await page.waitForSelector('.trip');
+  await page.waitForTimeout(1200);   // past the first sync (600 ms after start)
+  assert.ok(await page.isHidden('#toast'), 'no toast signed out');
+  assert.equal(await page.evaluate(() => window.__travel.sync()), false, 'a sync signed out does nothing');
   await page.click('#setBtn');
-  assert.match(await page.textContent('#stSheetSub'), /Sign in to sync/);
-  await page.click('#stSheet');
-  await page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
-  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+  assert.ok(await noSheetUI(page), 'Settings have no Sheet row, and there\'s no Sheet sheet (aOS → Account → Google Sheets has it)');
   assert.equal(await page.$('#syUrl'), null, 'no link or phrase to type on a phone');
   assert.equal(await page.$('#syShare'), null, 'no setup link');
   assert.equal(await page.$('#syOff'), null, 'no Disconnect');
   assert.equal(sheetCalls.length, 0, 'nothing is sent signed out');
   assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('signed in, a Sheet not set up in aOS yet says nothing; a real error shows one toast a session', async () => {
+  sheetFail = 'no-sheet';
+  const { ctx, page, errs } = await famPhone('tok-ella', [stay('h-solo', 'Austin Motel', 20, 22)]);
+  await until(() => refused.includes('no-sheet'));
+  await page.evaluate(() => window.__travel.sync());
+  assert.ok(await page.isHidden('#toast'), 'no toast: the owner sets the Sheet up in aOS');
+  sheetFail = 'busy';
+  await page.evaluate(() => window.__travel.sync());
+  await page.waitForSelector('#toast:not([hidden])', { timeout: 5000 });
+  assert.match(await page.textContent('#toastMsg'), /The Sheet was busy/);
+  await page.evaluate(() => { document.getElementById('toast').hidden = true; });
+  const n = refused.length;
+  await page.evaluate(() => window.__travel.sync());
+  await until(() => refused.length > n); await page.waitForTimeout(300);
+  assert.ok(await page.isHidden('#toast'), 'and not again this session');
+  assert.equal(sheetCalls.length, 0, 'nothing reached the Sheet');
+  assert.deepEqual(errs, []);
+  sheetFail = ''; refused.length = 0;
   await ctx.close();
 });
 
@@ -396,11 +422,10 @@ await step('signed in (Tom, the owner): his bookings go to the family Sheet as h
   assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days');
   assert.deepEqual((await stored(tom.page)).bookings.map(b => b.id).sort(), ['f-tom', 'h-recent', 'h-tom'], 'the trip that ended 200 days ago is in the Sheet, not on the phone');
   assert.ok((await stored(tom.page)).bookings.every(b => b.by === 'tom'), 'marked as his');
-  await tom.page.click('#setBtn'); await tom.page.click('#stSheet');
-  await tom.page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await tom.page.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced/);
-  assert.equal(await tom.page.textContent('#syNow .t'), 'Sync now');
-  await tom.page.click('#syncSheet .sheethead [data-close]');
+  assert.ok(+(await tom.page.evaluate(() => localStorage.getItem('allison-travel-v1-sync-at'))) > 0, 'the phone notes when it last synced');
+  await tom.page.click('#setBtn');
+  assert.ok(await noSheetUI(tom.page), 'signed in and synced, Settings still have no Sheet row');
+  await tom.page.click('#setSheet .sheethead [data-close]');
 });
 
 await step('Just me on a booking of yours: only you see it, with a small Just me pill; Private is something else', async () => {
@@ -480,7 +505,7 @@ await step('the owner\'s phone hands the Sheet link and phrase it kept over to a
   // an old setup link opened on a phone is only taken off the address
   await o.page.goto(BASE + '/travel/index.html#sync=eyJ1IjoieCIsInMiOiJ5In0'); await o.page.waitForFunction(() => window.__travel);
   assert.equal(await o.page.evaluate(() => location.hash), '');
-  assert.equal(await o.page.$('#syncSheet:not([hidden])'), null);
+  assert.equal(await o.page.$('#syncSheet'), null, 'and no Sheet sheet opens');
   assert.deepEqual(o.errs, []);
   await o.ctx.close();
 });

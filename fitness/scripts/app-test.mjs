@@ -6,8 +6,8 @@
 // Calendar's week start and ?date= link, Calendar showing the workouts as a
 // layer, the Analysis view (the drop-down under the title, Week and Month,
 // stronger / weaker / new, muscle groups missed, your drinks from Drinks), Google Sheet sync end to end (the real google-sheet-sync.gs,
-// running on fake-sheet.mjs) including a second phone set up from the
-// setup link, dark mode, and that nothing trips the page's Content
+// running on fake-sheet.mjs, through aOS: no Sheet button or sheet of its own, syncing by itself once signed in)
+// including your second phone and someone else's, dark mode, and that nothing trips the page's Content
 // Security Policy. Screenshots go to the folder given as the second argument.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (Futura, flat cream
 // or walnut cards, a mustard thumb, an orange add button, the shapes behind the title; the sky held at
@@ -334,18 +334,20 @@ await test('a sideways swipe on the week moves a week', async () => {
   assert.equal(next, ymd(d));
 });
 
-await test('Google Sheet, through aOS: signed out it asks to sign in; signed in, the log goes to the family Sheet as yours', async () => {
+// Synced at least once: the time of the last sync this phone keeps.
+const syncedAt = (page, after = 0) => page.waitForFunction(t => +localStorage.getItem('allison-fitness-v1-sync-at') > t, after, { timeout: 8000 });
+await test('Google Sheet, through aOS: no Sheet controls of its own; signed out it stays quiet; signed in, the log goes to the family Sheet as yours', async () => {
   await page.goto(BASE + '/fitness/');
   await page.waitForFunction(() => window.__fitness);
-  await page.click('#syncBtn');
-  await page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
-  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
-  assert.equal(await page.$('#syUrl'), null, 'no link or phrase to type on a phone');
-  await page.click('#syncSheet .sheethead [data-close]');
+  for (const sel of ['#syncBtn', '#syncSheet', '#syStatus', '#syNow', '#syUrl']) assert.equal(await page.$(sel), null, sel + ' is gone: aOS sets the Sheet up');
+  const sent = sheetCalls.length;
+  await page.waitForTimeout(1200);   // the start's sync (at 0.6 s) has had its turn
+  assert.equal(sheetCalls.length, sent, 'signed out: nothing sent');
+  assert.ok(await page.$eval('#toast', e => e.hidden), 'and no toast asking to sign in');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-sync-at')), null);
   await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
   await page.reload(); await page.waitForFunction(() => window.__fitness);
-  await page.waitForFunction(() => document.getElementById('syStatus').textContent.includes('Last synced'), null, { timeout: 8000 });
+  await syncedAt(page);
   const mine = (await stored(page)).logs.length;
   const rows = sheet.tab('Workouts');
   assert.equal(rows.length, mine + 1, 'every exercise in the Workouts tab');
@@ -353,10 +355,7 @@ await test('Google Sheet, through aOS: signed out it asks to sign in; signed in,
   assert.ok(rows.some(r => r[4] === 'Plank' && r[7] === 45), 'the plank in seconds');
   assert.ok(sheetCalls.every(c => !('secret' in c)), 'the phone sends no phrase');
   assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days');
-  await page.click('#syncBtn');
-  assert.match(await page.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced/);
-  await shot(page, '07-sheet-connected');
-  await page.click('#syncSheet .sheethead [data-close]');
+  await shot(page, '07-sheet-synced');
 });
 
 await test('Google Sheet: a deletion syncs; your other phone gets your log; someone else\'s phone gets none of it', async () => {
@@ -377,7 +376,7 @@ await test('Google Sheet: a deletion syncs; your other phone gets your log; some
   await phone2.ctx.close();
   const ella = await newPage('light', { v: 2, logs: [], exercises: [] }, { 'aos.session': session('tok-ella') });
   await ella.page.goto(BASE + '/fitness/'); await ella.page.waitForFunction(() => window.__fitness);
-  await ella.page.waitForFunction(() => document.getElementById('syStatus').textContent.includes('Last synced'), null, { timeout: 8000 });
+  await syncedAt(ella.page);
   assert.deepEqual((await stored(ella.page)).logs, [], 'Ella\'s phone gets none of Tom\'s');
   await ella.ctx.close();
 });
