@@ -1469,7 +1469,6 @@
     'not-json': 'The Sheet didn’t answer as expected. Trying again later.'
   };
   const syncLabel = () => ({syncing:' · Syncing…', ok:' · Synced', error:' · Not synced', offline:' · Offline'})[syncState] || '';
-  const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   // The first day this phone keeps finished reminders from (the Sheet's script counts the same way).
   const keepFrom = () => dayOff(-(KEEP_DAYS - 1));
   const fmtShort = d => new Date(d + 'T12:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year: d.slice(0, 4) === todayStr().slice(0, 4) ? undefined : 'numeric'});
@@ -1529,9 +1528,11 @@
       persist(); localStorage.setItem(KEY + '-private-v2', '1');
     } catch(e) {}
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sync(loud){
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+  // Always quietly, signed in: the owner sets the Sheet up in aOS (Account → Google Sheets), so nobody
+  // is asked for Face ID here, nor told about a Sheet that isn't set up or a sign-in that has run out.
+  // A real error shows one toast a visit; after that, only the title's "Not synced" says so.
+  async function sync(){
+    if (!SH() || !signedIn()) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
     if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
     syncing = true; syncState = 'syncing'; renderSyncStatus();
@@ -1543,27 +1544,27 @@
       if (!fresh) { privateOnce(); track(); persist(); }
       const sent = fresh ? new Set() : new Set([].concat(notes.map(x => 'notes:' + x.id), todos.map(x => 'todos:' + x.id), lists.map(x => 'lists:' + x.id)));
       const res = await SH().sync('notes', fresh ? {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes:[], todos:[], lists:[], graves:{}}
-        : {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes, todos, lists, graves}, {ask:loud});
+        : {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes, todos, lists, graves}, {ask:false});
       if (res.app && res.app !== APP_ID) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       if (![res.notes, res.todos, res.lists].every(Array.isArray)) throw new Error('not-json');   // never take a partial answer as "gone"
       lastSyncAt = Date.now(); try { localStorage.setItem(SYNC_KEY + '-at', String(lastSyncAt)); } catch(e) {}
       if (!familySynced) { familySynced = true; try { localStorage.setItem(KEY + '-family', '1'); } catch(e) {} }
-      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      syncState = 'ok'; syncErr = ''; ok = true;
       if (fresh) { let still = true; try { still = !localStorage.getItem(KEY); } catch(e) {} if (still) { notes = []; todos = []; lists = []; } else syncAgain = true; }   // unless you saved something meanwhile
       applyRemote(res, sent);
       if (pushDirty) { pushDirty = false; pokePush(); }
       if (pendingOpen) { const w = pendingOpen; pendingOpen = null; openFrom(w, true); }
     } catch(e) {
       syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+      if (!errShown && syncState === 'error' && syncErr !== 'no-sheet') { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
+  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? 2000 : ms); }
 
   // Looking back: reminders finished before the 90 days this phone keeps come from the Sheet (once a
   // visit, signed in), and stay until the app is next opened.
@@ -1591,13 +1592,6 @@
   }
 
   function renderSyncStatus(){
-    const signed = signedIn();
-    const line = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('bkSheetSub').textContent = signed ? line : 'Sign in to sync';
-    $('syStatus').textContent = line;
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     if (st.tab === 'notes' && !st.coll && !tokensOf(st.q).length) $('notesSub').textContent = plural(shelf().length, 'note') + syncLabel();
     syncPill();
   }
@@ -1625,14 +1619,12 @@
     const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
     return app ? 'the Notes app' : 'this browser';
   };
-  $('bkSheet').onclick = () => { closeSheet('backupSheet'); renderSyncStatus(); openSheet('syncSheet'); };
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   // A setup link (#sync=…) from before aOS kept the Sheet: nothing to set up any more, and nothing in it is kept.
   const SETUP_GONE = 'Setup links aren’t needed any more: sign in, and Notes syncs with the family’s Google Sheet by itself.';
-  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
-  window.addEventListener('online', () => { if (signedIn()) sync(false); });
-  // Signed in (here, or by a sync that asked): hand the old link over, then sync. Signed out: say so.
-  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync(false)); else { syncState = 'signin'; renderSyncStatus(); render(); } });
+  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(); });
+  window.addEventListener('online', () => { if (signedIn()) sync(); });
+  // Signed in (here, or by Show completed before …): hand the old link over, then sync. Signed out: the title stops saying Synced.
+  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync()); else { syncState = 'signin'; renderSyncStatus(); render(); } });
 
   // ---------- notifications (notes/push; notes/README.md, "Notifications") ----------
   // The server alerts this phone when a reminder is due, or a note's nudge
@@ -1656,7 +1648,7 @@
     'other-sheet':'This server already alerts for a different Google Sheet.',
     'not-family':'The notification server couldn’t check that you’re in the family. Try again in a minute.',
     'sheet-network':'The server couldn’t reach the Google Sheet. Try again in a minute.',
-    'sheet-not-json':'The server couldn’t read the Google Sheet. Check that Sync now works, then try again.',
+    'sheet-not-json':'The server couldn’t read the Google Sheet. Check that Notes says Synced, then try again.',
     'sheet-busy':'The Google Sheet was busy. Try again in a moment.',
     'sheet-secret-not-set':'The Sheet’s script still has CHANGE-ME as its secret.',
     'bad-subscription':'The server didn’t accept this phone. Turn notifications off and on again.',
@@ -1781,7 +1773,7 @@
     const i = what.indexOf(':'), kind = what.slice(0, i), id = what.slice(i + 1);
     if (kind === 'todo' && todos.some(t => t.id === id)) { setTab('rem'); if (!$('todoSheet').hidden) finishTodo(); openTodo(id); return; }
     if (kind === 'note' && notes.some(n => n.id === id)) { setTab('notes'); if (!$('editor').hidden) finishEdit(); openEditor(id); return; }
-    if (!late && signedIn()) { pendingOpen = what; sync(false); return; }
+    if (!late && signedIn()) { pendingOpen = what; sync(); return; }
     toast(kind === 'note' ? 'That note isn’t here any more.' : 'That reminder isn’t here any more.');
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && typeof e.data.open === 'string') openFrom(e.data.open); });
@@ -1909,7 +1901,7 @@
     openFrom(q);
   })();
   // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
-  setTimeout(() => handOver().finally(() => sync(false)), 600);
+  setTimeout(() => handOver().finally(() => sync()), 600);
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
   // first open only records the fingerprint. The code is in app.js now, so the

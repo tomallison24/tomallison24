@@ -88,6 +88,7 @@ const KEY = 'allison-notes-v1';
 const SECRET = 'test-secret-phrase', OLD_URL = 'https://script.google.com/macros/s/OWNERSHEET/exec';
 const sheet = fakeSheet(new URL('../google-sheet-sync.gs', import.meta.url).pathname, SECRET);
 const sheetCalls = [], claims = [];
+let sheetFails = null;   // set: every sync answers this error instead, as aOS (409, no-sheet) or the script ({ ok: false }) would
 const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
 const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
 async function sheetRoutes(ctx) {
@@ -100,6 +101,8 @@ async function sheetRoutes(ctx) {
     if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
     if (req.method() === 'GET') return json({ configured: true });
     sheetCalls.push({ who: who.id, ...JSON.parse(req.postData()) });
+    if (sheetFails === 'no-sheet') return json({ ok: false, error: 'no-sheet' }, 409);
+    if (sheetFails) return json({ ok: false, app: 'allison-notes-sync', aos: true, error: sheetFails });
     return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
   });
 }
@@ -323,20 +326,17 @@ for (const scheme of ['light', 'dark']) {
     assert.equal(saved.lists.find(l => l.name === 'Errands').color, '#8B5CF6', 'saved as Notes would');
   });
 
-  await step(scheme + ': the Google Sheet and Backup sheets, a toast, and the "Updated" pill are flat too', async () => {
+  await step(scheme + ': Settings (with no Google Sheet row or sheet: aOS links the Sheet), a toast, and the "Updated" pill are flat too', async () => {
     await page.click('#remView [data-open-backup]');
     await page.waitForSelector('#backupSheet:not([hidden])');
     await page.waitForTimeout(500);
-    assert.match(await page.textContent('#bkSheetSub'), /Sign in to sync/);
-    assert.equal((await q('#backupSheet .rgroup', ['borderRadius']))[0], '20px');
-    await page.click('#bkSheet');
-    await page.waitForSelector('#syncSheet:not([hidden])');
-    assert.equal(await page.textContent('#syLbl'), 'The family’s Google Sheet');
-    assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
-    assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+    assert.equal(await page.$('#bkSheet, #bkSheetSub, #syncSheet, #syLbl, #syStatus, #syNow'), null, 'no Google Sheet row in Settings, and no Sheet sheet');
     assert.equal(await page.$('#syUrl, #sySecret, #syConnect, #syShare, #syOff'), null, 'no link or phrase to type, no setup link, no Disconnect');
-    assert.equal((await q('#syncSheet .rgroup', ['borderRadius']))[0], '20px', 'flat, as the other sheets');
-    await page.click('#syncSheet [data-close]');
+    assert.doesNotMatch(await page.textContent('#backupSheet'), /Sync now|Sign in and sync/);
+    assert.ok(await page.isVisible('#bkExport') && await page.isVisible('#bkImport'), 'Backup and Import are still there');
+    assert.equal((await q('#backupSheet .rgroup', ['borderRadius']))[0], '20px');
+    await page.click('#backupSheet .sheethead [data-close]');
+    await page.waitForSelector('#backupSheet', { state: 'hidden' });
     await page.evaluate(() => { document.getElementById('toastMsg').textContent = 'Moved to Trash'; document.getElementById('toast').hidden = false; });
     const [tbg, tfilter] = await q('#toast', ['backgroundColor', 'backdropFilter']);
     assert.equal(tbg, scheme === 'light' ? 'rgb(240, 229, 208)' : 'rgb(61, 51, 44)'); assert.ok(tfilter === 'none' || tfilter === '');
@@ -571,8 +571,10 @@ await step('a phone with both: Notes\' own data is kept, the old app\'s is not c
 const famSeed = (tok, data, extra = {}) => ({ 'aos.seen': JSON.stringify({ notes: '999' }), [KEY]: JSON.stringify(data), [KEY + '-backup']: String(Date.now()), ...(tok ? { 'aos.session': session(tok) } : {}), ...extra });
 const until = async (fn, label, ms = 8000) => { const t0 = Date.now(); while (!(await fn())) { if (Date.now() - t0 > ms) throw new Error('timed out: ' + label); await new Promise(r => setTimeout(r, 100)); } };
 const stored = page => page.evaluate(KEY => JSON.parse(localStorage.getItem(KEY)), KEY);
-const lastSynced = page => page.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 });
-const syncNow = async page => { const n = sheetCalls.length; await page.evaluate(() => document.getElementById('syNow').click()); await until(() => sheetCalls.length > n, 'a sync'); await page.waitForTimeout(500); };
+// a sync worked: the app keeps when (there's no Sync now or status sheet any more: aOS links the Sheet, the app syncs by itself)
+const lastSynced = page => page.waitForFunction(KEY => !!localStorage.getItem(KEY + '-sync-at'), KEY, { timeout: 8000 });
+// one more sync, as when the phone comes back online
+const syncNow = async page => { const n = sheetCalls.length; await page.evaluate(() => dispatchEvent(new Event('online'))); await until(() => sheetCalls.length > n, 'a sync'); await page.waitForTimeout(500); };
 const sentBy = (who, fn) => until(() => sheetCalls.some(c => c.who === who && c.action === 'sync' && fn(c)), who + '\'s phone sent it');
 let tom = null, ella = null;
 
@@ -584,13 +586,12 @@ await step('the family\'s Google Sheet, through aOS: signed in, Tom\'s notes, li
   assert.ok(sheet.tab('✓ Groceries').slice(1).some(r => r[0] === 'Tom' && r[1] === 'Eggs'));
   assert.ok(sheetCalls.length && sheetCalls.every(c => !('secret' in c)), 'the phone sends no phrase');
   assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days of finished reminders');
+  await tom.page.waitForFunction(() => / · Synced$/.test(document.getElementById('notesSub').textContent), null, { timeout: 4000 });   // the title says so
   await tom.page.click('#setBtn');
-  await tom.page.click('#bkSheet');
-  await tom.page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await tom.page.textContent('#syStatus'), /^In the family’s Google Sheet\. Last synced/);
-  assert.equal(await tom.page.textContent('#syNow .t'), 'Sync now');
+  await tom.page.waitForSelector('#backupSheet:not([hidden])');
+  assert.equal(await tom.page.$('#bkSheet, #syncSheet, #syNow'), null, 'signed in too, Settings has no Google Sheet row: it syncs by itself');
   await shot(tom.page, 'family-sheet');
-  await tom.page.click('#syncSheet [data-close]');
+  await tom.page.click('#backupSheet .sheethead [data-close]');
 });
 
 await step('Ella\'s phone gets the family\'s notes, lists and reminders; Just me on Tom\'s note isn\'t hers to switch', async () => {
@@ -717,6 +718,36 @@ await step('the owner\'s phone hands the Sheet link and phrase it kept over to a
   await m.page.waitForFunction(KEY => !localStorage.getItem(KEY + '-sync'), KEY, { timeout: 8000 });
   assert.equal(claims.length, n, 'nothing claimed from a family member\'s phone: aOS already has it');
   await clean(m.page, m.problems); await m.ctx.close();
+});
+
+await step('a sync that goes wrong, with no status sheet: no toast for a Sheet not set up yet or a sign-in that ran out; a real error, one toast a visit', async () => {
+  const lists1 = [{ id: 'l1', updated: 1, name: 'Personal', color: '#3B82F6' }];
+  const toastShown = page => page.evaluate(() => !document.getElementById('toast').hidden);
+  try {
+    sheetFails = 'no-sheet';
+    let n = sheetCalls.length;
+    const a = await phone('light', { seed: famSeed('tok-ella', { notes: [], lists: lists1, todos: [] }) });
+    await until(() => sheetCalls.length > n, 'a sync on opening'); await a.page.waitForTimeout(400);
+    assert.equal(await toastShown(a.page), false, 'the owner sets the Sheet up in aOS: nobody is told here');
+    await syncNow(a.page);
+    assert.equal(await toastShown(a.page), false, 'nor at the next sync');
+    assert.match(await a.page.textContent('#notesSub'), / · Not synced$/, 'the title says it, quietly');
+    sheetFails = 'busy';
+    await syncNow(a.page);
+    assert.equal(await toastShown(a.page), true, 'a real error: one toast');
+    assert.equal(await a.page.textContent('#toastMsg'), 'The Sheet was busy. Trying again shortly.');
+    await a.page.evaluate(() => { document.getElementById('toast').hidden = true; });
+    sheetFails = null; await syncNow(a.page); sheetFails = 'busy'; await syncNow(a.page);
+    assert.equal(await toastShown(a.page), false, 'once a visit, even after a sync that worked');
+    await clean(a.page, a.problems); await a.ctx.close();
+    sheetFails = null; n = sheetCalls.length;
+    const gone = JSON.stringify({ token: 'tok-gone', user: { id: 'max', name: 'Max', role: 'member' }, at: 1 });
+    const b = await phone('light', { seed: famSeed(null, { notes: [], lists: lists1, todos: [] }, { 'aos.session': gone }) });
+    await b.page.waitForTimeout(800);
+    assert.equal(sheetCalls.length, n, 'aOS turned it away');
+    assert.equal(await toastShown(b.page), false, 'a sign-in that ran out: no toast');
+    await clean(b.page, b.problems); await b.ctx.close();
+  } finally { sheetFails = null; }
 });
 
 await step('finished reminders: the phone keeps 90 days, the Sheet keeps the rest, and Show completed before … brings them back', async () => {

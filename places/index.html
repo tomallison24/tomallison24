@@ -233,8 +233,8 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
-:where(#viewBtn, #syncBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab]){position:relative}
-:where(#viewBtn, #syncBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+:where(#viewBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab]){position:relative}
+:where(#viewBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -418,7 +418,6 @@ path.osm-dot{stroke:#FBF5E9}
       <h1 class="title">Places<small id="sub"></small></h1>
       <div class="acts">
         <button class="iconbtn glass" id="viewBtn" type="button" aria-label="Show the map" aria-pressed="false"></button>
-        <button class="iconbtn glass" id="syncBtn" type="button" aria-label="The family’s Google Sheet"></button>
         <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg></button>
       </div>
     </div>
@@ -515,24 +514,6 @@ path.osm-dot{stroke:#FBF5E9}
         <button class="rowbtn" type="button" id="plOpen"><span class="ic">🗺️</span><span>Open in Apple Maps<span class="sub">See it there: photos, reviews, Look Around</span></span></button>
       </div>
       <button class="btn danger" id="plDelete" type="button">Delete place</button>
-    </div>
-  </div>
-</div>
-
-<!-- Google Sheet sync -->
-<div class="sheetwrap" id="syncSheet" hidden>
-  <div class="scrim" data-close></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-    <div class="grab" aria-hidden="true"></div>
-    <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="sheetbody">
-      <p class="hint" id="syStatus"></p>
-      <div class="field">
-        <div class="rgroup">
-          <button class="rowbtn" type="button" id="syNow"><span class="ic">🔄</span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets the family’s latest from the Sheet</span></span></button>
-        </div>
-        <p class="hint">Places keeps its lists in the family’s Google Sheet, Notes’ Sheet: one for the whole family, where every place is shared and each row says who added it. The owner sets it up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-      </div>
     </div>
   </div>
 </div>

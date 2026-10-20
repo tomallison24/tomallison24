@@ -129,7 +129,6 @@
     $('viewBtn').innerHTML = st.view === 'map' ? ICON.list : ICON.map;
     $('viewBtn').setAttribute('aria-label', st.view === 'map' ? 'Show the list' : 'Show the map');
     $('viewBtn').setAttribute('aria-pressed', st.view === 'map');
-    $('syncBtn').innerHTML = ICON.cloud;
 
     const list = sorted(shown());
     let h = '';
@@ -156,7 +155,6 @@
   const ICON = {
     map: '<svg class="i" viewBox="0 0 24 24"><path d="M9 4.5L3.8 6.6v12.9L9 17.4l6 2.1 5.2-2.1V4.5L15 6.6z"/><path d="M9 4.5v12.9M15 6.6v12.9"/></svg>',
     list: '<svg class="i" viewBox="0 0 24 24"><path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/><circle cx="4.6" cy="6.5" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17.5" r="1" fill="currentColor"/></svg>',
-    cloud: '<svg class="i" viewBox="0 0 24 24"><path d="M7.2 18.6h10a3.9 3.9 0 0 0 .6-7.8 5.6 5.6 0 0 0-10.9-.9A4.4 4.4 0 0 0 7.2 18.6z"/><path d="M12 15.6v-5M9.8 12.6l2.2-2.2 2.2 2.2"/></svg>',
   };
 
   $('seg').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b && st.tab !== b.dataset.tab) { st.tab = b.dataset.tab; st.tag = null; render(); } });
@@ -612,21 +610,17 @@
   const APP_ID = 'allison-notes-sync';
   const SH = () => window.AllisonOS && AllisonOS.sheet;
   const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
-  let syncing = false, again = false, syncTimer = null, syncState = 'idle', syncErr = '';
+  let syncing = false, again = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
   const ERR = {
-    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Places keeps your lists on this phone.',
-    'no-sheet': 'The family’s Notes Sheet (which Places shares) isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
     'wrong-secret': 'aOS’s phrase for the Notes Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
     'old-script': 'The Notes Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
     'secret-not-set': 'The Notes Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
     busy: 'The Sheet was busy. Trying again shortly.',
-    offline: 'Offline. Changes will sync when you’re back online.',
     'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
     'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
-  const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   const syncLabel = () => !signedIn() ? '' : syncState === 'syncing' ? ' · Syncing…' : syncState === 'error' ? ' · Not synced' : st.lastSync ? ' · Synced' : '';
-  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 1500 : ms); }
+  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? 1500 : ms); }
   // The link and phrase this phone kept before aOS did (Places' own, or Notes' where they share
   // storage): on the owner's phone they go to aOS once; once aOS has them, Places forgets its own.
   async function handOver() {
@@ -634,16 +628,18 @@
     if (!old || !SH() || !signedIn()) return;
     if (await SH().adopt('places', { url: old.url, secret: old.secret })) store.set(SYNC_KEY, null);
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sync(loud) {
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSync(); return false; }
+  // Always quietly, signed in: the owner sets the Sheet up in aOS (Account → Google Sheets), so nobody
+  // is asked for Face ID here, nor told about a Sheet that isn't set up or a sign-in that has run out.
+  // A real error shows one toast a visit; after that, only the title's "Not synced" says so.
+  async function sync() {
+    if (!SH() || !signedIn()) { syncState = signedIn() ? 'idle' : 'signin'; renderSync(); return false; }
     if (syncing) { again = true; return false; }
     if (!navigator.onLine) { syncState = 'offline'; renderSync(); return false; }
     syncing = true; syncState = 'syncing'; renderSync();
     let ok = false;
     try {
       const sent = new Set(places.map(p => p.id));
-      const res = await SH().sync('places', { action: 'places', v: 2, places, graves }, { ask: loud });
+      const res = await SH().sync('places', { action: 'places', v: 2, places, graves }, { ask: false });
       if (res.app && res.app !== APP_ID) throw new Error('not-json');
       if (!res.aos || !Array.isArray(res.places)) throw new Error('old-script');
       applyRemote(res, sent);
@@ -651,7 +647,7 @@
       syncState = 'ok'; syncErr = ''; ok = true;
     } catch (e) {
       syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
-      if (loud) toast(ERR[syncErr] || 'Sync didn’t work. Trying again later.');
+      if (!errShown && syncState === 'error' && syncErr !== 'no-sheet') { errShown = true; toast(ERR[syncErr] || 'Sync didn’t work. Trying again later.'); }
     } finally {
       syncing = false; renderSync();
       if (again) { again = false; scheduleSync(800); }
@@ -680,19 +676,12 @@
     if (mine) again = true;
   }
   function renderSync() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? ERR.signin
-      : syncState === 'error' ? (ERR[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? ERR.offline : st.lastSync ? 'In the family’s Google Sheet. Last synced ' + ago(st.lastSync) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     $('sub').textContent = places.length ? (places.length + (places.length === 1 ? ' place' : ' places')) + syncLabel() : syncLabel().replace(/^ · /, '');
   }
-  $('syncBtn').onclick = () => { renderSync(); openSheet('syncSheet'); };
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - st.lastSync > 30000) sync(false); });
-  window.addEventListener('online', () => { if (signedIn()) sync(false); });
-  // Signed in (here, or by a sync that asked): hand the old link over, then sync. Signed out: say so.
-  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync(false)); else { syncState = 'signin'; renderSync(); } });
+  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - st.lastSync > 30000) sync(); });
+  window.addEventListener('online', () => { if (signedIn()) sync(); });
+  // Signed in: hand the old link over, then sync. Signed out: the title stops saying Synced.
+  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync()); else { syncState = 'signin'; renderSync(); } });
 
   // ---------- Settings: the design ----------
   // Vintage or Standard, at once and just on this phone (../home/design.js): not part of any save.
@@ -716,6 +705,6 @@
   slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true });
   window.addEventListener('resize', () => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
   // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
-  setTimeout(() => handOver().finally(() => sync(false)), 400);
+  setTimeout(() => handOver().finally(() => sync()), 400);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

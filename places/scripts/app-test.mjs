@@ -272,21 +272,20 @@ await page.click('#toastAct'); await page.waitForTimeout(200);
 ok('Undo brings it back', (await rows()).some(x => x.startsWith('Corner Café')));
 
 // ---- the family's Google Sheet (Notes'), through aOS ----
-await page.click('#syncBtn'); await page.waitForTimeout(200);
-ok('signed out: the Sheet sheet says to sign in, and keeps the places on the phone', (await page.textContent('#syStatus')).startsWith('Sign in to sync with the family’s Google Sheet') && (await page.textContent('#syNow .t')) === 'Sign in and sync', await page.textContent('#syStatus'));
+ok('no Google Sheet button or sheet: aOS links the Sheet, Places syncs by itself', (await page.$('#syncBtn, #syncSheet, #syStatus, #syNow')) === null);
+ok('signed out: the places stay on the phone, and the title doesn’t say Synced', (await rows()).some(x => x.startsWith('Corner Café')) && !/Synced/.test(await page.textContent('#sub')), await page.textContent('#sub'));
 ok('no link or phrase to type, no setup link, no Disconnect', (await page.$('#syUrl, #sySecret, #syConnect, #syPaste, #syNotes, #syOff')) === null);
 ok('signed out: nothing goes to the Sheet', calls.sheet.length === 0 && !calls.google);
-await page.click('#syncSheet [data-close].iconbtn');
 // Ella added a place from her phone; Tom signs in, on a phone where Notes kept the Sheet link and phrase (Safari: shared storage)
 const mkPlace = (id, name, x) => Object.assign({ id, name, status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], notes: '', created: 1, updated: Date.now() }, x);
 sheet.post({ action: 'places', places: [mkPlace('pwife1', 'Sushi Den')], graves: {} }, { key: SECRET, who: 'ella', name: 'Ella' });
 await page.evaluate(([s, sheet]) => { localStorage.setItem('aos.session', s); localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: sheet, secret: 'maple-otter' })); }, [session('tok-tom'), SHEET]);
 await page.reload();
-await page.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 }).catch(() => {});
+await page.waitForFunction(() => !!localStorage.getItem('allison-places-v1-synced'), null, { timeout: 8000 }).catch(() => {});   // a sync worked
 await toList();
 const last = calls.sheet.at(-1);
 ok('signed in: sends its places with action "places", and no phrase', last && last.action === 'places' && last.who === 'tom' && last.places.length === 4 && !('secret' in last), JSON.stringify(last && { action: last.action, n: last.places.length }));
-ok('and loads the family’s places (Ella’s too)', (await rows()).some(x => x.startsWith('Sushi Den')) && (await page.textContent('#syStatus')).startsWith('In the family’s Google Sheet. Last synced'), await page.textContent('#syStatus'));
+ok('and loads the family’s places (Ella’s too)', (await rows()).some(x => x.startsWith('Sushi Den')) && / · Synced$/.test(await page.textContent('#sub')), await page.textContent('#sub'));
 ok('the owner’s phone hands the Notes Sheet link and phrase it found over to aOS', claims.some(c => c.who === 'tom' && c.url === SHEET && c.secret === SECRET));
 const want = sheet.tab('📍 Want to go');
 ok('in the Sheet, each place says who added it', want[0][0] === 'Who' && want.slice(1).some(r => r[0] === 'Ella' && r[1] === 'Sushi Den') && want.slice(1).some(r => r[0] === 'Tom' && r[1] === 'Corner Café'), JSON.stringify(want.map(r => r.slice(0, 2))));
@@ -312,13 +311,43 @@ for (const [label, key, tok] of [['Notes Vintage', 'allison-notesv-v1-sync', 'to
   const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
   const n = claims.length;
   await p2.goto(BASE + '/places/');
-  await p2.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 }).catch(() => {});
+  await p2.waitForFunction(() => !!localStorage.getItem('allison-places-v1-synced'), null, { timeout: 8000 }).catch(() => {});
   if (tok === 'tok-tom') ok('the owner’s phone hands the link it kept (' + label + ') to aOS', claims.length === n + 1 && claims.at(-1).url === SHEET + '?' + key && claims.at(-1).who === 'tom', JSON.stringify(claims.at(-1)));
   else ok('a family member’s phone claims nothing (aOS has it already)', claims.length === n);
   if (key === 'allison-places-v1-sync') ok('then Places forgets its own copy (' + label + ')', !(await p2.evaluate(() => localStorage.getItem('allison-places-v1-sync'))));
   ok('and the family’s places load (' + label + ')', (await p2.textContent('#list')).includes('Sushi Den'));
   ok('no errors on the page (' + label + ')', e2.length === 0, e2.join(' | '));
   await c2.close();
+}
+
+// ---- a sync that goes wrong, with no status sheet: no toast for a Sheet not set up yet; a real error, one toast a visit ----
+{
+  let fails = 'no-sheet', n = 0;
+  const c3 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
+  await c3.route(/^https?:\/\/(?!localhost)/, stub);
+  await c3.route('**/sheet/api/**', route => {
+    if (route.request().method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"configured":true}' });
+    n++;
+    return fails === 'no-sheet' ? route.fulfill({ status: 409, contentType: 'application/json', body: '{"ok":false,"error":"no-sheet"}' })
+      : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fails ? { ok: false, app: 'allison-notes-sync', aos: true, error: fails } : { ok: true, app: 'allison-notes-sync', v: 2, aos: true, places: [], graves: {} }) });
+  });
+  await c3.addInitScript(s => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify({ places: '999' })); localStorage.setItem('aos.session', s); }, session('tok-ella'));
+  const p3 = await c3.newPage(); const e3 = []; p3.on('pageerror', e => e3.push(e.message));
+  const toastShown = () => p3.evaluate(() => !document.getElementById('toast').hidden);
+  const again = async () => { const m = n; await p3.evaluate(() => dispatchEvent(new Event('online'))); for (let i = 0; i < 40 && n === m; i++) await p3.waitForTimeout(100); await p3.waitForTimeout(400); };
+  await p3.goto(BASE + '/places/');
+  for (let i = 0; i < 60 && !n; i++) await p3.waitForTimeout(100);
+  await p3.waitForTimeout(400);
+  ok('quiet sync: a Sheet that isn’t set up yet shows no toast (the owner sets it up in aOS)', n > 0 && !(await toastShown()));
+  await again();
+  ok('nor at the next sync, and the title says Not synced', !(await toastShown()) && / · Not synced$|^Not synced$/.test(await p3.textContent('#sub')), await p3.textContent('#sub'));
+  fails = 'busy'; await again();
+  ok('a real error: one toast, in its words', await toastShown() && (await p3.textContent('#toastMsg')) === 'The Sheet was busy. Trying again shortly.', await p3.textContent('#toastMsg'));
+  await p3.evaluate(() => { document.getElementById('toast').hidden = true; });
+  fails = null; await again(); fails = 'busy'; await again();
+  ok('once a visit, even after a sync that worked', !(await toastShown()));
+  ok('no errors on the page (sync errors)', e3.length === 0, e3.join(' | '));
+  await c3.close();
 }
 
 // ---- Vintage, the default design: drawn in the Retro look, light and dark ----
@@ -390,10 +419,11 @@ for (const scheme of ['light', 'dark']) {
   ok(lbl('Retro: the chosen stars are mustard'), (await q(rp, '#plRate button.on', ['color']))[0] === (scheme === 'light' ? 'rgb(184, 120, 15)' : MUSTARD));
   if (SHOTS) await rp.screenshot({ path: path.join(SHOTS, '22-retro-place-' + scheme + '.png') });
   await rp.click('#placeSheet [data-close].iconbtn'); await rp.waitForTimeout(300);
-  // the sync sheet and the toast
-  await rp.click('#syncBtn'); await rp.waitForTimeout(500);
-  ok(lbl('Retro: the family’s Google Sheet sheet is a flat panel too'), (await q(rp, '#syncSheet .sheet', ['backgroundColor']))[0] === cream && ['none', ''].includes((await q(rp, '#syncSheet .sheet', ['backdropFilter']))[0]));
-  await rp.click('#syncSheet [data-close].iconbtn');
+  // Settings and the toast (no Google Sheet button or sheet: aOS links the Sheet)
+  ok(lbl('Retro: no Google Sheet button or sheet'), (await rp.$('#syncBtn, #syncSheet')) === null);
+  await rp.click('#setBtn'); await rp.waitForTimeout(500);
+  ok(lbl('Retro: the Settings sheet is a flat panel too'), (await q(rp, '#setSheet .sheet', ['backgroundColor']))[0] === cream && ['none', ''].includes((await q(rp, '#setSheet .sheet', ['backdropFilter']))[0]));
+  await rp.click('#setSheet [data-close].iconbtn'); await rp.waitForTimeout(300);
   await rp.click('#list .row:has-text("Corner")'); await rp.waitForTimeout(300); await rp.click('#plDelete'); await rp.waitForTimeout(300);
   ok(lbl('Retro: the toast is a flat panel'), (await q(rp, '#toast', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(240, 229, 208)' : 'rgb(61, 51, 44)') && ['none', ''].includes((await q(rp, '#toast', ['backdropFilter']))[0]));
   ok(lbl('no errors on the page'), re.length === 0, re.join(' | '));
