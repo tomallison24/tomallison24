@@ -19,8 +19,9 @@
 <!--
   Notes - notes and reminders as a home-screen web app.
 
-  Data: everything lives in this browser's localStorage. No server, no
-  accounts. Sharing sends a copy: a link with the item packed into the part
+  Data: everything lives in this browser's localStorage and, signed in to the
+  family account, in the family's Google Sheet, through aOS (../home/sheet.js;
+  shared with the family except what is marked Just me). Sharing sends a copy: a link with the item packed into the part
   after the #, which is never sent to any server, or a small .json file.
   Backups are a single .json file you save wherever you like.
 
@@ -189,7 +190,9 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .card h3{margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.3;display:flex;gap:6px;align-items:flex-start}
 .card h3 span{flex:1;overflow-wrap:anywhere}
 .card h3 svg{width:14px;height:14px;color:var(--flag);margin-top:3px}
-.card h3 svg.lk,.nrow .nt svg.lk{color:var(--icon)}
+.card h3 svg.lk,.nrow .nt svg.lk,.nrow .nt svg.me,.chip svg.me{color:var(--icon)}
+.chip svg.me{width:13px;height:13px;margin-left:-3px}
+.swrow:disabled{opacity:.5;cursor:default}
 .card p{margin:0;color:var(--muted);font-size:14px;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
 mark{background:var(--mark);color:inherit;border-radius:3px}
@@ -1055,7 +1058,9 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         </div>
         <div class="field">
           <p class="label">Privacy</p>
-          <div class="rgroup glass"><button class="swrow" id="edPrivate" type="button" role="switch" aria-checked="false"><svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg><span class="grow">Private</span><span class="switch" aria-hidden="true"></span></button></div>
+          <div class="rgroup glass"><button class="swrow" id="edOnly" type="button" role="switch" aria-checked="false" aria-describedby="edOnlyHint"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg><span class="grow">Just me</span><span class="switch" aria-hidden="true"></span></button></div>
+          <p class="hint" id="edOnlyHint"></p>
+          <div class="rgroup glass"><button class="swrow" id="edPrivate" type="button" role="switch" aria-checked="false" aria-describedby="edPrivHint"><svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg><span class="grow">Private</span><span class="switch" aria-hidden="true"></span></button></div>
           <p class="hint" id="edPrivHint"></p>
         </div>
         <button class="btn quiet danger" id="edDelete" type="button">Delete note</button>
@@ -1120,6 +1125,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <svg viewBox="0 0 24 24" class="fs"><path d="M5.2 21.2V4.6"/><path d="M5.2 4.6c1.9-1.2 3.9-1.4 6.1-.4s4.3 1 6.6-.2a.6.6 0 0 1 .9.5v8.3a1 1 0 0 1-.5.9c-2.1 1.1-4.3 1.1-7 0-2.1-.9-4.1-.7-6.1.4z"/></svg><span class="grow">Flag</span><span class="switch" aria-hidden="true"></span>
           </button>
         </div>
+        <div class="field">
+          <div class="rgroup glass"><button class="swrow" id="tdOnly" type="button" role="switch" aria-checked="false" aria-describedby="tdOnlyHint"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg><span class="grow">Just me</span><span class="switch" aria-hidden="true"></span></button></div>
+          <p class="hint" id="tdOnlyHint"></p>
+        </div>
         <button class="btn quiet danger" id="tdDelete" type="button">Delete reminder</button>
       </div>
     </div>
@@ -1137,6 +1146,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="field">
           <div class="rgroup glass"><button class="swrow" id="lsGrocery" type="button" role="switch" aria-checked="false"><svg viewBox="0 0 24 24"><path d="M3.4 4.4h2.2l2.3 10.4a1.6 1.6 0 0 0 1.6 1.2h8.2a1.6 1.6 0 0 0 1.6-1.2l1.3-6.2H6.6"/><circle cx="10" cy="19.6" r="1.3"/><circle cx="17.4" cy="19.6" r="1.3"/></svg><span class="grow">Sort into store sections</span><span class="switch" aria-hidden="true"></span></button></div>
           <p class="hint">Groups the list by section (Produce, Meat, Dairy & Eggs…) in supermarket order. On by itself for lists called Groceries or Shopping.</p>
+        </div>
+        <div class="field">
+          <div class="rgroup glass"><button class="swrow" id="lsOnly" type="button" role="switch" aria-checked="false" aria-describedby="lsOnlyHint"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg><span class="grow">Just me</span><span class="switch" aria-hidden="true"></span></button></div>
+          <p class="hint" id="lsOnlyHint"></p>
         </div>
         <button class="btn quiet danger" id="lsDelete" type="button">Delete list and its reminders</button>
       </div>
@@ -1202,7 +1215,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="bkSheet">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
-            <span>Google Sheet sync<span class="sub" id="bkSheetSub">Not connected</span></span>
+            <span>The family’s Google Sheet<span class="sub" id="bkSheetSub">Sign in to sync</span></span>
           </button>
         </div>
         <div class="rgroup glass">
@@ -1216,7 +1229,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
         </div>
         <input type="file" id="bkFile" accept=".json,application/json" hidden>
-        <p class="hint">Everything is stored only in this browser. Clearing the browser's data deletes it, so back up now and then.</p>
+        <p class="hint">This phone keeps its own copy. Signed in, it syncs with the family’s Google Sheet; until then, clearing the browser’s data deletes it, so back up now and then.</p>
       </div>
     </div>
   </div>
@@ -1314,31 +1327,17 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
+      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
-        <form id="syForm" class="field" autocomplete="on" action="#">
-          <div class="box glass">
-            <label class="label" for="syUrl">Web app link</label>
-            <input class="plain" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false">
-            <label class="label" for="sySecret">Secret code</label>
-            <input class="plain" id="sySecret" name="password" type="password" placeholder="The SECRET you set in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false">
-          </div>
-          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
-          <p class="hint">Set up the Sheet first (steps in the Notes README). If you have a setup link, copy it and tap the clipboard button instead. If the iPhone offers to save the link and code as a password, say yes: next time, tap the link box and pick it.</p>
-        </form>
-        <div id="syOn" class="field" hidden>
+        <div class="field">
           <div class="rgroup glass">
             <button class="rowbtn" type="button" id="syNow">
               <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
-              <span>Sync now<span class="sub">Sends this phone’s changes and loads the other phone’s</span></span>
-            </button>
-            <button class="rowbtn" type="button" id="syShare">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
-              <span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your wife’s phone, or to reconnect this one. Keep it private.</span></span>
+              <span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets the family’s latest from the Sheet</span></span>
             </button>
           </div>
-          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+          <p class="hint">One Sheet for the family: notes, reminders and lists are shared, except what you mark Just me, which only you see. Each row says whose it is. This phone keeps every note, list and open reminder, and reminders finished in the last 90 days; older ones stay in the Sheet. The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
         </div>
       </div>
     </div>
@@ -1358,7 +1357,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <input class="plain" id="puServer" type="url" inputmode="url" placeholder="https://notes-push.….workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false">
           </div>
           <button class="btn" id="puOn" type="button">Turn on notifications</button>
-          <p class="hint">The server is set up once (steps in the Notes README, “Notifications”). Its address comes with the Google Sheet setup link, too.</p>
+          <p class="hint">The server is set up once (steps in the Notes README, “Notifications”). Signed in, each phone turns notifications on for itself.</p>
         </div>
         <div id="puOnBox" class="field" hidden>
           <p class="label">Lists that alert this phone</p>
@@ -1383,7 +1382,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
   <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
 </div>
 
-<script src="../home/account.js"></script>   <!-- family accounts: signs "Add to calendar" and Ipsy in -->
+<script src="../home/account.js"></script>   <!-- family accounts: signs "Add to calendar", Ipsy and the family's Google Sheet in -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="../home/slide.js"></script>
 <script src="../home/aisles.js"></script>
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->

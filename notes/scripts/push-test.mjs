@@ -1,7 +1,7 @@
 // Tests Notes' notification Worker (notes/push) without Cloudflare, Google or
-// Apple: the Google Sheet and the push service are stand-ins, and every
-// notification is decrypted here with Node's own crypto to read what the
-// phone would show.
+// Apple: the Google Sheet, aOS (which checks a family session) and the push
+// service are stand-ins, and every notification is decrypted here with Node's
+// own crypto to read what the phone would show.
 //   node notes/scripts/push-test.mjs
 import crypto from 'node:crypto';
 import { b64u } from '../../mail/push/webpush.js';
@@ -54,18 +54,26 @@ function world() {
     secrets: { [SHEET]: 'maple-otter', [OTHER]: 'someone-else' },
     lists: [{ id: 'l1', name: 'Personal', updated: 1 }, { id: 'l3', name: 'Groceries', updated: 1 }],
     todos: [], notes: [],
-    sheetCalls: 0, pushed: [], pushStatus: 201, sheetDown: false,
+    sheetCalls: 0, sheetLinks: [], stateCalls: [], pushed: [], pushStatus: 201, sheetDown: false,
+    newScript: false,   // the script since aOS (VERSION 2): the phrase only counts in the link (?key=)
   };
   w.fetch = async (url, init = {}) => {
     url = String(url);
     if (url.startsWith('https://script.google.com/')) {
-      w.sheetCalls++;
+      w.sheetCalls++; w.sheetLinks.push(url);
       if (w.sheetDown) throw new TypeError('fetch failed');
-      if (!(url in w.secrets)) return new Response('<html>Not found</html>', { status: 404 });
+      const u = new URL(url), base = u.origin + u.pathname;
+      if (!(base in w.secrets)) return new Response('<html>Not found</html>', { status: 404 });
       const req = JSON.parse(init.body);
-      if (req.secret !== w.secrets[url]) return Response.json({ ok: false, error: 'wrong-secret' });
+      if ((w.newScript ? u.searchParams.get('key') : req.secret) !== w.secrets[base]) return Response.json({ ok: false, error: 'wrong-secret', ...(w.newScript ? { aos: true } : {}) });
       // An older script: answers "due" with everything, as a sync does.
-      return Response.json({ ok: true, app: 'allison-notes-sync', v: 1, todos: w.todos, notes: w.notes, lists: w.lists, graves: {} });
+      return Response.json({ ok: true, app: 'allison-notes-sync', v: w.newScript ? 2 : 1, todos: w.todos, notes: w.notes, lists: w.lists, graves: {} });
+    }
+    if (url === 'https://tomallison24-news.pages.dev/aOS/api/state') {
+      // aOS: who a family session belongs to
+      const tok = String((init.headers || {}).Authorization || '').replace('Bearer ', ''); w.stateCalls.push(tok);
+      const people = { 'tok-tom-0123456789': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella-0123456789': { id: 'ella', name: 'Ella', role: 'member' } };
+      return Response.json({ storage: true, setup: true, user: people[tok] || null });
     }
     if (url.startsWith('https://web.push.apple.com/')) {
       w.pushed.push({ endpoint: url, headers: init.headers, body: init.body });
@@ -124,6 +132,9 @@ const NY = { tz: 'America/New_York', lang: 'en-US', morning: '09:00', skip: [], 
   ok('2. keeps open, dated, recent reminders only', s.todos.map(t => t.id).join() === 'a');
   ok('2. keeps no reminder notes and no note text', !JSON.stringify(s).includes('private words') && !JSON.stringify(s).includes('secret body'));
   ok('2. nudges: live ones only; untitled notes use their first line', s.nudges.map(n => n.id + '=' + n.title).join() === 'n1=Dentist,n3=First line');
+  const j = slim({ lists: [], todos: [{ id: 'm', title: 'Gift', list: 'l1', date: '2026-10-02', who: 'ella' }, { id: 'x', title: 'Odd', list: 'l1', date: '2026-10-02', who: 'not ok!' }],
+    notes: [{ id: 'k', title: 'Surprise', body: '', reminder: '2026-10-02T14:00:00.000Z', who: 'ella' }] }, now);
+  ok('2. a Just-me one keeps whose it is (and only a real id)', j.todos.map(t => t.id + ':' + (t.who || '')).join() === 'm:ella,x:' && j.nudges[0].who === 'ella');
 }
 
 // ---- 3. subscribing ----
@@ -248,9 +259,59 @@ const A = phone('a'), B = phone('b');
   r = await tick(w5.env, w5.fetch, due + 65e3);
   ok('4. nobody subscribed: the minute is skipped', r.skipped === 'nobody subscribed');
 
+  // Just me: only that person's phones.
+  const mine = { todos: [{ id: 'j', title: 'Gift', list: 'l1', date: '2026-10-02', time: '17:30', who: 'ella' }], nudges: [{ id: 'k', title: 'Surprise', at: due, who: 'ella' }], lists: {} };
+  ok('4. a Just-me reminder and nudge alert only their person\'s phones', dueFor(mine, { ...NY, who: 'ella' }, 'e', due + 5e3, {}).length === 2
+    && dueFor(mine, { ...NY, who: 'tom' }, 't', due + 5e3, {}).length === 0 && dueFor(mine, NY, 'o', due + 5e3, {}).length === 0);
+
   // Time zones: the same reminder alerts each phone at its own 5:30 PM.
   const la = dueFor({ todos: [{ id: 'x', title: 'x', list: 'l1', date: '2026-10-02', time: '17:30' }], nudges: [], lists: {} }, { ...NY, tz: 'America/Los_Angeles' }, 's', Date.UTC(2026, 9, 3, 0, 30), {});
   ok('4. a phone in Los Angeles gets it at 5:30 PM there', la.length === 1);
+}
+
+// ---- 5. since aOS keeps the Sheet: phones sign in, the server keeps its own link and phrase ----
+{
+  const sub = ph => ({ endpoint: ph.endpoint, keys: ph.keys });
+  const TOM = 'tok-tom-0123456789', ELLA = 'tok-ella-0123456789';
+  const w = world();
+  w.newScript = true;
+  let r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
+  ok('5. signed in, but the server has no Sheet yet: refused, and says so', r.status === 403 && r.body.error === 'no-sheet');
+  w.env.NOTES_SHEET_URL = SHEET; w.env.NOTES_SHEET_SECRET = 'maple-otter';   // the owner's Worker secrets
+  r = await call(w, '/subscribe', { subscription: sub(A), session: 'tok-nobody-0123456789', prefs: NY });
+  ok('5. a session aOS doesn\'t know: refused', r.status === 403 && r.body.error === 'signin');
+  r = await call(w, '/subscribe', { subscription: sub(A), session: 'not a token', prefs: NY });
+  ok('5. something that isn\'t a session: refused without asking aOS', r.status === 403 && r.body.error === 'signin' && w.stateCalls.length === 2);
+  r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
+  ok('5. Ella, signed in: subscribed', r.status === 200 && r.body.ok, JSON.stringify(r.body));
+  r = await call(w, '/subscribe', { subscription: sub(B), session: TOM, prefs: NY });
+  const subs = await w.env.PUSH.get('subs', 'json');
+  ok('5. each phone keeps whose it is, and no session is kept', Object.values(subs).map(s => s.who).sort().join() === 'ella,tom' && ![...w.env.PUSH.map.values()].some(v => v.includes('tok-')));
+  const link = new URL(w.sheetLinks.at(-1));
+  ok('5. the Sheet is asked with the phrase in the link, as the notification server', link.searchParams.get('key') === 'maple-otter' && link.searchParams.get('who') === 'notes-push');
+  const due = Date.UTC(2026, 9, 2, 21, 30);
+  w.todos = [{ id: 's1', title: 'Pick up Sofia', list: 'l1', date: '2026-10-02', time: '17:30', done: false },
+    { id: 'g1', title: 'Wrap the gift', list: 'l1', date: '2026-10-02', time: '17:30', done: false, who: 'ella' }];
+  await call(w, '/refresh', { endpoint: A.endpoint });
+  await tick(w.env, w.fetch, due + 5e3);
+  const got = ph => w.pushed.filter(p => p.endpoint === ph.endpoint).map(p => decrypt(p.body, ph).title).sort().join('|');
+  ok('5. a shared reminder alerts both; Ella\'s Just-me one only her phone', got(A) === 'Pick up Sofia|Wrap the gift' && got(B) === 'Pick up Sofia', got(A) + ' / ' + got(B));
+  // changing her choices keeps whose phone it is
+  r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: { ...NY, nudges: false } });
+  ok('5. a change of choices: still hers', r.status === 200 && (await w.env.PUSH.get('subs', 'json'))[Object.keys(subs).find(k => subs[k].who === 'ella')].nudges === false);
+  // the owner changed the Sheet's phrase: the server's old one is refused until it is given the new one
+  w.secrets[SHEET] = 'new-phrase';
+  r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
+  ok('5. the Sheet\'s phrase changed: says so', r.status === 403 && r.body.error === 'wrong-secret');
+  w.env.NOTES_SHEET_SECRET = 'new-phrase';
+  r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
+  ok('5. given the new phrase (a Worker secret): works again', r.status === 200);
+  // without Worker secrets: the pair the first phone brought, before aOS
+  const w2 = world();
+  await call(w2, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  w2.newScript = true;
+  r = await call(w2, '/subscribe', { subscription: sub(B), session: TOM, prefs: NY });
+  ok('5. no Worker secrets: the kept pair still reads the new script', r.status === 200, JSON.stringify(r.body));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

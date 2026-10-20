@@ -86,9 +86,8 @@ applies it before the page is drawn.
     its pins and cards 26px further clear of the header than in Standard,
     because the Vintage header is 26px taller), in the list the header is solid
     ground and the list slides under it;
-  - solid burnt-orange buttons (+, Save, Connect and sync, Want to go on the
-    card); outlined teal for Paste a setup link; outlined red for Delete and
-    Disconnect;
+  - solid burnt-orange buttons (+, Save, Want to go on the card); outlined red
+    for Delete;
   - the map keeps CARTO's own tiles, warmed with a light sepia filter
     (`.leaflet-tile-pane`) so they sit better with the cream;
   - Futura, which iOS has built in, so no font is downloaded.
@@ -128,15 +127,15 @@ tap, pin, sheet and search works the same in both.
 that added it keeps it. The first time it opens there, `design.js` moves that
 app's data on the phone over to Places' names (`allison-placesv-…` →
 `allison-places-…`: the places, their deleted marks, the sort, the map's
-layers, the last known position, the Sheet link and the last sync time, and
-what it had seen, so no walkthrough again), unless Places already has data on
-that phone; nothing old is deleted. Places has no server route and no
-IndexedDB, so nothing else moves. Both used the same Sheet, so a phone that
-had both connected sees the same places either way. **Use the same Sheet as
-Notes** still reads the old Notes Vintage app's link
-(`allison-notesv-v1-sync`) as well as Notes' (`allison-notes-v1-sync`): where
-they share storage (Safari), the old one is there until Notes is next opened at
-its old Vintage address and moves it.
+layers, the last known position, the Sheet link it kept before aOS and the
+last sync time, and what it had seen, so no walkthrough again), unless Places
+already has data on that phone; nothing old is deleted. Places has no server
+route of its own and no IndexedDB, so nothing else moves. That Sheet link is
+handed to aOS once signed in, like Places' own (below). Where Places and Notes
+share storage (Safari), Places also hands over a link it finds under Notes'
+name (`allison-notes-v1-sync`) or the old Notes Vintage app's
+(`allison-notesv-v1-sync`, there until Notes is next opened at its old
+Vintage address and moves it).
 
 ## Where the data comes from
 
@@ -158,14 +157,16 @@ date. Anything it doesn't have can still be added by hand or from a pin.
 
 Places sends your searches and, when you add one, your position to Photon,
 and a place's OpenStreetMap id, or the area the map is showing, to Overpass. Nothing else leaves the phone
-except the Google Sheet sync below.
+except the family's Google Sheet sync below.
 
 ## From your calendar
 
 Every three hours a GitHub workflow (`.github/workflows/places-calendar.yml`,
 `scripts/from-calendar.mjs`) reads the iCloud **Family** calendar, a year
-back and a year ahead, and adds outings to Places through the Sheet; the
-phones pick them up on their next sync.
+back and a year ahead, and adds outings to Places through the family's Sheet;
+the phones pick them up on their next sync. It asks the Sheet's script as the
+calendar (`who=places-calendar`, with the phrase in the link, as aOS does), so
+those places are the family's and their Who column says **Calendar**.
 
 - **What counts** (`calendar.mjs`): an event that happens once, whose
   location OpenStreetMap knows as somewhere you'd go out: a restaurant, café,
@@ -201,32 +202,42 @@ calendar/README.md, "Set up"), plus the Notes Sheet:
 
 1. GitHub → the repository → **Settings → Secrets and variables → Actions →
    New repository secret**: `NOTES_SHEET_URL` (the Sheet's web app link, ending
-   in `/exec`) and `NOTES_SHEET_SECRET` (its SECRET).
-2. The Sheet's script must be the updated one (below).
+   in `/exec`) and `NOTES_SHEET_SECRET` (its SECRET). When you change the
+   Sheet's SECRET (aOS/SHEETS.md), change this one too.
+2. The Sheet's script must be the family's one (`notes/google-sheet-sync.gs`,
+   VERSION 2; an older one still works with this workflow).
 3. **Actions → Places from Calendar → Run workflow** to run it now; it then
    runs every three hours by itself. Until the secrets exist it just says it
    isn't set up.
 
-## Two phones: the Notes Google Sheet
+## The family's Google Sheet (Notes')
 
-Places keeps its lists in **the same Google Sheet as Notes**, with the same
-web app link and secret, so there's nothing new to set up in Google:
+Places keeps its lists in **the family's Notes Sheet** (aOS/SHEETS.md;
+`notes/README.md`, *The family's Google Sheet*): one Sheet for the whole
+family, where every place is shared (Places has no Just me), and each row says
+who added it.
 
-1. Update the Sheet's script once: paste the new
-   [`notes/google-sheet-sync.gs`](../notes/google-sheet-sync.gs) over the old
-   one (keep your SECRET line), **Save**, then **Deploy → Manage deployments →
-   ✏️ Edit → Version: New version → Deploy**. The link stays the same. Until
-   then, Places says the script needs updating.
-2. In Notes: the download button → **Google Sheet sync** → **Copy setup
-   link**.
-3. In Places: the cloud button → **Paste a setup link**. (Where Places and
-   Notes share storage, as in Safari, **Use the same Sheet
-   as Notes** does it in one tap.)
+- **Through aOS, signed in.** No phone keeps the Sheet's link or phrase:
+  every sync goes to `../sheet/api/places` (`functions/sheet/api`, which sends
+  Places to Notes' Sheet) with the phone's family session (`../home/account.js`
+  and `../home/sheet.js`), as `{ action: 'places', places, graves }`; the
+  script sends back every place and Places' deletion marks, nothing of Notes'.
+  Signed in, Places syncs on opening, a moment after each change, when it
+  comes back to the front and when the phone is back online. Signed out, it
+  works on the phone as before, and the cloud button's sheet says to sign in
+  (**Sign in and sync** asks for Face ID).
+- **Handing over the old link.** A phone that kept the Sheet's link and phrase
+  (Places' own, `allison-places-v1-sync`, or Notes' where they share storage)
+  passes them to aOS once, on the owner's phone and only while aOS has none,
+  then Places forgets its own copy.
+- **Setting it up** is the Notes Sheet's (aOS/SHEETS.md, "Setting it up"):
+  nothing of its own.
 
 The Sheet gets a hidden `_places` tab the app reads back from, and readable
-**📍 Want to go** and **📍 Been** tabs (rebuilt on every change, so edit in
-the app). Changes merge as in Notes: the newest change to each place wins,
-and deleted places are remembered so the other phone deletes them too.
+**📍 Want to go** and **📍 Been** tabs, starting with **Who** (rebuilt on every
+change, so edit in the app). Changes merge as in Notes: the newest change to
+each place wins, and deleted places are remembered so the other phones delete
+them too. Places are undated: each phone keeps all of them.
 
 ## How it's built
 
@@ -235,8 +246,8 @@ and deleted places are remembered so the other phone deletes them too.
   OpenStreetMap tags into places, no network), `sw.js` (offline shell),
   `manifest.webmanifest` and the icons (`icon.svg`, Vintage, and
   `icon-glass.svg`, Standard, rendered by `scripts/make-icons.mjs`).
-- **Data** lives in localStorage (`allison-places-v1`) and, once connected,
-  the Sheet.
+- **Data** lives in localStorage (`allison-places-v1`) and, signed in, the
+  family's Sheet.
 - Published with the other apps by `.github/workflows/news.yml`, and listed
   on Home.
 
@@ -245,8 +256,10 @@ tags, hours), `node places/scripts/calendar-test.mjs` (which events count and
 what they change), `node places/scripts/from-calendar-test.mjs` (the calendar
 workflow end to end, with iCloud, Photon and the Sheet as stand-ins) and
 `node places/scripts/app-test.mjs` (the app in headless Chromium against
-stand-ins for Photon, Overpass, the map tiles and the Sheet; the Sheet link of
-Notes or the old Notes Vintage app in one tap; both designs: Vintage, the
+stand-ins for Photon, Overpass, the map tiles and aOS; the family's Sheet with
+the real script on an in-memory Sheet: signed out, then in, Who, a deletion,
+and the old link handed over from Places, Notes or the old Notes Vintage app;
+both designs: Vintage, the
 default, in the Retro look in light and dark, and Standard; Settings → Design
 switching at once, the business dots recoloured, and kept across a reload; the
 old Places Vintage address moving that app's data once). `node

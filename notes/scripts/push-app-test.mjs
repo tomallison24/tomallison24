@@ -1,6 +1,8 @@
-// Drives Notes in headless Chromium against a stubbed Google Sheet and a
-// stubbed notification server (notes/push): the bell and its sheet, turning
-// notifications on (what the phone sends the server), choosing lists, the
+// Drives Notes in headless Chromium against a stubbed family Google Sheet
+// (through aOS, **/sheet/api/notes) and a stubbed notification server
+// (notes/push): the bell and its sheet, signed out it asks to sign in, turning
+// notifications on (what the phone sends the server: its family session, never
+// a Sheet link or phrase), choosing lists, the
 // per-reminder Alert choice, the ping after a sync, a test notification,
 // opening the app from a notification, and turning them off. The browser's
 // push service is stubbed too: headless Chromium can't reach Apple's.
@@ -34,7 +36,7 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, r));
 const BASE = 'http://localhost:' + server.address().port;
 
-const SHEET = 'https://script.google.com/macros/s/AKfycbTEST/exec';
+const SESSION = JSON.stringify({ token: 'tok-tom', user: { id: 'tom', name: 'Tom', role: 'owner' }, at: 1 });
 const PUSH = 'https://notes-push.test.workers.dev';
 const KEY = 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM';
 const today = new Date(); const pad = n => String(n).padStart(2, '0');
@@ -53,11 +55,15 @@ const browser = await chromium.launch({ executablePath: fs.existsSync('/opt/pw-b
 const ctx = await browser.newContext({ timezoneId: 'America/New_York', locale: 'en-US', viewport: { width: 390, height: 844 }, serviceWorkers: 'allow' });
 const calls = [];
 let sheetItems = null;
-await ctx.route(SHEET, async route => {
-  const b = JSON.parse(route.request().postData() || '{}');
+await ctx.route('https://script.google.com/**', route => route.abort());   // no phone talks to Google itself any more
+await ctx.route('**/sheet/api/**', async route => {
+  const r = route.request();
+  if (r.headers().authorization !== 'Bearer tok-tom') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"signin"}' });
+  if (r.method() === 'GET') return route.fulfill({ contentType: 'application/json', body: '{"configured":true}' });
+  const b = JSON.parse(r.postData() || '{}');
   if (b.todos) sheetItems = { notes: b.notes, todos: b.todos, lists: b.lists };
   calls.push({ to: 'sheet', action: b.action });
-  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, app: 'allison-notes-sync', v: 1, ...(sheetItems || seed), graves: {} }) });
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, app: 'allison-notes-sync', v: 2, aos: true, ...(sheetItems || seed), graves: {} }) });
 });
 await ctx.route(PUSH + '/**', async route => {
   const r = route.request(), p = new URL(r.url()).pathname;
@@ -90,16 +96,29 @@ const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
 await page.goto(BASE + '/notes/');
-await page.evaluate(({ seed, SHEET }) => {
+await page.evaluate(({ seed }) => {
   localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
-  localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
   localStorage.setItem('allison-notes-v1-tab', 'rem');
   localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
   localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still (Vintage is the default design)
-}, { seed, SHEET });
+}, { seed });
 await page.reload();
 await page.waitForTimeout(1500);
 const upcoming = async () => { await page.click('#seg [data-view="upcoming"]'); await page.waitForTimeout(300); };
+await upcoming();
+
+// ---- signed out: notifications are for the family, so it asks to sign in first ----
+await page.click('#remBellBtn');
+ok('signed out: the sheet says to sign in first', (await page.textContent('#puStatus')).includes('Sign in first'), await page.textContent('#puStatus'));
+await page.fill('#puServer', PUSH);
+await page.click('#puOn');
+await page.waitForSelector('#aos-signin');
+ok('turning on signed out: the family sign-in, and nothing sent', !calls.some(c => c.to === 'push'));
+await page.click('#aos-signin .s-not');
+await page.waitForTimeout(400);
+await page.evaluate(s => localStorage.setItem('aos.session', s), SESSION);
+await page.reload();
+await page.waitForTimeout(1500);
 await upcoming();
 
 // ---- the bell ----
@@ -107,6 +126,7 @@ ok('bell in the Reminders header, no dot while off', await page.isVisible('#remB
 ok('reminder rows show the clock while notifications are off', await page.locator('.todo').first().locator('.tchip.bare svg circle').count() === 1);
 await page.click('#remBellBtn');
 ok('the sheet explains, and asks for the server address', (await page.textContent('#puStatus')).includes('even with Notes closed') && await page.isVisible('#puServer'));
+await page.fill('#puServer', '');
 await page.click('#puOn');
 ok('no address: says what to enter, sends nothing', (await page.textContent('#puStatus')).includes('workers.dev') && !calls.some(c => c.to === 'push'));
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '1-off.png') });
@@ -114,7 +134,7 @@ await page.fill('#puServer', PUSH + '/');
 await page.click('#puOn');
 await page.waitForTimeout(800);
 const sub1 = calls.find(c => c.path === '/subscribe');
-ok('turning on: subscribes with the Sheet link, secret, time zone and choices', sub1 && sub1.body.sheet.url === SHEET && sub1.body.sheet.secret === 'maple-otter'
+ok('turning on: subscribes with the family session (no Sheet link or phrase), time zone and choices', sub1 && sub1.body.session === 'tok-tom' && !('sheet' in sub1.body)
   && sub1.body.prefs.tz === 'America/New_York' && sub1.body.prefs.morning === '09:00' && sub1.body.prefs.nudges === true && sub1.body.subscription.endpoint.startsWith('https://web.push.apple.com/'), JSON.stringify(sub1 && sub1.body.prefs));
 ok('the sheet now shows the lists, nudges and the morning time', await page.isVisible('#puOnBox') && await page.locator('#puLists [data-pl]').count() === 2 && await page.isVisible('#remBellDot'));
 await page.click('#puLists [data-pl="l3"]');

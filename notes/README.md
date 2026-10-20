@@ -2,11 +2,19 @@
 
 Notes and reminders as a home-screen web app, in two designs: Vintage
 (mid-century modern, the default) or Standard (the same frosted glass as Mail
-and News), picked in Settings. Free, no accounts, no server (except Ipsy, the helper you
-chat with, below, which asks Claude through the family server).
+and News), picked in Settings. Free. Everything works on the phone; signed in
+to the family account, it syncs with **the family's Google Sheet**, through aOS
+(below). Ipsy, the helper you chat with, asks Claude through the family server.
 
 - **Notes**: colour, pin, tags (type `#tag` anywhere), search (`#work budget`),
   and a "nudge" date shown on the card.
+- **Shared with the family, or Just me**: notes, reminders and lists are the
+  family's, in the family's Google Sheet. **Just me** (a switch in a note, a
+  list and a reminder) keeps one to you: nobody else in the family gets it
+  (below, *The family's Google Sheet*). A Just-me list keeps its reminders to you
+  too. Just-me items are marked with a small person: on a note's card ("Just
+  me") and in Recent, on a list's chip, on a reminder's row. Not the same as
+  **Private**, which only hides a note from Ipsy (the family still sees it).
 - **Home**: pinned notes, then **Collections** (one tile per tag, plus
   "No tag"), a short **Recent** list, and links to All notes, Nudges,
   Archive, Trash and Tidy up. Inside a collection, notes are newest-created
@@ -65,7 +73,8 @@ chat with, below, which asks Claude through the family server).
 - **Notifications**: the bell at the top of Reminders. Once on, a reminder
   alerts the phone at its **Alert** time even with Notes closed, and so does a
   note's nudge. Each phone picks which lists alert it. See *Notifications*
-  below; it needs the Google Sheet sync and a small free server.
+  below; it needs the family sign-in, the family's Google Sheet and a small
+  free server.
 
 ## Ipsy
 
@@ -92,6 +101,8 @@ pancake recipe*, *Turn my packing note into a list*.
 - **Reminders that alert.** A reminder Ipsy gives a date, time and alert is
   the same as one you set in its sheet: once the Sheet syncs, the notification
   server alerts the phones that have notifications on (*Notifications*, below).
+- **Just me**: Ipsy works on what this phone has, which is the family's items
+  and your own Just-me ones (never anyone else's). It doesn't switch Just me.
 - **Every change shows in the chat with Undo**, for as long as the app stays
   open, and goes through the app's own save, so it reaches the Google Sheet
   (and the other phone) like any other change; an Undo does too. It follows
@@ -103,10 +114,11 @@ pancake recipe*, *Turn my packing note into a list*.
   until you tap one. Everything else just happens, with Undo.
 - **Private notes are hidden from Ipsy**: it never sees them. They are left out
   of everything it reads (it is told only how many there are) and it can't
-  change them. Private only hides a note from Ipsy: it still syncs to the Sheet
-  and the other phones, and its nudge notifies, like any other note. (Until
-  aOS1.7 private notes stayed on the phone; the first sync since sends them.)
-  The same Private is in Orders, Travel and Calendar.
+  change them. Private only hides a note from Ipsy: it still syncs to the
+  family's Sheet and the family's phones, and its nudge notifies, like any
+  other note (Just me is what keeps a note to you). (Until aOS1.7 private notes
+  stayed on the phone; the first sync since sends them.) The same Private is in
+  Orders, Travel and Calendar.
 - **How it works.** The chat lives on the phone. Each step sends the whole
   conversation to the family server (`functions/notes/api`, `POST ipsy`; the
   shared part is `server/ipsy.js`), which adds Ipsy's instructions and tools
@@ -146,9 +158,10 @@ drawn. Every tap, swipe, sheet and step works the same in both.
     place of glass;
   - mustard, teal, burnt orange and olive: the Notes / Reminders bar, the
     reminder views, the list chips and a reminder's When, Alert, Priority and
-    List all have a mustard thumb; Done, the add buttons and Connect are solid
-    burnt orange; Cancel-style buttons are outlined teal and Delete is outlined
-    orange; a switch that is on is teal;
+    List all have a mustard thumb; Done and the add buttons are solid burnt
+    orange; Cancel-style buttons are outlined teal and Delete is outlined
+    orange; a switch that is on is teal (Just me, Private, Flag), and one that
+    isn't yours to switch is faded;
   - **a note's colour** (yellow, green, blue, pink, purple) is mustard, olive,
     teal, terracotta and plum, flat and ringed in the same colour;
   - **a list's colour** (the same seven choices, stored as the same hex values
@@ -197,19 +210,20 @@ colours.
 (the deploy copies `notes/` there, `.github/workflows/news.yml`), so a phone
 that added it keeps it. The first time it opens, `design.js` moves that app's
 data on the phone over to Notes' names (`allison-notesv-…` → `allison-notes-…`:
-the notes, lists and reminders, the deleted marks, the Sheet link and its time,
-the notification choices, the view and tab, the last backup; the IndexedDB
-copy of the Sheet link `allison-notesv` → `allison-notes`, which the app opens
-only after that; and what it had seen, so no walkthrough again), unless Notes
-already has data on that phone; nothing old is deleted. Its Google Sheet link
-and notification choices move with it, so it stays connected to the same Sheet
-and server (`notes/push`), and a notification still opens the address it was
-turned on at. What it shows in Calendar is still sent under its own name,
+the notes, lists and reminders, the deleted marks, the Sheet link it kept
+before aOS and its time, the notification choices, the view and tab, the last
+backup; the IndexedDB copy of the Sheet link `allison-notesv` → `allison-notes`,
+which the app opens only after that; and what it had seen, so no walkthrough
+again), unless Notes already has data on that phone; nothing old is deleted.
+The Sheet link is then handed to aOS once signed in and forgotten, as Notes'
+own is (below). Its notification choices move with it, so a notification still
+opens the address it was turned on at. What it shows in Calendar is still sent under its own name,
 `notesv`, when the app runs at that address (`notes` everywhere else;
 `functions/aOS/api` shows the two together as Notes), so a phone with both Home
 Screen apps keeps two copies that never overwrite each other.
-Places finds the Sheet link under Notes' name (`allison-notes-v1-sync`) as
-before. Its old offline cache (`notesvintage-…`) is cleared by `sw.js`.
+Places hands over a Sheet link it finds under Notes' name
+(`allison-notes-v1-sync`) too. Its old offline cache (`notesvintage-…`) is
+cleared by `sw.js`.
 
 ## Notifications
 
@@ -225,25 +239,37 @@ that reminder or note.
   reminders alert *At time* until you choose otherwise. In the list, a bell
   instead of a clock marks the reminders that will alert this phone.
 - **Per phone** (the bell): which lists alert this phone, whether note nudges
-  do, and the "no time" time. Your wife's phone makes its own choices.
+  do, and the "no time" time. Each phone in the family makes its own choices.
 - **Several at once**: up to three arrive separately; more arrive as one
   ("4 reminders").
 - Done reminders never alert. A reminder already overdue by more than 10
   minutes when it is added doesn't alert either.
 
-**How it knows**: it reads the Google Sheet the phones sync with. After a
-phone syncs a change it pings the server, which reads the Sheet again within
-seconds; it also reads it every 15 minutes anyway. It keeps only what it needs
-to alert: each open reminder's title, list, date, time and alert, and each
-nudge's title and time. It never keeps note text. Each notification is
-encrypted for the phone it's going to (the same code as Mail's), so Apple's
-push service carries only ciphertext.
+**How it knows**: it reads the family's Google Sheet, the one the phones sync
+with, with its own copy of the Sheet's link and phrase (the phones don't have
+them any more: aOS does). After a phone syncs a change it pings the server,
+which reads the Sheet again within seconds; it also reads it every 15 minutes
+anyway. It keeps only what it needs to alert: each open reminder's title,
+list, date, time and alert, and each nudge's title and time, and whose a
+Just-me one is. It never keeps note text. Each notification is encrypted for
+the phone it's going to (the same code as Mail's), so Apple's push service
+carries only ciphertext.
 
-**Who can use it**: only a phone that has the Sheet's web app link and secret
-code. The first phone's pair is kept; after that the server refuses any other
-Sheet, so nobody can point it at their own. If you change the secret in the
-script, the old pair stops working and the next phone to turn notifications
-on with the new one takes over.
+**Who can use it**: someone signed in to the family. Turning notifications on
+sends the phone's family session; the server checks it with aOS once
+(`/aOS/api/state`) and keeps only whose phone it is, never the session. So a
+Just-me reminder or nudge alerts only its own person's phones; a shared one
+alerts every phone that has its list on.
+
+**Its copy of the Sheet's link and phrase**: the pair the first phone brought
+(before aOS kept the Sheet), kept in its storage; or, once you give it them,
+the Worker secrets `NOTES_SHEET_SECRET` (and `NOTES_SHEET_URL`, if it has no
+pair yet), which win. When you change the Notes Sheet's `SECRET`
+(aOS/SHEETS.md, "Setting it up"), give the server the new phrase too, or
+notifications stop: in Cloudflare, **Workers & Pages → notes-push → Settings →
+Variables and Secrets → Add**, type *Secret*, name `NOTES_SHEET_SECRET`, the
+new phrase (and `NOTES_SHEET_URL`, the Sheet's web app link, the first time).
+Until then, turning notifications on says the phrase doesn't match.
 
 ### Set up (once)
 
@@ -261,22 +287,20 @@ on with the new one takes over.
    deploys. The end of the log shows the address:
    `https://notes-push.<your-subdomain>.workers.dev`. It deploys again by
    itself whenever `notes/push` changes on the default branch.
-4. **Optional: update the Sheet's script.** Paste the new
-   `google-sheet-sync.gs` over the old one and deploy a new version (steps in
-   *Changing the script later*). The server then gets just the titles and
-   dates it needs instead of everything. It works without this step.
+4. **The Sheet.** The Sheet's script must be the one for the family's Sheet
+   (aOS/SHEETS.md), and the server needs its link and phrase: give them as the
+   Worker secrets above (`NOTES_SHEET_URL`, `NOTES_SHEET_SECRET`). A server
+   that already alerted keeps the pair it had until the phrase changes.
 
 ### Turn it on (each phone)
 
 1. Open Notes **from its Home Screen icon** (iPhone only allows
-   notifications for Home Screen apps, on iOS 16.4 or later). The Google Sheet
-   must be connected.
+   notifications for Home Screen apps, on iOS 16.4 or later), signed in to the
+   family (it asks, with Face ID).
 2. **Reminders → bell**. Paste the server address, tap **Turn on
    notifications**, then **Allow**.
 3. Tap **Send a test**.
-4. For your wife's phone: **Copy setup link** (Settings → Google Sheet
-   sync) now includes the server address. Set up her phone with it as before,
-   then on her phone go to **Reminders → bell → Turn on notifications**.
+4. On each family phone, the same: signed in, the bell, the server address.
 
 Each place Notes opens (its own icon, aOS, Safari) is separate on
 an iPhone, so notifications are turned on in each one you want them in.
@@ -290,9 +314,11 @@ an iPhone, so notifications are turned on in each one you want them in.
 - Turning notifications off on the phone (Settings → Notifications → Notes,
   or **Turn off on this phone**) makes the server forget that phone.
 - `node notes/scripts/push-test.mjs` tests the server (time zones and clock
-  changes, who may subscribe, what's sent, and that only the phone can
-  read it). `node notes/scripts/push-app-test.mjs` drives the app's side in
-  headless Chromium. Neither can test a real iPhone.
+  changes, who may subscribe, the family session checked with aOS, Just-me
+  reminders alerting only their person, the Sheet's phrase in its link, what's
+  sent, and that only the phone can read it). `node
+  notes/scripts/push-app-test.mjs` drives the app's side in headless Chromium.
+  Neither can test a real iPhone, aOS or Apple.
 
 ## How it's built
 
@@ -301,8 +327,8 @@ an iPhone, so notifications are turned on in each one you want them in.
   offline and shows notifications; `manifest.webmanifest` and the icons make
   it installable. `push/` is the notification server (a Cloudflare Worker),
   deployed by `.github/workflows/notes-push.yml`.
-- **Data** lives in the browser's `localStorage` on each device, and, once
-  connected, in a Google Sheet you both share (below).
+- **Data** lives in the browser's `localStorage` on each device, and, signed
+  in, in the family's Google Sheet (below).
 - **Two designs**: `../home/design.js` and `../home/sky.js` in `<head>` (*The
   two designs*, above).
 - Published with the other apps by `.github/workflows/news.yml` (also at the
@@ -311,10 +337,11 @@ an iPhone, so notifications are turned on in each one you want them in.
 ## Tests
 
 ```sh
-node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark, both designs: home, collections, the editor, colours, Trash and Undo, Reminders, swipes, lists, the Sheet and Settings sheets, step by step, its storage, Settings > Design, the old Notes Vintage address
-node notes/scripts/push-app-test.mjs    # the notifications, the app's side (a stubbed Sheet and server)
+node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark, both designs: home, collections, the editor, colours, Trash and Undo, Reminders, swipes, lists, the Sheet and Settings sheets, step by step, its storage, Settings > Design, the old Notes Vintage address; the family's Google Sheet through aOS (the real script): two phones, Just me on a note, a list and a reminder, the old link handed over, finished reminders past 90 days
+node notes/scripts/sheet-test.mjs       # the Sheet's script (shared with Places): who gets in, shared and Just-me items, rows from before aOS, the 90 days and looking back, Who, what the notification server gets
+node notes/scripts/push-app-test.mjs    # the notifications, the app's side (a stubbed Sheet and server; signed out, then in)
 node notes/scripts/aisles-app-test.mjs  # the grocery sections in the app
-node notes/scripts/security-test.mjs    # hostile data from a backup, the Sheet or a setup link (both designs)
+node notes/scripts/security-test.mjs    # hostile data from a backup or the Sheet, and an old setup link (both designs)
 node notes/scripts/ipsy-test.mjs        # Ipsy in the app: its place, its tools, Undo, asking before deleting, private notes (a stand-in Claude and Sheet)
 node notes/scripts/ipsy-api-test.mjs    # Ipsy's server route, functions/notes/api (POST ipsy)
 node notes/scripts/push-test.mjs        # the notification server (notes/push)
@@ -341,7 +368,7 @@ same in every AllisonOS app. A coloured note keeps its tint.
 
 Sheets are iOS 26 Liquid Glass, as in the Calendar: each floats just inside
 the screen's edges with a lit rim, its rows sit on those faint tiles, fields
-are lighter glass on top, ✕ closes and a blue ✓ saves, and Private and Flag
+are lighter glass on top, ✕ closes and a blue ✓ saves, and Just me, Private and Flag
 are iOS 26 switches (the note editor stays a full page, with the same tiles
 and buttons). The toast is the same sheet glass, and **Show N completed** the
 same clear glass as every button. Every
@@ -349,83 +376,90 @@ one-choice switch (the Notes / Reminders bar, the reminder views, the list
 chips, a reminder's When, Priority and List) has one glass thumb that slides
 to the chosen option, from the shared `home/slide.js`.
 
-## Google Sheet sync
+## The family's Google Sheet
 
-One Google Sheet shared by both phones. Every change is sent a couple of
-seconds after you make it (and when the app opens); the newest change to each
-note, reminder or list wins. If a phone is wiped, connecting again loads
-everything back. Free: it runs as a small Apps Script in your own Google
-account (`google-sheet-sync.gs` in this folder).
+One Google Sheet for the whole family, the record of everyone's notes,
+reminders and lists (aOS/SHEETS.md, the design every app's Sheet follows).
+Signed in to the family account, Notes sends every change a couple of seconds
+after you make it (and when the app opens, comes back to the front or back
+online); the newest change to each note, reminder or list wins. If a phone is
+wiped, signing in again loads everything back. Free: it runs as a small Apps
+Script in the owner's Google account (`google-sheet-sync.gs` in this folder,
+VERSION 2).
 
-The Places app (`places/`) keeps its lists in this same Sheet, with the same
-link and secret (its README says how); they show up as **📍 Want to go** and
-**📍 Been** tabs.
+- **Through aOS, signed in.** No phone keeps the Sheet's link or phrase. The
+  owner gives them to aOS once (**aOS → Account → Google Sheets → Notes**), and
+  every sync goes to `../sheet/api/notes` (`functions/sheet/api`) with the
+  phone's family session; aOS passes it on to the script with who's asking.
+  `../home/sheet.js` does the calling. Signed out, Notes works on the phone as
+  before, and **Settings → The family's Google Sheet** says to sign in (**Sign
+  in and sync** asks for Face ID).
+- **Shared, except Just me.** Everything is the family's: each person's phone
+  gets every note, list and reminder, and anyone can change or delete them.
+  An item marked **Just me** (`only: true`) only ever goes to its own person's
+  phones, and a reminder in a Just-me list does too. The script enforces it:
+  only the person who made an item (`by`, which the script writes on every
+  row) can make it Just me or shared again, and nobody else's phone can change
+  or delete it, even by sending its id. On the phone, the switch is faded on
+  someone else's item, and on a reminder in a Just-me list (it's Just me with
+  its list). When an item becomes Just me, it leaves the other phones at their
+  next sync, without a deletion mark.
+- **Rows from before aOS** are the owner's, written down as theirs the first
+  time the owner syncs; they stay shared.
+- **What the phone keeps.** Every note, list and open reminder, and the
+  reminders finished in the last 90 days (by the day they were ticked off).
+  Older finished ones stay in the Sheet only: they leave the phone after a
+  sync, with no deletion mark. **Show completed** in Reminders (on a list, or
+  All) offers **Show completed before …**, which fetches them from the Sheet,
+  once a visit; they stay until the app is next opened. Search and Ipsy only
+  see what's on the phone.
+- **Handing over the old link.** A phone that kept the Sheet's link and phrase
+  (Notes used to: `allison-notes-v1-sync`, and a copy in IndexedDB
+  `allison-notes`) passes them to aOS once, on the owner's phone and only while
+  aOS has none (`AllisonOS.sheet.adopt`), then deletes both copies. An old
+  setup link (`#sync=…`) is refused with a note that it isn't needed any more.
+- **Readable tabs** are rebuilt on every change, so make edits in the app: one
+  tab per tag (`#recipe`, `#home`, … and `No tag`, newest note first), one per
+  reminder list (`✓ Groceries`, …), each starting with a **Who** column. They
+  leave out Just-me items; those are in the hidden data tabs (`_notes`,
+  `_reminders`, `_lists`, with `_deleted` and `_people`), as everything is:
+  the Sheet is the record, in the owner's Google account.
 
-The Sheet gets one tab per tag (`#recipe`, `#home`, ... and `No tag`, newest
-note first), one per reminder list (`✓ Groceries`, ...), and hidden `_notes`,
-`_reminders`, `_lists` and `_deleted` tabs that the app reads back from. The
-tag and list tabs are rebuilt on every change, so make edits in the app.
+The Places app (`places/`) keeps its lists in this same Sheet
+(`../sheet/api/places`, which aOS sends to Notes' Sheet); they show up as **📍
+Want to go** and **📍 Been** tabs. The notification server (`push/`) reads it
+too, with its own copy of the link and phrase (*Notifications*, above).
 
-### Set up (once, on a computer)
+### Set up (the owner, once)
 
-1. Go to [sheets.new](https://sheets.new) (signed in to the Google account you
-   want to use) and name the Sheet, e.g. **AllisonOS - Notes**.
-2. In the Sheet: **Extensions → Apps Script**.
-3. Delete everything in `Code.gs`, then paste the whole of
-   [`google-sheet-sync.gs`](google-sheet-sync.gs).
-4. On the line `const SECRET = 'CHANGE-ME';` replace `CHANGE-ME` with your own
-   long phrase, e.g. `maple-otter-47-lantern-quiet`. Keep the quotes.
-5. Click **Save** (the disk icon).
-6. **Deploy → New deployment**. Click the gear next to "Select type" and
-   choose **Web app**. Set **Execute as: Me** and **Who has access: Anyone**,
-   then **Deploy**.
-7. Google asks you to authorise: **Authorize access**, pick your account. If
-   it says "Google hasn't verified this app", click **Advanced → Go to …
-   (unsafe)** (it is your own script) and **Allow**.
-8. Copy the **Web app URL** (it ends in `/exec`).
+aOS/SHEETS.md, "Setting it up", has the steps every app's Sheet shares: paste
+the new `google-sheet-sync.gs` into the Notes Sheet's Apps Script (keep your
+`SECRET` line), **Deploy → Manage deployments → ✏️ → Version: New version →
+Deploy** (the link stays the same), then open Notes on your phone signed in
+(it hands over the link and phrase it has), or give aOS the phrase in
+**Account → Google Sheets**. Then change the Sheet's `SECRET`, deploy again,
+and give the new phrase to aOS, to the notification server (*Notifications*)
+and to the `NOTES_SHEET_SECRET` repository secret Places' calendar workflow
+uses (`places/README.md`).
 
-### Connect the phones
-
-1. On your phone, open Notes → **Settings** (the gear, top right) → **Google
-   Sheet sync**. Paste the Web app URL and type the secret phrase, then
-   **Connect and sync**. If the iPhone offers to save them as a password, say
-   yes: next time, tap the link box and pick it.
-2. Still there, tap **Copy setup link**. It copies a link with the URL and
-   secret in it. Send it to your wife (only her).
-3. On her phone: copy the link, open Notes from the Home Screen, tap the
-   **clipboard** button next to the pencil, then **Connect and sync**.
-
-Each place Notes opens keeps its own copy on an iPhone: its own Home Screen
-icon, aOS, and Safari. Connect each one you use once; after that
-the connection stays (it's kept twice on the phone, in localStorage and
-IndexedDB). Removing and re-adding the Home Screen icon starts it fresh, so
-connect again with the setup link or the saved password.
-
-### Changing the script later
-
-Edit it, **Save**, then **Deploy → Manage deployments → ✏️ Edit → Version:
-New version → Deploy**. The URL stays the same.
-
-**2026-10 update, worth doing once:** the script now keeps any text that
-starts with `=`, `+`, `-` or `@` as text, so a note titled like a formula
-(`=IMPORTXML(…)`) can never run as one in the Sheet. Paste the new
-`google-sheet-sync.gs` over the old one and deploy a new version as above.
+A new Sheet, from nothing: [sheets.new](https://sheets.new) → **Extensions →
+Apps Script** → paste `google-sheet-sync.gs`, set `SECRET`, **Deploy → New
+deployment → Web app** (Execute as: Me, Who has access: Anyone), authorise it,
+and give aOS its web app link and phrase.
 
 ### Keep in mind
 
-- **Setup links**: a link opens the sync sheet already filled in and says
-  which Sheet it points to (`script.google.com/macros/s/AKfy…/exec`), and
-  warns if it isn't the one this phone already uses. Only tap Connect for a
-  link that came from your own Notes. A link's notification server is only
-  taken once Connect works.
 - **Anything that comes from the Sheet or a backup file is checked** before
   Notes keeps it, and ids and colours are escaped wherever they are drawn, so
   nothing in them can become part of the page
   (`node notes/scripts/security-test.mjs` tries).
-- Anyone with both the URL and the secret can read and change the notes, so
-  keep them private.
-- Free Google accounts have daily Apps Script limits; two people syncing notes
-  are far below them. If a limit is ever hit, sync pauses and tries again;
-  nothing is charged.
+- Anyone with both the Sheet's link and phrase can read and change it, so only
+  aOS (and the notification server, and the calendar workflow) has them.
+- Free Google accounts have daily Apps Script limits; a family syncing notes is
+  far below them. If a limit is ever hit, sync pauses and tries again; nothing
+  is charged.
 - A single note over about 45,000 characters is split across several cells in
   the hidden `_notes` tab; the `#tag` tab shows the first 45,000.
+- Not tried against the real Google Apps Script or a real aOS: the tests run
+  the real script on an in-memory Sheet (`drinks/scripts/fake-sheet.mjs`), with
+  aOS stood in for.
