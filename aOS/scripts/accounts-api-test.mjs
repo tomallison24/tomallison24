@@ -6,7 +6,8 @@
 // returns it, "installed" never rewrites the user record (so it can't bring a removed
 // person back), a sign-up can't take over a passkey that's already someone's, and
 // Calendar's layers are each person's own; signing in writes nothing until a real
-// passkey signs, once per challenge; and "Sign out other devices" ends the others.
+// passkey signs, once per challenge; "Sign out other devices" ends the others; and
+// "Sign out and erase" (yours, or the owner's for someone) tells those sessions to erase.
 //   node aOS/scripts/accounts-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest } from '../../functions/aOS/api/[[route]].js';
@@ -238,6 +239,36 @@ await test('Sign out other devices: every other session ends, this one gets a fr
   const again = (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;
   assert.equal(await lockReq(again), 'through', 'signing in again afterwards works');
   assert.equal((await call('signout-others', {})).status, 401);
+});
+
+await test('Sign out and erase: every other session of yours is told to erase its app\'s data; plain sign-out never is', async () => {
+  const fresh = async () => (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;
+  const lost = await fresh(), here = await fresh();
+  const plain = await call('signout-others', {}, here);
+  assert.equal((await call('state', undefined, lost)).body.erase, undefined, 'signed out, not erased');
+  const lost2 = await fresh(), here2 = plain.body.token;
+  const r = await call('signout-others', { erase: true }, here2);
+  assert.equal(r.status, 200);
+  const st = (await call('state', undefined, lost2)).body;
+  assert.deepEqual([st.user, st.erase], [null, true], 'the lost phone erases itself');
+  assert.equal((await call('state', undefined, lost)).body.erase, true, 'and an older session too');
+  assert.equal((await call('state', undefined, r.body.token)).body.erase, undefined, 'this device carries on');
+  assert.ok((await call('state', undefined, r.body.token)).body.user);
+  assert.equal((await call('state', undefined, await fresh())).body.erase, undefined, 'signing in again afterwards is never erased');
+  assert.equal((await call('state', undefined, 'nonsense.token')).body.erase, undefined, 'only a session we signed can be told');
+  assert.equal((await call('state')).body.erase, undefined);
+});
+
+await test('the owner can erase someone else\'s devices (they lost their only phone); no one else can', async () => {
+  const boss = (await call('signin/finish', await signIn((await call('signin/begin', {})).body, 'TOMKEY'))).body.token;   // the earlier tests signed tom's old one out
+  const inv = (await call('invite', { name: 'Kim' }, boss)).body.token;
+  const k = await join({ invite: inv }, 'KIMKEY');
+  const kimId = k.body.user.id, kim = k.body.token;
+  assert.equal((await call('erase', { id: owner }, kim)).status, 403, 'a member can\'t');
+  assert.equal((await call('erase', { id: owner }, boss)).body.error, 'self', 'your own: Sign out and erase from this phone');
+  assert.equal((await call('erase', { id: kimId }, boss)).status, 200);
+  assert.equal((await call('state', undefined, kim)).body.erase, true);
+  assert.ok(JSON.parse(db.m.get('user:' + kimId)).name === 'Kim' && !JSON.parse(db.m.get('user:' + kimId)).removed, 'still in the family');
 });
 
 await test('unexpected errors say only "verify", not the inner message', async () => {

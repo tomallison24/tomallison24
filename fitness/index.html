@@ -25,6 +25,9 @@
   time, so the next session starts from there.
 
   Data: everything stays on this phone, in localStorage (allison-fitness-v1).
+  Meds (a page of its own: what you take, and each day's checklist) and each
+  day's steps live there too; steps can come from your own iPhone through
+  ../fitness/api (functions/fitness/api: Home Assistant's Steps sensor).
   Calendar shows each day's workout as a layer, and Fitness starts its week
   on the day Calendar's setting says; both work because the apps share this
   phone's storage when they are opened in Safari. Code: app.js,
@@ -734,6 +737,58 @@ a.xrow:active{background:var(--fill)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
+/* steps, beside each day (with Drinks' glass under it) and in the week's totals */
+.tags{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.tags:empty{display:none}
+.stp{display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.stp svg{width:15px;height:15px;color:var(--faint)}
+.stp.met,.stp.met svg{color:var(--accent-text)}
+.stats.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+/* the day sheet's steps: the count, and a bar to the goal */
+.steps .frow > label{display:flex;align-items:center;gap:10px}
+.steps .frow > label svg{width:22px;height:22px;color:var(--icon);flex:none}
+.steps .frow > label small{display:block;margin-left:0}
+.steps input.num{flex:0 0 104px;text-align:right;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.sbar{display:flex;flex-direction:column;gap:5px;padding:0 14px 12px}
+.sbar .trk{display:block;height:8px;border-radius:4px;background:var(--fill);overflow:hidden}
+.sbar .trk i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.sbar small{font-size:12px;color:var(--faint);text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---- Meds ----
+   The day's checklist, by the time of day: a round tick, the name and dose, and
+   when it was taken; "as needed" ones with − and +. Under it, what you take,
+   each with how often it was taken over 7 and 30 days. */
+.medlist{display:flex;flex-direction:column;gap:6px}
+.medlist > .sechead{margin-top:6px}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 12px 10px 14px;text-align:left;border-top:1px solid var(--hair-2);color:var(--text)}
+.mrow:first-child{border-top:0}
+button.mrow:active{background:var(--fill)}
+.mrow .ck{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;border:2px solid var(--hair);color:transparent;transition:background .2s,border-color .2s,color .2s}
+.mrow .ck svg{width:16px;height:16px;stroke-width:2.6}
+.mrow[aria-pressed="true"] .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.mrow .mt{flex:1;min-width:0;font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.mrow .mt small{display:block;font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0;font-variant-numeric:tabular-nums}
+.mrow .mk{flex:none;font-size:12px;color:var(--faint)}
+.mrow.prn .iconbtn{width:36px;height:36px;flex:none}
+.mrow.prn .iconbtn svg{width:18px;height:18px}
+button.xrow{width:100%;text-align:left;color:var(--text)}
+button.xrow:active{background:var(--fill)}
+.xrow > svg{width:16px;height:16px;color:var(--faint);flex:none}
+.xrow.add .xt{color:var(--accent-text)}
+.medrow .xt em{font-style:normal;font-weight:500;color:var(--muted)}
+.medrow .xt small.how{color:var(--accent-text);font-weight:500}
+.medrow.paused .xt{opacity:.62}
+.empty .btn{display:flex;margin:16px auto 0;min-height:46px}
+.navrow .iconbtn[disabled]{opacity:.35}
+#medBody{gap:16px}
+.mopt{--h:165}
+#medBody .formbtns{margin-top:4px}
+/* Settings: Steps and This phone */
+.btn.sm{min-height:32px;padding:5px 14px;font-size:14px;flex:none}
+.frow .l .sub{display:block;font-size:12px;color:var(--faint);font-weight:400;overflow-wrap:anywhere}
+#setMore{display:flex;flex-direction:column;gap:18px;margin-top:18px}
+#setMore a.rowbtn{color:var(--text);text-decoration:none}
+
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
@@ -1039,6 +1094,16 @@ a.xrow .xt{color:var(--accent-text)}
     </div>
   </div>
 
+  <!-- Meds: add or change something you take -->
+  <div class="sheetwrap lg" id="medSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="medLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="medLbl">Add to what you take</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody" id="medBody"></div>
+    </div>
+  </div>
+
   <!-- Shown once after an update; and while the Sheet syncs -->
   <div class="updpill" id="updPill" role="status" hidden><svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>Updated</div>
 
@@ -1048,8 +1113,9 @@ a.xrow .xt{color:var(--accent-text)}
 </div>
 
 <script src="../home/slide.js"></script>
-<script src="../home/account.js"></script>   <!-- family accounts: reads your own Drinks log for Analysis -->
+<script src="../home/account.js"></script>   <!-- family accounts: your own Drinks log for Analysis, your iPhone's steps, and Meds (signed in only) -->
 <script src="analysis.js"></script>
+<script src="meds.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="fitness" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>

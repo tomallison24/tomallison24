@@ -11,6 +11,11 @@
 //                      removed?: when the owner removed them (signed out, data kept) }
 //   apps:<id>        { <app>: when it was last opened from their Home Screen }
 //   sv:<id>          how many times they've used "Sign out other devices"
+//   wipe:<id>        "Sign out and erase": every session of theirs signed before this sign-out
+//                    count erases aOS's data from its app the next time that app opens online
+//                    (GET /aOS/api/state says erase: true; home/welcome.js does it)
+//   steps:<id>, steps:by:<entity>   the Home Assistant step sensor linked to that person, and
+//                    who it's linked to (functions/fitness/api); only they can read its steps
 //   used:<challenge> a sign-in challenge already used, gone after 5 minutes
 //   layer:<app>:<id> { at, data } - what Notes, Travel (travelv: Travel Vintage), Fitness or Mail shows in that
 //                    person's Calendar (functions/aOS/api); only they can read it
@@ -100,22 +105,36 @@ export async function openChallenge(db, kind, id, now = Date.now()) {
   return p && p.k === kind && typeof p.c === 'string' && typeof p.e === 'number' && p.e * 1000 >= now ? p.c : null;
 }
 
-// The signed-in user, or null: the session must be signed by us, unexpired, and its user still in the family.
-export async function sessionUser(db, request, now = Date.now()) {
+// A session's payload, if we signed it (expired or not), else null.
+async function readSession(db, request) {
   const m = /^Bearer ([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(request.headers.get('Authorization') || '');
   if (!m) return null;
   let ok = false;
   try { ok = await crypto.subtle.verify('HMAC', await hmacKey(db), unb64u(m[2]), enc.encode(m[1])); } catch { return null; }
   if (!ok) return null;
   let p; try { p = JSON.parse(new TextDecoder().decode(unb64u(m[1]))); } catch { return null; }
-  if (!p || typeof p.u !== 'string' || typeof p.e !== 'number' || p.e * 1000 < now) return null;
+  return p && typeof p.u === 'string' && typeof p.e === 'number' ? p : null;
+}
+// The signed-in user, or null: the session must be signed by us, unexpired, and its user still in the family.
+export async function sessionUser(db, request, now = Date.now()) {
+  const p = await readSession(db, request);
+  if (!p || p.e * 1000 < now) return null;
   const u = await getJSON(db, 'user:' + p.u);
   return u && !u.removed && (p.s || 0) === await signOuts(db, u.id) ? u : null;
 }
+// A session from before its person asked to sign out and erase (wipe:<id>): that app
+// erases aOS's data from the phone. Only for a session we signed, so nothing else can ask.
+export async function eraseAsked(db, request) {
+  const p = await readSession(db, request);
+  if (!p) return false;
+  const w = +(await db.get('wipe:' + p.u)) || 0;
+  return w > 0 && (p.s || 0) < w;
+}
 export const signOuts = async (db, id) => +(await db.get('sv:' + id)) || 0;
-export async function signOutOthers(db, id) {
+export async function signOutOthers(db, id, erase = false) {
   const sv = (await signOuts(db, id)) + 1;
   await db.put('sv:' + id, String(sv));
+  if (erase) await db.put('wipe:' + id, String(sv));
   return sv;
 }
 

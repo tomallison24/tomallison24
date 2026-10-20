@@ -42,9 +42,84 @@ the week, and for each day what you did.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
-- **Week and Analysis**: pick between them from the pill at the
+- **Week, Analysis and Meds**: pick between them from the pill at the
   bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
   it, and the app remembers the view you were on. See below.
+- **Steps**: each day shows its steps beside it (a shoe and the count, in the
+  accent once you reach your goal), the week's totals add **steps a day**, and
+  a day's sheet starts with its steps and a bar to the goal. See Steps, below.
+
+## Meds
+
+A page of its own (**Meds** in the view picker), never on the week, for the
+medications and supplements you take. It's for you alone: it asks you to sign
+in to your family account first (Face ID, once), so that if the phone is lost,
+aOS can erase it (aOS → Account → **Erase aOS from a lost phone**).
+
+- **What you take**: add each one once with **+** (or **Add a medication or
+  supplement**): its name, a dose if you like ("1000 IU", "2 capsules"),
+  Medication or Supplement, **when** (Morning, Midday, Evening, Bedtime, any
+  of them; none means once a day, any time; or **As needed**) and the **days**
+  you take it (every day unless you say otherwise).
+- **Each day**: a checklist by the time of day. Tap one to tick it off; it
+  keeps the time you did. Tap again to take it back. As needed ones have **+**
+  (took one) and **−** (take back the last), and are never "missed". The
+  arrows (or a sideways swipe) go back a day, to fill in one you forgot.
+- **How it's going**: under the checklist, each one you take shows how often
+  you took it over the last **7** and **30 days**, and how many **days in a
+  row**. Today only counts once everything due today is ticked, so a morning
+  check never reads as a miss; days you don't take it on don't break a run.
+- **Pause** stops one for a while (nothing due, left out of the numbers);
+  **Delete** takes it off the list (with Undo); the days you took it stay in
+  your history and in the Sheet.
+
+The sums are in `meds.js`, separate from the page, so they can be tested on
+their own.
+
+## Steps
+
+Each day's steps, typed in or read from your own iPhone.
+
+- **Typed in**: open a day and type its steps at the top. A number you type is
+  never replaced by your iPhone's; clear it and your iPhone's fills it in again.
+- **From your iPhone**: the Home Assistant app on an iPhone has a **Steps**
+  sensor: the phone's own motion chip, steps since midnight (it isn't Apple
+  Health, so an Apple Watch's steps aren't in it). Fitness reads it through
+  aOS (`../fitness/api/`, `functions/fitness/api`), which holds the Home
+  Assistant token, so no phone keeps one that could run the house. Link your
+  phone once in **Settings → Steps**: pick it from the list (or type its
+  sensor's name, `sensor.<your_phone>_steps`, if the list can't be shown).
+  Once it's linked to you, no one else in the family can link it, and you
+  only ever see your own; the owner can unlink anyone (a mistake, a new phone).
+  Fitness asks for the last 10 days the first time each day (Home Assistant
+  keeps 10 days by default) and the last 2 every 10 minutes or so after that;
+  each day keeps the highest count it has seen.
+- **The goal**: 10,000 a day unless you pick another in Settings (2,000 to
+  30,000). A day at or over it shows its count in the accent, and its sheet
+  says **Goal met**.
+- **Analysis**: two more totals, **Steps a day** (the average over the days
+  with a count) and **Days at goal**, each against the window before.
+
+**How the count gets in**: iOS decides when the Home Assistant app updates its
+sensors (when it's open, when you move, and in the background now and then),
+so the count for a day is the last one it sent before midnight, and can be a
+little under what Health shows. Type the day in if it matters.
+
+**Setting it up**: the owner adds the token (`aOS/RELEASING.md`, "Steps"). On
+each iPhone, in the Home Assistant app: **Settings → Companion App →
+Sensors → Steps** on, and Motion & Fitness allowed. If the sensor reads
+`unavailable` in Home Assistant, check those, and that the server's **Sensors
+Sent** setting (Settings → Companion App → your server → Privacy) isn't off.
+
+## Sign out and erase
+
+**Settings → This phone → Sign out and erase** erases everything Fitness keeps
+on this phone (the log, Meds, Steps, the Sheet link and its backup copy, the
+offline copy) and signs it out, after one last sync to the Sheet. **Lost a
+phone?** opens aOS's step-by-step page, where **Sign out and erase my other
+devices** makes Fitness (and every other aOS app of yours) erase itself on
+those phones the next time it opens online. `../home/welcome.js` does the
+erasing for every app.
 
 ## The two designs
 
@@ -243,8 +318,11 @@ Analysis's comparisons, and `sw.js` is the offline shell.
   app refuses to run inside another page's frame.
 - **Data**: the log is kept in `localStorage` under `allison-fitness-v1` as
   `{ v: 2, logs: [{ id, date, group, exercise, weight, reps, sets, timed?,
-  updated }], exercises: [{ id, group, name, updated }] }`. The second list
-  holds the exercises you typed in yourself. For a hold, `reps` is the
+  updated }], exercises: [{ id, group, name, updated }], meds: [{ id, name,
+  dose, kind, slots, days, prn, paused, since, updated }], doses: [{ id, med,
+  name, date, slot, at, updated }], steps: [{ id (the date), date, n, src:
+  'ha' | 'you', updated }] }`. The second list holds the exercises you typed in
+  yourself. The step goal is `allison-fitness-v1-step-goal`. For a hold, `reps` is the
   seconds and `timed` is true. Deletions are kept as "graves" in
   `allison-fitness-v1-graves`, so a sync can pass them on. Nothing leaves
   the phone unless you connect the Google Sheet. There is no server piece
@@ -277,8 +355,22 @@ same design as Travel, with **its own Sheet and script**:
   Minutes, Distance and Unit. Newest is at the top. If you set the Sheet up
   before cardio was added, paste the script in again and deploy a new
   version to get the new columns. The data itself syncs either way.
-- Hidden `_logs`, `_exercises` and `_deleted` tabs, which the app reads
-  back.
+- **Meds**: every dose ticked off (Date, Day, Time, Name, Dose, Type, When),
+  newest first; **Med list**: what you take, when, which days, and whether
+  it's paused; **Steps**: each day's steps, and whether they came from your
+  iPhone or were typed in. These came with version 2 of the script: a Sheet
+  set up before then keeps the workouts only, and Fitness says to paste the
+  script in again and deploy a new version (the Sheet button shows it).
+- Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps` and `_deleted`
+  tabs, which the app reads back.
+
+**Kept on the phone for 30 days**: once the Sheet holds Meds and Steps, the
+phone keeps only the last 30 days of doses and steps (after each sync; your
+list of meds and all your workouts stay, since Analysis compares 8 weeks of
+workouts). The older ones stay in the Sheet, and nothing is deleted from it:
+the phone leaves no grave for them. Without the Sheet, everything stays on the
+phone, since it's the only copy. A month's Analysis of steps then says its
+window before is in the Sheet rather than counting it as none.
 
 The Workouts tab is rebuilt on every change, so make changes in the app,
 not in the Sheet. A **Fitness** menu in the Sheet can rebuild it by hand.
@@ -311,6 +403,9 @@ glass tints).
 node fitness/scripts/analysis-test.mjs                           # Analysis's sums: the windows, totals, stronger / weaker / steady, groups missed
 node fitness/scripts/sheet-test.mjs                              # google-sheet-sync.gs on an in-memory Sheet: secret, merge, deletions, the Workouts tab
 node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a day, the lists, search, a timed hold, editing, deleting, Calendar's layer, Analysis, Sheet sync end to end, dark mode, the CSP, both designs, Settings > Design, the old Fitness Vintage address
+node fitness/scripts/meds-test.mjs                               # Meds' sums: what's due, taken over 7 and 30 days, streaks; Analysis's steps windows
+node fitness/scripts/steps-api-test.mjs                          # functions/fitness/api: linking your own phone, no one else's, the token kept on the server, the counts
+node fitness/scripts/meds-steps-test.mjs [repo root] [screenshot dir]   # Meds and Steps in the page, the Sheet keeping them and the phone keeping 30 days, Sign out and erase, aOS's Lost a phone?
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps
@@ -328,3 +423,10 @@ on it. The app test needs Playwright with Chromium
   real connect is the first true test.
 - **Until the Sheet is connected, there is no backup.** The log lives only
   in this phone's storage.
+- **Steps from Home Assistant were tested against a stand-in**, not a real
+  Home Assistant: the API calls (`/api/template`, `/api/states/<id>`,
+  `/api/history/period`) follow Home Assistant's own source, and the Steps
+  sensor's behaviour (the phone's own steps since midnight) its companion app
+  docs and code. The first real link is the first true test.
+- **Erasing was tested in Chromium.** Safari on an iPhone clears the same
+  storage, but `indexedDB.databases()` only exists from iOS 14.

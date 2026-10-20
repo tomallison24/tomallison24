@@ -7,11 +7,19 @@
  * secret into Fitness. Full steps: fitness/README.md, "Google Sheet sync".
  *
  * What it keeps in the Sheet:
- *   _logs, _exercises, _deleted   hidden tabs the app reads back from
+ *   _logs, _exercises, _meds, _doses, _steps, _deleted
+ *                                  hidden tabs the app reads back from
  *                                  (one row per item, as JSON)
  *   Workouts                       every exercise logged, newest first
- * The Workouts tab is rebuilt on every change, so change the log in the
- * app, not there.
+ *   Meds                           every dose ticked off, newest first
+ *   Med list                       what you take, and when
+ *   Steps                          each day's steps, newest first
+ * The readable tabs are rebuilt on every change, so change things in the
+ * app, not there. The phone keeps only the last 30 days of doses and steps
+ * once this Sheet holds them; this Sheet keeps them all.
+ *
+ * VERSION 2 added Meds and Steps. A phone talking to a VERSION 1 script keeps
+ * them to itself and says to paste this one in and deploy a new version.
  *
  * How changes merge: every logged exercise (and every exercise you typed
  * in) carries the time it was last changed; the newest version wins.
@@ -21,8 +29,8 @@
 
 const SECRET = 'CHANGE-ME';   // <- replace with your own long phrase, e.g. 'maple-otter-47-lantern-quiet'
 
-const APP = 'allison-fitness-sync', VERSION = 1;
-const DATA = {logs: '_logs', exercises: '_exercises'};
+const APP = 'allison-fitness-sync', VERSION = 2;
+const DATA = {logs: '_logs', exercises: '_exercises', meds: '_meds', doses: '_doses', steps: '_steps'};
 const GRAVES = '_deleted';
 const KEEP_DELETED_DAYS = 400;   // long enough that a phone left unopened for a year still hears of a deletion
 const CHUNK = 45000;             // a Sheet cell holds up to 50,000 characters
@@ -54,6 +62,7 @@ function doPost(e) {
     return out({
       ok: true, app: APP, v: VERSION, at: Date.now(),
       logs: Array.from(db.logs.values()), exercises: Array.from(db.exercises.values()),
+      meds: Array.from(db.meds.values()), doses: Array.from(db.doses.values()), steps: Array.from(db.steps.values()),
       graves: Object.fromEntries(db.graves)
     });
   } finally {
@@ -61,9 +70,9 @@ function doPost(e) {
   }
 }
 
-// A "Fitness" menu in the Sheet, to rebuild the Workouts tab by hand.
+// A "Fitness" menu in the Sheet, to rebuild the readable tabs by hand.
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('Fitness').addItem('Rebuild Workouts tab', 'rebuildTabs').addToUi();
+  SpreadsheetApp.getUi().createMenu('Fitness').addItem('Rebuild the tabs', 'rebuildTabs').addToUi();
 }
 function rebuildTabs() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -73,7 +82,8 @@ function rebuildTabs() {
 // ---------- reading and writing the hidden data tabs ----------
 
 function load(ss) {
-  const db = {logs: new Map(), exercises: new Map(), graves: new Map()};
+  const db = {graves: new Map()};
+  Object.keys(DATA).forEach(kind => { db[kind] = new Map(); });
   Object.keys(DATA).forEach(kind => {
     rows(ss, DATA[kind]).forEach(r => {
       const id = String(r[0] || ''); if (!id) return;
@@ -167,10 +177,50 @@ function views(ss, db) {
   if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(asTextRows(body));
   sh.setFrozenRows(1);
   sh.setColumnWidth(4, 240);
+  medViews(ss, db);
   ss.getSheets().forEach(s => {
     const n = s.getName();
     if ((n === 'Sheet1' || n === 'Sheet 1') && s.getLastRow() === 0) ss.deleteSheet(s);
   });
+}
+
+// ---------- Meds and Steps, readable ----------
+
+const SLOT_NAMES = {am: 'Morning', mid: 'Midday', pm: 'Evening', bed: 'Bedtime', day: 'Once a day', prn: 'As needed'};
+const KIND_NAMES = {med: 'Medication', supp: 'Supplement'};
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+const dayName = s => Utilities.formatDate(new Date(s + 'T12:00:00Z'), 'UTC', 'EEE');
+
+function table(ss, name, header, body, wide) {
+  const sh = ss.getSheetByName(name) || ss.insertSheet(name);
+  sh.clearContents();
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  if (body.length) sh.getRange(2, 1, body.length, header.length).setValues(asTextRows(body));
+  sh.setFrozenRows(1);
+  if (wide) sh.setColumnWidth(wide, 200);
+}
+
+function medViews(ss, db) {
+  const meds = Array.from(db.meds.values()).filter(m => m && m.name);
+  const byId = new Map(meds.map(m => [m.id, m]));
+  if (!meds.length && !db.doses.size && !db.steps.size) return;   // nothing yet: no empty tabs
+  const tz = ss.getSpreadsheetTimeZone();
+  const doses = Array.from(db.doses.values()).filter(x => x && isDay(x.date))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(b.at) || 0) - (Number(a.at) || 0));
+  table(ss, 'Meds', ['Date', 'Day', 'Time', 'Name', 'Dose', 'Type', 'When'], doses.map(x => {
+    const m = byId.get(x.med) || {};
+    return [x.date, dayName(x.date), Number(x.at) > 0 ? Utilities.formatDate(new Date(Number(x.at)), tz, 'h:mm a') : '',
+      String(m.name || x.name || ''), String(m.dose || ''), KIND_NAMES[m.kind] || '', SLOT_NAMES[x.slot] || ''];
+  }), 4);
+  table(ss, 'Med list', ['Name', 'Dose', 'Type', 'When', 'Days', 'Status', 'Since'], meds.sort((a, b) => String(a.name).localeCompare(String(b.name))).map(m => [
+    String(m.name), String(m.dose || ''), KIND_NAMES[m.kind] || '',
+    m.prn ? 'As needed' : (Array.isArray(m.slots) && m.slots.length ? m.slots.map(k => SLOT_NAMES[k] || k).join(', ') : 'Once a day'),
+    m.prn || !Array.isArray(m.days) || !m.days.length || m.days.length === 7 ? 'Every day' : m.days.map(i => WEEKDAYS[i]).join(', '),
+    m.paused ? 'Paused' : 'Taking', isDay(m.since) ? m.since : ''
+  ]), 1);
+  const steps = Array.from(db.steps.values()).filter(x => x && isDay(x.date)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  table(ss, 'Steps', ['Date', 'Day', 'Steps', 'From'], steps.map(x => [x.date, dayName(x.date), Number(x.n) || 0, x.src === 'ha' ? 'iPhone' : 'Typed in']));
 }
 
 function out(obj) {

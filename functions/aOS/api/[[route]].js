@@ -10,6 +10,8 @@
 //   POST installed        (family) { app }    -> this app was opened from your Home Screen (aOS shows Installed)
 //                         { app, removed: true } -> you took it off your Home Screen (aOS shows Get)
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
+//                         { erase: true }      -> and each of those apps erases aOS's data from its phone the
+//                                                 next time it opens online (GET state says erase: true)
 //   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail;
 //                                                  'travelv' and 'notesv' are the Vintage designs of Travel and Notes: GET layer
 //                                                  shows each as part of its app)
@@ -25,12 +27,14 @@
 //   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
 //                         { id } of someone removed -> an invite that brings them back as they were
 //   POST remove           (owner) { id }       -> signs them out everywhere; their data is kept
+//   POST erase            (owner) { id }       -> signs someone else out everywhere and erases aOS from their
+//                                                 phones as they next open (they lost their only phone)
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
 import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo, announce, audienceIds } from '../../../server/push.js';
-import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
+import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, eraseAsked, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
@@ -133,7 +137,9 @@ export async function onRequest({ request, params, env }) {
     const plan = await planView(db);
     // (0: you said it's gone from your Home Screen; kept as 0 so an older u.apps can't show it again)
     const apps = u ? Object.fromEntries(Object.entries({ ...(u.apps || {}), ...((await getJSON(db, 'apps:' + u.id)) || {}) }).filter(([, t]) => t > 0)) : null;
-    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps } });
+    // A session from before "Sign out and erase": the app erases aOS's data from this phone.
+    const erase = !u && request.headers.has('Authorization') && await eraseAsked(db, request);
+    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps }, ...(erase ? { erase: true } : {}) });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -254,9 +260,10 @@ export async function onRequest({ request, params, env }) {
       return reply({ layers: out });
     }
 
-    // Lost a phone? Every other session of yours ends; this device gets a fresh one.
+    // Lost a phone? Every other session of yours ends; this device gets a fresh one. With
+    // erase, each of those apps also erases aOS's data from its phone when it next opens.
     if (route === 'signout-others' && method === 'POST') {
-      const sv = await signOutOthers(db, me.id);
+      const sv = await signOutOthers(db, me.id, (await body(request)).erase === true);
       return reply({ token: await issue(db, me.id, Date.now(), sv), user: pub(me) });
     }
 
@@ -312,6 +319,20 @@ export async function onRequest({ request, params, env }) {
       // deleted (their record, Drinks log, apps): an invite back brings it all back.
       for (const c of u.creds || []) await db.delete('cred:' + c);
       await putJSON(db, 'user:' + id, { ...u, creds: [], removed: Date.now() });
+      // Their step sensor is freed, so it can be linked again (functions/fitness/api).
+      const steps = await db.get('steps:' + id);
+      if (steps) { await db.delete('steps:by:' + steps); await db.delete('steps:' + id); }
+      return reply({ ok: true });
+    }
+
+    // Someone lost their only phone: sign them out everywhere and erase aOS from it as it
+    // next opens. Their account stays: they sign in again with Face ID on a new phone.
+    if (route === 'erase' && method === 'POST') {
+      const id = String((await body(request)).id || '');
+      const u = await getJSON(db, 'user:' + id);
+      if (!u || u.removed) return reply({ error: 'unknown' }, 404);
+      if (id === me.id) return reply({ error: 'self' }, 400);   // your own: signout-others with erase, from this phone
+      await signOutOthers(db, id, true);
       return reply({ ok: true });
     }
 
