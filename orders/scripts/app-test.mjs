@@ -10,6 +10,12 @@
 // the sky held at day, aos.sky), and Standard (Sea glass); Settings > Design switches between them
 // at once and keeps the choice; and the old Orders Vintage address (served from orders/, as the
 // deploy does) moves that app's data on the phone over to Orders' names, IndexedDB copy included.
+// The family's Google Sheet, through aOS (aOS/SHEETS.md): the real google-sheet-sync.gs on an
+// in-memory Sheet answers **/sheet/api/orders, with who's asking from the page's session. Signed out,
+// the Sheet sheet asks to sign in; your orders go up as yours (Private too) and reach your other phone
+// but not Ella's; an id that's someone else's is kept on the phone, not sent again; the 90 days, every
+// order still on its way, and older ones back from the Sheet at the end of Delivered; an old order read
+// again from Gmail folding into the Sheet's copy; the Log with Who; and the old link handed to aOS.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node orders/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -19,6 +25,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -369,132 +376,42 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
-// Google Sheet: a "wrong secret" says which link it was.
-await step('another app’s Sheet link is recognised, and an old Orders script is named', async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })));
-  const page = await ctx.newPage();
-  let app = 'allison-travel-sync';
-  await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
-    ? route.fulfill({ json: { ok: false, error: 'wrong-secret' } })
-    : route.fulfill({ json: { ok: true, app, v: 1 } }));
-  await page.goto(BASE + '/orders/');
-  await page.click('#setBtn'); await page.click('#stSheet');
-  await page.fill('#syUrl', 'https://script.google.com/macros/s/abc/exec'); await page.fill('#sySecret', 'maple-otter');
-  await page.click('#syConnect');
-  await page.waitForFunction(() => /another app/.test(document.getElementById('syStatus').textContent));
-  app = 'allison-orders-sync';
-  await page.click('#syConnect');
-  await page.waitForFunction(() => /old copy of the script/.test(document.getElementById('syStatus').textContent));
-  await ctx.close();
-});
-
-// A working Sheet: orders go up, the other phone's come down, deleted ones are gone.
-await step('Sheet sync sends this phone’s orders and merges the other phone’s', async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })));
-  const page = await ctx.newPage();
-  const sent = [];
-  await ctx.route('https://script.google.com/**', route => {
-    if (route.request().method() !== 'POST') return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 1 } });
-    const body = JSON.parse(route.request().postData());
-    sent.push(body);
-    return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 1, at: Date.now(), graves: {},
-      orders: [{ id: 'o-other', store: 'Other Phone Shop', storeKey: 'otherphoneshop', status: 'shipped', kind: 'package', items: [{ name: 'A thing from the other phone' }], steps: { shipped: '2026-01-02' }, updated: Date.now() }] } });
-  });
-  await page.goto(BASE + '/orders/');
-  await page.click('#fab');
-  await page.fill('#ef_store', 'Corner Shop'); await page.click('#edDone');
-  await page.click('#setBtn'); await page.click('#stSheet');
-  await page.fill('#syUrl', 'https://script.google.com/macros/s/abc/exec'); await page.fill('#sySecret', 'maple-otter');
-  await page.click('#syConnect');
-  await page.waitForFunction(() => window.__orders.orders.some(o => o.store === 'Other Phone Shop'), null, { timeout: 8000 });
-  assert.equal(sent[0].action, 'sync'); assert.ok(sent[0].orders.some(o => o.store === 'Corner Shop'));
-  assert.equal(sent[0].bookings, undefined);
-  await ctx.close();
-});
-
-// The Log tab: whatever passes through goes to the Sheet, whatever the kinds in Settings say.
-await step('Sheet Log: every order added, every status change, deletion and left-out email is sent once and acknowledged', async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })));
-  await ctx.addInitScript(() => {
-    if (sessionStorage.getItem('seeded')) return;
-    sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
-    localStorage.setItem('orders.token.ever', '1');
-    localStorage.setItem('allison-orders-v1-sync', JSON.stringify({ url: 'https://script.google.com/macros/s/abc/exec', secret: 'maple-otter' }));
-  });
-  const page = await ctx.newPage();
-  await ctx.route('https://gmail.googleapis.com/**', route => {
-    const u = new URL(route.request().url());
-    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
-    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: EMAILS.map(m => ({ id: m.id, threadId: m.threadId })) } });
-    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
-    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
-  });
-  const events = [], posts = [];
-  let scriptKnowsLog = true;
-  await ctx.route('https://script.google.com/**', route => {
-    if (route.request().method() !== 'POST') return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1 } });
-    const body = JSON.parse(route.request().postData()); posts.push(body);
-    const res = { ok: true, app: 'allison-orders-sync', v: 2, at: Date.now(), graves: {}, orders: [] };
-    if (scriptKnowsLog) { res.log = 1; res.logged = (body.log || []).map(e => e.id); (body.log || []).forEach(e => events.push(e)); }
-    return route.fulfill({ json: res });
-  });
-  const until = async (fn, what) => { for (let i = 0; i < 80; i++) { if (fn()) return; await page.waitForTimeout(150); } assert.fail('never saw ' + what + ': ' + JSON.stringify(events.map(e => e.ev + ' ' + (e.o.store || '') + ' ' + e.note))); };
-  await page.goto(BASE + '/orders/');
-  await page.waitForFunction(() => window.__orders && window.__orders.orders.length >= 5, null, { timeout: 8000 });
-  await until(() => events.filter(e => e.ev === 'Added').length >= 5, 'five Added');
-  const added = events.filter(e => e.ev === 'Added').map(e => e.o.store).sort();
-  assert.deepEqual(added, ['Green Home Supply', 'Home Depot', 'Skin Tech', 'Target', 'Walmart']);
-  // the food order Settings leaves out is in the Log all the same
-  await until(() => events.some(e => e.ev === 'Left out'), 'Left out');
-  const left = events.find(e => e.ev === 'Left out');
-  assert.equal(left.o.kind, 'food'); assert.match(left.note, /switched off in Settings/);
-  assert.equal(await page.evaluate(() => window.__orders.orders.some(o => o.kind === 'food')), false, 'and it is still not in the list');
-  // a status change is a new row, with where it came from
-  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Home Depot'); o.status = 'delivered'; o.steps = { ...o.steps, delivered: '2026-01-05' }; window.__orders.save(); });
-  await until(() => events.some(e => e.ev === 'Status changed' && e.o.store === 'Home Depot'), 'Status changed');
-  const st = events.find(e => e.ev === 'Status changed');
-  assert.equal(st.note, 'Shipped → Delivered'); assert.equal(st.o.status, 'delivered'); assert.equal(st.o.orderNo, 'WK00000001');
-  // a detail edit is an Updated row; a deletion is a Deleted row with the order as it was
-  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK123'; window.__orders.save(); });
-  await until(() => events.some(e => e.ev === 'Updated' && e.o.store === 'Target'), 'Updated');
-  assert.equal(events.find(e => e.ev === 'Updated').note, 'Changed: tracking');
-  await page.evaluate(() => { const a = window.__orders.orders, i = a.findIndex(x => x.store === 'Walmart'); a.splice(i, 1); window.__orders.save(); });
-  await until(() => events.some(e => e.ev === 'Deleted'), 'Deleted');
-  assert.equal(events.find(e => e.ev === 'Deleted').o.store, 'Walmart');
-  // the orders that were already there when the Log began were logged once as Existing (none here: the Sheet link was set before any order)
-  assert.equal(new Set(events.map(e => e.id)).size, events.length, 'every event id is sent once');
-  await page.waitForTimeout(500);
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log') || '[]').length), 0, 'acknowledged events are not kept');
-  // an old script (no "log" in its answer) leaves the events queued, and says so
-  scriptKnowsLog = false;
-  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK456'; window.__orders.save(); });
-  await page.waitForFunction(() => /old copy/.test(document.body.textContent), null, { timeout: 8000 });
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log')).length), 1);
-  await ctx.close();
-});
-
 // ---- Both designs (../home/design.js) ----
+// The family's Google Sheet through aOS (functions/sheet/api, stood in for here): the real script
+// (google-sheet-sync.gs) on an in-memory Sheet, with who's asking taken from the session the page sends.
+const GS = path.join(ROOT, 'orders', 'google-sheet-sync.gs'), SECRET = 'test-secret-phrase';
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+function sheetRoute(ctx, sheet, { calls = [], claims = [], answer = null } = {}) {
+  return ctx.route('**/sheet/api/**', route => {
+    const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', ''), who = PEOPLE[tok];
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (!who) return json({ error: 'signin' }, 401);
+    if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+    if (req.method() === 'GET') return json({ configured: true });
+    const body = JSON.parse(req.postData());
+    calls.push({ who: who.id, ...body });
+    const a = answer && answer(body, who);
+    return json(a || sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+  });
+}
+
 // A phone: Gmail answers with no mail (or the made-up emails), the Sheet and the rest of the web are stubbed or cut off.
-async function phone(scheme = 'light', { design = null, at = '/orders/', emails = false } = {}) {
+async function phone(scheme = 'light', { design = null, at = '/orders/', emails = false, sheet = null, answer = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
-    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: emails ? EMAILS.map(m => ({ id: m.id, threadId: m.threadId })) : [] } });
-    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    const list = Array.isArray(emails) ? emails : emails ? EMAILS : [];   // emails: true for the made-up ones, or a list of its own
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: list.map(m => ({ id: m.id, threadId: m.threadId })) } });
+    const m = list.find(x => x.id === u.pathname.split('/').pop());
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
   });
-  const posts = [];
-  await ctx.route('https://script.google.com/**', route => {
-    if (route.request().method() !== 'POST') return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1 } });
-    const body = JSON.parse(route.request().postData()); posts.push(body);
-    return route.fulfill({ json: { ok: true, app: 'allison-orders-sync', v: 2, log: 1, logged: (body.log || []).map(e => e.id), at: Date.now(), graves: {}, orders: [] } });
-  });
+  // the family's Sheet: its own, or one shared with another phone (sheet); answer: stands in for the script when it returns something
+  const posts = [], claims = [];
+  sheet = sheet || fakeSheet(GS, SECRET);
+  await sheetRoute(ctx, sheet, { calls: posts, claims, answer });
   await ctx.addInitScript(design => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -506,7 +423,7 @@ async function phone(scheme = 'light', { design = null, at = '/orders/', emails 
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|net::ERR/.test(m.text())) errs.push(m.text()); });
-  return { ctx, page, errs, posts, open: async () => { await page.goto(BASE + at); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(600); } };
+  return { ctx, page, errs, posts, claims, sheet, open: async () => { await page.goto(BASE + at); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(600); } };
 }
 // What an old app left on the phone, written from a page of the same site before the app first opens (localStorage, and an IndexedDB database of key -> value)
 const seedPhone = (page, ls, dbs = {}) => page.evaluate(async ([ls, dbs]) => {
@@ -585,10 +502,10 @@ await step('Settings > Design: Vintage, then Standard and back, at once (the fil
 });
 
 await step('the old Orders Vintage address: its orders, sign-in, settings and Sheet copy move over once, and what it had seen', async () => {
-  const { ctx, page, errs, posts, open } = await phone('light', { at: '/ordersvintage/' });
+  const { ctx, page, errs, posts, claims, open } = await phone('light', { at: '/ordersvintage/' });
   await page.goto(BASE + '/orders/icon.svg');   // the same site, before the app has ever opened
   await seedPhone(page, {
-    'aos.seen': JSON.stringify({ ordersvintage: '1.3' }),
+    'aos.seen': JSON.stringify({ ordersvintage: '1.3' }), 'aos.session': session('tok-tom'),
     'ordersv.token': TOKEN(), 'ordersv.token.ever': '1', 'ordersv.me': 'tom@example.com',
     'allison-ordersv-v1': JSON.stringify({ orders: [ORDER('o-v', 'Vintage Shop')], kinds: { package: true, pickup: true, food: true } }),
     'allison-ordersv-v1-tab': 'way',
@@ -601,13 +518,19 @@ await step('the old Orders Vintage address: its orders, sign-in, settings and Sh
   assert.equal(got.food, true, 'its kinds'); assert.ok(got.token, 'its Gmail sign-in'); assert.equal(got.me, 'tom@example.com');
   assert.equal(got.seen.orders, '1.3', 'what it had seen (no walkthrough again)');
   assert.ok(got.old, 'nothing old is deleted'); assert.equal(got.look, 'vintage');
-  // the Sheet link only lived in the old app's IndexedDB copy: it is copied over before Orders opens its own, so Orders reconnects from it
-  await page.waitForFunction(() => localStorage.getItem('allison-orders-v1-sync'), null, { timeout: 8000 });
-  assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('allison-orders-v1-sync'))).url, 'https://script.google.com/macros/s/vintage/exec');
-  assert.equal((await readDB(page, 'allison-orders', 'sync')).url, 'https://script.google.com/macros/s/vintage/exec');
-  assert.ok(await readDB(page, 'allison-ordersv', 'sync'), 'the old copy is kept');
-  for (let i = 0; i < 40 && !posts.length; i++) await page.waitForTimeout(150);
-  assert.ok(posts.length && posts[0].orders.some(o => o.store === 'Vintage Shop'), 'and syncs with the Sheet');
+  // the Sheet link only lived in the old app's IndexedDB copy: it is copied over before Orders opens its own, and on the
+  // owner's phone, signed in, Orders hands it to aOS (which keeps it from then on) and forgets it
+  for (let i = 0; i < 60 && !claims.length; i++) await page.waitForTimeout(150);
+  assert.deepEqual(claims[0], { who: 'tom', url: 'https://script.google.com/macros/s/vintage/exec', secret: 'maple-otter' });
+  let kept = true;
+  for (let i = 0; i < 40 && kept; i++) { kept = !!(await readDB(page, 'allison-orders', 'sync')); if (kept) await page.waitForTimeout(150); }
+  assert.ok(!kept, 'Orders\' own copy is forgotten');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-sync')), null);
+  assert.ok(await readDB(page, 'allison-ordersv', 'sync'), 'the old app\'s copy is kept, as everything old is');
+  for (let i = 0; i < 40 && !posts.some(p => p.action === 'sync'); i++) await page.waitForTimeout(150);
+  const first = posts.find(p => p.action === 'sync');
+  assert.ok(first && first.orders.some(o => o.store === 'Vintage Shop'), 'and syncs with the family Sheet, through aOS');
+  assert.ok(posts.every(p => !('secret' in p)), 'with no phrase');
   // once only: a later change to the old keys is not copied again
   await page.evaluate(() => localStorage.setItem('allison-ordersv-v1', JSON.stringify({ orders: [], kinds: {} })));
   await page.reload(); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(300);
@@ -627,6 +550,195 @@ await step('a phone with both: Orders\' own orders are kept, the old app\'s are 
   await open();
   assert.deepEqual(await page.evaluate(() => window.__orders.orders.map(o => o.store)), ['Standard Shop']);
   assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+
+// ---- The family's Google Sheet, through aOS (aOS/SHEETS.md) ----
+const TOM = { key: SECRET, who: 'tom', name: 'Tom', owner: '1' };
+const until = async (page, fn, what, ms = 12000) => { for (let t = 0; t < ms; t += 150) { if (await fn()) return; await page.waitForTimeout(150); } assert.fail('never saw ' + (typeof what === 'function' ? what() : what)); };
+const OLD = n => ymd(day(-n));
+const SEEDED = (id, store, extra) => Object.assign(ORDER(id, store), extra);
+const SEEN = JSON.stringify({ orders: '999' });
+
+await step('the family’s Google Sheet: signed out it asks to sign in, with no link or phrase to type; signed in, your orders go up as yours', async () => {
+  const { ctx, page, errs, posts, sheet, open } = await phone('light');
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, { 'allison-orders-v1': JSON.stringify({ orders: [ORDER('o-c', 'Corner Shop'), SEEDED('o-p', 'Pharmacy', { private: true })], kinds: { package: true } }) });
+  await open();
+  await page.click('#setBtn');
+  assert.equal(await page.textContent('#stSheetSub'), 'Sign in to sync');
+  await page.click('#stSheet');
+  await page.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
+  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+  assert.equal(await page.$('#syUrl'), null, 'no link or phrase on a phone');
+  assert.equal(await page.$('#syShare'), null, 'and no setup link');
+  assert.equal(posts.length, 0, 'nothing goes anywhere signed out');
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-signed-out.png') });
+  await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
+  await page.reload(); await page.waitForFunction(() => window.__orders);
+  await until(page, () => sheet.tab('Orders'), 'the Orders tab');
+  assert.deepEqual(sheet.tab('Orders').slice(1).map(r => r[0] + ':' + r[2]).sort(), ['Tom:Corner Shop', 'Tom:Pharmacy'], 'each order says whose it is');
+  assert.ok(posts.every(p => !('secret' in p)), 'the phone sends no phrase');
+  assert.equal(posts.find(p => p.action === 'sync').window, 90, 'and keeps 90 days');
+  assert.equal(sheet.post({ action: 'sync', graves: {} }, TOM).orders.find(o => o.id === 'o-p').private, true, 'Private goes up like any other detail');
+  await page.click('#setBtn'); await page.click('#stSheet');
+  await page.waitForFunction(() => /In the family’s Google Sheet\. Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 });
+  assert.equal(await page.textContent('#syNow .t'), 'Sync now');
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-synced.png') });
+  // your other phone gets your orders
+  const two = await phone('light', { sheet });
+  await two.page.goto(BASE + '/orders/icon.svg'); await seedPhone(two.page, { 'aos.session': session('tok-tom'), 'aos.seen': SEEN }); await two.open();
+  await two.page.waitForFunction(() => window.__orders.orders.length === 2, null, { timeout: 8000 });
+  assert.equal(await two.page.evaluate(() => window.__orders.orders.find(o => o.id === 'o-p').private), true, 'Private, and so hidden from Ipsy, there too');
+  await two.ctx.close();
+  // Ella's phone gets none of them. It has an order with one of Tom's ids (the same email in her Gmail), and one of her own.
+  const ella = await phone('light', { sheet });
+  await ella.page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(ella.page, { 'aos.session': session('tok-ella'), 'aos.seen': SEEN, 'allison-orders-v1': JSON.stringify({ orders: [ORDER('o-c', 'Corner Shop'), ORDER('o-e', 'Etsy')], kinds: { package: true } }) });
+  await ella.open();
+  await until(ella.page, () => ella.page.evaluate(() => window.__orders.notMine.has('o-c')), 'Tom\'s id turned down');
+  await ella.page.waitForTimeout(3000);
+  const n = ella.posts.filter(p => p.action === 'sync').length;
+  await ella.page.waitForTimeout(2500);
+  assert.equal(ella.posts.filter(p => p.action === 'sync').length, n, 'and no sync after sync because of it');
+  assert.deepEqual(await ella.page.evaluate(() => window.__orders.orders.map(o => o.id).sort()), ['o-c', 'o-e'], 'her copy stays on her phone');
+  assert.ok(!ella.posts.at(-1).orders.some(o => o.id === 'o-c'), 'and isn\'t sent again');
+  assert.deepEqual(sheet.post({ action: 'sync', graves: {} }, TOM).orders.map(o => o.id).sort(), ['o-c', 'o-p'], 'Tom\'s are as they were');
+  assert.deepEqual(sheet.tab('Orders').slice(1).map(r => r[0] + ':' + r[2]).sort(), ['Ella:Etsy', 'Tom:Corner Shop', 'Tom:Pharmacy']);
+  assert.deepEqual(ella.errs, []);
+  await ella.ctx.close();
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('the phone keeps 90 days and every order still on its way; older ones come back from the Sheet at the end of Delivered', async () => {
+  const { ctx, page, errs, posts, sheet, open } = await phone('light');
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, { 'aos.session': session('tok-tom'), 'allison-orders-v1': JSON.stringify({ kinds: { package: true }, orders: [
+    SEEDED('o-new', 'New Shop', { status: 'delivered', orderDate: OLD(10), steps: { ordered: OLD(10), delivered: OLD(8) } }),
+    SEEDED('o-old', 'Old Shop', { status: 'delivered', orderDate: OLD(200), steps: { ordered: OLD(200), delivered: OLD(195) } }),
+    SEEDED('o-lost', 'Slow Boat', { status: 'shipped', orderDate: OLD(150), steps: { ordered: OLD(150), shipped: OLD(149) } }),
+  ] }) });
+  await open();
+  await until(page, () => page.evaluate(() => !!window.__orders.pruneFrom() && !window.__orders.orders.some(o => o.id === 'o-old')), 'the old order tidied away');
+  assert.deepEqual(await page.evaluate(() => window.__orders.orders.map(o => o.id).sort()), ['o-lost', 'o-new'], 'the last 90 days, and the one still on its way');
+  assert.deepEqual(Object.keys(await page.evaluate(() => window.__orders.graves())), [], 'with no grave: the Sheet keeps it');
+  assert.ok(sheet.post({ action: 'sync', graves: {} }, TOM).orders.some(o => o.id === 'o-old'), 'it is in the Sheet');
+  await page.click('#whenChips [data-when="done"]');
+  await page.waitForSelector('#olderGo');
+  assert.doesNotMatch(await page.textContent('#list'), /Old Shop/);
+  await page.click('#olderGo');
+  await page.waitForFunction(() => /Old Shop/.test(document.getElementById('list').textContent), null, { timeout: 8000 });
+  assert.match(await page.textContent('#toastMsg'), /^Found 1 older order, /, 'the one still on its way was here already');
+  const range = posts.filter(p => p.action === 'range').at(-1);
+  assert.ok(range && range.to < OLD(89) && range.from <= OLD(200), JSON.stringify(range));
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-older.png') });
+  // it stays while Orders is open, through another sync
+  await page.evaluate(() => window.__orders.sync(false)); await page.waitForTimeout(500);
+  assert.ok(await page.evaluate(() => window.__orders.orders.some(o => o.id === 'o-old')));
+  // a second tap goes a year further back, and finds nothing
+  await page.click('#olderGo');
+  await page.waitForFunction(() => /Nothing older in the family’s Google Sheet/.test(document.getElementById('list').textContent), null, { timeout: 8000 });
+  // and no sync after sync because of what was fetched
+  await page.waitForTimeout(1500);
+  const n = posts.length; await page.waitForTimeout(2500);
+  assert.equal(posts.length, n, posts.slice(n).map(p => p.action).join());
+  // the next time Orders opens, it goes again
+  await page.reload(); await page.waitForFunction(() => window.__orders);
+  await until(page, () => page.evaluate(() => !window.__orders.orders.some(o => o.id === 'o-old')), 'the old order gone again');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('an old order read again from Gmail folds into your copy in the Sheet: your edits, Private and notes stay', async () => {
+  const OLD_MAIL = { id: 'e-old', threadId: 't-old', ago: 200, from: 'Skin Tech <sales@skintech.example>', subject: 'Your order is on the way', text:
+    `Order On The Way.\n\nYour Skin Tech order has been packed and picked up by UPS.\n\nOrder No. US-0000000099\n\nWhat's Coming?\n\nSkin Tech Hair Dryer\n\nx1\n\nDelivery Carrier\n\nUPS\n\nTracking No.\n\n1Z0000000000000099` };
+  const { ctx, page, errs, posts, sheet, open } = await phone('light', { emails: [OLD_MAIL, EMAILS[0]] });
+  // what Orders makes of that email (the same reader, here in Node), and Tom's copy of it in the Sheet from long ago, edited
+  const P = require(path.join(ROOT, 'orders', 'parse.js'));
+  const f = P.parseEmail({ text: OLD_MAIL.text, subject: OLD_MAIL.subject, from: OLD_MAIL.from, date: Date.now() - 200 * 864e5, id: OLD_MAIL.id, threadId: OLD_MAIL.threadId }).orders[0];
+  const T0 = Date.now() - 200 * 864e5;
+  sheet.post({ action: 'sync', orders: [{ ...f, status: 'delivered', steps: { ...f.steps, delivered: OLD(195) }, tracking: '', trackUrl: '', private: true, notes: 'For Mum', locks: { status: true }, checked: true, guess: false, created: T0, updated: T0 + 5 * 864e5 }], graves: {} }, TOM);
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, { 'aos.session': session('tok-tom'), 'orders.token': TOKEN(), 'orders.token.ever': '1', 'allison-orders-v1-family': '1', 'allison-orders-v1-log-seed': '1', 'allison-orders-v1-sync-at': String(Date.now() - 864e5) });
+  await open();
+  await until(page, () => posts.some(p => p.action === 'range') && posts.filter(p => p.action === 'sync').length >= 2, () => 'the Sheet asked first, then a sync: ' + posts.map(p => p.action).join());
+  await page.waitForTimeout(800);
+  const all = sheet.post({ action: 'sync', graves: {} }, TOM).orders, back = all.find(o => o.id === f.id);
+  assert.ok(back, 'the same order');
+  assert.equal(all.filter(o => o.store === 'Skin Tech').length, 1, 'not two');
+  assert.equal(back.private, true); assert.equal(back.notes, 'For Mum'); assert.equal(back.status, 'delivered', 'the status you set stays');
+  assert.equal(back.created, T0);
+  assert.equal(back.tracking, '1Z0000000000000099', 'what the email says that the Sheet\'s copy lacked is folded in');
+  const mine = await page.evaluate(id => window.__orders.orders.find(o => o.id === id), f.id);
+  assert.ok(mine && mine.private && mine.notes === 'For Mum', 'and this phone has it as the Sheet does, for now');
+  assert.ok(!posts.flatMap(p => p.log || []).some(e => e.ev === 'Added' && e.o.store === 'Skin Tech'), 'it wasn\'t logged as added');
+  assert.ok(all.some(o => o.store === 'Home Depot'), 'a new order from the same read goes up as usual');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('Sheet Log, through aOS: every order added, status change, edit, deletion and left-out email is sent once, acknowledged and written with whose it is', async () => {
+  let oldScript = false;
+  // an old script (VERSION 2) turns away aOS's request: there's no phrase in it
+  const { ctx, page, errs, posts, sheet, open } = await phone('light', { emails: true, answer: () => oldScript ? { ok: false, app: 'allison-orders-sync', error: 'wrong-secret' } : null });
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, { 'aos.session': session('tok-tom'), 'orders.token': TOKEN(), 'orders.token.ever': '1', 'allison-orders-v1-family': '1', 'allison-orders-v1-log-seed': '1', 'allison-orders-v1-ipsy-auto': '0' });
+  await open();
+  const events = () => posts.flatMap(p => p.log || []);
+  const seen = (fn, what) => until(page, () => events().some(fn), () => what + ': ' + JSON.stringify(events().map(e => e.ev + ' ' + (e.o.store || '') + ' ' + e.note)));
+  await until(page, () => new Set(events().filter(e => e.ev === 'Added').map(e => e.id)).size >= 5, 'five Added');
+  assert.deepEqual([...new Set(events().filter(e => e.ev === 'Added').map(e => e.o.store))].sort(), ['Green Home Supply', 'Home Depot', 'Skin Tech', 'Target', 'Walmart']);
+  // the food order Settings leaves out is in the Log all the same
+  await seen(e => e.ev === 'Left out', 'Left out');
+  const left = events().find(e => e.ev === 'Left out');
+  assert.equal(left.o.kind, 'food'); assert.match(left.note, /switched off in Settings/);
+  assert.equal(await page.evaluate(() => window.__orders.orders.some(o => o.kind === 'food')), false, 'and it is still not in the list');
+  // a status change is a new row, with where it came from
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Home Depot'); o.status = 'delivered'; o.steps = { ...o.steps, delivered: o.steps.shipped }; window.__orders.save(); });
+  await seen(e => e.ev === 'Status changed' && e.o.store === 'Home Depot', 'Status changed');
+  const st = events().find(e => e.ev === 'Status changed');
+  assert.equal(st.note, 'Shipped → Delivered'); assert.equal(st.o.status, 'delivered'); assert.equal(st.o.orderNo, 'WK00000001');
+  // a detail edit is an Updated row; a deletion is a Deleted row with the order as it was
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK123'; window.__orders.save(); });
+  await seen(e => e.ev === 'Updated' && e.o.store === 'Target', 'Updated');
+  assert.equal(events().find(e => e.ev === 'Updated').note, 'Changed: tracking');
+  await page.evaluate(() => { const a = window.__orders.orders, i = a.findIndex(x => x.store === 'Walmart'); a.splice(i, 1); window.__orders.save(); });
+  await seen(e => e.ev === 'Deleted', 'Deleted');
+  assert.equal(events().find(e => e.ev === 'Deleted').o.store, 'Walmart');
+  await until(page, () => page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log') || '[]').length === 0), 'every event acknowledged');
+  const log = sheet.tab('Log');
+  assert.equal(log[0][0], 'Who');
+  assert.equal(new Set(log.slice(1).map(r => r[14])).size, log.length - 1, 'every event written once');
+  assert.ok(log.slice(1).every(r => r[0] === 'Tom'), 'each with whose phone it came from');
+  assert.ok(log.some(r => r[2] === 'Left out' && r[4] === 'food'));
+  // an old script: the events stay queued, and Orders says what the owner has to do
+  oldScript = true;
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Target'); o.tracking = 'TRK456'; window.__orders.save(); });
+  await page.waitForFunction(() => /still on its old script/.test(document.body.textContent), null, { timeout: 8000 });
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-orders-v1-log')).length), 1);
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('the owner\'s phone hands the Sheet link and phrase it kept over to aOS, then forgets them; another phone just forgets them once aOS has one', async () => {
+  for (const tok of ['tok-tom', 'tok-ella']) {
+    const { ctx, page, errs, claims, open } = await phone('light');
+    await page.goto(BASE + '/orders/icon.svg');
+    await seedPhone(page, { 'aos.session': session(tok), 'allison-orders-v1-sync': JSON.stringify({ url: 'https://script.google.com/macros/s/abc/exec', secret: 'maple-otter' }) });
+    await open();
+    await until(page, () => page.evaluate(() => !localStorage.getItem('allison-orders-v1-sync')), 'the old link forgotten');
+    assert.deepEqual(claims, tok === 'tok-tom' ? [{ who: 'tom', url: 'https://script.google.com/macros/s/abc/exec', secret: 'maple-otter' }] : [], 'only the owner\'s phone hands it over');
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  }
+  // an old setup link opened on a phone is only taken off the address
+  const { ctx, page, open } = await phone('light', { at: '/orders/#sync=' + Buffer.from(JSON.stringify({ u: 'https://script.google.com/macros/s/abc/exec', s: 'maple-otter' })).toString('base64url') });
+  await open();
+  assert.equal(await page.evaluate(() => location.hash), '');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-sync')), null);
   await ctx.close();
 });
 

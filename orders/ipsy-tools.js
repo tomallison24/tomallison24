@@ -8,7 +8,8 @@
 //   window.OrdersIpsy(app) -> the options for AllisonOS.ipsy.mount (tools, label, context, words)
 //   app: the app's own pieces (orders/app.js passes them): orders (get and set), save, render, P
 //        (parse.js), todayStr, isOpen, needsCheck, checkReason, kindOn, gmail, bodies, header,
-//        getToken, AuthError, openOrder, current (the open order), closeOrder, refreshOrder, screen
+//        getToken, AuthError, openOrder, lookBack (older orders from the family's Sheet, from a day),
+//        current (the open order), closeOrder, refreshOrder, screen
 //
 // Changes follow the app's own rules: a field Ipsy sets is locked like one you typed (a later
 // email won't overwrite it), a new status gets its step's date, a deleted order gets a grave (it
@@ -141,6 +142,8 @@ window.OrdersIpsy = function (app) {
 
   const tools = {
     async find_orders(q) {
+      // The phone keeps the last 90 days (and what's still on its way): older ones come from the Sheet first.
+      if (app.lookBack) await app.lookBack(ymd(q.from) ? q.from : '').catch(() => null);
       const words = clip(q.query, 200).toLowerCase().split(/\s+/).filter(Boolean);
       const limit = Math.max(1, Math.min(100, Number.isInteger(q.limit) ? q.limit : 30));
       let list = app.orders.filter(seen).filter(o => {

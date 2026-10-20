@@ -293,6 +293,8 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
   });
+  // signed in, Orders also syncs with the family's Sheet: aOS answers that it isn't set up here (orders/scripts/app-test.mjs has the Sheet)
+  await ctx.route('**/sheet/api/**', route => route.fulfill({ status: 409, json: { ok: false, error: 'no-sheet' } }));
   const reads = [];
   await ctx.route('**/orders/api/read', route => {
     reads.push({ auth: route.request().headers().authorization, b: JSON.parse(route.request().postData()) });

@@ -1,8 +1,8 @@
 // Offline shell for the Orders app. Same-origin files load network-first, so
 // a new deploy shows up on the next open and the cache is only the fallback.
-// Gmail and the Sheet are never touched here.
-const CACHE = 'orders-v4';
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/slide.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js'];
+// Gmail and the Sheet (through ../sheet/api/) are never touched here.
+const CACHE = 'orders-v5';
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/slide.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
