@@ -48,16 +48,21 @@ family({
     const d = dv('dyson', y.id, y.name), f = st(y.fan), F = f ? f.attributes : {}, c = st(y.clim), C = c ? c.attributes : {};
     const offline = gone(y.fan);
     const on = !offline && held(d, 'power', f.state) === 'on';
-    const pct = held(d, 'pct', F.percentage);
-    const spd = on ? Math.max(1, Math.min(10, Math.round((pct || 0) / 10))) : 0;
+    const pct = held(d, 'pct', F.percentage), auto = held(d, 'preset', F.preset_mode) === 'Auto';
+    // Auto (and every Air Boost) has no speed of its own: the unit reports
+    // percentage null, which used to show as Fan 1. As Signal does: speed 0,
+    // `fauto`, the SPEED controls greyed, and `spdv` gives the rotor a mid pace.
+    // A speed tapped in Auto shows at once (the unit leaves Auto for it).
+    const fauto = on && (pct == null || (auto && !tWaiting(d, 'pct')));
+    const spd = on && !fauto ? Math.max(1, Math.min(10, Math.round((pct || 0) / 10))) : 0;
     const hv = c && !gone(y.clim) ? held(d, 'hvac', c.state) : null;
     const tgt = held(d, 'temperature', C.temperature);
     const mood = offline ? 'offline' : hv === 'heat' && C.hvac_action === 'heating' ? 'heating' : hv === 'heat' ? 'warm' : on ? 'fan' : 'off';
     const bands = y.aq.map(([k, id, kind]) => [k, num(id), aqBand(kind, num(id))]);
     const worst = Math.max(-1, ...bands.map(b => b[2]));
     const nightOn = held(d, 'night', val(y.night)) === 'on';
-    return { d, F, C, offline, on, pct, spd, hv, tgt, mood, bands, worst,
-      auto: held(d, 'preset', F.preset_mode) === 'Auto', osc: !!held(d, 'osc', F.oscillating),
+    return { d, F, C, offline, on, pct, spd, fauto, spdv: spd || (fauto ? 5 : 0), hv, tgt, mood, bands, worst,
+      auto, osc: !!held(d, 'osc', F.oscillating),
       flow: y.flow === 'dir' ? held(d, 'flow', F.direction) : held(d, 'flow', C.fan_mode),
       night: !on && y.prevNight && st(y.prevNight) ? isOn(y.prevNight) : nightOn,
       sense: held(d, 'sense', val(y.sense)) === 'on', sens: y.sens ? held(d, 'sens', val(y.sens)) : null,
@@ -69,11 +74,12 @@ family({
     const n = v => v == null ? '--' : Math.round(v);
     if (r.tilt) return 'Tilted';
     return r.mood === 'heating' ? `Heating to ${n(r.tgt)}°` : r.mood === 'warm' ? `Holding ${n(r.tgt)}°`
-      : r.mood === 'fan' ? (r.boost ? `Air Boost · Fan ${r.spd}` : `Fan ${r.spd}${r.auto ? ' · Auto' : ''}`) : 'Off';
+      : r.mood === 'fan' ? (r.boost ? (r.fauto ? 'Air Boost' : `Air Boost · Fan ${r.spd}`) : this.fanWord(r)) : 'Off';
   },
+  fanWord(r) { return r.fauto ? 'Auto' : `Fan ${r.spd}${r.auto ? ' · Auto' : ''}`; },
   sub(y, r) {
     if (r.offline) return 'The unit is not reachable';
-    return [r.worst >= 0 ? 'Air ' + AQ_WORD[r.worst] : '', isNaN(r.rh) ? '' : Math.round(r.rh) + '% RH', r.mood === 'fan' || r.mood === 'off' ? '' : 'Fan ' + r.spd].filter(Boolean).join(' · ');
+    return [r.worst >= 0 ? 'Air ' + AQ_WORD[r.worst] : '', isNaN(r.rh) ? '' : Math.round(r.rh) + '% RH', r.mood === 'fan' || r.mood === 'off' ? '' : r.fauto ? 'Fan Auto' : 'Fan ' + r.spd].filter(Boolean).join(' · ');
   },
   // The rotor: ten curved glass blades, lit up to the speed, turning faster
   // with it (a turn every max(2.5, 26 - 2.3 x speed) seconds), the frosted
@@ -85,21 +91,21 @@ family({
       const lit = i < r.spd;
       bl += `<path transform="rotate(${i * 36} 100 100)" d="M100 64 C117 52 125 31 113 8 C103 23 95 43 100 64 Z" fill="rgba(${lit ? a : '255,255,255'},${lit ? 0.5 : 0.07})" stroke="${hot && lit ? 'rgba(246,170,112,0.95)' : `rgba(255,255,255,${lit ? 0.6 : 0.2})`}" stroke-width="${size === 'lg' ? 1 : 1.6}"/>`;
     }
-    const dur = r.spd ? Math.max(2.5, 26 - r.spd * 2.3).toFixed(1) + 's' : '0s';
+    const dur = r.spdv ? Math.max(2.5, 26 - r.spdv * 2.3).toFixed(1) + 's' : '0s';
     const t = isNaN(r.temp) ? (gone(y.temp) && !r.offline ? '…' : '--') : Math.round(r.temp);
-    return `<div class="rotor ${size}${r.spd ? ' spin' : ''}${r.osc && r.spd ? ' osc' : ''}" style="--a:${a};--dur:${dur}">
-      ${r.spd ? '<i class="swirl"></i>' : ''}<svg viewBox="0 0 200 200" aria-hidden="true"><g class="rot">${bl}</g></svg>
+    return `<div class="rotor ${size}${r.spdv ? ' spin' : ''}${r.osc && r.spdv ? ' osc' : ''}" style="--a:${a};--dur:${dur}">
+      ${r.spdv ? '<i class="swirl"></i>' : ''}<svg viewBox="0 0 200 200" aria-hidden="true"><g class="rot">${bl}</g></svg>
       <div class="hub"><em>ROOM</em><b>${t}<span>°</span></b></div></div>`;
   },
   fx(y, r, top) {
     const a = this.acc(y, r);
     const fx = r.mood === 'heating' ? { pool: 'breathe', poolA: 0.16, embers: 6 } : r.mood === 'warm' ? { pool: 'breathe', poolA: 0.12 }
-      : r.mood === 'fan' ? { air: Math.min(9, 2 + Math.round(r.spd / 1.5)), pool: 'drift', poolA: 0.08 } : {};
+      : r.mood === 'fan' ? { air: Math.min(9, 2 + Math.round(r.spdv / 1.5)), pool: 'drift', poolA: 0.08 } : {};
     if (r.worst >= 1 && !r.offline) fx.motes = 4 + r.worst * 3;
     return skyHTML(y.skies[r.mood] || y.skies.off, a, { ...fx, seed: 41 }, top);
   },
   speedStep(y, r, bare) {
-    return stepHTML('SPEED', r.on ? r.spd + (r.auto ? ' · Auto' : '') : 'Off', r.spd * 10, { bare, a: 'spd', dis: r.offline, atMin: r.spd <= 1, atMax: r.spd >= 10 });
+    return stepHTML('SPEED', !r.on ? 'Off' : r.fauto ? 'Auto' : r.spd + (r.auto ? ' · Auto' : ''), r.spd * 10, { bare, a: 'spd', dis: r.offline, atMin: !r.fauto && r.spd <= 1, atMax: r.spd >= 10 });
   },
 
   mount(el) {
@@ -118,6 +124,7 @@ family({
       put(R('info'), infoHTML2(y.name, this.title(y, r), this.sub(y, r).replace(/^Air [^·]+· ?/, ''), r.offline ? '' : chip));
       put(R('pwr'), pwrBtn(r.on, a, (r.on ? 'Turn off' : 'Turn on') + ' ' + y.name, { dis: r.offline, wait: tWaiting(r.d, 'power') }));
       put(R('tgt'), this.speedStep(y, r, true));
+      R('tgt').classList.toggle('auto', r.fauto);
       card.classList.toggle('offline', r.offline);
       shadow(card, a);
     }
@@ -125,7 +132,7 @@ family({
   },
   sheet(id) {
     const y = DYSONS.find(x => x.id === id), r = this.read(y), a = this.acc(y, r), tint = r.mood === 'off' ? PAL.on : a;
-    const words = { heating: 'Heat · Active', warm: 'Heat · Holding', fan: r.boost ? 'Air Boost' : `Fan ${r.spd}${r.auto ? ' · Auto' : ''}`, off: 'Off', offline: 'Offline' };
+    const words = { heating: 'Heat · Active', warm: 'Heat · Holding', fan: r.boost ? 'Air Boost' : this.fanWord(r), off: 'Off', offline: 'Offline' };
     const C = r.C, modes = ['off', 'cool', 'heat'].filter(m => !Array.isArray(C.hvac_modes) || C.hvac_modes.includes(m));
     const lo = Number.isFinite(C.min_temp) ? C.min_temp : 34, hi = Number.isFinite(C.max_temp) ? C.max_temp : 98;
     const aqTiles = r.bands.map(([k, v, b]) => [`<span class="aqk">${b >= 0 ? `<i style="background:rgb(${AQ_RGB[b]})"></i>` : ''}${k}</span>`, isNaN(v) ? '—' : nf(v, v % 1 ? 1 : 0)]);
@@ -134,7 +141,7 @@ family({
       title: y.name, accent: a, fx: this.fx(y, r, 150), pill: pillHTML2(r.tilt ? 'Tilted' : words[r.mood]),
       parts: [
         ['hero', `<div class="uhero">${this.rotor(y, r, 'lg')}<div class="dg-title">${this.title(y, r)}</div><div class="dg-sub">${this.sub(y, r)}</div></div>`],
-        ['spd', lbl('SPEED') + segHTML('rail', Array.from({ length: 10 }, (_, i) => [i + 1, i + 1]), r.on ? r.spd : null, { cls: 'rail', dis: r.offline, wait: tWaiting(r.d, 'pct') })],
+        ['spd', lbl('SPEED') + segHTML('rail', Array.from({ length: 10 }, (_, i) => [i + 1, i + 1]), r.on && !r.fauto ? r.spd : null, { cls: 'rail' + (r.fauto ? ' auto' : ''), dis: r.offline, wait: tWaiting(r.d, 'pct') })],
         ['power', grp(swRow('power', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
         r.hv != null ? ['mode', lbl('MODE') + segHTML('hvac', modes.map(m => [m, { off: 'Off', cool: 'Cool', heat: 'Heat' }[m]]), r.hv, { dis: r.offline, wait: tWaiting(r.d, 'hvac') })] : null,
         r.hv === 'heat' ? ['heat', stepHTML('HEAT TO', r.tgt == null ? '--' : Math.round(r.tgt) + '°', r.tgt == null ? 0 : (r.tgt - lo) / (hi - lo) * 100, { a: 'hstep', cls: 'tgt-gap', dis: r.offline, atMin: r.tgt <= lo, atMax: r.tgt >= hi })] : null,
@@ -168,8 +175,9 @@ family({
     const send = (f, dom, svc, data, v) => { tset(d, f, v); render(); return tsend(d, dom, svc, data, [f]); };
     if (a === 'power') return send('power', 'fan', r.on ? 'turn_off' : 'turn_on', { entity_id: y.fan }, r.on ? 'off' : 'on');
     if (a === 'spd' || a === 'rail') {
-      const s = a === 'rail' ? Number(b.dataset.v) : Math.max(1, Math.min(10, (r.on ? r.spd : 0) + Number(b.dataset.v)));
-      if (r.on && s === r.spd) return;
+      // In Auto the steppers start from the middle: there is no speed to step from.
+      const s = a === 'rail' ? Number(b.dataset.v) : Math.max(1, Math.min(10, (r.on ? r.spd || (r.fauto ? 5 : 0) : 0) + Number(b.dataset.v)));
+      if (r.on && !r.fauto && s === r.spd) return;
       tset(d, 'pct', s * 10); tset(d, 'power', 'on'); render();
       return later('dy' + id, () => tsend(d, 'fan', 'set_percentage', { entity_id: y.fan, percentage: this.read(y).pct }, ['pct', 'power']), a === 'rail' ? 0 : 600);
     }
@@ -193,7 +201,7 @@ family({
   },
 
   samples: e => ({
-    'fan.sofias_dyson': e('on', { percentage: 40, percentage_step: 10, preset_mode: 'Auto', preset_modes: ['Auto', 'Normal'], oscillating: true }),
+    'fan.sofias_dyson': e('on', { percentage: null, percentage_step: 10, preset_mode: 'Auto', preset_modes: ['Auto', 'Normal'], oscillating: true }),
     'climate.sofias_dyson': e('cool', { hvac_modes: ['off', 'cool', 'heat'], hvac_action: 'idle', current_temperature: 71, temperature: 70, fan_mode: 'diffuse', fan_modes: ['focus', 'diffuse'], min_temp: 34, max_temp: 98 }),
     'sensor.sofias_dyson_temperature': e(71, { unit_of_measurement: '°F' }), 'sensor.sofias_dyson_humidity': e(44, { unit_of_measurement: '%' }),
     'sensor.sofias_dyson_air_quality_index': e(2), 'sensor.sofias_dyson_volatile_organic_compounds_index': e(4),
