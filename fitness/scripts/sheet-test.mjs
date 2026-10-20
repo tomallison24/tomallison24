@@ -1,7 +1,8 @@
 // Runs fitness/google-sheet-sync.gs in Node against an in-memory Sheet
 // (fake-sheet.mjs): the secret check, a first sync, the readable Workouts
 // tab, newest change winning, a deletion reaching the other phone, Undo
-// bringing one back, and formula-looking text kept as text.
+// bringing one back, formula-looking text kept as text, and Meds and Steps
+// (their hidden tabs and the readable Meds, Med list and Steps tabs).
 //   node fitness/scripts/sheet-test.mjs
 import assert from 'assert/strict';
 import { fakeSheet } from './fake-sheet.mjs';
@@ -14,7 +15,7 @@ const log = (id, extra) => Object.assign({ id, date: '2026-10-05', group: 'shoul
 
 test('answers a GET with its name, and refuses a wrong or unset secret', () => {
   const s = fakeSheet();
-  assert.deepEqual(s.get(), { ok: true, app: 'allison-fitness-sync', v: 1 });
+  assert.deepEqual(s.get(), { ok: true, app: 'allison-fitness-sync', v: 2 });
   assert.equal(s.post({ secret: 'nope', action: 'sync' }).error, 'wrong-secret');
   assert.equal(s.post('not json').error, 'bad-request');
   assert.equal(fakeSheet(undefined, 'CHANGE-ME').post({ secret: 'CHANGE-ME', action: 'sync' }).error, 'secret-not-set');
@@ -81,6 +82,34 @@ test('text that looks like a formula stays text, and a long item survives the 45
   assert.ok(w.some(r => r[3] === '=IMPORTXML("http://x")'), 'read back as the plain text');
   const r = s.post({ secret: SECRET, action: 'sync', logs: [], graves: {} });
   assert.equal(r.logs.find(x => x.id === 'b').note.length, 100000);
+});
+
+test('Meds and Steps: kept and sent back, with readable Meds, Med list and Steps tabs', () => {
+  const s = fakeSheet();
+  assert.equal(s.tab('Meds'), null, 'no Meds tab until there is something in it');
+  const meds = [{ id: 'm1', name: 'Vitamin D', dose: '1000 IU', kind: 'supp', slots: ['am'], days: [], since: '2026-10-01', updated: T + 1 },
+    { id: 'm2', name: 'Ibuprofen', dose: '200 mg', kind: 'med', prn: true, slots: [], days: [], since: '2026-10-01', updated: T + 1 },
+    { id: 'm3', name: 'Iron', dose: '', kind: 'supp', slots: ['pm', 'am'], days: [1, 3, 5], paused: true, since: '2026-10-02', updated: T + 1 }];
+  const doses = [{ id: 'd1', med: 'm1', name: 'Vitamin D', date: '2026-10-05', slot: 'am', at: Date.parse('2026-10-05T14:05:00Z'), updated: T + 2 },
+    { id: 'd2', med: 'm2', name: 'Ibuprofen', date: '2026-10-06', slot: 'prn', at: 0, updated: T + 2 }];
+  const steps = [{ id: '2026-10-05', date: '2026-10-05', n: 8412, src: 'ha', updated: T + 3 }, { id: '2026-10-06', date: '2026-10-06', n: 12000, src: 'you', updated: T + 3 }];
+  const r = s.post({ secret: SECRET, action: 'sync', logs: [], exercises: [], meds, doses, steps, graves: {} });
+  assert.equal(r.v, 2);
+  assert.equal(r.meds.length, 3); assert.equal(r.doses.length, 2); assert.equal(r.steps.length, 2);
+  assert.deepEqual(s.tab('Meds'), [['Date', 'Day', 'Time', 'Name', 'Dose', 'Type', 'When'],
+    ['2026-10-06', 'Tue', '', 'Ibuprofen', '200 mg', 'Medication', 'As needed'],
+    ['2026-10-05', 'Mon', '8:05 AM', 'Vitamin D', '1000 IU', 'Supplement', 'Morning']]);
+  assert.deepEqual(s.tab('Med list').slice(1), [['Ibuprofen', '200 mg', 'Medication', 'As needed', 'Every day', 'Taking', '2026-10-01'],
+    ['Iron', '', 'Supplement', 'Evening, Morning', 'Mon, Wed, Fri', 'Paused', '2026-10-02'],
+    ['Vitamin D', '1000 IU', 'Supplement', 'Morning', 'Every day', 'Taking', '2026-10-01']]);
+  assert.deepEqual(s.tab('Steps'), [['Date', 'Day', 'Steps', 'From'], ['2026-10-06', 'Tue', 12000, 'Typed in'], ['2026-10-05', 'Mon', 8412, 'iPhone']]);
+  assert.ok(s.sheets.get('_doses').hidden && s.sheets.get('_steps').hidden && s.sheets.get('_meds').hidden);
+  // A phone that keeps only its last 30 days sends less: nothing is deleted without a grave.
+  const r2 = s.post({ secret: SECRET, action: 'sync', logs: [], meds, doses: [doses[1]], steps: [], graves: {} });
+  assert.equal(r2.doses.length, 2); assert.equal(r2.steps.length, 2);
+  // A ticked dose taken back (a grave) goes from the Sheet too.
+  const r3 = s.post({ secret: SECRET, action: 'sync', logs: [], doses: [], graves: { 'doses:d2': T + 10 } });
+  assert.deepEqual(r3.doses.map(x => x.id), ['d1']);
 });
 
 console.log('\n' + n + ' tests passed');

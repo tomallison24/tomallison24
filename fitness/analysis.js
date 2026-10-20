@@ -95,5 +95,21 @@
       hasNow: now.any, hasBefore: before.any, score, kindOf };
   }
 
-  root.FitnessAnalysis = { analyze, score, kindOf, add };
+  // Steps in the same two windows: the average a day (over the days with a count)
+  // and the days at or over the goal. 'floor' is the first day the phone still
+  // keeps (with the Google Sheet connected, 30 days back): a window reaching
+  // past it is left out (null) rather than read as no steps.
+  function steps(list, today, days, goal, floor) {
+    const from = add(today, -(days - 1)), beforeTo = add(from, -1), beforeFrom = add(beforeTo, -(days - 1));
+    const win = (a, b) => {
+      if (floor && a < floor) return null;
+      let sum = 0, n = 0, met = 0;
+      for (const x of list || []) if (x && x.date >= a && x.date <= b && +x.n >= 0) { sum += +x.n; n++; if (+x.n >= goal) met++; }
+      return { avg: n ? Math.round(sum / n) : 0, days: n, met };
+    };
+    const now = win(from, today), before = win(beforeFrom, beforeTo);
+    return { now, before, any: !!((now && now.days) || (before && before.days)) };
+  }
+
+  root.FitnessAnalysis = { analyze, steps, score, kindOf, add };
 })(typeof window !== 'undefined' ? window : globalThis);

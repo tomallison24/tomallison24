@@ -124,7 +124,8 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
     token: () => (load() || {}).token || null,
     signOut: () => { save(null); dispatchEvent(new CustomEvent('aos:account', { detail: null })); },
     // Lost a phone: every other session of yours ends (other devices, and the other apps on
-    // this one, which ask for Face ID again); this app keeps going with a fresh one.
-    signOutOthers: async () => keep(await call('signout-others', {})),
+    // this one, which ask for Face ID again); this app keeps going with a fresh one. With
+    // erase, each of those apps also erases aOS's data from its phone as it next opens.
+    signOutOthers: async erase => keep(await call('signout-others', erase ? { erase: true } : {})),
   };
 })();

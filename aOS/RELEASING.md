@@ -97,6 +97,36 @@ link that brings them back as they were.
 else**: every other sign-in of theirs ends at once (other devices, and the other
 apps on that phone, which ask for Face ID again). Nothing is deleted.
 
+**Erasing a lost phone** (aOS → Your account → **Erase aOS from a lost phone: step
+by step**, also at `aOS/#lost-phone`) walks through it: Find My first (the only
+sure way), then **Sign out and erase my other devices**. That bumps the person's
+sign-out count and records it (`wipe:<id>`); every older session of theirs, each
+time its app next opens online, gets `erase: true` from `GET /aOS/api/state`, and
+`home/welcome.js` erases that app's storage, databases and offline copy, then says
+so. Each Home Screen app erases itself (an iPhone keeps their storage apart), so
+the other aOS apps on the phone you kept do it too: sign in again there. An app
+kept offline, or never opened again, can't hear it. The owner can erase someone
+else's devices from the same page (they lost their only phone); their account
+stays. Fitness's Settings → **Sign out and erase**, and the button on that page,
+erase just the app they're in. Tests: `node aOS/scripts/accounts-api-test.mjs`,
+`node fitness/scripts/meds-steps-test.mjs`.
+
+**Steps** (Fitness reads each person's own iPhone steps from Home Assistant,
+`functions/fitness/api`): the Home Assistant token stays on the server, a
+secret `HA_TOKEN`, so no phone holds a token that can run the house. In Home
+Assistant (the owner's account, so it can list the family's step sensors):
+your profile → **Security** → **Long-lived access tokens** → **Create token**,
+named **aOS Steps**. Add it as a repository secret `HA_TOKEN` (GitHub →
+Settings → Secrets and variables → Actions → New repository secret); the next
+release puts it on the Pages project (or add it there by hand, as `OWNER_CODE`
+above). It uses the Home Assistant address saved in aOS. A token from a user
+that isn't an admin works too, but can't list sensors, so each person types
+their sensor's name. Each person then links their own phone in Fitness →
+Settings → Steps; once linked, no one else can link it, and only they can read
+it (the owner can unlink anyone). On each iPhone, the Home Assistant app's
+**Steps** sensor must be on (Settings → Companion App → Sensors) with Motion &
+Fitness allowed. Tests: `node fitness/scripts/steps-api-test.mjs`.
+
 The owner can then save the family's Home Assistant address (aOS → Your account
 → **Home Assistant address**, the Nabu Casa one). It's kept in that storage, not
 in the repository, and only signed-in family can read it: Home fills it in for

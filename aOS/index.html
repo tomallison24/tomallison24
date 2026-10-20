@@ -271,6 +271,9 @@
   .acct .fam small { color: var(--muted); margin-left: 6px; font-size: 13px; }
   .acct .fam button { color: #D9534F; font-size: 15px; font-weight: 600; }
   .acct .fam .gone span { color: var(--muted); } .acct .fam button.again { color: var(--accent); }
+  .lost ol, .lost ul { margin: 6px 0 0; padding-left: 22px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .lost li { margin-top: 6px; } .lost li b { color: var(--text); font-weight: 600; }
+  .acct .soft.danger { color: #D9534F; } .lost .fam { margin-top: 10px; }
   .rel h5 { margin: 10px 0 0; font-size: 14px; } .rel li.hi { color: var(--text); }
   .rel li.hi::marker { content: '✦  '; color: var(--accent); }
   #signin { margin-bottom: 12px; }
@@ -478,6 +481,7 @@
   .plan[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .plan em, .plan em.off, .plan em.used { border-radius: 999px; }
   .perr, .acct .err, .acct .fam button, .plans .pact.stop { color: var(--danger-text); }
+  .acct .soft.danger { color: var(--danger-text); box-shadow: inset 0 0 0 2px var(--danger-text); }
   .plan em.off { color: var(--danger-text); }
   .acct .link { border-radius: 14px; }
   .lab { border-radius: 20px; }

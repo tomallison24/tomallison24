@@ -36,6 +36,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
     getSheetByName: n => sheets.get(n) || null,
     insertSheet: n => { const s = makeSheet(n); sheets.set(n, s); return s; },
     getSheets: () => [...sheets.values()],
+    getSpreadsheetTimeZone: () => 'America/Denver',
     deleteSheet: s => sheets.delete(s.name),
   };
   ss.insertSheet('Sheet1');
@@ -43,7 +44,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
     SpreadsheetApp: { getActiveSpreadsheet: () => ss, getUi: () => ({ createMenu: () => ({ addItem() { return this; }, addToUi() {} }) }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
     ContentService: { createTextOutput: s => ({ text: s, setMimeType() { return this; } }), MimeType: { JSON: 'json' } },
-    Utilities: { formatDate: d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()] },
+    Utilities: { formatDate: (d, tz, f) => f === 'h:mm a' ? d.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' }) : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()] },
     Date, JSON, Math, Number, String, Object, Array, Map, Set,
   };
   const src = fs.readFileSync(gsPath, 'utf8').replace("const SECRET = 'CHANGE-ME';", 'const SECRET = ' + JSON.stringify(secret) + ';');
