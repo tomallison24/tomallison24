@@ -9,7 +9,8 @@
 // in step, a delete travelling between them, another person's phone getting
 // none of it, the 90 days kept on the phone and older weeks fetched when you
 // look back, the Log tab both ways, the old link and phrase handed to aOS,
-// signed out, the Sheet not set up yet; and Calendar's Drinks layer through the
+// signed out, the Sheet not set up yet (no toast: aOS sets it up; Drinks has no Sheet row or
+// sheet of its own); and Calendar's Drinks layer through the
 // real functions/drinks/api route (on an in-memory Workers KV with real
 // sessions), which asks the same Sheet. No phone talks to Google itself.
 // Also dark mode, and that nothing trips the page's Content Security Policy.
@@ -134,6 +135,12 @@ async function newPage(scheme, extra = {}) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource|401|404|503/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
+  // every toast the page shows (each sets its text anew, even the same text)
+  await page.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
+    window.__toasts = [];
+    const m = document.getElementById('toastMsg');
+    if (m) new MutationObserver(rs => rs.forEach(() => window.__toasts.push(m.textContent))).observe(m, { childList: true });
+  }));
   return { ctx, page };
 }
 const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, name + '.png') }) : null;
@@ -387,13 +394,11 @@ await test('signed out: works on the phone, says so, and offers Face ID; nothing
   await p.page.click('#moreBtn');
   assert.match(await p.page.textContent('#acct'), /On this phone only.*Sign in with your family account/);
   assert.ok(await p.page.isVisible('#signIn'));
-  assert.match(await p.page.textContent('#sheetBtn'), /The family’s Google Sheet\s*Sign in to sync/);
-  await p.page.click('#sheetBtn'); await p.page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await p.page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
-  assert.equal(await p.page.textContent('#syNow .t'), 'Sign in and sync');
-  assert.equal(await p.page.$('#syUrl'), null, 'no link or phrase to type on a phone');
+  for (const gone of ['#sheetBtn', '#sheetSub', '#syncSheet', '#syStatus', '#syNow', '#syUrl']) assert.equal(await p.page.$(gone), null, gone + ' is gone: aOS sets the Sheet up');
+  assert.doesNotMatch(await p.page.textContent('#moreBody'), /Sync now/);
   await p.page.waitForTimeout(2800);
   assert.equal(sheetCalls.length, before, 'nothing sent');
+  assert.ok(!(await p.page.evaluate(() => window.__toasts)).some(t => /Sign in to sync/.test(t)), 'no toast nagging to sign in: More offers it');
   await p.ctx.close();
 });
 
@@ -411,6 +416,9 @@ await test('the owner hasn’t set the Sheet up yet: says so, and the log stays 
   assert.match(await p.page.textContent('#acct'), /Couldn’t sync just now.*isn’t set up yet.*Account → Google Sheets/);
   slowNoSheet = false;
   assert.ok(await p.page.isHidden('#signIn'));
+  await p.page.evaluate(() => window.__drinks.sync()); await p.page.waitForTimeout(300);
+  assert.deepEqual(await p.page.evaluate(() => window.__toasts.filter(t => /Sheet|sync/i.test(t))), [], 'no toast: the owner sets it up in aOS');
+  assert.equal(await p.page.evaluate(() => document.getElementById('moreBtn').className), 'iconbtn', 'and no warning dot on More');
   await p.ctx.close();
   sheetOn = true;
 });
@@ -629,29 +637,27 @@ const COL = Object.fromEntries(['Who', 'Timestamp', 'Date', 'Time', 'Name', 'Cat
 const logRow = id => sheet.tab('Log').slice(1).find(r => r[COL.EntryID] === id);
 const logIndex = id => sheet.tab('Log').findIndex(r => r[COL.EntryID] === id) + 1;
 
-await test('the family’s Google Sheet: More has its row and its sheet (status and Sync now; no link, phrase or setup link); a row changed or added in the Log tab comes back', async () => {
+await test('the family’s Google Sheet: syncs by itself, with no Sheet row or sheet in More (no status, Sync now, link, phrase or setup link); a row changed or added in the Log tab comes back', async () => {
   const S = await newPage('light', { 'aos.session': SESSION, 'allison-drinks-v1': JSON.stringify({ v: 1, entries: [sheetDrink('s1'), sheetDrink('s2', { name: 'Wine', cat: 'wine', vol: 5, abv: 13 })], days: [{ id: YESTERDAY, status: 'af', updated: Date.now() }], prefs: [] }) });
   const sp = S.page;
   await sp.goto(BASE + '/drinks/'); await sp.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
   assert.ok(logRow('s1') && logRow('s2') && logRow('af-' + YESTERDAY), 'the drinks and the alcohol-free day are in the Log tab');
   assert.deepEqual([logRow('s1')[COL.Who], logRow('s1')[COL.ABV]], ['Tom', 6.8]);
   // settled: any follow-up sync done, and no more after it (not syncing again and again)
-  await sp.waitForFunction(() => window.__drinks.state() === 'ok' && !document.getElementById('moreBtn').classList.contains('warn'));
+  await sp.waitForFunction(() => window.__drinks.state() === 'ok');
   await sp.waitForTimeout(3500);
   const calls = sheetCalls.length; await sp.waitForTimeout(3500);
   assert.equal(sheetCalls.length, calls, 'no sync after sync');
-  slowSheet = 1500;   // opening More starts a sync: its row still says when it last synced, not "Syncing…"
+  slowSheet = 1500;   // opening More starts a sync: its account box still says when it last synced, not "Syncing…"
+  const at = +(await sp.evaluate(() => localStorage.getItem('allison-drinks-v1-synced-at')));
+  assert.ok(at > 0, 'synced by itself');
   await sp.click('#moreBtn');
-  assert.match(await sp.textContent('#sheetBtn'), /The family’s Google Sheet\s*Last synced/);
-  await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
-  await sp.waitForFunction(() => /In the family’s Google Sheet\. Last synced/.test(document.getElementById('syStatus').textContent));   // once the sync opening More started is done
+  assert.match(await sp.textContent('#acct'), /In the family’s Google Sheet.*Last synced/);
+  await sp.waitForFunction(t => +localStorage.getItem('allison-drinks-v1-synced-at') > t && window.__drinks.state() === 'ok', at);   // once the sync opening More started is done
   slowSheet = 0;
-  assert.equal(await sp.textContent('#syNow .t'), 'Sync now');
-  for (const gone of ['#syForm', '#syUrl', '#sySecret', '#syShare', '#syOff']) assert.equal(await sp.$(gone), null, gone + ' is gone');
+  for (const gone of ['#sheetBtn', '#sheetSub', '#syncSheet', '#syStatus', '#syNow', '#syForm', '#syUrl', '#sySecret', '#syShare', '#syOff']) assert.equal(await sp.$(gone), null, gone + ' is gone');
+  assert.equal(await sp.evaluate(() => document.getElementById('moreBtn').className), 'iconbtn', 'no warning dot on More');
   await shot(sp, '10-sheet');
-  await sp.click('#syNow');
-  await sp.waitForFunction(() => /Synced/.test(document.getElementById('toastMsg').textContent));
-  await sp.click('#syncSheet .iconbtn[data-close]'); await sp.waitForTimeout(150);
   // a row changed in the Sheet comes back here
   sheet.type(logIndex('s1'), 'ABV', 7.5); sheet.type(logIndex('s1'), 'Note', 'a big one');
   await syncNow(sp);

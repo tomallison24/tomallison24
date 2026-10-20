@@ -21,8 +21,10 @@
 //   The views: compared with before, weekly drinks, weeks over the limit, top
 //   drinks, days of the week, alcohol-free days, days over the limit, strength
 //   and size.
-// - More (the person button): the design, your account, your goals, the
-//   Sheet, bringing in the ABV Tracker's history, export, and delete.
+// - More (the person button): the design, your account, your goals, bringing
+//   in the ABV Tracker's history, export, and delete. No Sheet settings: it
+//   syncs by itself, and the owner sets the Sheet up in aOS (Account ->
+//   Google Sheets).
 // - Two designs, picked in More > Design: Vintage (the default) and Standard
 //   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
@@ -61,7 +63,6 @@ if (window.top !== window.self) {
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 6v12M6 12h12"/></svg>',
     import: '<svg viewBox="0 0 24 24"><path d="M12 3.6v11M7.6 10.6l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-2.6"/></svg>',
-    sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
     export: '<svg viewBox="0 0 24 24"><path d="M12 15V4M7.6 8.4L12 4l4.4 4.4"/><path d="M4.4 13.6v4.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-4.6"/></svg>',
     bin: '<svg viewBox="0 0 24 24"><path d="M4.6 6.8h14.8M9.6 6.8V4.6h4.8v2.2M6.6 6.8l.9 12a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12"/></svg>',
   };
@@ -391,7 +392,6 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="gAf">Alcohol-free days a week</label><select id="gAf">' + opts([0, 1, 2, 3, 4, 5, 6, 7], g.af) + '</select></div></div>'
       + '<p class="hint">In standard drinks (14 g of alcohol each).</p>'
       + '<p class="label">Your data</p><div class="rgroup">'
-      + '<button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>The family’s Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button>'
       + '<button class="rowbtn" type="button" id="importBtn"><span class="ic">' + ICON.import + '</span><span>Bring in ABV Tracker history<span class="sub">Its JSON backup, or its Google Sheet’s Log tab downloaded as CSV</span></span></button>'
       + '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + ICON.export + '</span><span>Export<span class="sub">Everything you’ve logged, as a spreadsheet (CSV)</span></span></button>'
       + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone' + (synced ? ' and the family’s Google Sheet (yours only)' : '') + '</span></span></button></div>';
@@ -412,7 +412,6 @@ if (window.top !== window.self) {
       catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
-    if (e.target.closest('#sheetBtn')) { openSheetSync(); return; }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }
     if (e.target.closest('#exportBtn')) { exportCSV(await everything()); return; }
     const w = e.target.closest('#wipeBtn');
@@ -497,9 +496,7 @@ if (window.top !== window.self) {
   };
   function setState(s, err) {
     syncState = s; if (s !== 'syncing') { settled = s; syncErr = err || ''; }   // while syncing, More still shows the last outcome, and why
-    $('moreBtn').classList.toggle('warn', s === 'error');
     if (!$('moreSheet').hidden && !more.contains(document.activeElement)) renderMore();
-    renderSyncStatus();
   }
   // Someone else signed in on this phone: their log isn't the last person's (the last person's is safe in the Sheet).
   function forOtherPerson(user) {
@@ -561,7 +558,7 @@ if (window.top !== window.self) {
     render();
     if (st.day && !$('daySheet').hidden) { if (st.form && st.form.editing && !data.entries.some(x => x.id === st.form.editing)) st.form = null; renderDay(); }
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
+  // loud: you signed in in More, or deleted all data (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud) {
     if (!SH() || (!loud && !signedIn())) { setState(signedIn() ? 'idle' : 'signin'); return false; }
     if (syncing) { syncAgain = true; return false; }
@@ -582,14 +579,16 @@ if (window.top !== window.self) {
       if (now) { whose = now.id; ls.set(K.who, whose); }
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       if (!synced) { synced = true; ls.set(K.family, '1'); }
-      errShown = false; ok = true;
+      ok = true;
       applyRemote(res, sent);
       setState('ok');
       if (loud) pillDone('Synced');
     } catch (e) {
       const m = e.message;
       setState(m === 'signin' ? 'signin' : m === 'offline' ? 'offline' : 'error', m); busyPill();
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[m] || 'Sync didn’t work. Trying again later.', null, 6000); }
+      // A quiet sync toasts a real error once a session; not signed out (More signs in), offline, or a Sheet
+      // the owner hasn't set up in aOS yet (Account → Google Sheets): nothing for the family to do here.
+      if (loud || (!errShown && syncState === 'error' && m !== 'no-sheet')) { errShown = true; toast(SYNC_ERRORS[m] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
       syncing = false;
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
@@ -625,19 +624,6 @@ if (window.top !== window.self) {
       return { entries: (res.entries || []).filter(C.okEntry), days: (res.days || []).filter(okDay) };
     } catch { return null; }
   }
-  // More's row: while a sync runs (opening More starts one), the last outcome, as in the account box above it
-  const sheetLine = (s = syncState === 'syncing' && settled !== 'idle' ? settled : syncState) => !signedIn() ? 'Sign in to sync' : s === 'error' ? 'Couldn’t sync just now' : s === 'syncing' ? 'Syncing…'
-    : s === 'offline' ? 'Offline: will sync when you’re back online' : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
-  function renderSyncStatus() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
-  }
-  function openSheetSync() { renderSyncStatus(); openSheet('syncSheet'); }
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync(false)); else setState('signin'); });
   // The pill at the top while the Sheet syncs (as in Fitness).
   let pillAt = 0, pillTimer = null;

@@ -27,7 +27,8 @@
   Data: on this phone (localStorage allison-drinks-v1: the last 90 days once
   it has synced) and, signed in, in the family's Google Sheet, where each row
   says whose it is and each phone only gets its own person's (through aOS,
-  ../home/sheet.js; aOS/SHEETS.md), so it follows you to another phone, and
+  ../home/sheet.js; aOS/SHEETS.md; the owner sets it up in aOS > Account >
+  Google Sheets, so Drinks has no Sheet settings), so it follows you to another phone, and
   Fitness and Calendar can show it (functions/drinks/api). Code: app.js, and
   calc.js for the sums.
   Two designs, picked in Settings > Design (../home/design.js, as in Clock):
@@ -129,7 +130,6 @@ svg.b{stroke-width:2.2}
 .iconbtn{position:relative;width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s,color .2s}
 .iconbtn svg{width:22px;height:22px}
 .iconbtn:active{transform:scale(.9);background:var(--glass-2);color:var(--text)}
-.iconbtn.warn::after{content:'';position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
 .btn{--tint:var(--accent);position:relative;min-height:50px;padding:8px 18px;border-radius:26px;font-weight:600;font-size:16px;color:var(--accent-text);
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 42%,transparent),inset 0 1px 1px var(--hi);transition:transform .18s var(--ease),filter .2s}
@@ -435,8 +435,6 @@ html.locked .dock{opacity:0;pointer-events:none}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
-.stackform{display:flex;flex-direction:column;gap:14px}
-.stackform[hidden]{display:none}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -535,7 +533,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .iconbtn,.btn,.fab,.seg,.vbar::before,.viewmenu,.sheet,.toast{-webkit-backdrop-filter:none;backdrop-filter:none}
 .iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
 .iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
-.iconbtn.warn::after{background:var(--mc-orange)}
 .btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);box-shadow:none}
 .btn:active{filter:brightness(.92)}
 .btn.quiet{background:transparent;color:var(--accent-text);font-weight:600;box-shadow:inset 0 0 0 2px var(--accent)}
@@ -684,23 +681,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="moreLbl">Drinks</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
       <div class="sheetbody" id="moreBody"></div>
-    </div>
-  </div>
-  <!-- Google Sheet sync -->
-  <div class="sheetwrap" id="syncSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
-      <div class="sheetbody">
-        <p class="hint" id="syStatus"></p>
-        <div class="stackform">
-          <div class="rgroup">
-            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets your latest from the Sheet</span></span></button>
-          </div>
-          <p class="hint">One Sheet for the family, the record of everyone’s Drinks: each row says whose it is, and each phone only ever gets its own person’s. This phone keeps the last 90 days and fetches older weeks when you look back. In its Log tab, a row changed or added comes back here (Qty 0 removes a drink). The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-        </div>
-      </div>
     </div>
   </div>
   <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" tabindex="-1" aria-hidden="true">
