@@ -548,14 +548,8 @@ svg.fs{fill:currentColor}
 :where(.btn){position:relative}
 :where(.btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 
-/* ---- Google Sheet backup (Settings): the link and code form, and a disconnect button ---- */
+/* ---- The family’s Google Sheet (Settings): its status and Sync now ---- */
 .stackform{display:flex;flex-direction:column;gap:14px}
-.frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
-.frow:first-child{border-top:0}
-.frow > label{flex:0 0 auto;white-space:nowrap}
-.frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
-.frow input.txt::placeholder{color:var(--faint)}
-.btn.danger{--tint:var(--danger);color:var(--danger-text);font-weight:500;width:100%}
 .btn[disabled]{opacity:.45;pointer-events:none}
 #epLbl,#setLbl,#actLbl,#syLbl{padding-left:8px}
 </style>
@@ -660,7 +654,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .btn::after{display:none}
 .btn:active{filter:brightness(.92)}
 .btn.quiet{background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
-.btn.danger{background:transparent;color:var(--danger-text);box-shadow:inset 0 0 0 2px var(--danger);font-weight:600}
 .morebtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--accent-text);font-weight:600;letter-spacing:.02em}
 .morebtn:active{background:var(--mc-card-2)}
 .linkbtn{font-weight:600}
@@ -741,8 +734,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .opt{font-weight:600}
 .notes a,.notes .ts,.epshow{color:var(--accent-text)}
 .notes blockquote{border-left-color:var(--mc-mustard)}
-.frow input.txt{font-family:inherit}
-.frow{border-top-color:var(--hair-2)}
 
 /* Now Playing: the ground colour, a mustard sun in the corner, flat artwork, a solid orange play button */
 .lg .sheet.np{background:var(--bg)}
@@ -949,7 +940,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="setSheetBtn">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
-            <span>Google Sheet backup<span class="sub" id="sheetSub">Not connected</span></span>
+            <span>The family’s Google Sheet<span class="sub" id="sheetSub">Sign in to sync</span></span>
           </button>
         </div>
         <p class="label">Backup</p>
@@ -963,34 +954,24 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <span>Import shows<span class="sub">An OPML file from another podcast app</span></span>
           </button>
         </div>
-        <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. What you follow, where you got to, Up Next and Saved are kept on this phone. A Google Sheet backup of your shows, saved episodes and history is optional.</p>
+        <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. Signed in, what you follow, Saved, History and where you got to sync with the family’s Google Sheet, so your other phones have them too; Up Next and Settings stay on this phone.</p>
       </div>
     </div>
   </div>
 
-  <!-- Google Sheet backup -->
+  <!-- The family's Google Sheet: the status and Sync now (aOS keeps the Sheet's link and phrase) -->
   <div class="sheetwrap lg" id="syncSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet backup</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
-        <form id="syForm" autocomplete="on" action="#" class="stackform">
+        <div class="stackform">
           <div class="rgroup glass">
-            <div class="frow"><label for="syUrl">Web app link</label><input class="txt" id="syUrl" name="username" type="url" inputmode="url" placeholder="Paste the link" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
-            <div class="frow"><label for="sySecret">Secret code</label><input class="txt" id="sySecret" name="password" type="password" placeholder="Your phrase" autocomplete="current-password" autocapitalize="off" spellcheck="false"></div>
+            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets your latest from the Sheet</span></span></button>
           </div>
-          <button class="btn" id="syConnect" type="submit">Connect and back up</button>
-          <p class="hint">Set up the Sheet first (steps in the Podcasts README, “Google Sheet backup”; it is a Sheet of your own). On a second phone, open the setup link from the first instead. Several phones can back up to one Sheet.</p>
-        </form>
-        <div id="syOn" class="stackform" hidden>
-          <div class="rgroup glass">
-            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span>Back up now<span class="sub">Sends your shows, saved episodes and history to the Sheet</span></span></button>
-            <button class="rowbtn" type="button" id="syShare"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span><span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up your other phone. Keep it private.</span></span></button>
-          </div>
-          <p class="hint">The Sheet has Shows, Saved and History tabs. History keeps every episode you play, even after the app trims its own list. Nothing is ever deleted there (an unfollowed show reads No), and nothing is read back, so edit nothing in it.</p>
-          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+          <p class="hint">One Sheet for the family, the record of everyone’s Podcasts: the shows each person follows, their saved episodes, History and where they got to. Each row says whose it is, and each phone only ever gets its own person’s. This phone keeps the last 90 days of History and fetches older episodes when you ask (Library → History → Show older). The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
         </div>
       </div>
     </div>
@@ -1017,6 +998,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/account.js"></script>   <!-- family accounts: syncing with the family's Google Sheet needs you signed in -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="podcasts" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
