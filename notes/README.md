@@ -60,7 +60,8 @@ to the family account, it syncs with **the family's Google Sheet**, through aOS
   On iPhone a Home Screen app keeps separate storage from Safari, so a link
   opened in Safari offers to copy it for pasting into the Home Screen app.
 - **Settings** (the gear at the top of Notes and of Reminders): **Design**
-  first (below), then **Backup and sync**.
+  first (below), then **Backup and sync** (the backup file; the Sheet syncs by
+  itself, below).
 - **Backup**: Settings → **Back up everything** makes one `.json` file with everything.
   **Import** restores it, or opens a shared file. Restoring asks first ("Add
   3 notes, 2 reminders and 1 list from this file?"), and only restore files
@@ -337,7 +338,7 @@ an iPhone, so notifications are turned on in each one you want them in.
 ## Tests
 
 ```sh
-node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark, both designs: home, collections, the editor, colours, Trash and Undo, Reminders, swipes, lists, the Sheet and Settings sheets, step by step, its storage, Settings > Design, the old Notes Vintage address; the family's Google Sheet through aOS (the real script): two phones, Just me on a note, a list and a reminder, the old link handed over, finished reminders past 90 days
+node notes/scripts/app-test.mjs         # the app at iPhone size, light and dark, both designs: home, collections, the editor, colours, Trash and Undo, Reminders, swipes, lists, the Settings sheet (no Sheet settings), step by step, its storage, Settings > Design, the old Notes Vintage address; the family's Google Sheet through aOS (the real script): two phones, Just me on a note, a list and a reminder, the old link handed over, finished reminders past 90 days
 node notes/scripts/sheet-test.mjs       # the Sheet's script (shared with Places): who gets in, shared and Just-me items, rows from before aOS, the 90 days and looking back, Who, what the notification server gets
 node notes/scripts/push-app-test.mjs    # the notifications, the app's side (a stubbed Sheet and server; signed out, then in)
 node notes/scripts/aisles-app-test.mjs  # the grocery sections in the app
@@ -387,13 +388,15 @@ wiped, signing in again loads everything back. Free: it runs as a small Apps
 Script in the owner's Google account (`google-sheet-sync.gs` in this folder,
 VERSION 2).
 
-- **Through aOS, signed in.** No phone keeps the Sheet's link or phrase. The
-  owner gives them to aOS once (**aOS → Account → Google Sheets → Notes**), and
-  every sync goes to `../sheet/api/notes` (`functions/sheet/api`) with the
-  phone's family session; aOS passes it on to the script with who's asking.
-  `../home/sheet.js` does the calling. Signed out, Notes works on the phone as
-  before, and **Settings → The family's Google Sheet** says to sign in (**Sign
-  in and sync** asks for Face ID).
+- **It syncs by itself, through aOS.** Notes has no Sheet settings of its own:
+  the owner sets the Sheet up once in **aOS → Account → Google Sheets**
+  (Notes), and no phone keeps its link or phrase. Signed in, every sync goes to
+  `../sheet/api/notes` (`functions/sheet/api`) with the phone's family session;
+  aOS passes it on to the script with who's asking. `../home/sheet.js` does the
+  calling. The title says **Synced** or **Not synced**, and a sync that goes
+  wrong says why once a visit (never for a Sheet that isn't set up yet, or a
+  sign-in that has run out: nobody is nagged). Signed out, Notes works on the
+  phone as before.
 - **Shared, except Just me.** Everything is the family's: each person's phone
   gets every note, list and reminder, and anyone can change or delete them.
   An item marked **Just me** (`only: true`) only ever goes to its own person's
