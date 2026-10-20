@@ -212,7 +212,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await page.waitForFunction(() => document.querySelector('.ipsy-bubble').getAnimations().every(a => a.playState === 'finished'));
     const c = await page.textContent('.ipsy-consent');
     assert.match(c, /notes, reminders and lists Ipsy reads to answer it go to Claude through the family server, which keeps only a count/);
-    assert.match(c, /Private notes stay on this phone/); assert.match(c, /Undo/); assert.match(c, /asks before deleting a note/);
+    assert.match(c, /Private notes are hidden from Ipsy/); assert.match(c, /Undo/); assert.match(c, /asks before deleting a note/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-consent.png') });
     await page.click('#ipsyOk');
@@ -249,7 +249,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     // and the change went out the app's own way: saved, then synced to the Sheet
     await until(() => synced.length > s0 && synced.at(-1).todos.some(t => t.title === 'Greek yogurt') && synced.at(-1).notes.some(n => n.id === 'nshop' && /PRODUCE/.test(n.body)), 'synced to the Sheet');
     const last = synced.at(-1);
-    assert.ok(!last.notes.some(n => n.id === 'npriv'), 'the private note stays off the Sheet, as always');
+    assert.ok(last.notes.some(n => n.id === 'npriv' && n.private), 'the private note syncs to the Sheet like any other: Private only hides it from Ipsy');
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-chat-' + scheme + '.png') });
 

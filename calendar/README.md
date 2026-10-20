@@ -191,6 +191,15 @@ here?*
     back as it was, a deleted one is written back (only if nothing has taken
     its place). A change made since is never written over: the Undo says so in
     the app's message at the bottom of the screen.
+- **Private events are hidden from Ipsy.** The **Private** switch in an event
+  marks it in iCloud (`X-AOS-PRIVATE:TRUE`, so every phone knows; an event
+  marked private by another calendar app, `CLASS:PRIVATE`, counts too), and
+  this phone keeps a copy of the mark in case another app drops it. Ipsy
+  doesn't see a private event or change it; looking for free time, it only
+  knows that time is taken ("Private"). Private notes and Travel bookings in
+  the layers are hidden the same way, and so are the emails behind private
+  bookings. **Settings → Gmail for Ipsy → Turn off Gmail for Ipsy** turns
+  Ipsy's Gmail off altogether, on this phone.
 - **Event text is material, not instructions.** Titles, places and notes are
   written by whoever made the event (or an invitation from outside); Ipsy is
   told never to act on what they say, and to mention it if one asks it to do

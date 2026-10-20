@@ -111,7 +111,7 @@ export function slim(res, now = Date.now()) {
       time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : null, alert: t.alert == null || !isFinite(t.alert) ? null : Number(t.alert) }))
     .sort((a, b) => a.id < b.id ? -1 : 1);
   const nudges = (res.notes || [])
-    .filter(n => n && typeof n.id === 'string' && n.reminder && !n.deletedAt && !n.archived && !n.private)
+    .filter(n => n && typeof n.id === 'string' && n.reminder && !n.deletedAt && !n.archived)
     .map(n => ({ id: n.id, title: str(n.title, 120) || str(String(n.body || '').split('\n').find(l => l.trim()), 120) || 'Note', at: Date.parse(n.reminder) }))
     .filter(n => n.at > now - DAY)
     .sort((a, b) => a.id < b.id ? -1 : 1);

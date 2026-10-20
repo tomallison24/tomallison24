@@ -176,6 +176,15 @@ exceptions are Ipsy's: an order's email read again to fix it (when you tap
 **Have Ipsy check this order**, or by itself for To check once you've said
 yes), and whatever Ipsy reads to answer you in its chat (below).
 
+**Private** (the switch on an order's page, a lock on its card) hides an order
+from Ipsy: it is left out of everything Ipsy reads (Ipsy is told only how many
+there are), Ipsy can't change it, and Ipsy doesn't check it, by itself or with
+Have Ipsy check. Its emails are hidden too: the email it came from, that
+email's thread, and any email that names its order or tracking number are left
+out of what Ipsy finds or reads in Gmail. It still syncs and shows as usual:
+Private only hides it from Ipsy. **Settings → Ipsy can search Gmail** turns
+Ipsy's Gmail off altogether, on this phone (`home/ipsy.js`, `privacy`).
+
 ## One-off clean-up
 
 Many stores never send a "delivered" email, so orders pile up under *On the way*.

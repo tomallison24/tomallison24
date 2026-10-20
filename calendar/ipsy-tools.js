@@ -23,6 +23,11 @@
 // - Only the Family calendar is written, and only through the app's own calls (writeEvent,
 //   writeItem, deleteFile: PUT and DELETE with If-Match), so a change made elsewhere first is
 //   caught (412, 'changed') and reported, never written over. Undo goes through the same calls.
+// - Private events (the Private switch in an event, on every phone) and private items in the layers (a
+//   private note or booking) are hidden: left out of everything Ipsy reads, and Family ones can't be
+//   changed. free_time still counts a private event's time as busy, as "Private", and nothing more.
+// - Gmail: emails behind private Travel bookings are left out (Travel's layer names them), and Gmail can
+//   be turned off for Ipsy altogether (Settings, Gmail for Ipsy).
 window.CalendarIpsy = function (app) {
   const I = app.I, TZ = app.TZ, st = app.st;
   const MIN = 60e3, D = 864e5;
@@ -48,7 +53,7 @@ window.CalendarIpsy = function (app) {
   const fileOf = id => String(id || '').split('|')[0];
 
   // ---- what Ipsy may read: the Family calendar and the layers that are on (never Drinks) ----
-  const readable = () => st.occ.filter(x => KIND_KEY[x.kind]);
+  const readable = () => st.occ.filter(x => KIND_KEY[x.kind] && !app.isPrivate(x));
   const loaded = () => st.win ? { from: app.ymd(st.win.from), to: app.ymd(st.win.to - 1) } : null;
   const calOf = x => x.kind === 'family' ? calName() : app.LAYER[x.kind].name;
   const idOf = x => x.kind === 'family' ? x.name : x.id;
@@ -131,6 +136,7 @@ window.CalendarIpsy = function (app) {
     }
     const comps = I.children(item.cal, 'VEVENT');
     const x = st.occ.find(o => o.kind === 'family' && o.name === name);
+    if (x && app.isPrivate(x)) return { why: 'There is no Family event with id ' + line(id, 80) + ' loaded. Use find_events to get its id.' };
     if (comps.length !== 1 || (x && isRepeating(x)) || comps.some(c => I.prop(c, 'RRULE') || I.props(c, 'RDATE').length || I.prop(c, 'RECURRENCE-ID')))
       return { why: 'That is a repeating event. Ipsy doesn’t change or delete repeating events, or one occurrence of them: the person can do it in the app (tap the event, then Edit or Delete Event), where it asks whether they mean this event only, all future events or all events. Nothing was changed.' };
     if (!x) return { why: 'That event isn’t in the days the app has loaded. Use find_events with its dates first.' };
@@ -169,11 +175,30 @@ window.CalendarIpsy = function (app) {
     return { allDay, start, end };
   }
 
+  // Gmail: off for Ipsy (Settings), and the emails behind private Travel bookings (from Travel's layer).
+  const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
+  const gmailOn = () => !PV || PV.gmail('calendar');
+  const guard = () => {
+    const data = app.layerData('allison-travel-v1', 'travel'), list = data && Array.isArray(data.bookings) ? data.bookings : [];
+    return PV ? PV.guard(list.filter(b => b && b.private).map(b => ({ msgId: b.msgId, threadId: b.threadId, words: [b.conf, b.airlineCode && b.flightNo ? b.airlineCode + b.flightNo : ''] }))) : { hides: () => false };
+  };
   const gmailModule = import(new URL('../calendar/ipsy-gmail.js', location.href).href);
   gmailModule.then(m => m.mount()).catch(() => {});
   const tools = {
-    async search_gmail(q, ctx) { return (await gmailModule).tools.search_gmail(q, ctx); },
-    async read_email(q, ctx) { return (await gmailModule).tools.read_email(q, ctx); },
+    async search_gmail(q, ctx) {
+      if (!gmailOn()) fail(PV.gmailOff('Calendar'));
+      const r = await (await gmailModule).tools.search_gmail(q, ctx), c = r && r.content;
+      if (!c || !Array.isArray(c.emails)) return r;
+      const g = guard(), emails = c.emails.filter(m => !g.hides({ id: m.message_id, threadId: m.thread_id, subject: m.subject, from: m.from, snippet: m.snippet })), hidden = c.emails.length - emails.length;
+      return { ...r, content: { ...c, emails, shown: emails.length, ...(hidden ? { privateEmailsNotShown: hidden } : {}) } };
+    },
+    async read_email(q, ctx) {
+      if (!gmailOn()) fail(PV.gmailOff('Calendar'));
+      const r = await (await gmailModule).tools.read_email(q, ctx), c = r && r.content;
+      if (c && c.message_id && guard().hides({ id: c.message_id, threadId: c.thread_id, subject: c.subject, from: c.from, snippet: c.snippet }, c.text))
+        fail('That email is about something the person marked Private, so Ipsy can’t read it.');
+      return r;
+    },
     async find_events(q) {
       await fresh();
       const words = line(q.query, 200).toLowerCase().split(/\s+/).filter(Boolean);
@@ -188,7 +213,8 @@ window.CalendarIpsy = function (app) {
       const limit = Math.max(1, Math.min(200, Number.isInteger(q.limit) ? q.limit : 60));
       const end = app.addDays(to, 1);
       const list = readable().filter(x => overlaps(x, from, end) && (!cals.length || cals.includes(KIND_KEY[x.kind])) && (!words.length || app.matches(x, words)));
-      const out = { from, to, found: list.length, shown: Math.min(limit, list.length), events: list.slice(0, limit).map(brief) };
+      const priv = st.occ.filter(x => KIND_KEY[x.kind] && app.isPrivate(x) && overlaps(x, from, end)).length;
+      const out = { from, to, found: list.length, shown: Math.min(limit, list.length), events: list.slice(0, limit).map(brief), ...(priv ? { privateEventsNotShown: priv } : {}) };
       if (!ok) out.note = 'Only ' + (loaded() ? loaded().from + ' to ' + loaded().to : 'what was seen last') + ' could be loaded' + (st.offline ? ' (the phone is offline)' : '') + '; events outside that aren’t here.';
       else if (st.offline) out.note = 'The phone is offline: these are the events last seen.';
       const wx = {};
@@ -245,14 +271,14 @@ window.CalendarIpsy = function (app) {
         for (const [s, e] of busy) { if (s - t >= min * MIN) free.push([t, s]); t = Math.max(t, e); }
         if (b - t >= min * MIN) free.push([t, b]);
         const row = { date: d, weekday: new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }), free: free.map(([s, e]) => ({ from: hm(s), to: e >= app.dayMs(app.addDays(d, 1)) ? '24:00' : hm(e), minutes: Math.round((e - s) / MIN) })) };
-        const taken = on.filter(busyOf).filter(x => x.end > a && x.start < b).map(x => hm(x.start) + '-' + hm(x.end) + ' ' + line(x.title, 60));
+        const taken = on.filter(busyOf).filter(x => x.end > a && x.start < b).map(x => hm(x.start) + '-' + hm(x.end) + ' ' + (app.isPrivate(x) ? 'Private' : line(x.title, 60)));
         if (taken.length) row.busy = taken;
-        const allDay = on.filter(x => x.allDay).map(x => line(x.title, 60) + ' (' + calOf(x) + ')');
+        const allDay = on.filter(x => x.allDay && !app.isPrivate(x)).map(x => line(x.title, 60) + ' (' + calOf(x) + ')');
         if (allDay.length) row.all_day = allDay;
         days.push(row);
       }
       const out = { earliest: pad(Math.floor(early / 60)) + ':' + pad(early % 60), latest: late >= 1440 ? '24:00' : pad(Math.floor(late / 60)) + ':' + pad(late % 60), min_minutes: min,
-        counted_as_busy: 'Family events with times (not ones shown as free) and Travel flights and car pick-ups; all-day items are listed but don’t block time', days };
+        counted_as_busy: 'Family events with times (not ones shown as free) and Travel flights and car pick-ups; all-day items are listed but don’t block time. "Private" is something the person keeps private: only its time is shown', days };
       if (!ok) out.note = 'Only ' + (loaded() ? loaded().from + ' to ' + loaded().to : 'what was seen last') + ' could be loaded; days outside that look free but may not be.';
       return { content: out };
     },
@@ -412,11 +438,11 @@ window.CalendarIpsy = function (app) {
       return 'Calendar shows the ' + calName() + ' calendar (iCloud, shared with the family)' + (layers.length ? ' and these layers: ' + layers.join(', ') : '') + '. '
         + (l ? 'Loaded: ' + l.from + ' to ' + l.to + '. ' : '') + 'The phone’s time zone: ' + TZ + '. On screen: ' + app.screen() + '.'
         + (st.api !== 'ok' && st.api !== 'checking' ? ' The Family calendar can’t be reached right now, so nothing can be changed.' : '')
-        + (st.offline ? ' The phone is offline.' : '');
+        + (st.offline ? ' The phone is offline.' : '') + (gmailOn() ? '' : ' Gmail is turned off for Ipsy here (Settings).');
     },
     intro: 'Hi, I’m Ipsy! I can search your Gmail for appointments, find what’s on, look for free time, and add, move or delete an event in the Family calendar. I always ask you first before I change anything.',
     placeholder: 'Ask Ipsy about the calendar',
     suggestions: ['What’s on this week?', 'Find us a free evening next week', 'Find appointment emails in Gmail', 'What can you change here?'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the events Ipsy looks at to answer it (the Family calendar and the layers you have on, but not Drinks) go to Claude through the family server, which keeps only a count of questions. Ipsy asks you before every change, one event at a time, and each change shows here with Undo. It doesn’t change repeating events. Connect Gmail in Calendar Settings; Ipsy asks separately before sharing email subjects, snippets or text with Claude. Email results remain in this device’s chat until New chat.',
+    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the events Ipsy looks at to answer it (the Family calendar and the layers you have on, but not Drinks) go to Claude through the family server, which keeps only a count of questions. Ipsy asks you before every change, one event at a time, and each change shows here with Undo. It doesn’t change repeating events. Events you mark Private are hidden from Ipsy (it only knows that time is taken), and so are private notes and bookings in the layers. Connect Gmail in Calendar Settings; Ipsy asks separately before sharing email subjects, snippets or text with Claude. Email results remain in this device’s chat until New chat.',
   };
 };

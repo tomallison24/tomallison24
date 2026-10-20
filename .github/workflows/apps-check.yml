@@ -90,10 +90,11 @@ jobs:
               aOS/scripts/android-installed-test.mjs
               meals/scripts/app-test.mjs
               podcasts/scripts/app-test.mjs
-          # Drinks
+          # Drinks, and Private: what Orders, Travel and Calendar keep from Ipsy
           - group: drinks
             tests: |
               drinks/scripts/app-test.mjs
+              home/scripts/ipsy-private-test.mjs
           # Home, News' table and match pages, Calendar
           - group: home
             tests: |

@@ -16,13 +16,35 @@
 // sheet makes them: what is changed is the person's own (a later email won't overwrite it), a
 // deleted booking stays deleted, and everything goes through save(), so the Sheet and the Family
 // calendar follow. Deleting a whole trip asks first, in the chat.
+//
+// Private bookings (the Private pill on a booking, or on a whole trip) are hidden from Ipsy: they
+// are left out of everything it reads and it can't change them; a trip with some private bookings
+// is shown with the others only, named and dated by them, and can't be renamed. Their emails are
+// left out of what Ipsy finds or reads in Gmail (the email a booking came from, its thread, and any
+// email that names its confirmation or flight number). Gmail can also be turned off for Ipsy
+// altogether (Settings, Ipsy).
 window.TravelIpsy = function (app) {
   const P = app.P;
   const ymd = s => typeof s === 'string' && /^20\d\d-\d\d-\d\d$/.test(s) && !isNaN(Date.parse(s + 'T12:00:00Z'));
   const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, n);
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const FLIGHT = /^[A-Z0-9]{2}\d{1,4}[A-Z]?$/;
-  const byId = id => app.bookings.find(b => b.id === id);
+  const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
+  const seen = b => !b.private;                       // private bookings stay out of Ipsy's sight
+  const byId = id => app.bookings.find(b => b.id === id && seen(b));
+  const privCount = () => app.bookings.filter(b => !seen(b)).length;
+  // A trip as Ipsy sees it: its bookings that aren't private, named and dated by them (null: all private).
+  function view(g) {
+    if (!g) return null;
+    const items = g.items.filter(seen), hidden = g.items.length - items.length;
+    if (!hidden) return g;
+    if (!items.length) return null;
+    const starts = items.map(app.startOf).filter(Boolean).sort(), ends = items.map(b => app.endOf(b) || app.startOf(b)).filter(Boolean).sort();
+    return { ...g, items, live: g.live.filter(seen), name: app.autoName({ items }), start: starts[0] || g.start, end: ends[ends.length - 1] || g.end, hidden };
+  }
+  const trips = () => app.groupTrips().map(view).filter(Boolean);
+  const tripById = id => view(app.tripById(id));
+  const checkList = () => app.checkList().filter(seen);
   const fail = msg => { throw new Error(msg); };
   // Leaves out what says nothing (empty, null, false), so what goes to Claude stays short.
   const compact = v => {
@@ -50,7 +72,7 @@ window.TravelIpsy = function (app) {
   function full(b) {
     const { updated, created, source, calSig, calUid, filled, guess, shadow, ...rest } = b;
     const f = { ...rest, kind: kindOf(b) };
-    const g = app.startOf(b) && app.tripById(b.id);
+    const g = app.startOf(b) && tripById(b.id);
     if (g) f.trip = { id: g.id, name: g.name };
     f.check = why(b);
     if (calSig || calUid) f.inFamilyCalendar = true;
@@ -70,14 +92,19 @@ window.TravelIpsy = function (app) {
   const tripWords = g => '**' + g.name + '** (' + range(g) + ', ' + plural(g.items.length, 'booking') + ')';
 
   // ---- Gmail ----
+  const gmailOn = () => !PV || PV.gmail('travel');
   async function mail(path, params) {
+    if (!gmailOn()) fail(PV.gmailOff('Travel'));
     if (!app.getToken()) fail('Gmail isn’t connected in Travel on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
     try { return await app.gmail(path, params); }
     catch (e) { if (e instanceof app.AuthError) fail('Gmail’s sign-in has run out on this phone. The person can sign in again in Settings (the gear), Connect Gmail.'); throw e; }
   }
   const head = (m, n) => app.header(m, n.toLowerCase());
   const day = ms => { const d = new Date(+ms); return isNaN(d) ? '' : d.toISOString().slice(0, 10); };
-  const madeFrom = id => app.bookings.filter(b => b.source && b.source.msgId === id).map(b => b.id);
+  const madeFrom = id => app.bookings.filter(b => seen(b) && b.source && b.source.msgId === id).map(b => b.id);
+  // The emails behind private bookings, which Ipsy doesn't get either.
+  const guard = () => PV ? PV.guard(app.bookings.filter(b => !seen(b)).map(b => ({ msgId: b.source && b.source.msgId, threadId: b.source && b.source.threadId,
+    words: [b.conf, b.airlineCode && b.flightNo ? b.airlineCode + b.flightNo : ''] }))) : { hides: () => false };
 
   // ---- live flights: the app's own calls (travel/api/flight and find), counted in its monthly allowances ----
   const LIVE_ERRORS = { limit: 'The flight data service’s monthly allowance is used up.', 'key-refused': 'The flight data service refused the key.',
@@ -92,22 +119,23 @@ window.TravelIpsy = function (app) {
       const hit = text => want.every(w => text.includes(w));
       const limit = Math.max(1, Math.min(60, Number.isInteger(q.limit) ? q.limit : 20));
       if (when === 'check') {
-        const list = app.checkList().filter(b => !want.length || hit(words(b)));
+        const list = checkList().filter(b => !want.length || hit(words(b)));
         return { content: { found: list.length, bookings: list.slice(0, limit * 3).map(line) } };
       }
-      let groups = app.groupTrips();
+      let groups = trips();
       if (when === 'upcoming') groups = groups.filter(g => !g.past);
       if (when === 'past') groups = groups.filter(g => g.past).reverse();
       groups = groups.filter(g => (!ymd(q.from) || g.end.slice(0, 10) >= q.from) && (!ymd(q.to) || g.start.slice(0, 10) <= q.to)
         && (!want.length || hit(g.name.toLowerCase() + ' ' + g.items.map(words).join(' '))));
-      const toCheck = app.checkList().length;
+      const toCheck = checkList().length, priv = privCount();
       return { content: { found: groups.length, shown: Math.min(limit, groups.length), trips: groups.slice(0, limit).map(trip),
-        ...(toCheck && when !== 'past' ? { to_check: toCheck + (toCheck === 1 ? ' booking needs' : ' bookings need') + ' a look (find_trips with when: check)' } : {}) } };
+        ...(toCheck && when !== 'past' ? { to_check: toCheck + (toCheck === 1 ? ' booking needs' : ' bookings need') + ' a look (find_trips with when: check)' } : {}),
+        ...(priv ? { privateBookingsNotShown: priv } : {}) } };
     },
 
     async get_bookings(q) {
       const ids = (Array.isArray(q.ids) ? q.ids : []).slice(0, 20);
-      return { content: { bookings: ids.map(id => { const b = byId(id); return b ? full(b) : { id, missing: 'No booking with this id.' }; }) } };
+      return { content: { bookings: ids.map(id => { const b = byId(id); return b ? full(b) : { id, missing: 'No booking with this id (private bookings can’t be read).' }; }) } };
     },
 
     async update_booking(q) {
@@ -154,7 +182,7 @@ window.TravelIpsy = function (app) {
       const found = ids.filter(byId), missing = ids.filter(id => !byId(id));
       if (!found.length) fail('None of those bookings are here.');
       // every booking of a trip is the whole trip: the person says so first
-      const whole = app.groupTrips().filter(g => g.items.every(b => found.includes(b.id)));
+      const whole = trips().filter(g => !g.hidden && g.items.every(b => found.includes(b.id)));
       if (whole.length && !(await confirm('Delete ' + (whole.length === 1 ? 'the whole trip ' + tripWords(whole[0]) : whole.length + ' whole trips: ' + whole.map(tripWords).join(', '))
         + (found.length > whole.reduce((n, g) => n + g.items.length, 0) ? ', and other bookings' : '') + '? It won’t come back from the emails.', { yes: 'Delete', no: 'Keep it' })))
         return { content: { deleted: [], note: 'The person said no, so nothing was deleted.' } };
@@ -165,13 +193,13 @@ window.TravelIpsy = function (app) {
     },
 
     async delete_trip(q, { confirm }) {
-      const g = app.tripById(q.trip_id); if (!g) fail('No trip with id ' + q.trip_id + '.');
+      const g = tripById(q.trip_id); if (!g) fail('No trip with id ' + q.trip_id + '.');
       const list = g.items.map(b => '- ' + app.titleOf(b)).join('\n');
       if (!(await confirm('Delete the whole trip ' + tripWords(g) + '?\n' + list + '\nIt won’t come back from the emails.', { yes: 'Delete the trip', no: 'Keep it' })))
         return { content: { deleted: [], note: 'The person said no, so nothing was deleted.' } };
       const ids = g.items.map(b => b.id);
       const { change } = made(ids.map(id => ({ op: 'delete', id })), 'Deleted the trip ' + g.name + ' (' + plural(ids.length, 'booking') + ')');
-      return { content: { deleted: ids, trip: g.name }, change };
+      return { content: { deleted: ids, trip: g.name, ...(g.hidden ? { note: 'Its private bookings are still there: Ipsy can’t see or delete them.' } : {}) }, change };
     },
 
     async move_booking(q) {
@@ -180,22 +208,23 @@ window.TravelIpsy = function (app) {
       if (q.own_trip) {
         const o = app.checkEdit({ op: 'detach', id: b.id });
         const { change } = made([o], app.editText(o));
-        const g = app.tripById(b.id);
+        const g = tripById(b.id);
         return { content: { booking: b.id, trip: g ? { id: g.id, name: g.name } : null }, change };
       }
       const w = q.with && byId(q.with);
       if (!w) fail('Say which trip: with is a booking id in that trip, or the trip\'s id. Or own_trip: true for a trip of its own.');
-      const to = app.tripById(w.id); if (!to) fail('That booking has no date, so it is in no trip.');
-      const from = app.tripById(b.id);
+      const to = tripById(w.id); if (!to) fail('That booking has no date, so it is in no trip.');
+      const from = tripById(b.id);
       if (from && from.id === to.id) return { content: { booking: b.id, trip: { id: to.id, name: to.name }, note: 'It is already in that trip.' } };
       const o = app.checkEdit({ op: 'join', id: b.id, with: w.id }); if (!o) fail('Couldn’t move it there.');
       const { change } = made([o], 'Put ' + app.titleOf(b) + ' in the trip ' + to.name);
-      const g = app.tripById(b.id);
+      const g = tripById(b.id);
       return { content: { booking: b.id, trip: g ? { id: g.id, name: g.name } : null }, change };
     },
 
     async rename_trip(q) {
-      const g = app.tripById(q.trip_id); if (!g) fail('No trip with id ' + q.trip_id + '.');
+      const g = tripById(q.trip_id); if (!g) fail('No trip with id ' + q.trip_id + '.');
+      if (g.hidden) fail('This trip has bookings the person marked Private, so Ipsy can’t rename it. They can rename it on the trip’s page.');
       const o = app.checkEdit({ op: 'rename', id: g.id, name: q.name }, new Set([g.id]));
       if (!o) fail('A trip’s name is 2 to 60 characters.');
       if (o.name === g.name) return { content: { trip: { id: g.id, name: g.name }, note: 'It is already called that.' } };
@@ -206,7 +235,7 @@ window.TravelIpsy = function (app) {
     async show_trip(q) {
       const b = q.booking_id ? byId(q.booking_id) : null;
       if (q.booking_id && !b) fail('No booking with id ' + q.booking_id + '.');
-      const g = app.tripById(q.trip_id || (b && app.startOf(b) ? b.id : '') || '');
+      const g = tripById(q.trip_id || (b && app.startOf(b) ? b.id : '') || '');
       if (!g && !b) fail('No trip with id ' + q.trip_id + '.');
       if (g) app.openTrip(g.id);
       if (b) app.openBooking(b.id);
@@ -256,14 +285,17 @@ window.TravelIpsy = function (app) {
       const query = clip(q.query, 300); if (!query) fail('Give a Gmail search.');
       const max = Math.max(1, Math.min(25, Number.isInteger(q.max) ? q.max : 10));
       const r = await mail('/messages', { q: query + ' -in:chats', maxResults: max });
-      const ids = (r && r.messages || []).slice(0, max);
+      const ids = (r && r.messages || []).slice(0, max), g = guard();
       const emails = [];
+      let hidden = 0;
       for (const m of ids) {
+        if (g.hides(m)) { hidden++; continue; }
         const msg = await mail('/messages/' + m.id, { format: 'metadata' });
+        if (g.hides(msg)) { hidden++; continue; }
         const bs = madeFrom(m.id);
         emails.push({ message_id: m.id, from: head(msg, 'From'), subject: head(msg, 'Subject'), date: day(msg.internalDate), snippet: clip(msg.snippet, 200), ...(bs.length ? { bookings: bs } : {}) });
       }
-      return { content: { found: emails.length, ...(r && r.resultSizeEstimate > emails.length ? { more: true } : {}), emails } };
+      return { content: { found: emails.length, ...(r && r.resultSizeEstimate > emails.length + hidden ? { more: true } : {}), emails, ...(hidden ? { privateEmailsNotShown: hidden } : {}) } };
     },
 
     // Links are shown as their site only: an email's links can carry one-tap actions (check in,
@@ -275,6 +307,7 @@ window.TravelIpsy = function (app) {
       const fromHtml = html ? P.htmlToText(html) : '';
       const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
         .replace(/https?:\/\/([^\s/?#]+)\S*/g, (u, host) => '[link to ' + host.replace(/^www\./, '') + ']').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+      if (guard().hides(msg, body)) fail('That email is about a booking the person marked Private, so Ipsy can’t read it.');
       const bs = madeFrom(id);
       return { content: { message_id: id, from: head(msg, 'From'), to: head(msg, 'To'), subject: head(msg, 'Subject'), date: day(msg.internalDate),
         ...(bs.length ? { bookings: bs } : {}), text: body.slice(0, 20000) + (body.length > 20000 ? '\n[the rest of the email is cut off]' : '') } };
@@ -294,14 +327,14 @@ window.TravelIpsy = function (app) {
     tools,
     label: (name, input) => (LABELS[name] || (() => ''))(input || {}),
     context() {
-      const groups = app.groupTrips(), up = groups.filter(g => !g.past), next = up[0], check = app.checkList().length;
-      return 'Travel has ' + plural(app.bookings.length, 'booking') + ' in ' + plural(groups.length, 'trip') + ': ' + up.length + ' coming up'
+      const groups = trips(), up = groups.filter(g => !g.past), next = up[0], check = checkList().length, priv = privCount();
+      return 'Travel has ' + plural(app.bookings.filter(seen).length, 'booking') + ' in ' + plural(groups.length, 'trip') + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + up.length + ' coming up'
         + (next ? ' (the next: ' + next.name + ', ' + range(next) + ')' : '') + (check ? ', ' + check + ' to check' : '') + '. '
-        + 'On screen: ' + app.screen() + '.' + (app.getToken() ? '' : ' Gmail isn’t connected right now.');
+        + 'On screen: ' + app.screen() + '.' + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, Ipsy).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can tell you about your trips, fix or add a booking, check any flight live (delays, gates, where it is), find a flight number, look through your Gmail, or look something up on the web.',
     placeholder: 'Ask Ipsy about your trips',
     suggestions: ['When’s my next flight? Is it on time?', 'What’s on my next trip?', 'Is anything on my trips not confirmed?', 'Check Gmail for bookings I’m missing'],
-    consent: 'Ipsy runs on Claude, by Anthropic. Your question, and whatever Ipsy looks at to answer it (your bookings, with any names, seats and notes in them, and any email it opens in your Gmail), go to Claude through the family server, which keeps only a count of questions. Flight look-ups send AeroDataBox only the flight number and the day. Each change Ipsy makes shows here with Undo, and it asks before deleting a whole trip.',
+    consent: 'Ipsy runs on Claude, by Anthropic. Your question, and whatever Ipsy looks at to answer it (your bookings, with any names, seats and notes in them, and any email it opens in your Gmail), go to Claude through the family server, which keeps only a count of questions. Bookings and trips you mark Private, and their emails, are hidden from Ipsy, and you can turn off its Gmail in Settings. Flight look-ups send AeroDataBox only the flight number and the day. Each change Ipsy makes shows here with Undo, and it asks before deleting a whole trip.',
   };
 };

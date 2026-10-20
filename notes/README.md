@@ -101,9 +101,12 @@ pancake recipe*, *Turn my packing note into a list*.
   finished first, so it can't write over the change.
 - **Deleting a note asks first**, with Yes and No in the chat; nothing happens
   until you tap one. Everything else just happens, with Undo.
-- **Private notes stay on this phone**: Ipsy never sees them. They are left out
+- **Private notes are hidden from Ipsy**: it never sees them. They are left out
   of everything it reads (it is told only how many there are) and it can't
-  change them, as they are left out of the Sheet.
+  change them. Private only hides a note from Ipsy: it still syncs to the Sheet
+  and the other phones, and its nudge notifies, like any other note. (Until
+  aOS1.7 private notes stayed on the phone; the first sync since sends them.)
+  The same Private is in Orders, Travel and Calendar.
 - **How it works.** The chat lives on the phone. Each step sends the whole
   conversation to the family server (`functions/notes/api`, `POST ipsy`; the
   shared part is `server/ipsy.js`), which adds Ipsy's instructions and tools
@@ -227,7 +230,6 @@ that reminder or note.
   ("4 reminders").
 - Done reminders never alert. A reminder already overdue by more than 10
   minutes when it is added doesn't alert either.
-- **Private notes** never leave the phone, so their nudges can't notify.
 
 **How it knows**: it reads the Google Sheet the phones sync with. After a
 phone syncs a change it pings the server, which reads the Sheet again within

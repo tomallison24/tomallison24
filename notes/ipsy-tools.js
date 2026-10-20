@@ -15,8 +15,8 @@
 // Changes follow the app's own rules and go through save(), so they sync to the Google Sheet (and
 // the notification server) like any other change: a deleted note goes to Trash (30 days), tags
 // typed as #words in a note are kept as its tags, a grocery list sorts its items into store
-// sections and learns a section chosen for an item. Private notes never leave the phone, so Ipsy
-// never sees them: they are left out of everything it reads, and it can't change them.
+// sections and learns a section chosen for an item. Private notes are hidden from Ipsy (they still
+// sync like any other note): they are left out of everything it reads, and it can't change them.
 window.NotesIpsy = function (app) {
   const copy = o => JSON.parse(JSON.stringify(o));
   const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, n);
@@ -395,6 +395,6 @@ window.NotesIpsy = function (app) {
     intro: 'Hi, I’m Ipsy! I can find a note, write or tidy one, add to your lists, check things off, sort the groceries into store sections, set a reminder, or look something up on the web.',
     placeholder: 'Ask Ipsy about your notes',
     suggestions: ['What’s on my grocery list?', 'Sort the groceries by aisle', 'Find my notes about the house', 'Remind me to call Mom tomorrow at 5'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the notes, reminders and lists Ipsy reads to answer it go to Claude through the family server, which keeps only a count of questions. Private notes stay on this phone: Ipsy never sees them. Ipsy can write, change and check off things: each change shows here with Undo, and it asks before deleting a note.',
+    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the notes, reminders and lists Ipsy reads to answer it go to Claude through the family server, which keeps only a count of questions. Private notes are hidden from Ipsy: it never sees them. Ipsy can write, change and check off things: each change shows here with Undo, and it asks before deleting a note.',
   };
 };

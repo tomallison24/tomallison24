@@ -85,6 +85,24 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    // aOS1.7 is being put together in more than one PR: this one brings Private. Merge its lines into one 1.7 entry.
+    { v: '1.7', date: '2026-10-20', title: 'Yours to keep',
+      highlights: ['Mark a note, order, trip or event Private and Ipsy can\'t see it',
+        'Ipsy can\'t read the emails behind private things either',
+        'Turn off Ipsy\'s Gmail in Settings'],
+      notes: ['Private, in Notes, Orders, Travel and Calendar: a private item is left out of everything Ipsy reads (it is told only how many there are), Ipsy can\'t change it, and Ipsy doesn\'t check it by itself. It still syncs and shows as usual: Private only hides it from Ipsy',
+        'The emails behind a private order or booking are hidden from Ipsy too: the email it came from, that email\'s thread, and any email naming its order, tracking or confirmation number',
+        'Orders, Travel and Calendar: Ipsy can search Gmail is a setting now (Settings), on this phone; off, Ipsy can\'t search or read any email',
+        'Notes: a private note now syncs to the Google Sheet and the other phones like any other note, and its nudge notifies; before, private notes stayed on the phone. The first sync since sends them',
+        'Orders: the Private switch is on an order\'s page, and a lock shows on its card',
+        'Travel: the Private pill is on a booking, and Private trip on a trip\'s page; a trip with some private bookings is shown to Ipsy with the others only, named and dated by them, and its Family calendar events are marked private',
+        'Calendar: the Private switch is in an event, kept in iCloud so every phone knows (an event marked private by another calendar app counts too); looking for free time, Ipsy only knows that time is taken. Private notes and bookings in the layers are hidden from Ipsy, and so are the emails behind private bookings'],
+      apps: {
+        notes: { highlights: ['Private notes now sync like any other note', 'Private only hides a note from Ipsy', 'Their nudges notify now, too'] },
+        orders: { highlights: ['Mark an order Private to hide it from Ipsy', 'Ipsy can\'t read its emails either', 'Turn off Ipsy\'s Gmail in Settings'] },
+        travel: { highlights: ['Mark a booking or a whole trip Private', 'Ipsy can\'t see it, or its emails', 'Turn off Ipsy\'s Gmail in Settings'] },
+        calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Ipsy only knows that time is taken', 'Turn off Ipsy\'s Gmail in Settings'] },
+      } },
     { v: '1.6', date: '2026-10-16', title: 'Ipsy, everywhere', intro: 'ipsy',
       highlights: ['Ipsy is now in Travel, Meals, Calendar, Notes and News',
         'Ipsy checks flights live and searches the web for you',
