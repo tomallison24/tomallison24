@@ -9,9 +9,10 @@ Every merge to the default branch already releases (`CLAUDE.md`): small
 changes go into the top entry of the release log and reach phones with no
 update screen. A **minor release** is the owner choosing to *announce* what
 has gathered there: a new number, and in each app it changed, the new .x
-rising in and "What's new in <app>". aOS itself shows nothing (that's the plan
-in `aOS/RELEASING.md`); its What's new log and the "New in aOS1.2" under each
-changed app say it there.
+rising in and "What's new in <app>", then, where its controls are new or
+changed, a walkthrough of them. aOS shows its own only when it changed itself
+(`aos` in `apps`); its What's new log and the "New in aOS1.2" under each
+changed app say the rest.
 
 Read `aOS/RELEASING.md` first. Then, in order:
 
@@ -53,7 +54,13 @@ Above the old one, at the top of `RELEASES`:
   so in the apps people already have is fair: a last highlight like "New in
   aOS: Meals, the family's dinners. Get it in aOS" in the apps you name.
 - An app with nothing new: leave it out. It shows nothing and still moves to
-  the new number.
+  the new number. The owner wants every app the release changed named here.
+- **A walkthrough of what changed**: any app (aOS too) whose controls are new or
+  changed gets a `tour` beside its highlights: stops as in that app's `SPOTS`
+  in `welcome.js` (`sel`, `t`, `d`, `g`), one at each new or changed control,
+  on the app's main screen (a control on another page: point at the button
+  that gets there, and say so). Its update screen says **Show me** and plays
+  them. Plain data only (no `pre` functions): the log is read by tests.
 - Highlights are read on the Updates screen and in the app update screens, so keep them
   short and high level (a line each, no details; details go in `notes`).
 - The merge that adds this entry also sends the family a notification, "aOS updated to
@@ -93,12 +100,12 @@ Look at one screen yourself too if the words are long (they wrap on a phone).
 
 - One PR with the entry (and the changes it describes, if they aren't merged
   yet): title `aOS 1.2: <title>`. The body says which apps show a screen and
-  what aOS does (nothing).
+  what aOS does, and which have a walkthrough.
 - When every check passes, merge with a merge commit (`CLAUDE.md`,
   "Merging"). The merge's **News** run tags `aOS1.2` ("Released aOS1.2 at …" in
   its summary) and publishes it.
 - Confirm the run went green, then tell the owner: it's live, and each phone
-  sees it the next time it opens each app (aOS first is fine; it stays quiet).
+  sees it the next time it opens each app (aOS shows its own only if the release names it).
 
 ## 6. After
 

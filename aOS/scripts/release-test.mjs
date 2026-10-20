@@ -2,9 +2,11 @@
 // that last saw the version before it would: aOS and each app opened from the
 // Home Screen (an iPhone, the server offline), each with aos.seen at the old
 // version. Checks each shows what aOS/RELEASING.md says it should:
-//   minor (1.1): aOS nothing; an app the release names, the .1 rising in and
+//   minor (1.1): an app the release names (aOS too), the .1 rising in and
 //                "What's new in <app>" with its highlights (or first notes), at
-//                most three; an app it doesn't name, nothing
+//                most three, then, with a tour, "Show me" walks through its new or
+//                changed controls (only the stops it names, each one on screen);
+//                an app it doesn't name, nothing
 //   major (2):   aOS its cards (or highlights); every app "<app> is on aOS2"
 //                with the release's highlights
 //   silent:      nothing anywhere
@@ -59,13 +61,33 @@ for (const id of ['aos', ...APPS]) {
   // what it should say; nothing at all, if null
   let want = null;
   if (kind === 'major') want = id === 'aos' ? (rel.cards && rel.cards.length ? rel.cards.map(c => c.t || c.h).filter(Boolean).slice(0, 1) : top3([rel]).slice(0, 1)) : [`${NAMES[id]} is on aOS${rel.v}`, ...top3([rel])];
-  if (kind === 'minor' && id !== 'aos' && top3([(rel.apps || {})[id]].filter(Boolean)).length) want = [`What's new in ${NAMES[id]}`, ...top3([rel.apps[id]])];
+  if (kind === 'minor' && top3([(rel.apps || {})[id]].filter(Boolean)).length) want = [`What's new in ${NAMES[id]}`, ...top3([rel.apps[id]])];
+  const tourStops = kind === 'minor' && rel.apps && rel.apps[id] && Array.isArray(rel.apps[id].tour) ? rel.apps[id].tour : [];
   const problems = [];
   if (want) {
     const ok = await page.waitForFunction(w => { const el = document.getElementById('aos-welcome'); if (!el) return false; const t = el.innerText.replace(/[’‘]/g, "'").replace(/\s+/g, ' '); return w.every(x => t.includes(x)); }, want.map(norm), { timeout: kind === 'major' && id === 'aos' ? 30000 : 12000 }).then(() => true).catch(() => false);
     if (!ok) { const t = await page.evaluate(() => (document.getElementById('aos-welcome') || {}).innerText || '(no screen)'); problems.push('should say: ' + want.map(norm).join(' | ') + '\n    says: ' + norm(t).slice(0, 300)); }
+    // The walkthrough: "Show me", then each stop that's on screen, by its own title, to Done.
+    const shown = [];
+    await page.waitForSelector('#aos-welcome .c-panel.on', { timeout: 5000 }).catch(() => {});   // its buttons work once the panel is in
+    await page.waitForTimeout(300);
+    if (tourStops.length && await page.evaluate(() => [...document.querySelectorAll('#aos-welcome .c-btns .w-btn')].some(b => b.textContent.trim() === 'Show me'))) {
+      await page.click('#aos-welcome .c-btns .w-btn');
+      for (let k = 0; k < tourStops.length + 2; k++) {
+        const t = await page.waitForFunction(() => { const c = document.querySelector('#aos-welcome .s-card.on h3'); return c && c.textContent; }, null, { timeout: 5000 }).then(h => h.jsonValue()).catch(() => null);
+        if (!t || shown.includes(t)) break;
+        shown.push(t);
+        await page.click('#aos-welcome .s-next');
+        await page.waitForTimeout(900);
+      }
+      const titles = tourStops.map(x => x.t);
+      if (!shown.length) problems.push('"Show me" showed none of its walkthrough');
+      for (const t of shown) if (!titles.includes(t)) problems.push('walkthrough stop not in its tour: ' + t);
+    }
     await page.evaluate(() => { const b = [...document.querySelectorAll('#aos-welcome button')].find(x => /^(Done|Skip)$/.test(x.textContent.trim())); if (b) b.click(); });
     await page.waitForTimeout(1500);
+    if (await page.evaluate(() => !!document.getElementById('aos-welcome'))) problems.push('the screen didn\'t close');
+    if (shown.length) console.log('    walkthrough: ' + shown.join(' › '));
   } else {
     await page.waitForTimeout(4000);
     if (await page.evaluate(() => !!document.getElementById('aos-welcome'))) problems.push('shows a screen, and should show nothing: ' + norm(await page.evaluate(() => document.getElementById('aos-welcome').innerText)).slice(0, 160));
