@@ -342,7 +342,7 @@ if (window.top !== window.self) {
   }
   function animateIn(el) { el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
-  // The pill at the top while Gmail is read or the Sheet syncs.
+  // The pill at the top while Gmail is read.
   let pillAt = 0, pillTimer = null;
   function busyPill(text) {
     const p = $('syncPill');
@@ -1078,7 +1078,6 @@ if (window.top !== window.self) {
       + (PV ? '<button class="swrow" type="button" role="switch" id="stIpsyGmail" aria-checked="' + PV.gmail('orders') + '"><span class="grow">Ipsy can search Gmail<span class="sub">Off: Ipsy can’t search or read any email in your chats. Private orders’ emails are always hidden.</span></span><span class="switch" aria-hidden="true"></span></button>' : '');
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Orders only reads.'
       : 'Orders looks for order, shipping and pickup emails in the last year of email (Mail’s Orders tag, and the big stores and carriers), then for new ones each time it opens. Promotions are skipped.';
-    $('stSheetSub').textContent = !signedIn() ? 'Sign in to sync' : syncState === 'error' ? 'Not synced' : synced && lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
   // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
@@ -1120,7 +1119,6 @@ if (window.top !== window.self) {
     }
     else if (e.target.closest('#stOut')) signOut();
   });
-  $('stSheet').onclick = () => { closeSheet('setSheet'); openSyncSheet(); };
   $('stExport').onclick = async () => {
     const file = new File([JSON.stringify({ app: 'allison-orders', v: 1, kind: 'backup', saved: new Date().toISOString(), orders }, null, 2)], 'orders-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Orders backup');
@@ -1148,12 +1146,14 @@ if (window.top !== window.self) {
   // order not finished yet, whatever its age; older ones come from the Sheet
   // when you look back (Delivered, a search, Ipsy). Syncs go through aOS
   // (../home/sheet.js, functions/sheet/api), signed in, so the phone holds no
-  // Sheet link or phrase and only ever gets your own orders. Private (hidden
-  // from Ipsy) is just another detail of an order here: it syncs like the rest.
+  // Sheet link or phrase and only ever gets your own orders. It syncs by
+  // itself, with nothing to set up here: the owner links the Sheet in aOS
+  // (Account → Google Sheets). Private (hidden from Ipsy) is just another
+  // detail of an order here: it syncs like the rest.
   // ---------------------------------------------------------------------
   const APP = 'allison-orders-sync';
   const SH = () => window.AllisonOS && AllisonOS.sheet;
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   const KEEP_DAYS = 90, FINISHED = ['delivered', 'pickedup', 'cancelled'];
   const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
@@ -1197,13 +1197,13 @@ if (window.top !== window.self) {
   // read of a year of Gmail, or "Read the last year again"), the Sheet's copies of those days come first.
   // What the email said is folded into the Sheet's copy, as a later email would be, so its edits, its
   // checks and Private stay; an order the Sheet doesn't have goes up as new.
-  async function lookFirst(loud) {
+  async function lookFirst() {
     const floor = floorDay();
     const strays = orders.filter(o => !older.has(o.id) && !notMine.has(o.id) && orderDay(o)
       && (!synced || ((+o.created || 0) > lastSyncAt && orderDay(o) < floor)));
     if (!strays.length) return;
     const days = strays.map(orderDay).sort();
-    const res = await SH().sync('orders', { action: 'range', from: days[0], to: days[days.length - 1] }, { ask: loud });
+    const res = await SH().sync('orders', { action: 'range', from: days[0], to: days[days.length - 1] }, { ask: false });
     const here = new Map(orders.map(o => [o.id, o]));
     let n = 0;
     for (const r of (res.orders || []).filter(okOrder)) {
@@ -1234,38 +1234,37 @@ if (window.top !== window.self) {
     if (orders.some(o => (+o.updated || 0) > sentAt)) syncAgain = true;   // changed while this sync was on its way
     render();
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sync(loud) {
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+  // Always quietly, and only when signed in (it never asks for Face ID). A real error shows once a session;
+  // signed out or no Sheet in aOS yet says nothing: the owner sets the Sheet up in aOS.
+  async function sync() {
+    if (!SH() || !signedIn()) { syncState = signedIn() ? 'idle' : 'signin'; renderSub(); return false; }
     if (syncing) { syncAgain = true; return false; }
-    if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
+    if (!navigator.onLine) { syncState = 'offline'; renderSub(); return false; }
     syncing = true; syncState = 'syncing'; renderSub();
-    if (loud) busyPill('Syncing');
     let ok = false;
     try {
       track(); persist();
-      await lookFirst(loud);
+      await lookFirst();
       track(); persist();
       const sentAt = Date.now(), had = orders;
-      const res = await SH().sync('orders', { action: 'sync', v: 3, window: KEEP_DAYS, today: todayStr(), orders: orders.filter(o => !notMine.has(o.id)), graves, log: outbox.slice(0, 300) }, { ask: loud });
+      const res = await SH().sync('orders', { action: 'sync', v: 3, window: KEEP_DAYS, today: todayStr(), orders: orders.filter(o => !notMine.has(o.id)), graves, log: outbox.slice(0, 300) }, { ask: false });
       if (res.app && res.app !== APP) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
       if (!synced) { synced = true; ls.set(K.family, '1'); }
-      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      syncState = 'ok'; ok = true;
       applyRemote(res, sentAt);
       const got = new Set(res.logged || []);
       outbox = outbox.filter(e => !got.has(e.id)); ls.set(K.log, JSON.stringify(outbox));
       if (got.size && outbox.length) syncAgain = true;
       // The first time this phone's orders reach the Log: what was already in Orders is logged once, so the Log starts complete.
       if (!ls.get(K.logSeed, '')) { had.forEach(o => { if (!notMine.has(o.id)) logEvent('Existing', o, 'Already in Orders when the Log began', 'ex-' + o.id); }); ls.set(K.logSeed, '1'); if (outbox.length) syncAgain = true; }
-      if (loud) pillDone('Synced');
     } catch (e) {
       const code = e.message === 'wrong-secret' && e.data && !e.data.aos ? 'old-script' : e.message;   // a script from before aOS turns away aOS's request
-      syncState = code === 'signin' ? 'signin' : code === 'offline' ? 'offline' : 'error'; syncErr = code; busyPill();
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
+      syncState = code === 'signin' ? 'signin' : code === 'offline' ? 'offline' : 'error';
+      if (!errShown && syncState === 'error' && code !== 'no-sheet') { errShown = true; toast(SYNC_ERRORS[code] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
-      syncing = false; renderSyncStatus();
+      syncing = false; renderSub();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
@@ -1316,26 +1315,15 @@ if (window.top !== window.self) {
     if (!f || (from && from >= f)) return Promise.resolve(null);
     return loadOlder(from || P.addDays(f, -365), P.addDays(f, -1));
   };
-  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
-  function renderSyncStatus() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : synced && lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-    if (!$('setSheet').hidden) renderSettings();
-    renderSub();
-  }
-  function openSyncSheet() { renderSyncStatus(); openSheet('syncSheet'); }
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
+  function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? 2000 : ms); }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (Date.now() - lastSyncAt > 30000) sync(false);
+    if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
     render();
   });
-  window.addEventListener('online', () => sync(false));
-  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync(false)); else renderSyncStatus(); });
+  window.addEventListener('online', () => sync());
+  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); else renderSub(); });
 
   // ---------------------------------------------------------------------
   // Start
@@ -1353,7 +1341,7 @@ if (window.top !== window.self) {
   if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   // The family's Sheet: what this phone kept of its old link goes to aOS, then a sync (Gmail is read after it).
-  startSync = sleep(600).then(handOver).catch(() => {}).then(() => sync(false));
+  startSync = sleep(600).then(handOver).catch(() => {}).then(() => sync());
   // Refresh "today" and "was due" labels while open.
   setInterval(() => { if (document.visibilityState === 'visible') render(); }, 5 * 6e4);
   // "Updated" pill, once, when a new version arrives (as in Notes).

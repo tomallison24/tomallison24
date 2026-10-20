@@ -1363,7 +1363,6 @@
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
     opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
     slideOpts();
-    renderSyncStatus();
   }
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
   const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
@@ -1420,12 +1419,13 @@
   // and where you got to); older History comes from the Sheet when you ask.
   // Syncs go through aOS (../home/sheet.js, functions/sheet/api), signed in,
   // so the phone holds no Sheet link or phrase and only ever gets your own
-  // rows: the same on each of your phones. Signed out, the app works on this
-  // phone alone, and the Sheet sheet says to sign in.
+  // rows: the same on each of your phones. It syncs by itself, with nothing to
+  // set up here: the owner links the Sheet in aOS (Account → Google Sheets).
+  // Signed out, the app works on this phone alone.
   // =====================================================================
   const SHEET_APP = 'allison-podcasts-sync';
   const SH = () => window.AllisonOS && AllisonOS.sheet;
-  let syncing = false, syncAgain = false, syncTimer = 0, syncState = 'idle', syncErr = '', errShown = false, syncDelay = 2000;
+  let syncing = false, syncAgain = false, syncTimer = 0, syncState = 'idle', errShown = false, syncDelay = 2000;
   let lastSyncAt = +lsGet(SK.at) || 0;
   // The one-way backup's own: its time and this phone's id (it told phones apart; the Sheet now goes by person).
   lsDel(KEY + '-sheet-at'); lsDel(KEY + '-device');
@@ -1504,12 +1504,13 @@
     });
     render();
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sync(loud){
-    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+  // Always quietly, and only when signed in (it never asks for Face ID). A real error shows once a session;
+  // signed out or no Sheet in aOS yet says nothing: the owner sets the Sheet up in aOS.
+  async function sync(){
+    if (!SH() || !signedIn()) { syncState = signedIn() ? 'idle' : 'signin'; return false; }
     if (syncing) { syncAgain = true; return false; }
-    if (navigator.onLine === false) { syncState = 'offline'; renderSyncStatus(); return false; }
-    syncing = true; syncState = 'syncing'; renderSyncStatus();
+    if (navigator.onLine === false) { syncState = 'offline'; return false; }
+    syncing = true; syncState = 'syncing';
     let ok = false;
     try {
       track(); persist();
@@ -1519,24 +1520,25 @@
         const K = SYNC[kind];
         body[kind] = K.items().filter(([, o]) => !K.dated || !from || K.day(o) >= from).map(([id, o]) => Object.assign(K.out(id, o), {updated: o.updated}));
       }
-      const res = await SH().sync('podcasts', body, {ask: loud});
+      const res = await SH().sync('podcasts', body, {ask: false});
       if (res.app && res.app !== SHEET_APP) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); lsSet(SK.at, String(lastSyncAt));
       if (!synced) { synced = true; lsSet(SK.synced, '1'); }
-      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      syncState = 'ok'; ok = true;
       applyRemote(res);
     } catch(e) {
-      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
-      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
-      if (syncErr === 'busy') scheduleSync(10000);
+      const code = e.message;
+      syncState = code === 'signin' ? 'signin' : code === 'offline' ? 'offline' : 'error';
+      if (!errShown && syncState === 'error' && code !== 'no-sheet') { errShown = true; toast(SYNC_ERRORS[code] || 'Sync didn’t work. Trying again later.'); }
+      if (code === 'busy') scheduleSync(10000);
     } finally {
-      syncing = false; renderSyncStatus();
+      syncing = false;
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? syncDelay : ms); }
+  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? syncDelay : ms); }
   // Looking back past the 90 days of History this phone keeps: a year at a time from the Sheet (Library →
   // History → Show older), kept here until the next tidy-up.
   async function loadOlder(){
@@ -1564,24 +1566,13 @@
     } catch(e) { toast(SYNC_ERRORS[e.message] || 'Couldn’t reach the Sheet. Try again later.'); }
     olderBusy = false; renderLib();
   }
-  function renderSyncStatus(){
-    const signed = signedIn();
-    $('sheetSub').textContent = !signed ? 'Sign in to sync' : syncState === 'error' ? 'Not synced just now' : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline: will sync when you’re back online' : lastSyncAt ? 'Synced ' + ago(lastSyncAt) : 'Not synced yet';
-    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-  }
-  $('setSheetBtn').onclick = () => { renderSyncStatus(); openSheet('syncSheet'); };
-  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
   // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
   if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
   // On start (after handing over), on sign-in, when the app comes back to the front, and when the phone is online again.
-  setTimeout(() => handOver().finally(() => sync(false)), 600);
-  addEventListener('aos:account', e => { renderSyncStatus(); if (e.detail) handOver().then(() => sync(false)); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastSyncAt > 30000) sync(false); });
-  addEventListener('online', () => sync(false));
+  setTimeout(() => handOver().finally(() => sync()), 600);
+  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastSyncAt > 30000) sync(); });
+  addEventListener('online', () => sync());
   // For the tests (podcasts/scripts/app-test.mjs) only.
   window.__podcasts = {S, save, sync, syncState: () => syncState, setSyncDelay: ms => { syncDelay = ms; }, pruneFrom, loadOlder, older: () => [...older]};
 

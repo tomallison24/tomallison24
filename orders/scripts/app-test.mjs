@@ -11,8 +11,9 @@
 // at once and keeps the choice; and the old Orders Vintage address (served from orders/, as the
 // deploy does) moves that app's data on the phone over to Orders' names, IndexedDB copy included.
 // The family's Google Sheet, through aOS (aOS/SHEETS.md): the real google-sheet-sync.gs on an
-// in-memory Sheet answers **/sheet/api/orders, with who's asking from the page's session. Signed out,
-// the Sheet sheet asks to sign in; your orders go up as yours (Private too) and reach your other phone
+// in-memory Sheet answers **/sheet/api/orders, with who's asking from the page's session. Settings has
+// no Sheet controls (aOS links it); signed out nothing is sent, with no toast; no Sheet in aOS yet says
+// nothing, and a real error shows one toast a session; your orders go up as yours (Private too) and reach your other phone
 // but not Ella's; an id that's someone else's is kept on the phone, not sent again; the 90 days, every
 // order still on its way, and older ones back from the Sheet at the end of Delivered; an old order read
 // again from Gmail folding into the Sheet's copy; the Log with Who; and the old link handed to aOS.
@@ -365,7 +366,7 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#setBtn');
     assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
-    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Backup Log', 'Backup'], 'Design is the first section');
+    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });
@@ -561,20 +562,25 @@ const OLD = n => ymd(day(-n));
 const SEEDED = (id, store, extra) => Object.assign(ORDER(id, store), extra);
 const SEEN = JSON.stringify({ orders: '999' });
 
-await step('the family’s Google Sheet: signed out it asks to sign in, with no link or phrase to type; signed in, your orders go up as yours', async () => {
+// The family's Google Sheet has no controls in the app any more (aOS links it): none of them, anywhere.
+const SHEET_UI = ['#stSheet', '#stSheetSub', '#syncSheet', '#syLbl', '#syStatus', '#syNow', '#syUrl', '#sySecret', '#syShare'];
+const noSheetUi = async page => {
+  for (const gone of SHEET_UI) assert.equal(await page.$(gone), null, gone + ': no Sheet controls in the app');
+  assert.doesNotMatch(await page.textContent('#setSheet'), /Backup Log|Sync now|Sign in to sync|phrase|setup link/, 'Settings has no Sheet row');
+};
+const noToast = (page, re = /Sheet|Sign in/) => page.evaluate(re => document.getElementById('toast').hidden || !new RegExp(re).test(document.getElementById('toastMsg').textContent), re.source);
+
+await step('the family’s Google Sheet: no Sheet controls in Settings (aOS links it); signed out nothing is sent, quietly; signed in, your orders go up as yours', async () => {
   const { ctx, page, errs, posts, sheet, open } = await phone('light');
   await page.goto(BASE + '/orders/icon.svg');
   await seedPhone(page, { 'allison-orders-v1': JSON.stringify({ orders: [ORDER('o-c', 'Corner Shop'), SEEDED('o-p', 'Pharmacy', { private: true })], kinds: { package: true } }) });
   await open();
   await page.click('#setBtn');
-  assert.equal(await page.textContent('#stSheetSub'), 'Sign in to sync');
-  await page.click('#stSheet');
-  await page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
-  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
-  assert.equal(await page.$('#syUrl'), null, 'no link or phrase on a phone');
-  assert.equal(await page.$('#syShare'), null, 'and no setup link');
+  await noSheetUi(page);
+  await page.waitForTimeout(400);
   assert.equal(posts.length, 0, 'nothing goes anywhere signed out');
+  assert.ok(await noToast(page), 'signed out: no toast about the Sheet');
+  assert.doesNotMatch(await page.textContent('#sub'), /synced/i, 'and no sync line under the title');
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-signed-out.png') });
   await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
   await page.reload(); await page.waitForFunction(() => window.__orders);
@@ -583,9 +589,11 @@ await step('the family’s Google Sheet: signed out it asks to sign in, with no 
   assert.ok(posts.every(p => !('secret' in p)), 'the phone sends no phrase');
   assert.equal(posts.find(p => p.action === 'sync').window, 90, 'and keeps 90 days');
   assert.equal(sheet.post({ action: 'sync', graves: {} }, TOM).orders.find(o => o.id === 'o-p').private, true, 'Private goes up like any other detail');
-  await page.click('#setBtn'); await page.click('#stSheet');
-  await page.waitForFunction(() => /In the family’s Google Sheet\. Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 });
-  assert.equal(await page.textContent('#syNow .t'), 'Sync now');
+  // it synced by itself, and keeps when
+  await page.waitForFunction(() => /Synced/.test(document.getElementById('sub').textContent), null, { timeout: 8000 });
+  assert.ok(await page.evaluate(() => Date.now() - (+localStorage.getItem('allison-orders-v1-sync-at') || 0) < 60e3), 'synced just now');
+  await page.click('#setBtn'); await page.waitForTimeout(300);
+  await noSheetUi(page);
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-synced.png') });
   // your other phone gets your orders
   const two = await phone('light', { sheet });
@@ -613,6 +621,34 @@ await step('the family’s Google Sheet: signed out it asks to sign in, with no 
   await ctx.close();
 });
 
+await step('the family’s Google Sheet, quietly: no Sheet in aOS yet says nothing; a real error shows one toast a session', async () => {
+  // no Sheet in aOS yet: the owner sets it up there, so a member isn't told
+  const N = await phone('light', { answer: () => ({ ok: false, error: 'no-sheet' }) });
+  await N.page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(N.page, { 'aos.session': session('tok-ella'), 'allison-orders-v1': JSON.stringify({ orders: [ORDER('o-n', 'Corner Shop')], kinds: { package: true } }) });
+  await N.open();
+  await until(N.page, () => N.posts.length > 0, 'a sync');
+  await N.page.evaluate(() => window.__orders.sync()); await N.page.waitForTimeout(300);
+  assert.ok(await noToast(N.page), 'no toast');
+  assert.deepEqual(await N.page.evaluate(() => window.__orders.orders.map(o => o.id)), ['o-n'], 'the app keeps working');
+  assert.deepEqual(N.errs, []);
+  await N.ctx.close();
+  // a real error: one toast, however many syncs go wrong
+  const W = await phone('light', { answer: () => ({ ok: false, app: 'allison-orders-sync', aos: true, error: 'wrong-secret' }) });
+  await W.page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(W.page, { 'aos.session': session('tok-tom') });
+  await W.open();
+  await W.page.waitForFunction(() => document.getElementById('toastMsg').textContent === 'aOS’s phrase for the Orders Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.', null, { timeout: 8000 });
+  await W.page.evaluate(() => { document.getElementById('toast').hidden = true; document.getElementById('toastMsg').textContent = ''; });
+  const n = W.posts.length;
+  for (let i = 0; i < 2; i++) await W.page.evaluate(() => window.__orders.sync());
+  await W.page.waitForTimeout(300);
+  assert.ok(W.posts.length >= n + 2, 'it kept trying');
+  assert.ok(await W.page.evaluate(() => document.getElementById('toast').hidden && !document.getElementById('toastMsg').textContent), 'no second toast');
+  assert.deepEqual(W.errs, []);
+  await W.ctx.close();
+});
+
 await step('the phone keeps 90 days and every order still on its way; older ones come back from the Sheet at the end of Delivered', async () => {
   const { ctx, page, errs, posts, sheet, open } = await phone('light');
   await page.goto(BASE + '/orders/icon.svg');
@@ -636,7 +672,7 @@ await step('the phone keeps 90 days and every order still on its way; older ones
   assert.ok(range && range.to < OLD(89) && range.from <= OLD(200), JSON.stringify(range));
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-older.png') });
   // it stays while Orders is open, through another sync
-  await page.evaluate(() => window.__orders.sync(false)); await page.waitForTimeout(500);
+  await page.evaluate(() => window.__orders.sync()); await page.waitForTimeout(500);
   assert.ok(await page.evaluate(() => window.__orders.orders.some(o => o.id === 'o-old')));
   // a second tap goes a year further back, and finds nothing
   await page.click('#olderGo');

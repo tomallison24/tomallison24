@@ -33,10 +33,10 @@ in a mid-century Vintage design or the same frosted glass as Mail, Notes and New
   count as played. When an episode ends, the next one in Up Next plays
   (Settings can switch that off).
 - **Settings**: the design (Vintage or Standard, below), skip back
-  (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, **Import /
-  Export** your shows as OPML (the file other podcast apps use), and **the
-  family's Google Sheet** (below): signed in, your shows, Saved, History and
-  where you got to are the same on each of your phones.
+  (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, and **Import /
+  Export** your shows as OPML (the file other podcast apps use). The family's
+  Google Sheet (below) has no settings here: signed in, your shows, Saved,
+  History and where you got to are the same on each of your phones.
 
 It has two designs, Vintage (mid-century modern, the default) and Standard
 (Sea glass), picked in **Settings → Design** ("The two designs", below).
@@ -86,15 +86,15 @@ says whose it is, and each phone only ever gets its own person's. Signed in
 (Face ID, once), your shows, Saved, History and where you got to are the same
 on each of your phones: follow a show on one and it's on the other; unfollow,
 unsave or clear History and it goes from them too. Signed out, the app works
-on the phone alone, and **Settings → Backup Log → The family's Google Sheet**
-says to sign in.
+on the phone alone.
 
-No phone holds the Sheet's link or phrase. Syncs go through aOS
-(`../home/sheet.js` → `functions/sheet/api`), which adds the phrase and who's
-asking; the owner gives aOS the link and phrase once (**aOS → Account →
-Google Sheets**). The Sheet sheet in Settings shows the status and **Sync
-now** (which signs in if it has to); there is no form, setup link or
-Disconnect.
+It syncs by itself through aOS; set up in **aOS → Account → Google Sheets**
+(the owner, once). Podcasts has no Sheet controls of its own: no status, Sync
+now, form, setup link or Disconnect. No phone holds the Sheet's link or
+phrase: syncs go through aOS (`../home/sheet.js` → `functions/sheet/api`),
+which adds the phrase and who's asking. A quiet sync never asks for Face ID;
+a real error shows one toast a session, and signed out or no Sheet in aOS yet
+shows none.
 
 **What syncs** (`SYNC` in `app.js`): four kinds, each item with an id and
 `updated`, stamped on any change; anything deleted leaves a grave
@@ -244,7 +244,7 @@ node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sh
 node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library; the
                                        # family's Sheet end to end on the real script, with **/sheet/api/podcasts
                                        # answered here and who's asking from the page's aos.session (signed out,
-                                       # two phones of one person, someone else's phone, progress ticks, the 90
+                                       # no Sheet controls in Settings, two phones of one person, someone else's phone, progress ticks, the 90
                                        # days and Show older, handing the old link and phrase to aOS); both
                                        # designs, Settings > Design, the old Podcasts Vintage address
 node podcasts/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)

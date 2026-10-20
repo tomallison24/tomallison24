@@ -4,13 +4,15 @@
 // google-sheet-sync.gs, run in Node on an in-memory Sheet, answers the app's
 // requests to **/sheet/api/podcasts (aOS's route, stood in for here), with who's
 // asking taken from the session the page sends (aos.session). It checks that
-// signed out the app works and its Sheet sheet says to sign in (no link or
-// phrase anywhere); the request ({action, v, window, today, shows, saved, hist,
+// Settings has no Sheet controls (aOS links the Sheet: no status, Sync now, link
+// or phrase); that signed out the app works and sends nothing, with no nagging
+// toast; the request ({action, v, window, today, shows, saved, hist,
 // prog, graves}: no phrase, no episode lists, Up Next or settings); two phones
 // of one person kept the same (an unfollow, a follow, where you got to) while
 // someone else's phone gets none of it; that the progress ticks of a playing
 // episode don't sync; the 90 days of History and older on asking; and the
-// owner's phone handing its old link and phrase to aOS, then forgetting them.
+// owner's phone handing its old link and phrase to aOS, then forgetting them; no
+// Sheet in aOS yet says nothing, and a real error shows one toast a session.
 // Also that nothing trips the page's Content Security Policy.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look, light and dark
 // (Futura, flat cream or walnut cards, a mustard thumb, an orange primary button, the shapes behind
@@ -126,6 +128,15 @@ let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 const synced = (p, timeout = 8000) => p.waitForFunction(() => window.__podcasts && window.__podcasts.syncState() === 'ok', null, { timeout });
 const openSettings = async page => { await page.click('[data-tab="lib"]'); await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])'); await page.waitForTimeout(500); };
+// The family's Google Sheet has no controls in the app any more (aOS links it): none of them, anywhere.
+const SHEET_UI = ['#setSheetBtn', '#sheetSub', '#syncSheet', '#syLbl', '#syStatus', '#syNow', '#syUrl', '#sySecret', '#syForm', '#syShare', '#syOff', '#syConnect'];
+const noSheetUi = async page => {
+  for (const gone of SHEET_UI) assert.equal(await page.$(gone), null, gone + ': no Sheet controls in the app');
+  const set = await page.textContent('#setSheet');
+  assert.doesNotMatch(set, /Backup Log|Sync now|Sign in to sync/, 'Settings has no Sheet row');
+  assert.match(set, /Backup\s*Export shows/, 'Backup (Import / Export) stays');
+};
+const syncedAt = page => page.evaluate(k => [+localStorage.getItem(k + '-sync-at') || 0, localStorage.getItem(k + '-synced')], KEY);
 const lib = page => page.evaluate(() => { const S = window.__podcasts.S; return { follows: S.follows.map(f => f.id), saved: S.saved.map(e => e.k), hist: S.hist.map(e => e.k), prog: S.prog, graves: S.graves }; });
 const EMPTY = JSON.stringify({ follows: [], prog: {}, saved: [], queue: [], hist: [], now: null, set: { back: 15, fwd: 30, speed: 1, auto: true, cc: 'us' }, lastRefresh: NOW, lastClean: NOW });
 
@@ -145,30 +156,28 @@ await test('opens with the seeded library: Home, Library (shows, Saved, History)
   await shot(p, '03-history-light');
   await p.click('#libChips [data-act="lib:shows"]');
   await openSettings(p);
-  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Sign in to sync/);
+  await noSheetUi(p);
   await shot(p, '04-settings-light');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
 
-await test('the family’s Google Sheet: signed out it says to sign in (no link or phrase); signed in, your library goes to the Sheet as yours', async () => {
+await test('the family’s Google Sheet: no Sheet controls in Settings (aOS links it); signed out nothing is sent, quietly; signed in, your library goes to the Sheet as yours', async () => {
   const sheet = fakeSheet(GS, SHEET_SECRET);
   const P = await newPage('light', {}, sheet), p = P.page;
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(900);
   await openSettings(p);
-  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Sign in to sync/);
-  await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])'); await p.waitForTimeout(400);
-  assert.match(await p.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet\. Until then, Podcasts keeps everything on this phone/);
-  assert.equal(await p.textContent('#syNow .t'), 'Sign in and sync');
-  for (const gone of ['#syUrl', '#sySecret', '#syForm', '#syShare', '#syOff', '#syConnect']) assert.equal(await p.$(gone), null, gone + ': no link or phrase on a phone');
-  assert.doesNotMatch(await p.textContent('#syncSheet'), /secret|phrase you|web app link|setup link|disconnect/i);
+  await noSheetUi(p);
+  assert.doesNotMatch(await p.textContent('#setSheet'), /secret|phrase you|web app link|setup link|disconnect/i);
   await shot(p, '05-sheet-signed-out-light');
   assert.equal(P.posts.length, 0, 'signed out, nothing is sent');
+  assert.equal(await p.evaluate(() => window.__podcasts.syncState()), 'signin');
+  assert.ok(await p.evaluate(() => document.getElementById('toast').hidden || !/Sign in|Sheet/.test(document.getElementById('toastMsg').textContent)), 'signed out: no toast about the Sheet');
   // the app works signed out: saving an episode is kept on this phone, with no sync
   await p.evaluate(() => { const S = window.__podcasts.S; S.saved = []; window.__podcasts.save(); });
   assert.deepEqual((await lib(p)).saved, []);
   assert.ok(Object.keys((await lib(p)).graves).includes('saved:beta|beta-3'), 'the unsave is remembered for when you sign in');
-  await p.click('#syncSheet .sheethead [data-close]');
+  await p.click('#setSheet .sheethead [data-close]');
   // signed in (as on a phone whose app has a family session)
   await p.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await synced(p);
@@ -191,15 +200,16 @@ await test('the family’s Google Sheet: signed out it says to sign in (no link 
   assert.deepEqual(sheet.tab('Shows').slice(1).map(r => [r[0], r[1]]), [['Tom', 'Alpha Show'], ['Tom', 'Beta Show']]);
   assert.equal(sheet.tab('Saved').length, 1, 'nothing saved');
   assert.deepEqual(sheet.tab('History').slice(1).map(r => [r[0], r[3], r[6]]).sort(), [['Tom', 'Alpha Show episode 2', '5:00 of 32:00'], ['Tom', 'Beta Show episode 1', 'Finished']]);
+  // it synced by itself, and keeps when
+  const [at, once] = await syncedAt(p);
+  assert.ok(Date.now() - at < 60e3, 'synced just now'); assert.equal(once, '1', 'synced with the family Sheet once');
   await openSettings(p);
-  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Synced just now/);
-  await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])'); await p.waitForTimeout(300);
-  assert.match(await p.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced just now\./);
-  assert.equal(await p.textContent('#syNow .t'), 'Sync now');
+  await noSheetUi(p);
   await shot(p, '06-sheet-synced-light');
   const before = P.posts.length;
-  await p.click('#syNow'); await p.waitForFunction(n => document.getElementById('toastMsg').textContent === 'Synced', before);
-  assert.equal(P.posts.length, before + 1, 'Sync now syncs');
+  await p.evaluate(() => window.__podcasts.sync()); await synced(p);
+  assert.equal(P.posts.length, before + 1, 'a sync syncs');
+  assert.ok((await syncedAt(p))[0] >= at);
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
@@ -241,7 +251,7 @@ await test('the family’s Google Sheet: your phones are kept the same (an unfol
   await b.waitForFunction(() => window.__podcasts.S.follows.length === 2);
   await b.waitForTimeout(1500);
   assert.equal(sheet.tab('Shows').length, 3, 'the Sheet has it');
-  await a.evaluate(() => window.__podcasts.sync(false)); await a.waitForTimeout(300); await synced(a);
+  await a.evaluate(() => window.__podcasts.sync()); await a.waitForTimeout(300); await synced(a);
   got = await lib(a);
   assert.equal(got.follows.length, 2, 'phone A follows it too');
   assert.ok((await a.evaluate(() => window.__podcasts.S.follows.map(f => f.title))).includes('Beta Show'));
@@ -297,7 +307,7 @@ await test('the family’s Google Sheet: the phone keeps 90 days of History; old
   assert.ok(sheet.tab('History').slice(1).some(r => r[3] === 'Beta Show episode 3'), 'the Sheet keeps it');
   assert.equal(P.posts[0].body.window, 90);
   // a second sync sends only the last 90 days of History
-  await p.evaluate(() => window.__podcasts.sync(true)); await synced(p);
+  await p.evaluate(() => window.__podcasts.sync()); await synced(p);
   assert.deepEqual(P.posts.at(-1).body.hist.map(h => h.id), ['alpha|alpha-1']);
   // Library > History > Show older: a year at a time from the Sheet
   await p.click('[data-tab="lib"]'); await p.click('#libChips [data-act="lib:hist"]'); await p.waitForTimeout(300);
@@ -315,7 +325,7 @@ await test('the family’s Google Sheet: the phone keeps 90 days of History; old
   await p.waitForFunction(() => document.getElementById('toastMsg').textContent === 'Nothing older in the family’s Google Sheet.' && !document.querySelector('[data-act="hist-older"]'));
   // what came back is kept until the next tidy-up, and doesn't make the phone sync again and again
   const n0 = P.posts.length;
-  await p.evaluate(() => window.__podcasts.sync(false)); await p.waitForTimeout(2500);
+  await p.evaluate(() => window.__podcasts.sync()); await p.waitForTimeout(2500);
   assert.ok(P.posts.length - n0 <= 1, 'one sync, not a loop: ' + (P.posts.length - n0));
   assert.equal((await lib(p)).hist.length, 4);
   assert.ok(P.posts.slice(n0).every(x => x.body.hist.length === 1), 'older plays are not sent back');
@@ -340,7 +350,7 @@ await test('the owner’s phone hands the Sheet link and phrase it kept over to 
   assert.deepEqual(await p.evaluate(k => [localStorage.getItem(k + '-device'), localStorage.getItem(k + '-sheet-at')], KEY), [null, null], 'the one-way backup\'s phone id and time are gone');
   await synced(p);
   assert.ok(P.posts.every(x => !JSON.stringify(x.body).includes(SHEET_SECRET)), 'and never sent');
-  assert.equal(await p.$('#syncSheet:not([hidden])'), null, 'no setup sheet opened');
+  assert.equal(await p.$('#syncSheet'), null, 'no setup sheet');
   await P.ctx.close();
   // Ella's phone with a link and phrase of its own: aOS has one, so it's forgotten (never claimed: she isn't the owner)
   const E = await newPage('light', { 'aos.session': session('tok-ella'), [KEY]: EMPTY, [KEY + '-sheet']: JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }) }, sheet), e = E.page;
@@ -348,13 +358,25 @@ await test('the owner’s phone hands the Sheet link and phrase it kept over to 
   await e.waitForFunction(k => !localStorage.getItem(k + '-sheet'), KEY, { timeout: 8000 });
   assert.deepEqual(E.claims, []);
   await E.ctx.close();
-  // and with no Sheet in aOS yet, it says so (once), and the app keeps working
-  const N = await newPage('light', { 'aos.session': session('tok-tom') }, null), np = N.page;
+  // and with no Sheet in aOS yet, it says nothing (the owner sets it up in aOS), and the app keeps working
+  const N = await newPage('light', { 'aos.session': session('tok-ella') }, null), np = N.page;
   await np.goto(BASE + '/' + FOLDER + '/'); await np.waitForFunction(() => window.__podcasts);
   await np.waitForFunction(() => window.__podcasts.syncState() === 'error');
-  await openSettings(np); await np.click('#setSheetBtn'); await np.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await np.textContent('#syStatus'), /The family’s Podcasts Sheet isn’t set up yet\. The owner sets it up in aOS: Account → Google Sheets\./);
+  await np.evaluate(() => window.__podcasts.sync()); await np.waitForTimeout(300);
+  assert.ok(await np.evaluate(() => document.getElementById('toast').hidden || !/Sheet/.test(document.getElementById('toastMsg').textContent)), 'no Sheet yet: no toast');
+  assert.equal(await np.$$eval('#libBody .stile, #homeBody .upcard', e => e.length > 0), true, 'the app works');
   await N.ctx.close();
+  // a real error: one toast a session, however many syncs go wrong
+  const W = await newPage('light', { 'aos.session': session('tok-tom') }, { post: () => ({ ok: false, app: 'allison-podcasts-sync', aos: true, error: 'wrong-secret' }) }), wp = W.page;
+  await wp.goto(BASE + '/' + FOLDER + '/'); await wp.waitForFunction(() => window.__podcasts);
+  await wp.waitForFunction(() => document.getElementById('toastMsg').textContent === 'aOS’s phrase for the Podcasts Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.');
+  await wp.evaluate(() => { document.getElementById('toast').hidden = true; document.getElementById('toastMsg').textContent = ''; });
+  for (let i = 0; i < 2; i++) await wp.evaluate(() => window.__podcasts.sync());
+  await wp.waitForTimeout(300);
+  assert.equal(await wp.evaluate(() => window.__podcasts.syncState()), 'error');
+  assert.ok(W.posts.length >= 3, 'it kept trying');
+  assert.ok(await wp.evaluate(() => document.getElementById('toast').hidden && !document.getElementById('toastMsg').textContent), 'no second toast');
+  await W.ctx.close();
 });
 
 await test('Vintage, the default design: the Retro look, light and dark: Futura, flat cream or walnut, mustard, orange, teal, atomic shapes, the player', async () => {
@@ -406,13 +428,11 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     await rp.click('#npSpeed'); await rp.waitForSelector('#actSheet:not([hidden])'); await rp.waitForTimeout(500);
     assert.equal((await q('#actSheet .sheet', ['backgroundColor']))[0], cream, 'the choices sheet is a flat panel');
     await rp.click('#actSheet .sheethead [data-close]'); await rp.click('#np .sheethead [data-close]'); await rp.waitForTimeout(400);
-    // Settings: a mustard thumb, an orange Done; the Sheet sheet a flat panel
+    // Settings: a mustard thumb, an orange Done
     await rp.click('[data-tab="lib"]'); await rp.click('#setBtn'); await rp.waitForSelector('#setSheet:not([hidden])'); await rp.waitForTimeout(600);
     assert.equal((await q('#setSheet .okbtn', ['backgroundColor']))[0], orange, 'Done is solid orange');
     assert.equal((await q('#setBack .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen option');
-    await rp.click('#setSheetBtn'); await rp.waitForSelector('#syncSheet:not([hidden])'); await rp.waitForTimeout(500);
-    assert.equal((await q('#syncSheet .sheet', ['backgroundColor']))[0], cream, 'the Sheet sheet is a flat panel');
-    await rp.click('#syncSheet .sheethead [data-close]'); await rp.waitForTimeout(400);
+    assert.equal((await q('#setSheet .sheet', ['backgroundColor']))[0], cream, 'Settings is a flat panel');
     assert.equal(await rp.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true', 'Settings > Design shows Vintage');
     await shot(rp, '22-retro-settings-' + scheme);
     assert.deepEqual(await rp.evaluate(() => window.__csp || []), []);
