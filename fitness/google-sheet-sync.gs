@@ -40,6 +40,9 @@ const SECRET = 'CHANGE-ME';   // <- replace with your own long phrase, e.g. 'map
 const APP = 'allison-fitness-sync', VERSION = 3;
 const DATA = {logs: '_logs', exercises: '_exercises', meds: '_meds', doses: '_doses', steps: '_steps'};
 const DATED = {logs: 'date', doses: 'date', steps: 'date'};   // what's kept on the phone by its day: the last 90
+// A day's steps have the day as their id, so two people's steps on one day share it: kept here as
+// '<who>~<day>', and sent back to each phone by the day alone.
+const PER_PERSON = {steps: true};
 const MODE = 'personal';   // each person's own rows only (Notes and Travel are 'family': shared, with "Just me" items)
 const GRAVES = '_deleted', PEOPLE = '_people';
 const KEEP_DELETED_DAYS = 400;   // long enough that a phone left unopened for a year still hears of a deletion
@@ -71,6 +74,20 @@ function caller(e) {
 // Whose an item is: its by; one from before by was kept is the owner's.
 function ownerOf(it, db) { return (it && it.by) || db.owner || ''; }
 function canSee(it, c, db) { const o = ownerOf(it, db); return MODE === 'family' ? !it.only || o === c.who : o === c.who; }
+function slot(kind, id, who) { return PER_PERSON[kind] ? who + '~' + id : id; }
+function phoneKey(key) { const i = key.indexOf(':'), kind = key.slice(0, i), id = key.slice(i + 1); return PER_PERSON[kind] && id.includes('~') ? kind + ':' + id.slice(id.indexOf('~') + 1) : key; }
+// After meet(): the per-person kinds keyed by whose each item is (rows from before, by the day alone).
+function rekey(db) {
+  Object.keys(PER_PERSON).forEach(kind => {
+    const m = new Map();
+    db[kind].forEach(it => m.set(slot(kind, it.id, ownerOf(it, db)), it));
+    db[kind] = m;
+  });
+  Array.from(db.graves.keys()).forEach(k => {
+    const i = k.indexOf(':'), kind = k.slice(0, i), id = k.slice(i + 1);
+    if (PER_PERSON[kind] && !id.includes('~')) { const g = db.graves.get(k); db.graves.delete(k); db.graves.set(kind + ':' + slot(kind, id, g.by || db.owner), g); }
+  });
+}
 function cutoff(today, days) { return new Date(Date.parse(today + 'T00:00:00Z') - (days - 1) * 864e5).toISOString().slice(0, 10); }
 
 function doPost(e) {
@@ -85,6 +102,7 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const db = load(ss);
     let changed = meet(db, c);
+    rekey(db);
     if (req.action === 'sync') changed = merge(db, req, c) || changed;
     if (changed || req.action === 'rebuild') { store(ss, db); views(ss, db); }
     const res = {ok: true, app: APP, v: VERSION, aos: true, at: Date.now(), by: c.who};
@@ -100,7 +118,7 @@ function doPost(e) {
     });
     if (!range) {
       res.graves = {};
-      db.graves.forEach((g, k) => { if (MODE === 'family' || (g.by || db.owner) === c.who) res.graves[k] = g.t; });
+      db.graves.forEach((g, k) => { if (MODE === 'family' || (g.by || db.owner) === c.who) res.graves[phoneKey(k)] = g.t; });
     }
     return out(res);
   } finally {
@@ -153,10 +171,10 @@ function rows(ss, name) {
 
 function store(ss, db) {
   Object.keys(DATA).forEach(kind => {
-    const list = Array.from(db[kind].values()).map(it => {
+    const list = Array.from(db[kind].entries()).map(([id, it]) => {
       const json = JSON.stringify(it), parts = [];
       for (let i = 0; i < json.length; i += CHUNK) parts.push(json.slice(i, i + CHUNK));
-      return [it.id, Number(it.updated) || 0].concat(parts);
+      return [id, Number(it.updated) || 0].concat(parts);
     });
     const width = Math.max(3, ...list.map(r => r.length));
     const header = ['id', 'updated', 'data'].concat(Array(width - 3).fill('data (continued)'));
@@ -189,21 +207,23 @@ function merge(db, req, c) {
   const now = Date.now();
   Object.keys(req.graves || {}).forEach(k => {
     const t = Number(req.graves[k]) || 0, i = k.indexOf(':'), kind = k.slice(0, i);
-    const cur = db[kind] && db[kind].get(k.slice(i + 1));
+    if (!db[kind]) return;
+    const id = slot(kind, k.slice(i + 1), c.who), key = kind + ':' + id;
+    const cur = db[kind].get(id);
     if (cur && !canSee(cur, c, db)) return;
-    const g = db.graves.get(k);
-    if (!g || g.t < t) { db.graves.set(k, {t: t, by: cur ? ownerOf(cur, db) : (g && g.by) || c.who}); changed = true; }
+    const g = db.graves.get(key);
+    if (!g || g.t < t) { db.graves.set(key, {t: t, by: cur ? ownerOf(cur, db) : (g && g.by) || c.who}); changed = true; }
   });
   Object.keys(DATA).forEach(kind => {
     (req[kind] || []).forEach(item => {
       if (!item || typeof item.id !== 'string') return;
-      const u = Number(item.updated) || 0, key = kind + ':' + item.id;
-      const cur = db[kind].get(item.id), g = db.graves.get(key), gone = g ? g.t : 0;
+      const id = slot(kind, item.id, c.who), u = Number(item.updated) || 0, key = kind + ':' + id;
+      const cur = db[kind].get(id), g = db.graves.get(key), gone = g ? g.t : 0;
       if (cur && !canSee(cur, c, db)) return;
       item.by = cur ? ownerOf(cur, db) : c.who;
       if (MODE === 'family' && item.by !== c.who) item.only = !!(cur && cur.only);   // only its own person makes it Just me
       if (gone && gone >= u) return;                       // deleted after this change
-      if (!cur || u > (Number(cur.updated) || 0)) { db[kind].set(item.id, item); changed = true; }
+      if (!cur || u > (Number(cur.updated) || 0)) { db[kind].set(id, item); changed = true; }
       if (gone && u > gone) { db.graves.delete(key); changed = true; }   // brought back (Undo)
     });
   });

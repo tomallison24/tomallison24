@@ -38,7 +38,7 @@ await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom
 const tok = await issue(db, 'O1');
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
 const b = await chromium.launch();
-const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
+const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
 const out = [];
 for (const app of APPS) for (const signed of [false, true]) {

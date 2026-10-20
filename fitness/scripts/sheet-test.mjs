@@ -163,4 +163,19 @@ test('the phone keeps 90 days: dated rows older than that stay here, and come ba
   assert.deepEqual(s.post({ action: 'range', from: '2026-04-01', to: '2026-05-31' }, ELLA).logs, [], 'and only yours');
 });
 
+test('two people\'s steps on the same day are each their own (a day\'s steps have the day as their id)', () => {
+  const s = fakeSheet(undefined, SECRET, TOM);
+  const day = (n, u) => ({ id: '2026-10-05', date: '2026-10-05', n, src: 'you', updated: T + u });
+  s.post({ action: 'sync', steps: [day(8000, 1)], graves: {} }, TOM);
+  s.post({ action: 'sync', steps: [day(5000, 2)], graves: {} }, ELLA);
+  assert.deepEqual(s.post({ action: 'sync', graves: {} }, TOM).steps.map(x => [x.id, x.n]), [['2026-10-05', 8000]]);
+  assert.deepEqual(s.post({ action: 'sync', graves: {} }, ELLA).steps.map(x => [x.id, x.n]), [['2026-10-05', 5000]]);
+  // Ella deleting her day leaves Tom's, and the grave comes back to her phone by the day alone
+  const r = s.post({ action: 'sync', steps: [], graves: { 'steps:2026-10-05': T + 5 } }, ELLA);
+  assert.deepEqual(r.steps, []); assert.ok(r.graves['steps:2026-10-05']);
+  const t = s.post({ action: 'sync', graves: {} }, TOM);
+  assert.deepEqual(t.steps.map(x => x.n), [8000]); assert.equal(t.graves['steps:2026-10-05'], undefined);
+  assert.deepEqual(s.tab('Steps').slice(1).map(r => [r[0], r[3]]), [['Tom', 8000]]);
+});
+
 console.log('\n' + n + ' tests passed');
