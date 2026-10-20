@@ -33,6 +33,12 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
         setWrap: () => {},
         getSheet: () => sh, getRow: () => r, getNumRows: () => nr,
       }),
+      // a column put in front of column c: every row, and each column's number format, moves one right
+      insertColumnBefore: c => {
+        sh.cells.forEach(r => { if (r && r.length >= c - 1) r.splice(c - 1, 0, ''); });
+        sh.formats = new Set([...sh.formats].map(f => { const i = f.indexOf(':'), n = +f.slice(0, i); return (n >= c ? n + 1 : n) + f.slice(i); }));
+        return sh;
+      },
       hideSheet: () => { sh.hidden = true; },
       setFrozenRows: () => {}, setColumnWidth: () => {},
     };

@@ -26,7 +26,8 @@ tracking number, and opens the carrier's own tracking page with one tap.
   tracking number and status. The clipboard button reads a **pasted email**
   (from any inbox, e.g. one forwarded by someone else) the same way Gmail's
   are read.
-- **Two phones**: a shared Google Sheet, set up like Notes' and Travel's (below).
+- **The family's Google Sheet** is the record: one Sheet for everyone's orders,
+  each person's phone getting only their own, through aOS (below).
 
 ## The two designs
 
@@ -71,9 +72,9 @@ address now opens this same app (the deploy copies `orders/` there,
 time it opens there, `design.js` moves that app's data on the phone over to
 Orders' names (`ordersv.…` → `orders.…` for the Gmail sign-in,
 `allison-ordersv-…` → `allison-orders-…` for the orders, what was read, the
-kinds, the Sheet link and the rest; the IndexedDB copy of the Sheet link
+kinds, an old Sheet link and the rest; the IndexedDB copy of an old Sheet link
 `allison-ordersv` → `allison-orders`, which Orders opens only once that is
-done; and what it had seen, so no walkthrough again), unless Orders already has
+done, and then hands to aOS, below; and what it had seen, so no walkthrough again), unless Orders already has
 data on that phone; nothing old is deleted. Ipsy's checks call
 `../orders/api/read`, so it reaches the family's route from either address; an
 email opens in Mail (`../mail/?thread=…`), which also carries both designs now.
@@ -171,7 +172,7 @@ there is none it becomes a package of its own.
   clears an *unavailable* flag by itself.
 
 Nothing about the emails is kept or sent anywhere: only the orders found in
-them, on the phone and in your Google Sheet if you connect one. The
+them, on the phone and, once you're signed in, in the family's Google Sheet. The
 exceptions are Ipsy's: an order's email read again to fix it (when you tap
 **Have Ipsy check this order**, or by itself for To check once you've said
 yes), and whatever Ipsy reads to answer you in its chat (below).
@@ -268,7 +269,9 @@ in Vintage, pastel glass in Standard; it changes with the design at once). Ask i
 - **Every change shows in the chat with Undo**, for as long as the app stays
   open. What Ipsy changes is kept like your own edits (a later email won't
   overwrite it), a deleted order doesn't come back from the email, and it all
-  goes to the Google Sheet and its Log tab like any other change.
+  goes to the family's Google Sheet and its Log tab like any other change.
+  Asked about older orders (or with no dates given, the last year), Ipsy's
+  `find_orders` first fetches them from the Sheet (`lookBack` in `app.js`).
 - **It changes shape as it works**: a stem cell at rest, a nerve cell (sparks
   at its tips) while it thinks, a white blood cell while it runs one of its
   tools, and it talks while the answer appears. Reduce Motion holds it still.
@@ -356,49 +359,77 @@ the address on the Amazon account: if that isn't the Gmail Orders reads, set up
 forwarding from that mailbox (a filter on `from:amazon.com` that forwards to
 this Gmail); forwarded mail is read as if it had come straight here.
 
-## Google Sheet sync
+## The family's Google Sheet
 
-The same design as Notes and Travel (read `notes/README.md`, "Google Sheet
-sync", for the details), with **its own Sheet and script**:
+One Sheet for the whole family, the record of everyone's orders, the same
+design as Fitness' (`aOS/SHEETS.md` has it, with the contract every app's
+script and app follow, and the owner's set-up):
 
-1. [sheets.new](https://sheets.new) → name it e.g. **AllisonOS - Orders**.
-2. **Extensions → Apps Script**, replace `Code.gs` with the whole of
-   [`google-sheet-sync.gs`](google-sheet-sync.gs), and change
-   `const SECRET = 'CHANGE-ME';` to your own long phrase.
-3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access:
-   Anyone* → **Deploy** → authorise → copy the **Web app URL**.
-4. Orders → gear → **Google Sheet sync** → paste the URL and the phrase →
-   **Connect and sync**. Then **Copy setup link** and open it on the other
-   phone with the clipboard button.
+- **Each order is someone's.** Every row carries `by`, the family id of the
+  person whose Gmail (or hands) it came from, and each phone only ever gets its
+  own person's orders. The readable **Orders** tab and the **Log** tab start
+  with a **Who** column. Orders from before aOS kept `by` are the owner's.
+- **No link or phrase on a phone.** The owner gives the Sheet's link and phrase
+  to aOS once (**aOS → Account → Google Sheets → Orders**). Every sync goes
+  through aOS (`../home/sheet.js`, `functions/sheet/api`), signed in with Face
+  ID, which passes it on to the script with who's asking. Signed out, Orders
+  works on the phone as before; its Sheet sheet (Settings → **The family's
+  Google Sheet**) says to sign in, and **Sign in and sync** does.
+- **Handed over once.** A phone that still has the old link and phrase (in
+  `localStorage` or its IndexedDB copy) hands them to aOS on the owner's phone,
+  and forgets them on every phone once aOS has them. An old `#sync=` setup link
+  is only taken off the address.
+- **The last 90 days, and everything still on its way.** Once a phone has synced
+  with the family's Sheet, it keeps the orders from the last 90 days (by the day
+  each was ordered: its order date, else its first step's, else its email's, the
+  same `orderDay` in the script and in `app.js`) and **every order that isn't
+  finished yet** (ordered, shipped, out for delivery, ready for pickup),
+  however old. Older finished orders (delivered, picked up, canceled) are
+  dropped from the phone after a sync with no grave: the Sheet keeps them. The
+  Sheet's answer is the same: the last 90 days, every order not finished, and
+  whatever the phone sent, as the Sheet now has it.
+- **Looking back.** At the end of **Delivered** and of a search, **Show older
+  orders from the Sheet** fetches a year further back each tap (`action:
+  'range'`); they stay on the phone until Orders next opens. Ipsy does the same
+  when asked about older orders.
+- **An email read again** (a first read of a year of Gmail on a new phone, or
+  **Read the last year again**) can find an order the Sheet already has, edited
+  by you (checked, Private, notes, a status you set). Before such orders are
+  sent, Orders asks the Sheet for those days first (`lookFirst`) and folds what
+  the email says into the Sheet's copy, as a later email would be, so your edits
+  stay. The first sync of a session runs before Gmail is read, for the same
+  reason.
+- **The same order in two people's Gmail** (a family account, a forwarded
+  confirmation) makes the same order id. The first to send it keeps it; the
+  other's phone is told the id is someone else's (`refused`), keeps its copy to
+  itself and stops sending it.
+- **Private** (hidden from Ipsy) is just a detail of an order: it syncs like the
+  rest and has nothing to do with whose an order is.
 
-**"The secret code doesn't match"** when you're sure it does: Apps Script runs
-the *deployed* copy, so after changing `SECRET` choose **Deploy → Manage
-deployments → ✏️ → Version: New version → Deploy**; and make sure the link is
-the Orders Sheet's, not Notes' or Travel's (Orders says so when it can tell).
+Newest change wins; a deletion reaches your other phone and doesn't come back
+from the email. Which kinds are switched on is per phone.
 
-The Sheet's link is already filled in (`SHEET_URL` in `app.js`: the owner's
-Sheet; to use another, paste its URL over it), so only the phrase is typed. The
-phrase is never in the code.
+**The Log tab** is a history that only grows (oldest at the top), with **Who**
+(whose phone sent it) first. One row each time an order is **Added**, **Status
+changed** (with "Shipped → Delivered"), **Updated** (which fields), or
+**Deleted** (the order as it was), and one row (**Left out**) for each email
+whose kind is switched off in Settings, so the Log has everything that passes
+through whatever Settings say; only orders, never the other emails. The first
+time a phone's orders reach the Log, the orders already in the app are logged
+once as **Existing**. Rows are never rebuilt or cleared by the script; a row
+can't be written twice (every event has an id, and two phones that notice the
+same thing write one row). The phone queues events (once it has synced with the
+family's Sheet) and sends them with the next sync. A Log from before VERSION 3
+gets its Who column put in front the first time the new script writes to it
+(every row moves one column right as it is; its rows are the owner's). Tracking
+and order numbers are kept as text.
 
-The Sheet gets a readable **Orders** tab (newest first) and hidden `_orders`
-and `_deleted` tabs the app reads back. Newest change wins. Each phone reads
-its own Gmail; the same order found by both is still one order. Which kinds are
-switched on is per phone.
-
-**The Log tab** is a history that only grows (oldest at the top). One row each
-time an order is **Added**, **Status changed** (with "Shipped → Delivered"),
-**Updated** (which fields), or **Deleted** (the order as it was), and one row
-(**Left out**) for each email whose kind is switched off in Settings, so the Log
-has everything that passes through whatever Settings say; only orders, never the
-other emails. The first time a Sheet is connected, the orders already in the
-app are logged once as **Existing**. Rows are never rebuilt or cleared by the
-script; a row can't be written twice (every event has an id, and two phones
-that notice the same thing write one row). The phone queues events and sends
-them with the next sync; an old copy of the script doesn't acknowledge them, so
-they stay queued until the new script is deployed (paste
-[`google-sheet-sync.gs`](google-sheet-sync.gs) over `Code.gs`, **Deploy → Manage
-deployments → ✏️ → Version: New version → Deploy**). Tracking and order numbers
-are kept as text.
+**Updating the script** (VERSION 3): paste
+[`google-sheet-sync.gs`](google-sheet-sync.gs) over `Code.gs`, keeping your
+`SECRET` line, then **Deploy → Manage deployments → ✏️ → Version: New version →
+Deploy**, and give aOS the phrase (`aOS/SHEETS.md`, "Setting it up"). Until then
+Orders says the Sheet is still on its old script, and keeps its Log events
+queued.
 
 ## How it's built
 
@@ -414,8 +445,9 @@ are kept as text.
   these files, no email is ever shown as a page (the HTML is only read as
   text), it refuses to run in a frame, and the sign-in carries a random `state`.
 - **Data** in `localStorage` (orders, which emails were read and which were
-  passed over, the kinds switched on), the Sheet link also in IndexedDB, as in
-  Notes.
+  passed over, the kinds switched on, the Log events not yet in the Sheet) and
+  the family's Google Sheet (above). An old Sheet link, until it's handed to
+  aOS, also in IndexedDB.
 - Published with the other apps by `.github/workflows/news.yml`.
 
 ## Tests
@@ -424,8 +456,8 @@ are kept as text.
 node orders/scripts/api-test.mjs     # Ipsy's server side and its checks (read), with a stand-in for Anthropic
 node orders/scripts/ipsy-test.mjs    # Ipsy in both designs, in headless Chromium, with a stand-in for Claude and Gmail
 node orders/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts, and how emails fold into orders
-node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs)
-node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed: both designs, Settings > Design, the old Orders Vintage address
+node orders/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (the Drinks test's fake-sheet.mjs): who gets in, each person's own, the 90 days and range, Who, the Log
+node orders/scripts/app-test.mjs     # the app in headless Chromium, Gmail stubbed: both designs, Settings > Design, the old Orders Vintage address, and the family's Sheet through a stand-in for aOS
 node orders/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
@@ -450,3 +482,7 @@ The last two need Playwright with Chromium (`npm i -g playwright`).
 - **A first read of a year of email** was not run end to end on a phone.
 - **Safari on an iPhone** was not tested; the app was checked in Chromium at
   iPhone size, light and dark.
+- **The VERSION 3 script in a real Sheet.** It runs in the tests on an
+  in-memory stand-in for Apps Script; it was not deployed. In particular, a real
+  old Log getting its Who column (`insertColumnBefore`, which should carry each
+  column's number format with it) is only tested on the stand-in.
