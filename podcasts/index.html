@@ -548,10 +548,7 @@ svg.fs{fill:currentColor}
 :where(.btn){position:relative}
 :where(.btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 
-/* ---- The family’s Google Sheet (Settings): its status and Sync now ---- */
-.stackform{display:flex;flex-direction:column;gap:14px}
-.btn[disabled]{opacity:.45;pointer-events:none}
-#epLbl,#setLbl,#actLbl,#syLbl{padding-left:8px}
+#epLbl,#setLbl,#actLbl{padding-left:8px}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -936,13 +933,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="opts" id="setAuto" role="radiogroup" aria-label="When an episode ends"></div>
         <p class="label">Top shows from</p>
         <div class="opts" id="setCc" role="radiogroup" aria-label="Top shows from"></div>
-        <p class="label">Backup Log</p>
-        <div class="rgroup glass">
-          <button class="rowbtn" type="button" id="setSheetBtn">
-            <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
-            <span>The family’s Google Sheet<span class="sub" id="sheetSub">Sign in to sync</span></span>
-          </button>
-        </div>
         <p class="label">Backup</p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="setExport">
@@ -955,24 +945,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
         </div>
         <p class="hint">Episodes stream from each podcast’s own servers, so they need a connection; nothing is downloaded. Signed in, what you follow, Saved, History and where you got to sync with the family’s Google Sheet, so your other phones have them too; Up Next and Settings stay on this phone.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- The family's Google Sheet: the status and Sync now (aOS keeps the Sheet's link and phrase) -->
-  <div class="sheetwrap lg" id="syncSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
-      <div class="sheetbody">
-        <p class="hint" id="syStatus"></p>
-        <div class="stackform">
-          <div class="rgroup glass">
-            <button class="rowbtn" type="button" id="syNow"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span><span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets your latest from the Sheet</span></span></button>
-          </div>
-          <p class="hint">One Sheet for the family, the record of everyone’s Podcasts: the shows each person follows, their saved episodes, History and where they got to. Each row says whose it is, and each phone only ever gets its own person’s. This phone keeps the last 90 days of History and fetches older episodes when you ask (Library → History → Show older). The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-        </div>
       </div>
     </div>
   </div>
