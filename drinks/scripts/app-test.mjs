@@ -83,7 +83,7 @@ async function api(route) {
 const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
 const sheet = fakeSheet(undefined, SECRET);
 const sheetCalls = [], claims = [], google = [];
-let sheetOn = true;
+let sheetOn = true, slowNoSheet = false;
 await putJSON(KV, 'user:KID1', { id: 'KID1', name: 'Sam', role: 'member', creds: [] });
 const SAM_TOKEN = await issue(KV, 'KID1');
 const SAM_SESSION = JSON.stringify({ token: SAM_TOKEN, user: { id: 'KID1', name: 'Sam', role: 'member' }, at: Date.now() });
@@ -91,6 +91,7 @@ const PEOPLE = { [TOKEN]: { id: 'OWNER1', name: 'Tom', role: 'owner' }, [SAM_TOK
 const asked = who => ({ key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) });
 const TOMQ = asked(PEOPLE[TOKEN]), SAMQ = asked(PEOPLE[SAM_TOKEN]);
 async function sheetApi(route) {
+  if (!sheetOn && slowNoSheet) await new Promise(r => setTimeout(r, 4000));   // a sync still on its way
   const req = route.request(), u = new URL(req.url()), who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
   const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
   if (req.headers()['x-sheet'] !== '1') return json({ error: 'header' }, 400);
@@ -402,9 +403,12 @@ await test('the owner hasn’t set the Sheet up yet: says so, and the log stays 
   await p.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'error');
   await p.page.click('#fab'); await p.page.click('.utile[data-usual="4"]');
   assert.ok((await local(p.page)).entries.length >= 1);
+  slowNoSheet = true;   // More opened while the next sync is still on its way: the last outcome, and why
   await p.page.click('#daySheet .okbtn');
+  await p.page.waitForFunction(() => window.__drinks.state() === 'syncing', null, { timeout: 8000 });
   await p.page.click('#moreBtn');
   assert.match(await p.page.textContent('#acct'), /Couldn’t sync just now.*isn’t set up yet.*Account → Google Sheets/);
+  slowNoSheet = false;
   assert.ok(await p.page.isHidden('#signIn'));
   await p.ctx.close();
   sheetOn = true;

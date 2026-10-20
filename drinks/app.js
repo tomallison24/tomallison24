@@ -496,7 +496,7 @@ if (window.top !== window.self) {
     'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
   function setState(s, err) {
-    syncState = s; syncErr = err || ''; if (s !== 'syncing') settled = s;
+    syncState = s; if (s !== 'syncing') { settled = s; syncErr = err || ''; }   // while syncing, More still shows the last outcome, and why
     $('moreBtn').classList.toggle('warn', s === 'error');
     if (!$('moreSheet').hidden && !more.contains(document.activeElement)) renderMore();
     renderSyncStatus();
