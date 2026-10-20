@@ -104,6 +104,8 @@
 
 /* A rail of numbers (a Dyson's speed, the Hatch's brightness) */
 .seg.rail button { font-variant-numeric: tabular-nums; padding: 0; min-width: 0; }
+/* A Dyson in Auto has no speed of its own: its speed controls greyed, still tappable (a tap picks a speed, leaving Auto) */
+.seg.rail.auto button, .auto > .tgt { opacity: .4; }
 
 /* Ghost buttons on a card (Snapshot, Dock) */
 .ghost { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600;

@@ -173,7 +173,7 @@ family({
         out.push({ name: t.name, word: r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : 'Fan', view: 'climate', open: () => openThermo(t.id) });
     }
     for (const h of HEATERS) { const r = heat.read(h); if (r.mood === 'heating') out.push({ name: h.name, word: 'Heating', view: 'climate', open: () => openDev(heat, h.id) }); }
-    for (const y of DYSONS) { const r = dy.read(y); if (r.on) out.push({ name: y.name, word: r.mood === 'heating' ? 'Heating' : 'Fan ' + r.spd, view: 'climate', open: () => openDev(dy, y.id) }); }
+    for (const y of DYSONS) { const r = dy.read(y); if (r.on) out.push({ name: y.name, word: r.mood === 'heating' ? 'Heating' : r.fauto ? 'Auto' : 'Fan ' + r.spd, view: 'climate', open: () => openDev(dy, y.id) }); }
     for (const u of UNITS) { const r = read(u); if (r.on) out.push({ name: u.name, word: r.mood === 'drying' ? 'Drying' : r.mood === 'full' ? 'Tank full' : 'Holding', view: 'climate', open: () => openUnit(u.id), idle: r.mood !== 'drying' }); }
     for (const v of VACS) { const r = vac.read(v); if (r.mood === 'cleaning' || r.mood === 'returning') out.push({ name: v.name, word: V_WORD[r.mood], view: 'around', open: () => openDev(vac, v.id) }); }
     return out;

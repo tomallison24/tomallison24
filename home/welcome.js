@@ -119,6 +119,7 @@
             { sel: '#syncBtn', t: 'Backed up to your Sheet', d: 'Your Google Sheet keeps Meds and Steps too, once you paste in its new script.', g: 'tap' },
           ] },
         house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'],
+          notes: ['Air Purifiers: in Auto the speed says Auto and is greyed out (a Dyson reports no speed of its own then), instead of showing an old speed'],
           tour: [{ sel: ['[data-dv^="heat:"]', '#viewBtn'], t: 'Heaters, like the Tuya app', d: 'On Climate (pick it here), each heater has its wattage, Eco, Comfort or Boost, and a timer that turns it off in 1, 2, 4 or 8 hours.', g: 'tap' }] },
         calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Connect Gmail so Ipsy can find appointment emails', 'Turn Ipsy\'s Gmail off any time in Settings'],
           tour: [{ sel: '#fab', t: 'Private events', d: 'Open or add an event and switch on Private: Ipsy can\'t see it, and when it looks for free time it only knows the time is taken.', g: 'tap' },
