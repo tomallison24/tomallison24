@@ -16,8 +16,16 @@
 //   moves that app's data on the phone over to Notes' names, once (its Sheet
 //   link in IndexedDB too, and its Calendar layer 'notesv' is emptied), and a
 //   phone with both keeps Notes' own.
-// And that Notes' storage is its own: every key is allison-notes-v1*, the Sheet
-// copy is in IndexedDB allison-notes, the Calendar layer is 'notes'.
+// And that Notes' storage is its own: every key is allison-notes-v1*, the Calendar
+// layer is 'notes'.
+// The family's Google Sheet, through aOS (the real notes/google-sheet-sync.gs on
+// an in-memory Sheet, answering **/sheet/api/notes as aOS would, with who's
+// asking from the phone's session): signed out it asks to sign in; signed in,
+// everything goes to the family Sheet and comes back to every phone in the
+// family, except Just me (a note, a list, a reminder), which only its person
+// gets, and only they can switch; the owner's phone hands its old link and
+// phrase to aOS; finished reminders older than 90 days stay in the Sheet and
+// come back with Show completed before ….
 // (Notes' tests of the notifications, the grocery sections and hostile data:
 // push-app-test, aisles-app-test and security-test.)
 //
@@ -29,6 +37,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'node:assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -74,6 +83,27 @@ const todos = [
 const seed = { notes, lists, todos };
 const KEY = 'allison-notes-v1';
 
+// The family's Google Sheet: the real Apps Script, on an in-memory Sheet, reached through aOS
+// (functions/sheet/api, stood in for here): each phone's session says who's asking.
+const SECRET = 'test-secret-phrase', OLD_URL = 'https://script.google.com/macros/s/OWNERSHEET/exec';
+const sheet = fakeSheet(new URL('../google-sheet-sync.gs', import.meta.url).pathname, SECRET);
+const sheetCalls = [], claims = [];
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+async function sheetRoutes(ctx) {
+  await ctx.route('https://script.google.com/**', route => route.abort());   // no phone talks to Google itself any more
+  await ctx.route('**/sheet/api/**', route => {
+    const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', ''), who = PEOPLE[tok];
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (!who) return json({ error: 'signin' }, 401);
+    if (!/\/sheet\/api\/notes(\/|$)/.test(req.url())) return json({ error: 'app' }, 404);
+    if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+    if (req.method() === 'GET') return json({ configured: true });
+    sheetCalls.push({ who: who.id, ...JSON.parse(req.postData()) });
+    return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+  });
+}
+
 const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 6).join('\n   ')); } };
@@ -87,6 +117,7 @@ for (const scheme of ['light', 'dark']) {
   await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' }))));   // no aOS walkthrough over the page; the Vintage sky held still
   await ctx.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, json: {} }));
+  await sheetRoutes(ctx);
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
   const problems = [];
@@ -296,13 +327,15 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#remView [data-open-backup]');
     await page.waitForSelector('#backupSheet:not([hidden])');
     await page.waitForTimeout(500);
-    assert.match(await page.textContent('#bkSheetSub'), /Not connected/);
+    assert.match(await page.textContent('#bkSheetSub'), /Sign in to sync/);
     assert.equal((await q('#backupSheet .rgroup', ['borderRadius']))[0], '20px');
     await page.click('#bkSheet');
     await page.waitForSelector('#syncSheet:not([hidden])');
-    assert.match(await page.inputValue('#syUrl'), /^https:\/\/script\.google\.com\/macros\/s\//, 'the owner\'s Sheet link is filled in');
-    assert.equal(await page.inputValue('#sySecret'), '', 'the secret phrase is never filled in');
-    assert.equal((await q('#syConnect', ['backgroundColor']))[0], orange, 'Connect is solid orange');
+    assert.equal(await page.textContent('#syLbl'), 'The family’s Google Sheet');
+    assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
+    assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+    assert.equal(await page.$('#syUrl, #sySecret, #syConnect, #syShare, #syOff'), null, 'no link or phrase to type, no setup link, no Disconnect');
+    assert.equal((await q('#syncSheet .rgroup', ['borderRadius']))[0], '20px', 'flat, as the other sheets');
     await page.click('#syncSheet [data-close]');
     await page.evaluate(() => { document.getElementById('toastMsg').textContent = 'Moved to Trash'; document.getElementById('toast').hidden = false; });
     const [tbg, tfilter] = await q('#toast', ['backgroundColor', 'backdropFilter']);
@@ -336,7 +369,7 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForTimeout(300);
   });
 
-  await step(scheme + ': its storage and Calendar layer are Notes\' (allison-notes-v1…, IndexedDB allison-notes, \'notes\')', async () => {
+  await step(scheme + ': its storage and Calendar layer are Notes\' (allison-notes-v1…, \'notes\'); signed out, nothing goes to the Sheet', async () => {
     const shared = await page.evaluate(() => { window.__shared = []; const o = AllisonOS.layer.share; AllisonOS.layer.share = (a, d) => { window.__shared.push(a); return o(a, d); }; return true; });
     assert.ok(shared);
     await page.click('.tab[data-tab="rem"]');
@@ -349,20 +382,8 @@ for (const scheme of ['light', 'dark']) {
     assert.ok(mine.length >= 3, 'it keeps things: ' + mine.join(', '));
     assert.ok(mine.every(x => x === KEY || x.startsWith(KEY + '-')), 'every key is ' + KEY + '…: ' + mine.join(', '));
     assert.ok(!keys.some(x => x.startsWith('allison-notesv-')), 'nothing under the old Notes Vintage names');
-    // the Sheet link and code are also kept in IndexedDB; connect a stubbed Sheet to see which one
-    await ctx.route('https://script.google.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, app: 'allison-notes-sync', v: 1, notes: [], todos: [], lists: [], graves: {} }) }));
-    await page.click('#remSetBtn');
-    await page.click('#bkSheet');
-    await page.fill('#sySecret', 'maple-otter');
-    await page.click('#syConnect');
-    await page.waitForFunction(() => !document.getElementById('syOn').hidden, null, { timeout: 8000 });
-    // saved once the Sheet has answered, which can be a moment after the form switches: wait for it, don't race it
-    await page.waitForFunction(KEY => !!localStorage.getItem(KEY + '-sync'), KEY, { timeout: 8000 }).catch(() => { throw new Error('the Sheet link is kept under Notes\' key'); });
-    await page.waitForFunction(async () => (await indexedDB.databases()).some(d => d.name === 'allison-notes'), null, { timeout: 8000 });
-    await page.waitForTimeout(500);
-    const dbs = await page.evaluate(async () => (await indexedDB.databases()).map(d => d.name));
-    assert.deepEqual(dbs, ['allison-notes'], 'the Sheet copy is in Notes\' IndexedDB');
-    await page.click('#syncSheet [data-close]');
+    assert.ok(!keys.includes(KEY + '-sync'), 'and no Sheet link or phrase');
+    assert.deepEqual(sheetCalls, [], 'signed out: nothing goes to the Sheet');
   });
 
   await step(scheme + ': the service worker, manifest and page head', async () => {
@@ -371,7 +392,7 @@ for (const scheme of ['light', 'dark']) {
     assert.match(sw, /startsWith\('notesvintage-'\)/, 'the old Notes Vintage app\'s cache is cleared');
     const shell = JSON.parse(/const SHELL = (\[[^\]]*\])/.exec(sw)[1].replace(/'/g, '"'));
     for (const f of shell.filter(f => f !== './')) assert.ok(fs.existsSync(path.join(ROOT, 'notes', f.split('?')[0])), f + ' exists (the offline shell lists it)');
-    for (const f of ['index.html', 'app.js', '../home/design.js', '../home/sky.js', '../home/slide.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js']) assert.ok(shell.includes(f), f + ' is in the shell');
+    for (const f of ['index.html', 'app.js', '../home/design.js', '../home/sky.js', '../home/slide.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js', '../home/sheet.js']) assert.ok(shell.includes(f), f + ' is in the shell');
     assert.ok(shell.some(f => /^icon-glass-180\.png/.test(f)) && shell.some(f => /^icon-180\.png/.test(f)), 'both designs\' icons are in the shell');
     const mf = JSON.parse(fs.readFileSync(path.join(ROOT, 'notes/manifest.webmanifest'), 'utf8'));
     assert.equal(mf.related_applications[0].url, 'https://tomallison24-news.pages.dev/notes/manifest.webmanifest');
@@ -399,7 +420,7 @@ for (const scheme of ['light', 'dark']) {
 async function phone(scheme, { design = null, seed = null, at = '/notes/', idb = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, json: {} }));
-  await ctx.route('https://script.google.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, app: 'allison-notes-sync', v: 1, notes: [], todos: [], lists: [], graves: {} }) }));
+  await sheetRoutes(ctx);
   await ctx.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
   // what the app sends to Calendar (welcome.js AllisonOS.layer.share), from its first save on: wrapped before app.js's own 'load'
   await ctx.addInitScript(() => addEventListener('load', () => { const L = window.AllisonOS && AllisonOS.layer; if (!L) return; const o = L.share; L.share = (a, d) => { (window.__shared = window.__shared || []).push([a, d]); return o(a, d); }; }));
@@ -544,6 +565,180 @@ await step('a phone with both: Notes\' own data is kept, the old app\'s is not c
   assert.doesNotMatch(await page.textContent('#list'), /From Notes Vintage/);
   await clean(page, problems);
   await ctx.close();
+});
+
+// ---- the family's Google Sheet, through aOS: Tom's phone, Ella's phone, Just me ----
+const famSeed = (tok, data, extra = {}) => ({ 'aos.seen': JSON.stringify({ notes: '999' }), [KEY]: JSON.stringify(data), [KEY + '-backup']: String(Date.now()), ...(tok ? { 'aos.session': session(tok) } : {}), ...extra });
+const until = async (fn, label, ms = 8000) => { const t0 = Date.now(); while (!(await fn())) { if (Date.now() - t0 > ms) throw new Error('timed out: ' + label); await new Promise(r => setTimeout(r, 100)); } };
+const stored = page => page.evaluate(KEY => JSON.parse(localStorage.getItem(KEY)), KEY);
+const lastSynced = page => page.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 });
+const syncNow = async page => { const n = sheetCalls.length; await page.evaluate(() => document.getElementById('syNow').click()); await until(() => sheetCalls.length > n, 'a sync'); await page.waitForTimeout(500); };
+const sentBy = (who, fn) => until(() => sheetCalls.some(c => c.who === who && c.action === 'sync' && fn(c)), who + '\'s phone sent it');
+let tom = null, ella = null;
+
+await step('the family\'s Google Sheet, through aOS: signed in, Tom\'s notes, lists and reminders go to the family Sheet as his, with no phrase', async () => {
+  const data = { notes: [N('Family dinner', 'Tacos on Friday', { tags: ['food'] })], lists: [{ id: 'l1', updated: 1, name: 'Personal', color: '#3B82F6' }, { id: 'l3', updated: 1, name: 'Groceries', color: '#10B981' }], todos: [T('l3', 'Eggs')] };
+  tom = await phone('light', { seed: famSeed('tok-tom', data) });
+  await lastSynced(tom.page);
+  assert.ok(sheet.tab('#food').slice(1).some(r => r[0] === 'Tom' && r[1] === 'Family dinner'), 'in the family Sheet, and its Who says Tom');
+  assert.ok(sheet.tab('✓ Groceries').slice(1).some(r => r[0] === 'Tom' && r[1] === 'Eggs'));
+  assert.ok(sheetCalls.length && sheetCalls.every(c => !('secret' in c)), 'the phone sends no phrase');
+  assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days of finished reminders');
+  await tom.page.click('#setBtn');
+  await tom.page.click('#bkSheet');
+  await tom.page.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await tom.page.textContent('#syStatus'), /^In the family’s Google Sheet\. Last synced/);
+  assert.equal(await tom.page.textContent('#syNow .t'), 'Sync now');
+  await shot(tom.page, 'family-sheet');
+  await tom.page.click('#syncSheet [data-close]');
+});
+
+await step('Ella\'s phone gets the family\'s notes, lists and reminders; Just me on Tom\'s note isn\'t hers to switch', async () => {
+  ella = await phone('light', { seed: famSeed('tok-ella', { notes: [], lists: [{ id: 'l1', updated: 1, name: 'Personal', color: '#3B82F6' }], todos: [] }) });
+  await lastSynced(ella.page);
+  const got = await stored(ella.page);
+  assert.ok(got.notes.some(n => n.title === 'Family dinner' && n.by === 'tom'), 'Tom\'s note, saying whose it is');
+  assert.ok(got.lists.some(l => l.name === 'Groceries') && got.todos.some(x => x.title === 'Eggs'), 'his list and reminder');
+  await ella.page.click('.nrow:has-text("Family dinner")');
+  await ella.page.waitForSelector('#editor:not([hidden])');
+  assert.equal(await ella.page.getAttribute('#edOnly', 'aria-checked'), 'false');
+  assert.ok(await ella.page.isDisabled('#edOnly'), 'Tom\'s to switch, not hers');
+  assert.match(await ella.page.textContent('#edOnlyHint'), /Shared with the family\. Only the person who wrote it can make it Just me\./);
+  await ella.page.click('#edDone');
+});
+
+await step('a new phone, signed in before its first save: the samples never reach the family Sheet; it takes the family\'s', async () => {
+  const n = sheetCalls.length;
+  const fresh = await phone('light', { seed: { 'aos.seen': JSON.stringify({ notes: '999' }), 'aos.session': session('tok-ella') } });
+  await lastSynced(fresh.page);
+  const mine = sheetCalls.slice(n).filter(c => c.action === 'sync');
+  assert.ok(mine.length && mine.every(c => !c.notes.some(x => x.title === 'Welcome to Notes')), 'no sample note sent');
+  assert.ok(!sheet.tab('Notes') || !JSON.stringify(sheet.tab('Notes')).includes('Welcome to Notes'), 'and none in the Sheet');
+  const got = await stored(fresh.page);
+  assert.ok(got.notes.some(x => x.title === 'Family dinner') && !got.notes.some(x => x.title === 'Welcome to Notes'), 'the family\'s notes, not the samples');
+  await fresh.ctx.close();
+});
+
+await step('Just me on a note: Ella\'s phones only; marked on it; Private stays a separate thing (hidden from Ipsy)', async () => {
+  const p = ella.page;
+  await p.click('#fab');
+  await p.waitForSelector('#editor:not([hidden])');
+  await p.fill('#edTitle', 'Gift ideas'); await p.fill('#edBody', 'A kite for Tom');
+  assert.ok(!(await p.isDisabled('#edOnly')), 'her own: hers to switch');
+  assert.match(await p.textContent('#edOnlyHint'), /^Shared with the family\. Just me keeps it to you\./);
+  await p.click('#edOnly');
+  assert.equal(await p.getAttribute('#edOnly', 'aria-checked'), 'true');
+  assert.match(await p.textContent('#edOnlyHint'), /^Only you see it\./);
+  assert.equal(await p.getAttribute('#edPrivate', 'aria-checked'), 'false', 'not Private: that only hides it from Ipsy');
+  assert.equal(await p.textContent('#edPrivHint'), 'Private hides this note from Ipsy.');
+  await shot(p, 'just-me-note');
+  await p.click('#edDone');
+  await sentBy('ella', c => c.notes.some(n => n.title === 'Gift ideas' && n.only === true));
+  assert.ok(await p.$('.nrow:has-text("Gift ideas") svg.me'), 'marked in Recent');
+  await p.click('[data-coll="all"]'); await p.waitForSelector('.grid .card');
+  assert.ok(await p.$('.card:has-text("Gift ideas") .tchip:has-text("Just me")'), 'and on its card');
+  await p.click('#collBack');
+  await syncNow(tom.page);
+  assert.ok(!(await stored(tom.page)).notes.some(n => n.title === 'Gift ideas'), 'Tom\'s phone never gets it');
+  assert.ok(!JSON.stringify(sheet.tab('No tag') || []).includes('Gift ideas'), 'nor is it drawn in the Sheet\'s tabs');
+});
+
+await step('Just me on a list keeps it and its reminders to Ella; a reminder can be Just me on its own', async () => {
+  const p = ella.page;
+  await p.click('.tab[data-tab="rem"]');
+  await p.click('#addList'); await p.waitForSelector('#listSheet:not([hidden])');
+  await p.fill('#lsName', 'Surprise party');
+  assert.ok(!(await p.isDisabled('#lsOnly')));
+  await p.click('#lsOnly');
+  assert.equal(await p.getAttribute('#lsOnly', 'aria-checked'), 'true');
+  assert.match(await p.textContent('#lsOnlyHint'), /Only you see this list and its reminders\./);
+  await shot(p, 'just-me-list');
+  await p.click('#lsSave'); await p.waitForTimeout(300);
+  assert.ok(await p.$('#listChips [data-list]:has-text("Surprise party") svg.me'), 'its chip is marked');
+  await p.fill('#qa', 'Order the cake'); await p.press('#qa', 'Enter'); await p.waitForTimeout(300);
+  await p.click('#seg [data-view="all"]');
+  await p.click('.todo:has-text("Order the cake") [data-todo]'); await p.waitForSelector('#todoSheet:not([hidden])');
+  assert.equal(await p.getAttribute('#tdOnly', 'aria-checked'), 'true', 'in a Just-me list: Just me');
+  assert.ok(await p.isDisabled('#tdOnly'), 'by its list');
+  assert.match(await p.textContent('#tdOnlyHint'), /Surprise party is Just me, so only you see its reminders\./);
+  await p.click('#tdDone'); await p.waitForTimeout(300);
+  // a reminder of her own in a shared list
+  await p.click('#listChips [data-list="l1"]');
+  await p.fill('#qa', 'Book the flowers'); await p.press('#qa', 'Enter'); await p.waitForTimeout(300);
+  await p.click('#seg [data-view="all"]');
+  await p.click('.todo:has-text("Book the flowers") [data-todo]'); await p.waitForSelector('#todoSheet:not([hidden])');
+  assert.ok(!(await p.isDisabled('#tdOnly')));
+  await p.click('#tdOnly');
+  assert.equal(await p.getAttribute('#tdOnly', 'aria-checked'), 'true');
+  await shot(p, 'just-me-reminder');
+  await p.click('#tdDone'); await p.waitForTimeout(300);
+  assert.ok(await p.$('.todo:has-text("Book the flowers") .tchip:has-text("Just me")'), 'the reminder is marked');
+  // Tom's reminder, in his shared list: not hers to switch
+  await p.click('#listChips [data-list="l3"]');
+  await p.click('.todo:has-text("Eggs") [data-todo]'); await p.waitForSelector('#todoSheet:not([hidden])');
+  assert.ok(await p.isDisabled('#tdOnly'), 'Tom added it');
+  assert.match(await p.textContent('#tdOnlyHint'), /Only the person who added it can make it Just me\./);
+  await p.click('#tdDone'); await p.waitForTimeout(300);
+  await sentBy('ella', c => c.todos.some(x => x.title === 'Book the flowers' && x.only) && c.lists.some(l => l.name === 'Surprise party' && l.only) && c.todos.some(x => x.title === 'Order the cake'));
+  await syncNow(tom.page);
+  const t = await stored(tom.page);
+  assert.ok(!t.lists.some(l => l.name === 'Surprise party'), 'Tom\'s phone doesn\'t get her list');
+  assert.ok(!t.todos.some(x => ['Order the cake', 'Book the flowers'].includes(x.title)), 'nor its reminders, nor her Just-me one');
+  assert.equal(sheet.tab('✓ Surprise party'), null, 'no tab for it in the Sheet');
+});
+
+await step('Tom makes his note Just me: it leaves Ella\'s phone at her next sync, with no deletion mark', async () => {
+  const p = tom.page;
+  await p.click('.tab[data-tab="notes"]');
+  await p.click('.nrow:has-text("Family dinner")'); await p.waitForSelector('#editor:not([hidden])');
+  assert.ok(!(await p.isDisabled('#edOnly')), 'his to switch');
+  await p.click('#edOnly'); await p.click('#edDone');
+  await sentBy('tom', c => c.notes.some(n => n.title === 'Family dinner' && n.only));
+  await syncNow(ella.page);
+  const e = await stored(ella.page);
+  assert.ok(!e.notes.some(n => n.title === 'Family dinner'), 'gone from Ella\'s phone');
+  const id = (await stored(p)).notes.find(n => n.title === 'Family dinner').id;
+  assert.ok(!(await ella.page.evaluate(KEY => JSON.parse(localStorage.getItem(KEY + '-graves')) || {}, KEY))['notes:' + id], 'not as a deletion');
+  assert.ok((await stored(p)).notes.some(n => n.title === 'Family dinner' && n.only), 'still Tom\'s, Just me');
+  for (const ph of [tom, ella]) await clean(ph.page, ph.problems);
+  await tom.ctx.close(); await ella.ctx.close();
+});
+
+await step('the owner\'s phone hands the Sheet link and phrase it kept over to aOS, then forgets them (both copies); a family member\'s just forgets', async () => {
+  const lists1 = [{ id: 'l1', updated: 1, name: 'Personal', color: '#3B82F6' }];
+  const o = await phone('light', { seed: famSeed('tok-tom', { notes: [], lists: lists1, todos: [] }, { [KEY + '-sync']: JSON.stringify({ url: OLD_URL, secret: SECRET }) }), idb: { name: 'allison-notes', kv: { sync: { url: OLD_URL, secret: SECRET } } } });
+  await o.page.waitForFunction(KEY => !localStorage.getItem(KEY + '-sync'), KEY, { timeout: 8000 });
+  assert.deepEqual(claims.at(-1), { who: 'tom', url: OLD_URL, secret: SECRET });
+  const idbCopy = () => o.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-notes'); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sync'); q.onsuccess = () => { res(q.result || null); r.result.close(); }; q.onerror = () => res(null); }; r.onerror = () => res(null); }));
+  await until(async () => (await idbCopy()) === null, 'the IndexedDB copy is deleted too');
+  await clean(o.page, o.problems); await o.ctx.close();
+  const n = claims.length;
+  const m = await phone('light', { seed: famSeed('tok-ella', { notes: [], lists: lists1, todos: [] }, { [KEY + '-sync']: JSON.stringify({ url: OLD_URL, secret: SECRET }) }) });
+  await m.page.waitForFunction(KEY => !localStorage.getItem(KEY + '-sync'), KEY, { timeout: 8000 });
+  assert.equal(claims.length, n, 'nothing claimed from a family member\'s phone: aOS already has it');
+  await clean(m.page, m.problems); await m.ctx.close();
+});
+
+await step('finished reminders: the phone keeps 90 days, the Sheet keeps the rest, and Show completed before … brings them back', async () => {
+  const data = { notes: [], lists: [{ id: 'l1', updated: 1, name: 'Personal', color: '#3B82F6' }],
+    todos: [T('l1', 'Old chore', { done: true, doneAt: now - 200 * 864e5 }), T('l1', 'Recent chore', { done: true, doneAt: now - 3 * 864e5 }), T('l1', 'Open chore')] };
+  const o = await phone('light', { seed: famSeed('tok-tom', data) });
+  await lastSynced(o.page); await o.page.waitForTimeout(300);
+  const got = (await stored(o.page)).todos.map(x => x.title);
+  assert.ok(!got.includes('Old chore') && got.includes('Recent chore') && got.includes('Open chore'), 'the old one left the phone: ' + got.join(', '));
+  assert.ok(sheet.tab('✓ Personal').slice(1).some(r => r[1] === 'Old chore'), 'and is in the Sheet');
+  await o.page.click('.tab[data-tab="rem"]');
+  await o.page.click('#listChips [data-list="l1"]');
+  await o.page.click('#seg [data-view="all"]');
+  await o.page.click('#toggleDone');
+  assert.match(await o.page.textContent('#olderDone'), /^Show completed before /);
+  await o.page.click('#olderDone');
+  await o.page.waitForFunction(() => /Old chore/.test(document.getElementById('remBody').textContent), null, { timeout: 8000 });
+  assert.equal(await o.page.$('#olderDone'), null, 'once a visit');
+  assert.deepEqual(sheetCalls.at(-1).action, 'range');
+  await syncNow(o.page);
+  assert.ok((await stored(o.page)).todos.some(x => x.title === 'Old chore'), 'kept while the app stays open, through a sync');
+  await clean(o.page, o.problems); await o.ctx.close();
 });
 
 await browser.close(); server.close();

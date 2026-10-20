@@ -9,7 +9,7 @@
 //
 // Environment (repository secrets):
 //   ICLOUD_APPLE_ID, ICLOUD_APP_PASSWORD, ICLOUD_CALENDAR (optional, default Family)
-//   NOTES_SHEET_URL, NOTES_SHEET_SECRET   the Notes Sheet's web app link and secret
+//   NOTES_SHEET_URL, NOTES_SHEET_SECRET   the family’s Notes Sheet: its web app link and SECRET (the same as aOS has)
 //   PLACES_TZ (optional)                   for the rare event written in UTC
 // State: .cache-places/seen.json (kept by the workflow's cache), so an event is
 // looked up once rather than every run. The log shows counts only, never event
@@ -79,8 +79,16 @@ fs.mkdirSync('.cache-places', { recursive: true });
 fs.writeFileSync(STATE, JSON.stringify(seen));
 
 // ---- the Sheet ----
+// The script trusts the phrase in its link (?key=, as aOS sends it: aOS/SHEETS.md), with who's asking:
+// the calendar, whose places are the family's and say "Calendar" in the Who column. The phrase goes in
+// the request too, for a script from before aOS.
+const link = (() => {
+  let u; try { u = new URL(env.NOTES_SHEET_URL); } catch { console.error('::error::NOTES_SHEET_URL isn’t a link (it ends in /exec)'); process.exit(1); }
+  for (const [k, v] of [['key', env.NOTES_SHEET_SECRET], ['who', 'places-calendar'], ['name', 'Calendar'], ['app', 'notes']]) u.searchParams.set(k, v);
+  return u.toString();
+})();
 async function sheet(body) {
-  const r = await fetch(env.NOTES_SHEET_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ secret: env.NOTES_SHEET_SECRET, action: 'places', v: 1, graves: {} }, body)) });
+  const r = await fetch(link, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ secret: env.NOTES_SHEET_SECRET, action: 'places', v: 1, graves: {} }, body)) });
   let j; try { j = await r.json(); } catch { throw new Error('the Sheet didn’t answer like the Notes script (check NOTES_SHEET_URL ends in /exec)'); }
   if (!j.ok) throw new Error(j.error || 'the Sheet refused');
   if (!Array.isArray(j.places)) throw new Error('the Sheet’s script needs updating for Places (Notes README, “Changing the script later”)');

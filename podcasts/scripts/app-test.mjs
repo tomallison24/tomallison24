@@ -1,13 +1,17 @@
 // Drives the Podcasts app in headless Chromium at iPhone size, against stubbed
 // feeds: it opens with a seeded library (shows, a saved episode, history), the
-// tabs and lists draw, and the optional Google Sheet backup works end to end:
-// the real google-sheet-sync.gs, run in Node on an in-memory Sheet, answers the
-// app's requests. It checks the request is exactly {secret, action, v, device,
-// follows, saved, hist} with the shapes the script reads (and nothing else: no
-// episode lists, progress, queue or settings), the error text, an unfollow
-// reading "No", that the progress ticks of a playing episode don't send
-// anything, the setup link, the IndexedDB copy of the link and phone id, and
-// Disconnect. Also that nothing trips the page's Content Security Policy.
+// tabs and lists draw, and the family's Google Sheet works end to end: the real
+// google-sheet-sync.gs, run in Node on an in-memory Sheet, answers the app's
+// requests to **/sheet/api/podcasts (aOS's route, stood in for here), with who's
+// asking taken from the session the page sends (aos.session). It checks that
+// signed out the app works and its Sheet sheet says to sign in (no link or
+// phrase anywhere); the request ({action, v, window, today, shows, saved, hist,
+// prog, graves}: no phrase, no episode lists, Up Next or settings); two phones
+// of one person kept the same (an unfollow, a follow, where you got to) while
+// someone else's phone gets none of it; that the progress ticks of a playing
+// episode don't sync; the 90 days of History and older on asking; and the
+// owner's phone handing its old link and phrase to aOS, then forgetting them.
+// Also that nothing trips the page's Content Security Policy.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look, light and dark
 // (Futura, flat cream or walnut cards, a mustard thumb, an orange primary button, the shapes behind
 // the title, the player and its scrubber; the sky held at day, aos.sky), and Standard (Sea glass);
@@ -72,25 +76,38 @@ const seed = () => JSON.stringify({
 // 20 seconds of silence (8 kHz, 8-bit), so an episode can really play
 const WAV = (() => { const n = 8000 * 20, b = Buffer.alloc(44 + n, 128); b.write('RIFF', 0); b.writeUInt32LE(36 + n, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(8000, 28); b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write('data', 36); b.writeUInt32LE(n, 40); return b; })();
 
-// ---- the Sheet: the real script on an in-memory Sheet ----
+// ---- the family's Sheet: the real script on an in-memory Sheet, reached through aOS ----
+// (functions/sheet/api, stood in for here: each phone's session says who's asking)
 const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SHEET_SECRET = 'test-secret-phrase';
 const GS = path.join(ROOT, 'podcasts', 'google-sheet-sync.gs');
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+const asAos = who => ({ key: SHEET_SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) });
 const browser = await chromium.launch();
 const errors = [];
+// sheet: the fake Sheet the page's syncs reach (none: aOS says it isn't set up); posts: what each sync sent,
+// with who sent it; claims: links and phrases handed over to aOS
 async function newPage(scheme, extra = {}, sheet = null) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, locale: 'en-US' });
-  const posts = [];
+  const posts = [], claims = [];
   await ctx.route('**/' + FOLDER + '/api/**', route => route.fulfill({ status: 404, contentType: 'text/html', body: '<html></html>' }));
+  await ctx.route('https://script.google.com/**', route => route.abort());   // no phone talks to Google itself any more
+  await ctx.route('**/sheet/api/**', route => {
+    const req = route.request(), who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (!/\/sheet\/api\/podcasts(\/claim)?$/.test(new URL(req.url()).pathname) || req.headers()['x-sheet'] !== '1') return json({ error: 'app' }, 404);
+    if (!who) return json({ error: 'signin' }, 401);
+    if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+    if (req.method() === 'GET') return json({ configured: !!sheet });
+    if (!sheet) return json({ ok: false, error: 'no-sheet' }, 409);
+    posts.push({ who: who.id, body: JSON.parse(req.postData()) });
+    return json(sheet.post(req.postData(), asAos(who)));
+  });
   await ctx.route(/^https:\/\/feeds\.example\.com\//, route => {
     const n = route.request().url().match(/\/(\w+)\.xml/)[1];
     route.fulfill({ status: 200, contentType: 'application/rss+xml', headers: { 'access-control-allow-origin': '*' }, body: rss(n === 'alpha' ? 'Alpha Show' : 'Beta Show', n) });
   });
   await ctx.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
-  if (sheet) await ctx.route(/^https:\/\/script\.google(usercontent)?\.com\//, route => {
-    const req = route.request(), cors = { 'access-control-allow-origin': '*' };
-    if (req.method() === 'POST') { posts.push({ ct: req.headers()['content-type'], body: JSON.parse(req.postData()) }); return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.post(req.postData())) }); }
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(sheet.get()) });
-  });
   // the sky held at day, so the colours don't depend on the hour; a key given as null is left out
   extra = Object.assign({ 'aos.seen': JSON.stringify({ [APP_ID]: '999' }), 'aos.sky': 'day', [KEY]: seed() }, extra);
   await ctx.addInitScript(extra => {
@@ -102,13 +119,15 @@ async function newPage(scheme, extra = {}, sheet = null) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|net::ERR|Failed to load resource|404/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { window.__csp = (window.__csp || []).concat(e.violatedDirective + ' ' + e.blockedURI); }));
-  return { ctx, page, posts };
+  return { ctx, page, posts, claims };
 }
 const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, name + '.png') }) : null;
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
-const connected = p => p.waitForFunction(() => window.__podcasts.sheetState() === 'ok' && !document.getElementById('syOn').hidden && !document.getElementById('syConnect').disabled);
+const synced = (p, timeout = 8000) => p.waitForFunction(() => window.__podcasts && window.__podcasts.syncState() === 'ok', null, { timeout });
 const openSettings = async page => { await page.click('[data-tab="lib"]'); await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])'); await page.waitForTimeout(500); };
+const lib = page => page.evaluate(() => { const S = window.__podcasts.S; return { follows: S.follows.map(f => f.id), saved: S.saved.map(e => e.k), hist: S.hist.map(e => e.k), prog: S.prog, graves: S.graves }; });
+const EMPTY = JSON.stringify({ follows: [], prog: {}, saved: [], queue: [], hist: [], now: null, set: { back: 15, fwd: 30, speed: 1, auto: true, cc: 'us' }, lastRefresh: NOW, lastClean: NOW });
 
 await test('opens with the seeded library: Home, Library (shows, Saved, History) and Settings, no script errors', async () => {
   const P = await newPage('light');
@@ -126,143 +145,216 @@ await test('opens with the seeded library: Home, Library (shows, Saved, History)
   await shot(p, '03-history-light');
   await p.click('#libChips [data-act="lib:shows"]');
   await openSettings(p);
-  assert.match(await p.textContent('#setSheetBtn'), /Google Sheet backup\s*Not connected/);
+  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Sign in to sync/);
   await shot(p, '04-settings-light');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
 
-await test('Google Sheet backup: the form, its errors, and connecting sends exactly the three lists and this phone', async () => {
+await test('the family’s Google Sheet: signed out it says to sign in (no link or phrase); signed in, your library goes to the Sheet as yours', async () => {
   const sheet = fakeSheet(GS, SHEET_SECRET);
   const P = await newPage('light', {}, sheet), p = P.page;
-  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(500);
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(900);
   await openSettings(p);
+  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Sign in to sync/);
   await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])'); await p.waitForTimeout(400);
-  assert.equal(await p.isVisible('#syForm'), true); assert.equal(await p.isHidden('#syOn'), true);
-  assert.match(await p.inputValue('#syUrl'), /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/, 'the owner’s Sheet link is filled in');
-  assert.equal(await p.inputValue('#sySecret'), '');
-  await shot(p, '05-sheet-form-light');
-  await p.fill('#syUrl', 'https://example.com/x'); await p.fill('#sySecret', 'abc'); await p.click('#syConnect');
-  assert.match(await p.textContent('#syStatus'), /starts with https:\/\/script\.google\.com/);
-  assert.equal(P.posts.length, 0, 'nothing is sent to a link that is not Apps Script');
-  await p.fill('#syUrl', SHEET_URL); await p.fill('#sySecret', 'wrong'); await p.click('#syConnect');
-  await p.waitForFunction(() => /secret code doesn.t match/.test(document.getElementById('syStatus').textContent));
-  assert.equal(await p.evaluate(() => window.__podcasts.sheetCfg()), null, 'a wrong secret is not kept');
-  await p.fill('#sySecret', SHEET_SECRET); await p.click('#syConnect');
-  await connected(p);
-  const sent = P.posts[P.posts.length - 1];
-  assert.equal(sent.ct, 'text/plain;charset=utf-8');
-  assert.deepEqual(Object.keys(sent.body).sort(), ['action', 'device', 'follows', 'hist', 'saved', 'secret', 'v']);
-  assert.equal(sent.body.action, 'sync'); assert.equal(sent.body.v, 1); assert.equal(sent.body.secret, SHEET_SECRET);
-  assert.match(sent.body.device, /^p[0-9a-f]{16}$/);
-  assert.deepEqual(sent.body.follows.map(f => Object.keys(f).sort()), [['at', 'author', 'feed', 'genre', 'id', 'title'], ['at', 'author', 'feed', 'genre', 'id', 'title']]);
-  assert.deepEqual(sent.body.follows.map(f => f.title), ['Alpha Show', 'Beta Show']);
-  assert.equal(sent.body.follows[0].feed, feedUrl('alpha'));
-  assert.deepEqual(Object.keys(sent.body.saved[0]).sort(), ['d', 'dur', 'k', 'link', 'show', 't', 'u']);
-  assert.deepEqual(sent.body.saved[0], { k: 'beta|beta-3', show: 'Beta Show', t: 'Beta Show episode 3', d: sent.body.saved[0].d, dur: 1980, u: 'https://media.example.com/beta-3.mp3', link: 'https://example.com/ep/beta-3' });
-  assert.deepEqual(Object.keys(sent.body.hist[0]).sort(), ['d', 'dur', 'k', 'link', 'played', 'show', 't', 'u']);
-  assert.equal(sent.body.hist.length, 2);
-  const h0 = sent.body.hist.find(h => h.k === 'alpha|alpha-2'), h1 = sent.body.hist.find(h => h.k === 'beta|beta-1');
-  assert.ok(h0.played > 0, 'played is when the progress was last saved'); assert.equal(h1.played > 0, true);
-  assert.equal(h0.show, 'Alpha Show');
+  assert.match(await p.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet\. Until then, Podcasts keeps everything on this phone/);
+  assert.equal(await p.textContent('#syNow .t'), 'Sign in and sync');
+  for (const gone of ['#syUrl', '#sySecret', '#syForm', '#syShare', '#syOff', '#syConnect']) assert.equal(await p.$(gone), null, gone + ': no link or phrase on a phone');
+  assert.doesNotMatch(await p.textContent('#syncSheet'), /secret|phrase you|web app link|setup link|disconnect/i);
+  await shot(p, '05-sheet-signed-out-light');
+  assert.equal(P.posts.length, 0, 'signed out, nothing is sent');
+  // the app works signed out: saving an episode is kept on this phone, with no sync
+  await p.evaluate(() => { const S = window.__podcasts.S; S.saved = []; window.__podcasts.save(); });
+  assert.deepEqual((await lib(p)).saved, []);
+  assert.ok(Object.keys((await lib(p)).graves).includes('saved:beta|beta-3'), 'the unsave is remembered for when you sign in');
+  await p.click('#syncSheet .sheethead [data-close]');
+  // signed in (as on a phone whose app has a family session)
+  await p.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
+  await p.reload(); await p.waitForFunction(() => window.__podcasts); await synced(p);
+  const sent = P.posts[0];
+  assert.equal(sent.who, 'tom');
+  assert.deepEqual(Object.keys(sent.body).sort(), ['action', 'graves', 'hist', 'prog', 'saved', 'shows', 'today', 'v', 'window']);
+  assert.equal(sent.body.action, 'sync'); assert.equal(sent.body.v, 2); assert.equal(sent.body.window, 90);
+  assert.match(sent.body.today, /^\d{4}-\d{2}-\d{2}$/);
+  assert.deepEqual(sent.body.shows.map(f => Object.keys(f).sort()), [['art', 'at', 'author', 'feed', 'genre', 'id', 'title', 'updated'], ['art', 'at', 'author', 'feed', 'genre', 'id', 'title', 'updated']], 'a show: no episode list, no error, no "latest"');
+  assert.deepEqual(sent.body.shows.map(f => f.title).sort(), ['Alpha Show', 'Beta Show']);
+  assert.deepEqual(sent.body.saved, [], 'unsaved while signed out');
+  assert.ok(sent.body.graves['saved:beta|beta-3'] > 0, 'and its grave sent');
+  assert.deepEqual(sent.body.hist.map(h => h.id).sort(), ['alpha|alpha-2', 'beta|beta-1']);
+  assert.ok(sent.body.hist.every(h => h.pl > 0 && /^\d{4}-\d{2}-\d{2}$/.test(h.date) && h.updated > 0 && h.u.startsWith('https://media.example.com/')), 'each play with when, its day and its audio');
+  assert.deepEqual(Object.keys(sent.body.prog).length, 2);
+  assert.deepEqual(sent.body.prog.map(x => [x.id, x.t, x.p]).sort(), [['alpha|alpha-2', 300, false], ['beta|beta-1', 0, true]], 'where you got to, and what\'s played');
   const text = JSON.stringify(sent.body);
-  assert.ok(!/"(queue|prog|eps|set|now|h|img|sa|st|feedUrl)"/.test(text.replace(/"feed":/g, '')), 'no episode lists, progress, queue or settings are sent');
-  // the Sheet got them, readable
-  assert.deepEqual(sheet.tab('Shows').slice(1).map(r => [r[0], r[3]]), [['Alpha Show', 'Yes'], ['Beta Show', 'Yes']]);
-  assert.equal(sheet.tab('Saved').length, 2); assert.equal(sheet.tab('History').length, 3);
-  assert.match(await p.textContent('#syStatus'), /Connected\. Last backed up .*2 shows, 1 saved, 2 in history/);
-  await shot(p, '06-sheet-connected-light');
-  await p.click('#syncSheet .sheethead [data-close]'); await p.waitForTimeout(200);
-  assert.match(await p.textContent('#setSheetBtn'), /Connected\. Last backed up/);
-  assert.deepEqual(await p.evaluate(k => JSON.parse(localStorage.getItem(k + '-sheet')), KEY), { url: SHEET_URL, secret: SHEET_SECRET }, 'the link and code are kept on the phone');
-  assert.deepEqual(await p.evaluate(() => window.__csp || []), [], 'the Content Security Policy lets Apps Script through');
+  assert.ok(!/"(secret|device|follows|queue|eps|set|now|h|latest|err)":/.test(text), 'no phrase, phone id, episode lists, Up Next or settings');
+  // the Sheet has them, as Tom's
+  assert.deepEqual(sheet.tab('Shows').slice(1).map(r => [r[0], r[1]]), [['Tom', 'Alpha Show'], ['Tom', 'Beta Show']]);
+  assert.equal(sheet.tab('Saved').length, 1, 'nothing saved');
+  assert.deepEqual(sheet.tab('History').slice(1).map(r => [r[0], r[3], r[6]]).sort(), [['Tom', 'Alpha Show episode 2', '5:00 of 32:00'], ['Tom', 'Beta Show episode 1', 'Finished']]);
+  await openSettings(p);
+  assert.match(await p.textContent('#setSheetBtn'), /The family’s Google Sheet\s*Synced just now/);
+  await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])'); await p.waitForTimeout(300);
+  assert.match(await p.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced just now\./);
+  assert.equal(await p.textContent('#syNow .t'), 'Sync now');
+  await shot(p, '06-sheet-synced-light');
+  const before = P.posts.length;
+  await p.click('#syNow'); await p.waitForFunction(n => document.getElementById('toastMsg').textContent === 'Synced', before);
+  assert.equal(P.posts.length, before + 1, 'Sync now syncs');
+  assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
 
-await test('Google Sheet backup: an unfollow reads No, a follow arrives, and the progress ticks of a playing episode send nothing', async () => {
+await test('the family’s Google Sheet: your phones are kept the same (an unfollow, a follow, where you got to); someone else’s phone gets none of it', async () => {
   const sheet = fakeSheet(GS, SHEET_SECRET);
-  const P = await newPage('light', { [KEY + '-sheet']: JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }) }, sheet), p = P.page;
-  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
-  await p.evaluate(() => window.__podcasts.setSheetDelay(300));
-  await p.waitForFunction(() => window.__podcasts.sheetState() === 'ok', null, { timeout: 8000 });   // backs up by itself when the app opens
-  assert.equal(P.posts.length >= 1, true);
-  // a playing episode moves its "played" time on every few seconds; that alone is not a change, and pausing is
+  const A = await newPage('light', { 'aos.session': session('tok-tom') }, sheet), a = A.page;
+  await a.goto(BASE + '/' + FOLDER + '/'); await a.waitForFunction(() => window.__podcasts); await synced(a);
+  await a.evaluate(() => window.__podcasts.setSyncDelay(300));
+  // unfollow Beta on phone A
+  await a.click('[data-tab="lib"]'); await a.waitForSelector('#libBody .stile');
+  await a.click('#libBody .stile[data-show="beta"]'); await a.waitForSelector('#showView:not([hidden])');
+  const n0 = A.posts.length;
+  await a.click('#showMore'); await a.click('#actRows .rowbtn.danger');
+  await a.waitForFunction(n => window.__podcasts.syncState() === 'ok', n0); await a.waitForTimeout(1200);
+  assert.ok(A.posts.length > n0, 'a sync a moment after the change');
+  assert.ok(A.posts.at(-1).body.graves['shows:beta'] > 0, 'the unfollow went as a grave');
+  assert.deepEqual(sheet.tab('Shows').slice(1).map(r => r[1]), ['Alpha Show'], 'and the Sheet follows only Alpha');
+  await a.click('#showBack');
+  // phone B: Tom's other phone, nothing on it yet
+  const B = await newPage('light', { 'aos.session': session('tok-tom'), [KEY]: EMPTY }, sheet), b = B.page;
+  await b.goto(BASE + '/' + FOLDER + '/'); await b.waitForFunction(() => window.__podcasts); await synced(b);
+  await b.waitForFunction(() => window.__podcasts.S.follows.length === 1);
+  let got = await lib(b);
+  assert.deepEqual(got.follows, ['alpha'], 'what he follows');
+  assert.deepEqual(got.saved, ['beta|beta-3'], 'his saved episode');
+  assert.deepEqual(got.hist, ['alpha|alpha-2', 'beta|beta-1'], 'his History, newest first');
+  assert.equal(got.prog['alpha|alpha-2'].t, 300, 'where he got to'); assert.equal(got.prog['beta|beta-1'].p, true, 'and what he played');
+  await b.click('[data-tab="lib"]'); await b.waitForSelector('#libBody .stile[data-show="alpha"]');
+  await b.waitForFunction(() => /Alpha Show/.test(document.querySelector('#libBody .stile[data-show="alpha"]').textContent));
+  await b.click('[data-tab="home"]'); await b.waitForTimeout(300);
+  assert.ok((await b.$$eval('#homeBody .upcard [data-ep]', els => els.map(x => x.dataset.ep))).includes('alpha|alpha-2'), 'Up Next on phone B: the episode he was part way through on phone A');
+  // phone B follows a show (a shared link opens it) and saves nothing; phone A gets it
+  await b.evaluate(() => window.__podcasts.setSyncDelay(300));
+  await b.goto(BASE + '/' + FOLDER + '/?feed=' + encodeURIComponent(feedUrl('beta'))); await b.waitForFunction(() => window.__podcasts);
+  await b.waitForSelector('#showView:not([hidden]) [data-act="follow-show"]'); await b.waitForTimeout(400);
+  await b.evaluate(() => window.__podcasts.setSyncDelay(300));
+  await b.click('[data-act="follow-show"]');
+  await b.waitForFunction(() => window.__podcasts.S.follows.length === 2);
+  await b.waitForTimeout(1500);
+  assert.equal(sheet.tab('Shows').length, 3, 'the Sheet has it');
+  await a.evaluate(() => window.__podcasts.sync(false)); await a.waitForTimeout(300); await synced(a);
+  got = await lib(a);
+  assert.equal(got.follows.length, 2, 'phone A follows it too');
+  assert.ok((await a.evaluate(() => window.__podcasts.S.follows.map(f => f.title))).includes('Beta Show'));
+  await B.ctx.close();
+  // Ella's phone, signed in as her: none of Tom's
+  const E = await newPage('light', { 'aos.session': session('tok-ella'), [KEY]: EMPTY }, sheet), e = E.page;
+  await e.goto(BASE + '/' + FOLDER + '/'); await e.waitForFunction(() => window.__podcasts); await synced(e);
+  got = await lib(e);
+  assert.deepEqual([got.follows, got.saved, got.hist, Object.keys(got.prog)], [[], [], [], []], 'Ella\'s phone gets none of Tom\'s');
+  assert.equal(E.posts.at(-1).who, 'ella');
+  assert.deepEqual(await e.evaluate(() => window.__csp || []), []);
+  await E.ctx.close(); await A.ctx.close();
+});
+
+await test('the family’s Google Sheet: the progress ticks of a playing episode don’t sync; pausing does', async () => {
+  const sheet = fakeSheet(GS, SHEET_SECRET);
+  const P = await newPage('light', { 'aos.session': session('tok-tom') }, sheet), p = P.page;
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await synced(p);
+  await p.evaluate(() => window.__podcasts.setSyncDelay(300));
   await p.click('.upcard .playpill'); await p.waitForFunction(() => !document.getElementById('audio').paused);
-  await p.waitForTimeout(900);
+  await p.waitForTimeout(1200);   // playing it moves it to the top of History: that syncs
   const playing = P.posts.length;
-  await p.evaluate(() => { const S = window.__podcasts.S, k = Object.keys(S.prog).find(k => !S.prog[k].p); S.prog[k].at = Date.now(); S.prog[k].t += 10; window.__podcasts.save(); });
+  assert.ok(P.posts.at(-1).body.hist.some(h => h.id === 'alpha|alpha-2' && Date.now() - h.pl < 60e3), 'played just now');
+  await p.evaluate(() => { const S = window.__podcasts.S, k = Object.keys(S.prog).find(k => !S.prog[k].p); S.prog[k] = Object.assign({}, S.prog[k], { at: Date.now(), t: S.prog[k].t + 10 }); window.__podcasts.save(); });
   await p.waitForTimeout(1000);
   assert.equal(P.posts.length, playing, 'a progress tick of the playing episode sends nothing');
   await p.click('#miniPlay'); await p.waitForFunction(() => document.getElementById('audio').paused);
   await p.waitForTimeout(1200);
-  assert.ok(P.posts.length > playing, 'pausing sends the new played time');
-  const before = P.posts.length;
-  // unfollow Beta in the app
-  await p.click('[data-tab="lib"]'); await p.waitForSelector('#libBody .stile');
-  await p.click('#libBody .stile[data-show="beta"]'); await p.waitForSelector('#showView:not([hidden])');
-  await p.click('#showMore'); await p.click('#actRows .rowbtn.danger'); await p.waitForTimeout(1500);
-  assert.equal(P.posts.length, before + 1, 'one more backup, a moment after the change');
-  const last = P.posts[P.posts.length - 1].body;
-  assert.equal(last.follows.length, 1); assert.equal(last.follows[0].title, 'Alpha Show');
-  assert.deepEqual(sheet.tab('Shows').slice(1).map(r => [r[0], r[3]]), [['Alpha Show', 'Yes'], ['Beta Show', 'No']], 'the unfollowed show stays listed, as No');
-  // saving an episode sends it
-  await p.click('#showBack'); await p.waitForTimeout(300);
-  await p.evaluate(() => { const S = window.__podcasts.S; S.hist = []; window.__podcasts.save(); });
-  await p.waitForTimeout(1200);
-  assert.equal(sheet.tab('History').length, 3, 'clearing the app’s history does not clear the Sheet’s');
+  assert.ok(P.posts.length > playing, 'pausing syncs where you got to');
+  assert.ok(P.posts.at(-1).body.prog.some(x => x.id === 'alpha|alpha-2' && Date.now() - x.at < 60e3));
   await P.ctx.close();
 });
 
-await test('Google Sheet backup: this phone’s id is kept, and the link, code and id come back from the IndexedDB copy if localStorage is emptied', async () => {
-  const sheet = fakeSheet(GS, SHEET_SECRET);
-  const P = await newPage('light', {}, sheet), p = P.page;
-  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(500);
-  await openSettings(p); await p.click('#setSheetBtn'); await p.waitForSelector('#syncSheet:not([hidden])');
-  await p.fill('#syUrl', SHEET_URL); await p.fill('#sySecret', SHEET_SECRET); await p.click('#syConnect'); await connected(p);
-  const device = await p.evaluate(() => window.__podcasts.device());
-  const idb = await p.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-podcasts-sheet', 1); r.onsuccess = () => { const db = r.result, tx = db.transaction('kv'), a = tx.objectStore('kv').get('sheet'), b = tx.objectStore('kv').get('device'); tx.oncomplete = () => res({ sheet: a.result, device: b.result }); }; }));
-  assert.deepEqual(idb.sheet, { url: SHEET_URL, secret: SHEET_SECRET }); assert.equal(idb.device, device);
-  await p.reload(); await p.waitForFunction(() => window.__podcasts);
-  assert.equal(await p.evaluate(() => window.__podcasts.device()), device, 'the same phone after a reload');
-  // localStorage emptied (but the database is not)
-  await p.evaluate(k => { localStorage.removeItem(k + '-sheet'); localStorage.removeItem(k + '-sheet-at'); localStorage.removeItem(k + '-device'); }, KEY);
-  const before = P.posts.length;
-  await p.reload(); await p.waitForFunction(() => window.__podcasts);
-  await p.waitForFunction(() => window.__podcasts.sheetCfg() && window.__podcasts.sheetState() === 'ok', null, { timeout: 8000 });
-  assert.equal(await p.evaluate(() => window.__podcasts.device()), device, 'the phone id came back too, so the Sheet doesn’t see a new phone');
-  assert.equal(P.posts[P.posts.length - 1].body.device, device); assert.ok(P.posts.length > before);
-  await P.ctx.close();
-});
-
-await test('Google Sheet backup: a setup link fills in the form (and leaves the address bar), errors read plainly, Disconnect forgets it', async () => {
-  const sheet = fakeSheet(GS, SHEET_SECRET);
-  const P = await newPage('light', {}, sheet), p = P.page;
-  const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  await p.goto(BASE + '/' + FOLDER + '/' + link); await p.waitForFunction(() => window.__podcasts);
-  await p.waitForSelector('#syncSheet:not([hidden])');
-  assert.equal(await p.inputValue('#syUrl'), SHEET_URL); assert.equal(await p.inputValue('#sySecret'), SHEET_SECRET);
-  assert.equal(await p.evaluate(() => location.hash), '', 'the secret is out of the address bar');
-  await p.click('#syConnect'); await connected(p);
-  // Copy setup link
-  await p.evaluate(() => { navigator.clipboard.writeText = async t => { window.__copied = t; }; });
-  await p.click('#syShare'); await p.waitForTimeout(200);
-  assert.match(await p.evaluate(() => window.__copied), new RegExp('/' + FOLDER + '/#sync='));
-  // a script that is not Podcasts', and a network failure
-  await p.click('#syOff'); await p.click('#syOff');
-  assert.equal(await p.evaluate(() => window.__podcasts.sheetCfg()), null);
-  assert.equal(await p.evaluate(k => localStorage.getItem(k + '-sheet'), KEY), null);
-  await p.waitForTimeout(300);
-  await p.evaluate(() => window.__podcasts.save());   // disconnected: nothing is scheduled
-  await p.waitForTimeout(500);
-  const count = P.posts.length;
-  await p.waitForTimeout(500);
-  assert.equal(P.posts.length, count);
-  await P.ctx.route(/^https:\/\/script\.google\.com\/macros\/s\/DOWN\//, r => r.abort());
-  await p.fill('#syUrl', 'https://script.google.com/macros/s/DOWN/exec'); await p.fill('#sySecret', 'x'); await p.click('#syConnect');
-  await p.waitForFunction(() => /Couldn.t reach the Sheet/.test(document.getElementById('syStatus').textContent));
-  await shot(p, '07-sheet-error-light');
+await test('the family’s Google Sheet: the phone keeps 90 days of History; older plays come back from the Sheet on asking', async () => {
+  const sheet = fakeSheet(GS, SHEET_SECRET), TOM = PEOPLE['tok-tom'];
+  const day = ms => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const played = (sid, i, st, ago) => Object.assign(ep(sid, i, st), { id: sid + '|' + sid + '-' + i, pl: NOW - ago * DAY, date: day(NOW - ago * DAY), updated: NOW - ago * DAY });
+  // on the Sheet already: a play 10 days ago, one 200 days ago, and one 500 days ago (from his other phone)
+  sheet.post({ action: 'sync', shows: [], saved: [], hist: [played('alpha', 1, 'Alpha Show', 10), played('alpha', 3, 'Alpha Show', 200), played('beta', 2, 'Beta Show', 500)],
+    prog: [{ id: 'alpha|alpha-3', t: 0, d: 1980, p: true, at: NOW - 200 * DAY, date: day(NOW - 200 * DAY), updated: NOW - 200 * DAY }], graves: {} }, asAos(TOM));
+  // this phone: one play 120 days ago still on it, and a played mark 300 days ago
+  const s = JSON.parse(seed());
+  s.hist = [Object.assign(ep('beta', 3, 'Beta Show'), { pl: NOW - 120 * DAY })];
+  s.prog = { 'beta|beta-3': { p: true, t: 0, d: 1980, at: NOW - 300 * DAY } };
+  const P = await newPage('light', { 'aos.session': session('tok-tom'), [KEY]: JSON.stringify(s) }, sheet), p = P.page;
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await synced(p);
+  assert.ok(P.posts[0].body.hist.some(h => h.id === 'beta|beta-3'), 'the first sync sends everything the phone has');
+  await p.waitForFunction(() => window.__podcasts.S.hist.length === 1);
+  let got = await lib(p);
+  assert.deepEqual(got.hist, ['alpha|alpha-1'], 'the last 90 days: the 120-day-old play went from this phone');
+  assert.ok(!Object.keys(got.graves).some(k => k.startsWith('hist:')), 'with no grave');
+  assert.equal(got.prog['beta|beta-3'].p, true, 'what\'s played stays on the phone however old');
+  assert.ok(sheet.tab('History').slice(1).some(r => r[3] === 'Beta Show episode 3'), 'the Sheet keeps it');
+  assert.equal(P.posts[0].body.window, 90);
+  // a second sync sends only the last 90 days of History
+  await p.evaluate(() => window.__podcasts.sync(true)); await synced(p);
+  assert.deepEqual(P.posts.at(-1).body.hist.map(h => h.id), ['alpha|alpha-1']);
+  // Library > History > Show older: a year at a time from the Sheet
+  await p.click('[data-tab="lib"]'); await p.click('#libChips [data-act="lib:hist"]'); await p.waitForTimeout(300);
+  assert.equal(await p.$$eval('#libBody .ep', e => e.length), 1);
+  await p.click('[data-act="hist-older"]');
+  await p.waitForFunction(() => document.querySelectorAll('#libBody .ep').length === 3);
+  got = await lib(p);
+  assert.deepEqual(got.hist, ['alpha|alpha-1', 'beta|beta-3', 'alpha|alpha-3'], 'the year before the 90 days, newest first');
+  assert.equal(got.prog['alpha|alpha-3'].p, true, 'with what was played');
+  await shot(p, '08-history-older-light');
+  await p.click('[data-act="hist-older"]');
+  await p.waitForFunction(() => document.querySelectorAll('#libBody .ep').length === 4);
+  assert.deepEqual((await lib(p)).hist.at(-1), 'beta|beta-2', 'and the year before that');
+  await p.click('[data-act="hist-older"]');
+  await p.waitForFunction(() => document.getElementById('toastMsg').textContent === 'Nothing older in the family’s Google Sheet.' && !document.querySelector('[data-act="hist-older"]'));
+  // what came back is kept until the next tidy-up, and doesn't make the phone sync again and again
+  const n0 = P.posts.length;
+  await p.evaluate(() => window.__podcasts.sync(false)); await p.waitForTimeout(2500);
+  assert.ok(P.posts.length - n0 <= 1, 'one sync, not a loop: ' + (P.posts.length - n0));
+  assert.equal((await lib(p)).hist.length, 4);
+  assert.ok(P.posts.slice(n0).every(x => x.body.hist.length === 1), 'older plays are not sent back');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
+});
+
+await test('the owner’s phone hands the Sheet link and phrase it kept over to aOS, then forgets them; an old setup link is only taken off the address', async () => {
+  const sheet = fakeSheet(GS, SHEET_SECRET);
+  const P = await newPage('light', { 'aos.session': session('tok-tom'), [KEY + '-sheet']: JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }), [KEY + '-device']: 'p00000000000000aa', [KEY + '-sheet-at']: String(NOW) }, sheet), p = P.page;
+  // the IndexedDB copy the one-way backup kept too
+  await p.goto(BASE + '/' + FOLDER + '/sw.js');
+  await p.evaluate(([url, secret]) => new Promise(res => { const o = indexedDB.open('allison-podcasts-sheet', 1); o.onupgradeneeded = () => o.result.createObjectStore('kv'); o.onsuccess = () => { const t = o.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url, secret }, 'sheet'); t.objectStore('kv').put('p00000000000000aa', 'device'); t.oncomplete = () => { o.result.close(); res(); }; }; }), [SHEET_URL, SHEET_SECRET]);
+  const link = '#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SHEET_SECRET })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  await p.goto(BASE + '/' + FOLDER + '/' + link); await p.waitForFunction(() => window.__podcasts);
+  assert.equal(await p.evaluate(() => location.hash), '', 'the phrase is out of the address bar');
+  await p.waitForFunction(k => !localStorage.getItem(k + '-sheet'), KEY, { timeout: 8000 });
+  assert.deepEqual(P.claims.at(-1), { who: 'tom', url: SHEET_URL, secret: SHEET_SECRET }, 'handed to aOS');
+  const idbLeft = () => p.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-podcasts-sheet', 1); r.onsuccess = () => { const t = r.result.transaction('kv'), a = t.objectStore('kv').getAll(); t.oncomplete = () => { r.result.close(); res(a.result.length); }; }; }));
+  for (let i = 0; i < 40 && await idbLeft(); i++) await p.waitForTimeout(100);
+  assert.equal(await idbLeft(), 0, 'and the IndexedDB copy, with the old phone id');
+  assert.deepEqual(await p.evaluate(k => [localStorage.getItem(k + '-device'), localStorage.getItem(k + '-sheet-at')], KEY), [null, null], 'the one-way backup\'s phone id and time are gone');
+  await synced(p);
+  assert.ok(P.posts.every(x => !JSON.stringify(x.body).includes(SHEET_SECRET)), 'and never sent');
+  assert.equal(await p.$('#syncSheet:not([hidden])'), null, 'no setup sheet opened');
+  await P.ctx.close();
+  // Ella's phone with a link and phrase of its own: aOS has one, so it's forgotten (never claimed: she isn't the owner)
+  const E = await newPage('light', { 'aos.session': session('tok-ella'), [KEY]: EMPTY, [KEY + '-sheet']: JSON.stringify({ url: SHEET_URL, secret: SHEET_SECRET }) }, sheet), e = E.page;
+  await e.goto(BASE + '/' + FOLDER + '/'); await e.waitForFunction(() => window.__podcasts);
+  await e.waitForFunction(k => !localStorage.getItem(k + '-sheet'), KEY, { timeout: 8000 });
+  assert.deepEqual(E.claims, []);
+  await E.ctx.close();
+  // and with no Sheet in aOS yet, it says so (once), and the app keeps working
+  const N = await newPage('light', { 'aos.session': session('tok-tom') }, null), np = N.page;
+  await np.goto(BASE + '/' + FOLDER + '/'); await np.waitForFunction(() => window.__podcasts);
+  await np.waitForFunction(() => window.__podcasts.syncState() === 'error');
+  await openSettings(np); await np.click('#setSheetBtn'); await np.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await np.textContent('#syStatus'), /The family’s Podcasts Sheet isn’t set up yet\. The owner sets it up in aOS: Account → Google Sheets\./);
+  await N.ctx.close();
 });
 
 await test('Vintage, the default design: the Retro look, light and dark: Futura, flat cream or walnut, mustard, orange, teal, atomic shapes, the player', async () => {
@@ -314,12 +406,12 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     await rp.click('#npSpeed'); await rp.waitForSelector('#actSheet:not([hidden])'); await rp.waitForTimeout(500);
     assert.equal((await q('#actSheet .sheet', ['backgroundColor']))[0], cream, 'the choices sheet is a flat panel');
     await rp.click('#actSheet .sheethead [data-close]'); await rp.click('#np .sheethead [data-close]'); await rp.waitForTimeout(400);
-    // Settings: a mustard thumb, an orange Done and Connect button, an outlined Disconnect
+    // Settings: a mustard thumb, an orange Done; the Sheet sheet a flat panel
     await rp.click('[data-tab="lib"]'); await rp.click('#setBtn'); await rp.waitForSelector('#setSheet:not([hidden])'); await rp.waitForTimeout(600);
     assert.equal((await q('#setSheet .okbtn', ['backgroundColor']))[0], orange, 'Done is solid orange');
     assert.equal((await q('#setBack .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen option');
     await rp.click('#setSheetBtn'); await rp.waitForSelector('#syncSheet:not([hidden])'); await rp.waitForTimeout(500);
-    assert.equal((await q('#syConnect', ['backgroundColor']))[0], orange, 'Connect is solid orange');
+    assert.equal((await q('#syncSheet .sheet', ['backgroundColor']))[0], cream, 'the Sheet sheet is a flat panel');
     await rp.click('#syncSheet .sheethead [data-close]'); await rp.waitForTimeout(400);
     assert.equal(await rp.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true', 'Settings > Design shows Vintage');
     await shot(rp, '22-retro-settings-' + scheme);
@@ -403,24 +495,24 @@ const seedOldDbs = (p, withNew) => p.evaluate(async ([NOW, feed, withNew]) => {
   const show = title => ({ id: 'alpha', feed, title: 'Alpha Show', author: 'An Author', art: '', itArt: '', desc: '', link: '', genre: 'News', at: NOW,
     eps: [{ k: 'alpha|kept-1', sid: 'alpha', g: 'kept-1', u: 'https://media.example.com/alpha-9.mp3', v: false, t: title, d: NOW - 3600e3, dur: 1800, img: '', link: '', sn: 0, en: 0, x: '', h: '', s: '' }] });
   await make('allison-podcastsv', 'shows', [['alpha', show('An episode from Podcasts Vintage')]]);
-  await make('allison-podcastsv-sheet', 'kv', [['device', 'p00000000000000aa']]);
+  await make('allison-podcastsv-sheet', 'kv', [['sheet', { url: 'https://script.google.com/macros/s/OLD/exec', secret: 'old-phrase' }]]);
   if (withNew) await make('allison-podcasts', 'shows', [['alpha', show('An episode from Podcasts')]]);
 }, [NOW, feedUrl('alpha'), withNew]);
 const dbRows = (p, name, store) => p.evaluate(([name, store]) => new Promise(res => { const r = indexedDB.open(name); r.onsuccess = () => { const db = r.result; if (!db.objectStoreNames.contains(store)) return res(null); const t = db.transaction(store), a = t.objectStore(store).getAll(); t.oncomplete = () => { db.close(); res(a.result); }; }; }), [name, store]);
 
 await test('the old Podcasts Vintage address: its data (localStorage and both databases) moved to Podcasts’ names once, what it had seen carried over, feeds through Podcasts’ route', async () => {
-  const P = await newPage('light', { 'aos.seen': JSON.stringify({ podcastsvintage: '1.3' }), [KEY]: null, [OLD_KEY]: seed(), [OLD_KEY + '-tab']: 'lib', [OLD_KEY + '-device']: 'p00000000000000aa' }), p = P.page;
+  const P = await newPage('light', { 'aos.seen': JSON.stringify({ podcastsvintage: '1.3' }), [KEY]: null, [OLD_KEY]: seed(), [OLD_KEY + '-tab']: 'lib' }), p = P.page;
   await p.goto(BASE + '/podcastsvintage/sw.js'); await seedOldDbs(p, false);
   const reqs = [];
   p.on('request', r => { const u = new URL(r.url()); if (u.pathname.includes('/api/') && !u.pathname.startsWith('/aOS/api/')) reqs.push(u.pathname); });
   await p.goto(BASE + '/podcastsvintage/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(900);
-  const got = await p.evaluate(([KEY, OLD_KEY]) => ({ lib: !document.getElementById('libView').hidden, tiles: document.querySelectorAll('#libBody .stile').length, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: !!localStorage.getItem(OLD_KEY), now: JSON.parse(localStorage.getItem(KEY)), device: window.__podcasts.device(), look: document.documentElement.dataset.look }), [KEY, OLD_KEY]);
+  const got = await p.evaluate(([KEY, OLD_KEY]) => ({ lib: !document.getElementById('libView').hidden, tiles: document.querySelectorAll('#libBody .stile').length, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: !!localStorage.getItem(OLD_KEY), now: JSON.parse(localStorage.getItem(KEY)), look: document.documentElement.dataset.look }), [KEY, OLD_KEY]);
   assert.equal(got.lib, true, 'it opens on the tab it was on (Library)'); assert.equal(got.tiles, 2, 'its two shows');
-  assert.equal(got.now.follows.length, 2); assert.equal(got.device, 'p00000000000000aa', 'the same phone to the Sheet');
+  assert.equal(got.now.follows.length, 2);
   assert.equal(got.seen.podcasts, '1.3', 'what it had seen carries over (no walkthrough again)');
   assert.equal(got.old, true, 'nothing old is deleted'); assert.equal(got.look, 'vintage');
   assert.deepEqual((await dbRows(p, 'allison-podcasts', 'shows')).map(s => s.eps[0].t), ['An episode from Podcasts Vintage'], 'the episode database moved');
-  assert.deepEqual(await dbRows(p, 'allison-podcasts-sheet', 'kv'), ['p00000000000000aa'], 'the Sheet backup copy moved');
+  assert.deepEqual(await dbRows(p, 'allison-podcasts-sheet', 'kv'), [{ url: 'https://script.google.com/macros/s/OLD/exec', secret: 'old-phrase' }], 'its copy of the old Sheet link and phrase moved, to hand over to aOS once signed in');
   // (1.3's seen brings what's new since 1.3 on top: seen now, so the taps below reach the app)
   await p.evaluate(() => localStorage.setItem('aos.seen', JSON.stringify({ podcasts: '999', podcastsvintage: '1.3' })));
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);

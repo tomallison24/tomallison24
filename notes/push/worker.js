@@ -7,27 +7,38 @@
 // phone (RFC 8291, the same code as Mail's), so Apple's push service only ever
 // carries ciphertext.
 //
-// Where the reminders come from: the Google Sheet the phones already sync
-// with (notes/google-sheet-sync.gs). A phone pings /refresh after it syncs a
-// change, and every 15 minutes the Worker reads the Sheet again anyway. It
-// keeps only what it needs to alert: each open reminder's title, list, date,
-// time and alert, and each nudge's title and time. Never note bodies.
+// Where the reminders come from: the family's Google Sheet, the one Notes
+// syncs with (notes/google-sheet-sync.gs, aOS/SHEETS.md). A phone pings
+// /refresh after it syncs a change, and every 15 minutes the Worker reads the
+// Sheet again anyway. It keeps only what it needs to alert: each open
+// reminder's title, list, date, time and alert, and each nudge's title and
+// time, and whose a Just-me one is. Never note bodies.
 //
-// Who may subscribe: a phone that knows the Sheet's web app link and secret
-// (the same two things it syncs with). The first phone's pair is kept; later
-// phones must bring the same pair, so nobody can point this server at a Sheet
-// of their own. If the secret is changed in the script, the old pair stops
-// working and the next phone to subscribe with the new one takes over.
+// The Sheet's link and phrase: the phones don't have them any more (aOS keeps
+// them), so the Worker keeps its own: NOTES_SHEET_URL and NOTES_SHEET_SECRET
+// if the owner gives them to it as Worker secrets (Cloudflare: Workers &
+// Pages > notes-push > Settings > Variables and Secrets), else the pair the
+// first phone brought before aOS kept the Sheet. It asks the script with the
+// phrase in the link (?key=), as aOS does, and in the request too, for a
+// script from before aOS.
+//
+// Who may subscribe: someone signed in to the family. The phone sends its
+// family session; the Worker checks it once with aOS (GET /aOS/api/state on
+// the site) and keeps only whose phone it is, never the session, so a Just-me
+// reminder alerts only its own person's phones. (A phone from before aOS that
+// brings the Sheet's link and phrase is still let in as before: the first
+// pair is kept and later phones must bring the same one, so nobody can point
+// this server at a Sheet of their own.)
 //
 // Setup: notes/README.md, "Notifications". Deployed by
 // .github/workflows/notes-push.yml. It makes its own push keys (VAPID) the
-// first time it runs and keeps them in its KV store, so there are no secrets
-// to set.
+// first time it runs and keeps them in its KV store.
 //
 // Environment (wrangler.toml):
 //   PUSH             KV namespace binding
-//   ALLOWED_ORIGIN   where Notes is served, comma-separated
+//   ALLOWED_ORIGIN   where Notes is served, comma-separated (the first is the site that checks sessions)
 //   VAPID_SUBJECT    a contact for Apple's push service (an https: or mailto: address)
+//   NOTES_SHEET_URL, NOTES_SHEET_SECRET   (optional Worker secrets) the family's Notes Sheet
 
 import { send, b64u, makeKeys } from '../../mail/push/webpush.js';
 
@@ -84,10 +95,19 @@ export function fireAt(t, sub) {
 // ---------------------------------------------------------------------------
 class SheetError extends Error {}
 
+// The script's link with the phrase and who's asking (aOS/SHEETS.md): the notification server.
+function sheetLink(sheet) {
+  const u = new URL(sheet.url);
+  u.searchParams.set('key', sheet.secret);
+  u.searchParams.set('who', 'notes-push');
+  u.searchParams.set('app', 'notes');
+  return u.toString();
+}
+
 async function pull(sheet, fetchImpl, now = Date.now()) {
   let r, res;
   try {
-    r = await fetchImpl(sheet.url, {
+    r = await fetchImpl(sheetLink(sheet), {
       method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ secret: sheet.secret, action: 'due', v: 1 }),
       signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(25000) : undefined,
@@ -99,20 +119,22 @@ async function pull(sheet, fetchImpl, now = Date.now()) {
 }
 
 // Just what alerting needs. Done and deleted reminders, archived and deleted
-// notes, and anything too old to alert any more are left out.
+// notes, and anything too old to alert any more are left out. A Just-me one
+// keeps whose it is (who), and alerts only that person's phones.
 export function slim(res, now = Date.now()) {
   const str = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+  const who = x => typeof x.who === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.who) ? { who: x.who } : {};
   const oldest = new Date(now - 2 * DAY).toISOString().slice(0, 10);
   const lists = {};
   for (const l of res.lists || []) if (l && typeof l.id === 'string' && !l.deletedAt) lists[l.id] = str(l.name, 60) || 'Reminders';
   const todos = (res.todos || [])
     .filter(t => t && typeof t.id === 'string' && !t.done && !t.deletedAt && /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') && t.date >= oldest)
     .map(t => ({ id: t.id, title: str(t.title, 120) || 'Reminder', list: String(t.list || ''), date: t.date,
-      time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : null, alert: t.alert == null || !isFinite(t.alert) ? null : Number(t.alert) }))
+      time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : null, alert: t.alert == null || !isFinite(t.alert) ? null : Number(t.alert), ...who(t) }))
     .sort((a, b) => a.id < b.id ? -1 : 1);
   const nudges = (res.notes || [])
     .filter(n => n && typeof n.id === 'string' && n.reminder && !n.deletedAt && !n.archived)
-    .map(n => ({ id: n.id, title: str(n.title, 120) || str(String(n.body || '').split('\n').find(l => l.trim()), 120) || 'Note', at: Date.parse(n.reminder) }))
+    .map(n => ({ id: n.id, title: str(n.title, 120) || str(String(n.body || '').split('\n').find(l => l.trim()), 120) || 'Note', at: Date.parse(n.reminder), ...who(n) }))
     .filter(n => n.at > now - DAY)
     .sort((a, b) => a.id < b.id ? -1 : 1);
   return { lists, todos, nudges };
@@ -126,8 +148,18 @@ async function keepItems(env, items) {
   return true;
 }
 
+// The Sheet this server reads: the owner's Worker secrets, else the pair kept from the first phone.
+async function sheetOf(env) {
+  const kept = await env.PUSH.get('sheet', 'json');
+  if (env.NOTES_SHEET_SECRET) {
+    const url = String(env.NOTES_SHEET_URL || (kept && kept.url) || '').trim();
+    return SHEET_URL.test(url) ? { url, secret: String(env.NOTES_SHEET_SECRET) } : null;
+  }
+  return kept;
+}
+
 async function refresh(env, fetchImpl, now = Date.now()) {
-  const sheet = await env.PUSH.get('sheet', 'json');
+  const sheet = await sheetOf(env);
   if (!sheet) throw new SheetError('no-sheet');
   const items = await pull(sheet, fetchImpl, now);
   const changed = await keepItems(env, items);
@@ -146,7 +178,7 @@ async function same(a, b) {
 // Whether a phone may subscribe with this Sheet link and secret (null if so).
 async function authorise(env, sheet, fetchImpl) {
   if (!sheet || !SHEET_URL.test(sheet.url || '') || typeof sheet.secret !== 'string' || !sheet.secret) return 'no-sheet';
-  const cur = await env.PUSH.get('sheet', 'json');
+  const cur = await sheetOf(env);
   if (cur && cur.url === sheet.url && await same(cur.secret, sheet.secret)) return null;
   let items;
   try { items = await pull(sheet, fetchImpl); }                // the Sheet itself must accept it
@@ -162,6 +194,23 @@ async function authorise(env, sheet, fetchImpl) {
   await env.PUSH.put('sheet', JSON.stringify({ url: sheet.url, secret: sheet.secret }));
   await keepItems(env, items);
   return null;
+}
+
+// Whose phone it is: the family session it sent, checked with aOS (the site's /aOS/api/state answers
+// with the signed-in person). Only the id is kept, never the session. { id }, or an error code.
+async function familyMember(env, token, fetchImpl) {
+  if (typeof token !== 'string' || !/^[\w.-]{10,4000}$/.test(token)) return 'signin';
+  const site = String(env.SITE || String(env.ALLOWED_ORIGIN || '').split(',')[0] || '').trim().replace(/\/+$/, '');
+  if (!/^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/.test(site)) return 'not-family';
+  let r, j = null;
+  try {
+    r = await fetchImpl(site + '/aOS/api/state', { headers: { Authorization: 'Bearer ' + token }, signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(10000) : undefined });
+    j = await r.json();
+  } catch { return 'not-family'; }
+  const u = j && j.user;
+  if (!r.ok) return 'not-family';
+  if (!u || typeof u.id !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(u.id)) return 'signin';
+  return { id: u.id };
 }
 
 // ---------------------------------------------------------------------------
@@ -233,10 +282,20 @@ export async function handle(req, env, fetchImpl = fetch) {
   if (url.pathname === '/subscribe') {
     const s = body.subscription;
     if (!s || !PUSH_HOSTS.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth || !(await validKeys(s.keys))) return json({ error: 'bad-subscription' }, 400, h);
-    const no = await authorise(env, body.sheet, fetchImpl);
-    if (no) return json({ error: no }, 403, h);
     const id = await idOf(s.endpoint);
-    subs[id] = { subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...prefsOf(body.prefs, subs[id]), at: Date.now() };
+    let who = subs[id] && subs[id].who;
+    if (body.session != null) {
+      // signed in to the family: whose phone, and can this server read the Sheet?
+      const me = await familyMember(env, body.session, fetchImpl);
+      if (typeof me === 'string') return json({ error: me }, 403, h);
+      try { await refresh(env, fetchImpl); }
+      catch (e) { return json({ error: e.message === 'no-sheet' || e.message === 'wrong-secret' ? e.message : 'sheet-' + e.message }, 403, h); }
+      who = me.id;
+    } else {
+      const no = await authorise(env, body.sheet, fetchImpl);
+      if (no) return json({ error: no }, 403, h);
+    }
+    subs[id] = { subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...prefsOf(body.prefs, subs[id]), ...(who ? { who } : {}), at: Date.now() };
     await env.PUSH.put('subs', JSON.stringify(subs));
     return json({ ok: true }, 200, h);
   }
@@ -263,18 +322,19 @@ export async function handle(req, env, fetchImpl = fetch) {
 // Every minute: anything due?
 // ---------------------------------------------------------------------------
 
-// What should alert this phone now: due in the last LATE minutes and not sent yet.
+// What should alert this phone now: due in the last LATE minutes and not sent yet. A Just-me
+// reminder or nudge (who) only alerts that person's phones.
 export function dueFor(items, sub, subId, now, sent) {
-  const out = [], skip = new Set(sub.skip || []);
+  const out = [], skip = new Set(sub.skip || []), theirs = x => !x.who || x.who === sub.who;
   for (const t of items.todos || []) {
-    if (skip.has(t.list)) continue;
+    if (skip.has(t.list) || !theirs(t)) continue;
     const at = fireAt(t, sub);
     if (at == null || at > now || now - at > LATE) continue;
     const key = subId + ':t:' + t.id + ':' + at;
     if (!sent[key]) out.push({ key, kind: 'todo', item: t, at });
   }
   if (sub.nudges !== false) for (const n of items.nudges || []) {
-    if (n.at > now || now - n.at > LATE) continue;
+    if (!theirs(n) || n.at > now || now - n.at > LATE) continue;
     const key = subId + ':n:' + n.id + ':' + n.at;
     if (!sent[key]) out.push({ key, kind: 'note', item: n, at: n.at });
   }

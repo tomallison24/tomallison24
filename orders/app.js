@@ -7,7 +7,10 @@
 //   shipping email, the carrier's own notice and the delivery email end up as
 //   one order, whatever order they are read in.
 // - Tracking opens the carrier's own page (no lookups, no keys, no cost).
-// - A Google Sheet keeps both phones in step, as in Notes and Travel.
+// - The family's Google Sheet is the record (aOS/SHEETS.md): one Sheet for
+//   everyone's orders, each person's phone getting only their own, through aOS
+//   (signed in). The phone keeps the last 90 days and every order still on
+//   its way; older ones come from the Sheet when you look back.
 // - Packages and store pickups show by default; food, subscriptions and
 //   tickets can be switched on in Settings.
 // - Two designs, picked in Settings > Design: Vintage (the default) and Standard
@@ -49,6 +52,7 @@ if (window.top !== window.self) {
     token: 'orders.token', state: 'orders.state', silent: 'orders.silent', silentFail: 'orders.silentFail', lastAuth: 'orders.lastAuth', hint: 'orders.hint', me: 'orders.me',
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
+    family: KEY + '-family', notMine: KEY + '-not-mine',
     aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
     cleanup: KEY + '-cleanup-5d',
   };
@@ -97,9 +101,18 @@ if (window.top !== window.self) {
   let graves = ls.json(K.graves, {});
   let seen = new Set(ls.json(K.seen, []));
   let skipped = ls.json(K.skipped, {});                                       // message id -> the kind that was switched off when it was read
-  let syncCfg = ls.json(K.sync, null);
   let outbox = ls.json(K.log, []);                                            // log events not yet in the Sheet's Log tab
   if (!Array.isArray(outbox)) outbox = [];
+  // Synced with the family's Sheet at least once (through aOS): from then on this phone keeps the last
+  // 90 days of orders and every one not finished yet, and the Sheet keeps the rest (below).
+  let synced = ls.get(K.family, '') === '1';
+  // Ids the Sheet says are someone else's (the same email in two people's Gmail makes the same order):
+  // kept on this phone as they are, not sent again.
+  const notMine = new Set(ls.json(K.notMine, []));
+  // Orders fetched from the Sheet this session (looking back past the 90 days): kept until the next start.
+  const older = new Set();
+  const past = { day: '', busy: false, end: false };   // how far "Show older orders" has reached
+  let startSync = null;   // the first sync of this session (Gmail is read after it)
   const shadow = new Map();
   let ipsy = null;   // Ipsy's handle (home/ipsy.js), once it's in its corner (the end of this script)
   const st = { tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
@@ -127,6 +140,7 @@ if (window.top !== window.self) {
   // What each order looked like at the last save: any change stamps a new
   // 'updated' time, and anything that vanished becomes a grave for the Sheet.
   const kindsOfData = () => [['orders', orders]];
+  const bare = it => { const { updated, ...rest } = it; return JSON.stringify(rest); };
   function initShadow() {
     shadow.clear();
     kindsOfData().forEach(([kind, arr]) => arr.forEach(it => {
@@ -140,8 +154,10 @@ if (window.top !== window.self) {
   // the common ones so two phones that notice the same thing write one row.
   const LOG_MAX = 2000;
   const LOG_WATCH = { store: 'store', items: 'items', total: 'total', orderNo: 'order number', orderDate: 'order date', eta: 'expected date', carrier: 'carrier', tracking: 'tracking', kind: 'kind', pickupBy: 'pickup date', notes: 'notes' };
+  // Queued once this phone has synced with the family's Sheet (or still holds an old link, from before aOS).
+  const logging = () => synced || !!ls.get(K.sync, '');
   function logEvent(ev, o, note, id) {
-    if (!syncCfg || !o) return;
+    if (!logging() || !o) return;
     const at = Date.now(), snap = {};
     ['id', 'store', 'kind', 'items', 'total', 'status', 'carrier', 'tracking', 'eta', 'orderNo'].forEach(k => { if (o[k] != null) snap[k] = o[k]; });
     outbox.push({ id: id || ev.toLowerCase().replace(/\W+/g, '-') + '-' + o.id + '-' + at, at, ev, note: note || '', o: snap });
@@ -149,7 +165,7 @@ if (window.top !== window.self) {
     ls.set(K.log, JSON.stringify(outbox));
   }
   function logChange(prev, o) {
-    if (!syncCfg) return;
+    if (!logging()) return;
     if (prev == null) return logEvent('Added', o, '', 'add-' + o.id + '-' + (o.created || 0));
     let p; try { p = JSON.parse(prev); } catch { return; }
     const same = k => JSON.stringify(p[k] == null ? null : p[k]) === JSON.stringify(o[k] == null ? null : o[k]);
@@ -174,9 +190,10 @@ if (window.top !== window.self) {
   let storeWarned = false;
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ orders, kinds })) && ls.set(K.graves, JSON.stringify(graves));
-    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Orders: storage is full.' + (syncCfg ? ' Your orders are safe in the Google Sheet.' : ' Back up soon.')); }
+    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Orders: storage is full.' + (synced ? ' Your orders are safe in the family’s Google Sheet.' : ' Back up soon.')); }
   }
-  function save() { track(); persist(); if (syncCfg) scheduleSync(); }
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  function save() { track(); persist(); if (signedIn()) scheduleSync(); }
   const saveSeen = () => { ls.set(K.seen, JSON.stringify([...seen].slice(-6000))); ls.set(K.skipped, JSON.stringify(skipped)); };
 
   // ---------------------------------------------------------------------
@@ -359,8 +376,6 @@ if (window.top !== window.self) {
     catch (e) { if (e.name === 'AbortError') return 'cancelled'; }
     download(file); return 'downloaded';
   }
-  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
   const LINKS = {
     mailApp: threadId => '../mail/?thread=' + encodeURIComponent(threadId),
     gmailWeb: msgId => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(msgId),
@@ -425,12 +440,7 @@ if (window.top !== window.self) {
     if (st.tab === 'check' && !check.length) st.tab = 'way';
     $('whenChips').innerHTML = chips.map(([k, t, n]) => '<button class="chip glass" type="button" data-when="' + k + '" aria-pressed="' + (!q && st.tab === k) + '">' + esc(t) + ' <span class="n">' + n + '</span></button>').join('');
     slideWhen();
-    const sub = [];
-    if (way.length) sub.push(way.length + ' on the way');
-    if (st.scanning) sub.push('Reading Gmail…');
-    else if (+ls.get(K.lastScan, 0)) sub.push('Gmail checked ' + ago(+ls.get(K.lastScan, 0)));
-    if (syncCfg) sub.push(syncState === 'error' ? 'Not synced' : syncState === 'syncing' ? 'Syncing…' : 'Synced');
-    $('sub').textContent = sub.join(' · ');
+    renderSub(way.length);
     $('qClear').hidden = !st.q;
 
     let h = '', i = 0;
@@ -442,12 +452,12 @@ if (window.top !== window.self) {
         + '<button class="btn quiet" type="button" id="emptyAdd">Add an order by hand</button>';
     } else if (q) {
       const list = vis.filter(o => matches(o, q)).sort(byRecent);
-      h = list.length ? '<p class="resulthead">' + plural(list.length, 'result') + '</p>' + list.map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>No match</strong>Try a store, an item or an order number.</div>';
+      h = (list.length ? '<p class="resulthead">' + plural(list.length, 'result') + '</p>' + list.map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>No match</strong>Try a store, an item or an order number.</div>') + olderRow();
     } else if (st.tab === 'check') {
       h = '<p class="hint">These were read from the words of an email, or nothing has been heard about them for a while. Open each one, fix anything wrong and tap “Looks right”.</p>' + check.sort(byRecent).map(o => card(o, i++)).join('');
     } else if (st.tab === 'done') {
       const secs = doneSections(done);
-      h = secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing delivered yet</strong>Orders move here once they arrive or you pick them up.</div>';
+      h = (secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing delivered yet</strong>Orders move here once they arrive or you pick them up.</div>') + olderRow();
     } else {
       const secs = waySections(way);
       h = secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing on the way</strong>New orders in Gmail show up here after the next check (the envelope, top right).</div>';
@@ -455,7 +465,25 @@ if (window.top !== window.self) {
     $('list').innerHTML = h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openEdit();
+    if ($('olderGo')) $('olderGo').onclick = showOlder;
     if (!$('opage').hidden && st.order) renderOrder();
+  }
+  // The line under the title: what's on the way, Gmail, and the Sheet.
+  function renderSub(onWay) {
+    const sub = [];
+    if (onWay == null) onWay = orders.filter(o => kindOn(o) && isOpen(o)).length;
+    if (onWay) sub.push(onWay + ' on the way');
+    if (st.scanning) sub.push('Reading Gmail…');
+    else if (+ls.get(K.lastScan, 0)) sub.push('Gmail checked ' + ago(+ls.get(K.lastScan, 0)));
+    if (signedIn()) { const s = { error: 'Not synced', syncing: 'Syncing…', offline: 'Offline' }[syncState] || (synced ? 'Synced' : ''); if (s) sub.push(s); }
+    $('sub').textContent = sub.join(' · ');
+  }
+  // At the end of Delivered and of a search: older orders, a year at a time, from the family's Sheet.
+  function olderRow() {
+    if (!synced) return '';
+    if (past.end) return '<p class="hint olderhint">Nothing older in the family’s Google Sheet' + (past.day ? ' (before ' + esc(fmtDay(past.day)) + ')' : '') + '.</p>';
+    return '<button class="btn quiet" type="button" id="olderGo"' + (past.busy ? ' disabled' : '') + '>' + (past.busy ? 'Looking in the Sheet…' : 'Show older orders from the Sheet') + '</button>'
+      + '<p class="hint olderhint">This phone keeps the last 90 days, and every order still on its way. The rest are in the family’s Google Sheet' + (past.day ? ': shown here back to ' + esc(fmtDay(past.day)) : '') + '.</p>';
   }
   $('whenChips').addEventListener('click', e => {
     const b = e.target.closest('[data-when]'); if (!b) return;
@@ -834,12 +862,11 @@ if (window.top !== window.self) {
   $('fab').onclick = () => openEdit();
 
   // ---------------------------------------------------------------------
-  // Paste: an order email, or a Sheet setup link
+  // Paste: an order email
   // ---------------------------------------------------------------------
   async function pasteIn() {
     let text = '';
     try { text = await navigator.clipboard.readText(); } catch {}
-    if (text && takeSetupLink(text)) return;
     if (text && text.trim().length > 20) return readPasted(text);
     $('psText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
   }
@@ -857,7 +884,7 @@ if (window.top !== window.self) {
     if (r.orders.length === 1) { const o = orders.find(x => x.id === r.orders[0].id) || orders[orders.length - 1]; if (o) openOrder(o.id); }
   }
   $('pasteBtn').onclick = pasteIn;
-  $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; if (takeSetupLink(t)) { closeSheet('pasteSheet'); return; } closeSheet('pasteSheet'); readPasted(t); };
+  $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; closeSheet('pasteSheet'); readPasted(t); };
 
   let revive = new Set();   // ids "Read the last year again" cleared, which may come back
 
@@ -966,6 +993,9 @@ if (window.top !== window.self) {
     }
     st.scanning = true; scanErr = ''; render();
     busyPill('Reading Gmail');
+    // The first sync of this session goes first, so an email read now folds into your own copy of its
+    // order from the Sheet (with your edits) rather than starting a new one.
+    if (startSync) await Promise.race([startSync, sleep(15000)]);
     const startedAt = Date.now();
     const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
@@ -1048,7 +1078,7 @@ if (window.top !== window.self) {
       + (PV ? '<button class="swrow" type="button" role="switch" id="stIpsyGmail" aria-checked="' + PV.gmail('orders') + '"><span class="grow">Ipsy can search Gmail<span class="sub">Off: Ipsy can’t search or read any email in your chats. Private orders’ emails are always hidden.</span></span><span class="switch" aria-hidden="true"></span></button>' : '');
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Orders only reads.'
       : 'Orders looks for order, shipping and pickup emails in the last year of email (Mail’s Orders tag, and the big stores and carriers), then for new ones each time it opens. Promotions are skipped.';
-    $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
+    $('stSheetSub').textContent = !signedIn() ? 'Sign in to sync' : syncState === 'error' ? 'Not synced' : synced && lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
   // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
@@ -1112,158 +1142,207 @@ if (window.top !== window.self) {
   });
 
   // ---------------------------------------------------------------------
-  // Google Sheet sync - the same as Notes' and Travel's, for orders
+  // The family's Google Sheet: the record of everyone's orders, each one
+  // marked with whose it is (aOS/SHEETS.md). This phone keeps a working
+  // copy: the last 90 days of orders (by the day each was ordered) and every
+  // order not finished yet, whatever its age; older ones come from the Sheet
+  // when you look back (Delivered, a search, Ipsy). Syncs go through aOS
+  // (../home/sheet.js, functions/sheet/api), signed in, so the phone holds no
+  // Sheet link or phrase and only ever gets your own orders. Private (hidden
+  // from Ipsy) is just another detail of an order here: it syncs like the rest.
   // ---------------------------------------------------------------------
-  let logNagged = false, syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
+  const APP = 'allison-orders-sync';
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxj_O0w_Q30WKA-AfWXh86ZyspCG2JsxtsSal_pO8_rpz1xQbbDRNx0L_LY-2ylKJgT/exec';
-  const SYNC_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes or Travel code.',
-    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
-    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
-    'busy': 'The Sheet was busy. Trying again shortly.',
-    'bad-request': 'The Sheet didn’t understand the request.',
-    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
-    'not-json': 'That link didn’t answer like the Orders script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That’s another app’s Sheet link. Orders needs the web app link from the AllisonOS - Orders Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
-  };
-  function saveSyncCfg() {
-    if (syncCfg) ls.set(K.sync, JSON.stringify(syncCfg)); else ls.del(K.sync);
-    keep.set('sync', syncCfg ? { url: syncCfg.url, secret: syncCfg.secret } : null);
+  const KEEP_DAYS = 90, FINISHED = ['delivered', 'pickedup', 'cancelled'];
+  const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  // The day an order was placed, worked out as the Sheet's script does (google-sheet-sync.gs, orderDay):
+  // its order date, else its first step's, else its email's (or when it was added), in UTC.
+  function orderDay(o) {
+    if (!o) return '';
+    if (isDay(o.orderDate)) return o.orderDate;
+    const steps = Object.values(o.steps || {}).filter(isDay).sort();
+    if (steps.length) return steps[0];
+    const t = Number(o.source && o.source.date) || Number(o.created) || 0;
+    return t > 0 ? new Date(t).toISOString().slice(0, 10) : '';
   }
-  function applyRemote(res) {
+  const finished = o => FINISHED.includes(o.status);
+  const floorDay = () => P.addDays(todayStr(), -(KEEP_DAYS - 1));
+  const pruneFrom = () => synced ? floorDay() : null;
+  // What this phone keeps: an order not finished yet, any from the last 90 days, one fetched from the
+  // Sheet this session, and the one that's open. Older ones are dropped with no grave (the Sheet keeps them).
+  const keepHere = (o, from) => !from || !finished(o) || !orderDay(o) || orderDay(o) >= from || older.has(o.id) || (st.order && st.order.id === o.id);
+  const okOrder = o => o && typeof o.id === 'string' && o.status in P.STATUS_NAMES;   // a status this app knows, as the backup import requires
+  const SYNC_ERRORS = {
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Orders keeps everything on this phone.',
+    'no-sheet': 'The family’s Orders Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Orders Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Orders Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Orders Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
+  };
+  // The link and phrase this phone used to keep (before aOS kept them): on the owner's phone they go
+  // to aOS once (it keeps them from then on); on every phone, once aOS has them, they're forgotten here.
+  async function handOver() {
+    const old = ls.json(K.sync, null) || await keep.get('sync');
+    if (!old || !old.secret || !SH() || !signedIn()) return;
+    if (await SH().adopt('orders', old)) { ls.del(K.sync); keep.set('sync', null); }
+  }
+  // Before sending orders the Sheet may already have, with your edits on them, that this phone has only
+  // just read from an email (its first sync with the family's Sheet, or older mail read again: a first
+  // read of a year of Gmail, or "Read the last year again"), the Sheet's copies of those days come first.
+  // What the email said is folded into the Sheet's copy, as a later email would be, so its edits, its
+  // checks and Private stay; an order the Sheet doesn't have goes up as new.
+  async function lookFirst(loud) {
+    const floor = floorDay();
+    const strays = orders.filter(o => !older.has(o.id) && !notMine.has(o.id) && orderDay(o)
+      && (!synced || ((+o.created || 0) > lastSyncAt && orderDay(o) < floor)));
+    if (!strays.length) return;
+    const days = strays.map(orderDay).sort();
+    const res = await SH().sync('orders', { action: 'range', from: days[0], to: days[days.length - 1] }, { ask: loud });
+    const here = new Map(orders.map(o => [o.id, o]));
+    let n = 0;
+    for (const r of (res.orders || []).filter(okOrder)) {
+      const l = here.get(r.id);
+      if (!l || !((+r.created || 0) < (+l.created || 0))) continue;   // the same copy as the Sheet's: the newest change wins, as ever
+      const base = bare(r), x = P.upsert([r], l, {});
+      orders[orders.indexOf(l)] = r; if (st.order === l) st.order = r;
+      shadow.set('orders:' + r.id, x === 'changed' ? base : bare(r));   // changed: sent, and logged against the Sheet's copy
+      outbox = outbox.filter(e => e.id !== 'add-' + l.id + '-' + (l.created || 0));   // not new after all
+      if (orderDay(r) < floor) older.add(r.id);
+      n++;
+    }
+    if (n) { ls.set(K.log, JSON.stringify(outbox)); persist(); }
+  }
+  function applyRemote(res, sentAt) {
     Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
-    let localNewer = false;
-    const mergeKind = (kind, local, remote) => {
-      const map = new Map(local.map(x => [x.id, x]));
-      (remote || []).forEach(r => {
-        if (!r || typeof r.id !== 'string') return;
-        const l = map.get(r.id);
-        if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
-        else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
-      });
-      const remoteIds = new Set((remote || []).map(r => r && r.id));
-      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
-      return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
-    };
-    // Only orders with a status this app knows, as the backup import requires.
-    orders = mergeKind('orders', orders, (res.orders || []).filter(o => o && o.status in P.STATUS_NAMES));
+    if ((res.refused || []).length) { res.refused.forEach(id => notMine.add(id)); ls.set(K.notMine, JSON.stringify([...notMine].slice(-2000))); }
+    const from = pruneFrom(), stays = o => keepHere(o, from);
+    const map = new Map(orders.filter(stays).map(x => [x.id, x]));
+    (res.orders || []).filter(okOrder).filter(stays).forEach(r => {
+      const l = map.get(r.id);
+      if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
+    });
+    // older finished orders went to the Sheet with this sync: kept there, not here (initShadow below leaves no graves)
+    orders = [...map.values()].filter(x => { const g = graves['orders:' + x.id]; return !(g && g >= (+x.updated || 0)); });
+    if (st.order && !orders.includes(st.order)) st.order = orders.find(o => o.id === st.order.id) || st.order;
     initShadow(); persist();
-    if (localNewer) syncAgain = true;
+    if (orders.some(o => (+o.updated || 0) > sentAt)) syncAgain = true;   // changed while this sync was on its way
     render();
   }
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud) {
-    if (!syncCfg) return false;
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
-    if (!navigator.onLine) { syncState = 'offline'; return false; }
-    syncing = true; syncState = 'syncing';
+    if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
+    syncing = true; syncState = 'syncing'; renderSub();
     if (loud) busyPill('Syncing');
     let ok = false;
     try {
       track(); persist();
-      let r, res;
-      try {
-        r = await fetch(syncCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 1, orders, graves, log: outbox.slice(0, 300) }) });
-      } catch { throw new Error('network'); }
-      try { res = await r.json(); } catch { throw new Error('not-json'); }
-      if (res && res.ok && res.app && res.app !== 'allison-orders-sync') throw new Error('wrong-app');
-      if (res && res.error === 'wrong-secret' && res.app !== 'allison-orders-sync') throw new Error(await whichScript(syncCfg.url));
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      await lookFirst(loud);
+      track(); persist();
+      const sentAt = Date.now(), had = orders;
+      const res = await SH().sync('orders', { action: 'sync', v: 3, window: KEEP_DAYS, today: todayStr(), orders: orders.filter(o => !notMine.has(o.id)), graves, log: outbox.slice(0, 300) }, { ask: loud });
+      if (res.app && res.app !== APP) throw new Error('not-json');
+      if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
+      if (!synced) { synced = true; ls.set(K.family, '1'); }
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
-      applyRemote(res);
-      if (res.log) {
-        const got = new Set(res.logged || []);
-        outbox = outbox.filter(e => !got.has(e.id)); ls.set(K.log, JSON.stringify(outbox));
-        if (got.size && outbox.length) syncAgain = true;
-        // The first time this Sheet's Log is on: what is already in Orders is logged once, so the Log starts complete.
-        if (ls.get(K.logSeed, '') !== syncCfg.url) { orders.forEach(o => logEvent('Existing', o, 'Already in Orders when the Log began', 'ex-' + o.id)); ls.set(K.logSeed, syncCfg.url); syncAgain = true; }
-      } else if (outbox.length && !logNagged) { logNagged = true; toast('The Sheet’s script is an old copy, so its Log tab isn’t filling. Paste the new script and deploy a new version (Orders README).'); }
+      applyRemote(res, sentAt);
+      const got = new Set(res.logged || []);
+      outbox = outbox.filter(e => !got.has(e.id)); ls.set(K.log, JSON.stringify(outbox));
+      if (got.size && outbox.length) syncAgain = true;
+      // The first time this phone's orders reach the Log: what was already in Orders is logged once, so the Log starts complete.
+      if (!ls.get(K.logSeed, '')) { had.forEach(o => { if (!notMine.has(o.id)) logEvent('Existing', o, 'Already in Orders when the Log began', 'ex-' + o.id); }); ls.set(K.logSeed, '1'); if (outbox.length) syncAgain = true; }
       if (loud) pillDone('Synced');
     } catch (e) {
-      syncState = 'error'; syncErr = e.message; busyPill();
-      if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+      const code = e.message === 'wrong-secret' && e.data && !e.data.aos ? 'old-script' : e.message;   // a script from before aOS turns away aOS's request
+      syncState = code === 'signin' ? 'signin' : code === 'offline' ? 'offline' : 'error'; syncErr = code; busyPill();
+      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  // A "wrong secret" from a script that doesn't say it's Orders': ask the
-  // link which app it belongs to (every script answers a plain GET with its name).
-  async function whichScript(url) {
+  // Looking back past the 90 days this phone keeps: those days come from the Sheet (each range once a
+  // session), and stay here until the next start. loud: you asked (Face ID if you're signed out).
+  // { got: how many orders the Sheet had for those days, added: how many weren't here already }, or null when it wasn't asked.
+  const olderAsked = new Set();
+  async function loadOlder(from, to, loud) {
+    const floor = pruneFrom();
+    if (!floor || from >= floor || !SH() || (!loud && !signedIn()) || !navigator.onLine) return null;
+    if (to >= floor) to = P.addDays(floor, -1);
+    const key = from + '|' + to; if (olderAsked.has(key)) return null;
+    olderAsked.add(key);
     try {
-      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
-      const d = await r.json();
-      if (d && d.app && d.app !== 'allison-orders-sync') return 'wrong-app';
-      if (d && d.app === 'allison-orders-sync') return 'old-script';
-    } catch {}
-    return 'wrong-secret';
+      const res = await SH().sync('orders', { action: 'range', from, to }, { ask: !!loud });
+      const got = (res.orders || []).filter(okOrder);
+      let n = 0;
+      for (const x of got) {
+        if (graves['orders:' + x.id] >= (+x.updated || 0)) continue;
+        older.add(x.id);
+        if (orders.some(y => y.id === x.id)) continue;
+        orders.push(x); shadow.set('orders:' + x.id, bare(x)); n++;
+      }
+      if (n) { persist(); render(); }
+      return { got: got.length, added: n };
+    } catch (e) { olderAsked.delete(key); if (loud) throw e; return null; }
   }
+  // "Show older orders from the Sheet", at the end of Delivered and of a search: a year further back each time.
+  async function showOlder() {
+    const floor = pruneFrom();
+    if (!floor || past.busy) return;
+    const to = P.addDays(past.day || floor, -1), from = P.addDays(to, -364);
+    past.busy = true; render();
+    try {
+      const r = await loadOlder(from, to, true);
+      past.day = from;
+      if (r && !r.got) past.end = true;
+      else if (r) toast(r.added ? 'Found ' + plural(r.added, 'older order') + ', ' + fmtMD(from) + ' to ' + fmtMD(to) + '.' : 'Nothing more from ' + fmtMD(from) + ' to ' + fmtMD(to) + '.');
+    } catch (e) {
+      toast(SYNC_ERRORS[e.message] || 'Couldn’t reach the Sheet. Try again in a minute.', null, 6000);
+    } finally { past.busy = false; render(); }
+  }
+  // Ipsy, asked about orders from before the 90 days (or about any order with no dates given: the last
+  // year, as Gmail is read): those come from the Sheet first, quietly.
+  const lookBack = from => {
+    const f = pruneFrom();
+    if (!f || (from && from >= f)) return Promise.resolve(null);
+    return loadOlder(from || P.addDays(f, -365), P.addDays(f, -1));
+  };
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
   function renderSyncStatus() {
-    const on = !!syncCfg;
-    const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
-    $('syStatus').textContent = line;
-    $('syForm').hidden = on; $('syOn').hidden = !on;
+    const signed = signedIn();
+    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
+      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? SYNC_ERRORS.offline : synced && lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     if (!$('setSheet').hidden) renderSettings();
-    if (!$('listView').hidden) { const sub = $('sub').textContent; if (/Sync/.test(sub) || on) render(); }
+    renderSub();
   }
-  function openSyncSheet(pre) {
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
-    $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
-    renderSyncStatus();
-    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
-    openSheet('syncSheet');
-  }
-  $('syForm').onsubmit = async e => {
-    e.preventDefault();
-    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = syncCfg;
-    syncCfg = { url, secret };
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sync(true);
-    $('syConnect').disabled = false;
-    if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
-    saveSyncCfg(); renderSyncStatus();
-    toast('Connected. ' + plural(orders.length, 'order') + ' now in the Sheet.');
-  };
+  function openSyncSheet() { renderSyncStatus(); openSheet('syncSheet'); }
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify({ u: syncCfg.url, s: syncCfg.secret }));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. On the other phone: copy it, open Orders and tap the clipboard button. Keep it private.', null, 6000); }
-    catch { toast('Copy isn’t available here.'); }
-  };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; outbox = []; ls.del(K.log); saveSyncCfg(); renderSyncStatus();
-    toast('Disconnected. Your orders stay on this phone and in the Sheet.');
-  };
-  function takeSetupLink(text) {
-    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return false;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSyncSheet(c); return true; } } catch {}
-    toast('That setup link is damaged. Copy it again.'); return true;
-  }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
+    if (Date.now() - lastSyncAt > 30000) sync(false);
     if (getToken() && scanDue()) scan();
     render();
   });
-  window.addEventListener('online', () => { if (syncCfg) sync(false); });
+  window.addEventListener('online', () => sync(false));
+  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync(false)); else renderSyncStatus(); });
 
   // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
   const back = consumeRedirect();
-  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
+  if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
   if (+ls.get(K.lastScan, 0)) cleanupOnce();
   render();
   if (back && back.error) {
@@ -1273,12 +1352,8 @@ if (window.top !== window.self) {
   // Read Gmail on open: always after a sign-in, else if it's been a while.
   if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
-  if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
-  else keep.get('sync').then(c => {
-    if (syncCfg || !c || !c.url || !c.secret) return;
-    syncCfg = { url: c.url, secret: c.secret }; syncState = 'idle'; ls.set(K.sync, JSON.stringify(syncCfg));
-    sync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
-  });
+  // The family's Sheet: what this phone kept of its old link goes to aOS, then a sync (Gmail is read after it).
+  startSync = sleep(600).then(handOver).catch(() => {}).then(() => sync(false));
   // Refresh "today" and "was due" labels while open.
   setInterval(() => { if (document.visibilityState === 'visible') render(); }, 5 * 6e4);
   // "Updated" pill, once, when a new version arrives (as in Notes).
@@ -1304,7 +1379,7 @@ if (window.top !== window.self) {
       app: 'orders', name: 'Orders', endpoint: '../orders/api/ipsy', headers: { 'X-Orders': '1' }, slot: document.querySelector('.dock > span'),
       ...window.OrdersIpsy({
         P, get orders() { return orders; }, set orders(v) { orders = v; }, save, render, todayStr, isOpen, needsCheck, checkReason, kindOn,
-        gmail, bodies, header, getToken, AuthError, openOrder, current: () => (!$('opage').hidden && st.order) || null,
+        gmail, bodies, header, getToken, AuthError, openOrder, lookBack, current: () => (!$('opage').hidden && st.order) || null,
         closeOrder: id => { if (st.order && st.order.id === id) { st.order = null; closeSheet('opage'); } },
         refreshOrder: () => { if (st.order && !orders.includes(st.order)) { const o = orders.find(x => x.id === st.order.id); if (o) { st.order = o; renderOrder(); } else { st.order = null; closeSheet('opage'); } } },
         screen: () => st.q ? 'search results' + (orders.some(o => o.private) ? '' : ' for "' + st.q + '"') : TAB_NAMES[st.tab] || 'the order list',   // a search could name a private order
@@ -1314,5 +1389,6 @@ if (window.top !== window.self) {
   }
 
   // For the tests (orders/scripts/app-test.mjs) only.
-  window.__orders = { get orders() { return orders; }, tidy: cleanupOnce, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale };
+  window.__orders = { get orders() { return orders; }, tidy: cleanupOnce, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale,
+    sync, orderDay, pruneFrom, older, notMine, graves: () => graves };
 })();

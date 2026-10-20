@@ -46,7 +46,7 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response(JSON.stringify({ features: feats }), { headers: { 'Content-Type': 'application/json' } });
   }
   if (u.href.startsWith('https://script.google.com/')) {
-    const b = JSON.parse(init.body); log.sheet.push({ action: b.action, secret: b.secret, n: b.places.length });
+    const b = JSON.parse(init.body); log.sheet.push({ action: b.action, secret: b.secret, key: u.searchParams.get('key'), who: u.searchParams.get('who'), n: b.places.length });
     const byId = new Map(log.places.map(p => [p.id, p])); for (const p of b.places) byId.set(p.id, p); log.places = [...byId.values()]; save();
     return new Response(JSON.stringify({ ok: true, places: log.places, graves: {} }), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -66,7 +66,7 @@ const byName = n => log.places.find(p => p.name === n);
 ok('a past dinner at a restaurant: Been, with the event’s date as the visit', byName('Rioja')?.status === 'been' && byName('Rioja')?.visits.length === 1 && byName('Rioja')?.notes === '📅 Anniversary dinner');
 ok('a coming show at a theatre: Want to go, Planned for its date', byName('Buell Theatre')?.status === 'want' && /^\d{4}-\d{2}-\d{2}$/.test(byName('Buell Theatre')?.planned || ''));
 ok('Fearless Foxes training and the dentist are not places, and the training isn’t even looked up', log.places.length === 2 && !log.photon.some(q => /sloan/i.test(q)) && !log.photon.some(q => /smile/i.test(q)), JSON.stringify(log.photon));
-ok('the Sheet is read with the Notes secret, then sent the two new places', log.sheet.length === 2 && log.sheet.every(s => s.action === 'places' && s.secret === 'maple-otter') && log.sheet[1].n === 2, JSON.stringify(log.sheet));
+ok('the Sheet is read with the Notes secret in its link, as the calendar (and in the request, for an old script), then sent the two new places', log.sheet.length === 2 && log.sheet.every(s => s.action === 'places' && s.key === 'maple-otter' && s.who === 'places-calendar' && s.secret === 'maple-otter') && log.sheet[1].n === 2, JSON.stringify(log.sheet));
 ok('the log shows counts, never event titles or places', !/Rioja|Buell|Hamilton|Anniversary|Foxes|Dentist/i.test(out1), out1.trim().split('\n').join(' | '));
 const photonBefore = log.photon.length;
 const out2 = run();

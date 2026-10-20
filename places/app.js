@@ -7,8 +7,9 @@
   const P = window.PlacesParse;
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
   const KEY = 'allison-places-v1', SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', HERE_KEY = KEY + '-here', AT_KEY = KEY + '-synced';
-  // Notes' Google Sheet link and secret, when this browser has them: Notes', or the old Notes
-  // Vintage app's (its own name until it is next opened and design.js moves it to Notes')
+  // Notes' Google Sheet link and secret from before aOS kept them, when this browser has them: Notes',
+  // or the old Notes Vintage app's (its own name until it is next opened and design.js moves it to
+  // Notes'). Only ever handed over to aOS (handOver, below).
   const NOTES_SYNC = ['allison-notes-v1-sync', 'allison-notesv-v1-sync'];
   const notesSync = () => { for (const k of NOTES_SYNC) { const n = store.get(k, null); if (n && n.url && n.secret) return n; } return null; };
   // The map is CARTO's (OpenStreetMap data), with the same free key as Weather's radar map.
@@ -57,7 +58,7 @@
   }
   let places = store.get(KEY, []).map(tidy);
   let graves = store.get(GRAVE_KEY, {});
-  let syncCfg = store.get(SYNC_KEY, null);
+
   const st = {
     tab: 'want', view: 'list', q: '', tag: null,
     sort: Object.assign({ want: 'soon', been: 'recent' }, store.get(KEY + '-sort', {})),
@@ -69,7 +70,7 @@
     for (const k of Object.keys(graves)) if (graves[k] < cut) delete graves[k];
     store.set(KEY, places); store.set(GRAVE_KEY, graves);
   }
-  function save() { persist(); render(); if (syncCfg) scheduleSync(); }
+  function save() { persist(); render(); if (signedIn()) scheduleSync(); }
   const tagsOf = text => [...new Set((String(text || '').match(/(^|\s)#[a-z0-9][\w-]*/gi) || []).map(t => t.trim().slice(1).toLowerCase()))];
 
   // ---------- small helpers for the list ----------
@@ -603,38 +604,53 @@
       : 'https://maps.apple.com/?q=' + encodeURIComponent([name, p.address].filter(Boolean).join(', '));
   };
 
-  // ---------- Google Sheet sync (the same Sheet as Notes) ----------
-  let syncing = false, again = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '';
+  // ---------- The family's Google Sheet (Notes' Sheet) ----------
+  // Places keeps its lists in the family's Notes Sheet (aOS/SHEETS.md): one Sheet for the whole
+  // family, the record of everyone's places, all shared, each row marked with who added it. Syncs go
+  // through aOS (../home/sheet.js, functions/sheet/api: places is Notes' Sheet), signed in, so the
+  // phone holds no Sheet link or phrase. Places are undated: this phone keeps all of them.
+  const APP_ID = 'allison-notes-sync';
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  let syncing = false, again = false, syncTimer = null, syncState = 'idle', syncErr = '';
   const ERR = {
-    'wrong-secret': 'The secret code doesn’t match the one in the script.',
-    'secret-not-set': 'The script still has CHANGE-ME as its secret.',
-    'busy': 'The Sheet was busy. Trying again shortly.',
-    'network': 'Couldn’t reach the Sheet. You may be offline.',
-    'not-json': 'That link didn’t answer like the Notes script. Check it ends in /exec.',
-    'old-script': 'The Sheet’s script needs updating for Places: paste the new notes/google-sheet-sync.gs and deploy a new version (Notes README, “Changing the script later”).',
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Places keeps your lists on this phone.',
+    'no-sheet': 'The family’s Notes Sheet (which Places shares) isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Notes Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Notes Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Notes Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
   const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
-  const syncLabel = () => !syncCfg ? '' : syncState === 'syncing' ? ' · Syncing…' : syncState === 'error' ? ' · Not synced' : st.lastSync ? ' · Synced' : '';
+  const syncLabel = () => !signedIn() ? '' : syncState === 'syncing' ? ' · Syncing…' : syncState === 'error' ? ' · Not synced' : st.lastSync ? ' · Synced' : '';
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 1500 : ms); }
+  // The link and phrase this phone kept before aOS did (Places' own, or Notes' where they share
+  // storage): on the owner's phone they go to aOS once; once aOS has them, Places forgets its own.
+  async function handOver() {
+    const mine = store.get(SYNC_KEY, null), old = mine && mine.secret ? mine : notesSync();
+    if (!old || !SH() || !signedIn()) return;
+    if (await SH().adopt('places', { url: old.url, secret: old.secret })) store.set(SYNC_KEY, null);
+  }
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud) {
-    if (!syncCfg) return false;
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSync(); return false; }
     if (syncing) { again = true; return false; }
+    if (!navigator.onLine) { syncState = 'offline'; renderSync(); return false; }
     syncing = true; syncState = 'syncing'; renderSync();
     let ok = false;
     try {
-      let r, res;
-      try {
-        r = await fetch(syncCfg.url, { method: 'POST', redirect: 'follow', cache: 'no-store', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'places', v: 1, places, graves }) });
-      } catch { throw new Error('network'); }
-      try { res = await r.json(); } catch { throw new Error('not-json'); }
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
-      if (!Array.isArray(res.places)) throw new Error('old-script');
-      applyRemote(res);
+      const sent = new Set(places.map(p => p.id));
+      const res = await SH().sync('places', { action: 'places', v: 2, places, graves }, { ask: loud });
+      if (res.app && res.app !== APP_ID) throw new Error('not-json');
+      if (!res.aos || !Array.isArray(res.places)) throw new Error('old-script');
+      applyRemote(res, sent);
       st.lastSync = Date.now(); store.set(AT_KEY, st.lastSync);
       syncState = 'ok'; syncErr = ''; ok = true;
     } catch (e) {
-      syncState = 'error'; syncErr = e.message;
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
       if (loud) toast(ERR[syncErr] || 'Sync didn’t work. Trying again later.');
     } finally {
       syncing = false; renderSync();
@@ -642,7 +658,9 @@
     }
     return ok;
   }
-  function applyRemote(res) {
+  // sent: the ids this sync sent. One sent that doesn't come back, with no grave, is the Sheet's alone
+  // now (no one in the family can see it from here): it leaves this phone with no grave.
+  function applyRemote(res, sent) {
     for (const [k, t] of Object.entries(res.graves || {})) if (k.startsWith('places:') && (graves[k] || 0) < +t) graves[k] = +t;
     const byId = new Map(places.map(p => [p.id, p]));
     let mine = false;
@@ -650,60 +668,31 @@
       if (!r || typeof r.id !== 'string') continue;
       const l = byId.get(r.id);
       if (!l || (+r.updated || 0) > (+l.updated || 0)) byId.set(r.id, tidy(r));
-      else if ((+l.updated || 0) > (+r.updated || 0)) mine = true;
+      else mine = true;
     }
     const theirs = new Set(res.places.map(r => r && r.id));
-    for (const l of places) if (!theirs.has(l.id) && !graves['places:' + l.id]) mine = true;
+    for (const l of places) {
+      if (theirs.has(l.id) || graves['places:' + l.id]) continue;
+      if (sent && sent.has(l.id)) byId.delete(l.id); else mine = true;
+    }
     places = [...byId.values()].filter(p => { const g = graves['places:' + p.id]; return !(g && g >= (+p.updated || 0)); });
     persist(); render();
     if (mine) again = true;
   }
   function renderSync() {
-    const on = !!syncCfg;
-    const line = !on ? 'Not connected. Places keeps your lists on this phone; connect the Google Sheet to share them with your wife’s phone and keep a copy.'
-      : syncState === 'error' ? (ERR[syncErr] || 'Not synced.') : syncState === 'syncing' ? 'Syncing…' : st.lastSync ? 'Connected. Last synced ' + ago(st.lastSync) + '.' : 'Connected.';
-    $('syStatus').textContent = line;
-    $('syForm').hidden = on; $('syOn').hidden = !on;
-    $('syNotes').hidden = on || !notesSync();
+    const signed = signedIn();
+    $('syStatus').textContent = !signed ? ERR.signin
+      : syncState === 'error' ? (ERR[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? ERR.offline : st.lastSync ? 'In the family’s Google Sheet. Last synced ' + ago(st.lastSync) + '.' : 'Not synced yet.';
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     $('sub').textContent = places.length ? (places.length + (places.length === 1 ? ' place' : ' places')) + syncLabel() : syncLabel().replace(/^ · /, '');
   }
-  async function connect(url, secret) {
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = syncCfg;
-    syncCfg = { url, secret };
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sync(false);
-    $('syConnect').disabled = false;
-    if (!ok) { const e = syncErr; syncCfg = before; renderSync(); $('syStatus').textContent = ERR[e] || 'Couldn’t connect.'; return; }
-    store.set(SYNC_KEY, syncCfg); renderSync();
-    toast('Connected. ' + places.length + (places.length === 1 ? ' place' : ' places') + ' in the Sheet.');
-  }
-  // Places shares Notes' Sheet, so the owner's Notes link is filled in; only the secret phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz8kIAKSV-PVYnVX_TvZeSGNiR1t5kqArVzcjnSw7OkiHbyWEmVmxNqoPwFc4oQZRcO/exec';
-  $('syncBtn').onclick = () => { renderSync(); if (syncCfg) { $('syUrl').value = syncCfg.url; $('sySecret').value = syncCfg.secret; } else $('syUrl').value = SHEET_URL; openSheet('syncSheet'); };
-  $('syForm').addEventListener('submit', e => { e.preventDefault(); connect($('syUrl').value.trim(), $('sySecret').value.trim()); });
-  $('syNotes').onclick = () => { const n = notesSync(); if (n) connect(n.url, n.secret); };
-  $('syPaste').onclick = async () => {
-    let text = '';
-    try { text = await navigator.clipboard.readText(); } catch { $('syStatus').textContent = 'Couldn’t read the clipboard here. Paste the link and secret into the boxes instead.'; return; }
-    const m = /#sync=([\w-]+)/.exec(text || '');
-    if (!m) { $('syStatus').textContent = 'The clipboard doesn’t have a setup link. In Notes: the download button, Google Sheet sync, Copy setup link.'; return; }
-    try {
-      const c = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')))));
-      $('syUrl').value = c.u; $('sySecret').value = c.s; connect(c.u, c.s);
-    } catch { $('syStatus').textContent = 'That setup link is damaged. Copy it again.'; }
-  };
+  $('syncBtn').onclick = () => { renderSync(); openSheet('syncSheet'); };
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; store.set(SYNC_KEY, null); renderSync(); render();
-    toast('Disconnected. Your places stay on this phone and in the Sheet.');
-  };
-  document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - st.lastSync > 30000) sync(false); });
-  window.addEventListener('online', () => { if (syncCfg) sync(false); });
+  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - st.lastSync > 30000) sync(false); });
+  window.addEventListener('online', () => { if (signedIn()) sync(false); });
+  // Signed in (here, or by a sync that asked): hand the old link over, then sync. Signed out: say so.
+  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync(false)); else { syncState = 'signin'; renderSync(); } });
 
   // ---------- Settings: the design ----------
   // Vintage or Standard, at once and just on this phone (../home/design.js): not part of any save.
@@ -726,6 +715,7 @@
   if (!places.some(p => p.lat != null) && st.here && map) map.setView([st.here.lat, st.here.lon], 15);
   slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true });
   window.addEventListener('resize', () => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
-  if (syncCfg) setTimeout(() => sync(false), 400);
+  // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
+  setTimeout(() => handOver().finally(() => sync(false)), 400);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

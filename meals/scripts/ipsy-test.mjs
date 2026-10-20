@@ -7,8 +7,10 @@
 // shopping list); one night's dinner changed, with the server's allergy check turning away a
 // dinner with coconut first; a new plan made and accepted, asked first with a Yes / No card; No
 // leaving it be; discarding; ticking the list; a recipe opened on screen; every change with an Undo
-// that puts it back on the server; the conversation only ever added to; and no script errors or
-// Content Security Policy violations. Screenshots go to the folder in SHOTS (default: none).
+// that puts it back on the server; what Ipsy changed reaching the family's Google Sheet (the real
+// google-sheet-sync.gs on a fake Sheet, through a stand-in for aOS's /sheet/api), an accept taken
+// back leaving it; the conversation only ever added to; and no script errors or Content Security
+// Policy violations. Screenshots go to the folder in SHOTS (default: none).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node meals/scripts/ipsy-test.mjs
@@ -18,6 +20,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';   // an in-memory Sheet for meals/google-sheet-sync.gs
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 const R = path.resolve(new URL('../..', import.meta.url).pathname);
@@ -150,6 +153,14 @@ async function phone(design, scheme) {
     const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.split('/meals/api/')[1].split('/') }, env: fam.env }, ai);
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
   });
+  // the family's Google Sheet, through aOS (functions/sheet/api, stood in for here)
+  const sheet = fakeSheet(path.join(R, 'meals/google-sheet-sync.gs'), 'test-secret-phrase'), sheetCalls = [];
+  await ctx.route('**/sheet/api/**', route => {
+    const rq = route.request();
+    if (rq.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"configured":true}' });
+    sheetCalls.push(JSON.parse(rq.postData()));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sheet.post(rq.postData(), { key: 'test-secret-phrase', who: 'O1', name: 'Tom', owner: '1' })) });
+  });
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   await ctx.addInitScript(([t, design]) => {
     if (sessionStorage.getItem('seeded')) return;
@@ -165,7 +176,7 @@ async function phone(design, scheme) {
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => console.error('CSP: ' + e.violatedDirective + ' ' + e.blockedURI)));
   await page.goto(BASE + '/meals/');
   await page.waitForFunction(() => window.__meals && window.__meals.st.state === 'ok' && document.querySelectorAll('#main [data-meal]').length === 4, null, { timeout: 10000 });
-  return { ...fam, ctx, page, problems };
+  return { ...fam, ctx, page, problems, sheet, sheetCalls };
 }
 async function ask(page, q) {
   await page.fill('#ipsyIn', q);
@@ -206,7 +217,8 @@ for (const [design, scheme] of [['glass', 'light'], ['glass', 'dark'], ['vintage
 
 for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const tag = 'meals (' + design + ')';
-  const { ctx, page, problems, m } = await phone(design, scheme);
+  const { ctx, page, problems, m, sheet, sheetCalls } = await phone(design, scheme);
+  let pork = null;
   const n0 = sent.length, r0 = results.length;
   const first = plan(m);
 
@@ -259,6 +271,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await idle(page);
     const p = plan(m);
     assert.deepEqual(p.meals.map(x => x.title), ['Pork carnitas', 'Pork ramen', 'Pork schnitzel']); assert.equal(draft(m), null);
+    pork = p.id;
     assert.equal(JSON.parse(m.get('meals:log')).length, 2);
     assert.ok(p.sales.some(x => x.name === 'Pork tenderloin'), 'planned with this week’s deals');
     const ch = (await texts(page, '.ipsy-change')).slice(-2);
@@ -328,6 +341,14 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.$eval('#recipeSheet', e => e.hidden), false);
     assert.match(await page.textContent('#recipeBody'), /Chicken tacos/);
     await page.keyboard.press('Escape');
+  });
+
+  await step(tag + ': what Ipsy changed reaches the family’s Google Sheet; the accept taken back leaves it', async () => {
+    await until(() => sheetCalls.some(c => c.graves && c.graves['plans:' + pork]), 'the taken-back plan’s grave sent', 8000);
+    await until(() => sheet.tab('Plans') && !sheet.tab('Plans').some(r => r[16] === pork), 'out of Plans', 8000);
+    const kept = sheet.tab('_plans').slice(1).map(r => JSON.parse(r.slice(2).join(''))).find(x => x.id === first.id);
+    assert.deepEqual(kept.meals.map(x => x.title), plan(m).meals.map(x => x.title), 'the family’s plan, as the family server has it');
+    assert.ok(sheetCalls.every(c => !('secret' in c)), 'no phrase from the phone');
   });
 
   await step(tag + ': the conversation is only ever added to, between steps and questions', async () => {

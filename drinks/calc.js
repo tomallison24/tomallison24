@@ -8,8 +8,8 @@
 // A standard drink is the US one: 14 g of alcohol. A drink's alcohol is
 //   millilitres × quantity × ABV ÷ 100 × 0.789 (the density of ethanol, g/ml)
 // with a fluid ounce of 29.5735 ml. So 12 oz of 5% beer is 14.0 g, one
-// standard drink. functions/drinks/api/[[route]].js works the same sum out
-// for Calendar's layer; keep the two the same.
+// standard drink. google-sheet-sync.gs works the same sum out for the Log tab
+// and the summary Fitness and Calendar show; keep the two the same.
 //
 // A day is one of:
 //   drinks    something was logged that day
@@ -62,7 +62,7 @@
   const add = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * D).toISOString().slice(0, 10);
   const between = (s, from, to) => s >= from && s <= to;
 
-  // the same limits the server keeps (functions/drinks/api CLEAN), so nothing is kept here that it would drop
+  // the limits a drink is kept within (the family account's route kept the same, when it kept the log)
   const okEntry = x => x && typeof x.id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.id) && ISO.test(x.date || '')
     && num(x.vol) >= 0.01 && num(x.vol) <= 10000 && num(x.qty) >= 1 && num(x.qty) <= 100 && num(x.abv) >= 0 && num(x.abv) <= 100;
   // What was had each day: standard drinks, how many drinks, and by kind.

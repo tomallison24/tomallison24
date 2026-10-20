@@ -45,7 +45,6 @@
     return Object.keys(fix).length ? Object.assign({}, n, fix) : n;
   }
   const saneAll = (arr, fn) => (Array.isArray(arr) ? arr : []).map(fn).filter(Boolean);
-  let linkServer = null;   // a setup link's notification server, waiting for Connect (see takeSetupLink)
   const H = 3600e3, D = 24*H, now = Date.now();
   const I = {
     pin:'<svg viewBox="0 0 24 24"><path d="M9.2 3.4h5.6a.8.8 0 0 1 .6 1.3l-1 1.3v4.4l2.7 2.6a1 1 0 0 1-.7 1.7H7.6a1 1 0 0 1-.7-1.7l2.7-2.6V6l-1-1.3a.8.8 0 0 1 .6-1.3z"/><path d="M12 15v5.6"/></svg>',
@@ -61,6 +60,7 @@
     tag:'<svg viewBox="0 0 24 24"><path d="M3 11.4V5.6A2.6 2.6 0 0 1 5.6 3h5.8a2.6 2.6 0 0 1 1.8.8l7.2 7.2a2.6 2.6 0 0 1 0 3.7l-5.5 5.5a2.6 2.6 0 0 1-3.7 0l-7.2-7.2a2.6 2.6 0 0 1-.8-1.8z"/><circle cx="7.9" cy="7.9" r="1.6"/></svg>',
     sparkle:'<svg viewBox="0 0 24 24"><path d="M11 3.6l1.5 4.1a2.4 2.4 0 0 0 1.4 1.4l4.1 1.5-4.1 1.5a2.4 2.4 0 0 0-1.4 1.4L11 17.6l-1.5-4.1a2.4 2.4 0 0 0-1.4-1.4L4 10.6l4.1-1.5a2.4 2.4 0 0 0 1.4-1.4z"/><path d="M18.2 15.2l.6 1.6.6.6 1.6.6-1.6.6-.6.6-.6 1.6-.6-1.6-.6-.6-1.6-.6 1.6-.6.6-.6z"/></svg>',
     lock:'<svg viewBox="0 0 24 24" class="lk"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
+    me:'<svg viewBox="0 0 24 24" class="me" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg>',
     check:'<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus:'<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>'
   };
@@ -91,18 +91,19 @@
 
   const clone = x => JSON.parse(JSON.stringify(x));
   const saved = load();
-  // Google Sheet sync (see "Google Sheet sync" further down).
+  // The family's Google Sheet (see "The family's Google Sheet" further down). SYNC_KEY is where this phone
+  // kept the Sheet's link and phrase before aOS did (handed over once, then forgotten); -at, the last sync.
   const SYNC_KEY = KEY + '-sync', GRAVE_KEY = KEY + '-graves', shadow = new Map();
-  let syncCfg = null, graves = {};
+  let graves = {}, lastSyncAt = 0;
+  try { lastSyncAt = +localStorage.getItem(SYNC_KEY + '-at') || 0; } catch(e) {}
   // Notifications (see "notifications" further down): this phone's choices.
   const PUSH_KEY = KEY + '-push';
   const push = {server:'', on:false, skip:[], nudges:true, morning:'09:00', tz:''};
   try { Object.assign(push, JSON.parse(localStorage.getItem(PUSH_KEY)) || {}); } catch(e) {}
   const savePush = () => { try { localStorage.setItem(PUSH_KEY, JSON.stringify(push)); } catch(e) {} };
   let pushDirty = false, pendingOpen = null;
-  try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch(e) {}
-  // The Sheet link and code are also kept in IndexedDB, so they survive if
-  // localStorage is cleared or full (every AllisonOS app shares its space).
+  // The Sheet link and code this phone kept before aOS did were also kept in IndexedDB (so they
+  // survived if localStorage was cleared or full): handed over to aOS from there too, then deleted.
   const keep = (() => {
     let db = null;
     // opened after the old Notes Vintage app's copy is moved over, if it is (../home/design.js)
@@ -124,11 +125,7 @@
   let storeWarned = false;
   function storeFailed(){
     if (storeWarned) return; storeWarned = true;
-    setTimeout(() => toast('This phone couldn’t save Notes: storage is full.' + (syncCfg ? ' Your notes are safe in the Google Sheet.' : ' Back up soon.')), 800);
-  }
-  function saveSyncCfg(){
-    try { syncCfg ? localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)) : localStorage.removeItem(SYNC_KEY); } catch(e) { storeFailed(); }
-    keep.set('sync', syncCfg ? {url:syncCfg.url, secret:syncCfg.secret} : null);
+    setTimeout(() => toast('This phone couldn’t save Notes: storage is full.' + (lastSyncAt ? ' Your notes are safe in the family’s Google Sheet.' : ' Back up soon.')), 800);
   }
   try { graves = JSON.parse(localStorage.getItem(GRAVE_KEY)) || {}; } catch(e) {}
   let notes = saved ? saneAll(saved.notes, saneNote) : clone(SAMPLE_NOTES);
@@ -145,7 +142,7 @@
   let todos = saved ? saneAll(saved.todos, saneTodo) : clone(SAMPLE_TODOS);
   // What each item looked like at the last save, so any change anywhere in
   // the app stamps it with a new 'updated' time, and anything that vanished
-  // is recorded as deleted (a "grave") for the other phone.
+  // is recorded as deleted (a "grave") for the other phones.
   function initShadow(){
     shadow.clear();
     [['notes', notes], ['todos', todos], ['lists', lists]].forEach(([kind, arr]) => arr.forEach(it => {
@@ -184,7 +181,18 @@
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
-  function save(){ track(); persist(); if (syncCfg) scheduleSync(); pushDirty = true; }
+  function save(){ track(); persist(); if (signedIn()) scheduleSync(); pushDirty = true; }
+  // Signed in to the family account (../home/account.js): syncing needs it.
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  const meId = () => { const u = window.AllisonOS && AllisonOS.account && AllisonOS.account.user(); return (u && u.id) || ''; };
+  // Yours: one you made (the Sheet writes whose each is, by), so you can make it Just me, or not.
+  const isMine = it => !it.by || (!!meId() && it.by === meId());
+  // The words under a Just-me switch (a note, a reminder, a list), and the switch itself.
+  const ONLY_ON = 'Only you see it. Nobody else in the family gets it.', ONLY_OFF = 'Shared with the family. Just me keeps it to you.';
+  const onlyHint = (it, made, on = ONLY_ON, off = ONLY_OFF) => !isMine(it)
+    ? (meId() ? 'Shared with the family. Only the person who ' + made + ' can make it Just me.' : 'Sign in to change who sees it.')
+    : it.only ? on : off;
+  const flipOnly = it => { if (!isMine(it)) return; if (it.only) delete it.only; else it.only = true; };
   function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } shareCal(); }
   // Calendar's Notes layer: dated reminders and notes with a nudge, kept in your own
   // family account (home/welcome.js AllisonOS.layer), since Calendar can't read this
@@ -404,6 +412,7 @@
   function card(n, i, opts = {}){
     const rem = n.reminder ? fmtRem(n.reminder) : null;
     const meta = (n.archived && opts.flagArchived ? '<span class="tchip bare">' + I.archive + 'Archived</span>' : '')
+      + (n.only ? '<span class="tchip bare">' + I.me + 'Just me</span>' : '')
       + (rem ? '<span class="tchip bare' + (rem.over ? ' over' : '') + '">' + I.bell + esc(rem.txt) + '</span>' : '')
       + n.tags.map(t => tchip(t, st.q)).join('');
     return '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
@@ -432,7 +441,7 @@
   const snippet = n => (n.body || '').split('\n').map(l => l.trim().replace(/^[•*-]\s*/, '')).filter(l => l && !/^[A-Z][A-Z &]+:?$/.test(l))[0] || '';
   const nrow = (n, i) => '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
     + '<button class="nrow" type="button" style="--i:' + i + '" data-id="' + esc(n.id) + '"><span class="nt">' + esc(n.title || snippet(n) || 'Untitled')
-    + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</span><span class="ns">' + esc(n.title ? snippet(n) : '') + '</span><span class="nd">' + esc(fmtDay(n.created)) + '</span></button></div>';
+    + (n.only ? I.me + '<span class="vh"> (Just me)</span>' : '') + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</span><span class="ns">' + esc(n.title ? snippet(n) : '') + '</span><span class="nd">' + esc(fmtDay(n.created)) + '</span></button></div>';
 
   function renderNotes(){
     const c = st.coll, searching = tokensOf(st.q).length > 0;
@@ -679,8 +688,12 @@
     $('edRemClear').hidden = !e.reminder;
     $('swatches').innerHTML = COLORS.map(c => '<button class="swatch" type="button" role="radio" data-color="'+c+'" data-sw="'+c+'" aria-label="'+(c === 'none' ? 'Clear glass' : c)+'" aria-checked="'+(e.color === c)+'"></button>').join('');
     $('edPrivate').setAttribute('aria-checked', !!e.private);
-    $('edPrivHint').textContent = e.private ? 'Hidden from Ipsy. It still syncs' + (syncCfg ? ' to the Google Sheet and the other phones' : '') + ' like any other note.'
+    $('edPrivHint').textContent = e.private ? 'Hidden from Ipsy. Private doesn’t hide it from the family: Just me does.'
       : 'Private hides this note from Ipsy.';
+    // Just me: only you see it, on your phones; only the person who wrote it can set it, or clear it.
+    $('edOnly').setAttribute('aria-checked', !!e.only);
+    $('edOnly').disabled = !isMine(e);
+    $('edOnlyHint').textContent = onlyHint(e, 'wrote it');
     $('edPin').innerHTML = e.pinned ? I.pinFill : I.pin;
     $('edPin').setAttribute('aria-pressed', e.pinned);
     $('edPin').setAttribute('aria-label', e.pinned ? 'Unpin note' : 'Pin note');
@@ -713,6 +726,7 @@
   $('edTitle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('edBody').focus(); } });
   window.addEventListener('resize', () => { if (!$('editor').hidden) growBody(); });
   $('edPrivate').onclick = () => { st.editing.private = !st.editing.private; renderEditor(); };
+  $('edOnly').onclick = () => { flipOnly(st.editing); renderEditor(); };
   $('edPin').onclick = () => { st.editing.pinned = !st.editing.pinned; renderEditor(); };
   $('edRem').addEventListener('change', e => { st.editing.reminder = e.target.value ? iso(new Date(e.target.value)) : null; renderEditor(); });
   $('edRemClear').onclick = () => { st.editing.reminder = null; renderEditor(); };
@@ -770,6 +784,7 @@
     const l = listById(t.list);
     const meta = [];
     if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+(alertsHere(t) ? I.bell : I.clock)+esc(fmtDue(t))+'</span>');
+    if (t.only || (l.only && !st.rlist)) meta.push('<span class="tchip bare">'+I.me+'Just me</span>');
     if (!st.rlist) meta.push('<span class="tchip lst">'+esc(l.name)+'</span>');
     t.tags.forEach(x => meta.push(tchip(x, st.rq)));
     return '<div class="todo'+(t.done ? ' done' : '')+'" style="'+lcStyle(l.color)+';--i:'+(i||0)+'">'
@@ -817,7 +832,8 @@
     let c = '<button class="chip glass" type="button" data-list="" aria-pressed="'+(!st.rlist)+'">All lists</button>';
     lists.forEach(l => {
       const n = todos.filter(t => !t.done && t.list === l.id).length;
-      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)+' <span class="n">'+n+'</span></button>';
+      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)
+        + (l.only ? I.me + '<span class="vh"> (Just me)</span>' : '') + ' <span class="n">'+n+'</span></button>';
     });
     c += '<button class="chip ghost" type="button" id="addList">'+I.plus+'List</button>';
     $('listChips').innerHTML = c;
@@ -851,6 +867,9 @@
       });
     }
     if (doneCount) h += '<button class="morebtn glass" type="button" id="toggleDone">'+(st.showDone ? 'Hide completed' : 'Show '+doneCount+' completed')+'</button>';
+    // Finished more than 90 days ago: in the family's Google Sheet, fetched when asked for (once a visit).
+    if (!searching && lookBack() && (st.showDone || (!doneCount && (st.rview === 'all' || st.rlist))))
+      h += '<button class="morebtn glass" type="button" id="olderDone"'+(older.busy ? ' disabled' : '')+'>'+(older.busy ? 'Getting older completed…' : 'Show completed before ' + esc(fmtShort(keepFrom())))+'</button>';
     $('remBody').innerHTML = h;
   }
 
@@ -867,6 +886,7 @@
     }
     if (e.target.closest('#addList')) { openListEditor(null); return; }
     if (e.target.closest('#toggleDone')) { st.showDone = !st.showDone; render(); return; }
+    if (e.target.closest('#olderDone')) { loadOlder(); return; }
     const chk = e.target.closest('[data-check]');
     if (chk) {
       const t = todos.find(x => x.id === chk.dataset.check);
@@ -939,6 +959,11 @@
     }
     $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
+    // Just me: in a Just-me list (yours, or you wouldn't have it) it is anyway.
+    const inOnly = !!listById(t.list).only;
+    $('tdOnly').setAttribute('aria-checked', !!t.only || inOnly);
+    $('tdOnly').disabled = inOnly || !isMine(t);
+    $('tdOnlyHint').textContent = inOnly ? listById(t.list).name + ' is Just me, so only you see its reminders.' : onlyHint(t, 'added it');
     todoTags.render();
     slideTodo();
   }
@@ -975,6 +1000,7 @@
     renderTodo();
   });
   $('tdFlag').onclick = () => { st.todo.flagged = !st.todo.flagged; renderTodo(); };
+  $('tdOnly').onclick = () => { if (!listById(st.todo.list).only) flipOnly(st.todo); renderTodo(); };
   // Where the site is on Cloudflare, the Calendar app's function puts the
   // reminder straight into the iCloud Family calendar (calendar/README.md);
   // anywhere else, or if that fails, a calendar file as before.
@@ -1008,7 +1034,7 @@
     $('lsLbl').textContent = l ? 'Edit list' : 'New list';
     $('lsName').value = st.listEdit.name;
     $('lsDelete').hidden = !l || lists.length < 2;
-    renderListColors(); renderListGrocery();
+    renderListColors(); renderListGrocery(); renderListOnly();
     openSheet('listSheet');
     $('lsName').focus();
   }
@@ -1018,6 +1044,14 @@
   const editGrocery = () => isGrocery(Object.assign({}, st.listEdit, {name: $('lsName').value}));
   function renderListGrocery(){ $('lsGrocery').setAttribute('aria-checked', editGrocery()); }
   $('lsGrocery').onclick = () => { st.listEdit.grocery = !editGrocery(); renderListGrocery(); };
+  // Just me: the list and every reminder in it, only for you.
+  function renderListOnly(){
+    const l = st.listEdit;
+    $('lsOnly').setAttribute('aria-checked', !!l.only);
+    $('lsOnly').disabled = !isMine(l);
+    $('lsOnlyHint').textContent = onlyHint(l, 'made it', 'Only you see this list and its reminders.', 'Shared with the family. Just me keeps this list and its reminders to you.');
+  }
+  $('lsOnly').onclick = () => { flipOnly(st.listEdit); renderListOnly(); };
   $('lsName').addEventListener('input', renderListGrocery);
   $('lsColors').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { st.listEdit.color = b.dataset.c; renderListColors(); } });
   $('lsName').addEventListener('keydown', e => { if (e.key === 'Enter') $('lsSave').click(); });
@@ -1133,7 +1167,7 @@
     toast('Added ' + plural(n, 'item'));
   };
   function checkIncoming(){
-    if (/^#sync=/.test(location.hash)) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); takeSetupLink(h); return; }
+    if (/^#sync=/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); toast(SETUP_GONE); return; }
     const m = location.hash.match(/^#add=([\w-]+)$/);
     if (!m) return;
     const link = location.href;
@@ -1195,7 +1229,7 @@
   function handlePaste(text){
     text = (text || '').trim();
     if (!text) { toast('The clipboard is empty. Copy something first.'); return; }
-    if (takeSetupLink(text)) return;
+    if (/#sync=[\w-]+/.test(text)) { toast(SETUP_GONE); return; }
     const link = text.match(/#add=([\w-]+)/);
     if (link) {
       try { offerImport(JSON.parse(b64d(link[1])), 'Shared with you. It’ll be added as a new copy.'); }
@@ -1408,38 +1442,70 @@
     else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeCook(); }
   }, true);
 
-  // ---------- Google Sheet sync: one shared Sheet for both phones ----------
-  // The app sends everything to a small Apps Script in the Sheet a couple of
-  // seconds after each change (and when it opens); the script merges it with
-  // what the other phone sent (newest change wins) and sends the whole lot
-  // back. Deleted-for-good items travel as "graves" so they stay deleted.
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
-  let lastSyncAt = 0;
-  try { lastSyncAt = +localStorage.getItem(SYNC_KEY + '-at') || 0; } catch(e) {}
+  // ---------- The family's Google Sheet ----------
+  // One Sheet for the whole family, the record of everyone's notes, reminders and lists (aOS/SHEETS.md):
+  // all shared, except what someone marks Just me, which only they ever get. This phone keeps a working
+  // copy: every note, list and open reminder, and the reminders finished in the last 90 days; older
+  // finished ones stay in the Sheet and come back when you ask (Show completed before …). Syncs go
+  // through aOS (../home/sheet.js, functions/sheet/api), signed in, so the phone holds no Sheet link or
+  // phrase. A couple of seconds after each change (and when the app opens, comes back to the front or
+  // back online) it sends everything; the script merges it (newest change wins) and sends back all
+  // this person may see. Deleted-for-good items travel as "graves" so they stay deleted everywhere.
+  const APP_ID = 'allison-notes-sync', KEEP_DAYS = 90;
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
+  // Synced with the family's Sheet at least once: from then on, finished reminders older than 90 days are the Sheet's.
+  let familySynced = false;
+  try { familySynced = localStorage.getItem(KEY + '-family') === '1'; } catch(e) {}
   const SYNC_ERRORS = {
-    'wrong-secret':'The secret code doesn’t match the SECRET in the script.',
-    'secret-not-set':'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
-    'busy':'The Sheet was busy. Trying again shortly.',
-    'bad-request':'The Sheet didn’t understand the request.',
-    'network':'Couldn’t reach the Sheet. Check the link, or you may be offline.',
-    'not-json':'That link didn’t answer like the Notes script. Check it ends in /exec and “Who has access” is Anyone.'
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Notes keeps everything on this phone.',
+    'no-sheet': 'The family’s Notes Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Notes Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Notes Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Notes Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.'
   };
-  const syncLabel = () => ({off:'', idle:'', syncing:' · Syncing…', ok:' · Synced', error:' · Not synced', offline:' · Offline'})[syncState] || '';
+  const syncLabel = () => ({syncing:' · Syncing…', ok:' · Synced', error:' · Not synced', offline:' · Offline'})[syncState] || '';
   const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+  // The first day this phone keeps finished reminders from (the Sheet's script counts the same way).
+  const keepFrom = () => dayOff(-(KEEP_DAYS - 1));
+  const fmtShort = d => new Date(d + 'T12:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year: d.slice(0, 4) === todayStr().slice(0, 4) ? undefined : 'numeric'});
 
-  function applyRemote(res){
+  // The link and phrase this phone kept before aOS did: on the owner's phone they go to aOS once (it
+  // keeps them from then on); on every phone, once aOS has them, they're forgotten here (both copies).
+  async function handOver(){
+    if (!SH() || !signedIn()) return;
+    let old = null;
+    try { old = JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch(e) {}
+    if (!old || !old.secret) old = await keep.get('sync');
+    if (!old || !old.secret) return;
+    if (await SH().adopt('notes', {url: old.url, secret: old.secret})) { try { localStorage.removeItem(SYNC_KEY); } catch(e) {} await keep.set('sync', null); }
+  }
+
+  // sent: what this sync sent ('notes:<id>', ...). Anything sent that doesn't come back, with no
+  // grave, is the Sheet's alone now: a reminder finished more than 90 days ago, or one someone made
+  // Just me. It leaves this phone with no grave (nothing is deleted). Anything not sent (made while
+  // the sync was on its way) stays, and goes with the next one.
+  function applyRemote(res, sent){
     Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
     let localNewer = false;
     const mergeKind = (kind, local, remote) => {
-      const map = new Map(local.map(x => [x.id, x]));
+      const map = new Map(local.map(x => [x.id, x])), back = new Set();
       (remote || []).forEach(r => {
         if (!r || typeof r.id !== 'string') return;
+        back.add(r.id);
         const l = map.get(r.id);
-        if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
-        else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
+        if (!l || (+r.updated || 0) >= (+l.updated || 0)) map.set(r.id, r);   // the same change too: the Sheet's copy says whose it is
+        else localNewer = true;
       });
-      const remoteIds = new Set((remote || []).map(r => r && r.id));
-      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
+      local.forEach(l => {
+        if (back.has(l.id) || graves[kind + ':' + l.id]) return;
+        if (sent && sent.has(kind + ':' + l.id) && !(kind === 'todos' && l.done && older.done)) map.delete(l.id);
+        else localNewer = true;
+      });
       return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
     notes = mergeKind('notes', notes, saneAll(res.notes, saneNote));
@@ -1463,29 +1529,34 @@
       persist(); localStorage.setItem(KEY + '-private-v2', '1');
     } catch(e) {}
   }
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud){
-    if (!syncCfg) return false;
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
     if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
     syncing = true; syncState = 'syncing'; renderSyncStatus();
     let ok = false;
     try {
-      privateOnce(); track(); persist();
-      let r, res;
-      try {
-        r = await fetch(syncCfg.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, redirect:'follow', cache:'no-store',
-          body: JSON.stringify({secret:syncCfg.secret, action:'sync', v:1, notes, todos, lists, graves})});
-      } catch(e) { throw new Error('network'); }
-      try { res = await r.json(); } catch(e) { throw new Error('not-json'); }
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      // still the samples shown before your first save: they never go to the family's Sheet (or Calendar);
+      // the first sync just takes what the Sheet has
+      let fresh = false; try { fresh = !localStorage.getItem(KEY); } catch(e) {}
+      if (!fresh) { privateOnce(); track(); persist(); }
+      const sent = fresh ? new Set() : new Set([].concat(notes.map(x => 'notes:' + x.id), todos.map(x => 'todos:' + x.id), lists.map(x => 'lists:' + x.id)));
+      const res = await SH().sync('notes', fresh ? {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes:[], todos:[], lists:[], graves:{}}
+        : {action:'sync', v:2, window:KEEP_DAYS, today:todayStr(), notes, todos, lists, graves}, {ask:loud});
+      if (res.app && res.app !== APP_ID) throw new Error('not-json');
+      if (!res.aos) throw new Error('old-script');
+      if (![res.notes, res.todos, res.lists].every(Array.isArray)) throw new Error('not-json');   // never take a partial answer as "gone"
       lastSyncAt = Date.now(); try { localStorage.setItem(SYNC_KEY + '-at', String(lastSyncAt)); } catch(e) {}
+      if (!familySynced) { familySynced = true; try { localStorage.setItem(KEY + '-family', '1'); } catch(e) {} }
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
-      applyRemote(res);
+      if (fresh) { let still = true; try { still = !localStorage.getItem(KEY); } catch(e) {} if (still) { notes = []; todos = []; lists = []; } else syncAgain = true; }   // unless you saved something meanwhile
+      applyRemote(res, sent);
       if (pushDirty) { pushDirty = false; pokePush(); }
       if (pendingOpen) { const w = pendingOpen; pendingOpen = null; openFrom(w, true); }
     } catch(e) {
-      syncState = 'error'; syncErr = e.message;
-      if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
+      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
@@ -1494,13 +1565,39 @@
   }
   function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
 
+  // Looking back: reminders finished before the 90 days this phone keeps come from the Sheet (once a
+  // visit, signed in), and stay until the app is next opened.
+  const older = {busy:false, done:false};
+  const lookBack = () => familySynced && !older.done && !!SH() && signedIn();
+  async function loadOlder(){
+    if (!lookBack() || older.busy) return;
+    if (!navigator.onLine) { toast(SYNC_ERRORS.offline); return; }
+    older.busy = true; render();
+    try {
+      const to = dayOff(-KEEP_DAYS), res = await SH().sync('notes', {action:'range', from:'2000-01-01', to}, {ask:true});
+      let n = 0;
+      saneAll(res.todos, saneTodo).forEach(t => {
+        if (!t.done || todos.some(x => x.id === t.id) || graves['todos:' + t.id]) return;
+        if (!lists.some(l => l.id === t.list)) return;          // its list is gone, or isn't yours to see
+        const {updated, ...rest} = t;
+        todos.push(t); shadow.set('todos:' + t.id, JSON.stringify(rest)); n++;
+      });
+      older.done = true; st.showDone = true;
+      if (n) persist();
+      toast(n ? plural(n, 'older completed reminder') + ' from the family’s Google Sheet' : 'No older completed reminders in the family’s Google Sheet');
+    } catch(e) {
+      toast(SYNC_ERRORS[e.message] || 'Couldn’t get them from the Sheet. Try again later.');
+    } finally { older.busy = false; render(); }
+  }
+
   function renderSyncStatus(){
-    const on = !!syncCfg;
-    const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
-    $('bkSheetSub').textContent = line;
-    $('syStatus').textContent = on ? line : 'Not connected in ' + place() + '. Notes opened from its own icon, from aOS and in Safari each keep their own copy, so each needs connecting once.';
-    $('syForm').hidden = on; $('syOn').hidden = !on;
+    const signed = signedIn();
+    const line = !signed ? SYNC_ERRORS.signin
+      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
+    $('bkSheetSub').textContent = signed ? line : 'Sign in to sync';
+    $('syStatus').textContent = line;
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     if (st.tab === 'notes' && !st.coll && !tokensOf(st.q).length) $('notesSub').textContent = plural(shelf().length, 'note') + syncLabel();
     syncPill();
   }
@@ -1528,68 +1625,23 @@
     const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
     return app ? 'the Notes app' : 'this browser';
   };
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz8kIAKSV-PVYnVX_TvZeSGNiR1t5kqArVzcjnSw7OkiHbyWEmVmxNqoPwFc4oQZRcO/exec';
-  function openSyncSheet(pre){
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
-    $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
-    if (pre && syncCfg) { $('syForm').hidden = false; $('syOn').hidden = true; }
-    renderSyncStatus();
-    if (pre) {
-      $('syForm').hidden = false; $('syOn').hidden = true;
-      // Say exactly where the link points, so a link from anyone else stands out.
-      let where = pre.u; try { const u = new URL(pre.u); where = u.host + u.pathname.replace(/^(\/macros\/s\/.{6}).*(\/exec)$/, '$1…$2'); } catch(e) {}
-      const other = syncCfg && syncCfg.url !== pre.u;
-      $('syStatus').textContent = 'From a setup link to ' + where + '. ' + (other ? 'That is a different Sheet from the one this phone uses now. ' : '')
-        + 'Connect sends your notes and reminders there. Only tap Connect if the link came from your own Notes.';
-    }
-    openSheet('syncSheet');
-  }
-  $('bkSheet').onclick = () => { closeSheet('backupSheet'); openSyncSheet(); };
-  $('syForm').onsubmit = async e => {
-    e.preventDefault();
-    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = syncCfg;
-    syncCfg = {url, secret};
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sync(true);
-    $('syConnect').disabled = false;
-    if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
-    saveSyncCfg();
-    if (linkServer && !push.on) { push.server = linkServer; savePush(); }
-    linkServer = null;
-    renderSyncStatus();
-    toast('Connected. ' + plural(alive().length, 'note') + ' and ' + plural(todos.length, 'reminder') + ' now in the Sheet.');
-  };
+  $('bkSheet').onclick = () => { closeSheet('backupSheet'); renderSyncStatus(); openSheet('syncSheet'); };
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify(Object.assign({u:syncCfg.url, s:syncCfg.secret}, push.server ? {p:push.server} : {})));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. To use it, copy it, open Notes and tap the clipboard button. Only send it to your wife.'); }
-    catch(e) { toast('Copy isn’t available here.'); }
-  };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; saveSyncCfg();
-    renderSyncStatus(); toast('Disconnected. Your notes stay on this phone and in the Sheet.');
-  };
-  function takeSetupLink(text){
-    const m = text.match(/#sync=([\w-]+)/); if (!m) return false;
-    // The link's notification server (p) is only taken once Connect works.
-    try { const c = JSON.parse(b64d(m[1])); if (c && typeof c.u === 'string' && typeof c.s === 'string') { linkServer = typeof c.p === 'string' && okServer(c.p) ? c.p : null; openSyncSheet(c); return true; } } catch(e) {}
-    toast('That setup link is damaged. Copy it again.'); return true;
-  }
-  document.addEventListener('visibilitychange', () => { if (syncCfg && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
-  window.addEventListener('online', () => { if (syncCfg) sync(false); });
+  // A setup link (#sync=…) from before aOS kept the Sheet: nothing to set up any more, and nothing in it is kept.
+  const SETUP_GONE = 'Setup links aren’t needed any more: sign in, and Notes syncs with the family’s Google Sheet by itself.';
+  document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(false); });
+  window.addEventListener('online', () => { if (signedIn()) sync(false); });
+  // Signed in (here, or by a sync that asked): hand the old link over, then sync. Signed out: say so.
+  addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync(false)); else { syncState = 'signin'; renderSyncStatus(); render(); } });
 
   // ---------- notifications (notes/push; notes/README.md, "Notifications") ----------
   // The server alerts this phone when a reminder is due, or a note's nudge
-  // comes round, even with Notes closed. It reads them from the Google Sheet,
-  // so it needs the Sheet connected; this phone tells it its time zone, which
-  // lists to alert for, whether to include nudges, and when "no time" is.
+  // comes round, even with Notes closed. It reads them from the family's Google
+  // Sheet with its own copy of the Sheet's link and phrase, so this phone only
+  // shows it that it's signed in to the family (its session, checked with aOS
+  // once, never kept), which also tells it whose Just-me reminders are this
+  // phone's. This phone tells it its time zone, which lists to alert for,
+  // whether to include nudges, and when "no time" is.
   const okServer = u => /^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?(\/[\w.\/-]*)?$/.test(u);
   const pushable = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const zone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(e) { return ''; } };
@@ -1598,9 +1650,11 @@
   const bytesKey = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const fmtClock = hm => new Date('2000-01-01T' + (hm || '09:00')).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
   const PUSH_ERRORS = {
-    'no-sheet':'Connect the Google Sheet first (the download button, then Google Sheet sync). The server reads your reminders from it.',
-    'wrong-secret':'The server says the Sheet’s secret code is wrong. Reconnect the Google Sheet, then try again.',
-    'other-sheet':'This server already alerts for a different Google Sheet. Use the setup link from the phone that set it up.',
+    'signin':'Sign in first: notifications come from the family’s Google Sheet, for the family.',
+    'no-sheet':'The notification server doesn’t have the family’s Google Sheet yet. The owner gives it the Sheet (Notes README, “Notifications”).',
+    'wrong-secret':'The notification server’s phrase for the family’s Google Sheet doesn’t match any more. The owner gives it the new one (Notes README, “Notifications”).',
+    'other-sheet':'This server already alerts for a different Google Sheet.',
+    'not-family':'The notification server couldn’t check that you’re in the family. Try again in a minute.',
     'sheet-network':'The server couldn’t reach the Google Sheet. Try again in a minute.',
     'sheet-not-json':'The server couldn’t read the Google Sheet. Check that Sync now works, then try again.',
     'sheet-busy':'The Google Sheet was busy. Try again in a moment.',
@@ -1629,7 +1683,8 @@
 
   function pushPrefs(){ return {tz:zone(), lang:navigator.language || 'en-US', morning:push.morning, skip:push.skip, nudges:push.nudges}; }
   async function subscribeHere(sub){
-    await pushPost('subscribe', {subscription:sub.toJSON(), sheet:{url:syncCfg.url, secret:syncCfg.secret}, prefs:pushPrefs()});
+    if (!signedIn()) throw new Error('signin');
+    await pushPost('subscribe', {subscription:sub.toJSON(), session:AllisonOS.account.token(), prefs:pushPrefs()});
     push.tz = zone(); savePush();
   }
   function renderPush(){
@@ -1638,7 +1693,7 @@
     $('puOff').hidden = on; $('puOnBox').hidden = !on;
     $('puStatus').textContent = !pushable()
       ? (isIOS && !standalone() ? 'On iPhone, notifications only work in Notes opened from its own Home Screen icon. Open it from there and turn them on.' : 'This browser can’t show notifications.')
-      : !syncCfg ? PUSH_ERRORS['no-sheet']
+      : !signedIn() ? PUSH_ERRORS.signin
       : on ? 'On in ' + place() + '. Reminders alert here at their Alert time, even with Notes closed.'
       : 'Get an alert on this phone when a reminder is due or a note’s nudge comes round, even with Notes closed.';
     $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
@@ -1651,7 +1706,11 @@
   $('puOn').onclick = async () => {
     const server = $('puServer').value.trim().replace(/\/+$/, '');
     if (!pushable()) { renderPush(); return; }
-    if (!syncCfg) { $('puStatus').textContent = PUSH_ERRORS['no-sheet']; return; }
+    if (!signedIn()) {
+      $('puStatus').textContent = PUSH_ERRORS.signin;
+      if (window.AllisonOS && AllisonOS.account) AllisonOS.account.prompt('Sign in to turn on notifications for Notes.').then(ok => { if (ok) renderPush(); });
+      return;
+    }
     if (!okServer(server)) { $('puStatus').textContent = 'Enter the server address. It starts with https:// and ends in workers.dev.'; return; }
     $('puOn').disabled = true; $('puStatus').textContent = 'Turning on…';
     try {
@@ -1711,7 +1770,7 @@
     if (!push.on || !push.server) return;
     currentSub().then(sub => {
       if (!sub) return;
-      return pushPost('refresh', {endpoint:sub.endpoint}).catch(e => { if (e.message === 'not-subscribed' && syncCfg) return subscribeHere(sub); });
+      return pushPost('refresh', {endpoint:sub.endpoint}).catch(e => { if (e.message === 'not-subscribed' && signedIn()) return subscribeHere(sub); });
     }).catch(() => {});
   }
   // Opening a notification: the reminder or note it's about. If it isn't on
@@ -1722,7 +1781,7 @@
     const i = what.indexOf(':'), kind = what.slice(0, i), id = what.slice(i + 1);
     if (kind === 'todo' && todos.some(t => t.id === id)) { setTab('rem'); if (!$('todoSheet').hidden) finishTodo(); openTodo(id); return; }
     if (kind === 'note' && notes.some(n => n.id === id)) { setTab('notes'); if (!$('editor').hidden) finishEdit(); openEditor(id); return; }
-    if (!late && syncCfg) { pendingOpen = what; sync(false); return; }
+    if (!late && signedIn()) { pendingOpen = what; sync(false); return; }
     toast(kind === 'note' ? 'That note isn’t here any more.' : 'That reminder isn’t here any more.');
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && typeof e.data.open === 'string') openFrom(e.data.open); });
@@ -1737,7 +1796,7 @@
   // ---------- backup ----------
   const LAST = KEY + '-backup';
   const lastBackup = () => { try { return +localStorage.getItem(LAST) || 0; } catch(e) { return 0; } };
-  const needsBackup = () => (notes.length + todos.length > 3) && Date.now() - lastBackup() > 7 * D && !(syncCfg && Date.now() - lastSyncAt < 7 * D);
+  const needsBackup = () => (notes.length + todos.length > 3) && Date.now() - lastBackup() > 7 * D && !(lastSyncAt && Date.now() - lastSyncAt < 7 * D);
   function backupStatus(){
     const t = lastBackup();
     if (!t) return 'Not backed up yet.';
@@ -1849,14 +1908,8 @@
     history.replaceState(null, '', location.pathname + location.hash);
     openFrom(q);
   })();
-  if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
-  else keep.get('sync').then(c => {
-    if (syncCfg || !c || !c.url || !c.secret) return;
-    syncCfg = {url:c.url, secret:c.secret}; syncState = 'idle';
-    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch(e) {}
-    renderSyncStatus(); sync(false);
-    toast('Reconnected to the Google Sheet from this phone’s backup copy.');
-  });
+  // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
+  setTimeout(() => handOver().finally(() => sync(false)), 600);
   // "Updated": the app fingerprints its own code; when the fingerprint changes
   // (a new version was published), the pill shows once for 5 seconds. The very
   // first open only records the fingerprint. The code is in app.js now, so the

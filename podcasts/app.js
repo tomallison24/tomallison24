@@ -64,12 +64,14 @@
         if (s.cc === 'gb' && !s.ccChosen) s.cc = 'us';
         return s;
       })(Object.assign({}, DEF_SET, v.set && typeof v.set === 'object' ? v.set : {})),
-      lastRefresh: +v.lastRefresh || 0, lastClean: +v.lastClean || 0
+      lastRefresh: +v.lastRefresh || 0, lastClean: +v.lastClean || 0,
+      // deleted (an unfollow, an episode unsaved, History cleared): kind:id -> when, for the family's Google Sheet
+      graves: v.graves && typeof v.graves === 'object' && !Array.isArray(v.graves) ? v.graves : {}
     };
   })();
   let warned = false;
-  function save(){
-    scheduleSheet();   // the Google Sheet backup, if connected: soon, and only if its three lists changed
+  // Writes S to this phone. save() also notes what changed for the family's Google Sheet and syncs a moment later.
+  function persist(){
     const write = () => localStorage.setItem(KEY, JSON.stringify(S));
     try { write(); }
     catch(e) {
@@ -77,13 +79,21 @@
       try { write(); } catch(e2) { if (!warned) { warned = true; toast('This phone’s storage is full, so some progress may not be kept.'); } }
     }
   }
+  function save(){
+    const changed = track();
+    persist();
+    // a playing episode's progress, every ten seconds, is not worth a sync by itself; pausing is
+    const ticking = cur && !player.paused && changed.every(k => k === 'prog:' + cur.k);
+    if (changed.length && !ticking && signedIn()) scheduleSync();
+  }
   // Progress: {t: seconds in, d: length, p: played, at: when, e: the episode
-  // (kept only while it's part-played, for Up Next)}.
+  // (kept only while it's part-played, for Up Next), updated}. Trimmed to the
+  // newest: what's dropped is only forgotten here (no grave: the Sheet keeps it).
   function pruneProg(keep){
     const ents = Object.entries(S.prog).sort((a, b) => (b[1].at || 0) - (a[1].at || 0));
+    ents.slice(keep).forEach(([k]) => shadow.delete('prog:' + k));
     S.prog = Object.fromEntries(ents.slice(0, keep));
   }
-  if (Object.keys(S.prog).length > 3000) pruneProg(3000);
 
   const idb = (function(){
     let dbp = null;
@@ -208,6 +218,120 @@
     const d = new DOMParser().parseFromString(html.slice(0, 4000), 'text/html');   // inert: nothing runs or loads
     return (d.body.textContent || '').replace(/\s+/g, ' ').trim();
   }
+
+  // =====================================================================
+  // WHAT SYNCS WITH THE FAMILY'S GOOGLE SHEET (the syncing itself is near the end)
+  // Four kinds, each item with an id and `updated` (stamped on any change), and
+  // a grave (S.graves, kind:id -> when) for anything deleted, so your other
+  // phones delete it too (as in Fitness):
+  //   shows  what you follow (S.follows; id: the show's id)
+  //   saved  your saved episodes (S.saved; id: the episode's key k; at: when saved)
+  //   hist   History (S.hist; id: k; pl: when you played it)
+  //   prog   where you got to, and what's played (S.prog; id: k)
+  // hist and prog are dated (date: the day played, or last listened). Once
+  // synced, the phone keeps the last 90 days of History (at most 100) and asks
+  // the Sheet for older; what's played stays on the phone however old (at most
+  // 3000), so an old episode doesn't look new again, but only its last 90 days
+  // come from the Sheet. Shows' episode lists, Up Next, what's playing and
+  // Settings stay on each phone.
+  // =====================================================================
+  const KEEP_DAYS = 90, HIST_MAX = 100;
+  const pad2 = n => String(n).padStart(2, '0');
+  const ymd = ms => { if (!(ms > 0)) return ''; const d = new Date(ms); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return ymd(d.getTime()); };
+  const today = () => ymd(Date.now());
+  const SK = {cfg: KEY + '-sheet', at: KEY + '-sync-at', synced: KEY + '-synced'};
+  const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+  const lsDel = k => { try { localStorage.removeItem(k); } catch(e) {} };
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  // Synced with the family Sheet at least once: from then on the phone keeps 90 days of History.
+  let synced = lsGet(SK.synced) === '1';
+  const pruneFrom = () => synced ? addDays(today(), -(KEEP_DAYS - 1)) : null;
+  // Older History fetched from the Sheet this session (kind:id), kept until the next tidy-up.
+  const older = new Set();
+  let olderFrom = null, olderEnd = false, olderBusy = false;
+  const str = v => String(v == null ? '' : v);
+  // An episode from the Sheet, as the app keeps one: only web links, as from a feed.
+  const epIn = r => snap({k: r.id, sid: str(r.sid || r.id.split('|')[0]), t: str(r.t), d: +r.d || 0, u: media(r.u), v: !!r.v, dur: +r.dur || 0, img: media(r.img),
+    st: str(r.st), sa: media(r.sa), feed: webUrl(r.feed), link: webUrl(r.link), s: str(r.s), sn: +r.sn || 0, en: +r.en || 0, x: str(r.x)});
+  const okEp = r => typeof r.u === 'string';
+  const byNewest = f => (a, b) => (f(b[1]) || 0) - (f(a[1]) || 0);
+  // Each kind: its items as [id, the object the app keeps]; what's sent of one (out: never `updated`, which
+  // goes beside it); one from the Sheet made into the app's (in, given this phone's own copy, if any); and
+  // putting a merged list back.
+  const SYNC = {
+    shows: {
+      items: () => S.follows.map(f => [f.id, f]),
+      out: (id, f) => ({id, feed: f.feed, title: f.title || '', author: f.author || '', art: f.art || '', genre: f.genre || '', at: f.at || 0}),
+      ok: r => !!webUrl(r.feed),
+      // when its newest episode came out, and an error loading it, are this phone's own
+      in: (r, l) => ({id: r.id, feed: webUrl(r.feed), title: str(r.title), author: str(r.author), art: media(r.art), genre: str(r.genre), at: +r.at || 0,
+        latest: (l && l.latest) || 0, err: (l && l.err) || '', updated: +r.updated || 0}),
+      set: list => { S.follows = list.sort(byNewest(f => f.at)).map(x => x[1]); }
+    },
+    saved: {
+      items: () => S.saved.map(e => [e.k, e]),
+      out: (id, e) => Object.assign({id}, snap(e), {at: e.at || 0}),
+      ok: okEp,
+      in: r => Object.assign(epIn(r), {at: +r.at || 0, updated: +r.updated || 0}),
+      set: list => { S.saved = list.sort(byNewest(e => e.at)).map(x => x[1]); }
+    },
+    hist: {
+      dated: true, day: e => ymd(e.pl),
+      items: () => S.hist.map(e => [e.k, e]),
+      out: (id, e) => Object.assign({id}, snap(e), {pl: e.pl || 0, date: ymd(e.pl)}),
+      ok: okEp,
+      in: r => Object.assign(epIn(r), {pl: +r.pl || 0, updated: +r.updated || 0}),
+      set: list => { S.hist = list.sort(byNewest(e => e.pl)).map(x => x[1]); capHist(); }
+    },
+    prog: {
+      dated: true, keepAll: true, day: p => ymd(p.at),
+      items: () => Object.entries(S.prog).filter(([, p]) => p && typeof p === 'object'),
+      out: (id, p) => { const o = {id, t: p.t || 0, d: p.d || 0, p: !!p.p, at: p.at || 0, date: ymd(p.at)}; if (p.e) o.e = snap(p.e); return o; },
+      ok: () => true,
+      in: r => {
+        const p = {t: +r.t || 0, d: +r.d || 0, at: +r.at || 0, updated: +r.updated || 0};
+        if (r.p) p.p = true;
+        if (r.e && typeof r.e === 'object' && typeof r.e.k === 'string') p.e = epIn(Object.assign({}, r.e, {id: r.e.k}));
+        return p;
+      },
+      set: list => { S.prog = Object.fromEntries(list); }
+    }
+  };
+  // History keeps its newest 100 (and what was fetched from the Sheet this session); the rest is only
+  // forgotten here, with no grave: the Sheet keeps it.
+  function capHist(){
+    let n = 0;
+    S.hist = S.hist.filter(e => { if (older.has('hist:' + e.k) || n++ < HIST_MAX) return true; shadow.delete('hist:' + e.k); return false; });
+  }
+  // What each item looked like at the last save (as in Fitness and Travel): a change stamps `updated`, and a
+  // gone one leaves a grave.
+  const shadow = new Map();
+  function initShadow(){
+    shadow.clear();
+    for (const kind in SYNC) for (const [id, o] of SYNC[kind].items()) {
+      if (!o.updated) o.updated = 1;
+      shadow.set(kind + ':' + id, JSON.stringify(SYNC[kind].out(id, o)));
+    }
+  }
+  function track(){
+    const now = Date.now(), have = new Set(), changed = [];
+    for (const kind in SYNC) for (const [id, o] of SYNC[kind].items()) {
+      const k = kind + ':' + id, j = JSON.stringify(SYNC[kind].out(id, o));
+      have.add(k);
+      if (shadow.get(k) !== j || !o.updated) { o.updated = now; shadow.set(k, j); delete S.graves[k]; changed.push(k); }
+    }
+    shadow.forEach((j, k) => { if (!have.has(k)) { S.graves[k] = now; shadow.delete(k); changed.push(k); } });
+    return changed;
+  }
+  // From before the Sheet was the record: when each saved episode was saved and each History one played (its
+  // progress's time, else when it came out), in the lists' order; and graves over 400 days old go.
+  S.saved.forEach((e, i) => { if (!(e.at > 0)) e.at = Date.now() - i * 1000; });
+  S.hist.forEach((e, i) => { if (!(e.pl > 0)) e.pl = (S.prog[e.k] && S.prog[e.k].at) || e.d || Date.now() - i * 1000; });
+  Object.keys(S.graves).forEach(k => { if (!(Date.now() - S.graves[k] < 400 * DAY)) delete S.graves[k]; });
+  if (Object.keys(S.prog).length > 3000) pruneProg(3000);
+  initShadow();
 
   // =====================================================================
   // FEEDS
@@ -416,7 +540,7 @@
     const e = getEp(k);
     if (!e) return;
     if (isSaved(k)) { S.saved = S.saved.filter(x => x.k !== k); toast('Removed from Saved'); }
-    else { S.saved.unshift(snap(e)); toast('Saved'); }
+    else { S.saved.unshift(Object.assign(snap(e), {at: Date.now()})); toast('Saved'); }
     save(); render();
   }
   const inQueue = k => S.queue.some(x => x.k === k);
@@ -536,8 +660,10 @@
         : emptyCard('No saved episodes', 'Tap the bookmark on any episode to keep it here.');
     } else if (st.lib === 'hist') {
       const eps = S.hist.map(x => getEp(x.k) || x);
-      h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div><button class="morebtn" type="button" data-act="hist-clear">Clear history</button>'
-        : emptyCard('Nothing played yet', 'Episodes you play show up here.');
+      // older than the 90 days this phone keeps: from the family's Google Sheet, a year at a time
+      const more = synced && signedIn() && !olderEnd ? '<button class="morebtn" type="button" data-act="hist-older"' + (olderBusy ? ' disabled' : '') + '>' + (olderBusy ? 'Loading…' : 'Show older') + '</button>' : '';
+      h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div>' + more + '<button class="morebtn" type="button" data-act="hist-clear">Clear history</button>'
+        : emptyCard('Nothing played yet', 'Episodes you play show up here.') + more;
     } else if (!S.follows.length) {
       h = emptyCard('No shows yet', 'Search for a show and tap Follow, or import your shows from another app in Settings.',
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
@@ -962,6 +1088,7 @@
     else if (a === 'new-more') { st.newLimit += 30; renderHome(); }
     else if (a.startsWith('lib:')) { st.lib = a.slice(4); try { localStorage.setItem(KEY + '-lib', st.lib); } catch(e) {} renderLib(); animateIn($('libBody')); }
     else if (a === 'hist-clear') { const h = S.hist; S.hist = []; save(); renderLib(); toast('History cleared', () => { S.hist = h; save(); renderLib(); }); }
+    else if (a === 'hist-older') loadOlder();
     else if (a.startsWith('sf:')) { st.showFilter = a.slice(3); st.showLimit = 40; renderShow(); }
     else if (a === 'sort') { st.showSort = st.showSort === 'new' ? 'old' : 'new'; st.showLimit = 40; renderShow(); }
     else if (a === 'show-more') { st.showLimit += 40; renderShow(); }
@@ -1002,7 +1129,8 @@
     cur = snap(e);
     S.now = cur;
     S.queue = S.queue.filter(x => x.k !== e.k);
-    S.hist = [cur, ...S.hist.filter(x => x.k !== e.k)].slice(0, 100);
+    S.hist = [Object.assign({}, cur, {pl: Date.now()}), ...S.hist.filter(x => x.k !== e.k)];
+    capHist();
     attach(cur, from != null ? from : resumeAt(cur));
     player.play().catch(playFailed);
     save(); session(); render(); if (!$('np').hidden) renderNP();
@@ -1235,7 +1363,7 @@
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
     opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
     slideOpts();
-    renderSheetStatus();
+    renderSyncStatus();
   }
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
   const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
@@ -1286,50 +1414,39 @@
   };
 
   // =====================================================================
-  // GOOGLE SHEET BACKUP - optional; a readable copy of your shows, saved
-  // episodes and history in a Sheet of your own (google-sheet-sync.gs; steps
-  // in the README). One way: the phone writes, nothing is read back. It sends
-  // the three lists only (never episode lists, progress or settings), whole
-  // each time, at most every few seconds and only when they changed, off the
-  // player's path. Several phones can back up to one Sheet: each says who it is
-  // (`device`) and the script adds them together.
+  // THE FAMILY'S GOOGLE SHEET: the record of everyone's Podcasts, each row
+  // marked with whose it is (aOS/SHEETS.md). This phone keeps a working copy
+  // (what syncs, at the top: your shows, Saved, the last 90 days of History,
+  // and where you got to); older History comes from the Sheet when you ask.
+  // Syncs go through aOS (../home/sheet.js, functions/sheet/api), signed in,
+  // so the phone holds no Sheet link or phrase and only ever gets your own
+  // rows: the same on each of your phones. Signed out, the app works on this
+  // phone alone, and the Sheet sheet says to sign in.
   // =====================================================================
   const SHEET_APP = 'allison-podcasts-sync';
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in for you; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzyRxvnOvC97ByhaBJ0_Oc1Z-pP_SBIA9rZPEa5dyvvn1c4W1tGcOyM8LG4XXXbf7Vb/exec';
-  const SHEET_MAX = 3000;
-  const SK = {cfg: KEY + '-sheet', at: KEY + '-sheet-at', device: KEY + '-device'};
-  const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
-  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
-  const lsDel = k => { try { localStorage.removeItem(k); } catch(e) {} };
-  const DEVICE_OK = /^p[0-9a-f]{16}$/;
-  let deviceNew = false, deviceId = lsGet(SK.device) || '';
-  if (!DEVICE_OK.test(deviceId)) {
-    const a = new Uint8Array(8);
-    try { crypto.getRandomValues(a); } catch(e) { for (let i = 0; i < 8; i++) a[i] = Math.floor(Math.random() * 256); }
-    deviceId = 'p' + Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
-    deviceNew = true; lsSet(SK.device, deviceId);
-  }
-  let sheetCfg = null;
-  try { sheetCfg = JSON.parse(lsGet(SK.cfg)); } catch(e) {}
-  if (!sheetCfg || typeof sheetCfg.url !== 'string' || typeof sheetCfg.secret !== 'string') sheetCfg = null;
-  let sheetBusy = false, sheetAgain = false, sheetTimer = 0, sheetState = sheetCfg ? 'idle' : 'off', sheetErr = '', sheetErrShown = false, sheetLastSig = '', sheetDelay = 6000;
-  let sheetAt = +lsGet(SK.at) || 0, sheetCounts = null;
-  const SHEET_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t add a space to the code.',
-    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
-    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
-    'busy': 'The Sheet was busy. Trying again shortly.',
-    'bad-request': 'The Sheet didn’t understand the request.',
-    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
-    'not-json': 'That link didn’t answer like the Podcasts script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Podcasts needs the web app link from its own Sheet (Extensions → Apps Script → Deploy → Manage deployments).'
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  let syncing = false, syncAgain = false, syncTimer = 0, syncState = 'idle', syncErr = '', errShown = false, syncDelay = 2000;
+  let lastSyncAt = +lsGet(SK.at) || 0;
+  // The one-way backup's own: its time and this phone's id (it told phones apart; the Sheet now goes by person).
+  lsDel(KEY + '-sheet-at'); lsDel(KEY + '-device');
+  const SYNC_ERRORS = {
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Podcasts keeps everything on this phone.',
+    'no-sheet': 'The family’s Podcasts Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Podcasts Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Podcasts Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Podcasts Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.'
   };
-  // A copy of the link, code and this phone's id in a small database of its own, as in Drinks: it survives a full or
-  // cleared localStorage (every AllisonOS app shares its space). Separate from the episode database, so that one is never touched.
+  // The link and phrase this phone used to keep (before aOS kept them), in localStorage and in a small database
+  // of their own: on the owner's phone they go to aOS once (it keeps them from then on); on every phone, once aOS
+  // has them, they're forgotten here.
   const sheetKeep = (function(){
     let dbp = null;
     const open = () => dbp || (dbp = Promise.resolve(window.aosDesign && aosDesign.moved).then(() => new Promise((res, rej) => {   // after design.js's move (as the episode database)
+      if (!window.indexedDB) return rej(new Error('No IndexedDB'));
       const r = indexedDB.open('allison-podcasts-sheet', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
@@ -1343,153 +1460,130 @@
       set: (k, v) => tx('readwrite', x => v == null ? x.delete(k) : x.put(v, k)).catch(() => {})
     };
   })();
-  // This phone's id: the copy in IndexedDB wins if localStorage was just emptied, so the Sheet doesn't see a new phone.
-  const deviceReady = sheetKeep.get('device').then(d => {
-    if (deviceNew && typeof d === 'string' && DEVICE_OK.test(d)) { deviceId = d; lsSet(SK.device, d); }
-    else if (d !== deviceId) sheetKeep.set('device', deviceId);
-  });
-  function saveSheetCfg(){
-    if (sheetCfg) lsSet(SK.cfg, JSON.stringify(sheetCfg)); else lsDel(SK.cfg);
-    sheetKeep.set('sheet', sheetCfg ? {url: sheetCfg.url, secret: sheetCfg.secret} : null);
+  async function handOver(){
+    let old = null;
+    try { old = JSON.parse(lsGet(SK.cfg)); } catch(e) {}
+    if (!old || !old.secret) old = await sheetKeep.get('sheet');
+    if (!old || !old.secret || !SH() || !signedIn()) return;
+    if (await SH().adopt('podcasts', {url: old.url, secret: old.secret})) { lsDel(SK.cfg); sheetKeep.set('sheet', null); sheetKeep.set('device', null); }
   }
-
-  // What is sent: the show's name looked up from the loaded show, else what the episode remembers, else the follow.
-  const showName = e => { const sh = shows.get(e.sid), f = followOf(e.sid); return (sh && sh.title) || e.st || (f && f.title) || ''; };
-  const sheetEp = e => ({k: e.k, show: showName(e), t: e.t || '', d: e.d || 0, dur: e.dur || (S.prog[e.k] && S.prog[e.k].d) || 0, u: e.u || '', link: e.link || ''});
-  function sheetSnapshot(){
-    return {
-      follows: S.follows.slice(0, SHEET_MAX).map(f => ({id: f.id, feed: f.feed, title: f.title || '', author: f.author || '', genre: f.genre || '', at: f.at || 0})),
-      saved: S.saved.slice(0, SHEET_MAX).map(sheetEp),
-      hist: S.hist.slice(0, SHEET_MAX).map(e => Object.assign(sheetEp(e), {played: (S.prog[e.k] && S.prog[e.k].at) || 0}))
-    };
+  // The Sheet's answer, merged into this phone's copy: the newest change of each item wins, and graves delete.
+  // Dated items older than the 90 days go (no grave: the Sheet keeps them), except what's played.
+  function applyRemote(res){
+    Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((S.graves[k] || 0) < t) S.graves[k] = t; });
+    const gone = (k, o) => { const g = S.graves[k]; return !!(g && g >= (+o.updated || 0)); };
+    const from = pruneFrom();
+    let localNewer = false;
+    for (const kind in SYNC) {
+      const K = SYNC[kind], inWin = o => !K.dated || !from || K.day(o) >= from;
+      const mine = new Map(), kept = new Map();
+      for (const [id, o] of K.items()) {
+        if (inWin(o)) mine.set(id, o);
+        else if (K.keepAll || older.has(kind + ':' + id)) kept.set(id, o);   // not compared: the Sheet sends only the 90 days
+      }
+      const remote = (Array.isArray(res[kind]) ? res[kind] : []).filter(r => r && typeof r === 'object' && typeof r.id === 'string' && r.id && K.ok(r));
+      const ids = new Set();
+      remote.forEach(r => {
+        ids.add(r.id);
+        const l = mine.get(r.id);
+        if (!l || (+r.updated || 0) > (+l.updated || 0)) mine.set(r.id, K.in(r, l || kept.get(r.id)));
+        else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
+      });
+      mine.forEach((o, id) => { if (!ids.has(id) && !S.graves[kind + ':' + id]) localNewer = true; });
+      kept.forEach((o, id) => { if (!mine.has(id)) mine.set(id, o); });
+      K.set([...mine].filter(([id, o]) => !gone(kind + ':' + id, o)));
+    }
+    initShadow(); persist();
+    if (localNewer) syncAgain = true;
+    // shows followed on another phone: their episodes, from this phone's store or their feeds
+    const missing = S.follows.filter(f => !shows.has(f.id));
+    if (missing.length) Promise.all(missing.map(f => ensureShow(f.id))).then(() => {
+      render();
+      const still = S.follows.filter(f => !shows.has(f.id));
+      if (still.length) pool(still, 4, f => loadShow(f.feed, f.id).catch(e => { f.err = e.message; })).then(render);
+    });
+    render();
   }
-  // Has anything changed? An episode that is playing moves its "played" time on every ten seconds; that alone doesn't count.
-  function sheetSig(snap){
-    snap = snap || sheetSnapshot();
-    const playing = cur && player && !player.paused ? cur.k : '';
-    return JSON.stringify([snap.follows, snap.saved, snap.hist.map(h => h.k === playing ? Object.assign({}, h, {played: 0}) : h)]);
-  }
-  async function sheetSync(loud){
-    if (!sheetCfg) return false;
-    if (sheetBusy) { sheetAgain = true; return false; }
-    if (navigator.onLine === false) { sheetState = 'offline'; renderSheetStatus(); return false; }
-    sheetBusy = true; sheetState = 'syncing'; renderSheetStatus();
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
+  async function sync(loud){
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
+    if (syncing) { syncAgain = true; return false; }
+    if (navigator.onLine === false) { syncState = 'offline'; renderSyncStatus(); return false; }
+    syncing = true; syncState = 'syncing'; renderSyncStatus();
     let ok = false;
     try {
-      await deviceReady;
-      const snap = sheetSnapshot(), sig = sheetSig(snap);
-      let r, res;
-      try {
-        r = await fetch(sheetCfg.url, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({secret: sheetCfg.secret, action: 'sync', v: 1, device: deviceId, follows: snap.follows, saved: snap.saved, hist: snap.hist})});
-      } catch(e) { throw new Error('network'); }
-      try { res = await r.json(); } catch(e) { throw new Error('not-json'); }
-      if (res && res.ok && res.app && res.app !== SHEET_APP) throw new Error('wrong-app');
-      if (res && res.error === 'wrong-secret' && res.app !== SHEET_APP) throw new Error(await whichSheetScript(sheetCfg.url));
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
-      sheetAt = Date.now(); lsSet(SK.at, String(sheetAt)); sheetLastSig = sig;
-      sheetState = 'ok'; sheetErr = ''; sheetErrShown = false; ok = true;
-      sheetCounts = {shows: +res.shows || 0, saved: +res.saved || 0, history: +res.history || 0};
+      track(); persist();
+      // all of it the first time; then the last 90 days of what's dated (older is in the Sheet already)
+      const from = pruneFrom(), body = {action: 'sync', v: 2, window: KEEP_DAYS, today: today(), graves: S.graves};
+      for (const kind in SYNC) {
+        const K = SYNC[kind];
+        body[kind] = K.items().filter(([, o]) => !K.dated || !from || K.day(o) >= from).map(([id, o]) => Object.assign(K.out(id, o), {updated: o.updated}));
+      }
+      const res = await SH().sync('podcasts', body, {ask: loud});
+      if (res.app && res.app !== SHEET_APP) throw new Error('not-json');
+      if (!res.aos) throw new Error('old-script');
+      lastSyncAt = Date.now(); lsSet(SK.at, String(lastSyncAt));
+      if (!synced) { synced = true; lsSet(SK.synced, '1'); }
+      syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
+      applyRemote(res);
     } catch(e) {
-      sheetState = 'error'; sheetErr = e.message;
-      if (loud || !sheetErrShown) { sheetErrShown = true; toast(SHEET_ERRORS[sheetErr] || 'The Google Sheet didn’t sync. Trying again later.'); }
-      if (sheetErr === 'busy') scheduleSheet(10000);
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message;
+      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+      if (syncErr === 'busy') scheduleSync(10000);
     } finally {
-      sheetBusy = false; renderSheetStatus();
-      if (sheetAgain) { sheetAgain = false; scheduleSheet(800); }
+      syncing = false; renderSyncStatus();
+      if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  // A "wrong secret" from a script that doesn't say it's Podcasts': ask the link which app it belongs to (every script
-  // answers a plain GET with its name).
-  async function whichSheetScript(url){
+  function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? syncDelay : ms); }
+  // Looking back past the 90 days of History this phone keeps: a year at a time from the Sheet (Library →
+  // History → Show older), kept here until the next tidy-up.
+  async function loadOlder(){
+    const floor = pruneFrom();
+    if (!floor || olderBusy || olderEnd || !SH()) return;
+    const to = addDays(olderFrom || floor, -1), from = addDays(to, -364);
+    olderBusy = true; renderLib();
     try {
-      const r = await fetch(url, {cache: 'no-store', redirect: 'follow'});
-      const d = await r.json();
-      if (d && d.app && d.app !== SHEET_APP) return 'wrong-app';
-      if (d && d.app === SHEET_APP) return 'old-script';
-    } catch(e) {}
-    return 'wrong-secret';
+      const res = await SH().sync('podcasts', {action: 'range', from, to}, {ask: true});
+      olderFrom = from;
+      let n = 0;
+      for (const kind of ['hist', 'prog']) {
+        const K = SYNC[kind], have = new Set(K.items().map(x => x[0]));
+        for (const r of (Array.isArray(res[kind]) ? res[kind] : [])) {
+          if (!r || typeof r.id !== 'string' || !r.id || !K.ok(r) || have.has(r.id) || S.graves[kind + ':' + r.id]) continue;
+          const o = K.in(r);
+          if (!o.updated) o.updated = 1;
+          if (kind === 'hist') { S.hist.push(o); n++; } else S.prog[r.id] = o;
+          older.add(kind + ':' + r.id); shadow.set(kind + ':' + r.id, JSON.stringify(K.out(r.id, o)));
+        }
+      }
+      if (n) S.hist.sort((a, b) => (b.pl || 0) - (a.pl || 0));
+      else { olderEnd = true; toast('Nothing older in the family’s Google Sheet.'); }
+      persist();
+    } catch(e) { toast(SYNC_ERRORS[e.message] || 'Couldn’t reach the Sheet. Try again later.'); }
+    olderBusy = false; renderLib();
   }
-  // Called by every save(). Once a timer is pending, more saves add nothing; when it fires, a send happens only if the lists changed.
-  function scheduleSheet(ms){
-    if (!sheetCfg || sheetTimer) return;
-    sheetTimer = setTimeout(() => {
-      sheetTimer = 0;
-      if (sheetCfg && !sheetBusy && (sheetState !== 'ok' || sheetSig() !== sheetLastSig)) sheetSync(false);
-      else if (sheetCfg && sheetBusy) sheetAgain = true;
-    }, ms == null ? sheetDelay : ms);
+  function renderSyncStatus(){
+    const signed = signedIn();
+    $('sheetSub').textContent = !signed ? 'Sign in to sync' : syncState === 'error' ? 'Not synced just now' : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? 'Offline: will sync when you’re back online' : lastSyncAt ? 'Synced ' + ago(lastSyncAt) : 'Not synced yet';
+    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
+      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
   }
-  const sheetLine = () => !sheetCfg ? 'Not connected' : sheetState === 'error' ? 'Couldn’t back up just now' : sheetState === 'syncing' ? 'Backing up…'
-    : sheetState === 'offline' ? 'Offline: will back up when you’re back online' : sheetAt ? 'Connected. Last backed up ' + ago(sheetAt) + '.' : 'Connected';
-  function renderSheetStatus(){
-    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
-    if (!$('syStatus')) return;
-    const on = !!sheetCfg;
-    $('syStatus').textContent = !on ? 'Keep a readable copy of your shows, saved episodes and listening history in a Google Sheet of your own. It is a one-way backup: nothing is read back from the Sheet.'
-      : sheetState === 'error' ? (SHEET_ERRORS[sheetErr] || 'Not backed up')
-      : sheetState === 'syncing' ? 'Backing up…'
-      : sheetState === 'offline' ? 'Offline. Your changes will be backed up when you’re back online.'
-      : sheetAt ? 'Connected. Last backed up ' + ago(sheetAt) + (sheetCounts ? ': ' + sheetCounts.shows + (sheetCounts.shows === 1 ? ' show, ' : ' shows, ') + sheetCounts.saved + ' saved, ' + sheetCounts.history + ' in history.' : '.')
-      : 'Connected.';
-    $('syForm').hidden = on; $('syOn').hidden = !on;
-  }
-  function openSheetSync(pre){
-    $('syUrl').value = pre ? pre.u : sheetCfg ? sheetCfg.url : SHEET_URL;
-    $('sySecret').value = pre ? pre.s : sheetCfg ? sheetCfg.secret : '';
-    renderSheetStatus();
-    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and back up.'; }
-    openSheet('syncSheet');
-  }
-  $('setSheetBtn').onclick = () => openSheetSync();
-  $('syForm').onsubmit = async e => {
-    e.preventDefault();
-    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = sheetCfg;
-    sheetCfg = {url, secret};
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sheetSync(true);
-    $('syConnect').disabled = false;
-    if (!ok) { sheetCfg = before; sheetState = before ? 'idle' : 'off'; const err = sheetErr; renderSheetStatus(); $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = SHEET_ERRORS[err] || 'Couldn’t connect.'; return; }
-    saveSheetCfg(); renderSheetStatus();
-    toast('Connected. ' + S.follows.length + (S.follows.length === 1 ? ' show' : ' shows') + ' backed up to the Sheet.');
-  };
-  $('syNow').onclick = async () => { if (await sheetSync(true)) toast('Backed up'); };
-  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
-  $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({u: sheetCfg.url, s: sheetCfg.secret}));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Podcasts on your other phone. Keep it private.'); }
-    catch(e) { toast('Copy isn’t available here.'); }
-  };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    sheetCfg = null; sheetState = 'off'; clearTimeout(sheetTimer); sheetTimer = 0; sheetLastSig = ''; saveSheetCfg(); renderSheetStatus();
-    toast('Disconnected. Your shows stay on this phone and in the Sheet.');
-  };
-  function takeSetupLink(text){
-    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSheetSync(c); return; } } catch(e) {}
-    toast('That setup link is damaged. Copy it again.');
-  }
-  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
-  // When the app opens, and when it comes back after a while or the phone is online again.
-  if (sheetCfg) {
-    setTimeout(() => sheetSync(false), 2500);
-    sheetKeep.get('sheet').then(c => { if (sheetCfg && (!c || c.url !== sheetCfg.url || c.secret !== sheetCfg.secret)) saveSheetCfg(); });
-  } else sheetKeep.get('sheet').then(c => {
-    if (sheetCfg || !c || !c.url || !c.secret) return;
-    sheetCfg = {url: c.url, secret: c.secret}; sheetState = 'idle'; lsSet(SK.cfg, JSON.stringify(sheetCfg));
-    sheetSync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
-  });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && sheetCfg && Date.now() - sheetAt > 10 * MIN) sheetSync(false); });
-  addEventListener('online', () => { if (sheetCfg && sheetState !== 'ok') sheetSync(false); });
+  $('setSheetBtn').onclick = () => { renderSyncStatus(); openSheet('syncSheet'); };
+  $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
+  // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
+  if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
+  // On start (after handing over), on sign-in, when the app comes back to the front, and when the phone is online again.
+  setTimeout(() => handOver().finally(() => sync(false)), 600);
+  addEventListener('aos:account', e => { renderSyncStatus(); if (e.detail) handOver().then(() => sync(false)); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastSyncAt > 30000) sync(false); });
+  addEventListener('online', () => sync(false));
   // For the tests (podcasts/scripts/app-test.mjs) only.
-  window.__podcasts = {S, save, sheetSync, sheetState: () => sheetState, sheetCfg: () => sheetCfg, device: () => deviceId, setSheetDelay: ms => { sheetDelay = ms; }};
+  window.__podcasts = {S, save, sync, syncState: () => syncState, setSyncDelay: ms => { syncDelay = ms; }, pruneFrom, loadOlder, older: () => [...older]};
 
   // =====================================================================
   // START

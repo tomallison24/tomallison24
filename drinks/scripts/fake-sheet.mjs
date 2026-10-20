@@ -7,7 +7,9 @@ import fs from 'fs';
 import vm from 'vm';
 import path from 'path';
 
-export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase') {
+// asAos: the link parameters aOS adds to every request (functions/sheet/api: key, who, name, owner),
+// used when a test doesn't give its own to post()
+export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase', asAos = {}) {
   const sheets = new Map();
   const makeSheet = name => {
     const sh = {
@@ -31,6 +33,12 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
         setWrap: () => {},
         getSheet: () => sh, getRow: () => r, getNumRows: () => nr,
       }),
+      // a column put in front of column c: every row, and each column's number format, moves one right
+      insertColumnBefore: c => {
+        sh.cells.forEach(r => { if (r && r.length >= c - 1) r.splice(c - 1, 0, ''); });
+        sh.formats = new Set([...sh.formats].map(f => { const i = f.indexOf(':'), n = +f.slice(0, i); return (n >= c ? n + 1 : n) + f.slice(i); }));
+        return sh;
+      },
       hideSheet: () => { sh.hidden = true; },
       setFrozenRows: () => {}, setColumnWidth: () => {},
     };
@@ -58,7 +66,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
   const api = {
     sheets,
     get: () => JSON.parse(ctx.__api.doGet().text),
-    post: body => JSON.parse(ctx.__api.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
+    post: (body, params = asAos) => JSON.parse(ctx.__api.doPost({ parameter: params, postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
     tab: n => sheets.get(n) ? sheets.get(n).cells : null,
     // a person typing into the Log tab: row is 1-based (the header is row 1), col is a header name
     type(row, header, value, tab = 'Log') {
@@ -68,6 +76,8 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
       ctx.__api.onEdit({ range: { getSheet: () => sh, getRow: () => row, getNumRows: () => 1 } });
     },
     rebuild: () => ctx.__api.rebuildTabs(),
+    // a tab as an older script left it (rows as read back, the header first)
+    put(name, rows) { const sh = sheets.get(name) || ss.insertSheet(name); sh.cells = rows.map(r => r.slice()); return sh; },
   };
   return api;
 }

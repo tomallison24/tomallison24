@@ -3,9 +3,13 @@
 // adding by search, by a pasted Apple Maps link and from where you are; the
 // place sheet (status, stars, price, dates, notes and #tags, OpenStreetMap
 // details); moving a place to Been; the lists, sorting and filters; the map
-// and its pins; Apple Maps directions; delete with undo; and the Sheet sync,
-// including an old script that doesn't know Places yet, and the Sheet link of Notes
-// (or of the old Notes Vintage app) offered in one tap.
+// and its pins; Apple Maps directions; delete with undo; and the family's Google
+// Sheet (Notes'), through aOS: the real notes/google-sheet-sync.gs on an
+// in-memory Sheet answering **/sheet/api/places, with who's asking from the
+// phone's session: signed out it asks to sign in; signed in, every place is the
+// family's, with a Who column; the owner's phone hands the Sheet link and phrase
+// it kept (Places', Notes' or the old Notes Vintage app's) to aOS, then Places
+// forgets its own.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look in
 // light and dark (the sky held at day, aos.sky: Futura, the cream or walnut ground,
 // flat cards and sheets, a mustard thumb, orange buttons, the shapes behind the
@@ -23,6 +27,7 @@ import { execSync } from 'child_process';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -44,7 +49,23 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, r));
 const BASE = 'http://localhost:' + server.address().port;
-const SHEET = 'https://script.google.com/macros/s/AKfycbTEST/exec';
+const SHEET = 'https://script.google.com/macros/s/AKfycbTEST/exec', SECRET = 'maple-otter';   // the link and phrase phones kept before aOS did
+// The family's Google Sheet (Notes'): the real Apps Script on an in-memory Sheet, reached through aOS
+// (functions/sheet/api, stood in for here): each phone's session says who's asking.
+const sheet = fakeSheet(new URL('../../notes/google-sheet-sync.gs', import.meta.url).pathname, SECRET);
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+const claims = [];
+const sheetRoute = c => c.route('**/sheet/api/**', route => {
+  const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', ''), who = PEOPLE[tok];
+  const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+  if (!who) return json({ error: 'signin' }, 401);
+  if (!/\/sheet\/api\/places(\/|$)/.test(req.url())) return json({ error: 'app' }, 404);
+  if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+  if (req.method() === 'GET') return json({ configured: true });
+  calls.sheet.push({ who: who.id, ...JSON.parse(req.postData()) });
+  return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+});
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAAAASUVORK5CYII=', 'base64');
 
 const feat = (lon, lat, props) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: props });
@@ -57,7 +78,7 @@ const HOUSE = feat(-104.98, 39.74, { osm_type: 'W', osm_id: 9, osm_key: 'buildin
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, geolocation: { latitude: 39.7392, longitude: -104.9903 }, permissions: ['geolocation'], timezoneId: 'America/Denver', locale: 'en-US' });
 const calls = { photon: [], overpass: 0, sheet: [], apple: [], biz: [] };
-let sheetMode = 'old', sheetPlaces = [];
+
 const stub = async route => {
   const u = route.request().url(), cors = { 'Access-Control-Allow-Origin': '*' };
   if (u.startsWith('https://photon.komoot.io/api/')) {
@@ -81,19 +102,12 @@ const stub = async route => {
     return route.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ elements: [{ type: 'node', id: 1, tags }] }) });
   }
   if (u.includes('basemaps.cartocdn.com')) return route.fulfill({ contentType: 'image/png', body: PNG });
-  if (u.startsWith(SHEET)) {
-    const b = JSON.parse(route.request().postData() || '{}'); calls.sheet.push(b);
-    if (b.secret !== 'maple-otter') return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'wrong-secret' }) });
-    if (sheetMode === 'old') return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, notes: [], todos: [], lists: [], graves: {} }) });
-    const byId = new Map(sheetPlaces.map(p => [p.id, p]));
-    for (const p of b.places || []) if (!byId.has(p.id) || p.updated > byId.get(p.id).updated) byId.set(p.id, p);
-    sheetPlaces = [...byId.values()].filter(p => !(b.graves || {})['places:' + p.id]);
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, places: sheetPlaces, graves: b.graves || {} }) });
-  }
+  if (u.startsWith('https://script.google.com/')) { calls.google = (calls.google || 0) + 1; return route.abort(); }   // no phone talks to Google itself any more
   if (u.startsWith('https://maps.apple.com/')) { calls.apple.push(u); return route.fulfill({ status: 204, body: '' }); }
   return route.fulfill({ status: 404, body: '' });
 };
 await ctx.route(/^https?:\/\/(?!localhost)/, stub);
+await sheetRoute(ctx);
 await ctx.addInitScript(() => {
   localStorage.setItem('aos.seen', JSON.stringify({ notes: '999', places: '999', calendar: '999' }));   // the walkthrough as seen, as on a phone in use
   localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still, so the test works at any hour
@@ -257,51 +271,54 @@ ok('delete removes it', !(await rows()).some(x => x.startsWith('Corner Café')))
 await page.click('#toastAct'); await page.waitForTimeout(200);
 ok('Undo brings it back', (await rows()).some(x => x.startsWith('Corner Café')));
 
-// ---- sync ----
-await page.evaluate(sheet => localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: sheet, secret: 'maple-otter' })), SHEET);
+// ---- the family's Google Sheet (Notes'), through aOS ----
 await page.click('#syncBtn'); await page.waitForTimeout(200);
-ok('the Notes Sheet is offered in one tap where Notes shares storage', await page.isVisible('#syNotes'));
-await page.click('#syNotes'); await page.waitForTimeout(500);
-ok('an old Notes script: says it needs updating, and stays unconnected', (await page.textContent('#syStatus')).includes('needs updating') && await page.isVisible('#syForm'), await page.textContent('#syStatus'));
-sheetMode = 'new';
-sheetPlaces = [{ id: 'pwife1', name: 'Sushi Den', status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], created: 1, updated: Date.now() }];
-await page.click('#syNotes'); await page.waitForTimeout(600);
-const last = calls.sheet.at(-1);
-ok('connected: sends its places with action "places" and the Notes secret', last.action === 'places' && last.secret === 'maple-otter' && last.places.length === 4, JSON.stringify({ action: last.action, n: last.places.length }));
-ok('and loads the other phone’s place', (await rows()).some(x => x.startsWith('Sushi Den')) && (await page.textContent('#syStatus')).includes('Connected'));
+ok('signed out: the Sheet sheet says to sign in, and keeps the places on the phone', (await page.textContent('#syStatus')).startsWith('Sign in to sync with the family’s Google Sheet') && (await page.textContent('#syNow .t')) === 'Sign in and sync', await page.textContent('#syStatus'));
+ok('no link or phrase to type, no setup link, no Disconnect', (await page.$('#syUrl, #sySecret, #syConnect, #syPaste, #syNotes, #syOff')) === null);
+ok('signed out: nothing goes to the Sheet', calls.sheet.length === 0 && !calls.google);
 await page.click('#syncSheet [data-close].iconbtn');
+// Ella added a place from her phone; Tom signs in, on a phone where Notes kept the Sheet link and phrase (Safari: shared storage)
+const mkPlace = (id, name, x) => Object.assign({ id, name, status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], notes: '', created: 1, updated: Date.now() }, x);
+sheet.post({ action: 'places', places: [mkPlace('pwife1', 'Sushi Den')], graves: {} }, { key: SECRET, who: 'ella', name: 'Ella' });
+await page.evaluate(([s, sheet]) => { localStorage.setItem('aos.session', s); localStorage.setItem('allison-notes-v1-sync', JSON.stringify({ url: sheet, secret: 'maple-otter' })); }, [session('tok-tom'), SHEET]);
+await page.reload();
+await page.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 }).catch(() => {});
+await toList();
+const last = calls.sheet.at(-1);
+ok('signed in: sends its places with action "places", and no phrase', last && last.action === 'places' && last.who === 'tom' && last.places.length === 4 && !('secret' in last), JSON.stringify(last && { action: last.action, n: last.places.length }));
+ok('and loads the family’s places (Ella’s too)', (await rows()).some(x => x.startsWith('Sushi Den')) && (await page.textContent('#syStatus')).startsWith('In the family’s Google Sheet. Last synced'), await page.textContent('#syStatus'));
+ok('the owner’s phone hands the Notes Sheet link and phrase it found over to aOS', claims.some(c => c.who === 'tom' && c.url === SHEET && c.secret === SECRET));
+const want = sheet.tab('📍 Want to go');
+ok('in the Sheet, each place says who added it', want[0][0] === 'Who' && want.slice(1).some(r => r[0] === 'Ella' && r[1] === 'Sushi Den') && want.slice(1).some(r => r[0] === 'Tom' && r[1] === 'Corner Café'), JSON.stringify(want.map(r => r.slice(0, 2))));
 await page.click('#list .row:has-text("Corner Café")'); await page.waitForTimeout(300);
 await page.click('#plDelete'); await page.waitForTimeout(2200);
-ok('a delete reaches the Sheet as a deleted mark', !sheetPlaces.some(p => p.name === 'Corner Café') && Object.keys(calls.sheet.at(-1).graves).some(k => k.startsWith('places:')));
+ok('a delete reaches the Sheet as a deleted mark', !sheet.post({ action: 'places', places: [], graves: {} }, { key: SECRET, who: 'ella', name: 'Ella' }).places.some(p => p.name === 'Corner Café') && Object.keys(calls.sheet.at(-1).graves).some(k => k.startsWith('places:')));
+ok('no phone asked Google itself', !calls.google);
 
 ok('no errors on the page', errors.length === 0, errors.join(' | '));
 
-// ---- the Sheet works from either Notes: Notes', or the old Notes Vintage app's (until that is next opened) ----
-for (const [label, key] of [['Notes Vintage', 'allison-notesv-v1-sync'], ['Notes', 'allison-notes-v1-sync']]) {
+// ---- what this phone kept from before aOS: Places' own link, or Notes' (or the old Notes Vintage app's, until that is next opened) ----
+for (const [label, key, tok] of [['Notes Vintage', 'allison-notesv-v1-sync', 'tok-tom'], ['Notes', 'allison-notes-v1-sync', 'tok-tom'], ['Places', 'allison-places-v1-sync', 'tok-tom'], ['Places, on Ella’s phone', 'allison-places-v1-sync', 'tok-ella']]) {
   const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
   await c2.route(/^https?:\/\/(?!localhost)/, stub);
-  await c2.addInitScript(([key, sheet]) => {
+  await sheetRoute(c2);
+  await c2.addInitScript(([key, sheet, s]) => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
     (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ places: '999' })));
     localStorage.setItem(key, JSON.stringify({ url: sheet, secret: 'maple-otter' }));
-  }, [key, SHEET]);
+    localStorage.setItem('aos.session', s);
+  }, [key, SHEET + '?' + key, session(tok)]);
   const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
-  await p2.goto(BASE + '/places/'); await p2.waitForTimeout(500);
-  await p2.click('#syncBtn'); await p2.waitForTimeout(200);
-  ok('the Sheet link of ' + label + ' is offered in one tap', await p2.isVisible('#syNotes'));
-  sheetMode = 'new'; sheetPlaces = [{ id: 'pv1', name: 'Sushi Den', status: 'want', lat: 39.69, lon: -104.98, category: 'Restaurant', emoji: '🍽️', tags: [], created: 1, updated: Date.now() }];
-  await p2.click('#syNotes'); await p2.waitForTimeout(700);
-  ok('and one tap connects it (' + label + '): its secret is sent and the Sheet’s places load', calls.sheet.at(-1).secret === 'maple-otter' && calls.sheet.at(-1).action === 'places' && (await p2.textContent('#syStatus')).includes('Connected') && (await p2.textContent('#list')).includes('Sushi Den'), await p2.textContent('#syStatus'));
+  const n = claims.length;
+  await p2.goto(BASE + '/places/');
+  await p2.waitForFunction(() => /Last synced/.test(document.getElementById('syStatus').textContent), null, { timeout: 8000 }).catch(() => {});
+  if (tok === 'tok-tom') ok('the owner’s phone hands the link it kept (' + label + ') to aOS', claims.length === n + 1 && claims.at(-1).url === SHEET + '?' + key && claims.at(-1).who === 'tom', JSON.stringify(claims.at(-1)));
+  else ok('a family member’s phone claims nothing (aOS has it already)', claims.length === n);
+  if (key === 'allison-places-v1-sync') ok('then Places forgets its own copy (' + label + ')', !(await p2.evaluate(() => localStorage.getItem('allison-places-v1-sync'))));
+  ok('and the family’s places load (' + label + ')', (await p2.textContent('#list')).includes('Sushi Den'));
   ok('no errors on the page (' + label + ')', e2.length === 0, e2.join(' | '));
   await c2.close();
-}
-{
-  const c3 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Denver', locale: 'en-US' });
-  await c3.route(/^https?:\/\/(?!localhost)/, stub);
-  await c3.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ places: '999' }))));
-  const p3 = await c3.newPage(); await p3.goto(BASE + '/places/'); await p3.waitForTimeout(400);
-  await p3.click('#syncBtn'); await p3.waitForTimeout(200);
-  ok('no Notes Sheet in this browser: no one-tap button, and the owner’s link is filled in for the secret to be typed', await p3.isHidden('#syNotes') && (await p3.inputValue('#syUrl')).startsWith('https://script.google.com/macros/s/') && (await p3.inputValue('#sySecret')) === '');
-  await c3.close();
 }
 
 // ---- Vintage, the default design: drawn in the Retro look, light and dark ----
@@ -375,7 +392,7 @@ for (const scheme of ['light', 'dark']) {
   await rp.click('#placeSheet [data-close].iconbtn'); await rp.waitForTimeout(300);
   // the sync sheet and the toast
   await rp.click('#syncBtn'); await rp.waitForTimeout(500);
-  ok(lbl('Retro: Connect is solid orange, Paste a setup link is outlined teal'), (await q(rp, '#syConnect', ['backgroundColor']))[0] === orangeBtn && (await q(rp, '#syPaste', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)');
+  ok(lbl('Retro: the family’s Google Sheet sheet is a flat panel too'), (await q(rp, '#syncSheet .sheet', ['backgroundColor']))[0] === cream && ['none', ''].includes((await q(rp, '#syncSheet .sheet', ['backdropFilter']))[0]));
   await rp.click('#syncSheet [data-close].iconbtn');
   await rp.click('#list .row:has-text("Corner")'); await rp.waitForTimeout(300); await rp.click('#plDelete'); await rp.waitForTimeout(300);
   ok(lbl('Retro: the toast is a flat panel'), (await q(rp, '#toast', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(240, 229, 208)' : 'rgb(61, 51, 44)') && ['none', ''].includes((await q(rp, '#toast', ['backdropFilter']))[0]));
@@ -464,12 +481,11 @@ for (const scheme of ['light', 'dark']) {
 { // the old Places Vintage app, on a phone that added it: its address opens Places, with its data moved over once
   const old = [{ id: 'v1', name: 'Snooze', status: 'want', lat: 39.75, lon: -104.99, category: 'Restaurant', emoji: '🍳', tags: [], notes: '', created: 1, updated: 1 }];
   const extra = { 'aos.seen': JSON.stringify({ placesvintage: '1.3' }), 'allison-placesv-v1': JSON.stringify(old), 'allison-placesv-v1-sort': JSON.stringify({ want: 'new', been: 'top' }), 'allison-placesv-v1-sync': JSON.stringify({ url: SHEET, secret: 'maple-otter' }) };
-  sheetMode = 'new'; sheetPlaces = [];
   const { c, pg, errs } = await phone('light', { extra, at: '/placesvintage/' });
   const got = await pg.evaluate(() => ({ list: document.getElementById('list').textContent, want: document.getElementById('nWant').textContent, sort: localStorage.getItem('allison-places-v1-sort'), sync: JSON.parse(localStorage.getItem('allison-places-v1-sync') || 'null'),
     seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), oldKept: !!localStorage.getItem('allison-placesv-v1') && !!localStorage.getItem('allison-placesv-v1-sync'), look: document.documentElement.dataset.look }));
   ok('old address: Places Vintage\'s places are now Places\' and show in the app', got.list.includes('Snooze') && got.want === '1' && JSON.parse(got.sort || '{}').want === 'new', JSON.stringify(got));
-  ok('old address: its Sheet link came too, so it stays connected and syncs', got.sync && got.sync.secret === 'maple-otter' && calls.sheet.some(b => b.secret === 'maple-otter' && (b.places || []).some(p => p.id === 'v1')));
+  ok('old address: its Sheet link came too (to be handed to aOS once signed in)', got.sync && got.sync.secret === 'maple-otter');
   ok('old address: what it had seen carries over (no walkthrough again), and nothing old is deleted', got.seen.places === '1.3' && got.oldKept);
   ok('old address: in Vintage', got.look === 'vintage');
   await pg.evaluate(o => localStorage.setItem('allison-placesv-v1', JSON.stringify([...o, { ...o[0], id: 'v2', name: 'Later one' }])), old);
