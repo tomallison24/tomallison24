@@ -34,6 +34,15 @@ with the details filled in.
 - **Ipsy**, the little stem cell at the bottom left: ask about your trips in your
   own words, change them (each change with Undo), look up any flight live, and
   check your Gmail (below).
+- **Private** (the pill on a booking, or **Private trip** on a trip's page)
+  hides a booking from Ipsy: it is left out of everything Ipsy reads (Ipsy is
+  told only how many there are), Ipsy can't change it and doesn't check it,
+  and a trip with some private bookings is shown to Ipsy with the others only,
+  named and dated by them. Its emails are hidden too (the email, its thread,
+  and any email that names its confirmation or flight number), in Calendar's
+  Ipsy as well, and its Family calendar event is marked private. It still syncs
+  and shows as usual. **Settings → Ipsy can search Gmail** turns Ipsy's Gmail
+  off altogether, on this phone.
 - **Two phones**: a shared Google Sheet, set up like Notes' (below).
 
 ## The two designs

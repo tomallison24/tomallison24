@@ -29,6 +29,15 @@
 //   read from your own Drinks log (drinks/api/summary; only you can read it).
 // - Two designs, picked in Settings (the gear) > Design: Vintage (the default) and
 //   Standard (Sea glass), kept on this phone (../home/design.js, as in Clock).
+// - Meds, a page of its own (the third view): what you take, set up once, and
+//   each day's checklist to tick off, with how often you took each over 7 and
+//   30 days. Signed in only, so a lost phone can be erased (aOS -> Lost a phone?).
+// - Steps on each day: typed in, or read from your own iPhone's Steps sensor in
+//   the family's Home Assistant through ../fitness/api (functions/fitness/api),
+//   which keeps the Home Assistant token off the phone and gives each person
+//   only their own phone's steps. A daily goal, set in Settings.
+// - With the Google Sheet connected, taken doses and steps older than 30 days
+//   are kept in the Sheet only, not on the phone.
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -48,7 +57,8 @@ if (window.top !== window.self) {
   const OTHER = '__other__';   // the exercise list's "Other…": a name typed in
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-fitness-v1';
-  const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period' };
+  const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period',
+    goal: KEY + '-step-goal', stepsLink: KEY + '-steps-link', health: KEY + '-sheet-health' };
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
@@ -59,6 +69,10 @@ if (window.top !== window.self) {
     glass: '<svg viewBox="0 0 24 24"><path d="M7.2 3.6h9.6c.4 3.8.3 6.2-.6 7.8-.9 1.6-2.4 2.6-4.2 2.6s-3.3-1-4.2-2.6c-.9-1.6-1-4-.6-7.8z"/><path d="M12 14v6.2M8.6 20.4h6.8"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     up: '<svg viewBox="0 0 24 24" class="b"><path d="M12 19V5.6M6.4 11.2L12 5.6l5.6 5.6"/></svg>',
+    pill: '<svg viewBox="0 0 24 24"><rect x="2.6" y="8.2" width="18.8" height="7.6" rx="3.8" transform="rotate(-38 12 12)"/><path d="M9.4 8.6l5.2 6.8"/></svg>',
+    shoe: '<svg viewBox="0 0 24 24"><path d="M3.4 16.6V8.4c0-.7.6-1.2 1.3-1l3 .9 1.4 2.3 3.6 1.1 6 1.6a2.6 2.6 0 0 1 1.9 2.5v.8H3.4z"/><path d="M3.4 19.4h17.2"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>',
+    minus: '<svg viewBox="0 0 24 24" class="b"><path d="M5.2 12h13.6"/></svg>',
     down: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5v13.4M6.4 12.8l5.6 5.6 5.6-5.6"/></svg>',
   };
   const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
@@ -155,20 +169,32 @@ if (window.top !== window.self) {
   // change, and anything deleted leaves a grave (kind:id -> when), so a
   // Google Sheet sync can tell newer from older and gone from not yet seen.
   // ---------------------------------------------------------------------
-  const data = { logs: [], exercises: [] };
+  // Meds and steps join them (the same object, the same graves and sync):
+  //   meds   [{id, name, dose, kind: 'med'|'supp', slots: ['am','mid','pm','bed'] (none: once
+  //          a day), days: [0-6] (Sunday 0; none: every day), prn (as needed), paused, since, updated}]
+  //   doses  [{id, med, name, date, slot ('am'|'mid'|'pm'|'bed'|'day'|'prn'), at (when, today), updated}]
+  //   steps  [{id: the date, date, n, src: 'ha' (your iPhone, from Home Assistant) | 'you', updated}]
+  const data = { logs: [], exercises: [], meds: [], doses: [], steps: [] };
   let graves = {};
-  const okLog = x => x && typeof x.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.date || '') && typeof x.exercise === 'string' && x.exercise.trim() && typeof x.group === 'string';
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const okLog = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && typeof x.exercise === 'string' && x.exercise.trim() && typeof x.group === 'string';
   const okEx = x => x && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && typeof x.group === 'string';
+  const okMed = x => x && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim();
+  const okDose = x => x && typeof x.id === 'string' && typeof x.med === 'string' && ISO.test(x.date || '') && typeof x.slot === 'string';
+  const okStep = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && x.id === x.date && +x.n >= 0;
   function load() {
     const d = ls.json(KEY, null) || {};
     data.logs = Array.isArray(d.logs) ? d.logs.filter(okLog) : [];
     data.exercises = Array.isArray(d.exercises) ? d.exercises.filter(okEx) : [];
+    data.meds = Array.isArray(d.meds) ? d.meds.filter(okMed) : [];
+    data.doses = Array.isArray(d.doses) ? d.doses.filter(okDose) : [];
+    data.steps = Array.isArray(d.steps) ? d.steps.filter(okStep) : [];
     const g = ls.json(K.graves, {}); graves = g && typeof g === 'object' && !Array.isArray(g) ? g : {};
     initShadow();
   }
   // What each item looked like at the last save (as in Travel).
   const shadow = new Map();
-  const kinds = () => [['logs', data.logs], ['exercises', data.exercises]];
+  const kinds = () => [['logs', data.logs], ['exercises', data.exercises], ['meds', data.meds], ['doses', data.doses], ['steps', data.steps]];
   function initShadow() {
     shadow.clear();
     kinds().forEach(([kind, arr]) => arr.forEach(it => {
@@ -187,7 +213,7 @@ if (window.top !== window.self) {
   }
   let storeWarned = false;
   function persist() {
-    const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises })) && ls.set(K.graves, JSON.stringify(graves));
+    const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (syncCfg ? ' Your log is safe in the Google Sheet.' : '')); }
     shareCal();
   }
@@ -240,7 +266,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  const st = { week: weekStartOf(today()), day: null, form: null, view: ls.get(K.view, 'week') === 'analysis' ? 'analysis' : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
+  const VIEW_IDS = ['week', 'analysis', 'meds'];
+  const st = { week: weekStartOf(today()), day: null, form: null, view: VIEW_IDS.includes(ls.get(K.view, 'week')) ? ls.get(K.view, 'week') : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week',
+    medDay: today(), medForm: null };
   const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false, q: '', mins: 20, dist: '' });
 
   // ---------------------------------------------------------------------
@@ -252,31 +280,34 @@ if (window.top !== window.self) {
     $('viewName').textContent = v.name;
     if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = ICON[v.icon]; }
     if (!$('viewMenu').hidden) drawViewMenu();
-    if (st.view === 'analysis') renderAnalysis(); else renderWeek();
+    $('fab').setAttribute('aria-label', st.view === 'meds' ? 'Add a medication or supplement' : 'Log today’s workout');
+    if (st.view === 'analysis') renderAnalysis(); else if (st.view === 'meds') renderMeds(); else renderWeek();
   }
   function renderWeek() {
     const ws = st.week, we = addDays(ws, 6), tod = today();
     const thisWeek = ws === weekStartOf(tod);
     const rel = thisWeek ? 'This week' : ws === weekStartOf(addDays(tod, -7)) ? 'Last week' : ws === weekStartOf(addDays(tod, 7)) ? 'Next week' : '';
     const label = (rel ? rel + ' · ' : '') + fmt(ws, { day: 'numeric', month: 'short' }) + ' – ' + fmt(we, { day: 'numeric', month: 'short', year: sameYear(we) ? undefined : 'numeric' });
-    let rows = '', days = 0, exCount = 0, sets = 0;
+    let rows = '', days = 0, exCount = 0, sets = 0, stepSum = 0, stepDays = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i), logs = logsOn(d);
       const groups = [...new Set(logs.map(x => x.group))];
       const n = logs.reduce((a, x) => a + (+x.sets || 0), 0);
       if (logs.length) { days++; exCount += logs.length; sets += n; }
+      const sp = stepsOn(d); if (sp) { stepSum += +sp.n; stepDays++; }
       const sum = logs.length
         ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(groupName(g)) + '</span>').join('') + '</span><span class="dline">' + dayLine(logs) + '</span>'
         : '<span class="rest">' + (d < tod ? 'Rest day' : d === tod ? 'Nothing logged yet' : '') + '</span>';
-      rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '') + (drinks.days[d] && typeof drinks.days[d].sd === 'number' ? ', ' + f1(drinks.days[d].sd) + ' standard drinks' : '')) + '">'
-        + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span>' + drinkTag(d) + ICON.chevR + '</button>';
+      rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '') + (drinks.days[d] && typeof drinks.days[d].sd === 'number' ? ', ' + f1(drinks.days[d].sd) + ' standard drinks' : '') + (sp ? ', ' + (+sp.n).toLocaleString('en-US') + ' steps' + (+sp.n >= goal() ? ', goal met' : '') : '')) + '">'
+        + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span><span class="tags">' + stepTag(d) + drinkTag(d) + '</span>' + ICON.chevR + '</button>';
     }
     $('todayBtn').hidden = thisWeek;
     loadDrinks(ws, we);
     main.innerHTML = '<div class="navrow" style="--i:0"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(label) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
       + '<div class="rgroup week" style="--i:1">' + rows + '</div>'
       + '<p class="sechead">' + (thisWeek ? 'This week' : 'That week') + '</p>'
-      + '<div class="stats" style="--i:2"><div class="stat"><b>' + days + '</b><span>' + (days === 1 ? 'day' : 'days') + ' trained</span></div><div class="stat"><b>' + exCount + '</b><span>' + (exCount === 1 ? 'exercise' : 'exercises') + '</span></div><div class="stat"><b>' + sets + '</b><span>' + (sets === 1 ? 'set' : 'sets') + '</span></div></div>';
+      + '<div class="stats' + (stepDays ? ' four' : '') + '" style="--i:2"><div class="stat"><b>' + days + '</b><span>' + (days === 1 ? 'day' : 'days') + ' trained</span></div><div class="stat"><b>' + exCount + '</b><span>' + (exCount === 1 ? 'exercise' : 'exercises') + '</span></div><div class="stat"><b>' + sets + '</b><span>' + (sets === 1 ? 'set' : 'sets') + '</span></div>'
+      + (stepDays ? '<div class="stat"><b>' + compact(Math.round(stepSum / stepDays)) + '</b><span>steps a day</span></div>' : '') + '</div>';
   }
   // "3 exercises · 9 sets · 20 min cardio"
   function dayLine(logs) {
@@ -290,8 +321,14 @@ if (window.top !== window.self) {
     const x = drinks.days[d];
     return x && typeof x.sd === 'number' ? '<span class="drk" title="Standard drinks, from Drinks">' + ICON.glass + f1(x.sd) + '</span>' : '';
   }
+  // Steps, beside the day: the shoe and the count, in the accent once the goal is met.
+  function stepTag(d) {
+    const x = stepsOn(d);
+    return x ? '<span class="stp' + (+x.n >= goal() ? ' met' : '') + '" title="Steps">' + ICON.shoe + compact(+x.n) + '</span>' : '';
+  }
   function goWeek(n) { st.week = addDays(st.week, 7 * n); render(); animateIn(main); }
   main.addEventListener('click', e => {
+    if (st.view === 'meds') return;   // its own taps, below
     const a = e.target.closest('[data-act]');
     if (a) { goWeek(a.dataset.act === 'prev' ? -1 : 1); return; }
     const d = e.target.closest('[data-day]');
@@ -305,8 +342,11 @@ if (window.top !== window.self) {
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goWeek(dx < 0 ? 1 : -1);
   });
-  $('todayBtn').onclick = () => { st.week = weekStartOf(today()); render(); animateIn(main); };
-  $('fab').onclick = () => { st.week = weekStartOf(today()); render(); openDay(today()); };
+  $('todayBtn').onclick = () => { st.week = weekStartOf(today()); st.medDay = today(); render(); animateIn(main); };
+  $('fab').onclick = () => {
+    if (st.view === 'meds') { if (signedIn()) openMed(null); return; }
+    st.week = weekStartOf(today()); render(); openDay(today());
+  };
 
   // ---------------------------------------------------------------------
   // The view picker: a glass pill at the bottom, as Home's; Week or Analysis
@@ -314,6 +354,7 @@ if (window.top !== window.self) {
   const VIEWS = [
     { id: 'week', name: 'Week', icon: 'week', sum: () => { const n = new Set(data.logs.filter(x => x.date >= weekStartOf(today()) && x.date <= today()).map(x => x.date)).size; return n ? plural(n, 'day') + ' trained this week' : 'Log each day’s workout'; } },
     { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => { const a = analysisNow(); return a.hasNow || a.hasBefore ? 'Improving ' + a.up.length + ' · needs work ' + (a.down.length + a.missed.length + a.dropped.length + (a.cardioMissed ? 1 : 0)) : 'Where you’re improving, and what needs work'; } },
+    { id: 'meds', name: 'Meds', icon: 'pill', sum: () => { const due = signedIn() ? dueOn(today()) : []; return due.length ? due.filter(x => doseOf(x.m.id, today(), x.slot)).length + ' of ' + due.length + ' taken today' : 'Medications and supplements you take'; } },
   ];
   function drawViewMenu() {
     $('viewMenu').innerHTML = VIEWS.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === st.view) + '"><span class="ic">' + ICON[v.icon] + '</span><span class="k">' + esc(v.name) + '<small>' + esc(v.sum()) + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
@@ -327,7 +368,7 @@ if (window.top !== window.self) {
   $('viewMenu').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
   document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
   function setView(v) {
-    st.view = v === 'analysis' ? 'analysis' : 'week'; ls.set(K.view, st.view);
+    st.view = VIEW_IDS.includes(v) ? v : 'week'; ls.set(K.view, st.view);
     closeViewMenu(); render(); animateIn(main); window.scrollTo({ top: 0 });
   }
 
@@ -346,7 +387,8 @@ if (window.top !== window.self) {
     const P = PERIODS[st.period], a = analysisNow(), r = a.range;
     const seg = '<div class="seg two small slides" role="radiogroup" aria-label="Compare" style="--i:0">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
     const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
-    if (!a.hasNow && !a.hasBefore) {
+    const sw = A.steps(data.steps, today(), P.days, goal(), pruneFrom());
+    if (!a.hasNow && !a.hasBefore && !sw.any) {
       main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few workouts and this fills in: where you’re getting stronger, and what needs work.</div>';
       slideSeg(); return;
     }
@@ -357,7 +399,7 @@ if (window.top !== window.self) {
       const delta = !a.hasBefore ? 'nothing before' : d === 0 ? 'same as before' : (d > 0 ? '+' : '−') + compact(Math.abs(d));
       const said = !a.hasBefore || !d ? delta : (d > 0 ? 'up ' : 'down ') + Math.abs(d).toLocaleString('en-US') + (t.before ? ', ' + Math.round(Math.abs(d) / t.before * 100) + '%' : '') + ' on ' + P.before;
       return '<div class="kpi" aria-label="' + esc(LBL[t.id] + ': ' + t.now.toLocaleString('en-US') + ', ' + said) + '"><span class="kl">' + LBL[t.id] + '</span><span class="kv">' + (t.now >= 100000 ? compact(t.now) : t.now.toLocaleString('en-US')) + '</span><span class="kd ' + dir + '">' + (dir ? (dir === 'up' ? '↑ ' : '↓ ') : '') + esc(delta) + '</span></div>';
-    }).join('') + '</div>';
+    }).join('') + stepTiles(sw, P) + '</div>';
     const g = id => GROUP[id] ? id : 'other';
     const was = x => x.was ? 'was ' + said(x.was) + (x.when === 'earlier' ? ' on ' + short(x.was.date) : '') : '';
     const pct = x => Math.max(1, Math.round(Math.abs(x.change) * 100)) + '%';
@@ -383,6 +425,19 @@ if (window.top !== window.self) {
       + drinksHtml(r, P)
       + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time, and cardio by speed (distance ÷ time) when you log a distance, otherwise by minutes. Volume counts weighted sets only.</p>';
     slideSeg();
+  }
+  // Steps, as two more totals: the average a day (over the days with a count) and
+  // the days at the goal. A window the phone no longer keeps (the Sheet has it) says so.
+  function stepTiles(sw, P) {
+    if (!sw.any) return '';
+    const tile = (label, now, before) => {
+      const has = before != null, d = has ? now - before : 0, dir = !has || !d ? '' : d > 0 ? 'up' : 'down';
+      const delta = !has ? (sw.before === null ? 'before: in the Sheet' : 'nothing before') : !d ? 'same as before' : (d > 0 ? '+' : '−') + compact(Math.abs(d));
+      const said = has && d ? (d > 0 ? 'up ' : 'down ') + Math.abs(d).toLocaleString('en-US') + ' on ' + P.before : delta;
+      return '<div class="kpi" aria-label="' + esc(label + ': ' + now.toLocaleString('en-US') + ', ' + said) + '"><span class="kl">' + label + '</span><span class="kv">' + now.toLocaleString('en-US') + '</span><span class="kd ' + dir + '">' + (dir ? (dir === 'up' ? '↑ ' : '↓ ') : '') + esc(delta) + '</span></div>';
+    };
+    const b = sw.before && sw.before.days ? sw.before : null, n = sw.now || { avg: 0, met: 0 };
+    return tile('Steps a day', n.avg, b && b.avg) + tile('Days at goal (' + compact(goal()) + ')', n.met, b && b.met);
   }
   // Drinks, beside your training: your own standard drinks and alcohol-free
   // days in the same two windows, from your Drinks log in your family account
@@ -441,12 +496,30 @@ if (window.top !== window.self) {
       ? logs.map(x => '<div class="erow' + (f.editing === x.id ? ' editing' : '') + '" data-g="' + esc(GROUP[x.group] ? x.group : 'other') + '"><button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Edit ' + esc(x.exercise) + '"><i></i><span class="et">' + esc(x.exercise) + '<small>' + esc(groupName(x.group)) + ' · ' + esc(fmtLine(x)) + '</small></span></button>'
         + '<button class="iconbtn del" type="button" data-del="' + esc(x.id) + '" aria-label="Delete ' + esc(x.exercise) + '">' + ICON.close + '</button></div>').join('')
       : '<div class="dempty">Nothing logged ' + (day === today() ? 'today' : 'this day') + ' yet.</div>';
-    $('dayBody').innerHTML = '<p class="label">Done</p><div class="rgroup" id="fxList">' + list + '</div>'
+    $('dayBody').innerHTML = stepsHtml(day) + '<p class="label">Done</p><div class="rgroup" id="fxList">' + list + '</div>'
       + '<p class="label">' + (f.editing ? 'Change exercise' : 'Add an exercise') + '</p>'
       + '<div class="search" role="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>'
       + '<input type="search" id="fxSearch" placeholder="Search all exercises" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Search all exercises" aria-controls="fxPick" value="' + esc(f.q) + '">'
       + '<button class="clear" type="button" id="fxSearchClear" aria-label="Clear search"' + (f.q ? '' : ' hidden') + '>' + ICON.close + '</button></div>'
       + '<div class="field" id="fxPick">' + pickHtml() + '</div>';
+  }
+  // The day's steps, at the top: from your iPhone (Home Assistant) or typed in, and
+  // a bar to the goal. Typing a number replaces the iPhone's for that day; clearing
+  // it lets the iPhone's count fill it in again.
+  function stepsHtml(day) {
+    const x = stepsOn(day), n = x ? +x.n : 0, pct = Math.min(100, n / goal() * 100);
+    const from = !x ? (day <= today() ? 'Type them in, or link your iPhone in Settings' : '') : x.src === 'ha' ? 'From your iPhone' : 'Typed in';
+    return '<p class="label">Steps</p><div class="rgroup steps"><div class="frow"><label for="fxSteps">' + ICON.shoe + '<span>Steps<small>' + esc(from) + '</small></span></label>'
+      + '<input class="txt num" id="fxSteps" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="—" aria-label="Steps on this day" value="' + (x ? n : '') + '"></div>'
+      + '<div class="sbar" role="img" aria-label="' + esc(x ? Math.round(pct) + '% of your goal of ' + goal().toLocaleString('en-US') : 'No steps yet') + '"><span class="trk"><i style="width:' + pct.toFixed(1) + '%"></i></span><small>' + (x ? (n >= goal() ? 'Goal met · ' : Math.round(pct) + '% · ') : '') + 'goal ' + goal().toLocaleString('en-US') + '</small></div></div>';
+  }
+  function setSteps(day, raw) {
+    const t = String(raw).replace(/[^0-9]/g, ''), x = stepsOn(day);
+    if (!t) { if (x) { data.steps.splice(data.steps.indexOf(x), 1); save(); } return; }
+    const n = Math.min(200000, +t);
+    if (x && +x.n === n && x.src === 'you') return;
+    if (x) Object.assign(x, { n, src: 'you' }); else data.steps.push({ id: day, date: day, n, src: 'you' });
+    save();
   }
   // Under the search bar: the results while searching, else the muscle
   // groups and the form.
@@ -602,6 +675,7 @@ if (window.top !== window.self) {
   });
   body.addEventListener('change', e => {
     const f = st.form, t = e.target;
+    if (t.id === 'fxSteps') { setSteps(st.day, t.value); renderDay(); render(); return; }
     if (t.id === 'fxEx') { pickExercise(t.value === OTHER ? OTHER : t.value); renderDay(); if (f.exercise === OTHER) $('fxOther').focus(); return; }
     if (!/^fx[WRSMD]$/.test(t.id)) return;
     if (t.id === 'fxM') f.mins = +t.value;
@@ -630,6 +704,7 @@ if (window.top !== window.self) {
     syncAdd();
   });
   body.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'fxSteps') { e.preventDefault(); e.target.blur(); return; }
     if (e.key === 'Enter' && e.target.id === 'fxOther' && formReady()) addOrSave();
     // Enter in the search takes the first result.
     if (e.key === 'Enter' && e.target.id === 'fxSearch') { e.preventDefault(); const b = $('fxPick').querySelector('[data-pick], [data-addnew]'); if (b) b.click(); }
@@ -662,6 +737,225 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
+  // Meds: what you take, set up once, and each day's checklist. A page of its
+  // own (the view picker's third), never on the week, and signed in only: a
+  // session means "Sign out and erase" can reach it on a lost phone. The sums
+  // (what's due, how often taken, streaks) are meds.js's.
+  // ---------------------------------------------------------------------
+  const M = window.FitnessMeds;
+  const SLOTS = [['am', 'Morning'], ['mid', 'Midday'], ['pm', 'Evening'], ['bed', 'Bedtime']];
+  const SLOT_NAME = Object.assign(Object.fromEntries(SLOTS), { day: 'Once a day', prn: 'As needed' });
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const KIND = { med: 'Medication', supp: 'Supplement' };
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  const dueOn = day => M.dueOn(data.meds, day).map(x => ({ m: x.med, slot: x.slot }));
+  const doseOf = (mid, day, slot) => data.doses.find(x => x.med === mid && x.date === day && x.slot === slot);
+  const timeOf = t => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const pctOf = a => a.share == null ? '—' : Math.round(a.share * 100) + '%';
+  // "Morning, Evening · Mon, Wed, Fri"
+  function scheduleOf(m) {
+    if (m.prn) return 'As needed';
+    const when = Array.isArray(m.slots) && m.slots.length ? SLOTS.filter(([k]) => m.slots.includes(k)).map(([, n]) => n).join(', ') : 'Once a day';
+    const days = Array.isArray(m.days) && m.days.length && m.days.length < 7 ? WEEKDAYS.filter((_, i) => m.days.includes(i)).join(', ') : 'every day';
+    return when + ' · ' + days;
+  }
+  function renderMeds() {
+    const tod = today(), day = st.medDay;
+    st.medOnToday = day === tod;
+    $('todayBtn').hidden = day === tod;
+    if (!signedIn()) {
+      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to use Meds</strong>Meds stays private to you, on this phone. Signing in with Face ID means you can erase it from a lost phone (aOS → Account → Lost a phone?).'
+        + '<button class="btn" type="button" id="mdSignin">Sign in with Face ID</button></div>';
+      return;
+    }
+    const nav = '<div class="navrow" style="--i:0"><button class="iconbtn glass" type="button" data-mday="-1" aria-label="Day before">' + ICON.chevL + '</button><span class="lbl">'
+      + esc((day === tod ? 'Today · ' : day === addDays(tod, -1) ? 'Yesterday · ' : '') + fmt(day, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(day) ? undefined : 'numeric' }))
+      + '</span><button class="iconbtn glass" type="button" data-mday="1" aria-label="Day after"' + (day >= tod ? ' disabled' : '') + '>' + ICON.chevR + '</button></div>';
+    if (!data.meds.length) {
+      main.innerHTML = nav + '<div class="empty" style="--i:1"><strong>What do you take?</strong>Add each medication or supplement once, with when you take it. Then tick them off here each day.'
+        + '<button class="btn" type="button" data-madd>Add a medication or supplement</button></div>' + medsHint();
+      return;
+    }
+    const due = dueOn(day), done = due.filter(x => doseOf(x.m.id, day, x.slot)).length;
+    let list = '';
+    for (const [slot, name] of SLOTS.concat([['day', 'Once a day']])) {
+      const rows = due.filter(x => x.slot === slot);
+      if (!rows.length) continue;
+      list += '<p class="sechead">' + esc(name) + '</p><div class="rgroup">' + rows.map(({ m }) => {
+        const x = doseOf(m.id, day, slot);
+        return '<button class="mrow" type="button" data-take="' + esc(m.id) + '" data-slot="' + slot + '" aria-pressed="' + !!x + '"><span class="ck">' + ICON.tick + '</span><span class="mt">' + esc(m.name)
+          + '<small>' + esc([m.dose, x ? (x.at ? 'Taken ' + timeOf(x.at) : 'Taken') : ''].filter(Boolean).join(' · ')) + '</small></span><span class="mk">' + esc(KIND[m.kind] || '') + '</span></button>';
+      }).join('') + '</div>';
+    }
+    const prn = data.meds.filter(m => m.prn && !m.paused);
+    if (prn.length) list += '<p class="sechead">As needed</p><div class="rgroup">' + prn.map(m => {
+      const xs = data.doses.filter(x => x.med === m.id && x.date === day).sort((a, b) => (a.at || 0) - (b.at || 0));
+      const when = xs.map(x => x.at ? timeOf(x.at) : '').filter(Boolean).join(', ');
+      return '<div class="mrow prn"><span class="mt">' + esc(m.name) + '<small>' + esc([m.dose, xs.length ? plural(xs.length, 'time') + (when ? ': ' + when : '') : 'Not taken ' + (day === tod ? 'today' : 'this day')].filter(Boolean).join(' · ')) + '</small></span>'
+        + (xs.length ? '<button class="iconbtn" type="button" data-prnless="' + esc(m.id) + '" aria-label="Take back the last ' + esc(m.name) + '">' + ICON.minus + '</button>' : '')
+        + '<button class="iconbtn glass" type="button" data-prn="' + esc(m.id) + '" aria-label="Took ' + esc(m.name) + '">' + ICON.plus + '</button></div>';
+    }).join('') + '</div>';
+    if (!due.length && !prn.length) list += '<div class="dempty rgroup">Nothing due ' + (day === tod ? 'today' : 'this day') + '.</div>';
+    // What you take, each with how often it was taken.
+    const floor = pruneFrom(), idx = M.index(data.doses);
+    const mine = data.meds.slice().sort((a, b) => !!a.paused - !!b.paused || a.name.localeCompare(b.name)).map(m => {
+      let how = '';
+      if (!m.paused && !m.prn) {
+        const w = M.adherence(m, data.doses, tod, 7, floor, idx), mo = M.adherence(m, data.doses, tod, 30, floor, idx), sk = M.streak(m, data.doses, tod, floor, idx);
+        how = '7 days ' + pctOf(w) + ' · 30 days ' + pctOf(mo) + (sk.days ? ' · ' + sk.days + (sk.more ? '+' : '') + (sk.days === 1 ? ' day' : ' days') + ' in a row' : '');
+      }
+      return '<button class="xrow medrow' + (m.paused ? ' paused' : '') + '" type="button" data-medit="' + esc(m.id) + '"><span class="xt">' + esc(m.name) + (m.dose ? ' <em>' + esc(m.dose) + '</em>' : '')
+        + '<small>' + esc((m.paused ? 'Paused · ' : '') + (KIND[m.kind] || '') + ' · ' + scheduleOf(m)) + '</small>' + (how ? '<small class="how">' + esc(how) + '</small>' : '') + '</span>' + ICON.chevR + '</button>';
+    }).join('');
+    main.innerHTML = nav
+      + '<p class="anote" style="--i:1">' + (due.length ? esc(done + ' of ' + due.length + ' taken') : '&nbsp;') + '</p>'
+      + '<div class="medlist" style="--i:1">' + list + '</div>'
+      + '<p class="sechead" style="--i:2">What you take</p><div class="rgroup" style="--i:2">' + mine
+      + '<button class="xrow add" type="button" data-madd><span class="xt">Add a medication or supplement</span>' + ICON.plus + '</button></div>'
+      + medsHint();
+  }
+  const medsHint = () => '<p class="hint">Only on this phone' + (syncCfg ? ', and in your Google Sheet. Doses older than 30 days are kept in the Sheet only.' : '. Connect the Google Sheet (the cloud at the top) to back it up.') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
+  function toggleDose(mid, slot) {
+    const day = st.medDay, x = doseOf(mid, day, slot), m = data.meds.find(y => y.id === mid);
+    if (x) data.doses.splice(data.doses.indexOf(x), 1);
+    else data.doses.push({ id: newId(), med: mid, name: m ? m.name : '', date: day, slot, at: day === today() ? Date.now() : 0 });
+    save(); render();
+  }
+  main.addEventListener('click', async e => {
+    if (st.view !== 'meds') return;
+    if (e.target.closest('#mdSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to use Meds, so you can erase it from a lost phone.')) { render(); loadSteps(true); } return; }
+    const nd = e.target.closest('[data-mday]');
+    if (nd) { const d = addDays(st.medDay, +nd.dataset.mday); if (d <= today()) { st.medDay = d; render(); } return; }
+    const tk = e.target.closest('[data-take]');
+    if (tk) { toggleDose(tk.dataset.take, tk.dataset.slot); return; }
+    const pr = e.target.closest('[data-prn]');
+    if (pr) { const m = data.meds.find(y => y.id === pr.dataset.prn); data.doses.push({ id: newId(), med: pr.dataset.prn, name: m ? m.name : '', date: st.medDay, slot: 'prn', at: st.medDay === today() ? Date.now() : 0 }); save(); render(); return; }
+    const pl = e.target.closest('[data-prnless]');
+    if (pl) {
+      const xs = data.doses.filter(x => x.med === pl.dataset.prnless && x.date === st.medDay).sort((a, b) => (a.at || 0) - (b.at || 0));
+      const last = xs[xs.length - 1]; if (last) { data.doses.splice(data.doses.indexOf(last), 1); save(); render(); }
+      return;
+    }
+    const ed = e.target.closest('[data-medit]');
+    if (ed) { openMed(ed.dataset.medit); return; }
+    if (e.target.closest('[data-madd]')) openMed(null);
+  });
+  // A sideways swipe moves a day, as the week moves a week.
+  let mx = null, my = 0;
+  main.addEventListener('touchstart', e => { if (st.view === 'meds' && e.touches.length === 1 && e.target.closest('.medlist')) { mx = e.touches[0].clientX; my = e.touches[0].clientY; } else mx = null; }, { passive: true });
+  main.addEventListener('touchend', e => {
+    if (mx === null) return;
+    const t = e.changedTouches[0], dx = t.clientX - mx, dy = t.clientY - my; mx = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { const d = addDays(st.medDay, dx < 0 ? 1 : -1); if (d <= today()) { st.medDay = d; render(); animateIn(main); } }
+  });
+
+  // The editor: a name, a dose, medication or supplement, when, and which days.
+  function openMed(id) {
+    const m = id && data.meds.find(x => x.id === id);
+    st.medForm = m ? { editing: m.id, name: m.name, dose: m.dose || '', kind: m.kind === 'supp' ? 'supp' : 'med', slots: (m.slots || []).slice(), prn: !!m.prn, days: Array.isArray(m.days) && m.days.length ? m.days.slice() : [0, 1, 2, 3, 4, 5, 6], paused: !!m.paused }
+      : { editing: null, name: '', dose: '', kind: 'med', slots: [], prn: false, days: [0, 1, 2, 3, 4, 5, 6], paused: false };
+    $('medLbl').textContent = m ? 'Edit ' + m.name : 'Add to what you take';
+    renderMed();
+    openSheet('medSheet');
+    if (!m) setTimeout(() => { const n = $('mdName'); if (n) n.focus(); }, 350);
+  }
+  function renderMed() {
+    const f = st.medForm;
+    const chip = (attr, val, on, label, radio) => '<button class="opt mopt" type="button" role="' + (radio ? 'radio' : 'checkbox') + '" ' + attr + '="' + val + '" aria-checked="' + on + '">' + esc(label) + '</button>';
+    $('medBody').innerHTML = '<div class="rgroup"><div class="frow"><input class="txt" id="mdName" type="text" maxlength="60" placeholder="Name, like Vitamin D" autocomplete="off" aria-label="Name" value="' + esc(f.name) + '"></div>'
+      + '<div class="frow"><input class="txt" id="mdDose" type="text" maxlength="40" placeholder="Dose, like 1000 IU or 2 capsules (optional)" autocomplete="off" aria-label="Dose" value="' + esc(f.dose) + '"></div></div>'
+      + '<div class="field"><p class="label">Type</p><div class="opts" role="radiogroup" aria-label="Type">' + Object.entries(KIND).map(([k, n]) => chip('data-mkind', k, f.kind === k, n, true)).join('') + '</div></div>'
+      + '<div class="field"><p class="label">When</p><div class="opts" role="group" aria-label="When">' + SLOTS.map(([k, n]) => chip('data-mslot', k, !f.prn && f.slots.includes(k), n)).join('') + chip('data-mprn', '1', f.prn, 'As needed') + '</div>'
+      + '<p class="hint">' + (f.prn ? 'Logged each time you take it, never counted as missed.' : f.slots.length ? 'One tick for each, every day it’s due.' : 'None picked: once a day, any time.') + '</p></div>'
+      + (f.prn ? '' : '<div class="field"><p class="label">Days</p><div class="opts" role="group" aria-label="Days">' + WEEKDAYS.map((n, i) => chip('data-mwd', i, f.days.includes(i), n)).join('') + '</div></div>')
+      + '<div class="formbtns">' + (f.editing ? '<button class="btn quiet" type="button" id="mdPause">' + (f.paused ? 'Resume' : 'Pause') + '</button>' : '') + '<button class="btn" type="button" id="mdSave"' + (f.name.trim() ? '' : ' disabled') + '>' + (f.editing ? 'Save' : 'Add') + '</button></div>'
+      + (f.editing ? '<button class="btn danger" type="button" id="mdDel">Delete</button><p class="hint">Pause keeps it in your list without anything due. Delete takes it off the list; the days you took it stay in your history.</p>' : '');
+  }
+  const mbody = $('medBody');
+  mbody.addEventListener('input', e => {
+    const f = st.medForm;
+    if (e.target.id === 'mdName') { f.name = e.target.value; $('mdSave').disabled = !f.name.trim(); }
+    if (e.target.id === 'mdDose') f.dose = e.target.value;
+  });
+  mbody.addEventListener('keydown', e => { if (e.key === 'Enter' && /^md(Name|Dose)$/.test(e.target.id)) { e.preventDefault(); if (st.medForm.name.trim()) saveMed(); } });
+  mbody.addEventListener('click', e => {
+    const f = st.medForm; let b;
+    if ((b = e.target.closest('[data-mkind]'))) { f.kind = b.dataset.mkind; renderMed(); return; }
+    if ((b = e.target.closest('[data-mslot]'))) { f.prn = false; const k = b.dataset.mslot; f.slots = f.slots.includes(k) ? f.slots.filter(x => x !== k) : f.slots.concat(k); renderMed(); return; }
+    if (e.target.closest('[data-mprn]')) { f.prn = !f.prn; renderMed(); return; }
+    if ((b = e.target.closest('[data-mwd]'))) { const i = +b.dataset.mwd; if (f.days.includes(i) && f.days.length === 1) return; f.days = f.days.includes(i) ? f.days.filter(x => x !== i) : f.days.concat(i).sort(); renderMed(); return; }
+    if (e.target.closest('#mdSave')) { saveMed(); return; }
+    if (e.target.closest('#mdPause')) { f.paused = !f.paused; saveMed(f.paused ? 'Paused ' : 'Resumed '); return; }
+    if (e.target.closest('#mdDel')) {
+      const i = data.meds.findIndex(x => x.id === f.editing); if (i < 0) return;
+      const [m] = data.meds.splice(i, 1); save(); closeSheet('medSheet'); render();
+      toast('Deleted ' + m.name, () => { data.meds.splice(Math.min(i, data.meds.length), 0, m); save(); render(); });
+    }
+  });
+  function saveMed(said) {
+    const f = st.medForm, name = f.name.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!name) return;
+    const fields = { name, dose: f.dose.replace(/\s+/g, ' ').trim().slice(0, 40), kind: f.kind, slots: f.prn ? [] : SLOTS.map(([k]) => k).filter(k => f.slots.includes(k)), days: f.prn || f.days.length === 7 ? [] : f.days.slice().sort(), prn: f.prn, paused: f.paused };
+    const m = f.editing && data.meds.find(x => x.id === f.editing);
+    if (m) Object.assign(m, fields); else data.meds.push(Object.assign({ id: newId(), since: today() }, fields));
+    save(); closeSheet('medSheet'); render();
+    toast((said || (m ? 'Saved ' : 'Added ')) + name);
+  }
+
+  // ---------------------------------------------------------------------
+  // Steps: typed in on a day, or read from your own iPhone. The Home Assistant
+  // app's Steps sensor counts the phone's own steps since midnight; the
+  // family's Home Assistant keeps 10 days of it, and ../fitness/api reads
+  // only the phone linked to you (functions/fitness/api). Each day keeps the
+  // highest count seen; a number you typed in is never replaced.
+  // ---------------------------------------------------------------------
+  const STEP_GOALS = []; for (let g = 2000; g <= 30000; g += 1000) STEP_GOALS.push(g);
+  const goal = () => { const g = +ls.get(K.goal, 10000); return STEP_GOALS.includes(g) ? g : 10000; };
+  const stepsOn = day => data.steps.find(x => x.date === day);
+  const token = () => window.AllisonOS && AllisonOS.account && AllisonOS.account.token();
+  async function fapi(path, body) {
+    const t = token();
+    const r = await fetch('../fitness/api/' + path, { method: body ? 'POST' : 'GET', cache: 'no-store', headers: Object.assign({ 'X-Fitness': '1', 'Content-Type': 'application/json' }, t ? { Authorization: 'Bearer ' + t } : {}), body: body ? JSON.stringify(body) : undefined });
+    let j = {}; try { j = await r.json(); } catch {}
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { status: r.status });
+    return j;
+  }
+  const stepsSt = { at: 0, busy: false };
+  // At most every 10 minutes; the last 10 days once a day, else the last 2.
+  async function loadSteps(force) {
+    if (!token() || stepsSt.busy || !navigator.onLine) return;
+    const link = ls.json(K.stepsLink, null) || {};
+    if (!force && Date.now() - stepsSt.at < 10 * 60e3) return;
+    if (!force && link.linked === false && Date.now() - (link.at || 0) < 6 * 3600e3) return;   // not linked: look again now and then
+    stepsSt.busy = true; stepsSt.at = Date.now();
+    try {
+      const full = link.full !== today();
+      const r = await fapi('steps?days=' + (full ? 10 : 2));
+      ls.set(K.stepsLink, JSON.stringify({ linked: true, at: Date.now(), full: today() }));
+      takeSteps(r.points || []);
+    } catch (e) {
+      if (e.message === 'not-linked') ls.set(K.stepsLink, JSON.stringify({ linked: false, at: Date.now() }));
+    } finally { stepsSt.busy = false; }
+  }
+  function takeSteps(points) {
+    const best = {};
+    for (const [t, n] of points) { if (!isFinite(t) || !isFinite(n)) continue; const d = ymd(new Date(t)); best[d] = Math.max(best[d] || 0, Math.round(n)); }
+    const from = pruneFrom();
+    let changed = false;
+    for (const [d, n] of Object.entries(best)) {
+      if (d > today() || (from && d < from)) continue;
+      const x = stepsOn(d);
+      if (x && (x.src === 'you' || +x.n >= n)) continue;
+      if (x) x.n = n; else data.steps.push({ id: d, date: d, n, src: 'ha' });
+      changed = true;
+    }
+    if (!changed) return;
+    save();
+    if (st.day) { if (document.activeElement && document.activeElement.id === 'fxSteps') return; renderDay(); }
+    render();
+  }
+
+  // ---------------------------------------------------------------------
   // Google Sheet sync - the same design as Travel's, for the log and your
   // own exercises (google-sheet-sync.gs; steps in the README)
   // ---------------------------------------------------------------------
@@ -670,6 +964,23 @@ if (window.top !== window.self) {
   if (!syncCfg || typeof syncCfg.url !== 'string' || typeof syncCfg.secret !== 'string') syncCfg = null;
   let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
+  // A Sheet running the script from before Meds and Steps (VERSION 1) keeps only the
+  // workouts: then they stay on this phone, and the Sheet sheet says to paste the new one.
+  let healthSheet = ls.get(K.health, '') === '1';
+  // With the Sheet connected (and holding Meds and Steps), the phone keeps only the last
+  // 30 days of taken doses and steps; older ones are in the Sheet. Your list of meds,
+  // and the workouts (Analysis compares 8 weeks of them), stay.
+  const KEEP_DAYS = 30;
+  const pruneFrom = () => syncCfg && healthSheet ? addDays(today(), -(KEEP_DAYS - 1)) : null;
+  function prune() {
+    const from = pruneFrom(); if (!from) return;
+    let n = 0;
+    for (const kind of ['doses', 'steps']) {
+      const arr = data[kind];
+      for (let i = arr.length - 1; i >= 0; i--) if (arr[i].date < from) { shadow.delete(kind + ':' + arr[i].id); arr.splice(i, 1); n++; }   // no grave: the Sheet keeps it
+    }
+    if (n) persist();
+  }
   const SYNC_ERRORS = {
     'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in another app’s code.',
     'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
@@ -719,7 +1030,14 @@ if (window.top !== window.self) {
     };
     data.logs = mergeKind('logs', data.logs, (res.logs || []).filter(okLog));
     data.exercises = mergeKind('exercises', data.exercises, (res.exercises || []).filter(okEx));
-    initShadow(); persist();
+    if (healthSheet) {
+      const from = pruneFrom(), recent = x => !from || x.date >= from;
+      data.meds = mergeKind('meds', data.meds, (res.meds || []).filter(okMed));
+      // older ones went to the Sheet with this sync: kept there, not here (initShadow below leaves no graves)
+      data.doses = mergeKind('doses', data.doses.filter(recent), (res.doses || []).filter(okDose).filter(recent));
+      data.steps = mergeKind('steps', data.steps.filter(recent), (res.steps || []).filter(okStep).filter(recent));
+    }
+    initShadow(); persist(); prune();
     if (localNewer) syncAgain = true;
     render();
     if (st.day) { if (st.form.editing && !data.logs.some(l => l.id === st.form.editing)) st.form = blankForm(); renderDay(); }
@@ -736,13 +1054,14 @@ if (window.top !== window.self) {
       let r, res;
       try {
         r = await fetch(syncCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 1, logs: data.logs, exercises: data.exercises, graves }) });
+          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, graves }) });
       } catch { throw new Error('network'); }
       try { res = await r.json(); } catch { throw new Error('not-json'); }
       if (res && res.ok && res.app && res.app !== APP) throw new Error('wrong-app');
       if (res && res.error === 'wrong-secret' && res.app !== APP) throw new Error(await whichScript(syncCfg.url));
       if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
+      healthSheet = (+res.v || 1) >= 2; ls.set(K.health, healthSheet ? '1' : '');
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
       applyRemote(res);
       if (loud) pillDone('Synced');
@@ -772,7 +1091,8 @@ if (window.top !== window.self) {
     const on = !!syncCfg;
     $('syStatus').textContent = !on ? 'Back up the log to a Google Sheet of your own, and keep a second phone in step.'
       : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
+      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : (lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.')
+        + (lastSyncAt && !healthSheet ? ' The Sheet’s script is from before Meds and Steps, so those stay on this phone: paste the new google-sheet-sync.gs into the Sheet’s Apps Script and deploy a new version.' : '');
     $('syForm').hidden = on; $('syOn').hidden = !on;
     $('syncBtn').classList.toggle('warn', on && syncState === 'error');
   }
@@ -786,11 +1106,69 @@ if (window.top !== window.self) {
     openSheet('syncSheet');
   }
   $('syncBtn').onclick = () => openSyncSheet();
-  // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js)
+  // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js);
+  // Steps (the daily goal, and linking your own iPhone); and signing out and erasing this phone.
   $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
-    + '<p class="hint">Just on this phone, and at once.</p>';
+    + '<p class="hint">Just on this phone, and at once.</p><div id="setMore"></div>';
   if (window.aosDesign) aosDesign.bind($('setBody'));
-  $('setBtn').onclick = () => openSheet('setSheet');
+  $('setBtn').onclick = () => { renderSetMore(); openSheet('setSheet'); loadPhones(); };
+  const phones = { state: 'idle', data: null, err: '' };
+  const PHONE_ERR = {
+    'ha-off': 'Not set up yet: the owner adds the Home Assistant token to the site (aOS/RELEASING.md, “Steps”), and the address in aOS.',
+    'ha-token': 'Home Assistant turned down the site’s token. The owner makes a new one (aOS/RELEASING.md, “Steps”).',
+    'ha-unreachable': 'Couldn’t reach Home Assistant. Try again in a minute.',
+    taken: 'That phone is already linked to someone in the family. The owner can unlink it.',
+    'no-sensor': 'Home Assistant has no sensor by that name.',
+    entity: 'That isn’t a step sensor’s name: it looks like sensor.your_iphone_steps.',
+  };
+  async function loadPhones() {
+    if (!signedIn()) { phones.state = 'signin'; return renderSetMore(); }
+    phones.state = 'loading'; renderSetMore();
+    try { phones.data = await fapi('phones'); phones.state = 'ok'; phones.err = ''; }
+    catch (e) { phones.state = e.status === 401 ? 'signin' : 'error'; phones.err = PHONE_ERR[e.message] || 'Couldn’t check Home Assistant (' + e.message + ').'; }
+    renderSetMore();
+  }
+  function renderSetMore() {
+    const box = $('setMore'); if (!box) return;
+    const d = phones.data || {}, row = (t, sub, btn) => '<div class="frow"><span class="l">' + esc(t) + (sub ? '<small class="sub">' + esc(sub) + '</small>' : '') + '</span>' + (btn || '') + '</div>';
+    let link = '';
+    if (phones.state === 'signin') link = row('Your iPhone’s steps', 'Sign in to read them from Home Assistant', '<button class="btn quiet sm" type="button" data-psignin>Sign in</button>');
+    else if (phones.state === 'loading' || phones.state === 'idle') link = row('Your iPhone’s steps', 'Checking Home Assistant…');
+    else if (phones.state === 'error') link = row('Your iPhone’s steps', phones.err, '<button class="btn quiet sm" type="button" data-pretry>Try again</button>');
+    else if (d.linked) link = row('Your iPhone: ' + (d.linked.name || d.linked.entity), 'Steps come in on their own. ' + d.linked.entity, '<button class="btn quiet sm" type="button" data-punlink>Unlink</button>');
+    else {
+      link = row('Link your iPhone', d.list === false ? 'Type your phone’s step sensor, from Home Assistant' : d.phones && d.phones.length ? 'Pick your own phone. No one else can link it after you.' : 'No step sensors found that aren’t linked already.');
+      if (d.list !== false) link += (d.phones || []).map(p => row(p.name || p.entity, p.entity, '<button class="btn sm" type="button" data-plink="' + esc(p.entity) + '">Link</button>')).join('');
+      else link += '<div class="frow"><input class="txt" id="stEntity" type="text" placeholder="sensor.your_iphone_steps" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Step sensor"><button class="btn sm" type="button" data-plinktyped>Link</button></div>';
+    }
+    if (phones.err && phones.state === 'ok') link += row('', phones.err);
+    const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
+    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>'
+      + '<p class="hint">From the Home Assistant app on your iPhone: its Steps sensor counts the phone’s own steps (not an Apple Watch’s). Turn it on in the Home Assistant app: Settings → Companion App → Sensors → Steps, and allow Motion &amp; Fitness. Only you see your steps. You can always type a day’s steps in instead.</p>' + links + '</div>'
+      + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
+      + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase<span class="sub">Erases Fitness’s log, Meds and Steps from this phone, and signs out. Sync to the Google Sheet first.</span></span></button>'
+      + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?<span class="sub">How to erase aOS from it, step by step, in aOS</span></span></a></div></div>';
+  }
+  $('setBody').addEventListener('change', e => { if (e.target.id === 'stGoal') { ls.set(K.goal, e.target.value); render(); } });
+  $('setBody').addEventListener('click', async e => {
+    let b;
+    if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
+    if (e.target.closest('[data-pretry]')) { loadPhones(); return; }
+    const linkTo = async (body, route) => {
+      try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); await loadPhones(); if (route === 'link') { loadSteps(true); toast('Linked. Your steps come in on their own.'); } }
+      catch (x) { phones.err = PHONE_ERR[x.message] || 'Couldn’t do that (' + x.message + ').'; renderSetMore(); }
+    };
+    if ((b = e.target.closest('[data-plink]'))) return linkTo({ entity: b.dataset.plink }, 'link');
+    if (e.target.closest('[data-plinktyped]')) return linkTo({ entity: ($('stEntity').value || '').trim() }, 'link');
+    if (e.target.closest('[data-punlink]')) return linkTo({}, 'unlink');
+    if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
+    if (e.target.closest('#setErase')) {
+      const msg = syncCfg ? 'Sign out and erase Fitness from this phone? Your Google Sheet keeps its copy: connect it again to get it back.' : 'Sign out and erase Fitness from this phone? It isn’t backed up to a Google Sheet, so your log, Meds and Steps will be gone.';
+      if (!confirm(msg)) return;
+      if (syncCfg) await sync(true);
+      if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
+    }
+  });
   $('syForm').onsubmit = async e => {
     e.preventDefault();
     const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
@@ -817,7 +1195,7 @@ if (window.top !== window.self) {
     const b = $('syOff');
     if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
     delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; saveSyncCfg(); renderSyncStatus();
+    syncCfg = null; syncState = 'off'; healthSheet = false; ls.set(K.health, ''); saveSyncCfg(); renderSyncStatus();
     toast('Disconnected. Your log stays on this phone and in the Sheet.');
   };
   function takeSetupLink(text) {
@@ -926,9 +1304,13 @@ if (window.top !== window.self) {
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    if (st.medOnToday || st.medDay > today()) st.medDay = today();   // left on today, back the next day: today again
     if (!st.day) render();
     if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
+    loadSteps(false);
   });
+  addEventListener('aos:account', e => { if (e.detail) { if (st.view === 'meds') render(); loadSteps(true); } });
+  setTimeout(() => loadSteps(false), 1200);
   window.addEventListener('online', () => { if (syncCfg) sync(false); });
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
@@ -951,5 +1333,5 @@ if (window.top !== window.self) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (fitness/scripts/app-test.mjs) only.
-  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises };
+  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises, loadSteps, takeSteps, pruneFrom, openMed };
 })();

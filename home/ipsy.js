@@ -650,5 +650,53 @@
     };
   }
 
-  AOS.ipsy = { mount, character, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass'
+  // Private: what the person keeps from Ipsy. A note, an order, a booking or an event can be marked
+  // Private in its app: the app's tools leave it out of everything they read, out of context() and
+  // out of the work Ipsy does by itself, and can't change it. It still syncs as usual: Private only
+  // hides it from Ipsy. These are the parts the apps share:
+  //   privacy.gmail(app)          -> false once Ipsy's Gmail is turned off in that app's Settings (this phone)
+  //   privacy.gmail(app, on)         turns it on or off
+  //   privacy.gmailOff(name)      -> what a Gmail tool answers while it's off
+  //   privacy.guard(keys)         -> { hides(msg, text) }. keys: the private items' emails,
+  //                                  [{ msgId, threadId, words: [order number, tracking, confirmation…] }].
+  //                                  An email is hidden if it is one of them, is in one of their threads,
+  //                                  or names one of their numbers in its subject, sender, snippet or text.
+  const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const privacy = {
+    gmail(app, on) {
+      const k = 'ipsy.' + app + '.gmail';
+      if (on === undefined) return ls.get(k, '') !== 'off';
+      if (on) ls.del(k); else ls.set(k, 'off');
+      return !!on;
+    },
+    gmailOff: name => 'The person has turned off Gmail for Ipsy in ' + name + ' (Settings, Ipsy), so Ipsy can’t search or read email here. Don’t try again; you can tell them it can be turned back on there.',
+    guard(keys) {
+      const ids = new Set(), threads = new Set(), nums = new Set(), codes = new Set();
+      (keys || []).forEach(k => {
+        if (!k) return;
+        if (k.msgId) ids.add(String(k.msgId));
+        if (k.threadId) threads.add(String(k.threadId));
+        (k.words || []).forEach(w => {
+          const n = norm(w);
+          if (/\d/.test(n) ? n.length >= 5 : n.length >= 6) (/\d/.test(n) ? nums : codes).add(n);   // a number, or a code of letters (a booking reference)
+        });
+      });
+      return {
+        hides(m, text) {
+          if (!m) return false;
+          if (ids.has(String(m.id)) || (m.threadId && threads.has(String(m.threadId)))) return true;
+          if (!nums.size && !codes.size) return false;
+          const heads = ((m.payload && m.payload.headers) || []).filter(h => /^(subject|from)$/i.test(h.name)).map(h => h.value);
+          const raw = [m.subject, m.from, m.snippet, ...heads, text].filter(Boolean).join(' ').toLowerCase();
+          const flat = norm(raw);
+          for (const n of nums) if (flat.includes(n)) return true;               // 112-1234567 matches 1121234567
+          const words = new Set(raw.split(/[^a-z0-9]+/));
+          for (const c of codes) if (words.has(c)) return true;                  // a code of letters only as a word of its own
+          return false;
+        },
+      };
+    },
+  };
+
+  AOS.ipsy = { mount, character, privacy, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass'
 })();

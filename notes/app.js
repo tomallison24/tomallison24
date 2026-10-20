@@ -200,7 +200,7 @@
     L.share(LAYER, {
       lists: lists.map(l => ({ id: l.id, name: l.name, color: l.color })),
       todos: todos.filter(t => t && t.date && t.date >= since).map(t => ({ id: t.id, title: t.title, date: t.date, time: t.time || '', done: !!t.done, notes: cut(t.notes), flagged: !!t.flagged, list: t.list })),
-      notes: notes.filter(n => n && n.reminder && !n.deletedAt && !n.archived).map(n => ({ id: n.id, title: n.title, body: cut(n.body), reminder: n.reminder })),
+      notes: notes.filter(n => n && n.reminder && !n.deletedAt && !n.archived).map(n => ({ id: n.id, title: n.title, body: cut(n.body), reminder: n.reminder, ...(n.private ? { private: true } : {}) })),   // private: hidden from Calendar's Ipsy
     });
   }
   addEventListener('load', () => { try { if (localStorage.getItem(KEY)) shareCal(); } catch(e){} });   // never the samples shown before your first save
@@ -679,9 +679,8 @@
     $('edRemClear').hidden = !e.reminder;
     $('swatches').innerHTML = COLORS.map(c => '<button class="swatch" type="button" role="radio" data-color="'+c+'" data-sw="'+c+'" aria-label="'+(c === 'none' ? 'Clear glass' : c)+'" aria-checked="'+(e.color === c)+'"></button>').join('');
     $('edPrivate').setAttribute('aria-checked', !!e.private);
-    $('edPrivHint').textContent = e.private ? 'Only on this phone. Not sent to the Google Sheet or anyone else\u2019s phone.'
-      : syncCfg ? 'Synced to the Google Sheet and the other phones. Turn on Private to keep it on this phone only.'
-      : 'Private notes stay on this phone, even once Google Sheet sync is on.';
+    $('edPrivHint').textContent = e.private ? 'Hidden from Ipsy. It still syncs' + (syncCfg ? ' to the Google Sheet and the other phones' : '') + ' like any other note.'
+      : 'Private hides this note from Ipsy.';
     $('edPin').innerHTML = e.pinned ? I.pinFill : I.pin;
     $('edPin').setAttribute('aria-pressed', e.pinned);
     $('edPin').setAttribute('aria-label', e.pinned ? 'Unpin note' : 'Pin note');
@@ -1433,16 +1432,15 @@
     let localNewer = false;
     const mergeKind = (kind, local, remote) => {
       const map = new Map(local.map(x => [x.id, x]));
-      const mine = new Set(local.filter(x => x.private).map(x => x.id));   // private: this phone's copy always wins
       (remote || []).forEach(r => {
-        if (!r || typeof r.id !== 'string' || mine.has(r.id)) return;
+        if (!r || typeof r.id !== 'string') return;
         const l = map.get(r.id);
         if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
         else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
       });
       const remoteIds = new Set((remote || []).map(r => r && r.id));
-      local.forEach(l => { if (!l.private && !remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
-      return [...map.values()].filter(x => { if (x.private) return true; const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
+      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
+      return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
     notes = mergeKind('notes', notes, saneAll(res.notes, saneNote));
     todos = mergeKind('todos', todos, saneAll(res.todos, saneTodo));
@@ -1454,13 +1452,16 @@
     render();
   }
 
-  // Private notes are never sent. Each one goes out only as a "deleted" mark,
-  // so a note that was synced before it was made private leaves the Sheet and
-  // the other phones; turning Private off later makes it newer than that mark.
-  function sendGraves(){
-    const g = Object.assign({}, graves);
-    notes.forEach(n => { if (n.private) g['notes:' + n.id] = Math.max(g['notes:' + n.id] || 0, +n.updated || 0); });
-    return g;
+  // Private notes used to stay on this phone, reaching the Sheet only as a "deleted" mark. Private now only
+  // hides a note from Ipsy, so before the first sync since, each private note is made newer than that mark
+  // and syncs like any other.
+  function privateOnce(){
+    try {
+      if (localStorage.getItem(KEY + '-private-v2')) return;
+      const t = Date.now();
+      notes.forEach(n => { if (n.private) { n.updated = Math.max(+n.updated || 0, t); delete graves['notes:' + n.id]; } });
+      persist(); localStorage.setItem(KEY + '-private-v2', '1');
+    } catch(e) {}
   }
   async function sync(loud){
     if (!syncCfg) return false;
@@ -1469,11 +1470,11 @@
     syncing = true; syncState = 'syncing'; renderSyncStatus();
     let ok = false;
     try {
-      track(); persist();
+      privateOnce(); track(); persist();
       let r, res;
       try {
         r = await fetch(syncCfg.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, redirect:'follow', cache:'no-store',
-          body: JSON.stringify({secret:syncCfg.secret, action:'sync', v:1, notes: notes.filter(n => !n.private), todos, lists, graves: sendGraves()})});
+          body: JSON.stringify({secret:syncCfg.secret, action:'sync', v:1, notes, todos, lists, graves})});
       } catch(e) { throw new Error('network'); }
       try { res = await r.json(); } catch(e) { throw new Error('not-json'); }
       if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');

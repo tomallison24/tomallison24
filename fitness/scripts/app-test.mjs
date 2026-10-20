@@ -405,7 +405,7 @@ await test('Analysis: from the glass pill at the bottom; stronger, weaker, new a
   assert.equal(await p.getAttribute('#viewBtn', 'aria-expanded'), 'true');
   const opens = await p.evaluate(() => document.getElementById('viewMenu').getBoundingClientRect().bottom <= document.getElementById('vbar').getBoundingClientRect().top);
   assert.ok(opens, 'the menu opens upwards, above the pill');
-  assert.deepEqual(await p.$$eval('#viewMenu [data-view]', bs => bs.map(b => [b.dataset.view, b.getAttribute('aria-selected')])), [['week', 'true'], ['analysis', 'false']]);
+  assert.deepEqual(await p.$$eval('#viewMenu [data-view]', bs => bs.map(b => [b.dataset.view, b.getAttribute('aria-selected')])), [['week', 'true'], ['analysis', 'false'], ['meds', 'false']]);   // Meds: meds-steps-test.mjs
   assert.match(await p.textContent('#viewMenu [data-view="analysis"] small'), /Improving 2 · needs work 2/);
   await shot(p, '08-view-menu');
   await p.click('#viewMenu [data-view="analysis"]');

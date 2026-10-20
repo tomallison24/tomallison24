@@ -412,6 +412,7 @@
           uid, start: s, end, allDay: isAllDay, tzid: dsHere.tzid || (dsHere.utc ? 'UTC' : null), master: e, comp, recurring: !!(prop(e, 'RRULE') || props(e, 'RDATE').length),
           rid: wall ? Object.assign({}, ds, wallParts(wall), { kind: ds.kind }) : null,
         });
+        if (info.private) o.private = true;   // a private series: every occurrence, changed on its own or not
         if (isAllDay) {
           const sw = utcToZoned(s, tz);
           o.startDate = sw.y + '-' + pad(sw.m) + '-' + pad(sw.d);
@@ -480,6 +481,8 @@
       transp: (text(e, 'TRANSP') || 'OPAQUE').toUpperCase(), status: (text(e, 'STATUS') || '').toUpperCase(),
       alarms, attendees, organizer: org ? { email: String(org.value).replace(/^mailto:/i, ''), name: org.params.CN || '' } : null,
       travel: trav ? Math.round((parseDuration(trav.value) || 0) / 60000) : 0,
+      // Private: hidden from Ipsy (aOS's own mark, or CLASS:PRIVATE / CONFIDENTIAL from another calendar app)
+      private: /^(true|1)$/i.test(text(e, 'X-AOS-PRIVATE') || '') || /^(private|confidential)$/i.test(text(e, 'CLASS') || ''),
     };
   }
 

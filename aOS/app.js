@@ -388,7 +388,78 @@
   const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
-  const getState = async () => { try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; } learnInstalled(state); paintHero(state); paintPlans(); return state; };
+  const getState = async () => {
+    const t = ACC.token();
+    try { state = await ACC.call('state'); } catch (e) { state = { error: (e && e.status) || 'network' }; }
+    if (state.erase && t && t === ACC.token()) { AllisonOS.erase(true); return state; }   // you erased aOS from your other devices: this was one
+    learnInstalled(state); paintHero(state); paintPlans(); return state;
+  };
+
+  // ---- Lost a phone? How to sign out of aOS and erase it, step by step ----
+  // The buttons: "Sign out and erase my other devices" (signout-others { erase: true }: each
+  // other app of yours erases itself as it next opens online, home/welcome.js), the owner's
+  // "Erase" for someone who lost their only phone (erase { id }), and "Sign out and erase aOS
+  // on this phone" (this app only, at once). Linked as aOS/#lost-phone.
+  function lostPage() {
+    const u = user();
+    const el = page(`<h1 class="ptitle">Lost a phone?</h1>
+      <p class="note" style="font-size:15px;margin:0 4px">How to sign out of aOS and erase what it keeps on a phone you've lost, or one you're selling or handing on.</p>
+      <div class="glbl">1. First: Find My</div>
+      <div class="group acct lost"><div><h3>The only sure way</h3><ol>
+        <li>On another Apple device, open the <b>Find My</b> app, or go to <b>icloud.com/find</b> in a browser, and sign in with your Apple Account.</li>
+        <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
+        <li>If you won't get it back, choose <b>Erase This Device</b>. That erases the whole phone, aOS with it, the next time it's online.</li></ol></div></div>
+      <div class="glbl">2. Erase aOS from your other devices</div>
+      <div class="group acct lost"><div><ol>
+        <li>Back up first, from a phone you still have: in <b>Fitness</b>, tap the cloud, then <b>Sync now</b>. Notes and Travel do the same from their Google Sheet button.</li>
+        <li>Here in aOS, signed in, tap <b>Sign out and erase my other devices</b>.</li>
+        <li>Every aOS app of yours, on every other device, erases what it keeps on that phone the next time it opens with internet, and signs out.</li>
+        <li>That includes the other aOS apps on <b>this</b> phone (an iPhone keeps each Home Screen app apart, so aOS can't tell them from the lost phone's). Open each one, sign in with Face ID, and its Google Sheet or family account fills it back in.</li></ol>
+        ${u ? `<button type="button" class="soft danger" id="lEraseOthers">Sign out and erase my other devices</button><div class="err" id="lErr"></div>` : `<p>Sign in to aOS first (Account), then come back here.</p>`}</div></div>
+      <div class="glbl">3. Lost your only phone?</div>
+      <div class="group acct lost"><div><ol>
+        <li>On a new iPhone signed in to your Apple Account, open aOS in Safari and sign in: your passkey comes with your iCloud Keychain. Then do step 2.</li>
+        <li>Or ask the owner: in aOS, <b>Account → Lost a phone?</b>, they can erase your devices for you. Your account stays; sign in again on your new phone.</li></ol>
+        ${u && u.role === 'owner' ? '<div class="fam" id="lFam"><p>Loading the family…</p></div>' : ''}</div></div>
+      <div class="glbl">4. Just this phone</div>
+      <div class="group acct lost"><div><p>Selling it or handing it on? Erase each aOS app on it yourself:</p><ol>
+        <li>In <b>Fitness</b>: Settings (the gear) → <b>Sign out and erase</b>.</li>
+        <li>In aOS: the button below. It erases what aOS itself keeps on this phone.</li>
+        <li>For every app, at once: <b>Settings → General → Transfer or Reset iPhone → Erase All Content and Settings</b> erases the whole phone.</li></ol>
+        <button type="button" class="soft danger" id="lEraseHere">Sign out and erase aOS on this phone</button></div></div>
+      <div class="glbl">What erasing can't do</div>
+      <div class="group acct lost"><div><ul>
+        <li>An app erases itself only when it's opened with internet. A phone kept offline, or an app never opened again, keeps its data behind the phone's passcode. Find My is the only sure way.</li>
+        <li>Only apps you've signed in to can hear it. Fitness asks you to sign in for Meds and Steps, so they can.</li>
+        <li>What's in your family account or your own Google Sheets isn't erased: it's how you get it back.</li></ul></div></div>`);
+    const lErr = el.querySelector('#lErr');
+    if (el.querySelector('#lEraseOthers')) el.querySelector('#lEraseOthers').onclick = async e => {
+      const b = e.currentTarget;
+      if (!confirm('Sign out and erase every other device? Each aOS app there, and the other aOS apps on this phone, erases what it keeps when it next opens. Back up first.')) return;
+      busy(b, true); lErr.textContent = ''; lErr.style.color = '';
+      try { await ACC.signOutOthers(true);
+        lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done. Each of your other aOS apps erases itself the next time it opens online.'; }
+      catch (x) { lErr.textContent = why(x); }
+      busy(b, false);
+    };
+    el.querySelector('#lEraseHere').onclick = () => {
+      if (!confirm('Sign out and erase what aOS keeps on this phone? The other apps keep theirs: erase each in its own Settings.')) return;
+      AllisonOS.erase();
+    };
+    if (u && u.role === 'owner') paintLostFamily(el.querySelector('#lFam'));
+    return el;
+  }
+  async function paintLostFamily(box) {
+    let f; try { f = (await ACC.call('family')).family.filter(m => m.role !== 'owner' && !m.removed); } catch { box.innerHTML = '<p>Couldn\'t load the family.</p>'; return; }
+    box.innerHTML = f.length ? f.map(m => `<div><span>${esc(m.name)}</span><button type="button" data-erase="${esc(m.id)}">Erase their devices</button></div>`).join('') : '<p>No one else in the family yet.</p>';
+    box.onclick = async e => {
+      const b = e.target.closest('[data-erase]'); if (!b) return;
+      const name = b.parentElement.querySelector('span').textContent;
+      if (!confirm(`Erase aOS from ${name}'s devices? Every aOS app of theirs signs out and erases what it keeps when it next opens online. Their account stays: they sign in again on a new phone.`)) return;
+      busy(b, true);
+      try { await ACC.call('erase', { id: b.dataset.erase }); b.textContent = 'Erased'; } catch (x) { b.textContent = why(x); busy(b, false); }
+    };
+  }
 
   // Today, signed out: a card that opens the account
   // The family card: aOS is curated for the Allison family. A greeting by name, and
@@ -480,7 +551,8 @@
       <button type="button" class="soft" id="aOut">Sign out</button></div>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
     box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3><p>Sign out everywhere else: every other device, and the other apps on this phone, ask for Face ID again. Nothing is deleted.</p>
-      <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div></div>`);
+      <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
+      <button type="button" class="soft" data-lost>Erase aOS from a lost phone: step by step</button></div>`);
     $('aOthers').onclick = async () => {
       if (!confirm('Sign out everywhere else? Every other device, and the other apps on this phone, will ask for Face ID again.')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
@@ -644,6 +716,7 @@
     if (ev.target.closest('[data-signin-card]')) return acctPage();
     if (ev.target.closest('[data-plan-card]')) return acctPage('plan');
     if (ev.target.closest('[data-acct]')) return acctPage();
+    if (ev.target.closest('[data-lost]')) return lostPage();
   });
 
   // ✓ Installed as soon as it's true: iOS doesn't tell a page it was added to the Home
@@ -665,6 +738,7 @@
     paintSigninCard(); paintAvatars();
     if (st.user) syncPush();
     if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
+    else if (location.hash === '#lost-phone') { history.replaceState(null, '', location.pathname); lostPage(); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
   });
   // a tap on a notification while aOS is already open (aOS/sw.js)

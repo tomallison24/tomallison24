@@ -47,6 +47,7 @@ if (window.top !== window.self) {
   const REFRESH_MS = 3 * MIN;
 
   const ICON = {
+    lock: '<svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
     clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3.2 2"/></svg>',
     map: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
     bell: '<svg viewBox="0 0 24 24"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.4 1.8H4.8z"/><path d="M10 20.2a2.2 2.2 0 0 0 4 0"/></svg>',
@@ -336,6 +337,18 @@ if (window.top !== window.self) {
       mailFromLayer(); rebuild(); render();
     } catch { st.layersState = 'error'; }
   }
+  // Private: hidden from Ipsy (ipsy-tools.js). A Family event keeps it in itself (X-AOS-PRIVATE, so every phone
+  // knows; CLASS:PRIVATE from another calendar app counts too) and, as a backup, on this phone (calendar.private:
+  // another calendar app that rewrites the event could drop the mark). A layer's item is private when it is in its
+  // own app (a private note or booking).
+  const PRIV_KEY = 'calendar.private';
+  let privRaw = null, privSet = new Set();
+  const privFiles = () => { const raw = ls.get(PRIV_KEY, '[]'); if (raw !== privRaw) { privRaw = raw; try { privSet = new Set(JSON.parse(raw)); } catch { privSet = new Set(); } } return privSet; };
+  const isPrivate = x => !!(x && (x.kind === 'family' ? (x.o && x.o.private) || privFiles().has(x.name) : x.private));
+  function keepPrivate(name, on) {
+    const s = new Set(privFiles()); if (on) s.add(name); else s.delete(name);
+    ls.set(PRIV_KEY, JSON.stringify([...s].slice(-2000)));
+  }
   const layerData = (key, app) => ls.json(key, null) || (st.layers && st.layers[app] && st.layers[app].data) || null;
   // Mail's Remind Me days: from Gmail itself where this browser has Mail's sign-in, else Mail's copy.
   function mailFromLayer() {
@@ -374,8 +387,9 @@ if (window.top !== window.self) {
       if (isNaN(ms) || ms < w.from - D || ms >= w.to) continue;
       const hasTime = /T\d{2}:\d{2}/.test(String(n.reminder)) && !/T00:00(:00)?$/.test(String(n.reminder));
       const title = (n.title || (n.body || '').split('\n')[0] || 'Note').slice(0, 120);
-      if (hasTime) out.push(timedItem('note', 'nudge|' + n.id, title, ms, ms + 30 * MIN, { sub: 'Nudge', link: '../notes/', notes: n.body || '' }));
-      else out.push(allDayItem('note', 'nudge|' + n.id, title, ymd(ms), null, { sub: 'Nudge', link: '../notes/', notes: n.body || '' }));
+      const extra = { sub: 'Nudge', link: '../notes/', notes: n.body || '', ...(n.private ? { private: true } : {}) };
+      if (hasTime) out.push(timedItem('note', 'nudge|' + n.id, title, ms, ms + 30 * MIN, extra));
+      else out.push(allDayItem('note', 'nudge|' + n.id, title, ymd(ms), null, extra));
     }
     return out;
   }
@@ -389,23 +403,24 @@ if (window.top !== window.self) {
     const inWin = ms => !isNaN(ms) && ms >= w.from - D && ms < w.to;
     for (const b of data.bookings) {
       if (!b || b.status === 'cancelled') continue;
+      const add = x => out.push(b.private ? Object.assign(x, { private: true }) : x);   // a private booking: hidden from Ipsy
       const desc = [b.conf ? 'Confirmation ' + b.conf : '', b.notes || ''].filter(Boolean).join('\n');
       if (b.type === 'flight' && b.dep) {
         const s = at(b.dep, b.depIso), e = at(b.arr, b.arrIso);
         if (!inWin(s)) continue;
         const name = ((b.airlineCode || '') + ' ' + (b.flightNo || '')).trim() || b.airline || 'Flight';
-        out.push(timedItem('travel', 'trv|' + b.id, name + ' ' + (b.from || '') + ' → ' + (b.to || ''), s, isNaN(e) || e <= s ? s + 2 * H : e, { sub: [b.fromName, b.toName].filter(Boolean).join(' → ') || 'Flight', link: '../travel/', notes: desc, icon: 'plane' }));
+        add(timedItem('travel', 'trv|' + b.id, name + ' ' + (b.from || '') + ' → ' + (b.to || ''), s, isNaN(e) || e <= s ? s + 2 * H : e, { sub: [b.fromName, b.toName].filter(Boolean).join(' → ') || 'Flight', link: '../travel/', notes: desc, icon: 'plane' }));
       } else if (b.type === 'hotel' && b.checkIn) {
         const out2 = b.checkOut && b.checkOut > b.checkIn ? b.checkOut : addDays(b.checkIn, 1);
         if (dayMs(out2) < w.from - D || dayMs(b.checkIn) >= w.to) continue;
-        out.push(allDayItem('travel', 'trv|' + b.id, b.name || 'Hotel', b.checkIn, out2, { sub: b.address || b.city || 'Hotel', link: '../travel/', notes: desc, icon: 'hotel' }));
+        add(allDayItem('travel', 'trv|' + b.id, b.name || 'Hotel', b.checkIn, out2, { sub: b.address || b.city || 'Hotel', link: '../travel/', notes: desc, icon: 'hotel' }));
       } else if (b.type === 'car' && b.pickup) {
         const s = at(b.pickup, b.pickupIso);
-        if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id + '|pu', 'Pick up · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), s, s + 30 * MIN, { sub: b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' }));
-        if (b.dropoff) { const e = at(b.dropoff, b.dropoffIso); if (inWin(e)) out.push(timedItem('travel', 'trv|' + b.id + '|dr', 'Return · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), e, e + 30 * MIN, { sub: b.dropPlace || b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' })); }
+        if (inWin(s)) add(timedItem('travel', 'trv|' + b.id + '|pu', 'Pick up · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), s, s + 30 * MIN, { sub: b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' }));
+        if (b.dropoff) { const e = at(b.dropoff, b.dropoffIso); if (inWin(e)) add(timedItem('travel', 'trv|' + b.id + '|dr', 'Return · ' + (b.company && b.company !== 'Car hire' ? b.company : 'Rental car'), e, e + 30 * MIN, { sub: b.dropPlace || b.pickupPlace || '', link: '../travel/', notes: desc, icon: 'car' })); }
       } else if (b.start) {
         const s = at(b.start), e = at(b.end);
-        if (inWin(s)) out.push(timedItem('travel', 'trv|' + b.id, b.title || 'Booking', s, isNaN(e) || e <= s ? s + H : e, { sub: b.place || '', link: '../travel/', notes: desc }));
+        if (inWin(s)) add(timedItem('travel', 'trv|' + b.id, b.title || 'Booking', s, isNaN(e) || e <= s ? s + H : e, { sub: b.place || '', link: '../travel/', notes: desc }));
       }
     }
     return out;
@@ -1025,6 +1040,7 @@ if (window.top !== window.self) {
       if (o.travel) rows.push(kv('car', esc(o.travel >= 60 ? (o.travel / 60) + ' h' : o.travel + ' min') + ' travel time'));
       if (o.alarms.length) rows.push(kv('bell', o.alarms.map(a => esc(alarmWords(a, x.allDay))).join('<br>')));
       if (o.transp === 'TRANSPARENT') rows.push(kv('busy', 'Shown as free'));
+      if (isPrivate(x)) rows.push(kv('lock', 'Private<small>Hidden from Ipsy</small>'));
       if (o.url) rows.push('<a class="kvrow" href="' + esc(/^https?:/i.test(o.url) ? o.url : '#') + '" target="_blank" rel="noopener"><span class="ic">' + ICON.link + '</span><span class="v">' + esc(o.url) + '</span><span class="go">' + ICON.ext + '</span></a>');
       if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', esc(o.description)));
@@ -1069,10 +1085,10 @@ if (window.top !== window.self) {
       return { title: x.title === 'New Event' ? '' : x.title, location: x.kind === 'family' ? o.location : (x.kind === 'travel' ? x.sub : ''), allDay: !!x.allDay,
         start: x.start, end: x.allDay ? Math.max(x.start + D, x.end) : Math.max(x.start + 15 * MIN, x.end), tz: (x.kind === 'family' && o.tzid && o.tzid !== 'UTC' && I.validTz(o.tzid)) ? o.tzid : TZ,
         rule: r ? I.fmtRRule(Object.assign({}, r, { COUNT: undefined, UNTIL: undefined })) : '', ruleEnd: r && r.COUNT ? { type: 'count', count: r.COUNT } : r && r.UNTIL ? { type: 'date', date: ymdOf(r.UNTIL) } : { type: 'never' },
-        alarms, travel: o.travel || 0, transp: o.transp === 'TRANSPARENT' ? 'TRANSPARENT' : 'OPAQUE', url: o.url || '', notes: x.kind === 'family' ? (o.description || '') : (x.notes || '') };
+        alarms, travel: o.travel || 0, transp: o.transp === 'TRANSPARENT' ? 'TRANSPARENT' : 'OPAQUE', url: o.url || '', notes: x.kind === 'family' ? (o.description || '') : (x.notes || ''), private: isPrivate(x) };
     }
     const base = at != null ? at : (() => { const w = I.utcToZoned(Date.now(), TZ); const p = partsOf(st.sel); return I.zonedToUtc({ y: p.y, m: p.m, d: p.d, h: Math.min(23, w.h + 1), mi: 0, s: 0 }, TZ); })();
-    return { title: '', location: '', allDay: false, start: base, end: base + settings.duration * MIN, tz: TZ, rule: '', ruleEnd: { type: 'never' }, alarms: settings.alertTimed ? [settings.alertTimed] : [], travel: 0, transp: 'OPAQUE', url: '', notes: '' };
+    return { title: '', location: '', allDay: false, start: base, end: base + settings.duration * MIN, tz: TZ, rule: '', ruleEnd: { type: 'never' }, alarms: settings.alertTimed ? [settings.alertTimed] : [], travel: 0, transp: 'OPAQUE', url: '', notes: '', private: false };
   }
   function openEditor({ occ, copyOf, start } = {}) {
     const f = occ ? formFrom(occ) : copyOf ? Object.assign(formFrom(copyOf), { rule: '', ruleEnd: { type: 'never' }, alarms: copyOf.allDay ? (settings.alertAllDay ? [settings.alertAllDay] : []) : (settings.alertTimed ? [settings.alertTimed] : []) }) : formFrom(null, start);
@@ -1121,11 +1137,12 @@ if (window.top !== window.self) {
       + '<div class="frow"><span class="ic">' + ICON.bell + '</span><label for="edAlert1">Alert</label><select id="edAlert1">' + opt(alerts.concat(f.alarms[0] && !alerts.some(a => a[0] === f.alarms[0]) ? [[f.alarms[0], alarmWords({ minutes: I.parseDuration(f.alarms[0]) / MIN }, f.allDay)]] : []), f.alarms[0] || '') + '</select></div>'
       + (f.alarms[0] ? '<div class="frow sub"><label for="edAlert2">Second Alert</label><select id="edAlert2">' + opt(alerts.concat(f.alarms[1] && !alerts.some(a => a[0] === f.alarms[1]) ? [[f.alarms[1], alarmWords({ minutes: I.parseDuration(f.alarms[1]) / MIN }, f.allDay)]] : []), f.alarms[1] || '') + '</select></div>' : '')
       + '<div class="frow"><span class="ic">' + ICON.busy + '</span><label for="edTransp">Show As</label><select id="edTransp">' + opt([['OPAQUE', 'Busy'], ['TRANSPARENT', 'Free']], f.transp) + '</select></div>'
+      + '<div class="frow"><span class="ic">' + ICON.lock + '</span><label for="edPrivate">Private</label><button class="switch" id="edPrivate" type="button" role="switch" aria-checked="' + !!f.private + '" aria-label="Private"></button></div>'
       + '</div>'
       + '<div class="rgroup glass"><div class="frow"><span class="ic">' + ICON.link + '</span><input class="txt" id="edUrl" type="url" inputmode="url" placeholder="URL" value="' + esc(f.url) + '" autocomplete="off" autocapitalize="off"></div>'
       + '<div class="frow"><span class="ic">' + ICON.notes + '</span><textarea id="edNotes" placeholder="Notes">' + esc(f.notes) + '</textarea></div></div>'
       + (ed.occ ? '<button class="btn quiet danger" type="button" id="edDelete">Delete Event</button>' : '')
-      + '<p class="hint">Saved to the ' + esc(st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud, so it shows on every phone with it, and the phone’s own Calendar does the alerting.</p>';
+      + '<p class="hint">Saved to the ' + esc(st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud, so it shows on every phone with it, and the phone’s own Calendar does the alerting. Private hides it from Ipsy on every phone; it still shows in the calendar.</p>';
     wireEditor();
   }
   function wireEditor() {
@@ -1169,6 +1186,7 @@ if (window.top !== window.self) {
     on('edAlert1', 'change', e => { const v = e.target.value; f.alarms = v ? [v].concat(f.alarms.slice(1).filter(a => a !== v)) : []; renderEditor(); });
     on('edAlert2', 'change', e => { const v = e.target.value; f.alarms = v && v !== f.alarms[0] ? [f.alarms[0], v] : [f.alarms[0]]; renderEditor(); });
     on('edTransp', 'change', e => { f.transp = e.target.value; });
+    on('edPrivate', 'click', () => { f.private = !f.private; renderEditor(); });
     on('edDelete', 'click', () => { const x = ed.occ; cancelEditor(); deleteEvent(x); });
   }
   $('edSave').onclick = async () => {
@@ -1201,6 +1219,8 @@ if (window.top !== window.self) {
     I.setText(ev, 'DESCRIPTION', f.notes.trim());
     I.setText(ev, 'URL', f.url.trim());
     I.setProp(ev, 'TRANSP', f.transp);
+    if (f.private) I.setProp(ev, 'X-AOS-PRIVATE', 'TRUE');
+    else { I.delProp(ev, 'X-AOS-PRIVATE'); if (/^(private|confidential)$/i.test(I.text(ev, 'CLASS') || '')) I.delProp(ev, 'CLASS'); }
     I.delProp(ev, 'DURATION');
     if (times) {
       if (f.allDay) { I.setDate(ev, 'DTSTART', dateDt(f.start)); I.setDate(ev, 'DTEND', dateDt(Math.max(f.start + D, f.end))); }
@@ -1303,7 +1323,8 @@ if (window.top !== window.self) {
     if (st.api !== 'ok') { toast(errText({ code: st.api === 'off' ? 'unavailable' : st.api === 'unconfigured' ? 'no-account' : st.apiError || 'unreachable' }), null, 6000); return; }
     busyPill('Saving');
     try {
-      await writeEvent(x, f, scope);
+      const name = await writeEvent(x, f, scope);
+      if (name) keepPrivate(name, !!f.private);
       written('Saved');
     } catch (e) {
       busyPill('');
@@ -1465,10 +1486,10 @@ if (window.top !== window.self) {
     window.AllisonOS.ipsy.mount({
       app: 'calendar', name: 'Calendar', endpoint: '../calendar/api/ipsy', headers: { 'X-Calendar': '1' }, slot: document.querySelector('.dock .ipsyslot'),
       ...window.CalendarIpsy({
-        I, TZ, st, settings, LAYER, eventsOn, matches, refresh, rebuild, render, goTo, writeEvent, writeItem, deleteFile, written, formFrom,
+        I, TZ, st, settings, LAYER, eventsOn, matches, isPrivate, layerData, refresh, rebuild, render, goTo, writeEvent, writeItem, deleteFile, written, formFrom,
         ymd, dayMs, addDays, today, fmtTime, longDate, medDate, wxFor, busyPill, toast, errText,
         calendarName: () => st.calendar && st.calendar.name || 'Family',
-        screen: () => (!$('evSheet').hidden && shown ? 'the event “' + shown.title + '” (' + (shown.kind === 'family' ? 'id ' + shown.name : LAYER[shown.kind].name) + '), over ' : '')
+        screen: () => (!$('evSheet').hidden && shown && isPrivate(shown) ? 'a private event, over ' : !$('evSheet').hidden && shown ? 'the event “' + shown.title + '” (' + (shown.kind === 'family' ? 'id ' + shown.name : LAYER[shown.kind].name) + '), over ' : '')
           + (st.searching ? 'search results for “' + st.search + '”' : 'the ' + VIEW_NAMES[st.view] + ' view, ' + (st.view === 'day' ? longDate(st.sel) : st.view === 'year' ? st.sel.slice(0, 4) : st.view === 'week' ? 'the week of ' + medDate(weekStartOf(st.sel)) : MONTHS[+st.sel.slice(5, 7) - 1] + ' ' + st.sel.slice(0, 4))),
       }),
     });

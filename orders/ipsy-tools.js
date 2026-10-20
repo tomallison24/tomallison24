@@ -14,6 +14,11 @@
 // email won't overwrite it), a new status gets its step's date, a deleted order gets a grave (it
 // doesn't come back from the email), and everything goes through save(), so the Sheet syncs and
 // its Log tab records it.
+//
+// Private orders (the switch on an order's page) are hidden from Ipsy: they are left out of
+// everything it reads and it can't change them, and their emails are left out of what it finds or
+// reads in Gmail (the email an order came from, its thread, and any email that names its order or
+// tracking number). Gmail can also be turned off for Ipsy altogether (Settings, Ipsy).
 window.OrdersIpsy = function (app) {
   const P = app.P;
   const copy = o => JSON.parse(JSON.stringify(o));
@@ -22,16 +27,20 @@ window.OrdersIpsy = function (app) {
   const STATUSES = ['ordered', 'shipped', 'out', 'pickup', 'delivered', 'pickedup', 'cancelled'];
   const KINDS = ['package', 'pickup', 'food', 'digital', 'other'];
   const EDITABLE = ['store', 'items', 'total', 'orderNo', 'orderDate', 'eta', 'etaEnd', 'carrier', 'tracking', 'status', 'kind', 'pickupBy', 'notes'];
-  const byId = id => app.orders.find(o => o.id === id);
+  const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
+  const seen = o => !o.private;                       // private orders stay out of Ipsy's sight
+  const anyById = id => app.orders.find(o => o.id === id);
+  const byId = id => app.orders.find(o => o.id === id && seen(o));
+  const privCount = () => app.orders.filter(o => !seen(o)).length;
   const done = () => { app.save(); app.render(); app.refreshOrder(); };
   const fail = msg => { throw new Error(msg); };
 
   // What the orders looked like before a change, and how to put them back.
-  function snapshot(ids) { return ids.map(id => { const o = byId(id); return [id, o ? copy(o) : null]; }); }
+  function snapshot(ids) { return ids.map(id => { const o = anyById(id); return [id, o ? copy(o) : null]; }); }
   function undoTo(snap) {
     return () => {
       snap.forEach(([id, before]) => {
-        const o = byId(id);
+        const o = anyById(id);
         if (!before) { if (o) { app.orders = app.orders.filter(x => x.id !== id); app.closeOrder(id); } return; }
         if (o) { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, copy(before)); }
         else app.orders = app.orders.concat(copy(before));
@@ -116,20 +125,25 @@ window.OrdersIpsy = function (app) {
   const who = o => o.store || (o.items && o.items[0] && o.items[0].name) || 'an order';
 
   // ---- Gmail ----
+  const gmailOn = () => !PV || PV.gmail('orders');
   async function mail(path, params) {
+    if (!gmailOn()) fail(PV.gmailOff('Orders'));
     if (!app.getToken()) fail('Gmail isn’t connected in Orders on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
     try { return await app.gmail(path, params); }
     catch (e) { if (e instanceof app.AuthError) fail('Gmail’s sign-in has run out on this phone. The person can sign in again in Settings (the gear), Connect Gmail.'); throw e; }
   }
   const head = (m, n) => app.header(m, n.toLowerCase());
   const day = ms => { const d = new Date(+ms); return isNaN(d) ? '' : d.toISOString().slice(0, 10); };
-  const orderOfMsg = id => { const o = app.orders.find(x => x.source && x.source.msgId === id); return o ? o.id : undefined; };
+  const orderOfMsg = id => { const o = app.orders.find(x => seen(x) && x.source && x.source.msgId === id); return o ? o.id : undefined; };
+  // The emails behind private orders, which Ipsy doesn't get either.
+  const guard = () => PV ? PV.guard(app.orders.filter(o => !seen(o)).map(o => ({ msgId: o.source && o.source.msgId, threadId: o.source && o.source.threadId, words: [o.orderNo, o.tracking] })))
+    : { hides: () => false };
 
   const tools = {
     async find_orders(q) {
       const words = clip(q.query, 200).toLowerCase().split(/\s+/).filter(Boolean);
       const limit = Math.max(1, Math.min(100, Number.isInteger(q.limit) ? q.limit : 30));
-      let list = app.orders.filter(o => {
+      let list = app.orders.filter(seen).filter(o => {
         if (words.length) {
           const hay = [o.store, o.orderNo, o.tracking, o.carrier, o.notes, ...(o.items || []).map(i => i.name)].join(' ').toLowerCase();
           if (!words.every(w => hay.includes(w))) return false;
@@ -145,12 +159,13 @@ window.OrdersIpsy = function (app) {
         return true;
       });
       list = list.sort((a, b) => lastNews(b).localeCompare(lastNews(a)));
-      return { content: { found: list.length, shown: Math.min(limit, list.length), orders: list.slice(0, limit).map(brief) } };
+      const priv = privCount();
+      return { content: { found: list.length, shown: Math.min(limit, list.length), orders: list.slice(0, limit).map(brief), ...(priv ? { privateOrdersNotShown: priv } : {}) } };
     },
 
     async get_orders(q) {
       const ids = (Array.isArray(q.ids) ? q.ids : []).slice(0, 20);
-      return { content: { orders: ids.map(id => { const o = byId(id); return o ? full(o) : { id, missing: 'No order with this id.' }; }) } };
+      return { content: { orders: ids.map(id => { const o = byId(id); return o ? full(o) : { id, missing: 'No order with this id (private orders can’t be read).' }; }) } };
     },
 
     async update_order(q) {
@@ -237,13 +252,16 @@ window.OrdersIpsy = function (app) {
       const query = clip(q.query, 300); if (!query) fail('Give a Gmail search.');
       const max = Math.max(1, Math.min(25, Number.isInteger(q.max) ? q.max : 10));
       const r = await mail('/messages', { q: query + ' -in:chats', maxResults: max });
-      const ids = (r && r.messages || []).slice(0, max);
+      const ids = (r && r.messages || []).slice(0, max), g = guard();
       const emails = [];
+      let hidden = 0;
       for (const m of ids) {
+        if (g.hides(m)) { hidden++; continue; }
         const msg = await mail('/messages/' + m.id, { format: 'metadata' });
+        if (g.hides(msg)) { hidden++; continue; }
         emails.push({ message_id: m.id, from: head(msg, 'From'), subject: head(msg, 'Subject'), date: day(msg.internalDate), snippet: clip(msg.snippet, 200), ...(orderOfMsg(m.id) ? { order_id: orderOfMsg(m.id) } : {}) });
       }
-      return { content: { found: emails.length, ...(r && r.resultSizeEstimate > emails.length ? { more: true } : {}), emails } };
+      return { content: { found: emails.length, ...(r && r.resultSizeEstimate > emails.length + hidden ? { more: true } : {}), emails, ...(hidden ? { privateEmailsNotShown: hidden } : {}) } };
     },
 
     // Links are shown as their site only: an email's links can carry one-tap actions (confirm,
@@ -255,6 +273,7 @@ window.OrdersIpsy = function (app) {
       const fromHtml = html ? P.htmlToText(html) : '';
       const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
         .replace(/https?:\/\/([^\s/?#]+)\S*/g, (u, host) => '[link to ' + host.replace(/^www\./, '') + ']').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+      if (guard().hides(msg, body)) fail('That email is about an order the person marked Private, so Ipsy can’t read it.');
       return { content: { message_id: id, from: head(msg, 'From'), to: head(msg, 'To'), subject: head(msg, 'Subject'), date: day(msg.internalDate),
         ...(orderOfMsg(id) ? { order_id: orderOfMsg(id) } : {}), text: body.slice(0, 20000) + (body.length > 20000 ? '\n[the rest of the email is cut off]' : '') } };
     },
@@ -271,14 +290,14 @@ window.OrdersIpsy = function (app) {
     tools,
     label: (name, input) => (LABELS[name] || (() => ''))(input || {}),
     context() {
-      const all = app.orders, open = all.filter(app.isOpen).length, check = all.filter(app.needsCheck).length, o = app.current();
-      return 'Orders has ' + all.length + ' orders: ' + open + ' on the way' + (check ? ', ' + check + ' marked Check details' : '') + '. '
-        + (o ? 'On screen: the order ' + o.id + ' from ' + (o.store || 'an unnamed store') + '.' : 'On screen: ' + app.screen() + '.')
-        + (app.getToken() ? '' : ' Gmail isn’t connected right now.');
+      const all = app.orders.filter(seen), open = all.filter(app.isOpen).length, check = all.filter(app.needsCheck).length, o = app.current(), priv = privCount();
+      return 'Orders has ' + all.length + ' orders' + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + open + ' on the way' + (check ? ', ' + check + ' marked Check details' : '') + '. '
+        + (o && !seen(o) ? 'On screen: a private order.' : o ? 'On screen: the order ' + o.id + ' from ' + (o.store || 'an unnamed store') + '.' : 'On screen: ' + app.screen() + '.')
+        + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, Ipsy).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can find an order, fix its details, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
     placeholder: 'Ask Ipsy about your orders',
     suggestions: ['What’s arriving this week?', 'Find duplicate orders and merge them', 'Is anything late?', 'Check Gmail for orders I’m missing'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and whatever Ipsy looks at to answer it (your orders, and any email it opens in your Gmail) go to Claude through the family server, which keeps only a count of questions. Ipsy can change, delete and merge orders: each change shows here with Undo.',
+    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and whatever Ipsy looks at to answer it (your orders, and any email it opens in your Gmail) go to Claude through the family server, which keeps only a count of questions. Orders you mark Private, and their emails, are hidden from Ipsy, and you can turn off its Gmail in Settings. Ipsy can change, delete and merge orders: each change shows here with Undo.',
   };
 };

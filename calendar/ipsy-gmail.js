@@ -73,8 +73,16 @@ export function mount() {
     const box = document.createElement('section'); box.className = 'box glass'; box.dataset.gmail = '1';
     const label = document.createElement('div'); label.className = 'label'; label.textContent = 'Gmail for Ipsy';
     const link = document.createElement('a'); link.className = 'btn'; link.href = new URL('../calendar/gmail-connect.html',location.href); link.textContent = session() ? 'Reconnect or switch Google account' : 'Connect Gmail';
-    const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Read-only Gmail for Calendar, separate from Mail and Orders. Reconnect when this browser session expires. Ipsy asks before sending email details to Claude.';
+    const hint = () => 'Read-only Gmail for Calendar, separate from Mail and Orders. Reconnect when this browser session expires. Ipsy asks before sending email details to Claude. Emails about private Travel bookings are hidden from it.';
+    const p = document.createElement('p'); p.className = 'hint'; p.textContent = hint();
     box.append(label,p,link);
+    const PV = window.AllisonOS?.ipsy?.privacy;
+    if (PV) {   // Off: Ipsy can't search or read email here at all (home/ipsy.js, privacy.gmail)
+      const tog = document.createElement('button'); tog.type = 'button'; tog.className = 'btn quiet'; tog.dataset.gmailIpsy = '1';
+      const say = () => { tog.textContent = PV.gmail('calendar') ? 'Turn off Gmail for Ipsy' : 'Turn on Gmail for Ipsy'; p.textContent = hint() + (PV.gmail('calendar') ? '' : ' Off: Ipsy can’t search or read any email here.'); };
+      tog.onclick = () => { PV.gmail('calendar', !PV.gmail('calendar')); say(); };
+      say(); box.append(tog);
+    }
     if (session()) { const off = document.createElement('button'); off.type = 'button'; off.className = 'btn quiet'; off.textContent = 'Disconnect Gmail'; off.onclick = () => { if (window.confirm('Disconnect Gmail on this device and clear Calendar Ipsy’s saved chat? Mail and Orders are not affected.')) { disconnect(); localStorage.removeItem('ipsy.calendar.chat'); location.reload(); } }; box.append(off); }
     b.append(box);
   }

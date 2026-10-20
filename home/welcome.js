@@ -85,6 +85,34 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.7', date: '2026-10-20', title: 'Meds, steps and yours to keep',
+      highlights: ['Fitness: Meds and your steps, every day',
+        'Mark a note, order, trip or event Private and Ipsy can\'t see it',
+        'Lost a phone? aOS can sign you out and erase it'],
+      notes: ['Fitness: Meds is a page of its own (the view picker at the bottom: Week, Analysis, Meds), never on the week. Add each medication or supplement once, with its dose, Morning, Midday, Evening or Bedtime (or once a day, or as needed) and the days you take it; then tick each off as you take it, with the time. Each shows how often you took it over 7 and 30 days, and how many days in a row. Pause one to stop it for a while. Signed in only, so a lost phone can be erased',
+        'Fitness: steps on each day of the week, in the week\'s totals (steps a day) and in Analysis (steps a day, and days at your goal), with a daily goal in Settings. Type a day\'s steps in, or link your own iPhone in Settings > Steps: the Home Assistant app\'s Steps sensor counts the phone\'s own steps (not an Apple Watch\'s), read through aOS so no phone holds a Home Assistant token. Each person sees only their own phone',
+        'Fitness: the Google Sheet backs up Meds and Steps too, in Meds, Med list and Steps tabs (paste the new script into the Sheet and deploy a new version). Once it does, the phone keeps only the last 30 days of doses and steps; the Sheet keeps them all',
+        'aOS: Account > Erase aOS from a lost phone, step by step: Find My first, then Sign out and erase my other devices. Every other aOS app of yours erases what it keeps on its phone the next time it opens online. The owner can do it for someone who lost their only phone. Fitness: Settings > Sign out and erase',
+        'Calendar: connect Gmail in Settings so Ipsy can search appointment emails, read-only, with separate email-sharing consent; every calendar change still asks first',
+        'Ipsy: larger across all six apps, with quiet breathing, occasional glances and softer idle movement; Reduce Motion is respected',
+        'Notes and Places: the Google Sheet connection form uses the new shared sync link; the shared Apps Script initializes Places data correctly',
+        'Home: the Office and M&D heaters no longer say Unavailable while they are on (Home Assistant now reports an on heater as unknown); Power and the target work again',
+        'Home: the heaters show their wattage (750 W or 1500 W) and mode (Eco, Comfort or Boost - all three, even when Home Assistant lists only Eco) to pick from, as in the Tuya app, and a countdown: 1, 2, 4 or 8 hours and the heater turns itself off',
+        'Private, in Notes, Orders, Travel and Calendar: a private item is left out of everything Ipsy reads (it is told only how many there are), Ipsy can\'t change it, and Ipsy doesn\'t check it by itself. It still syncs and shows as usual: Private only hides it from Ipsy',
+        'The emails behind a private order or booking are hidden from Ipsy too: the email it came from, that email\'s thread, and any email naming its order, tracking or confirmation number',
+        'Orders, Travel and Calendar: Ipsy can search Gmail is a setting now (Settings), on this phone; off, Ipsy can\'t search or read any email',
+        'Notes: a private note now syncs to the Google Sheet and the other phones like any other note, and its nudge notifies; before, private notes stayed on the phone. The first sync since sends them',
+        'Orders: the Private switch is on an order\'s page, and a lock shows on its card',
+        'Travel: the Private pill is on a booking, and Private trip on a trip\'s page; a trip with some private bookings is shown to Ipsy with the others only, named and dated by them, and its Family calendar events are marked private',
+        'Calendar: the Private switch is in an event, kept in iCloud so every phone knows (an event marked private by another calendar app counts too); looking for free time, Ipsy only knows that time is taken. Private notes and bookings in the layers are hidden from Ipsy, and so are the emails behind private bookings'],
+      apps: {
+        fitness: { highlights: ['Meds: list what you take once, then tick it off each day', 'Your steps on every day, from your iPhone or typed in', 'Meds and Steps back up to your Google Sheet'] },
+        house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'] },
+        calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Connect Gmail so Ipsy can find appointment emails', 'Turn Ipsy\'s Gmail off any time in Settings'] },
+        notes: { highlights: ['Private notes now sync like any other note', 'Private only hides a note from Ipsy', 'Their nudges notify now, too'] },
+        orders: { highlights: ['Mark an order Private to hide it from Ipsy', 'Ipsy can\'t read its emails either', 'Turn off Ipsy\'s Gmail in Settings'] },
+        travel: { highlights: ['Mark a booking or a whole trip Private', 'Ipsy can\'t see it, or its emails', 'Turn off Ipsy\'s Gmail in Settings'] },
+      } },
     { v: '1.6', date: '2026-10-16', title: 'Ipsy, everywhere', intro: 'ipsy',
       highlights: ['Ipsy is now in Travel, Meals, Calendar, Notes and News',
         'Ipsy checks flights live and searches the web for you',
@@ -97,12 +125,7 @@
         'Calendar: Ipsy finds what\'s on and free time, and adds, moves or deletes an event in the Family calendar. It asks you first before every change, one event at a time, never touches a repeating event, and only reads the other layers',
         'Notes: Ipsy finds and writes notes, adds to lists, checks things off, sorts groceries into store sections and sets reminders. It never sees private notes, and asks before deleting one',
         'News: Ipsy finds and sums up stories in today\'s headlines, checks scores, fixtures and tables, changes the teams you follow, and looks up anything newer on the web',
-        'Calendar: connect Gmail in Settings so Ipsy can search appointment emails, read-only, with separate email-sharing consent; every calendar change still asks first',
-        'Ipsy: larger across all six apps, with quiet breathing, occasional glances and softer idle movement; Reduce Motion is respected',
-        'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps',
-        'Notes and Places: the Google Sheet connection form uses the new shared sync link; the shared Apps Script initializes Places data correctly',
-        'Home: the Office and M&D heaters no longer say Unavailable while they are on (Home Assistant now reports an on heater as unknown); Power and the target work again',
-        'Home: the heaters show their wattage (750 W or 1500 W) and mode (Eco, Comfort or Boost - all three, even when Home Assistant lists only Eco) to pick from, as in the Tuya app, and a countdown: 1, 2, 4 or 8 hours and the heater turns itself off'],
+        'aOS: Meet Ipsy on Today now tells what Ipsy does in all six apps'],
       apps: {
         travel: { highlights: ['Meet Ipsy: tap the little stem cell and chat about your trips', 'Ipsy checks any flight live and finds flight numbers', 'Ipsy fills in what your bookings are missing, with Undo'] },
         meals: { highlights: ['Meet Ipsy: tap the little stem cell and chat about dinner', 'Ipsy swaps a night or plans a week around the deals', 'It always keeps to what the family never eats'] },
@@ -653,6 +676,11 @@
           "i": "chart",
           "t": "See your progress",
           "d": "Analysis compares this week or month with the one before, showing what's improving and what needs work."
+        },
+        {
+          "i": "check",
+          "t": "Meds and steps",
+          "d": "Tick off your medications and supplements on Meds, a private page, and see each day's steps, from your iPhone or typed in."
         },
         {
           "i": "star",
@@ -1590,6 +1618,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     { sel: '#fab', t: 'Log in seconds', d: 'Search an exercise, like "db curl", and last time’s weight, reps and sets fill in for you.', g: 'tap' },
     { sel: ['#main .drow.today', '#fab'], t: 'Cardio counts too', d: 'Log time and distance on the treadmill, bikes, rower, track or pool alongside your lifting.', g: 'tap' },
     { sel: ['#viewBtn', '#vbar'], t: 'See your progress', d: 'Analysis compares this week or month with the one before, showing what’s improving and what needs work.', g: 'tap' },
+    { sel: ['#viewBtn', '#vbar'], t: 'Meds and steps', d: 'Pick Meds here to tick off your medications and supplements, on a private page of its own. The week shows each day’s steps, from your iPhone or typed in.', g: 'tap' },
   ] };
   SPOTS.drinks = { stops: [
     { sel: ['#main .rgroup.week', '#main .week'], t: 'Your week', d: 'Each day shows its standard drinks or alcohol-free. Swipe sideways to move a week at a time.', g: 'swipe-left' },
@@ -1969,11 +1998,56 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     let p = null; try { p = JSON.parse(localStorage.getItem(PLAN) || 'null'); } catch {}
     showPlan(p);
     try {
-      const r = await fetch(api('state'), { cache: 'no-store' }); if (!r.ok) return;
-      p = (await r.json()).plan || null;
+      const t = token();   // signed in: the same call says if this app was asked to erase itself
+      const r = await fetch(api('state'), { cache: 'no-store', headers: t ? { Authorization: 'Bearer ' + t } : {} }); if (!r.ok) return;
+      const j = await r.json();
+      if (j.erase && t && t === token()) return eraseHere(true);
+      p = j.plan || null;
       try { p ? localStorage.setItem(PLAN, JSON.stringify(p)) : localStorage.removeItem(PLAN); } catch {}
       showPlan(p);
     } catch {}   // offline: the last plan seen stands
+  }
+
+  // ---- sign out and erase: a lost phone ----
+  // aOS -> Account -> Lost a phone? asks the server to erase aOS from every other session of
+  // yours (functions/aOS/api signout-others { erase: true }). Each app learns it here, the
+  // next time it opens or comes back to the front online (checkPlan's GET state, sent with
+  // this app's session, answers erase: true), and erases everything this app keeps on the
+  // phone: its storage, its databases, its offline copy. Each Home Screen app has its own
+  // storage on an iPhone, so each one erases itself as it is opened; one never opened again
+  // keeps its data behind the phone's passcode. "Sign out and erase" in an app's own
+  // Settings (Fitness's) and aOS's Lost a phone? page do the same for that app, at once.
+  // What's in a Google Sheet or the family account stays: sign in on the new phone to get it back.
+  const ERASED = 'aos.erased';
+  async function eraseHere(remote) {
+    const wipe = () => { try { localStorage.clear(); } catch {} };
+    wipe();
+    try { sessionStorage.clear(); sessionStorage.setItem(ERASED, remote ? 'remote' : 'here'); } catch {}
+    try {
+      const dbs = indexedDB.databases ? await indexedDB.databases() : [];
+      await Promise.all(dbs.map(d => d && d.name && new Promise(ok => { const q = indexedDB.deleteDatabase(d.name); q.onsuccess = q.onerror = q.onblocked = () => ok(); })));
+    } catch {}
+    try { for (const k of await caches.keys()) await caches.delete(k); } catch {}
+    try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } catch {}
+    wipe();   // anything the app wrote back while that ran
+    location.replace(location.pathname);
+  }
+  AOS.erase = remote => eraseHere(!!remote);   // remote: the server asked (aOS's own GET state, aOS/app.js)
+  // After the reload: once, a card saying so.
+  function erasedNote() {
+    let how = null; try { how = sessionStorage.getItem(ERASED); sessionStorage.removeItem(ERASED); } catch {}
+    if (!how) return false;
+    try { localStorage.clear(); } catch {}
+    if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
+    const el = document.createElement('div');
+    el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Erased');
+    el.innerHTML = `<div class="o-card"><h1>Signed out and erased</h1>
+      <p>${how === 'remote' ? 'You asked aOS to erase itself from your other devices, so ' + esc(NAMES[APP] || 'this app') + ' has erased what it kept on this phone.' : esc(NAMES[APP] || 'This app') + ' has erased what it kept on this phone.'}</p>
+      <p>Anything backed up to a Google Sheet or your family account is still there. Sign in again to get it back.</p>
+      <a class="o-go" href="${esc(location.pathname)}">OK</a></div>`;
+    el.querySelector('.o-go').onclick = e => { e.preventDefault(); el.remove(); };
+    document.body.appendChild(el);
+    return true;
   }
   const OFF_CSS = `
 #aos-off { position: fixed; inset: 0; z-index: 2147483600; display: grid; place-items: center; padding: 24px;
@@ -2015,8 +2089,9 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
   }
   if (me && me.hasAttribute('data-auto')) {
-    const go = () => { checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
+    const go = () => { if (erasedNote()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkPlan(); });   // back from aOS, or a day later
+    addEventListener('online', () => checkPlan());   // a phone kept offline hears of an erase as soon as it's back
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
   }
 })();

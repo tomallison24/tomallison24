@@ -77,6 +77,7 @@ if (window.top !== window.self) {
   const QUERY_V = '5';
 
   const I = {
+    lock: '<svg class="lk" viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
     spark: '<svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     flight: '<svg viewBox="0 0 24 24"><path d="M3.2 13.6l5.4 1.3L6 19.6l1.9.5 4.4-4.3 5.6 1.4a2 2 0 0 0 2.4-1.5v0a2 2 0 0 0-1.4-2.4l-5.6-1.4-1.6-6-1.9-.5-.4 5.4-3.1-.8-1.5-2-1.4-.4.5 3.5z"/></svg>',
     hotel: '<svg viewBox="0 0 24 24"><path d="M3.2 19.6V6.4"/><path d="M3.2 15.2h17.6v4.4"/><path d="M20.8 15.2v-3.4a3 3 0 0 0-3-3h-6.6v6.4"/><circle cx="7.4" cy="11.4" r="2"/></svg>',
@@ -168,7 +169,9 @@ if (window.top !== window.self) {
   const LAYER = /^\/travelvintage\//.test(location.pathname) ? 'travelv' : 'travel';
   function shareCal() {
     const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
-    L.share(LAYER, { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]]))) });
+    // a private booking goes with its email's ids, so Calendar's Ipsy leaves that email out too
+    const priv = b => b.private ? { private: true, msgId: (b.source && b.source.msgId) || '', threadId: (b.source && b.source.threadId) || '' } : {};
+    L.share(LAYER, { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => ({ ...Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]])), ...priv(b) })) });
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (syncCfg) scheduleSync(); }
@@ -290,7 +293,7 @@ if (window.top !== window.self) {
       g.endT = Math.max(...g.items.map(endT).filter(x => !isNaN(x)));
       g.past = g.endT < Date.now() - 6 * H;
       g.check = g.items.filter(b => b.guess && !isPast(b)).length;
-      g.gaps = g.items.filter(b => !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length).length;     // something Have Ipsy check could be asked for
+      g.gaps = g.items.filter(b => !b.private && !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length).length;     // something Have Ipsy check could be asked for
     });
     return groups;
   }
@@ -578,6 +581,11 @@ if (window.top !== window.self) {
       + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
   function tripById(id) { return groupTrips().find(g => g.id === id || g.items.some(b => b.id === id)); }
+  // Private: hidden from Ipsy (ipsy-tools.js), with its email; it still syncs, and an email can still update it.
+  function setPrivate(ids, on) {
+    bookings.forEach(b => { if (ids.includes(b.id)) { if (on) b.private = true; else delete b.private; } });
+    save(); render();
+  }
   function openTrip(id) {
     const g = tripById(id); if (!g) return;
     st.trip = g.id;
@@ -603,6 +611,9 @@ if (window.top !== window.self) {
     h += days.map((d, i) => '<div class="dayblock" style="--i:' + i + '"><p class="sechead"><span>' + esc(fmtDay(d.d, { weekday: 'long', month: 'long' })) + '</span></p><div class="tl glass">'
       + d.list.map(e => evRow(e.b, e.at, e.side)).join('') + '</div></div>').join('');
     h += '<button class="btn quiet" type="button" id="tpAdd">' + I.plus + 'Add a booking to this trip</button>';
+    const priv = g.items.filter(b => b.private).length, all = priv === g.items.length;
+    h += '<div class="opts"><button class="opt" type="button" id="tpPriv" aria-pressed="' + all + '">' + I.lock + 'Private trip</button></div><p class="hint">'
+      + (all ? 'Private: this trip and its emails are hidden from Ipsy.' : priv ? plural(priv, 'booking') + ' in this trip ' + (priv === 1 ? 'is' : 'are') + ' private. Private trip hides them all from Ipsy.' : 'Private trip hides this trip and its emails from Ipsy.') + '</p>';
     // Search for more around this trip.
     const flights = g.live.filter(b => b.type === 'flight');
     const hotel = g.live.find(b => b.type === 'hotel');
@@ -619,6 +630,7 @@ if (window.top !== window.self) {
       + '</div>';
     $('tpBody').innerHTML = h;
     $('tpAdd').onclick = () => openAdd(g.start.slice(0, 10));
+    $('tpPriv').onclick = () => { setPrivate(g.items.map(b => b.id), !all); renderTrip(); toast(all ? 'Ipsy can see this trip again' : 'Private: hidden from Ipsy'); };
   }
   function finishTrip() {
     const g = tripById(st.trip), inp = $('tpName');
@@ -685,7 +697,9 @@ if (window.top !== window.self) {
     if (rows.length) h += '<div class="rgroup glass">' + rows.join('') + '</div>';
     if (b.source && b.source.from) h += '<p class="hint">From ' + esc(b.source.from.replace(/<[^>]*>/g, '').trim() || b.source.from) + (b.source.date ? ', ' + esc(new Date(b.source.date).toLocaleDateString()) : '') + '.</p>';
     if (!st.isNew) {
-      h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button></div>';
+      h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button>'
+        + '<button class="opt" type="button" id="bkPriv" aria-pressed="' + !!b.private + '">' + I.lock + 'Private</button></div>'
+        + '<p class="hint">' + (b.private ? 'Private: hidden from Ipsy, and so is its email. It still syncs and shows here as usual.' : 'Private hides this booking and its email from Ipsy.') + '</p>';
       h += '<button class="btn quiet danger" type="button" id="bkDel">Delete booking</button>';
     }
     $('bkBody').innerHTML = h;
@@ -738,6 +752,12 @@ if (window.top !== window.self) {
       renderBooking(); toast('Thanks. Marked as checked.'); return;
     }
     if (e.target.closest('#bkCx')) { b.status = b.status === 'cancelled' ? 'confirmed' : 'cancelled'; renderBooking(); return; }
+    if (e.target.closest('#bkPriv')) {
+      // Private is kept at once, on the booking itself (it isn't an edit: an email can still update it).
+      readFields(); setPrivate([b.id], !b.private);
+      if (b.private) delete b.private; else b.private = true;
+      renderBooking(); return;
+    }
     if (e.target.closest('#bkCal')) { readFields(); await addToCalendar(ics([b]), titleOf(b), 'it'); return; }
     if (e.target.closest('#bkLiveGo')) { refreshLive(b, true).then(renderLiveBox); renderLiveBox(true); return; }
     if (e.target.closest('#bkDel')) {
@@ -1193,8 +1213,10 @@ if (window.top !== window.self) {
     // Exact (UTC) when the email gave the time zone; otherwise "floating",
     // which the calendar shows at that clock time wherever you are.
     const timed = (at, iso) => ({ s: iso && !isNaN(Date.parse(iso)) ? 'DTSTART:' + utcS(Date.parse(iso)) : 'DTSTART:' + floating(at) });
+    let priv = false;   // the booking being written is private: hidden from Ipsy in Calendar too (calendar/ical.js)
     const ev = (uid, summary, start, endLine, loc, desc, alarmMin) => {
       L.push('BEGIN:VEVENT', 'UID:' + uid + '@allison-travel', 'DTSTAMP:' + stamp, start, endLine, 'SUMMARY:' + e2(summary));
+      if (priv) L.push('X-AOS-PRIVATE:TRUE');
       if (loc) L.push('LOCATION:' + e2(loc));
       if (desc) L.push('DESCRIPTION:' + e2(desc));
       if (alarmMin != null) L.push('BEGIN:VALARM', 'TRIGGER:-PT' + alarmMin + 'M', 'ACTION:DISPLAY', 'DESCRIPTION:' + e2(summary), 'END:VALARM');
@@ -1208,6 +1230,7 @@ if (window.top !== window.self) {
       return 'DTEND:' + floating(ymd(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
     };
     for (const b of list) {
+      priv = !!b.private;
       const desc = [b.conf ? 'Confirmation: ' + b.conf : '', b.notes].filter(Boolean).join('\n');
       if (b.type === 'flight' && b.dep) {
         const dep = b.dep.length >= 16 ? b.dep : b.dep + 'T09:00';
@@ -1390,7 +1413,7 @@ if (window.top !== window.self) {
     const acct = window.AllisonOS && window.AllisonOS.account;
     for (const q of queue) {
       const b = bookings.find(x => x.id === q.bid);
-      if (!b || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) { out.done.add(q.bid); continue; }     // history isn't looked up
+      if (!b || b.private || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) { out.done.add(q.bid); continue; }     // history isn't looked up
       const map = ASK[b.type]; if (!map) { out.done.add(q.bid); continue; }
       let miss = P.missingFields(b);                       // nothing missing: nothing is asked, nothing is sent
       if (!miss.length) { out.done.add(q.bid); continue; }
@@ -1466,7 +1489,7 @@ if (window.top !== window.self) {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { toast('AI isn’t set up on this copy of the site (Travel README, “Smart help”).'); return; }
       if (!getToken()) { toast('Connect Gmail first, so Travel can read the emails.'); return; }
-      const todo = g.items.filter(b => !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length);
+      const todo = g.items.filter(b => !b.private && !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length);
       const { queue, noMail } = await mailQueue(todo);
       const r = await aiPass(queue);
       await findNumbers();
@@ -1492,7 +1515,7 @@ if (window.top !== window.self) {
     const mode = ls.get(K.ipsyAuto, '');
     if (mode === '0') return;
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
-    const todo = bookings.filter(b => b.source && b.source.msgId && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
+    const todo = bookings.filter(b => !b.private && b.source && b.source.msgId && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
     if (!todo.length) return;
     if (aiAvail === null) await pingLive();
@@ -1768,6 +1791,9 @@ if (window.top !== window.self) {
     $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
     $('stIpsyAutoSub').textContent = auto === '1' ? 'On. After each read of Gmail, Ipsy checks the upcoming bookings that are missing something, once per email, up to 10 at a time.'
       : auto === '0' ? 'Off. Ipsy checks a trip only when you press Have Ipsy check.' : 'Ipsy asks you first, the next time a booking is missing something.';
+    const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
+    $('stIpsyGmailOpt').hidden = !PV;
+    if (PV) $('stIpsyGmailSub').textContent = PV.gmail('travel') ? 'On. In a chat, Ipsy can search and read your Gmail, read-only. Private bookings’ emails are always hidden.' : 'Off. Ipsy can’t search or read any email in your chats.';
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
       : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
@@ -1797,6 +1823,7 @@ if (window.top !== window.self) {
     ls.set(K.ipsyAuto, on ? '1' : '0'); renderSettings();
     if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); ipsyAutoCheck(); }
   };
+  $('stIpsyGmailOpt').onclick = () => { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); };
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });
     else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
@@ -2029,16 +2056,16 @@ if (window.top !== window.self) {
     ipsy = window.AllisonOS.ipsy.mount({
       app: 'travel', name: 'Travel', endpoint: '../travel/api/ipsy', headers: { 'X-Travel': '1' }, slot: $('ipsySlot'),
       ...window.TravelIpsy({
-        P, get bookings() { return bookings; }, groupTrips, checkList, tripById, startOf, endOf, isPast, titleOf, fillText, liveView, liveWindow,
+        P, get bookings() { return bookings; }, groupTrips, checkList, tripById, autoName, startOf, endOf, isPast, titleOf, fillText, liveView, liveWindow,
         checkField, checkEdit, applyEdits, editText, EDIT_FIELDS, EDIT_NEEDED, EDIT_LABEL, render, openTrip, openBooking,
         flightData, keepLive, boardData,
         // the same monthly allowances on this phone as the app's own look-ups
         allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
         gmail, bodies, header, getToken, AuthError,
         screen() {
-          if (!$('bkSheet').hidden && st.booking && !st.isNew) return 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
+          if (!$('bkSheet').hidden && st.booking && !st.isNew) return st.booking.private ? 'a private booking' : 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
           const g = !$('tripPage').hidden && st.trip && tripById(st.trip);
-          if (g) return 'the trip ' + g.id + ' ("' + g.name + '")';
+          if (g) return g.items.some(b => b.private) ? 'a trip with private bookings' : 'the trip ' + g.id + ' ("' + g.name + '")';
           if (st.tab === 'explore') return 'Explore, which opens Google Flights, Google Hotels and others with a search filled in';
           return WHEN_NAMES[st.when] || 'the trips';
         },
