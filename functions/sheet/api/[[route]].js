@@ -34,7 +34,7 @@ export const SHEETS = {
 };
 // The owner's own Sheets, as the apps had them filled in: the link alone opens nothing (it needs the phrase).
 const USUAL = {
-  fitness: 'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec',   // deployed anew with Meds and Steps
+  fitness: 'https://script.google.com/macros/s/AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/exec',   // deployed anew with aOS's script (VERSION 3)
   drinks: 'https://script.google.com/macros/s/AKfycbxzpSXXD2t-j7kaNrA3S-kK74uaxC5J6P_OykrOQrdYYww4JCViMrwMnXSVo4Qn3nOO/exec',
   podcasts: 'https://script.google.com/macros/s/AKfycbzyRxvnOvC97ByhaBJ0_Oc1Z-pP_SBIA9rZPEa5dyvvn1c4W1tGcOyM8LG4XXXbf7Vb/exec',
   orders: 'https://script.google.com/macros/s/AKfycbxj_O0w_Q30WKA-AfWXh86ZyspCG2JsxtsSal_pO8_rpz1xQbbDRNx0L_LY-2ylKJgT/exec',
@@ -42,6 +42,13 @@ const USUAL = {
   travel: 'https://script.google.com/macros/s/AKfycbzEjKlk2PnB_VrMrrPdX6ObNX_kRX2cdxrdfhqjAJFmyzQ8mJEDU9phaKDD_B2CElI1gg/exec',
   meals: 'https://script.google.com/macros/s/AKfycbx7TrC5hNipE0gpjFOMZLRl_mMay1oMDYTkosgPLqvui5wJuOz6WN04iVe1tks-GEmD_w/exec',
 };
+// Links the owner has since replaced with a new deployment of the same Sheet's script: a kept one moves to the usual link.
+const RETIRED = new Set([
+  'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec',
+  'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec',
+  'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec',
+]);
+const current = (cfg, sheetApp) => cfg && (RETIRED.has(cfg.url) && USUAL[sheetApp] ? { ...cfg, url: USUAL[sheetApp] } : cfg);
 const MAX_BODY = 8 * 1024 * 1024;
 const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' && /^script\.google(usercontent)?\.com$/.test(x.hostname) && !x.username ? x.origin + x.pathname : null; } catch { return null; } };
 const first = n => String(n || '').trim().split(/\s+/)[0].slice(0, 40);
@@ -89,7 +96,7 @@ export async function onRequest({ request, params, env }) {
   const me = await sessionUser(db, request);
   if (!me) return reply({ error: 'signin' }, 401);
   const [sheetApp] = SHEETS[app], key = 'config:sheet:' + sheetApp;
-  const cfg = await getJSON(db, key);
+  const cfg = current(await getJSON(db, key), sheetApp);
 
   if (!sub && method === 'GET') return reply({ configured: !!cfg, ...(me.role === 'owner' ? { url: (cfg && cfg.url) || USUAL[sheetApp] || '', at: cfg ? cfg.at : null } : {}) });
 
@@ -106,7 +113,7 @@ export async function onRequest({ request, params, env }) {
     let b = {}; try { b = JSON.parse(await request.text() || '{}'); } catch {}
     if (sub === 'config' && b.clear === true) { await db.delete(key); return reply({ configured: false }); }
     if (sub === 'claim' && cfg) return reply({ configured: true, kept: true });
-    const url = okUrl(b.url || (cfg && cfg.url) || USUAL[sheetApp] || ''), secret = String(b.secret || '').trim();
+    const url = okUrl((RETIRED.has(b.url) ? '' : b.url) || (cfg && cfg.url) || USUAL[sheetApp] || ''), secret = String(b.secret || '').trim();
     if (!url) return reply({ error: 'url' }, 400);
     if (!secret) return reply({ error: 'secret' }, 400);
     const bad = await check(url, secret, sheetApp, me);

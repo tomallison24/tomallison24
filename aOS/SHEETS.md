@@ -91,10 +91,12 @@ Fitness's is the reference: `fitness/google-sheet-sync.gs` (VERSION 3).
 
 Fitness's is the reference: the sync section of `fitness/app.js`.
 
-1. **No link or phrase on the phone.**
-   - The Sheet sheet shows the status and **Sync now**, which signs in if it has to.
-   - No form, no "Copy setup link", no "Disconnect".
-   - The pre-filled `SHEET_URL` is gone: aOS has the owner's links (`USUAL` in `functions/sheet/api`).
+1. **No link, phrase or Sheet settings on the phone.**
+   - aOS (Account → Google Sheets) is the one place a Sheet is set up; the apps have no Sheet row or
+     sheet of their own, and sync by themselves.
+   - A real sync error shows one toast an app session; none for `signin` or `no-sheet` (the owner
+     sets it up in aOS, so nobody else is nagged).
+   - The owner's links are in aOS (`USUAL` in `functions/sheet/api`).
 2. **Hand over, once.** On start and on sign-in, `handOver()` passes what the phone kept (its
    `-sync`/`-sheet` key, or the IndexedDB copy) to `AllisonOS.sheet.adopt`, and deletes it when that
    says yes.
@@ -102,7 +104,7 @@ Fitness's is the reference: the sync section of `fitness/app.js`.
    - On start, after a change, when the app comes back to the front, and when the phone comes back
      online.
    - The request: `{ action: 'sync', v, window: 90, today, <kinds>, graves }`. Never a `secret`.
-   - Signed out, the app keeps working on the phone, and its Sheet sheet says to sign in.
+   - Signed out, the app keeps working on the phone; welcome.js and the app's own sign-in ask for Face ID.
 4. **Keep 90 days.**
    - Once a sync has worked, drop dated items older than 90 days from the phone after each sync,
      **with no grave** (the Sheet keeps them).
