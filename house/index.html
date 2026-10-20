@@ -830,6 +830,10 @@
   .pwr, .round, .disc, .rb-disc { background: var(--mc-card-2); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
   .alert { background: color-mix(in srgb, var(--mc-mustard) 28%, transparent); box-shadow: none; }
   .alert.full { background: color-mix(in srgb, var(--mc-orange) 28%, transparent); }
+  .alert.au-dev { background: color-mix(in srgb, var(--mc-mustard) 20%, transparent); }
+  .au-dot { background: var(--mc-olive); }
+  .au-off .au-dot, .au-unavailable .au-dot, .au-gone .au-dot { background: var(--mc-edge); }
+  .au-missing .au-dot { background: var(--mc-orange); }
   .tank .glass { background: color-mix(in srgb, var(--mc-card) 40%, transparent); box-shadow: inset 0 0 0 2px var(--mc-edge); }
 
   /* popups and sheets */
@@ -1082,6 +1086,8 @@
 <script src="around.js"></script>
 <script src="energy.js"></script>
 <script src="schedule.js"></script>
+<script src="automations-data.js"></script>   <!-- ha-config's automations and scripts (tools/automations.py), for the Automations view -->
+<script src="automations.js"></script>
 <script src="../weather/data.js"></script>   <!-- the Weather app's data, for the weather pill -->
 <script src="favorites.js"></script>
 <script src="bg.js"></script>

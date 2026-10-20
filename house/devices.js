@@ -16,7 +16,7 @@
 // with the thermostats' held()/tset()/tsend(): a device is { id, name }.
 'use strict';
 
-const VIEW_OF = { Favorites: 'fav', Climate: 'climate', Lights: 'lights', Media: 'media', Security: 'security', 'Around the house': 'around', Labs: 'labs' };
+const VIEW_OF = { Favorites: 'fav', Climate: 'climate', Lights: 'lights', Media: 'media', Security: 'security', 'Around the house': 'around', Automations: 'autos', Labs: 'labs' };
 function family(f) {
   const el = document.createElement('section');
   el.className = 'units'; el.id = 'v-' + f.id; el.hidden = true;

@@ -5,7 +5,7 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` was the AllisonOS
 launcher (retired; it now holds the scripts every app shares), and its
 `localStorage` keys are `house.*`. It has every device on the Signal
-dashboard in six views, picked from a floating Liquid Glass pill at the
+dashboard in six views, and every automation in a seventh, picked from a floating Liquid Glass pill at the
 bottom of the screen, in reach of a thumb (the view's icon and name; the
 menu opens upwards). The view's name is the title at the top. It has two
 designs (**Settings → Design**; see "The two designs" below): **Vintage**,
@@ -33,6 +33,7 @@ hand just after the block in `index.html`.
 - **Media**: Speakers (the Sonos, the Move, the Nest Mini) and TV
 - **Security**: the Blink system and cameras, the Nest doorbell
 - **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
+- **Automations**: every Home Assistant automation, what it does and whether it is on (see "Automations" below)
 
 A view with several kinds of device has a small heading over each, with
 what that part is doing. Each view says in the drop-down what is running or needs you ("4 running",
@@ -391,6 +392,47 @@ thermostat in its `entities`.
 - A thermostat with no schedule says so (a schedule kept in the Nest app
   isn't visible to Home Assistant).
 
+## Automations
+
+Every automation in Home Assistant, to see at a glance (`automations.js`):
+nothing here turns one on or off or runs it - that stays in Home Assistant.
+
+- **The list** is Home Assistant's own `automation.*` entities, live: each
+  one's status ("On · ran 2h ago", "Off · never run", "Running now") is its
+  own. The drop-down line says how many are running, ran today and are off.
+  **All / Ran today / Off** at the top filter them (Ran today only when
+  connected).
+- **What each does** comes from its config: the first sentence of its
+  description, when it runs (its triggers in words: "At 8:30 AM", "1 h before
+  sunset", "When Elena arrives home"), and the devices it works, each with its
+  state now ("Office Blinds · Open 40%"; more than three, one chip per kind:
+  "14 lights · 3 on"). Tap a card for the rest: Runs, Only if, Controls,
+  Watches, Notifies, the scripts it starts, the helpers it uses, and the whole
+  description.
+- **Where the configs come from**: Home Assistant gives an automation's config
+  only to an admin's token (`automation/config` is `require_admin`). So the
+  view asks once when it is opened, and with any other token reads Home's copy,
+  `automations-data.js`: ha-config's `automations.yaml` and the scripts they
+  start, from `scripts.yaml`, matched on the automation's id. **Re-run
+  `python3 house/tools/automations.py ../ha-config` after the automations
+  change** (it writes the copy; an automation made in Home Assistant's editor
+  and not in the copy says so on its card). One in the copy that Home Assistant
+  doesn't have is listed under **Not in Home Assistant**: removed there, or
+  turned down by Home Assistant for a mistake in it.
+- **Devices** are read out of the config: every `entity_id`, every entity a
+  template names, and those of a kind worked through a template (`target:
+  "{{ trigger.entity_id }}"` on a `fan.*` call: the fans it names elsewhere).
+  The actions' (and their scripts') are what it controls; the triggers' and
+  conditions', what it watches. Sensors and people are only ever watched.
+- **Groups**: Routines (three kinds of device or more, or two and run on
+  request or by people coming and going), then by its name ("Blinds - ...",
+  "Hatch - ...") or the kind it works most: Climate, Lights, Blinds,
+  Security, Media, Nursery; Notifications (sends one and works no device);
+  Behind the scenes (only the dashboard's helpers).
+- **Preview**: the copy's automations, all on, with the sample devices.
+
+The Signal dashboard has no such view; this one is Home's only.
+
 ## Labs
 
 **Labs** is a view for trying ideas live before they replace anything; it
@@ -563,7 +605,7 @@ The dehumidifiers are `UNITS` and the thermostats `THERMOS` in `app.js`.
 Every other family is its own file - `heaters.js`, `dysons.js`, `lights.js`,
 `media.js`, `security.js`, `around.js`, `favorites.js` - with its devices in
 a list at the top (entity ids, colours). `devices.js` has what they share:
-`family()` adds a section to one of the six views, and the cards, popup,
+`family()` adds a section to one of the views, and the cards, popup,
 sample states and preview are the family's own.
 
 ## Icons
