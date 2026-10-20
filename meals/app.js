@@ -427,8 +427,6 @@ if (window.top !== window.self) {
       + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>').join('') + '</div>'
       + '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
       + '<p class="hint">“Tree nuts” covers almonds, cashews, pecans, walnuts, pistachios, pine nuts, pesto and the like; peanuts are fine. Anything else you add is checked by its name.</p>'
-      + '<p class="label">The family’s record</p><div class="rgroup"><button class="rowbtn" type="button" id="sheetBtn"><span class="ic">' + ICON.sheet + '</span><span>Google Sheet<span class="sub" id="sheetSub">' + esc(sheetLine()) + '</span></span></button></div>'
-      + '<p class="hint">Every plan the family accepts, the deals and the shopping list, kept in the family’s Google Sheet. Older plans come back from it under Past plans.</p>'
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
   let draftAvoid = null, draft = { stores: [], cards: [] };
@@ -436,7 +434,6 @@ if (window.top !== window.self) {
   $('setBtn').onclick = () => { draftAvoid = [...(data.settings.avoid || [])]; draft = { stores: [...(data.settings.stores || [])], cards: [...(data.settings.cards || [])] }; renderSettings(); openSheet('setSheet'); };
   $('setBody').addEventListener('click', async e => {
     if (e.target.closest('[data-act="signin"]')) { closeSheet('setSheet'); return signIn(); }
-    if (e.target.closest('#sheetBtn')) { renderSheetStatus(); openSheet('syncSheet'); return; }
     const tg = e.target.closest('[data-store], [data-card]');
     if (tg) {
       const [list, v] = tg.dataset.store ? [draft.stores, tg.dataset.store] : [draft.cards, tg.dataset.card], i = list.indexOf(v);
@@ -541,7 +538,9 @@ if (window.top !== window.self) {
   const SHEET_APP = 'allison-meals-sync', KEEP_DAYS = 90;
   const SH = () => window.AllisonOS && AllisonOS.sheet;
   function signedIn() { return !!(A() && A().token()); }
-  let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetState = 'idle', sheetErr = '', sheetErrShown = false, sheetLast = '';
+  // sheetErrShown: a sync shows one toast a session at most, for a real error (aOS sets the Sheet up, so not for
+  // 'signin' or 'no-sheet').
+  let sheetBusy = false, sheetAgain = false, sheetTimer = null, sheetErrShown = false, sheetLast = '';
   let sheetAt = +ls.json(K.sheetAt, 0) || 0;
   // the plans the Sheet holds (by id, from its last answer: none known until one), and plans taken back here (Undo of Accept)
   const hadIds = ls.json(K.sheetHas, null);
@@ -561,7 +560,6 @@ if (window.top !== window.self) {
     'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
     'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
-  const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
 
   // The link and phrase this phone used to keep (before aOS kept them: localStorage, a copy in IndexedDB,
@@ -679,36 +677,35 @@ if (window.top !== window.self) {
     const key = JSON.stringify({ cur: cur && { ...sheetPlan(cur), updated: 0 }, deals, shopping, settings, graves: sheetGraves });
     return { key, more: plans.length - (cur ? 1 : 0), body: { plans, deals, shopping, settings } };
   }
-  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
-  async function sheetSync(loud) {
-    if (!SH() || (!loud && !signedIn())) { sheetState = signedIn() ? 'idle' : 'signin'; renderSheetStatus(); return false; }
+  // Always quietly, when signed in: aOS sets the Sheet up, and Meals syncs by itself.
+  async function sheetSync() {
+    if (!SH() || !signedIn()) return false;
     if (sheetBusy) { sheetAgain = true; return false; }
-    if (!navigator.onLine) { sheetState = 'offline'; renderSheetStatus(); return false; }
-    sheetBusy = true; sheetState = 'syncing';
+    if (!navigator.onLine) return false;
+    sheetBusy = true;
     let ok = false;
     try {
       const snap = await sheetSnapshot();
-      if (!loud && snap.key === sheetLast && !snap.more) { sheetState = 'ok'; ok = true; return true; }   // nothing new since the last copy
-      const res = await SH().sync('meals', Object.assign({ action: 'sync', v: 3, window: KEEP_DAYS, today: isoDay(new Date()) }, snap.body, { graves: sheetGraves }), { ask: loud });
+      if (snap.key === sheetLast && !snap.more) { ok = true; return true; }   // nothing new since the last copy
+      const res = await SH().sync('meals', Object.assign({ action: 'sync', v: 3, window: KEEP_DAYS, today: isoDay(new Date()) }, snap.body, { graves: sheetGraves }));
       if (res.app && res.app !== SHEET_APP) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       sheetLast = snap.key;
       if (Array.isArray(res.planIds)) { sheetHas = new Set(res.planIds); sheetKnows = true; ls.set(K.sheetHas, res.planIds.slice(-2000)); }
       sheetAt = Date.now(); ls.set(K.sheetAt, sheetAt);
-      sheetState = 'ok'; sheetErr = ''; sheetErrShown = false; ok = true;
+      ok = true;
       if (takeSheetPlans(res.plans, res.graves)) render();
       if (missing().length) sheetAgain = true;   // the Sheet lacks some of the family server's plans: they go next
     } catch (e) {
-      sheetState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; sheetErr = e.message;
-      // (the Sheet not set up yet only says so in its status, unless you asked)
-      if (loud || (!sheetErrShown && sheetState === 'error' && sheetErr !== 'no-sheet')) { sheetErrShown = true; toast(SHEET_ERRORS[sheetErr] || 'The family’s Google Sheet didn’t sync. Trying again later.', null, 6000); }
+      const code = e.message;
+      if (!sheetErrShown && !['signin', 'no-sheet', 'offline'].includes(code)) { sheetErrShown = true; toast(SHEET_ERRORS[code] || 'The family’s Google Sheet didn’t sync. Trying again later.', null, 6000); }
     } finally {
-      sheetBusy = false; renderSheetStatus();
+      sheetBusy = false;
       if (sheetAgain) { sheetAgain = false; scheduleSheet(800); }
     }
     return ok;
   }
-  function scheduleSheet(ms) { clearTimeout(sheetTimer); sheetTimer = setTimeout(() => sheetSync(false), ms == null ? 2500 : ms); }
+  function scheduleSheet(ms) { clearTimeout(sheetTimer); sheetTimer = setTimeout(() => sheetSync(), ms == null ? 2500 : ms); }
 
   // Looking back past the plans the family server keeps: a year at a time from the Sheet (if a year has
   // none, everything before it at once), each range once a session.
@@ -729,21 +726,6 @@ if (window.top !== window.self) {
     } catch (e) { toast(SHEET_ERRORS[e.message] || 'Couldn’t reach the family’s Google Sheet. Try again later.', null, 6000); }
     older.busy = false; render();
   }
-
-  function sheetLine() {
-    if (!signedIn()) return 'Sign in to sync';
-    return sheetState === 'error' ? (sheetErr === 'no-sheet' ? 'Not set up yet' : 'Couldn’t sync just now') : sheetState === 'syncing' ? 'Syncing…'
-      : sheetState === 'offline' ? 'Offline: will sync when you’re back online' : sheetAt ? 'Last synced ' + ago(sheetAt) : 'Not synced yet';
-  }
-  function renderSheetStatus() {
-    const signed = signedIn();
-    $('syStatus').textContent = !signed ? SHEET_ERRORS.signin
-      : sheetState === 'error' ? (SHEET_ERRORS[sheetErr] || 'Not synced. Trying again later.') : sheetState === 'syncing' ? 'Syncing…'
-      : sheetState === 'offline' ? SHEET_ERRORS.offline : sheetAt ? 'In the family’s Google Sheet. Last synced ' + ago(sheetAt) + '.' : 'Not synced yet.';
-    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
-    const sub = $('sheetSub'); if (sub) sub.textContent = sheetLine();
-  }
-  $('syNow').onclick = async () => { if (await sheetSync(true)) toast('Synced'); };
 
   // ---------------------------------------------------------------------
   // Start
