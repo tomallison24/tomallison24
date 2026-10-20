@@ -8,7 +8,8 @@ import fs from 'fs';
 import vm from 'vm';
 import path from 'path';
 
-export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase') {
+// asAos: the link parameters aOS adds to every request (key, who, name, owner), when a test doesn't give its own
+export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase', asAos = {}) {
   const sheets = new Map();
   const makeSheet = name => {
     const sh = {
@@ -53,7 +54,8 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
   return {
     sheets,
     get: () => JSON.parse(ctx.__api.doGet().text),
-    post: body => JSON.parse(ctx.__api.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
+    // params: what aOS adds to the link (functions/sheet/api): key (the SECRET), who, name, owner ('1')
+    post: (body, params = asAos) => JSON.parse(ctx.__api.doPost({ parameter: params, postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
     tab: n => sheets.get(n) ? sheets.get(n).cells : null,
   };
 }

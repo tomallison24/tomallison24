@@ -14,6 +14,9 @@
 //   wipe:<id>        "Sign out and erase": every session of theirs signed before this sign-out
 //                    count erases aOS's data from its app the next time that app opens online
 //                    (GET /aOS/api/state says erase: true; home/welcome.js does it)
+//   config:sheet:<sheet>   { url, secret, at } - an app's Google Sheet (its Apps Script link and secret
+//                    phrase), given by the owner; every phone's sync goes through functions/sheet/api,
+//                    which passes it on with who's asking, so no phone holds a link or phrase (aOS/SHEETS.md)
 //   steps:<id>, steps:by:<entity>   the Home Assistant step sensor linked to that person, and
 //                    who it's linked to (functions/fitness/api); only they can read its steps
 //   used:<challenge> a sign-in challenge already used, gone after 5 minutes

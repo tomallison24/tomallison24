@@ -7,7 +7,9 @@ import fs from 'fs';
 import vm from 'vm';
 import path from 'path';
 
-export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase') {
+// asAos: the link parameters aOS adds to every request (functions/sheet/api: key, who, name, owner),
+// used when a test doesn't give its own to post()
+export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs'), secret = 'test-secret-phrase', asAos = {}) {
   const sheets = new Map();
   const makeSheet = name => {
     const sh = {
@@ -58,7 +60,7 @@ export function fakeSheet(gsPath = path.join(path.dirname(new URL(import.meta.ur
   const api = {
     sheets,
     get: () => JSON.parse(ctx.__api.doGet().text),
-    post: body => JSON.parse(ctx.__api.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
+    post: (body, params = asAos) => JSON.parse(ctx.__api.doPost({ parameter: params, postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).text),
     tab: n => sheets.get(n) ? sheets.get(n).cells : null,
     // a person typing into the Log tab: row is 1-based (the header is row 1), col is a header name
     type(row, header, value, tab = 'Log') {

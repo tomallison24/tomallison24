@@ -24,7 +24,7 @@ jobs:
           node-version: 22
       - run: node aOS/scripts/check-apps.mjs
       # the family accounts' safety rules and the plan: plain Node, no network
-      - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node aOS/scripts/push-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
+      - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/sheet-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node aOS/scripts/push-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
       # Meals: the server (the allergy check above all) and its sums
       - run: node meals/scripts/api-test.mjs && node notes/scripts/ipsy-api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs && node news/scripts/ai-test.mjs
       # each app's own server and logic tests: plain Node, no network

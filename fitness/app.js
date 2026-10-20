@@ -214,7 +214,7 @@ if (window.top !== window.self) {
   let storeWarned = false;
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps })) && ls.set(K.graves, JSON.stringify(graves));
-    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (syncCfg ? ' Your log is safe in the Google Sheet.' : '')); }
+    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (lastSyncAt ? ' Your log is safe in the Google Sheet.' : '')); }
     shareCal();
   }
   // Calendar's Fitness layer: the last 400 days of your log, just what Calendar shows,
@@ -226,7 +226,7 @@ if (window.top !== window.self) {
     L.share('fitness', { logs: data.logs.filter(x => x && x.date >= since).map(x => ({ date: x.date, exercise: String(x.exercise || '').slice(0, 80), group: x.group, cardio: !!x.cardio, sets: x.sets, reps: x.reps, timed: !!x.timed, weight: x.weight, mins: x.mins, dist: x.dist, unit: x.unit })) });
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
-  function save() { track(); persist(); if (syncCfg) scheduleSync(); }
+  function save() { track(); persist(); if (signedIn()) scheduleSync(); }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const logsOn = day => data.logs.filter(x => x.date === day);
   // Your own exercises in a group, not already in its list.
@@ -302,7 +302,7 @@ if (window.top !== window.self) {
         + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span><span class="tags">' + stepTag(d) + drinkTag(d) + '</span>' + ICON.chevR + '</button>';
     }
     $('todayBtn').hidden = thisWeek;
-    loadDrinks(ws, we);
+    loadDrinks(ws, we); loadOlder(ws, we);
     main.innerHTML = '<div class="navrow" style="--i:0"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(label) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
       + '<div class="rgroup week" style="--i:1">' + rows + '</div>'
       + '<p class="sechead">' + (thisWeek ? 'This week' : 'That week') + '</p>'
@@ -417,7 +417,7 @@ if (window.top !== window.self) {
       const d = x.now - x.before;
       return '<div class="gbar" data-g="' + x.id + '" aria-label="' + esc(groupName(x.id) + ': ' + plural(x.now, 'set') + ', ' + x.before + ' before') + '"><span class="gn"><i></i>' + esc(groupName(x.id)) + '</span><span class="track"><span class="bar' + (x.now ? '' : ' zero') + '" style="width:' + (x.now / max * 72).toFixed(1) + '%"></span><span class="gv">' + x.now + (a.hasBefore && d ? ' <small>' + (d > 0 ? '+' : '−') + Math.abs(d) + '</small>' : '') + '</span></span></div>';
     }).join('');
-    loadDrinks(r.beforeFrom, r.to);
+    loadDrinks(r.beforeFrom, r.to); loadOlder(r.beforeFrom, r.to);
     main.innerHTML = seg + note + kpis
       + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
       + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
@@ -761,7 +761,7 @@ if (window.top !== window.self) {
   }
   function renderMeds() {
     const tod = today(), day = st.medDay;
-    st.medOnToday = day === tod;
+    st.medOnToday = day === tod; loadOlder(day, day);
     $('todayBtn').hidden = day === tod;
     if (!signedIn()) {
       main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to use Meds</strong>Meds stays private to you, on this phone. Signing in with Face ID means you can erase it from a lost phone (aOS → Account → Lost a phone?).'
@@ -814,7 +814,7 @@ if (window.top !== window.self) {
       + '<button class="xrow add" type="button" data-madd><span class="xt">Add a medication or supplement</span>' + ICON.plus + '</button></div>'
       + medsHint();
   }
-  const medsHint = () => '<p class="hint">Only on this phone' + (syncCfg ? ', and in your Google Sheet. Doses older than 30 days are kept in the Sheet only.' : '. Connect the Google Sheet (the cloud at the top) to back it up.') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
+  const medsHint = () => '<p class="hint">' + (lastSyncAt ? 'In the family’s Google Sheet, where only you see yours. This phone keeps the last 90 days.' : 'Only on this phone until it syncs with the family’s Google Sheet (the cloud at the top).') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
   function toggleDose(mid, slot) {
     const day = st.medDay, x = doseOf(mid, day, slot), m = data.meds.find(y => y.id === mid);
     if (x) data.doses.splice(data.doses.indexOf(x), 1);
@@ -956,43 +956,43 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
-  // Google Sheet sync - the same design as Travel's, for the log and your
-  // own exercises (google-sheet-sync.gs; steps in the README)
+  // The family's Google Sheet: the record of everyone's Fitness, each row
+  // marked with whose it is (aOS/SHEETS.md). This phone keeps a working copy:
+  // your exercises and meds, and the last 90 days of anything dated (workouts,
+  // doses, steps); older days come from the Sheet when you look back. Syncs go
+  // through aOS (../home/sheet.js, functions/sheet/api), signed in, so the
+  // phone holds no Sheet link or phrase and only ever gets your own rows.
   // ---------------------------------------------------------------------
   const APP = 'allison-fitness-sync';
-  let syncCfg = ls.json(K.sync, null);
-  if (!syncCfg || typeof syncCfg.url !== 'string' || typeof syncCfg.secret !== 'string') syncCfg = null;
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
-  // A Sheet running the script from before Meds and Steps (VERSION 1) keeps only the
-  // workouts: then they stay on this phone, and the Sheet sheet says to paste the new one.
-  let healthSheet = ls.get(K.health, '') === '1';
-  // With the Sheet connected (and holding Meds and Steps), the phone keeps only the last
-  // 30 days of taken doses and steps; older ones are in the Sheet. Your list of meds,
-  // and the workouts (Analysis compares 8 weeks of them), stay.
-  const KEEP_DAYS = 30;
-  const pruneFrom = () => syncCfg && healthSheet ? addDays(today(), -(KEEP_DAYS - 1)) : null;
+  // Synced with the family Sheet at least once: from then on the phone keeps 90 days of dated items.
+  let synced = ls.get(K.health, '') === 'family';
+  const KEEP_DAYS = 90, DATED = ['logs', 'doses', 'steps'];
+  const pruneFrom = () => synced ? addDays(today(), -(KEEP_DAYS - 1)) : null;
   function prune() {
     const from = pruneFrom(); if (!from) return;
     let n = 0;
-    for (const kind of ['doses', 'steps']) {
+    for (const kind of DATED) {
       const arr = data[kind];
-      for (let i = arr.length - 1; i >= 0; i--) if (arr[i].date < from) { shadow.delete(kind + ':' + arr[i].id); arr.splice(i, 1); n++; }   // no grave: the Sheet keeps it
+      for (let i = arr.length - 1; i >= 0; i--) if (arr[i].date < from && !older.has(arr[i].date)) { shadow.delete(kind + ':' + arr[i].id); arr.splice(i, 1); n++; }   // no grave: the Sheet keeps it
     }
     if (n) persist();
   }
   const SYNC_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in another app’s code.',
-    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
-    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
-    'busy': 'The Sheet was busy. Trying again shortly.',
-    'bad-request': 'The Sheet didn’t understand the request.',
-    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
-    'not-json': 'That link didn’t answer like the Fitness script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That link belongs to another AllisonOS app’s Sheet. Fitness needs the web app link from its own Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Fitness keeps everything on this phone.',
+    'no-sheet': 'The family’s Fitness Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Fitness Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Fitness Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Fitness Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
-  // A copy of the link and code in IndexedDB, as in Travel: it survives a
-  // full or cleared localStorage (every AllisonOS app shares its space).
+  // The link and phrase this phone used to keep (before aOS kept them): on the owner's phone they go
+  // to aOS once (it keeps them from then on); on every phone, once aOS has them, they're forgotten here.
   const keep = (() => {
     let db = null;
     // At the old Fitness Vintage address, once its copy (allison-fitnessv) has been moved over (../home/design.js).
@@ -1010,13 +1010,15 @@ if (window.top !== window.self) {
       set: (k, v) => tx('readwrite', s => v == null ? s.delete(k) : s.put(v, k)).catch(() => {}),
     };
   })();
-  function saveSyncCfg() {
-    if (syncCfg) ls.set(K.sync, JSON.stringify(syncCfg)); else lsDel(K.sync);
-    keep.set('sync', syncCfg ? { url: syncCfg.url, secret: syncCfg.secret } : null);
+  async function handOver() {
+    const old = ls.json(K.sync, null) || await keep.get('sync');
+    if (!old || !old.secret || !SH() || !signedIn()) return;
+    if (await SH().adopt('fitness', old)) { lsDel(K.sync); keep.set('sync', null); }
   }
   function applyRemote(res) {
     Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
     let localNewer = false;
+    const from = pruneFrom(), recent = x => !from || x.date >= from || older.has(x.date);
     const mergeKind = (kind, local, remote) => {
       const map = new Map(local.map(x => [x.id, x]));
       remote.forEach(r => {
@@ -1028,22 +1030,20 @@ if (window.top !== window.self) {
       local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
       return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
-    data.logs = mergeKind('logs', data.logs, (res.logs || []).filter(okLog));
+    // older dated items went to the Sheet with this sync: kept there, not here (initShadow below leaves no graves)
+    data.logs = mergeKind('logs', data.logs.filter(recent), (res.logs || []).filter(okLog).filter(recent));
     data.exercises = mergeKind('exercises', data.exercises, (res.exercises || []).filter(okEx));
-    if (healthSheet) {
-      const from = pruneFrom(), recent = x => !from || x.date >= from;
-      data.meds = mergeKind('meds', data.meds, (res.meds || []).filter(okMed));
-      // older ones went to the Sheet with this sync: kept there, not here (initShadow below leaves no graves)
-      data.doses = mergeKind('doses', data.doses.filter(recent), (res.doses || []).filter(okDose).filter(recent));
-      data.steps = mergeKind('steps', data.steps.filter(recent), (res.steps || []).filter(okStep).filter(recent));
-    }
+    data.meds = mergeKind('meds', data.meds, (res.meds || []).filter(okMed));
+    data.doses = mergeKind('doses', data.doses.filter(recent), (res.doses || []).filter(okDose).filter(recent));
+    data.steps = mergeKind('steps', data.steps.filter(recent), (res.steps || []).filter(okStep).filter(recent));
     initShadow(); persist(); prune();
     if (localNewer) syncAgain = true;
     render();
     if (st.day) { if (st.form.editing && !data.logs.some(l => l.id === st.form.editing)) st.form = blankForm(); renderDay(); }
   }
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud) {
-    if (!syncCfg) return false;
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
     if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
     syncing = true; syncState = 'syncing';
@@ -1051,61 +1051,53 @@ if (window.top !== window.self) {
     let ok = false;
     try {
       track(); persist();
-      let r, res;
-      try {
-        r = await fetch(syncCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, graves }) });
-      } catch { throw new Error('network'); }
-      try { res = await r.json(); } catch { throw new Error('not-json'); }
-      if (res && res.ok && res.app && res.app !== APP) throw new Error('wrong-app');
-      if (res && res.error === 'wrong-secret' && res.app !== APP) throw new Error(await whichScript(syncCfg.url));
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      const res = await SH().sync('fitness', { action: 'sync', v: 3, window: KEEP_DAYS, today: today(), logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, graves }, { ask: loud });
+      if (res.app && res.app !== APP) throw new Error('not-json');
+      if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
-      healthSheet = (+res.v || 1) >= 2; ls.set(K.health, healthSheet ? '1' : '');
+      if (!synced) { synced = true; ls.set(K.health, 'family'); }
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
       applyRemote(res);
       if (loud) pillDone('Synced');
     } catch (e) {
-      syncState = 'error'; syncErr = e.message; busyPill();
-      if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message; busyPill();
+      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  // A "wrong secret" from a script that doesn't say it's Fitness's: ask the
-  // link which app it belongs to (every script answers a plain GET with its name).
-  async function whichScript(url) {
+  // Looking back past the 90 days this phone keeps: those days come from the Sheet (each week once,
+  // while Fitness is open), for the week, a day and Analysis; they go again at the next tidy-up.
+  const older = new Set(), olderAsked = new Set();
+  async function loadOlder(from, to) {
+    const floor = pruneFrom();
+    if (!floor || from >= floor || !SH() || !signedIn() || !navigator.onLine) return;
+    const key = from + '|' + to; if (olderAsked.has(key)) return;
+    olderAsked.add(key);
     try {
-      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
-      const d = await r.json();
-      if (d && d.app && d.app !== APP) return 'wrong-app';
-      if (d && d.app === APP) return 'old-script';
-    } catch {}
-    return 'wrong-secret';
+      const res = await SH().sync('fitness', { action: 'range', from, to: to < floor ? to : addDays(floor, -1) });
+      for (let d = from; d <= to && d < floor; d = addDays(d, 1)) older.add(d);
+      let n = 0;
+      for (const [kind, ok] of [['logs', okLog], ['doses', okDose], ['steps', okStep]]) for (const x of (res[kind] || []).filter(ok)) {
+        if (data[kind].some(y => y.id === x.id) || graves[kind + ':' + x.id]) continue;
+        data[kind].push(x); shadow.set(kind + ':' + x.id, JSON.stringify(Object.assign({}, x, { updated: undefined }))); n++;
+      }
+      if (n) { persist(); if (!st.day) render(); else renderDay(); }
+    } catch { olderAsked.delete(key); }
   }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
   const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   function renderSyncStatus() {
-    const on = !!syncCfg;
-    $('syStatus').textContent = !on ? 'Back up the log to a Google Sheet of your own, and keep a second phone in step.'
-      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : (lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.')
-        + (lastSyncAt && !healthSheet ? ' The Sheet’s script is from before Meds and Steps, so those stay on this phone: paste the new google-sheet-sync.gs into the Sheet’s Apps Script and deploy a new version.' : '');
-    $('syForm').hidden = on; $('syOn').hidden = !on;
-    $('syncBtn').classList.toggle('warn', on && syncState === 'error');
+    const signed = signedIn();
+    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
+      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
+    $('syncBtn').classList.toggle('warn', signed && syncState === 'error');
   }
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
-  function openSyncSheet(pre) {
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
-    $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
-    renderSyncStatus();
-    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
-    openSheet('syncSheet');
-  }
-  $('syncBtn').onclick = () => openSyncSheet();
+  $('syncBtn').onclick = () => { renderSyncStatus(); openSheet('syncSheet'); };
   // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js);
   // Steps (the daily goal, and linking your own iPhone); and signing out and erasing this phone.
   $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
@@ -1163,46 +1155,13 @@ if (window.top !== window.self) {
     if (e.target.closest('[data-punlink]')) return linkTo({}, 'unlink');
     if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
     if (e.target.closest('#setErase')) {
-      const msg = syncCfg ? 'Sign out and erase Fitness from this phone? Your Google Sheet keeps its copy: connect it again to get it back.' : 'Sign out and erase Fitness from this phone? It isn’t backed up to a Google Sheet, so your log, Meds and Steps will be gone.';
+      const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone? The family’s Google Sheet keeps your copy: sign in again to get it back.' : 'Sign out and erase Fitness from this phone? It hasn’t synced with the family’s Google Sheet, so your log, Meds and Steps will be gone.';
       if (!confirm(msg)) return;
-      if (syncCfg) await sync(true);
+      if (lastSyncAt) await sync(true);
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
     }
   });
-  $('syForm').onsubmit = async e => {
-    e.preventDefault();
-    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = syncCfg;
-    syncCfg = { url, secret };
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sync(true);
-    $('syConnect').disabled = false;
-    if (!ok) { syncCfg = before; syncState = before ? 'idle' : 'off'; const err = syncErr; renderSyncStatus(); $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = SYNC_ERRORS[err] || 'Couldn’t connect.'; return; }
-    saveSyncCfg(); renderSyncStatus();
-    toast('Connected. ' + plural(data.logs.length, 'exercise') + ' logged, now in the Sheet.');
-  };
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
-  $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0].split('?')[0] + '#sync=' + b64e(JSON.stringify({ u: syncCfg.url, s: syncCfg.secret }));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. Open it in Fitness on the other phone. Keep it private.', null, 6000); }
-    catch { toast('Copy isn’t available here.'); }
-  };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; healthSheet = false; ls.set(K.health, ''); saveSyncCfg(); renderSyncStatus();
-    toast('Disconnected. Your log stays on this phone and in the Sheet.');
-  };
-  function takeSetupLink(text) {
-    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return false;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSyncSheet(c); return true; } } catch {}
-    toast('That setup link is damaged. Copy it again.'); return true;
-  }
   // The pill at the top while the Sheet syncs (as in Travel).
   let pillAt = 0, pillTimer = null;
   function busyPill(text) {
@@ -1291,8 +1250,8 @@ if (window.top !== window.self) {
   load();
   render();
   animateIn(main);
-  // A setup link from the other phone: #sync=...
-  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
+  if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
   // Opened from Calendar's Fitness layer: ?date=YYYY-MM-DD opens that day.
   const q = new URLSearchParams(location.search).get('date');
   if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
@@ -1306,18 +1265,13 @@ if (window.top !== window.self) {
     if (document.visibilityState !== 'visible') return;
     if (st.medOnToday || st.medDay > today()) st.medDay = today();   // left on today, back the next day: today again
     if (!st.day) render();
-    if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
+    if (Date.now() - lastSyncAt > 30000) sync(false);
     loadSteps(false);
   });
-  addEventListener('aos:account', e => { if (e.detail) { if (st.view === 'meds') render(); loadSteps(true); } });
+  addEventListener('aos:account', e => { if (e.detail) { if (st.view === 'meds') render(); loadSteps(true); handOver().then(() => sync(false)); } });
   setTimeout(() => loadSteps(false), 1200);
-  window.addEventListener('online', () => { if (syncCfg) sync(false); });
-  if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
-  else keep.get('sync').then(c => {
-    if (syncCfg || !c || !c.url || !c.secret) return;
-    syncCfg = { url: c.url, secret: c.secret }; syncState = 'idle'; ls.set(K.sync, JSON.stringify(syncCfg));
-    sync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
-  });
+  window.addEventListener('online', () => sync(false));
+  setTimeout(() => handOver().finally(() => sync(false)), 600);
   // "Updated" pill, once, when a new version arrives (as in Notes and Calendar).
   (function () {
     const src = [...document.querySelectorAll('style')].map(e => e.textContent).join('') + String(document.scripts.length);

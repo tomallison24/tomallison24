@@ -570,6 +570,8 @@
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
       <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
+      <div><h3>Google Sheets</h3><p>Each app's Sheet is the family's record: one Sheet an app, each row marked with whose it is, and each phone shown only its own (shared lists, places and trips stay shared). Phones don't keep the links or phrases: aOS does. Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
+      <div class="fam sheets" id="shList"><p class="note">Checking…</p></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
@@ -578,6 +580,7 @@
       busy($('iGo'), false);
     };
     paintFamily();
+    paintSheets();
     paintComposer();
     ACC.call('home').then(r => { if (r.address && !$('hAddr').value) $('hAddr').value = r.address; }).catch(() => {});
     $('hSave').onclick = async () => {
@@ -681,6 +684,41 @@
   }
   // Removing someone signs them out and forgets their passkeys; nothing of theirs is
   // deleted, so Invite back brings them back with their Drinks log and everything else.
+  // ---- the family's Google Sheets (functions/sheet/api; aOS/SHEETS.md) ----
+  // Each app's Apps Script link and secret phrase, kept by aOS, so the phones don't hold them.
+  const SHEET_APPS = [['fitness', 'Fitness'], ['drinks', 'Drinks'], ['notes', 'Notes and Places'], ['travel', 'Travel'], ['orders', 'Orders'], ['meals', 'Meals'], ['podcasts', 'Podcasts']];
+  const SHEET_WHY = { 'wrong-secret': 'That phrase doesn\'t match the script\'s SECRET.', 'old-script': 'That Sheet is still on the old script: paste the new one in and deploy a new version.',
+    'wrong-app': 'That link is another app\'s Sheet.', url: 'Use the web app link: https://script.google.com/…/exec.', secret: 'Enter the secret phrase.', 'not-json': 'That link didn\'t answer like a Sheet script.', 'sheet-unreachable': 'Couldn\'t reach the Sheet.' };
+  const sheetCall = async (path, body) => {
+    const r = await fetch('../sheet/api/' + path, { method: body ? 'POST' : 'GET', cache: 'no-store', headers: { 'X-Sheet': '1', 'Content-Type': 'application/json', Authorization: 'Bearer ' + (ACC.token() || '') }, body: body ? JSON.stringify(body) : undefined });
+    let j = {}; try { j = await r.json(); } catch {}
+    if (!r.ok) throw new Error(j.error || 'http-' + r.status);
+    return j;
+  };
+  async function paintSheets() {
+    const box = $('shList'); if (!box) return;
+    const st = await Promise.all(SHEET_APPS.map(([id]) => sheetCall(id).catch(e => ({ error: e.message }))));
+    if (!$('shList')) return;
+    box.innerHTML = SHEET_APPS.map(([id, name], i) => `<div data-sheet="${id}"><span>${esc(name)}<small>${st[i].error ? 'Can\'t check' : st[i].configured ? 'Connected' : 'Not set up'}</small></span><button type="button" class="again" data-shopen="${id}">${st[i].configured ? 'Change' : 'Set up'}</button></div>
+      <div class="shform" data-shform="${id}" hidden><input data-shurl="${id}" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(st[i].url || '')}" autocapitalize="off" autocomplete="off" spellcheck="false">
+        <input data-shkey="${id}" type="password" placeholder="Its secret phrase (SECRET in the script)" autocapitalize="off" autocomplete="off" spellcheck="false">
+        <button type="button" class="go" data-shsave="${id}">Save</button><div class="err" data-sherr="${id}"></div></div>`).join('');
+    box.onclick = async e => {
+      let b;
+      if ((b = e.target.closest('[data-shopen]'))) { const f = box.querySelector(`[data-shform="${b.dataset.shopen}"]`); f.hidden = !f.hidden; return; }
+      if ((b = e.target.closest('[data-shsave]'))) {
+        const id = b.dataset.shsave, m = box.querySelector(`[data-sherr="${id}"]`);
+        busy(b, true); m.textContent = ''; m.style.color = '';
+        try {
+          await sheetCall(id + '/config', { url: box.querySelector(`[data-shurl="${id}"]`).value.trim(), secret: box.querySelector(`[data-shkey="${id}"]`).value });
+          m.style.color = 'var(--muted)'; m.textContent = 'Connected. Each phone syncs with it through aOS now.';
+          setTimeout(paintSheets, 1500);
+        } catch (x) { m.textContent = SHEET_WHY[x.message] || 'Couldn\'t connect (' + x.message + ').'; }
+        busy(b, false);
+      }
+    };
+  }
+
   async function paintFamily() {
     let f; try { f = (await ACC.call('family')).family; } catch { return; }
     if (!$('fam')) return;

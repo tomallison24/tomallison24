@@ -4,9 +4,9 @@
 // with + and −, how often it was taken, Pause, and Delete with Undo; steps from
 // your iPhone (a stand-in for ../fitness/api) on the week and in the day, typed
 // steps winning over the iPhone's, and the totals in Analysis; linking your
-// phone in Settings; the Google Sheet backup (the real google-sheet-sync.gs on
+// phone in Settings; the family's Google Sheet, through aOS (the real google-sheet-sync.gs on
 // fake-sheet.mjs) taking Meds and Steps and the phone then keeping only the last
-// 30 days of them, with no graves; a Sheet still on the old script keeping them
+// 90 days, with no graves, and fetching older days back; a Sheet not set up yet keeping them
 // on the phone; an app told to erase itself (GET /aOS/api/state's erase) and
 // Settings > Sign out and erase clearing the phone; and aOS's Lost a phone? page.
 // Dates are relative to today, so it works on any day.
@@ -43,7 +43,7 @@ process.env.TZ = TZ;
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const day = n => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
-const TODAY = ymd(day(0)), YESTERDAY = ymd(day(-1)), D2 = ymd(day(-2)), OLD = ymd(day(-40));
+const TODAY = ymd(day(0)), YESTERDAY = ymd(day(-1)), D2 = ymd(day(-2)), OLD = ymd(day(-100));
 const SECRET = 'test-secret-phrase', SHEET_URL = 'https://script.google.com/macros/s/TEST/exec';
 const SESSION = { token: 'made.up', user: { id: 'u1', name: 'Test', role: 'owner' }, at: 1 };
 
@@ -54,7 +54,7 @@ const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); }
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png') }); };
 
 // One phone: its storage seeded once, aOS's and Fitness's server routes stood in for.
-async function phone({ seed = null, session = SESSION, state = { storage: true, setup: true }, steps = null, sheet = null, sheetV1 = false, design = 'glass' } = {}) {
+async function phone({ seed = null, session = SESSION, state = { storage: true, setup: true }, steps = null, sheet = null, noSheet = false, design = 'glass' } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, timezoneId: TZ, locale: 'en-US' });
   const calls = [];
   await ctx.route('**/aOS/api/**', r => { calls.push({ url: r.request().url(), body: r.request().postData(), auth: r.request().headers().authorization }); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r.request().url().endsWith('/state') ? state : { ok: true, token: 'new.token', user: SESSION.user }) }); });
@@ -67,12 +67,13 @@ async function phone({ seed = null, session = SESSION, state = { storage: true, 
     if (u.endsWith('/link')) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"linked":{"entity":"sensor.test_iphone_steps"}}' });
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ linked: null, list: true, phones: [{ entity: 'sensor.test_iphone_steps', name: 'Test iPhone' }], links: [] }) });
   });
-  if (sheet) await ctx.route('https://script.google.com/**', r => {
-    const cors = { 'Access-Control-Allow-Origin': '*' };
-    if (r.request().method() === 'GET') return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.get()) });
-    let res = sheet.post(r.request().postData());
-    if (sheetV1) res = { ok: res.ok, app: res.app, v: 1, at: res.at, logs: res.logs, exercises: res.exercises, graves: res.graves };
-    return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(res) });
+  // the family's Sheet, through aOS (functions/sheet/api, stood in for): who's asking comes from the session
+  await ctx.route('**/sheet/api/**', r => {
+    const json = (b, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (noSheet) return json({ ok: false, error: 'no-sheet' }, 409);
+    if (!sheet) return json({ ok: false, error: 'sheet-unreachable' }, 502);
+    if (r.request().method() === 'GET') return json({ configured: true });
+    return json(sheet.post(r.request().postData(), { key: SECRET, who: 'u1', name: 'Test', owner: '1' }));
   });
   await ctx.addInitScript(({ seed, session, design, sync }) => {
     if (location.protocol !== 'http:' || window.name.includes('seeded')) return;   // once a tab, on the site (not sessionStorage: erasing clears that too)
@@ -83,7 +84,7 @@ async function phone({ seed = null, session = SESSION, state = { storage: true, 
     if (session) localStorage.setItem('aos.session', JSON.stringify(session));
     if (seed) localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
     if (sync) localStorage.setItem('allison-fitness-v1-sync', JSON.stringify(sync));
-  }, { seed, session, design, sync: sheet ? { url: SHEET_URL, secret: SECRET } : null });
+  }, { seed, session, design, sync: null });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', d => d.accept());
@@ -219,7 +220,7 @@ await test('Settings: link your own iPhone', async () => {
   await ctx.close();
 });
 
-await test('the Google Sheet takes Meds and Steps; the phone then keeps only the last 30 days, with no graves', async () => {
+await test('the family Sheet takes Meds and Steps; the phone keeps only the last 90 days, with no graves, and fetches older ones back', async () => {
   const sheet = fakeSheet(undefined, SECRET);
   const seed = { v: 2, logs: [{ id: 'w1', date: OLD, group: 'chest', exercise: 'Dip', weight: 0, reps: 10, sets: 3, updated: 5 }], exercises: [],
     meds: [{ id: 'm1', name: 'Vitamin D', dose: '1000 IU', kind: 'supp', slots: ['am'], days: [], since: OLD, updated: 5 }],
@@ -231,30 +232,33 @@ await test('the Google Sheet takes Meds and Steps; the phone then keeps only the
   const d = await meds(page);
   assert.deepEqual(d.doses.map(x => x.id), ['new']);
   assert.deepEqual(d.steps.map(x => x.date), [YESTERDAY]);
-  assert.equal(d.logs.length, 1, 'workouts stay: Analysis compares 8 weeks');
+  assert.equal(d.logs.length, 0, 'a workout over 90 days old: in the Sheet only');
   assert.equal(d.meds.length, 1, 'your list stays');
   assert.deepEqual(Object.keys(await page.evaluate(() => __fitness.graves())), [], 'no graves: the Sheet keeps them');
-  const back = sheet.post({ secret: SECRET, action: 'sync', graves: {} });
+  const back = sheet.post({ action: 'sync', graves: {} }, { key: SECRET, who: 'u1', owner: '1' });
   assert.deepEqual(back.doses.map(x => x.id).sort(), ['new', 'old'], 'the Sheet has both');
   assert.equal(sheet.tab('Steps').length, 3);
   // A second sync doesn't bring the old ones back.
   await page.evaluate(() => __fitness.sync(true));
   assert.deepEqual((await meds(page)).doses.map(x => x.id), ['new']);
+  // looking back at that week: it comes from the Sheet
+  await page.evaluate(d => { __fitness.st.view = 'week'; __fitness.st.week = __fitness.weekStartOf(d); __fitness.render(); }, OLD);
+  await page.waitForFunction(() => __fitness.data.logs.some(x => x.id === 'w1'), null, { timeout: 8000 });
+  assert.match(await page.textContent(`[data-day="${OLD}"]`), /Chest/);
   await page.click('#syncBtn');
-  assert.ok(!(await page.textContent('#syStatus')).includes('before Meds'));
+  assert.match(await page.textContent('#syStatus'), /In the family’s Google Sheet/);
   await ctx.close();
 });
 
-await test('a Sheet still on the old script: Meds and Steps stay on the phone, and it says to update the script', async () => {
-  const sheet = fakeSheet(undefined, SECRET);
+await test('a family Sheet not set up yet: everything stays on the phone, and it says the owner sets it up in aOS', async () => {
   const seed = { v: 2, logs: [], exercises: [], meds: [{ id: 'm1', name: 'Zinc', slots: [], days: [], since: OLD, updated: 5 }], doses: [{ id: 'old', med: 'm1', date: OLD, slot: 'day', at: 1, updated: 5 }], steps: [] };
-  const { ctx, page } = await phone({ seed, sheet, sheetV1: true });
+  const { ctx, page } = await phone({ seed, noSheet: true });
   await open(page);
   await page.waitForTimeout(1500);
-  assert.deepEqual((await meds(page)).doses.map(x => x.id), ['old'], 'kept: the Sheet can\'t hold it');
-  assert.equal((await meds(page)).meds.length, 1);
+  assert.deepEqual((await meds(page)).doses.map(x => x.id), ['old'], 'kept: nothing has it yet');
   await page.click('#syncBtn');
-  assert.match(await page.textContent('#syStatus'), /from before Meds and Steps/);
+  await page.click('#syNow');
+  await page.waitForFunction(() => /Account → Google Sheets/.test(document.getElementById('syStatus').textContent));
   await ctx.close();
 });
 

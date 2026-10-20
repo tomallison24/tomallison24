@@ -59,10 +59,13 @@ const SEED = { v: 2, exercises: [], logs: [
   { id: 'old1', date: LAST_WEEK, group: 'shoulders', exercise: 'Overhead Barbell Press', weight: 95, reps: 8, sets: 3, updated: 1 },
   { id: 'old2', date: LAST_WEEK, group: 'core', exercise: 'Sit-Up', weight: 0, reps: 20, sets: 3, updated: 2 },
 ] };
-// The Google Sheet: the real Apps Script, on an in-memory Sheet.
+// The family's Google Sheet: the real Apps Script, on an in-memory Sheet, reached through aOS
+// (functions/sheet/api, stood in for here): each phone's session says who's asking.
 const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
 const sheet = fakeSheet(undefined, SECRET);
-const sheetCalls = [];
+const sheetCalls = [], claims = [];
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
 
 const browser = await chromium.launch();
 const violations = [], errors = [];
@@ -71,11 +74,15 @@ async function newPage(scheme, seed = SEED, extra = null, { design = null, fresh
   // Calendar reaches for iCloud and the weather; nothing is there in a test.
   await ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"no-config"}' }));
   await ctx.route('**/api.open-meteo.com/**', route => route.fulfill({ status: 503, body: '' }));
-  await ctx.route('https://script.google.com/**', route => {
-    const req = route.request(), cors = { 'Access-Control-Allow-Origin': '*' };
-    if (req.method() === 'GET') return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.get()) });
+  await ctx.route('https://script.google.com/**', route => route.abort());   // no phone talks to Google itself any more
+  await ctx.route('**/sheet/api/**', route => {
+    const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', ''), who = PEOPLE[tok];
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (!who) return json({ error: 'signin' }, 401);
+    if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+    if (req.method() === 'GET') return json({ configured: true });
     sheetCalls.push(JSON.parse(req.postData()));
-    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(sheet.post(req.postData())) });
+    return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
   });
   await ctx.addInitScript(({ seed, extra, design, fresh }) => {
     if (sessionStorage.getItem('seeded')) return;
@@ -327,55 +334,60 @@ await test('a sideways swipe on the week moves a week', async () => {
   assert.equal(next, ymd(d));
 });
 
-await test('Google Sheet: a wrong code is refused; the right one connects and sends the log', async () => {
+await test('Google Sheet, through aOS: signed out it asks to sign in; signed in, the log goes to the family Sheet as yours', async () => {
   await page.goto(BASE + '/fitness/');
   await page.waitForFunction(() => window.__fitness);
   await page.click('#syncBtn');
   await page.waitForSelector('#syncSheet:not([hidden])');
-  await page.fill('#syUrl', 'https://example.com/not-a-script');
-  await page.fill('#sySecret', SECRET);
-  await page.click('#syConnect');
-  assert.match(await page.textContent('#syStatus'), /starts with https:\/\/script\.google\.com/);
-  await page.fill('#syUrl', SHEET_URL);
-  await page.fill('#sySecret', 'wrong code');
-  await page.click('#syConnect');
-  await page.waitForFunction(() => /doesn’t match/.test(document.getElementById('syStatus').textContent));
-  assert.ok(await page.isVisible('#syForm'), 'still asking');
-  await page.fill('#sySecret', SECRET);
-  await page.click('#syConnect');
-  await page.waitForSelector('#syOn:not([hidden])');
-  assert.match(await page.textContent('#syStatus'), /Connected/);
+  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
+  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+  assert.equal(await page.$('#syUrl'), null, 'no link or phrase to type on a phone');
+  await page.click('#syncSheet .sheethead [data-close]');
+  await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
+  await page.reload(); await page.waitForFunction(() => window.__fitness);
+  await page.waitForFunction(() => document.getElementById('syStatus').textContent.includes('Last synced'), null, { timeout: 8000 });
   const mine = (await stored(page)).logs.length;
   const rows = sheet.tab('Workouts');
   assert.equal(rows.length, mine + 1, 'every exercise in the Workouts tab');
-  assert.ok(rows.some(r => r[3] === 'Plank' && r[6] === 45), 'the plank in seconds');
+  assert.ok(rows.slice(1).every(r => r[0] === 'Tom'), 'each row says whose it is');
+  assert.ok(rows.some(r => r[4] === 'Plank' && r[7] === 45), 'the plank in seconds');
+  assert.ok(sheetCalls.every(c => !('secret' in c)), 'the phone sends no phrase');
+  assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days');
+  await page.click('#syncBtn');
+  assert.match(await page.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced/);
   await shot(page, '07-sheet-connected');
   await page.click('#syncSheet .sheethead [data-close]');
 });
 
-await test('Google Sheet: a deletion syncs; a second phone set up from the link gets the log', async () => {
+await test('Google Sheet: a deletion syncs; your other phone gets your log; someone else\'s phone gets none of it', async () => {
   await page.click('.drow.today');
   await page.click('[aria-label="Delete Reverse hyper"]');
   await page.waitForFunction(() => window.__fitness && true);
   const deleted = (await page.evaluate(() => Object.keys(window.__fitness.graves())))[0];
   await page.waitForTimeout(2600);   // the sync after a change waits 2 s
   assert.ok(sheetCalls.at(-1).graves[deleted], 'the grave was sent');
-  assert.ok(!sheet.tab('Workouts').some(r => r[3] === 'Reverse hyper'), 'gone from the Sheet');
+  assert.ok(!sheet.tab('Workouts').some(r => r[4] === 'Reverse hyper'), 'gone from the Sheet');
   await page.keyboard.press('Escape');
-  const phone2 = await newPage('light', { v: 2, logs: [], exercises: [] });
-  const link = BASE + '/fitness/#sync=' + Buffer.from(JSON.stringify({ u: SHEET_URL, s: SECRET })).toString('base64url');
-  await phone2.page.goto(link);
-  await phone2.page.waitForSelector('#syncSheet:not([hidden])');
-  assert.match(await phone2.page.textContent('#syStatus'), /setup link/);
-  assert.equal(await phone2.page.inputValue('#syUrl'), SHEET_URL);
-  assert.ok(!(await phone2.page.evaluate(() => location.hash)), 'the code is taken out of the address');
-  await phone2.page.click('#syConnect');
-  await phone2.page.waitForSelector('#syOn:not([hidden])');
-  await phone2.page.click('#syncSheet .sheethead [data-close]');
+  const phone2 = await newPage('light', { v: 2, logs: [], exercises: [] }, { 'aos.session': session('tok-tom') });
+  await phone2.page.goto(BASE + '/fitness/'); await phone2.page.waitForFunction(() => window.__fitness);
+  await phone2.page.waitForFunction(() => window.__fitness.data.logs.length > 0, null, { timeout: 8000 });
   assert.match(await phone2.page.textContent('.drow.today'), /Shoulders.*Back.*Core.*3 exercises · 10 sets/);
   assert.deepEqual((await stored(phone2.page)).exercises.map(x => x.name), ['Reverse hyper'], 'your typed-in exercises come across too');
   violations.push(...(await phone2.page.evaluate(() => window.__csp || [])));
   await phone2.ctx.close();
+  const ella = await newPage('light', { v: 2, logs: [], exercises: [] }, { 'aos.session': session('tok-ella') });
+  await ella.page.goto(BASE + '/fitness/'); await ella.page.waitForFunction(() => window.__fitness);
+  await ella.page.waitForFunction(() => document.getElementById('syStatus').textContent.includes('Last synced'), null, { timeout: 8000 });
+  assert.deepEqual((await stored(ella.page)).logs, [], 'Ella\'s phone gets none of Tom\'s');
+  await ella.ctx.close();
+});
+
+await test('the owner\'s phone hands the Sheet link and phrase it kept over to aOS, then forgets them', async () => {
+  const o = await newPage('light', SEED, { 'aos.session': session('tok-tom'), 'allison-fitness-v1-sync': JSON.stringify({ url: SHEET_URL, secret: SECRET }) });
+  await o.page.goto(BASE + '/fitness/'); await o.page.waitForFunction(() => window.__fitness);
+  await o.page.waitForFunction(() => !localStorage.getItem('allison-fitness-v1-sync'), null, { timeout: 8000 });
+  assert.deepEqual(claims.at(-1), { who: 'tom', url: SHEET_URL, secret: SECRET });
+  await o.ctx.close();
 });
 
 await test('Analysis: from the glass pill at the bottom; stronger, weaker, new and missed', async () => {
@@ -728,15 +740,14 @@ await test('the old Fitness Vintage address: its log, Sheet link and seen move o
   // (only there: this phone's own storage lost the link, so the app reconnects from that copy, as it would at its old address)
   await o.page.evaluate(([u, sec]) => new Promise((res, rej) => { const r = indexedDB.open('allison-fitnessv', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: u, secret: sec }, 'sync'); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = rej; }; r.onerror = rej; }), [SHEET_URL, SECRET]);
   await o.page.goto(BASE + '/fitnessvintage/'); await o.page.waitForFunction(() => window.__fitness); await o.page.waitForTimeout(800);
-  const got = await o.page.evaluate(() => ({ log: JSON.parse(localStorage.getItem('allison-fitness-v1') || 'null'), view: window.__fitness.st.view, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-fitnessv-v1'), look: document.documentElement.dataset.look, sync: JSON.parse(localStorage.getItem('allison-fitness-v1-sync') || 'null') }));
+  const got = await o.page.evaluate(() => ({ log: JSON.parse(localStorage.getItem('allison-fitness-v1') || 'null'), view: window.__fitness.st.view, seen: JSON.parse(localStorage.getItem('aos.seen') || '{}'), old: localStorage.getItem('allison-fitnessv-v1'), look: document.documentElement.dataset.look }));
   assert.ok(got.log && got.log.logs.some(l => l.id === 'v1'), 'the log is now Fitness\'');
   assert.equal(got.view, 'analysis', 'it opens on the view it was on');
   assert.equal(got.seen.fitness, '1.3', 'what it had seen carries over (no walkthrough again)');
   assert.ok(got.old, 'nothing old is deleted');
   assert.equal(got.look, 'vintage');
   const idb = await o.page.evaluate(() => new Promise(res => { const r = indexedDB.open('allison-fitness', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('sync'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }; r.onerror = () => res(null); }));
-  assert.equal(idb && idb.url, SHEET_URL, 'the backup copy of the Sheet link moved to allison-fitness');
-  assert.equal(got.sync && got.sync.url, SHEET_URL, 'and Fitness reconnected to the Sheet from it');
+  assert.equal(idb && idb.url, SHEET_URL, 'the backup copy of the Sheet link moved to allison-fitness (handed to aOS once signed in)');
   await o.page.evaluate(() => window.__fitness.setView('week')); await o.page.waitForTimeout(300);
   assert.match(await o.page.textContent('.drow.today'), /Arms/, 'the old log shows in the week');
   // once only: a later change to the old keys is not copied again
