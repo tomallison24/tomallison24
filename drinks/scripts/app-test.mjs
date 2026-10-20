@@ -634,6 +634,11 @@ await test('the family’s Google Sheet: More has its row and its sheet (status 
   await sp.goto(BASE + '/drinks/'); await sp.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
   assert.ok(logRow('s1') && logRow('s2') && logRow('af-' + YESTERDAY), 'the drinks and the alcohol-free day are in the Log tab');
   assert.deepEqual([logRow('s1')[COL.Who], logRow('s1')[COL.ABV]], ['Tom', 6.8]);
+  // settled: any follow-up sync done, and no more after it (not syncing again and again)
+  await sp.waitForFunction(() => window.__drinks.state() === 'ok' && !document.getElementById('moreBtn').classList.contains('warn'));
+  await sp.waitForTimeout(3500);
+  const calls = sheetCalls.length; await sp.waitForTimeout(3500);
+  assert.equal(sheetCalls.length, calls, 'no sync after sync');
   await sp.click('#moreBtn');
   assert.match(await sp.textContent('#sheetBtn'), /The family’s Google Sheet\s*Last synced/);
   await sp.click('#sheetBtn'); await sp.waitForSelector('#syncSheet:not([hidden])');
