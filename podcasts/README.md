@@ -34,8 +34,9 @@ in a mid-century Vintage design or the same frosted glass as Mail, Notes and New
   (Settings can switch that off).
 - **Settings**: the design (Vintage or Standard, below), skip back
   (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, **Import /
-  Export** your shows as OPML (the file other podcast apps use), and an
-  optional **Google Sheet backup** (below).
+  Export** your shows as OPML (the file other podcast apps use), and **the
+  family's Google Sheet** (below): signed in, your shows, Saved, History and
+  where you got to are the same on each of your phones.
 
 It has two designs, Vintage (mid-century modern, the default) and Standard
 (Sea glass), picked in **Settings → Design** ("The two designs", below).
@@ -48,13 +49,14 @@ they need a connection.
 - **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, so the page's Content-Security-Policy allows only this site's scripts); `sw.js` keeps it working
   offline; `manifest.webmanifest` and the icons make it installable.
 - **Data**: what you follow, where you got to, Up Next, Saved and History
-  are in the browser's `localStorage`; each show's episode list (the newest
-  250) is in IndexedDB, so the app opens with it. Nothing leaves the phone
-  unless you connect the optional Google Sheet backup (below), which gets only
-  your shows, saved episodes and history.
-  Each place the app opens (its own Home Screen icon, aOS,
-  Safari) keeps its own copy on an iPhone; Export and Import move your shows
-  between them.
+  are in the browser's `localStorage` (`allison-podcasts-v1`); each show's
+  episode list (the newest 250) is in IndexedDB, so the app opens with it.
+  Signed in, the family's Google Sheet (below) is the record of what you
+  follow, Saved, History and where you got to, and the phone keeps a working
+  copy; Up Next, what's playing, Settings and the episode lists stay on each
+  phone. Signed out, everything stays on the phone. Each place the app opens
+  (its own Home Screen icon, aOS, Safari) keeps its own copy on an iPhone;
+  signed in, each gets yours from the Sheet.
 - **Feeds**: podcast feeds, and Apple's search, don't let a page on another
   site read them (CORS). So the app asks `functions/podcasts/api/[[route]].js`,
   a Cloudflare Pages Function on the same site, to fetch them:
@@ -76,52 +78,79 @@ they need a connection.
 - **Artwork** comes from Apple's directory (600 px) where there is one, as
   feeds' own pictures can be several megabytes.
 
-## Google Sheet backup
+## The family's Google Sheet
 
-Optional. **Settings → Google Sheet backup** keeps a **readable backup** of
-your shows, saved episodes and listening history in a Google Sheet of your
-own. It is one way: the phone writes, nothing is read back, so edit nothing in
-the Sheet. Only the three lists are sent (never episode lists, progress, Up
-Next or settings), the whole list each time, at most a few seconds after a
-change and only when something changed, off the player's path: it never slows
-playback. Several phones can back up to one Sheet; each says who it is (a
-random id made once per install), and the Sheet adds them together.
+One Google Sheet for the whole family is the record of everyone's Podcasts
+(`aOS/SHEETS.md`, the same design as Fitness's, kind `personal`): each row
+says whose it is, and each phone only ever gets its own person's. Signed in
+(Face ID, once), your shows, Saved, History and where you got to are the same
+on each of your phones: follow a show on one and it's on the other; unfollow,
+unsave or clear History and it goes from them too. Signed out, the app works
+on the phone alone, and **Settings → Backup Log → The family's Google Sheet**
+says to sign in.
 
-1. [sheets.new](https://sheets.new) → name it, e.g. **AllisonOS - Podcasts**.
-2. **Extensions → Apps Script**, replace `Code.gs` with the whole of
-   [`google-sheet-sync.gs`](google-sheet-sync.gs), and change
-   `const SECRET = 'CHANGE-ME';` to a long phrase of your own (you make it
-   up: there is nothing to look up).
-3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access:
-   Anyone* → **Deploy** → authorise → copy the **Web app URL**.
-4. Podcasts → **Settings → Google Sheet backup** → the link is already filled
-   in (`SHEET_URL` in `app.js`: the owner's Sheet; to use another, paste its
-   URL over it) → type the phrase → **Connect and back up**. The phrase is
-   never in the code. **Copy setup link** sets up your other phone.
+No phone holds the Sheet's link or phrase. Syncs go through aOS
+(`../home/sheet.js` → `functions/sheet/api`), which adds the phrase and who's
+asking; the owner gives aOS the link and phrase once (**aOS → Account →
+Google Sheets**). The Sheet sheet in Settings shows the status and **Sync
+now** (which signs in if it has to); there is no form, setup link or
+Disconnect.
 
-**The Sheet** has three readable tabs (and hidden `_shows`, `_saved`,
-`_history` ones they are built from; a **Podcasts → Rebuild tabs** menu
-rebuilds them by hand):
-- **Shows**: every show ever followed, its author, genre, feed link, when it
-  was first followed, and **Following** (Yes/No).
-- **Saved**: every episode ever saved, with its show, length, links and
-  **Saved** (Yes/No).
-- **History**: every episode you played, newest first. The app keeps only its
-  last 100; the Sheet keeps them all, forever.
+**What syncs** (`SYNC` in `app.js`): four kinds, each item with an id and
+`updated`, stamped on any change; anything deleted leaves a grave
+(`kind:id → when`, in `S.graves`) so your other phones delete it too, and the
+newest change wins.
+- `shows`: what you follow (the show's id: a hash of its feed). Its title,
+  author, artwork, genre, feed and when you followed it; not its episode list.
+- `saved`: your saved episodes (the episode's key, `show id|guid`), with when.
+- `hist`: History, each with when you played it (`pl`) and that day. Dated.
+- `prog`: where you got to, and what's played. Dated, by when you last
+  listened.
 
-Nothing is ever deleted from the Sheet: an unfollowed show or a removed saved
-episode reads **No**, and stays listed. With two phones, a show reads Yes while
-any phone still follows it. **When it backs up**: when you connect, a few
-seconds after a change to what you follow, save or play, when the app opens or
-comes back after a while, and when the phone is back online. A playing
-episode's progress alone doesn't send anything; pausing does.
+Up Next, what's playing, Settings and each show's episode list stay on each
+phone.
 
-The link and code are also kept in a small database of their own
-(`allison-podcasts-sheet`), with the phone's id, so they survive a full or
-cleared `localStorage`. It uses the same design as Drinks' (read
-`drinks/README.md`, "Google Sheet sync"), but one way and for these three
-lists only; the script's logic is tested on an in-memory Sheet
-(`scripts/sheet-test.mjs`).
+**The 90 days.** Once a sync has worked, the phone keeps the last 90 days of
+History (at most its newest 100); older plays go from the phone with no grave,
+as the Sheet keeps them. **Library → History → Show older** fetches them back
+from the Sheet, a year at a time (kept until the next tidy-up). What's played
+stays on the phone however old (at most 3000, as before), so an old episode
+doesn't look new again; only its last 90 days come from the Sheet. The first
+sync sends everything the phone has.
+
+**When it syncs**: a couple of seconds after a change, when the app opens,
+when it comes back to the front, when the phone is back online, and when you
+sign in. A playing episode's progress alone (saved every ten seconds) doesn't
+sync; pausing does.
+
+**The Sheet** (`google-sheet-sync.gs`, VERSION 2) has three readable tabs, each
+starting with **Who** (and hidden `_shows`, `_saved`, `_history`,
+`_progress`, `_deleted` and `_people` tabs they are built from; a **Podcasts
+→ Rebuild the tabs** menu rebuilds them by hand). They're rebuilt on every
+change, so change things in the app, not there:
+- **Shows**: the shows each person follows: author, genre, since when, feed.
+- **Saved**: each person's saved episodes, newest first.
+- **History**: every episode played, newest first, with **Where you got to**
+  (`12:05 of 45:00`, or Finished).
+
+Podcasts' ids are the same for everyone (two people can follow the same
+show), so the script keeps each person's rows apart (the hidden tabs' id
+column reads `who/id`): a phone only ever changes or deletes its own person's.
+
+**From the one-way backup** (VERSION 1, which added several phones together
+by a random phone id): its rows become the owner's, as `aOS/SHEETS.md` says
+for rows from before aOS. The shows and saved episodes some phone still had
+are kept (an unfollowed one, which read **No**, is dropped), and every History
+row. Phones go by person now, not by phone id. On the owner's phone, the link
+and phrase it kept (`allison-podcasts-v1-sheet`, and the IndexedDB copy
+`allison-podcasts-sheet`) go to aOS once, and then every phone forgets them; a
+`#sync=` setup link is only taken off the address. The one-way backup's phone
+id is gone.
+
+Setting it up: `aOS/SHEETS.md`, "Setting it up": paste the new
+`google-sheet-sync.gs` into the Sheet's Apps Script (keeping your `SECRET`),
+deploy a new version, then open Podcasts on your phone, signed in, or give
+aOS the phrase in **Account → Google Sheets**.
 
 ## The two designs
 
@@ -178,13 +207,13 @@ the bar colours.
 that added it keeps it. The first time it opens there, `design.js` moves that
 app's data on the phone over to Podcasts' names (`allison-podcastsv-…` →
 `allison-podcasts-…` in `localStorage`; the IndexedDB episode lists
-`allison-podcastsv` → `allison-podcasts` and the Sheet backup copy
-`allison-podcastsv-sheet` → `allison-podcasts-sheet`, which the app opens only
-after the move; and what it had seen, so no walkthrough again), unless Podcasts
-already has data on that phone; nothing old is deleted. Its feed requests go
-to `../podcasts/api/` (not `api/`), so they reach the route from either
-address. A Sheet backup set up there keeps its phone id, so the Sheet sees the
-same phone.
+`allison-podcastsv` → `allison-podcasts` and the old Sheet backup's copy of
+its link and phrase `allison-podcastsv-sheet` → `allison-podcasts-sheet`,
+which the app opens only after the move, to hand over to aOS; and what it had
+seen, so no walkthrough again), unless Podcasts already has data on that
+phone; nothing old is deleted. Its feed requests go to `../podcasts/api/`
+(not `api/`), and its syncs to `../sheet/api/podcasts`, so they reach the
+routes from either address.
 
 ## Look
 
@@ -198,7 +227,7 @@ Liquid Glass, as in Calendar: clear glass floating inside the screen's
 edges, with round ✕ and ✓ buttons. The tabs, the filter chips and Settings'
 choices have one glass thumb that slides to the chosen option
 (`home/slide.js`, shared with the other apps). The toast is the same clear
-glass as the sheets, and "Show more" and "Clear history" are small glass
+glass as the sheets, and "Show more", "Show older" and "Clear history" are small glass
 pills like the other buttons.
 
 The icons: `icon.svg` (Vintage) is drawn as `icon-512.png` and `icon-180.png`,
@@ -208,10 +237,16 @@ The icons: `icon.svg` (Vintage) is drawn as `icon-512.png` and `icon-180.png`,
 ## Tests
 
 ```
-node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs)
-node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library,
-                                       # the Sheet backup end to end, on the real script, both designs,
-                                       # Settings > Design, the old Podcasts Vintage address
+node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs),
+                                       # reached as aOS reaches it: who gets in, each person only theirs (and the
+                                       # same show followed by two), your phones kept the same, VERSION 1 rows
+                                       # becoming the owner's, the 90 days and older on asking, the Who column
+node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library; the
+                                       # family's Sheet end to end on the real script, with **/sheet/api/podcasts
+                                       # answered here and who's asking from the page's aos.session (signed out,
+                                       # two phones of one person, someone else's phone, progress ticks, the 90
+                                       # days and Show older, handing the old link and phrase to aOS); both
+                                       # designs, Settings > Design, the old Podcasts Vintage address
 node podcasts/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
 
