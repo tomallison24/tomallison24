@@ -7,7 +7,7 @@
 // phone in Settings; the family's Google Sheet, through aOS (the real google-sheet-sync.gs on
 // fake-sheet.mjs) taking Meds and Steps and the phone then keeping only the last
 // 90 days, with no graves, and fetching older days back; a Sheet not set up yet keeping them
-// on the phone; an app told to erase itself (GET /aOS/api/state's erase) and
+// on the phone with no toast (aOS sets it up), and a real error toasting once a session; an app told to erase itself (GET /aOS/api/state's erase) and
 // Settings > Sign out and erase clearing the phone; and aOS's Lost a phone? page.
 // Dates are relative to today, so it works on any day.
 //
@@ -76,6 +76,12 @@ async function phone({ seed = null, session = SESSION, state = { storage: true, 
     if (r.request().method() === 'GET') return json({ configured: true });
     return json(sheet.post(r.request().postData(), { key: SECRET, who: 'u1', name: 'Test', owner: '1' }));
   });
+  // every toast the page shows (there's no Sheet sheet: a sync's trouble can only show here)
+  await ctx.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
+    window.__toasts = [];
+    const m = document.getElementById('toastMsg');   // each toast sets its text anew, even the same text
+    if (m) new MutationObserver(rs => rs.forEach(() => window.__toasts.push(m.textContent))).observe(m, { childList: true });
+  }));
   await ctx.addInitScript(({ seed, session, design, sync }) => {
     if (location.protocol !== 'http:' || window.name.includes('seeded')) return;   // once a tab, on the site (not sessionStorage: erasing clears that too)
     window.name += ' seeded';
@@ -93,6 +99,7 @@ async function phone({ seed = null, session = SESSION, state = { storage: true, 
 }
 const open = async (page, url = '/fitness/') => { await page.goto(BASE + url); await page.waitForFunction(() => window.__fitness || document.querySelector('#today')); await page.waitForTimeout(400); };
 const meds = page => page.evaluate(() => JSON.parse(JSON.stringify(__fitness.data)));
+const toasts = page => page.evaluate(() => [...new Set(window.__toasts || [])]);
 
 await test('Meds asks you to sign in first, and stays off the week', async () => {
   const { ctx, page } = await phone({ session: null });
@@ -250,20 +257,33 @@ await test('the family Sheet takes Meds and Steps; the phone keeps only the last
   const before = calls.filter(c => c.url.includes('/sheet/api/')).length;
   await page.evaluate(() => __fitness.sync(false)); await page.waitForTimeout(2500);
   assert.ok(calls.filter(c => c.url.includes('/sheet/api/')).length - before <= 2, 'one sync, not a loop');
-  await page.click('#syncBtn');
-  assert.match(await page.textContent('#syStatus'), /In the family’s Google Sheet/);
+  assert.ok(+(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-sync-at'))) > 0, 'in the family’s Google Sheet');
+  assert.equal(await page.$('#syncBtn'), null, 'no Sheet button: aOS sets the Sheet up');
   await ctx.close();
 });
 
-await test('a family Sheet not set up yet: everything stays on the phone, and it says the owner sets it up in aOS', async () => {
+await test('a family Sheet not set up yet: everything stays on the phone, with no toast (the owner sets it up in aOS)', async () => {
   const seed = { v: 2, logs: [], exercises: [], meds: [{ id: 'm1', name: 'Zinc', slots: [], days: [], since: OLD, updated: 5 }], doses: [{ id: 'old', med: 'm1', date: OLD, slot: 'day', at: 1, updated: 5 }], steps: [] };
-  const { ctx, page } = await phone({ seed, noSheet: true });
+  const { ctx, page, calls } = await phone({ seed, noSheet: true });
   await open(page);
   await page.waitForTimeout(1500);
+  assert.ok(calls.some(c => c.url.includes('/sheet/api/')), 'it tried, through aOS');
   assert.deepEqual((await meds(page)).doses.map(x => x.id), ['old'], 'kept: nothing has it yet');
-  await page.click('#syncBtn');
-  await page.click('#syNow');
-  await page.waitForFunction(() => /Account → Google Sheets/.test(document.getElementById('syStatus').textContent));
+  await page.evaluate(() => __fitness.sync(false)); await page.waitForTimeout(300);
+  assert.deepEqual(await toasts(page), [], 'nobody is nagged to set up the Sheet');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-sync-at')), null, 'not synced');
+  await ctx.close();
+});
+
+await test('a Sheet that can\'t be reached: one toast a session, however many quiet syncs', async () => {
+  const seed = { v: 2, logs: [], exercises: [], meds: [], doses: [], steps: [] };
+  const { ctx, page, calls } = await phone({ seed });   // no Sheet behind aOS: sheet-unreachable
+  await open(page);
+  await page.waitForFunction(() => (window.__toasts || []).length > 0, null, { timeout: 8000 });
+  for (let i = 0; i < 3; i++) { await page.evaluate(() => __fitness.sync(false)); await page.waitForTimeout(200); }
+  assert.ok(calls.filter(c => c.url.includes('/sheet/api/')).length >= 4, 'it kept trying');
+  assert.deepEqual(await toasts(page), ['Couldn’t reach the Sheet. Trying again later.']);
+  assert.equal((await page.evaluate(() => window.__toasts)).length, 1, 'once');
   await ctx.close();
 });
 

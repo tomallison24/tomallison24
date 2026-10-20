@@ -300,7 +300,6 @@ mark{background:var(--mark);color:inherit;border-radius:3px}
 @keyframes pageIn{from{transform:translateX(100%)}to{transform:none}}
 .field{display:flex;flex-direction:column;gap:8px}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 4px}
-.box{border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .opts{display:flex;flex-wrap:wrap;gap:8px}
 .opt{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);background:var(--fill);border:1px solid var(--hair);transition:color .2s,background .2s,transform .18s var(--ease)}
 .opt:active{transform:scale(.93)}
@@ -725,15 +724,7 @@ a.xrow:active{background:var(--fill)}
 .srow > svg{width:16px;height:16px;color:var(--faint)}
 .srow.add .st{color:var(--accent-text)}
 
-/* the Google Sheet sheet: its fields on a faint tile, as in Travel */
-.lg .box{border:0;border-radius:26px;background:var(--tile);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 .5px var(--tile-edge)}
-.lg .box .label{margin:0}
-.lg .plain{font-size:16px;color:var(--text)}
 .lg .btn.danger{border-radius:26px}
-#syForm .btn{min-height:50px;border-radius:26px}
-#syStatus{font-size:13px;line-height:1.5}
-/* the header's Sheet button turns red while sync is failing */
-.iconbtn.warn{color:var(--danger-text)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.lg .sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.lg .sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
@@ -894,7 +885,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
 .iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
 .iconbtn[aria-pressed="true"]{color:var(--accent-text)}
-.iconbtn.warn{color:var(--danger-text)}
 .btn{min-height:50px;font-weight:600;letter-spacing:.02em;background:var(--cta);color:var(--cta-ink);border:0;box-shadow:none}
 .btn::after{display:none}
 .btn:active{filter:brightness(.92)}
@@ -920,9 +910,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .viewmenu small{letter-spacing:0}
 
 /* the week and its totals: solid cream cards, round-cornered, no rim light */
-.rgroup,.empty,.notice,.stats,.kpis,.box,.lg .rgroup{background:var(--mc-card);box-shadow:none;border-radius:20px}
-.lg .rgroup,.lg .box{background:var(--fill)}
-.lg .box{border-radius:20px}
+.rgroup,.empty,.notice,.stats,.kpis,.lg .rgroup{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.lg .rgroup{background:var(--fill)}
 .week{border-radius:20px}
 .navrow .lbl{font-weight:600;letter-spacing:.02em}
 .dn small{font-weight:600;letter-spacing:.12em}
@@ -989,7 +978,6 @@ a.xrow .xt{color:var(--accent-text)}
 .lg .frow select{background-color:var(--lgs-field);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600}
 .lg .frow select:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
 .lg .frow > label{font-weight:600}
-.lg .box .plain{background:transparent}
 .lg .kv label{letter-spacing:.14em}
 .lg .hint{color:var(--faint)}
 .formbtns .btn{border-radius:999px}
@@ -1016,7 +1004,6 @@ a.xrow .xt{color:var(--accent-text)}
         <h1 class="title" id="title">Fitness</h1>
         <div class="acts">
           <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg></button>
-          <button class="iconbtn glass" id="syncBtn" type="button" aria-label="The family’s Google Sheet"><svg viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .6-8 5.5 5.5 0 0 0-10.6-1.4A4.7 4.7 0 0 0 7 18.5z"/><path d="M12 15.6v-5M9.8 12.6l2.2-2.2 2.2 2.2"/></svg></button>
           <button class="iconbtn glass" id="todayBtn" type="button" aria-label="This week"><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" class="fs"/></svg></button>
         </div>
       </div>
@@ -1046,27 +1033,6 @@ a.xrow .xt{color:var(--accent-text)}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="dayLbl">Today</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody" id="dayBody"></div>
-    </div>
-  </div>
-
-  <!-- The family’s Google Sheet: its status and Sync now -->
-  <div class="sheetwrap lg" id="syncSheet" hidden>
-    <div class="scrim" data-close></div>
-    <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
-      <div class="sheetbody">
-        <p class="hint" id="syStatus"></p>
-        <div class="field">
-          <div class="rgroup">
-            <button class="rowbtn" type="button" id="syNow">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
-              <span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets your latest from the Sheet</span></span>
-            </button>
-          </div>
-          <p class="hint">One Sheet for the family, the record of everyone’s Fitness: each row says whose it is, and each phone only ever gets its own person’s. This phone keeps the last 90 days and fetches older days when you look back. The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
-        </div>
-      </div>
     </div>
   </div>
 

@@ -330,24 +330,14 @@ Analysis's comparisons, and `sw.js` is the offline shell.
 
 Published with the other apps by `.github/workflows/news.yml`.
 
-## Google Sheet sync
+## The family's Google Sheet
 
-This is optional. It backs the log up to a Google Sheet you own, gives you
-a readable **Workouts** tab, and keeps a second phone in step. It uses the
-same design as Travel, with **its own Sheet and script**:
-
-1. Go to [sheets.new](https://sheets.new) and name the Sheet, for example
-   **AllisonOS - Fitness**.
-2. Open **Extensions → Apps Script**. Replace `Code.gs` with the whole of
-   [`google-sheet-sync.gs`](google-sheet-sync.gs), and change
-   `const SECRET = 'CHANGE-ME';` to a long phrase of your own.
-3. Choose **Deploy → New deployment → Web app**, with *Execute as: Me* and
-   *Who has access: Anyone*. Tap **Deploy**, authorise it, and copy the
-   **Web app URL**.
-4. In Fitness, tap the cloud button at the top, paste the URL and the
-   phrase, and tap **Connect and sync**.
-5. For a second phone, tap **Copy setup link** on the first one and open
-   that link on the other.
+Fitness syncs by itself through aOS; the owner sets the Sheet up in
+**aOS → Account → Google Sheets** (`aOS/SHEETS.md`). Fitness has no Sheet
+settings of its own: no button, no status, no Sync now. Signed in, every
+phone syncs its own person's workouts, meds and steps with the one Sheet
+for the family (each row says whose it is, and each phone only ever gets
+its own person's). The script is [`google-sheet-sync.gs`](google-sheet-sync.gs).
 
 **What the Sheet holds**
 - **Workouts**: Date, Day, Muscle group, Exercise, Sets, Reps (or Seconds
@@ -359,35 +349,34 @@ same design as Travel, with **its own Sheet and script**:
   newest first; **Med list**: what you take, when, which days, and whether
   it's paused; **Steps**: each day's steps, and whether they came from your
   iPhone or were typed in. These came with version 2 of the script: a Sheet
-  set up before then keeps the workouts only, and Fitness says to paste the
-  script in again and deploy a new version (the Sheet button shows it).
+  set up before then keeps the workouts only, until the owner pastes the
+  script in again and deploys a new version.
 - Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps` and `_deleted`
   tabs, which the app reads back.
 
-**Kept on the phone for 30 days**: once the Sheet holds Meds and Steps, the
-phone keeps only the last 30 days of doses and steps (after each sync; your
-list of meds and all your workouts stay, since Analysis compares 8 weeks of
-workouts). The older ones stay in the Sheet, and nothing is deleted from it:
-the phone leaves no grave for them. Without the Sheet, everything stays on the
-phone, since it's the only copy. A month's Analysis of steps then says its
-window before is in the Sheet rather than counting it as none.
+**Kept on the phone for 90 days**: once it has synced, the phone keeps the
+last 90 days of workouts, doses and steps (after each sync; your list of meds
+and exercises stays). The older ones stay in the Sheet, and nothing is deleted
+from it: the phone leaves no grave for them. Looking back past the 90 days (a
+week, a day, Analysis) fetches those days from the Sheet. Before it has
+synced, everything stays on the phone, since it's the only copy.
 
 The Workouts tab is rebuilt on every change, so make changes in the app,
 not in the Sheet. A **Fitness** menu in the Sheet can rebuild it by hand.
 
-**When it syncs**
-- When you connect.
+**When it syncs** (signed in)
+- When the app is opened, and when it comes back to the front.
 - A couple of seconds after any change.
-- When the app is opened, and when the phone comes back online.
-- If you log while offline, it syncs when you're back online.
+- When the phone comes back online, so a log made offline syncs then.
+- Signed out, Fitness keeps everything on the phone until you sign in (Face
+  ID, `../home/account.js`); it never nags about the Sheet.
+
+**If it doesn't work**: a quiet sync shows at most one toast a session for a
+real error (a wrong phrase, an old script, an unreachable Sheet), and none
+while signed out or before the owner has set the Sheet up in aOS.
 
 **How changes merge**: the newest change to an exercise wins. A deletion
 reaches the other phone. **Undo** brings a deleted exercise back on both.
-
-**If the secret code "doesn't match"** when you're sure it does: Apps Script
-runs the *deployed* copy. After changing `SECRET`, choose **Deploy → Manage
-deployments → ✏️ → Version: New version → Deploy**. Also check that the
-iPhone didn't fill in another app's saved code.
 
 ## Icons
 
