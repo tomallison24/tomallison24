@@ -7,7 +7,8 @@
 // - Bookings close together in time make a trip; each trip is a timeline.
 // - Flights close to departure get live status from travel/api/flight (a
 //   Cloudflare Pages Function holding the flight data key).
-// - A Google Sheet keeps both phones in step, as in Notes.
+// - The family's Google Sheet, through aOS, is the record: trips are shared
+//   with the family, except a booking or trip marked Just me (aOS/SHEETS.md).
 // - Explore and each trip link out to Google Flights, Google Hotels,
 //   Marriott and rental car searches, filled in.
 // - Two designs, picked in Settings > Design: Vintage (the default) and Standard
@@ -47,7 +48,7 @@ if (window.top !== window.self) {
   const K = {
     token: 'travel.token', state: 'travel.state', silent: 'travel.silent', silentFail: 'travel.silentFail', lastAuth: 'travel.lastAuth', hint: 'travel.hint', me: 'travel.me',
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
-    sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore',
+    sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
     ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
   };
@@ -78,6 +79,7 @@ if (window.top !== window.self) {
 
   const I = {
     lock: '<svg class="lk" viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
+    me: '<svg class="lk" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg>',
     spark: '<svg viewBox="0 0 24 24"><path d="M12 3.2l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.6 15.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     flight: '<svg viewBox="0 0 24 24"><path d="M3.2 13.6l5.4 1.3L6 19.6l1.9.5 4.4-4.3 5.6 1.4a2 2 0 0 0 2.4-1.5v0a2 2 0 0 0-1.4-2.4l-5.6-1.4-1.6-6-1.9-.5-.4 5.4-3.1-.8-1.5-2-1.4-.4.5 3.5z"/></svg>',
     hotel: '<svg viewBox="0 0 24 24"><path d="M3.2 19.6V6.4"/><path d="M3.2 15.2h17.6v4.4"/><path d="M20.8 15.2v-3.4a3 3 0 0 0-3-3h-6.6v6.4"/><circle cx="7.4" cy="11.4" r="2"/></svg>',
@@ -107,14 +109,25 @@ if (window.top !== window.self) {
   let graves = ls.json(K.graves, {});
   let seen = new Set(ls.json(K.seen, []));
   let live = ls.json(K.live, {});                                            // booking id -> {at, leg, error}
-  let syncCfg = ls.json(K.sync, null);
   const shadow = new Map();
   let ipsy = null;      // Ipsy's handle (../home/ipsy.js), once it is mounted at the bottom of this file
   const st = { tab: ls.get(K.tab, 'trips'), when: ls.get(K.when, 'upcoming'), trip: null, booking: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
+  let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
 
-  // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
-  // or cleared localStorage (every AllisonOS app shares its space). Opened once
-  // the old Travel Vintage app's copy is moved over, at its address (../home/design.js).
+  // Whose a booking is. In the family's Sheet each booking and trip name is its own person's (by,
+  // stamped by the Sheet), shared with the family unless that person made it Just me (only). One
+  // not synced yet has no by: it's yours. Who you are: your family sign-in, or (signed out) who
+  // the Sheet last said you were.
+  const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  const meId = () => { const u = window.AllisonOS && AllisonOS.account && AllisonOS.account.user(); return (u && u.id) || ls.get(K.who, ''); };
+  const mine = b => !!b && (!b.by || b.by === meId());
+  const whose = b => (ls.json(K.people, {})[b.by] || '').trim();
+  // A booking whose email is in this phone's Gmail (read here, or yours): someone else's shared booking came from theirs.
+  const myMail = b => !!(b && b.source && b.source.msgId && (seen.has(b.source.msgId) || mine(b)));
+
+  // The IndexedDB copy of the Sheet link and code this phone kept before aOS kept them: read once
+  // to hand them over to aOS (handOver, below), then deleted. Opened once the old Travel Vintage
+  // app's copy is moved over, at its address (../home/design.js).
   const keep = (() => {
     let db = null;
     const open = () => db || (db = Promise.resolve(window.aosDesign && aosDesign.moved).catch(() => {}).then(() => new Promise((res, rej) => {
@@ -155,7 +168,7 @@ if (window.top !== window.self) {
   let storeWarned = false;
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ bookings, trips })) && ls.set(K.graves, JSON.stringify(graves));
-    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Travel: storage is full.' + (syncCfg ? ' Your bookings are safe in the Google Sheet.' : ' Back up soon.')); }
+    if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Travel: storage is full.' + (lastSyncAt ? ' Your bookings are safe in the family’s Google Sheet.' : ' Back up soon.')); }
     shareCal();
   }
   // Calendar's Travel layer: your bookings, just the fields Calendar shows, kept in your
@@ -174,7 +187,7 @@ if (window.top !== window.self) {
     L.share(LAYER, { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => ({ ...Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]])), ...priv(b) })) });
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
-  function save() { track(); persist(); if (syncCfg) scheduleSync(); }
+  function save() { track(); persist(); if (signedIn()) scheduleSync(); }
   const saveSeen = () => ls.set(K.seen, JSON.stringify([...seen].slice(-4000)));
   const saveLive = () => ls.set(K.live, JSON.stringify(live));
 
@@ -421,8 +434,6 @@ if (window.top !== window.self) {
     catch (e) { if (e.name === 'AbortError') return 'cancelled'; }
     download(file); return 'downloaded';
   }
-  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 
   // ---------------------------------------------------------------------
   // Links out: searches and places
@@ -503,7 +514,7 @@ if (window.top !== window.self) {
     return '<div class="tripwrap" style="--i:' + i + '"><button class="trip glass' + (g.past ? ' past' : '') + (ai ? ' hasai' : '') + '" type="button" data-trip="' + esc(g.id) + '" style="--i:' + i + '">'
       + '<div class="tt"><h3>' + esc(g.name) + '</h3>' + (soon ? '<span class="soon">' + esc(soon) + '</span>' : '') + '</div>'
       + '<div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div>'
-      + '<div class="icons">' + counts + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
+      + '<div class="icons">' + counts + (g.items.every(b => b.only) ? justMePill : '') + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
       + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' canceled') + '</span>' : '') + '</div></button>'
       + (ai ? '<button class="chip glass aibtn" type="button" data-ai="' + esc(g.id) + '" aria-label="Have Ipsy check ' + esc(g.name) + '">' + I.spark + 'Have Ipsy check</button>' : '') + '</div>';
   }
@@ -520,7 +531,8 @@ if (window.top !== window.self) {
     if (up.length) sub.push(plural(up.length, 'trip') + ' coming up');
     if (st.scanning) sub.push('Reading Gmail…');
     else if (+ls.get(K.lastScan, 0)) sub.push('Gmail checked ' + ago(+ls.get(K.lastScan, 0)));
-    if (syncCfg) sub.push(syncState === 'error' ? 'Not synced' : syncState === 'syncing' ? 'Syncing…' : 'Synced');
+    const synced1 = syncState === 'error' ? 'Not synced' : syncState === 'syncing' ? 'Syncing…' : syncState === 'offline' ? 'Offline' : lastSyncAt ? 'Synced' : '';
+    if (signedIn() && synced1) sub.push(synced1);
     $('tripsSub').textContent = sub.join(' · ');
 
     let h = '';
@@ -539,10 +551,13 @@ if (window.top !== window.self) {
       if (list.length) h += list.map(tripCard).join('');
       else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong>'
         + (st.when === 'past' ? 'Trips move here the day after they end.' : 'New bookings in Gmail show up here after the next check (the envelope, top right).') + '</div>';
+      if (st.when === 'past') h += olderHTML();
     }
     $('list').innerHTML = h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
+    if ($('olderBtn')) $('olderBtn').onclick = () => loadOlder(true);
+    if (st.when === 'past' && st.tab !== 'explore') loadOlder(false);
     if (!$('tripPage').hidden && st.trip) renderTrip();
   }
   $('whenChips').addEventListener('click', e => {
@@ -575,7 +590,7 @@ if (window.top !== window.self) {
       t = (side === 'start' ? 'Pick up · ' : 'Return · ') + carCo(b);
       s = [side === 'start' ? b.pickupPlace : (b.dropPlace || b.pickupPlace), side === 'start' ? b.carClass : ''].filter(Boolean).join(' · ');
     } else { t = b.title || 'Booking'; s = b.place || ''; }
-    const meta = [statusPill(b), b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
+    const meta = [statusPill(b), b.only && side === 'start' ? justMePill : '', b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
     return '<button class="ev ' + esc(b.type) + cx + '" type="button" data-bk="' + esc(b.id) + '">'
       + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(at ? fmtDay(at) : 'No date') + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
       + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
@@ -586,6 +601,26 @@ if (window.top !== window.self) {
     bookings.forEach(b => { if (ids.includes(b.id)) { if (on) b.private = true; else delete b.private; } });
     save(); render();
   }
+  // Just me: only you see it. It stays on your phones and in the family's Sheet, and the Sheet gives it to nobody
+  // else (google-sheet-sync.gs); only its own person can make a booking Just me or shared again, so only yours change
+  // here. It isn't put in the Family calendar either (the family sees that), and comes out if Travel put it there.
+  function setJustMe(ids, on) {
+    const list = bookings.filter(b => ids.includes(b.id) && mine(b));
+    list.forEach(b => {
+      if (on) { b.only = true; if (b.calSig) { dropFromCalendar(b); delete b.calSig; } }
+      else delete b.only;
+    });
+    save(); render();
+    return list.length;
+  }
+  // A trip is Just me when every booking in it is: its name goes with it (when the name is yours).
+  function setTripJustMe(g, on) {
+    const n = setJustMe(g.items.map(b => b.id), on);
+    const t = trips.find(x => x.id === g.id), all = g.items.every(b => b.only);
+    if (t && mine(t) && !!t.only !== (on && all)) { if (on && all) t.only = true; else delete t.only; save(); }
+    return n;
+  }
+  const justMePill = '<span class="st info jm">' + I.me + 'Just me</span>';
   function openTrip(id) {
     const g = tripById(id); if (!g) return;
     st.trip = g.id;
@@ -612,8 +647,15 @@ if (window.top !== window.self) {
       + d.list.map(e => evRow(e.b, e.at, e.side)).join('') + '</div></div>').join('');
     h += '<button class="btn quiet" type="button" id="tpAdd">' + I.plus + 'Add a booking to this trip</button>';
     const priv = g.items.filter(b => b.private).length, all = priv === g.items.length;
-    h += '<div class="opts"><button class="opt" type="button" id="tpPriv" aria-pressed="' + all + '">' + I.lock + 'Private trip</button></div><p class="hint">'
-      + (all ? 'Private: this trip and its emails are hidden from Ipsy.' : priv ? plural(priv, 'booking') + ' in this trip ' + (priv === 1 ? 'is' : 'are') + ' private. Private trip hides them all from Ipsy.' : 'Private trip hides this trip and its emails from Ipsy.') + '</p>';
+    // Just me trip: every booking in it that is yours (someone else's stays shared: only they can change that)
+    const yours = g.items.filter(mine), only = yours.filter(b => b.only).length, theirs = g.items.length - yours.length;
+    const jm = !!yours.length && only === yours.length;
+    h += '<div class="opts"><button class="opt" type="button" id="tpPriv" aria-pressed="' + all + '">' + I.lock + 'Private trip</button>'
+      + (yours.length ? '<button class="opt" type="button" id="tpOnly" aria-pressed="' + jm + '">' + I.me + 'Just me trip</button>' : '') + '</div><p class="hint">'
+      + (all ? 'Private: hidden from Ipsy, this trip and its emails. The family still sees it.' : priv ? plural(priv, 'booking') + ' in this trip ' + (priv === 1 ? 'is' : 'are') + ' private. Private trip hides them all from Ipsy.' : 'Private trip hides this trip and its emails from Ipsy.') + '</p>';
+    if (yours.length) h += '<p class="hint" id="tpOnlyHint">' + (jm ? 'Just me: only you see this trip. It isn’t shared with the family.' : only ? plural(only, 'booking') + ' in this trip ' + (only === 1 ? 'is' : 'are') + ' Just me. Just me trip: only you see it.' : 'Shared with the family. Just me trip: only you see it.')
+      + (theirs ? ' ' + plural(theirs, 'booking') + ' in it ' + (theirs === 1 ? 'is' : 'are') + ' someone else’s, and stay' + (theirs === 1 ? 's' : '') + ' shared.' : '') + '</p>';
+    else h += '<p class="hint">' + esc(g.items.some(b => b.by) && whose(g.items[0]) ? whose(g.items[0]) + '’s trip, shared with the family.' : 'Shared with the family.') + '</p>';
     // Search for more around this trip.
     const flights = g.live.filter(b => b.type === 'flight');
     const hotel = g.live.find(b => b.type === 'hotel');
@@ -631,13 +673,15 @@ if (window.top !== window.self) {
     $('tpBody').innerHTML = h;
     $('tpAdd').onclick = () => openAdd(g.start.slice(0, 10));
     $('tpPriv').onclick = () => { setPrivate(g.items.map(b => b.id), !all); renderTrip(); toast(all ? 'Ipsy can see this trip again' : 'Private: hidden from Ipsy'); };
+    if ($('tpOnly')) $('tpOnly').onclick = () => { setTripJustMe(g, !jm); renderTrip(); toast(jm ? 'Shared with the family again' : 'Just me: only you see it'); };
   }
   function finishTrip() {
     const g = tripById(st.trip), inp = $('tpName');
     if (g && inp) {
       const name = inp.value.trim(), cur = trips.find(t => t.id === g.id);
       if (!name || name === g.auto) { if (cur) { trips = trips.filter(t => t !== cur); save(); } }
-      else if (!cur) { trips.push({ id: g.id, name }); save(); }
+      // the name of a Just me trip (all of it yours) is Just me too
+      else if (!cur) { trips.push({ id: g.id, name, ...(g.items.every(b => b.only && mine(b)) ? { only: true } : {}) }); save(); }
       else if (cur.name !== name) { cur.name = name; save(); }
     }
     st.trip = null; closeSheet('tripPage'); render();
@@ -685,7 +729,7 @@ if (window.top !== window.self) {
         + (/^(airlineCode|from|to)$/.test(k) ? ' autocapitalize="characters"' : '') + '></div>';
     }).join('') + '<div class="f w"><label for="bf_notes">Notes</label><textarea id="bf_notes" data-k="notes" placeholder="Anything to remember">' + esc(b.notes || '') + '</textarea></div></div></div>';
     const rows = [];
-    if (b.source && b.source.threadId) {
+    if (b.source && b.source.threadId && myMail(b)) {
       rows.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(b.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(b.source.subject || '') + '</span></span></a>');
       rows.push(linkRow(LINKS.gmailWeb(b.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
@@ -697,9 +741,14 @@ if (window.top !== window.self) {
     if (rows.length) h += '<div class="rgroup glass">' + rows.join('') + '</div>';
     if (b.source && b.source.from) h += '<p class="hint">From ' + esc(b.source.from.replace(/<[^>]*>/g, '').trim() || b.source.from) + (b.source.date ? ', ' + esc(new Date(b.source.date).toLocaleDateString()) : '') + '.</p>';
     if (!st.isNew) {
+      const own = mine(b), who = whose(b);
       h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button>'
-        + '<button class="opt" type="button" id="bkPriv" aria-pressed="' + !!b.private + '">' + I.lock + 'Private</button></div>'
-        + '<p class="hint">' + (b.private ? 'Private: hidden from Ipsy, and so is its email. It still syncs and shows here as usual.' : 'Private hides this booking and its email from Ipsy.') + '</p>';
+        + '<button class="opt" type="button" id="bkPriv" aria-pressed="' + !!b.private + '">' + I.lock + 'Private</button>'
+        + (own ? '<button class="opt" type="button" id="bkOnly" aria-pressed="' + !!b.only + '">' + I.me + 'Just me</button>' : '') + '</div>'
+        + '<p class="hint">' + (b.private ? 'Private: hidden from Ipsy, and so is its email. The family still sees it.' : 'Private hides this booking and its email from Ipsy.') + '</p>'
+        // Just me is its own person's to set: someone else's booking just says whose it is
+        + '<p class="hint" id="bkOnlyHint">' + (!own ? esc((who ? who + '’s' : 'Someone else’s') + ' booking, shared with the family.')
+          : b.only ? 'Just me: only you see it. It isn’t shared with the family or put in the Family calendar.' : 'Shared with the family. Just me: only you see it.') + '</p>';
       h += '<button class="btn quiet danger" type="button" id="bkDel">Delete booking</button>';
     }
     $('bkBody').innerHTML = h;
@@ -742,6 +791,9 @@ if (window.top !== window.self) {
     st.booking = null; closeSheet('bkSheet'); render();
   }
   $('bkDone').onclick = finishBooking;
+  // After Private or Just me is kept (which stamps the booking's change time), the sheet's copy takes the same stamp,
+  // so closing the sheet doesn't count it as an edit of yours.
+  const keptStamp = b => { const cur = bookings.find(x => x.id === b.id); if (cur) b.updated = cur.updated; };
   $('bkBody').addEventListener('click', async e => {
     const b = st.booking; if (!b) return;
     if (e.target.closest('#bkOk')) {
@@ -756,7 +808,14 @@ if (window.top !== window.self) {
       // Private is kept at once, on the booking itself (it isn't an edit: an email can still update it).
       readFields(); setPrivate([b.id], !b.private);
       if (b.private) delete b.private; else b.private = true;
-      renderBooking(); return;
+      keptStamp(b); renderBooking(); return;
+    }
+    if (e.target.closest('#bkOnly')) {
+      // Just me, like Private, is kept at once, on the booking itself.
+      readFields();
+      if (!setJustMe([b.id], !b.only)) return;
+      if (b.only) delete b.only; else { b.only = true; delete b.calSig; }
+      keptStamp(b); renderBooking(); toast(b.only ? 'Just me: only you see it' : 'Shared with the family again'); return;
     }
     if (e.target.closest('#bkCal')) { readFields(); await addToCalendar(ics([b]), titleOf(b), 'it'); return; }
     if (e.target.closest('#bkLiveGo')) { refreshLive(b, true).then(renderLiveBox); renderLiveBox(true); return; }
@@ -791,12 +850,12 @@ if (window.top !== window.self) {
   $('addPaste').onclick = () => { closeSheet('addSheet'); pasteIn(); };
 
   // ---------------------------------------------------------------------
-  // Paste: a confirmation, or a Sheet setup link
+  // Paste: a confirmation
   // ---------------------------------------------------------------------
   async function pasteIn() {
     let text = '';
     try { text = await navigator.clipboard.readText(); } catch {}
-    if (text && takeSetupLink(text)) return;
+    if (text && oldSetupLink(text)) return;
     if (text && text.trim().length > 20) return readPasted(text);
     $('psText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
   }
@@ -814,7 +873,7 @@ if (window.top !== window.self) {
     if (r.bookings.length === 1) openBooking(r.bookings[0].id);
   }
   $('pasteBtn').onclick = pasteIn;
-  $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; if (takeSetupLink(t)) { closeSheet('pasteSheet'); return; } closeSheet('pasteSheet'); readPasted(t); };
+  $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; if (oldSetupLink(t)) { closeSheet('pasteSheet'); return; } closeSheet('pasteSheet'); readPasted(t); };
 
   // ---------------------------------------------------------------------
   // Merge a booking found in an email
@@ -850,6 +909,9 @@ if (window.top !== window.self) {
     if (!cur) cur = bookings.find(x => sameBooking(x, b));
     // A booking made from a calendar event: the email about the same trip takes it over (nothing is listed twice).
     if (!cur) { const hits = bookings.filter(x => x.fromCal && !x.edited && P.sameThing(x, b)); if (hits.length === 1) cur = hits[0]; }
+    // A trip that ended more than 90 days ago is kept in the family's Sheet, not on this phone: an email about it, read
+    // again, doesn't make it over again here (a fresh copy would win over what the Sheet has, edits and all).
+    if (!cur && !byHand && isOld(b)) return 'old';
     // The same flight number on another day in the same booking: the flight
     // was moved, and the newest email about it decides which day is right.
     if (b.type === 'flight' && b.conf) {
@@ -996,6 +1058,7 @@ if (window.top !== window.self) {
     busyPill('Reading Gmail');
     const startedAt = Date.now();
     const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and rebuild what the old reader made of it
+    const readHere = new Set(seen);                      // the emails read on this phone, from its own Gmail
     if (rebuild) { seen = new Set(); saveSeen(); }
     const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
@@ -1016,7 +1079,9 @@ if (window.top !== window.self) {
       if (rebuild) {
         // Only now that the list came back (a failed look leaves everything as it was). What you edited, checked or deleted, and what was
         // filled in by AI or came from the calendar, stays; the rest was made by the old reader and is made again by the new one.
-        const old = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked && !b.filled && !b.fromCal);
+        // Only bookings from emails read on this phone (someone else's shared booking came from their Gmail, which this
+        // phone can't read again), and not those kept in the Sheet past the 90 days (fetched to look back).
+        const old = bookings.filter(b => b.source && b.source.msgId && readHere.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked && !b.filled && !b.fromCal);
         old.forEach(b => revive.add(b.id));
         ls.set(K.revive, JSON.stringify([...revive]));
         dropped = old;
@@ -1327,7 +1392,8 @@ if (window.top !== window.self) {
       const wrote = [];
       for (const b of bookings.slice()) {
         if (b.fromCal || b.ride) continue;
-        if (b.status === 'cancelled') { if (b.calSig) { await dropFromCalendar(b); delete b.calSig; changed = true; } continue; }
+        // a Just me booking isn't put in the Family calendar (the family sees that), and comes out if it was
+        if (b.status === 'cancelled' || b.only) { if (b.calSig) { await dropFromCalendar(b); delete b.calSig; changed = true; } continue; }
         const start = startOf(b);
         if (b.guess || !start || start.slice(0, 10) < today || b.type === 'other') continue;
         if (b.type === 'flight' && (start.length < 16 || !(b.from && b.to))) continue;
@@ -1515,7 +1581,7 @@ if (window.top !== window.self) {
     const mode = ls.get(K.ipsyAuto, '');
     if (mode === '0') return;
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
-    const todo = bookings.filter(b => !b.private && b.source && b.source.msgId && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
+    const todo = bookings.filter(b => !b.private && myMail(b) && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
     if (!todo.length) return;
     if (aiAvail === null) await pingLive();
@@ -1784,7 +1850,7 @@ if (window.top !== window.self) {
     $('stGmail').innerHTML = rows;
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
       : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
-    $('stSheetSub').textContent = !syncCfg ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Connected';
+    $('stSheetSub').textContent = !signedIn() ? 'Sign in to sync. Until then, Travel keeps everything on this phone.' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : lastSyncAt ? 'Last synced ' + ago(lastSyncAt) : 'Not synced yet';
     $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
     $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Have Ipsy check button. Only a short excerpt of that booking’s email is sent (no names, numbers or prices). What Ipsy fills in is marked “Check”, with Undo. To ask about your trips or change them, chat with Ipsy, the little stem cell at the bottom left.' + modelsLine() : 'Off. No Have Ipsy check button, and Ipsy doesn’t check by itself. Ipsy, at the bottom left, is still there to chat with.';
     const auto = ls.get(K.ipsyAuto, '');
@@ -1832,7 +1898,8 @@ if (window.top !== window.self) {
       // Start over: bookings read from email (and not edited or checked by
       // you) are cleared and read again, so an improved reader replaces its
       // old mistakes. Anything not found again stays gone, on both phones.
-      const auto = bookings.filter(b => b.source && b.source.msgId && !b.edited && !b.checked);
+      // Only those whose email was read on this phone (as when the reader changes, in scan), and none past the 90 days.
+      const auto = bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked);
       revive = new Set(auto.map(b => b.id)); ls.set(K.revive, JSON.stringify([...revive]));
       bookings = bookings.filter(b => !revive.has(b.id));
       save();
@@ -1863,155 +1930,189 @@ if (window.top !== window.self) {
   });
 
   // ---------------------------------------------------------------------
-  // Google Sheet sync - the same as Notes', for bookings and trip names
+  // The family's Google Sheet: the record of everyone's trips, each booking
+  // and trip name marked with whose it is, and shared with the family unless
+  // its own person made it Just me (aOS/SHEETS.md, family mode). This phone
+  // keeps a working copy: every booking still to come, the last 90 days of
+  // the rest, and every trip name; older trips come from the Sheet when you
+  // look back (Past). Syncs go through aOS (../home/sheet.js,
+  // functions/sheet/api), signed in, so the phone holds no Sheet link or
+  // phrase, and never gets anyone else's Just me bookings.
   // ---------------------------------------------------------------------
-  let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
-  let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
-  const SYNC_ERRORS = {
-    'wrong-secret': 'The secret code doesn’t match the script’s. If you changed SECRET after deploying, the web app still has the old one: Deploy → Manage deployments → ✏️ → Version: New version → Deploy. Also check the phone didn’t fill in the Notes code.',
-    'old-script': 'The Sheet is running an old copy of the script. Deploy → Manage deployments → ✏️ → Version: New version → Deploy, then try again.',
-    'secret-not-set': 'The script still says SECRET = ‘CHANGE-ME’. Change it, save, and deploy a new version.',
-    'busy': 'The Sheet was busy. Trying again shortly.',
-    'bad-request': 'The Sheet didn’t understand the request.',
-    'network': 'Couldn’t reach the Sheet. Check the link, or you may be offline.',
-    'not-json': 'That link didn’t answer like the Travel script. Check it ends in /exec and “Who has access” is Anyone.',
-    'wrong-app': 'That’s the Notes Sheet’s link. Travel needs the web app link from the AllisonOS - Travel Sheet (Extensions → Apps Script → Deploy → Manage deployments).',
-  };
-  function saveSyncCfg() {
-    if (syncCfg) ls.set(K.sync, JSON.stringify(syncCfg)); else ls.del(K.sync);
-    keep.set('sync', syncCfg ? { url: syncCfg.url, secret: syncCfg.secret } : null);
+  const APP = 'allison-travel-sync';
+  const SH = () => window.AllisonOS && AllisonOS.sheet;
+  let syncing = false, syncAgain = false, syncTimer = null, syncState = 'idle', syncErr = '', errShown = false;
+  // Synced with the family Sheet at least once: from then on the phone keeps 90 days of past trips.
+  let synced = ls.get(K.family, '') === '1';
+  const KEEP_DAYS = 90;
+  const olderIds = new Set();   // past bookings fetched from the Sheet to look back (until the next tidy-up)
+  const pruneFrom = () => synced ? P.addDays(todayStr(), -(KEEP_DAYS - 1)) : null;
+  const endDay = b => String(endOf(b) || '').slice(0, 10);
+  // A booking that ended before the 90 days (one with no date yet never has): kept in the Sheet, not here.
+  const isOld = b => { const f = pruneFrom(); return !!f && !!startOf(b) && endDay(b) < f; };
+  const keepHere = b => !isOld(b) || olderIds.has(b.id);
+  function prune() {
+    if (!pruneFrom()) return;
+    const n = bookings.length;
+    bookings = bookings.filter(b => { if (keepHere(b)) return true; shadow.delete('bookings:' + b.id); return false; });   // no grave: the Sheet keeps it
+    if (bookings.length !== n) persist();
   }
-  function applyRemote(res) {
+  const SYNC_ERRORS = {
+    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Travel keeps everything on this phone.',
+    'no-sheet': 'The family’s Travel Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
+    'wrong-secret': 'aOS’s phrase for the Travel Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
+    'old-script': 'The Travel Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
+    'secret-not-set': 'The Travel Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.',
+    busy: 'The Sheet was busy. Trying again shortly.',
+    offline: 'Offline. Changes will sync when you’re back online.',
+    'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
+    'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
+  };
+  // The link and phrase this phone used to keep (before aOS kept them): on the owner's phone they go
+  // to aOS once (it keeps them from then on); on every phone, once aOS has them, they're forgotten here.
+  async function handOver() {
+    const old = ls.json(K.sync, null) || await keep.get('sync');
+    if (!old || !old.secret || !SH() || !signedIn()) return;
+    if (await SH().adopt('travel', old)) { ls.del(K.sync); keep.set('sync', null); }
+  }
+  // sent: each item's change time as this sync sent it. What changed here since goes with the next sync; what was sent
+  // and isn't in the answer (an id that is someone else's Just me booking) isn't sent again and again.
+  function applyRemote(res, sent) {
     Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
+    if (res.by) ls.set(K.who, String(res.by));
+    if (res.people && typeof res.people === 'object') ls.set(K.people, JSON.stringify(res.people));
+    const who = res.by || meId();
     let localNewer = false;
+    const newer = (kind, l) => (+l.updated || 0) > (sent.get(kind + ':' + l.id) || 0);
     const mergeKind = (kind, local, remote) => {
       const map = new Map(local.map(x => [x.id, x]));
-      (remote || []).forEach(r => {
-        if (!r || typeof r.id !== 'string') return;
+      remote.forEach(r => {
         const l = map.get(r.id);
         if (!l || (+r.updated || 0) > (+l.updated || 0)) map.set(r.id, r);
-        else if ((+l.updated || 0) > (+r.updated || 0)) localNewer = true;
+        else if ((+l.updated || 0) > (+r.updated || 0)) { if (newer(kind, l)) localNewer = true; }
+        else {
+          // the same version: whose it is, as the Sheet says (kept in place, as other code may be holding this booking)
+          if (r.by && l.by !== r.by) l.by = r.by;
+          if (!!r.only !== !!l.only) { if (r.only) l.only = true; else delete l.only; }
+        }
       });
-      const remoteIds = new Set((remote || []).map(r => r && r.id));
-      local.forEach(l => { if (!remoteIds.has(l.id) && !graves[kind + ':' + l.id]) localNewer = true; });
+      const remoteIds = new Set(remote.map(r => r.id));
+      local.forEach(l => {
+        if (remoteIds.has(l.id) || graves[kind + ':' + l.id]) return;
+        // someone else's that the Sheet no longer gives this phone: its own person made it Just me (one past the 90 days,
+        // fetched for Past, isn't in this answer anyway: it goes at the tidy-up)
+        if (l.by && l.by !== who) { if (kind !== 'bookings' || !isOld(l)) map.delete(l.id); }
+        else if (newer(kind, l)) localNewer = true;
+      });
       return [...map.values()].filter(x => { const g = graves[kind + ':' + x.id]; return !(g && g >= (+x.updated || 0)); });
     };
-    // Only bookings of a type this app knows, as the backup import requires.
-    bookings = mergeKind('bookings', bookings, (res.bookings || []).filter(b => b && /^(flight|hotel|car|other)$/.test(b.type)));
-    trips = mergeKind('trips', trips, res.trips);
+    const ok = x => x && typeof x.id === 'string';
+    // Only bookings of a type this app knows, as the backup import requires. Past trips older than the 90 days went to
+    // the Sheet with this sync: kept there, not here (initShadow below leaves no graves for them).
+    bookings = mergeKind('bookings', bookings.filter(keepHere), (res.bookings || []).filter(b => ok(b) && /^(flight|hotel|car|other)$/.test(b.type)).filter(keepHere));
+    trips = mergeKind('trips', trips, (res.trips || []).filter(ok));
     initShadow(); persist();
     if (localNewer) syncAgain = true;
     render();
   }
+  // loud: you tapped Sync now (Face ID if you're signed out); otherwise quietly, when signed in.
   async function sync(loud) {
-    if (!syncCfg) return false;
+    if (!SH() || (!loud && !signedIn())) { syncState = signedIn() ? 'idle' : 'signin'; renderSyncStatus(); return false; }
     if (syncing) { syncAgain = true; return false; }
-    if (!navigator.onLine) { syncState = 'offline'; return false; }
+    if (!navigator.onLine) { syncState = 'offline'; renderSyncStatus(); return false; }
     syncing = true; syncState = 'syncing';
     if (loud) busyPill('Syncing');
     let ok = false;
     try {
       track(); persist();
-      let r, res;
-      try {
-        r = await fetch(syncCfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
-          body: JSON.stringify({ secret: syncCfg.secret, action: 'sync', v: 1, bookings, trips, graves }) });
-      } catch { throw new Error('network'); }
-      try { res = await r.json(); } catch { throw new Error('not-json'); }
-      if (res && res.ok && res.app && res.app !== 'allison-travel-sync') throw new Error('wrong-app');
-      if (res && res.error === 'wrong-secret' && res.app !== 'allison-travel-sync') throw new Error(await whichScript(syncCfg.url));
-      if (!res || !res.ok) throw new Error((res && res.error) || 'not-json');
+      const sent = new Map();
+      kinds().forEach(([kind, arr]) => arr.forEach(it => sent.set(kind + ':' + it.id, +it.updated || 0)));
+      const res = await SH().sync('travel', { action: 'sync', v: 2, window: KEEP_DAYS, today: todayStr(), bookings, trips, graves }, { ask: loud });
+      if (res.app && res.app !== APP) throw new Error('not-json');
+      if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
+      if (!synced) { synced = true; ls.set(K.family, '1'); }
       syncState = 'ok'; syncErr = ''; errShown = false; ok = true;
-      applyRemote(res);
+      applyRemote(res, sent);
+      prune();
       if (loud) pillDone('Synced');
     } catch (e) {
-      syncState = 'error'; syncErr = e.message; busyPill();
-      if (loud || !errShown) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.'); }
+      syncState = e.message === 'signin' ? 'signin' : e.message === 'offline' ? 'offline' : 'error'; syncErr = e.message; busyPill();
+      if (loud || (!errShown && syncState === 'error')) { errShown = true; toast(SYNC_ERRORS[syncErr] || 'Sync didn’t work. Trying again later.', null, 6000); }
     } finally {
       syncing = false; renderSyncStatus();
       if (syncAgain) { syncAgain = false; scheduleSync(800); }
     }
     return ok;
   }
-  // A "wrong secret" from a script that doesn't say it's Travel's: ask the
-  // link which app it belongs to (every script answers a plain GET with its
-  // name). Notes' means the wrong link; Travel's means the deployed copy is
-  // older than this change, which added the name to that answer.
-  async function whichScript(url) {
-    try {
-      const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
-      const d = await r.json();
-      if (d && d.app && d.app !== 'allison-travel-sync') return 'wrong-app';
-      if (d && d.app === 'allison-travel-sync') return 'old-script';
-    } catch {}
-    return 'wrong-secret';
-  }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
+  // Looking back (Past): the trips that ended before the 90 days this phone keeps come from the Sheet, once a
+  // session when Past is shown (or when you tap Show older trips), and go from the phone at the next tidy-up.
+  let older = '';   // '', 'loading', 'done' or 'failed'
+  async function loadOlder(ask) {
+    const floor = pruneFrom();
+    if (!floor || !SH() || older === 'loading' || older === 'done') return;
+    if (!ask && (older === 'failed' || !signedIn() || !navigator.onLine)) return;
+    older = 'loading'; render();
+    try {
+      const res = await SH().sync('travel', { action: 'range', from: '2000-01-01', to: P.addDays(floor, -1) }, { ask: !!ask });
+      let n = 0;
+      for (const b of (res.bookings || []).filter(b => b && typeof b.id === 'string' && /^(flight|hotel|car|other)$/.test(b.type))) {
+        olderIds.add(b.id);
+        if (bookings.some(x => x.id === b.id) || graves['bookings:' + b.id]) continue;
+        const { updated, ...rest } = b;
+        bookings.push(b); shadow.set('bookings:' + b.id, JSON.stringify(rest)); n++;
+      }
+      older = 'done';
+      if (n) persist();
+    } catch (e) {
+      older = 'failed';
+      if (ask) toast(SYNC_ERRORS[e.message] || 'Couldn’t get older trips from the Sheet. Try again later.', null, 6000);
+    }
+    render();
+  }
+  // The end of Past: where older trips are, and a button to get them when they didn't come by themselves.
+  function olderHTML() {
+    const floor = pruneFrom(); if (!floor) return '';
+    const since = esc(fmtDay(floor, { weekday: undefined, year: 'numeric' }));
+    if (older === 'done') return '<p class="hint" id="olderHint">Trips that ended before ' + since + ' come from the family’s Google Sheet.</p>';
+    if (older === 'loading') return '<p class="hint" id="olderHint">Getting older trips from the family’s Google Sheet…</p>';
+    return '<button class="btn quiet" type="button" id="olderBtn">Show older trips from the Sheet</button><p class="hint" id="olderHint">Trips that ended before ' + since
+      + ' are kept in the family’s Google Sheet' + (signedIn() ? '.' : '. Sign in to see them here.') + '</p>';
+  }
   function renderSyncStatus() {
-    const on = !!syncCfg;
-    const line = !on ? 'Not connected' : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced') : syncState === 'syncing' ? 'Syncing…'
-      : syncState === 'offline' ? 'Offline. Changes will sync when you’re back online.' : lastSyncAt ? 'Connected. Last synced ' + ago(lastSyncAt) + '.' : 'Connected.';
-    $('syStatus').textContent = line;
-    $('syForm').hidden = on; $('syOn').hidden = !on;
+    const signed = signedIn();
+    $('syStatus').textContent = !signed ? SYNC_ERRORS.signin
+      : syncState === 'error' ? (SYNC_ERRORS[syncErr] || 'Not synced. Trying again later.') : syncState === 'syncing' ? 'Syncing…'
+      : syncState === 'offline' ? SYNC_ERRORS.offline : lastSyncAt ? 'In the family’s Google Sheet. Last synced ' + ago(lastSyncAt) + '.' : 'Not synced yet.';
+    $('syNow').querySelector('.t').textContent = signed ? 'Sync now' : 'Sign in and sync';
     if (!$('setSheet').hidden) renderSettings();
-    if (!$('tripsView').hidden) { const sub = $('tripsSub').textContent; if (/Sync/.test(sub) || on) render(); }
+    if (!$('tripsView').hidden) render();
   }
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEjKlk2PnB_VrMrrPdX6ObNX_kRX2cdxrdfhqjAJFmyzQ8mJEDU9phaKDD_B2CElI1gg/exec';
-  function openSyncSheet(pre) {
-    $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
-    $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
-    renderSyncStatus();
-    if (pre) { $('syForm').hidden = false; $('syOn').hidden = true; $('syStatus').textContent = 'From a setup link. Tap Connect and sync.'; }
-    openSheet('syncSheet');
-  }
-  $('syForm').onsubmit = async e => {
-    e.preventDefault();
-    const url = $('syUrl').value.trim(), secret = $('sySecret').value.trim();
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { $('syStatus').textContent = 'Paste the web app link from Apps Script. It starts with https://script.google.com/ and ends in /exec.'; return; }
-    if (!secret) { $('syStatus').textContent = 'Enter the secret code you put in the script.'; return; }
-    const before = syncCfg;
-    syncCfg = { url, secret };
-    $('syConnect').disabled = true; $('syStatus').textContent = 'Connecting…';
-    const ok = await sync(true);
-    $('syConnect').disabled = false;
-    if (!ok) { syncCfg = before; renderSyncStatus(); $('syStatus').textContent = SYNC_ERRORS[syncErr] || 'Couldn’t connect.'; return; }
-    saveSyncCfg(); renderSyncStatus();
-    toast('Connected. ' + plural(bookings.length, 'booking') + ' now in the Sheet.');
-  };
+  function openSyncSheet() { renderSyncStatus(); openSheet('syncSheet'); }
   $('syNow').onclick = async () => { if (await sync(true)) toast('Synced'); };
-  $('syShare').onclick = async () => {
-    const link = location.href.split('#')[0] + '#sync=' + b64e(JSON.stringify({ u: syncCfg.url, s: syncCfg.secret }));
-    try { await navigator.clipboard.writeText(link); toast('Setup link copied. On the other phone: copy it, open Travel and tap the clipboard button. Keep it private.', null, 6000); }
-    catch { toast('Copy isn’t available here.'); }
-  };
-  $('syOff').onclick = () => {
-    const b = $('syOff');
-    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to disconnect'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Disconnect this phone'; }, 3500); return; }
-    delete b.dataset.armed; b.textContent = 'Disconnect this phone';
-    syncCfg = null; syncState = 'off'; saveSyncCfg(); renderSyncStatus();
-    toast('Disconnected. Your bookings stay on this phone and in the Sheet.');
-  };
-  function takeSetupLink(text) {
-    const m = String(text).match(/#sync=([\w-]+)/); if (!m) return false;
-    try { const c = JSON.parse(b64d(m[1])); if (c && c.u && c.s) { openSyncSheet(c); return true; } } catch {}
-    toast('That setup link is damaged. Copy it again.'); return true;
+  // An old setup link (#sync=…, pasted): aOS keeps the family's Sheet now, so there's nothing to set up.
+  function oldSetupLink(text) {
+    if (!/#sync=[\w-]+/.test(String(text))) return false;
+    toast('That’s an old Sheet setup link. aOS keeps the family’s Google Sheet now, so there’s nothing to set up: just sign in.', null, 6000);
+    return true;
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (syncCfg && Date.now() - lastSyncAt > 30000) sync(false);
+    if (Date.now() - lastSyncAt > 30000) sync(false);
     if (getToken() && scanDue()) scan();
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
   });
-  window.addEventListener('online', () => { if (syncCfg) sync(false); });
+  window.addEventListener('online', () => sync(false));
+  addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync(false)); else { syncState = 'signin'; renderSyncStatus(); } });
 
   // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
   const back = consumeRedirect();
-  if (location.hash.startsWith('#sync=')) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); setTimeout(() => takeSetupLink(h), 300); }
+  // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
+  if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
   setTab(st.tab === 'explore' ? 'explore' : 'trips');
   render();
   if (back && back.error) {
@@ -2025,12 +2126,7 @@ if (window.top !== window.self) {
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
   else setTimeout(() => ipsyAutoCheck(), 2500);
   if (aiOn()) setTimeout(() => pingLive().then(render), 1500);
-  if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
-  else keep.get('sync').then(c => {
-    if (syncCfg || !c || !c.url || !c.secret) return;
-    syncCfg = { url: c.url, secret: c.secret }; syncState = 'idle'; ls.set(K.sync, JSON.stringify(syncCfg));
-    sync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
-  });
+  setTimeout(() => handOver().finally(() => sync(false)), 600);
   // Refresh "in 3 h" labels and live status while open.
   setInterval(() => { if (document.visibilityState === 'visible') { alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b)); render(); } }, 5 * 6e4);
   // "Updated" pill, once, when a new version arrives (as in Notes).
@@ -2074,5 +2170,5 @@ if (window.top !== window.self) {
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
 })();

@@ -41,9 +41,18 @@ with the details filled in.
   named and dated by them. Its emails are hidden too (the email, its thread,
   and any email that names its confirmation or flight number), in Calendar's
   Ipsy as well, and its Family calendar event is marked private. It still syncs
-  and shows as usual. **Settings → Ipsy can search Gmail** turns Ipsy's Gmail
+  and shows as usual, and the family still sees it. **Settings → Ipsy can search Gmail** turns Ipsy's Gmail
   off altogether, on this phone.
-- **Two phones**: a shared Google Sheet, set up like Notes' (below).
+- **Just me** (on a booking of yours, or **Just me trip** on a trip's page) is
+  something else: only you see it. It stays on your phone and in the family's
+  Google Sheet, and the Sheet gives it to nobody else; it isn't put in the
+  Family calendar (and comes out if Travel put it there). A small **Just me**
+  pill marks it on the trip's timeline and on the trip card. Only the booking's
+  own person can make it Just me or shared again, so someone else's booking has
+  no switch, just whose it is ("Ella's booking, shared with the family"). A
+  Just me trip makes every booking of yours in it Just me (someone else's in it
+  stay shared), and its name too.
+- **The family's Google Sheet**: everyone's trips, through aOS (below).
 
 ## The two designs
 
@@ -200,10 +209,10 @@ Rules that keep it tidy:
 - **What you typed wins.** A booking you edited is never overwritten by an
   email (a cancellation is still noted).
 - **Deleted means deleted.** A booking you delete doesn't come back when the
-  email is read again, on this phone or the other.
+  email is read again, on this phone or any of the family's.
 
 Nothing about the emails is kept: only the bookings found in them, on the
-phone and in your Google Sheet if you connect one. Nothing leaves the phone
+phone and, once you're signed in, in the family's Google Sheet. Nothing leaves the phone
 either, except what **Smart help** sends when a booking is missing something
 (next section).
 
@@ -338,7 +347,7 @@ bookings I'm missing*.
   through the same checks and the same save as the rest of the app (`checkEdit`,
   `applyEdits` in `app.js`): what it changes is yours (a later email won't overwrite
   it), a deleted booking doesn't come back from the email and comes out of the Family
-  calendar if Travel put it there, and it all goes to the Google Sheet. Undo puts back
+  calendar if Travel put it there, and it all goes to the family's Google Sheet. Undo puts back
   just the bookings and trip name that change touched.
 - **Live look-ups count** toward the same monthly allowances on the phone as the
   app's own (250 flight look-ups, 30 departure board look-ups; "Live flight status"
@@ -460,33 +469,55 @@ flight number and date, nothing about who's flying. The flight board lookup
 a month on a phone, and each answer is kept for an hour. Ipsy's look-ups (above)
 count toward the same two caps.
 
-## Google Sheet sync
+## The family's Google Sheet
 
-The same design as Notes (read `notes/README.md`, "Google Sheet sync", for
-the details), with **its own Sheet and script**:
+One Sheet for the whole family, the record of everyone's trips, through aOS
+(the design, and the owner's setup, are in `aOS/SHEETS.md`; Travel is a
+`family` Sheet):
 
-1. [sheets.new](https://sheets.new) → name it e.g. **AllisonOS - Travel**.
-2. **Extensions → Apps Script**, replace `Code.gs` with the whole of
-   [`google-sheet-sync.gs`](google-sheet-sync.gs), and change
-   `const SECRET = 'CHANGE-ME';` to your own long phrase.
-3. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access:
-   Anyone* → **Deploy** → authorise → copy the **Web app URL**.
-4. Travel → gear → **Google Sheet sync** → paste the URL and the phrase →
-   **Connect and sync**. Then **Copy setup link** and open it on the other
-   phone with the clipboard button.
-
-**"The secret code doesn't match"** when you're sure it does: (1) Apps
-Script runs the *deployed* copy, so after changing `SECRET` choose **Deploy →
-Manage deployments → ✏️ → Version: New version → Deploy**; (2) make sure the
-link is the Travel Sheet's, not Notes'; (3) make sure the iPhone didn't fill
-in the Notes code from its saved passwords. Spaces at the ends and the
-phone's curly quotes and long dashes don't count against you, and Travel
-says so when it can tell the link is Notes' or the script is an old copy.
-
-The Sheet gets a readable **Bookings** tab (soonest first) and hidden
-`_bookings`, `_trips` and `_deleted` tabs the app reads back. Newest change
-wins. Each phone reads its own Gmail; the same booking found by both is
-still one booking.
+- **Whose**: each booking and trip name is its own person's (`by`, written by
+  the Sheet), and the family sees it, unless that person made it **Just me**
+  (`only: true`). The Sheet gives a Just me booking only to its own person, and
+  only they can set or clear it; another phone can't change or delete it, even
+  with its id. Rows from before aOS are the owner's.
+- **No link or phrase on the phone.** Every sync goes through aOS
+  (`../home/sheet.js`, `functions/sheet/api`), signed in with your family
+  account, and aOS adds the Sheet's phrase and who's asking. Settings → **The
+  family's Google Sheet** shows how it's going and **Sync now** (which signs you
+  in if it has to). Signed out, Travel works on the phone as before, and that
+  sheet says to sign in. A phone that kept the old link and phrase hands them
+  to aOS once (the owner's phone; aOS keeps them from then on) and forgets
+  them; an old setup link (`#sync=…`) is only taken off the address, and a
+  pasted one says there's nothing to set up.
+- **It syncs** when Travel opens, 2 seconds after a change, when it comes back
+  to the front, and when the phone is back online, only when you're signed in.
+- **90 days on the phone.** Once it has synced, this phone keeps every booking
+  still to come (and under way), every one with no date yet, every trip name,
+  and the bookings that ended in the last 90 days; older ones are dropped from
+  the phone after each sync, with no deletion (the Sheet keeps them all).
+  **Past** asks the Sheet for them (`{ action: 'range' }`) the first time it's
+  shown in a session (or **Show older trips from the Sheet**, when that didn't
+  work, or you were signed out), and they go from the phone again at the next
+  tidy-up. An email about one of those old trips, read again, doesn't make it
+  over again on the phone (a fresh copy would win over the Sheet's, your edits
+  and all).
+- **Your Gmail is yours.** Someone else's shared booking came from their
+  Gmail: it has no links to its email here, and **Read the last year again**
+  (and the re-read after a reader update) only redoes bookings whose emails
+  were read on this phone, so it never deletes the family's.
+- **Calendar's Travel layer** is what's on this phone: your bookings and the
+  family's shared ones still to come and from the last 90 days (plus any older
+  ones Past just fetched). Older trips aren't in it any more.
+- **The Sheet** has a readable **Bookings** tab (soonest first, with **Who**
+  first and **Seen by**, Family or Just me, last) and hidden `_bookings`,
+  `_trips`, `_deleted` and `_people` tabs the app reads back. Newest change
+  wins. Each phone reads its own Gmail; the same booking found by two is still
+  one booking (it stays its first person's).
+- The script is [`google-sheet-sync.gs`](google-sheet-sync.gs) (VERSION 2).
+  Paste it into the Travel Sheet's Apps Script, keeping your `SECRET` line, and
+  deploy a new version; then give aOS the phrase (aOS → Account → Google
+  Sheets), or open Travel signed in on the owner's phone. Steps:
+  `aOS/SHEETS.md`, "Setting it up".
 
 ## Links out
 
@@ -521,7 +552,8 @@ site.
   files, no email is ever shown as a page (the HTML is only read as text),
   it refuses to run in a frame, and the sign-in carries a random `state`.
 - **Data** in `localStorage` (bookings, trip names, which emails were read,
-  live status), the Sheet link also in IndexedDB, as in Notes.
+  live status). No Sheet link or phrase: aOS keeps them (an old one, in
+  `localStorage` or the IndexedDB copy, is handed over and deleted).
 - Published with the other apps by `.github/workflows/news.yml`.
 
 ## Tests
@@ -530,8 +562,9 @@ site.
 node travel/scripts/parse-test.mjs   # the email reader: made-up emails in real emails' layouts
 node travel/scripts/api-test.mjs     # the flight status function, AeroDataBox stubbed; extract; Ipsy's step, Claude stubbed
 node travel/scripts/reader-version-test.mjs   # QUERY_V is bumped whenever the reader or the search changes
-node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed; both designs, Settings > Design, the old Travel Vintage address
-node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed; at Travel's address or the old Travel Vintage one
+node travel/scripts/sheet-test.mjs   # the Sheet's script on an in-memory Sheet: who gets in, shared and Just me, the owner's old rows, 90 days and older on asking, Who
+node travel/scripts/app-test.mjs     # the app in headless Chromium, Gmail and flight status stubbed; both designs, Settings > Design, the old Travel Vintage address; the family's Sheet through aOS (Just me, Past)
+node travel/scripts/smart-test.mjs [travel|travelvintage]   # Smart help in headless Chromium: undated bookings, To check, the calendar both ways, the AI and the flight board, all stubbed (and, signed in, the family's Sheet); at Travel's address or the old Travel Vintage one
 node travel/scripts/ipsy-test.mjs    # Ipsy in headless Chromium, both designs, light and dark: its tools, Undo, asking before a whole trip goes; Claude, Gmail and the flight service stubbed
 node travel/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```

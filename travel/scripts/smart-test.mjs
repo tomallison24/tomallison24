@@ -24,6 +24,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -102,7 +103,18 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], auth: [], find: [], imports: [], deletes: [], events: 0 };
+  const seen = { extract: [], auth: [], find: [], imports: [], deletes: [], events: 0, sheet: [] };
+  // The family's Google Sheet, through aOS (functions/sheet/api, stood in for here): the real script on an
+  // in-memory Sheet, who's asking from the session the page sends. Only a signed-in phone syncs.
+  const sheet = seen.sheetTab = fakeSheet(path.join(ROOT, 'travel', 'google-sheet-sync.gs'), 'test-secret-phrase');
+  const FAMILY = { 'sess-1': { id: 'u1', name: 'Pat' } };
+  await ctx.route(BASE + '/sheet/api/**', route => {
+    const req = route.request(), who = FAMILY[(req.headers().authorization || '').replace('Bearer ', '')];
+    if (!who) return route.fulfill({ status: 401, json: { error: 'signin' } });
+    if (req.method() === 'GET') return route.fulfill({ json: { configured: true } });
+    seen.sheet.push(JSON.parse(req.postData()));
+    return route.fulfill({ json: sheet.post(req.postData(), { key: 'test-secret-phrase', who: who.id, name: who.name }) });
+  });
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
@@ -554,6 +566,12 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#stIpsyAutoOpt');
     assert.match(await page.textContent('#stIpsyAutoSub'), /^Off\./);
     assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-ipsy-auto')), '0');
+  });
+  await step('signed in, the bookings (and what Ipsy filled in, then undid) went to the family\'s Google Sheet as Pat\'s', async () => {
+    assert.ok(seen.sheet.length && seen.sheet.every(c => !('secret' in c)), 'synced through aOS, with no phrase');
+    const rows = seen.sheetTab.tab('Bookings').slice(1);
+    assert.ok(rows.length && rows.every(r => r[0] === 'Pat'), rows.map(r => r[0] + ':' + r[4]).join(' | '));
+    assert.ok(await page.evaluate(() => window.__travel.bookings.filter(b => b.conf === 'TRZ4KD').every(b => b.by === 'u1' && !b.from)), 'the Undo kept, marked as hers');
   });
   await step('Ipsy\'s own check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
   await ctx.close();

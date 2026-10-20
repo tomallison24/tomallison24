@@ -9,6 +9,10 @@
 // behind the title; and Standard (Sea glass). Settings > Design switches between them at once and
 // keeps the choice; and the old Travel Vintage address (served from travel/, as the deploy does)
 // moves that app's data on the phone over to Travel's names, and still reaches Travel's route.
+// The family's Google Sheet, through aOS (the real script on fake-sheet.mjs, answering **/sheet/api/travel
+// as the session token says who): signed out it asks to sign in; signed in, bookings go to the Sheet as
+// their person's; Just me on a booking and a trip (only you see it), and Ella's phone not getting them;
+// past trips over 90 days kept in the Sheet and fetched back for Past; the old link handed over to aOS.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node travel/scripts/app-test.mjs [repo root] [screenshot dir]
@@ -18,6 +22,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -256,7 +261,11 @@ for (const scheme of ['light', 'dark']) {
       t.upsert(mk('2027-03-06T15:32', 1000, 'old'));
       t.upsert(mk('2027-03-07T15:32', 2000, 'new'));
       t.upsert(mk('2027-03-06T15:32', 1000, 'old'));          // the old email read again later
-      return t.bookings.filter(b => b.conf === 'MOVED1').map(b => b.dep);
+      const got = t.bookings.filter(b => b.conf === 'MOVED1').map(b => b.dep);
+      // tidied away: its emails were never read on this phone, so "Read the last year again" (next) leaves it alone
+      for (let i = t.bookings.length - 1; i >= 0; i--) if (t.bookings[i].conf === 'MOVED1') t.bookings.splice(i, 1);
+      t.save();
+      return got;
     });
     assert.deepEqual(r, ['2027-03-07T15:32']);
   });
@@ -280,7 +289,7 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': a ride at home makes no trip, and a widened search reads back a year once', async () => {
     const trips = await page.evaluate(() => window.__travel.groupTrips().map(g => g.items.map(b => b.title || b.type).join()));
     assert.ok(!trips.some(t => /Lyft/.test(t)), trips.join(' | '));
-    assert.equal(trips.length, 2);
+    assert.equal(trips.length, 2, trips.join(' | '));
     listed.length = 0;
     await page.evaluate(() => { localStorage.setItem('allison-travel-v1-scan', String(Date.now())); localStorage.removeItem('allison-travel-v1-query-v'); });
     await page.reload();
@@ -315,24 +324,165 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
-// Google Sheet: a "wrong secret" says which link it was.
-await step('a Notes Sheet link is recognised, and an old Travel script is named', async () => {
+// The family's Google Sheet: the real Apps Script, on an in-memory Sheet, reached through aOS
+// (functions/sheet/api, stood in for here): each phone's session says who's asking.
+const SHEET_URL = 'https://script.google.com/macros/s/TEST/exec', SECRET = 'test-secret-phrase';
+const sheet = fakeSheet(path.join(ROOT, 'travel', 'google-sheet-sync.gs'), SECRET);
+const sheetCalls = [], claims = [];
+const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
+const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+const stay = (id, name, a, b, extra) => ({ type: 'hotel', status: 'confirmed', conf: id.toUpperCase(), name, city: name.split(' ')[0], checkIn: iso(day(a)), checkOut: iso(day(b)), guess: false, edited: true, id, created: 1, updated: 1, notes: '', ...extra });
+const hop = (id, a, extra) => ({ type: 'flight', status: 'confirmed', airlineCode: 'UA', flightNo: '88', airline: 'United', from: 'DEN', to: 'SAN', fromName: 'Denver', toName: 'San Diego', dep: iso(day(a)) + 'T08:00', arr: iso(day(a)) + 'T10:00', conf: 'SD88', guess: false, edited: true, id, created: 1, updated: 1, notes: '', ...extra });
+// A family phone: signed in as tok (or signed out), nothing but the Sheet (and Travel's own route) reachable.
+async function famPhone(tok, bookings = [], extra = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(() => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' }))));   // no aOS walkthrough over the page; the sky held at day
+  await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());   // no phone talks to Google's Sheet itself any more
+  await ctx.route(BASE + '/**/api/**', route => {
+    const req = route.request(), u = new URL(req.url());
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (u.pathname.startsWith('/travel/api/')) return u.pathname.endsWith('/ping') ? json({ ok: true, status: true }) : json({ ok: true, found: false });
+    if (!u.pathname.startsWith('/sheet/api/travel')) return json({ error: 'not-found' }, 404);
+    const who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
+    if (req.headers()['x-sheet'] !== '1') return json({ error: 'header' }, 400);
+    if (!who) return json({ error: 'signin' }, 401);
+    if (u.pathname.endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
+    if (req.method() === 'GET') return json({ configured: true });
+    sheetCalls.push({ who: who.id, ...JSON.parse(req.postData()) });
+    return json(sheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+  });
+  await ctx.addInitScript(([seed]) => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
+  }, [{ 'aos.seen': JSON.stringify({ travel: '999' }), 'aos.sky': 'day', 'allison-travel-v1': JSON.stringify({ bookings, trips: [] }), ...(tok ? { 'aos.session': session(tok) } : {}), ...extra }]);
   const page = await ctx.newPage();
-  let app = 'allison-notes-sync';
-  await ctx.route('https://script.google.com/**', route => route.request().method() === 'POST'
-    ? route.fulfill({ json: { ok: false, error: 'wrong-secret' } })
-    : route.fulfill({ json: { ok: true, app, v: 1 } }));
+  const errs = [];
+  page.on('pageerror', e => errs.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.goto(BASE + '/travel/');
-  await page.click('#setBtn'); await page.click('#stSheet');
-  await page.fill('#syUrl', 'https://script.google.com/macros/s/abc/exec'); await page.fill('#sySecret', 'maple-otter');
-  await page.click('#syConnect');
-  await page.waitForFunction(() => /Notes Sheet/.test(document.getElementById('syStatus').textContent));
-  app = 'allison-travel-sync';
-  await page.click('#syConnect');
-  await page.waitForFunction(() => /old copy of the script/.test(document.getElementById('syStatus').textContent));
+  await page.waitForFunction(() => window.__travel, null, { timeout: 5000 });
+  return { ctx, page, errs };
+}
+const synced = page => page.waitForFunction(() => /Synced/.test(document.getElementById('tripsSub').textContent), null, { timeout: 8000 });
+const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('allison-travel-v1')));
+// the sync after a change waits 2 s: wait for what the Sheet was sent
+const until = async (fn, ms = 8000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('timed out waiting for the Sheet'); await new Promise(r => setTimeout(r, 100)); } };
+const sentLast = id => { const c = sheetCalls.filter(c => c.action === 'sync').at(-1); return c && (c.bookings || []).find(b => b.id === id); };
+
+await step('the family\'s Google Sheet: signed out, Travel works on the phone and the Sheet sheet asks to sign in; no link or phrase', async () => {
+  const { ctx, page, errs } = await famPhone(null, [stay('h-solo', 'Austin Motel', 20, 22)]);
+  await page.waitForSelector('.trip');
+  await page.click('#setBtn');
+  assert.match(await page.textContent('#stSheetSub'), /Sign in to sync/);
+  await page.click('#stSheet');
+  await page.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await page.textContent('#syStatus'), /Sign in to sync with the family’s Google Sheet/);
+  assert.equal(await page.textContent('#syNow .t'), 'Sign in and sync');
+  assert.equal(await page.$('#syUrl'), null, 'no link or phrase to type on a phone');
+  assert.equal(await page.$('#syShare'), null, 'no setup link');
+  assert.equal(await page.$('#syOff'), null, 'no Disconnect');
+  assert.equal(sheetCalls.length, 0, 'nothing is sent signed out');
+  assert.deepEqual(errs, []);
   await ctx.close();
+});
+
+let tom, ella;
+await step('signed in (Tom, the owner): his bookings go to the family Sheet as his, with the Who column; past ones over 90 days stay there', async () => {
+  tom = await famPhone('tok-tom', [stay('h-tom', 'Boston Courtyard', 20, 22), hop('f-tom', 20), stay('h-recent', 'Chicago Inn', -40, -37), stay('h-old', 'Lisbon Palace', -200, -196)]);
+  await synced(tom.page);
+  const rows = sheet.tab('Bookings');
+  assert.deepEqual(rows.slice(1).map(r => r[0] + ':' + r[4]).sort(), ['Tom:Boston Courtyard', 'Tom:Chicago Inn', 'Tom:Lisbon Palace', 'Tom:United UA88 DEN → SAN'], 'every booking, each says whose');
+  assert.ok(sheetCalls.every(c => !('secret' in c)), 'the phone sends no phrase');
+  assert.equal(sheetCalls.at(-1).window, 90, 'and keeps 90 days');
+  assert.deepEqual((await stored(tom.page)).bookings.map(b => b.id).sort(), ['f-tom', 'h-recent', 'h-tom'], 'the trip that ended 200 days ago is in the Sheet, not on the phone');
+  assert.ok((await stored(tom.page)).bookings.every(b => b.by === 'tom'), 'marked as his');
+  await tom.page.click('#setBtn'); await tom.page.click('#stSheet');
+  await tom.page.waitForSelector('#syncSheet:not([hidden])');
+  assert.match(await tom.page.textContent('#syStatus'), /In the family’s Google Sheet\. Last synced/);
+  assert.equal(await tom.page.textContent('#syNow .t'), 'Sync now');
+  await tom.page.click('#syncSheet .sheethead [data-close]');
+});
+
+await step('Just me on a booking of yours: only you see it, with a small Just me pill; Private is something else', async () => {
+  const { page } = tom;
+  await page.click('[data-when="upcoming"]');
+  await page.click('.trip[data-trip]');
+  await page.waitForSelector('#tripPage:not([hidden])');
+  await page.click('#tpBody .ev[data-bk="h-tom"]');
+  await page.waitForSelector('#bkSheet:not([hidden])');
+  assert.equal(await page.getAttribute('#bkOnly', 'aria-pressed'), 'false');
+  assert.match(await page.textContent('#bkOnlyHint'), /Shared with the family\. Just me: only you see it\./);
+  assert.match(await page.textContent('#bkBody'), /Private hides this booking and its email from Ipsy\./, 'Private says Ipsy');
+  await page.click('#bkOnly');
+  assert.equal(await page.getAttribute('#bkOnly', 'aria-pressed'), 'true');
+  assert.match(await page.textContent('#bkOnlyHint'), /^Just me: only you see it\./);
+  assert.equal(await page.getAttribute('#bkPriv', 'aria-pressed'), 'false', 'and it isn\'t Private');
+  await page.click('#bkDone');
+  assert.ok(await page.isVisible('#tpBody .ev[data-bk="h-tom"] .st.jm'), 'the Just me pill on its row');
+  assert.equal(await page.evaluate(() => window.__travel.bookings.find(b => b.id === 'h-tom').edited), true, 'typed in, as it was');
+  await until(() => sentLast('h-tom') && sentLast('h-tom').only === true);   // sent to the Sheet
+  assert.ok(sheet.tab('Bookings').some(r => r[4] === 'Boston Courtyard' && r[9] === 'Just me'));
+});
+
+await step('Ella\'s phone: the family\'s shared bookings, none of Tom\'s Just me ones, and no Just me switch on his', async () => {
+  ella = await famPhone('tok-ella', [stay('h-ella', 'Denver Lodge', 30, 31)]);
+  await synced(ella.page);
+  const ids = (await stored(ella.page)).bookings.map(b => b.id).sort();
+  assert.deepEqual(ids, ['f-tom', 'h-ella', 'h-recent'], 'Tom\'s shared ones and hers; not his Just me hotel: ' + ids.join(' '));
+  await ella.page.evaluate(() => { document.querySelector('[data-when="upcoming"]').click(); });
+  await ella.page.click('.trip[data-trip="f-tom"]');
+  await ella.page.waitForSelector('#tripPage:not([hidden])');
+  assert.equal(await ella.page.$('#tpOnly'), null, 'not hers to make Just me');
+  assert.match(await ella.page.textContent('#tpBody'), /Tom’s trip, shared with the family\./);
+  await ella.page.click('#tpBody .ev[data-bk="f-tom"]');
+  await ella.page.waitForSelector('#bkSheet:not([hidden])');
+  assert.equal(await ella.page.$('#bkOnly'), null);
+  assert.equal(await ella.page.textContent('#bkOnlyHint'), 'Tom’s booking, shared with the family.');
+  assert.ok(await ella.page.isVisible('#bkPriv'), 'Private (hidden from Ipsy) she can still use');
+  await ella.page.click('#bkDone');
+  await ella.page.click('#tpDone');
+});
+
+await step('a Just me trip: Tom\'s trip page makes all of it his alone, and Ella\'s phone lets it go at her next sync', async () => {
+  const { page } = tom;
+  assert.equal(await page.getAttribute('#tpOnly', 'aria-pressed'), 'false', 'one of two is Just me: not the whole trip');
+  assert.match(await page.textContent('#tpOnlyHint'), /1 booking in this trip is Just me/);
+  await page.click('#tpOnly');
+  assert.equal(await page.getAttribute('#tpOnly', 'aria-pressed'), 'true');
+  assert.match(await page.textContent('#tpOnlyHint'), /^Just me: only you see this trip\./);
+  await page.click('#tpDone');
+  assert.ok(await page.isVisible('.trip[data-trip] .st.jm'), 'the trip card says Just me');
+  await until(() => ['f-tom', 'h-tom'].every(id => sentLast(id) && sentLast(id).only));   // both sent as Just me
+  await ella.page.evaluate(() => window.__travel.sync(false));
+  await ella.page.waitForFunction(() => !window.__travel.bookings.some(b => b.id === 'f-tom'), null, { timeout: 5000 });
+  assert.deepEqual((await stored(ella.page)).bookings.map(b => b.id).sort(), ['h-ella', 'h-recent']);
+  assert.ok(!(await ella.page.evaluate(() => Object.keys(window.__travel.graves()).some(k => /f-tom/.test(k)))), 'without a deletion: Tom still has it');
+  assert.deepEqual(ella.errs, []);
+  await ella.ctx.close();
+});
+
+await step('Past: trips that ended more than 90 days ago come back from the Sheet when you look', async () => {
+  const { page, errs } = tom;
+  const before = sheetCalls.length;
+  await page.click('[data-when="past"]');
+  await page.waitForFunction(() => /Lisbon/.test(document.getElementById('list').textContent), null, { timeout: 5000 });
+  assert.ok(sheetCalls.slice(before).some(c => c.action === 'range' && c.from === '2000-01-01'), 'asked for older days');
+  assert.match(await page.textContent('#olderHint'), /come from the family’s Google Sheet/);
+  assert.ok(/Chicago/.test(await page.textContent('#list')), 'with the recent past trip');
+  assert.deepEqual(errs, []);
+  await tom.ctx.close();
+});
+
+await step('the owner\'s phone hands the Sheet link and phrase it kept over to aOS, then forgets them', async () => {
+  const o = await famPhone('tok-tom', [], { 'allison-travel-v1-sync': JSON.stringify({ url: SHEET_URL, secret: SECRET }) });
+  await o.page.waitForFunction(() => !localStorage.getItem('allison-travel-v1-sync'), null, { timeout: 8000 });
+  assert.deepEqual(claims.at(-1), { who: 'tom', url: SHEET_URL, secret: SECRET });
+  // an old setup link opened on a phone is only taken off the address
+  await o.page.goto(BASE + '/travel/index.html#sync=eyJ1IjoieCIsInMiOiJ5In0'); await o.page.waitForFunction(() => window.__travel);
+  assert.equal(await o.page.evaluate(() => location.hash), '');
+  assert.equal(await o.page.$('#syncSheet:not([hidden])'), null);
+  assert.deepEqual(o.errs, []);
+  await o.ctx.close();
 });
 
 // Without the server function (GitHub Pages): no lookups, a clear message.
@@ -467,8 +617,9 @@ await step('the old Travel Vintage address: its bookings, Gmail sign-in, Sheet b
   assert.ok(got.old && got.oldTok, 'nothing old is deleted');
   assert.equal(got.look, 'vintage');
   assert.equal(got.layer, 'travelv', 'Calendar\'s layer keeps the old app\'s own name there, so neither copy overwrites the other');
-  await page.waitForFunction(() => /script\.google\.com\/macros\/s\/old/.test(localStorage.getItem('allison-travel-v1-sync') || ''), null, { timeout: 5000 });
-  assert.ok(await page.evaluate(() => indexedDB.databases().then(d => d.some(x => x.name === 'allison-travel'))), 'the Sheet backup copy moved to Travel\'s database');
+  // the old app's copy of the Sheet link moves to Travel's database (handed over to aOS once signed in, then deleted)
+  await page.waitForFunction(() => new Promise(res => { const r = indexedDB.open('allison-travel', 1); r.onsuccess = () => { try { const q = r.result.transaction('kv').objectStore('kv').get('sync'); q.onsuccess = () => res(!!(q.result && /macros\/s\/old/.test(q.result.url))); q.onerror = () => res(false); } catch { res(false); } }; r.onerror = () => res(false); }), null, { timeout: 5000 });
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-sync')), null, 'and the phone doesn\'t reconnect to the Sheet with it: aOS keeps the Sheet now');
   await page.click('#setBtn');
   await page.waitForFunction(() => /Working/.test(document.getElementById('stLive').textContent), null, { timeout: 5000 });
   assert.match(await page.textContent('#stGmail'), /Look for new bookings now/, 'still signed in to Gmail');
