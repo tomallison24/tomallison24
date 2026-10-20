@@ -556,6 +556,8 @@ svg.fs{fill:currentColor}
 .st.bad{color:var(--bad-ink);background:color-mix(in srgb,var(--bad) 13%,transparent);border-color:color-mix(in srgb,var(--bad) 38%,transparent)}
 .st.info{color:var(--accent-text);background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:color-mix(in srgb,var(--accent) 34%,transparent)}
 .st.bare::before{display:none}
+.st.jm::before{display:none}
+.st.jm svg{width:13px;height:13px;stroke-width:2}
 
 /* the trip page: a timeline, day by day */
 .triphead{display:flex;flex-direction:column;gap:4px;padding:0 4px}
@@ -1045,11 +1047,11 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <span>Ipsy can search Gmail<span class="sub" id="stIpsyGmailSub"></span></span>
           </button>
         </div>
-        <p class="label">Backup Log</p>
+        <p class="label">Sync</p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="stSheet">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="3.2" y="3.6" width="17.6" height="16.8" rx="3.2"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6M9.4 9.2v11.2"/></svg></span>
-            <span>Google Sheet sync<span class="sub" id="stSheetSub">Not connected</span></span>
+            <span>The family’s Google Sheet<span class="sub" id="stSheetSub"></span></span>
           </button>
         </div>
         <p class="label">Backup</p>
@@ -1064,41 +1066,27 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
         </div>
         <input type="file" id="stFile" accept=".json,application/json" hidden>
-        <p class="hint">Emails are read on this phone, straight from Gmail. Only the bookings found in them are kept, here and in the Google Sheet if you connect one.</p>
+        <p class="hint">Emails are read on this phone, straight from Gmail. Only the bookings found in them are kept, here and, once you’re signed in, in the family’s Google Sheet.</p>
       </div>
     </div>
   </div>
 
-  <!-- Google Sheet sync -->
+  <!-- The family’s Google Sheet, through aOS -->
   <div class="sheetwrap lg" id="syncSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet glass-strong" role="dialog" aria-modal="true" aria-labelledby="syLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="syLbl">Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheethead"><h2 id="syLbl">The family’s Google Sheet</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody">
         <p class="hint" id="syStatus"></p>
-        <form id="syForm" class="field" autocomplete="on" action="#">
-          <div class="box glass">
-            <label class="label" for="syUrl">Web app link</label>
-            <input class="plain" id="syUrl" name="username" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="username" autocapitalize="off" spellcheck="false">
-            <label class="label" for="sySecret">Secret code</label>
-            <input class="plain" id="sySecret" name="password" type="password" placeholder="The SECRET you set in the script" autocomplete="current-password" autocapitalize="off" spellcheck="false">
-          </div>
-          <button class="btn" id="syConnect" type="submit">Connect and sync</button>
-          <p class="hint">Set up the Sheet first (steps in the Travel README; it is a separate Sheet from Notes’). If you have a setup link, copy it and tap the clipboard button instead.</p>
-        </form>
-        <div id="syOn" class="field" hidden>
+        <div class="field">
           <div class="rgroup glass">
             <button class="rowbtn" type="button" id="syNow">
               <span class="ic"><svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg></span>
-              <span>Sync now<span class="sub">Sends this phone’s changes and loads the other phone’s</span></span>
-            </button>
-            <button class="rowbtn" type="button" id="syShare">
-              <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
-              <span>Copy setup link<span class="sub">Has the secret code in it. Use it to set up the other phone. Keep it private.</span></span>
+              <span><span class="t">Sync now</span><span class="sub">Sends this phone’s changes and gets the family’s latest from the Sheet</span></span>
             </button>
           </div>
-          <button class="btn danger" id="syOff" type="button">Disconnect this phone</button>
+          <p class="hint">One Sheet for the family, the record of everyone’s trips: each booking says whose it is, and the family sees it, unless it’s marked Just me, which only its own person sees. This phone keeps every trip still to come and the last 90 days of the rest; older trips come from the Sheet when you look at Past. The owner sets the Sheet up in aOS (Account → Google Sheets); no phone keeps its link or phrase.</p>
         </div>
       </div>
     </div>
@@ -1139,6 +1127,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 
 <script src="../home/slide.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signs calls to travel/api and calendar/api in -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="parse.js"></script>
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
 <script src="ipsy-tools.js"></script>
