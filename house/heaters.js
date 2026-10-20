@@ -31,7 +31,7 @@ const HEATERS = [
 ];
 const HT_LO = 50, HT_HI = 86;
 const HT_WATTS = [['1', '750 W'], ['2', '1500 W']];
-const HT_MODES = ['eco', 'comfort', 'boost'];   // until Home Assistant lists its own (preset_modes)
+const HT_MODES = ['eco', 'comfort', 'boost'];   // always offered, as on the Signal card: the Tuya integration may list only 'eco' in preset_modes
 const HT_HOURS = [[1, '1 h'], [2, '2 h'], [4, '4 h'], [8, '8 h'], [0, 'None']];
 const htCap = m => String(m || '').charAt(0).toUpperCase() + String(m || '').slice(1);
 const htHours = dur => { const m = /^(\d+):(\d+)/.exec(dur || ''); return m ? Number(m[1]) + Number(m[2]) / 60 : 0; };
@@ -48,7 +48,7 @@ const heaters = family({
     const high = held(d, 'level', val(h.level)) === '2';
     const tgt = held(d, 'temperature', A.temperature);
     const mood = offline ? 'offline' : s === 'off' ? 'off' : w > 20 ? 'heating' : 'holding';
-    const preset = held(d, 'preset', A.preset_mode), modes = Array.isArray(A.preset_modes) && A.preset_modes.length ? A.preset_modes : HT_MODES;
+    const preset = held(d, 'preset', A.preset_mode), modes = [...new Set([...HT_MODES, ...(Array.isArray(A.preset_modes) ? A.preset_modes : [])])];
     // The countdown: the hours it was started with (0: none) and the minutes left.
     const T = st(h.timer), ends = T && T.state === 'active' ? Date.parse(T.attributes.finishes_at) : NaN;
     const left = ends > Date.now() ? Math.max(1, Math.round((ends - Date.now()) / 60000)) : 0;
