@@ -94,6 +94,7 @@
         'No phone keeps a Sheet\'s link or secret phrase any more: every sync goes through aOS, signed in with Face ID, and aOS tells the Sheet who is asking. A lost phone, or another family member, can\'t ask for anyone else\'s rows',
         'Each phone keeps everything undated, and the last 90 days of anything dated (workouts, doses, steps, drinks, plays, orders, plans); older days come back from the Sheet when you look back. Fitness kept 30 days before',
         'The owner sets up each app\'s Sheet once, in aOS: Account > Google Sheets (paste the app\'s new script into its Sheet, deploy a new version, then give aOS the phrase). The owner\'s phone hands over the link and phrase it already had by itself. Nobody else has to do anything',
+        'Each app syncs with its Sheet by itself, signed in: the apps\' own Google Sheet settings are gone, and aOS (Account > Google Sheets) is the one place a Sheet is set up',
         'Fitness: two people\'s steps on the same day are each kept as their own',
         'Drinks: your log is kept in the family\'s Google Sheet in place of the family account (it moves over at your first sync); going back past 90 days, or opening an older day from Calendar, fetches that week from the Sheet; Export and Delete all data take in what the Sheet has',
         'Podcasts: the Sheet is two-way now: what you follow, save, play and how far you got follow you to all your phones. Library > History keeps 90 days here, and Show older brings earlier plays back. Clear history clears them from the Sheet too',
