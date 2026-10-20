@@ -1010,14 +1010,15 @@ if (window.top !== window.self) {
       set: (k, v) => tx('readwrite', s => v == null ? s.delete(k) : s.put(v, k)).catch(() => {}),
     };
   })();
-  // The Sheet's script was deployed anew (with Meds and Steps), so its link changed: a phone still on the old one
-  // hands over the new one, with the phrase it kept (the same Sheet's script).
-  const OLD_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec';
+  // The Sheet's script was deployed anew (with Meds and Steps), so its link changed: a phone still on an earlier one
+  // hands over the newest, with the phrase it kept (the same Sheet's script).
+  const OLD_SHEET_URLS = ['https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec',
+    'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec'];
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzxpkjVaf-qQYWOgGIL5iHrdHYse8htiEm1Jjp6fyX8Af7c2a-Oc5F58W864pufSm7ICw/exec';
   async function handOver() {
     const old = ls.json(K.sync, null) || await keep.get('sync');
     if (!old || !old.secret || !SH() || !signedIn()) return;
-    if (await SH().adopt('fitness', { url: old.url === OLD_SHEET_URL ? SHEET_URL : old.url, secret: old.secret })) { lsDel(K.sync); keep.set('sync', null); }
+    if (await SH().adopt('fitness', { url: OLD_SHEET_URLS.includes(old.url) ? SHEET_URL : old.url, secret: old.secret })) { lsDel(K.sync); keep.set('sync', null); }
   }
   function applyRemote(res) {
     Object.keys(res.graves || {}).forEach(k => { const t = +res.graves[k] || 0; if ((graves[k] || 0) < t) graves[k] = t; });
