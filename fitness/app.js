@@ -960,8 +960,14 @@ if (window.top !== window.self) {
   // own exercises (google-sheet-sync.gs; steps in the README)
   // ---------------------------------------------------------------------
   const APP = 'allison-fitness-sync';
+  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
+  // It is the script with Meds and Steps (VERSION 2), deployed anew: a phone still on the old deployment's link moves to it,
+  // keeping its phrase (the same Sheet's script).
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwcj6XPCZPiRyc8nX4hK5cH7vezioihiGTLlYPeoxd_6D3HuHdCE6DzzJlwdAVDghIzXA/exec';
+  const OLD_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
   let syncCfg = ls.json(K.sync, null);
   if (!syncCfg || typeof syncCfg.url !== 'string' || typeof syncCfg.secret !== 'string') syncCfg = null;
+  if (syncCfg && syncCfg.url === OLD_SHEET_URL) { syncCfg = { ...syncCfg, url: SHEET_URL }; ls.set(K.sync, JSON.stringify(syncCfg)); }
   let syncing = false, syncAgain = false, syncTimer = null, syncState = syncCfg ? 'idle' : 'off', syncErr = '', errShown = false;
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   // A Sheet running the script from before Meds and Steps (VERSION 1) keeps only the
@@ -1096,8 +1102,6 @@ if (window.top !== window.self) {
     $('syForm').hidden = on; $('syOn').hidden = !on;
     $('syncBtn').classList.toggle('warn', on && syncState === 'error');
   }
-  // The owner's Sheet. The link alone opens nothing (changes need the secret phrase), so it is filled in; only the phrase is typed.
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwaEyJbjiKey2XfSQQWat96T-9l_c-BFkDskBvQ-fjWk03cjgilRWjK11lr2vKChHsvEQ/exec';
   function openSyncSheet(pre) {
     $('syUrl').value = pre ? pre.u : syncCfg ? syncCfg.url : SHEET_URL;
     $('sySecret').value = pre ? pre.s : syncCfg ? syncCfg.secret : '';
@@ -1315,7 +1319,7 @@ if (window.top !== window.self) {
   if (syncCfg) { setTimeout(() => sync(false), 600); keep.get('sync').then(c => { if (!c || c.url !== syncCfg.url || c.secret !== syncCfg.secret) saveSyncCfg(); }); }
   else keep.get('sync').then(c => {
     if (syncCfg || !c || !c.url || !c.secret) return;
-    syncCfg = { url: c.url, secret: c.secret }; syncState = 'idle'; ls.set(K.sync, JSON.stringify(syncCfg));
+    syncCfg = { url: c.url === OLD_SHEET_URL ? SHEET_URL : c.url, secret: c.secret }; syncState = 'idle'; ls.set(K.sync, JSON.stringify(syncCfg));
     sync(false); toast('Reconnected to the Google Sheet from this phone’s backup copy.');
   });
   // "Updated" pill, once, when a new version arrives (as in Notes and Calendar).
