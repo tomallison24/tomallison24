@@ -97,7 +97,7 @@
         'Ipsy: larger across all six apps, with quiet breathing, occasional glances and softer idle movement; Reduce Motion is respected',
         'Notes and Places: the Google Sheet connection form uses the new shared sync link; the shared Apps Script initializes Places data correctly',
         'Home: the Office and M&D heaters no longer say Unavailable while they are on (Home Assistant now reports an on heater as unknown); Power and the target work again',
-        'Home: the heaters show their wattage (750 W or 1500 W) and mode (Eco, Comfort or Boost) to pick from, as in the Tuya app, and a countdown: 1, 2, 4 or 8 hours and the heater turns itself off'],
+        'Home: the heaters show their wattage (750 W or 1500 W) and mode (Eco, Comfort or Boost - all three, even when Home Assistant lists only Eco) to pick from, as in the Tuya app, and a countdown: 1, 2, 4 or 8 hours and the heater turns itself off'],
       apps: {
         fitness: { highlights: ['Meds: list what you take once, then tick it off each day', 'Your steps on every day, from your iPhone or typed in', 'Meds and Steps back up to your Google Sheet'] },
         house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'] },
