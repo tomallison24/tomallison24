@@ -263,7 +263,7 @@ jobs:
           # Meals' Anthropic API key (meals/README.md, "The AI key"). MEALS_MODEL,
           # optional, names another model
           # than Claude Haiku 5.5. News's summaries use the same key (news/README.md,
-          # "Summaries"); NEWS_AI_MODEL, optional, names another model than Claude Opus 5.5.
+          # "Summaries"); NEWS_AI_MODEL, optional, names another model than Claude Sonnet 5.5.
           # Orders' Fix with Claude uses it too (orders/README.md); ORDERS_AI_MODEL, optional,
           # names another model than Claude Haiku 5.5, and ORDERS_IPSY_MODEL another than Claude
           # Sonnet 5.5 for Ipsy, the helper you chat with in Orders (TRAVEL_, MEALS_, CALENDAR_,

@@ -103,7 +103,8 @@
         'Places: on Notes\' Sheet, shared with the family, synced through aOS like the rest',
         'Travel: Just me on a booking, and on a trip; Show older trips from the Sheet brings back past trips',
         'Meals: every plan the family accepts is kept in the Sheet with who planned it; Past plans shows the ones the family server no longer keeps, and Older plans reads them back a year at a time',
-        'Home: an Automations page (the view picker at the bottom) with every Home Assistant automation by name, in groups. Tap one to see whether it is on and when it last ran, the devices it works with their state now, what it does and when it runs'],
+        'Home: an Automations page (the view picker at the bottom) with every Home Assistant automation by name, in groups. Tap one to see whether it is on and when it last ran, the devices it works with their state now, what it does and when it runs',
+        'News: story summaries and questions now use Claude Sonnet 5.5 (was Claude Opus 5.5): quicker and cheaper, still at low effort'],
       apps: {
         aos: { highlights: ['Each app\'s Google Sheet is now the family\'s record', 'The owner sets them up once, in Account > Google Sheets'],
           tour: [{ sel: '[data-acct]', t: 'Google Sheets', d: 'The owner sets up each app\'s Sheet once, in Account > Google Sheets, for the whole family. Nobody else has to do anything.', g: 'tap' }] },

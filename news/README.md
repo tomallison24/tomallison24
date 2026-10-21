@@ -116,7 +116,7 @@ affected). Follow-ups remember what was asked before.
   Each person gets at most 60 summaries and questions a day, and a story's summary is kept
   for a week for the whole family, so a second reader of the same story is free.
 - **The key:** the same `ANTHROPIC_API_KEY` repository secret as Meals (`meals/README.md`,
-  "The AI key"); until it is there the sheet says so. The model is Claude Opus 5.5 at low
+  "The AI key"); until it is there the sheet says so. The model is Claude Sonnet 5.5 at low
   effort. To use another (`claude-haiku-5-5` is the cheapest), add a repository secret
   `NEWS_AI_MODEL`. Science stories (Stem cells) can set off Claude's safety classifiers, so
   the request asks Anthropic for its server-side fallbacks, and a story Claude still
