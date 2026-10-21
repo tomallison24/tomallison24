@@ -62,27 +62,21 @@ const TV_ENT = 'media_player.65_oled';
 const tvW = () => gone(TV_ENT) && !st(TV_ENT) ? null : ['off', 'unavailable', 'unknown'].includes(val(TV_ENT)) ? 0.5 : 120;
 
 // ---- the popup's Energy section ----
-// stats: [label, value]; est: the numbers are estimates; note: a line under them.
-function energyPart(stats, est, note) {
-  return ['energy', `<div class="glbl">ENERGY${est ? ' · ESTIMATED' : ''}</div>` + grp(statsHTML(stats)) + (note ? `<p class="tnote">${note}</p>` : '')];
+// stats: [label, value]; est: the numbers are estimates.
+function energyPart(stats, est) {
+  return ['energy', `<div class="glbl">ENERGY${est ? ' · ESTIMATED' : ''}</div>` + grp(statsHTML(stats))];
 }
-const thermoEnergyHTML = t => {
-  const w = thermoW(t);
-  return { stats: withToday([['NOW', fmtW(w)]], t.id), note: t.id === 'wm'
-    ? 'About 730 W while it cools (8,000 BTU at a typical efficiency), counted while it is inferred to be cooling - it never says so itself.'
-    : t.id === 'lr' ? '2,710 W while it cools, from the unit\'s nameplate. Heating is gas and isn\'t counted.'
-    : '2,060 W while it cools: the outdoor unit\'s nameplate and an assumed 500 W blower. Heating isn\'t counted in Home Assistant\'s estimate.' };
-};
+const thermoEnergyHTML = t => ({ stats: withToday([['NOW', fmtW(thermoW(t))]], t.id) });
 
 // ---- the strips at the top of each view ----
 // Each view's totals are Home Assistant's category sensors; its list is each
 // device's power now.
 const ESTRIP = {
-  fav: { cats: [['sensor.estimated_total_power', 'sensor.total_daily_energy', 'sensor.total_monthly_energy']], what: 'Lighting, climate, fans and dehumidifiers, and the TV' },
+  fav: { cats: [['sensor.estimated_total_power', 'sensor.total_daily_energy', 'sensor.total_monthly_energy']] },
   climate: { cats: [['sensor.estimated_climate_power', 'sensor.climate_daily_energy', 'sensor.climate_monthly_energy'],
-    ['sensor.estimated_fan_dehumidifier_power', 'sensor.fan_dehumidifier_daily_energy', 'sensor.fan_dehumidifier_monthly_energy']], what: 'Thermostats, heaters, purifiers and dehumidifiers' },
-  lights: { cats: [['sensor.estimated_lighting_power', 'sensor.lighting_daily_energy', 'sensor.lighting_monthly_energy']], what: 'Indoor lights (not outdoors or the garage)' },
-  media: { cats: [['sensor.estimated_tv_power', 'sensor.tv_daily_energy', 'sensor.tv_monthly_energy']], what: 'The TV (the speakers and Apple TV aren\'t estimated)' },
+    ['sensor.estimated_fan_dehumidifier_power', 'sensor.fan_dehumidifier_daily_energy', 'sensor.fan_dehumidifier_monthly_energy']] },
+  lights: { cats: [['sensor.estimated_lighting_power', 'sensor.lighting_daily_energy', 'sensor.lighting_monthly_energy']] },
+  media: { cats: [['sensor.estimated_tv_power', 'sensor.tv_daily_energy', 'sensor.tv_monthly_energy']] },
 };
 function stripDevices(v) {
   const out = [], add = (name, w, tag = '') => { if (w != null) out.push({ name, w, tag }); };
@@ -118,8 +112,7 @@ family({
           <span class="es-st"><b>${fmtKwh(day, 1)}</b><small>today</small></span>
           <span class="es-st"><b>${fmtKwh(month, 0)}</b><small>${month != null ? '$' + (month * KW).toFixed(2) + ' month' : 'month'}</small></span>
           <span class="es-chev${open ? ' open' : ''}">${svg('chev', 16)}</span></button>
-        ${open ? `<div class="es-list">${list.map(x => `<div class="es-item${x.w ? '' : ' idle'}"><span>${esc(x.name)}${x.tag ? `<em>${esc(x.tag)}</em>` : ''}</span><b>${fmtW(x.w)}</b></div>`).join('')}
-          <p class="tnote">${ESTRIP[v].what}. Estimates except where metered, at $${KW.toFixed(2)}/kWh.</p></div>` : ''}`);
+        ${open ? `<div class="es-list">${list.map(x => `<div class="es-item${x.w ? '' : ' idle'}"><span>${esc(x.name)}${x.tag ? `<em>${esc(x.tag)}</em>` : ''}</span><b>${fmtW(x.w)}</b></div>`).join('')}</div>` : ''}`);
     }
   },
   act(id, a) { if (a === 'toggle') { stripOpen[id] = !stripOpen[id]; render(); } },

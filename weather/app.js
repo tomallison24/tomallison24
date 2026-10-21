@@ -215,7 +215,7 @@ function locate() {
     const giveUp = setTimeout(() => rej(new Error('Could not get your location.')), 30000);
     navigator.geolocation.getCurrentPosition(
       p => { clearTimeout(giveUp); res({ lat: p.coords.latitude, lon: p.coords.longitude }); },
-      e => { clearTimeout(giveUp); rej(new Error(e.code === 1 ? 'Location permission was denied. Allow it in Settings → Privacy → Location Services, or search for a city.' : 'Could not get your location.')); },
+      e => { clearTimeout(giveUp); rej(new Error(e.code === 1 ? 'Location is off: allow it in Settings, or search for a city.' : 'Could not get your location.')); },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 15 * 60 * 1000 }
     );
   });
@@ -727,7 +727,7 @@ function radarSync() {
   box.innerHTML = '';
   const { lat, lon } = S.loc;
   if (!inUS(lat, lon)) {
-    box.innerHTML = '<div class="rd-note"><b>Radar covers the continental US</b>Open a place there to see rain and storms moving in.</div>';
+    box.innerHTML = '<div class="rd-note"><b>Radar covers the continental US</b></div>';
     return;
   }
   const W = box.clientWidth, H = box.clientHeight, z = R.z, n = 2 ** z;
@@ -790,7 +790,7 @@ function radarSync() {
   }).catch(() => {
     // No run time: show the latest radar on its own, and say why the loop is missing.
     if (document.getElementById('rd') !== box || box.dataset.sig !== sig || box.querySelector('.rd-note')) return;
-    box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">The four-hour forecast isn’t available right now, so this is the latest radar only.</div>');
+    box.insertAdjacentHTML('beforeend', '<div class="rd-note over small">No radar forecast right now: showing the latest radar.</div>');
   });
   // Start the loop for you, unless you have already played, paused or scrubbed it; a redraw keeps it playing if it was.
   if (wasPlaying || (!R.touched && !calm())) setTimeout(() => {
@@ -1017,7 +1017,7 @@ function renderMsg(title, body, retry) {
 }
 
 function renderWelcome() {
-  renderShell(`<div class="msg"><b>Weather</b>It opens to wherever you are. Allow your location, or search for a city.<div class="row">
+  renderShell(`<div class="msg"><b>Weather</b>Use your location, or search for a city.<div class="row">
     <button class="pill primary" data-action="gps">${svg('crosshairs-gps', 18)}Use my location</button>
     <button class="pill" data-action="location">${svg('magnify', 18)}Search</button></div>
     ${S.error ? `<p class="note" style="margin:12px 0 0;">${esc(S.error)}</p>` : ''}</div>`);
@@ -1106,9 +1106,9 @@ function nowSource(how, tz, metric) {
   const st = how.name ? `${esc(how.name)} (${esc(how.st)})` : esc(how.st || 'the nearest station');
   const km = how.km == null ? '' : metric ? `${Math.round(how.km)} km` : `${Math.round(how.km / 1.609344)} mi`;
   const deg = d => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(Math.round(metric ? d * 5 / 9 : d))}°`;
-  const txt = how.kind === 'corrected' ? `Now is the National Weather Service forecast for this spot, adjusted ${deg(how.adj)} by the ${st} reading at ${minFmt(how.at, tz)}, ${km} away.`
-    : how.kind === 'station' ? `Now is the ${st} reading at ${minFmt(how.at, tz)}, ${km} away.`
-    : 'Now is the National Weather Service forecast for this spot. No weather station close by has reported recently to check it against.';
+  const txt = how.kind === 'corrected' ? `NWS forecast, adjusted ${deg(how.adj)} by ${st} at ${minFmt(how.at, tz)}, ${km} away.`
+    : how.kind === 'station' ? `From ${st} at ${minFmt(how.at, tz)}, ${km} away.`
+    : 'NWS forecast for this spot.';
   return `<p class="note">${txt}</p>`;
 }
 function openHour(t) { S.hourT = t; fillHour(); hourWrap.classList.add('open'); lockBehind(hourWrap); }
@@ -1288,7 +1288,7 @@ window.addEventListener('resize', () => syncUnits(true));
 if (window.aosDesign) {
   const box = document.getElementById('designBox');
   box.innerHTML = aosDesign.picker();
-  for (const id of ['designLabel', 'designBox', 'designNote']) document.getElementById(id).hidden = false;
+  for (const id of ['designLabel', 'designBox']) document.getElementById(id).hidden = false;
   aosDesign.bind(box);
 }
 window.addEventListener('aos:design', () => {
@@ -1339,7 +1339,7 @@ document.addEventListener('click', e => {
   if (t.dataset.alert != null) { S.alertOpen[t.dataset.alert] = !S.alertOpen[t.dataset.alert]; return render(); }
   if (t.dataset.pick != null) {
     const p = results._list[+t.dataset.pick];
-    if (!canAdd(p)) { results.innerHTML = `<button disabled><span>You have ${MAX_PLACES} places. Remove one to add another.</span></button>`; return; }
+    if (!canAdd(p)) { results.innerHTML = `<button disabled><span>Remove a place to add another (${MAX_PLACES} at most).</span></button>`; return; }
     q.value = ''; results.innerHTML = '';
     closeSheet();
     return addPlace(p);

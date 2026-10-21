@@ -69,7 +69,7 @@ family({
   },
   snap(name, pic, badge, age, extra = '') {
     const b = badge ? `<span class="cbadge ${badge}">${badge === 'active' ? '<i></i>' : ''}${badge.toUpperCase()}</span>` : '';
-    return `<div class="snap">${pic ? `<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">` : `<div class="noimg">${svg('cctv', 34)}<span>${mode === 'live' ? 'No picture yet' : 'The camera\'s picture shows here once connected'}</span></div>`}
+    return `<div class="snap">${pic ? `<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">` : `<div class="noimg">${svg('cctv', 34)}<span>${mode === 'live' ? 'No picture yet' : 'Connect to see the picture'}</span></div>`}
       ${b}<span class="cname">${esc(name)}</span>${age ? `<span class="cage">${age}</span>` : ''}${extra}</div>`;
   },
   ageOf(c, r) {
@@ -134,8 +134,7 @@ family({
           ['live', `<div class="camacts"><button class="ghost big" data-a="${L && L.status !== 'error' ? 'stop' : 'live'}"${mode !== 'live' ? ' disabled' : ''}>${svg(L && L.status !== 'error' ? 'stop' : 'video', 18)}${L && L.status !== 'error' ? 'Stop' : 'Watch live'}</button></div>
             ${L && L.status === 'error' ? `<p class="tnote">${esc(L.msg)}</p>` : mode !== 'live' ? '<p class="tnote">Live view needs Home Assistant connected.</p>' : ''}`],
           ['tiles', lbl('EVENTS') + grp(readRow('bell', 'Last ring', evWhen(DOORBELL.chime) + (evWhat(DOORBELL.chime) ? ' · ' + esc(evWhat(DOORBELL.chime)) : ''))
-            + readRow('motion', 'Last motion', evWhen(DOORBELL.motion) + (evWhat(DOORBELL.motion) ? ' · ' + esc(evWhat(DOORBELL.motion)) : '')))
-            + '<p class="tnote">The doorbell keeps recording whatever this shows; it can only be turned off in Google Home.</p>'],
+            + readRow('motion', 'Last motion', evWhen(DOORBELL.motion) + (evWhat(DOORBELL.motion) ? ' · ' + esc(evWhat(DOORBELL.motion)) : '')))],
         ],
       };
     }
@@ -147,7 +146,7 @@ family({
       fx: skyHTML(grad('#121316', '#1C1D21', '#2C2E34'), '190,194,204', {}, 150), pill: pillHTML2(r.badge === 'active' ? 'Active' : r.badge === 'standby' ? 'Standby' : 'Off', r.badge === 'active' ? PAL.on : r.badge === 'standby' ? PAL.amber : ''),
       parts: [
         ['view', `<div class="camv">${this.snap('', r.pic, '', this.ageOf(c, r))}</div>`],
-        ['acts', `<div class="camacts"><button class="ghost big" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Take a snapshot</button></div><p class="tnote">Blink sends stills, not video. A new one takes about 8 seconds.</p>`],
+        ['acts', `<div class="camacts"><button class="ghost big" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Take a snapshot</button></div>`],
         ['motion', grp(swRow('motion', 'Motion detection', 'motion', r.on, sys.armed ? PAL.on : PAL.amber, { dis: gone(c.sw), wait: tWaiting(r.d, 'sw'), sub: r.on && !sys.armed ? 'On, but the system is disarmed' : '' }), true)],
         ['pause', (() => { const left = this.pauseLeft(c, r);
           return `<div class="glbl cp-lbl"><span>PAUSE MOTION DETECTION</span>${this.pauseLine(c, r)}</div>` + chipsHTML('pause', PAUSES, left && left.mins != null ? left.m : null, { dis: !r.on && !left }); })()],

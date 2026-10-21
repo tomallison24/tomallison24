@@ -186,7 +186,7 @@ function mediaFamily(cfg) {
           sonos && r.mood !== 'idle' && !r.offline ? ['hand', lbl('HAND OFF TO') + `<div class="chips nodrag">${peers.map(x => {
               const k = 'ho' + p.id + x.id, arm = isArmed(k);
               return `<button class="chip2${arm ? ' armed' : ''}" data-a="handoff" data-v="${x.ent}"${gone(x.ent) ? ' disabled' : ''}>${arm ? 'Tap to move to ' : ''}${esc(x.name)}</button>`;
-            }).join('')}</div><p class="tnote">Moves what is playing to that speaker and stops it here.</p>`] : null,
+            }).join('')}</div>`] : null,
           sonos ? ['tone', lbl('TONE') + `<div class="group tsl">${numSl('bass', 'Bass')}${numSl('treble', 'Treble')}${numSl('balance', 'Balance')}</div>`] : null,
           p.ht ? ['ht', lbl('HOME THEATER') + grp(sw('night_sound', 'Night sound', 'night') + sw('speech_enhancement', 'Speech enhancement', 'speech')
             + sw('subwoofer_enabled', 'Subwoofer', 'sub') + sw('surround_enabled', 'Surround', 'surround')
@@ -195,8 +195,7 @@ function mediaFamily(cfg) {
             + grp(actRow('tvsrc', 'Switch to TV', 'tv', { dis: dis || A.source === 'TV', right: A.source === 'TV' ? 'On TV' : null })
               + readRow('input', 'Input format', esc(val('sensor.' + p.pre + '_audio_input_format') || '—')))] : null,
           status ? ['status', lbl('STATUS') + grp(status)] : null,
-          p.ent === TV_ENT ? energyPart([['NOW', fmtW(tvW())], ['TODAY', fmtKwh(num('sensor.tv_daily_energy'))], ['MONTH', fmtKwh(num('sensor.tv_monthly_energy'), 1)]], true,
-            '120 W on (between its rated SDR and HDR figures), 0.5 W in standby.') : null,
+          p.ent === TV_ENT ? energyPart([['NOW', fmtW(tvW())], ['TODAY', fmtKwh(num('sensor.tv_daily_energy'))], ['MONTH', fmtKwh(num('sensor.tv_monthly_energy'), 1)]], true) : null,
         ],
       };
     },

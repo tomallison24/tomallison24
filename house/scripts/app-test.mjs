@@ -195,7 +195,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await page.locator('[data-th="wm"] .alert.eco').count(), 0, 'the Windmill is left alone');
     // The popup says why.
     await page.evaluate(() => openThermo('lr'));
-    assert.match(await page.textContent('#thermoWrap .away-note'), /Away from the house.*back on the schedule/);
+    assert.match(await page.textContent('#thermoWrap .away-note'), /^\s*Away from the house: in Eco until someone arrives\.\s*$/);
     await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
     await page.evaluate(() => goView('fav'));
     // The menu says it too.
@@ -238,6 +238,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal((await page.textContent('#sheetWrap .sheet-body .label')).trim(), 'Design', 'Design is the first section');
     assert.ok(await page.isVisible('#designBox [data-design="vintage"]') && await page.isVisible('#designBox [data-design="glass"]'), 'its two rows');
     assert.equal(await page.getAttribute(`#designBox [data-design="${design}"]`, 'aria-checked'), 'true', 'the design in use is ticked');
+    assert.equal(await page.locator('#designBlock .help').count(), 0, 'no note under Design');
     assert.equal(await page.isVisible('#custBlock'), design === 'glass', 'Customization (the background) is Standard\'s only');
     await page.click('#sheetClose'); await page.waitForTimeout(500);
     assert.ok(!(await page.evaluate(() => document.getElementById('sheetWrap').classList.contains('open'))), 'Done closes it');

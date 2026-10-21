@@ -1203,7 +1203,7 @@ function renderThermo() {
   put(S('fx'), tfxHTML(t, r, 150));
   put(S('pill'), tPill(t, r));
   put(S('hero'), `<div class="uhero"><div class="dg-title">${esc(tStatus(t, r))}</div><div class="dg-sub">${r.cur != null && !r.offline ? Math.round(r.cur) + '° inside · ' : ''}${tSub(t, r, true)}</div></div>`
-    + (r.away ? `<p class="tnote away-note">${svg('leaf', 13)}Away from the house. Home Assistant has this thermostat in Eco while nobody is home, and puts it back on the schedule when someone arrives.</p>` : ''));
+    + (r.away ? `<p class="tnote away-note">${svg('leaf', 13)}Away from the house: in Eco until someone arrives.</p>` : ''));
   put(S('tgt'), tTargetHTML(t, r));
   put(S('power'), tPowerRow(t, r));
   S('ecoWrap').hidden = !r.canEco;
@@ -1217,7 +1217,7 @@ function renderThermo() {
   put(S('read'), tReadHTML(t, r));
   put(S('sched'), tSchedHTML(t));   // schedule.js
   const en = thermoEnergyHTML(t);   // energy.js
-  put(S('en'), statsHTML(en.stats)); put(S('enNote'), en.note);
+  put(S('en'), statsHTML(en.stats));
   tsheet.style.boxShadow = `inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 24px 60px rgba(${T_ACC[r.mood] || T_ACC.idle},0.22), 0 2px 8px var(--lgs-lift)`;
   slide(S('mode'), S('mode').querySelector('[aria-pressed="true"]'), 'tmode-' + t.id);
   if (t.fans) slide(S('fanSeg'), S('fanSeg').querySelector('[aria-pressed="true"]'), 'tfan-' + t.id);
@@ -1425,8 +1425,8 @@ function syncSheet() {
   }
   $('lkUrl').textContent = (saved().url || '').replace(/^https?:\/\//, '');
   $('lkLine').innerHTML = PIN.get()
-    ? `${svg('lock', 16)}Locked. Changing or disconnecting needs your PIN.`
-    : `${svg('lockOpen', 16)}Not locked. You will choose a PIN the first time you change or disconnect.`;
+    ? `${svg('lock', 16)}Locked with your PIN.`
+    : `${svg('lockOpen', 16)}Not locked.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1472,7 +1472,7 @@ async function famFill(ask) {
   let a = null;
   try { const r = await A.fetch(FAM_URL, { cache: 'no-store' }); if (r.ok) a = (await r.json()).address || null; } catch {}
   if (a) { if (!$('haUrl').value.trim()) $('haUrl').value = a; return; }
-  if (ask) { b.hidden = false; b.textContent = 'No family address yet: the owner adds it in aOS'; }
+  if (ask) { b.hidden = false; b.textContent = 'No family address yet'; }
 }
 $('haFam').onclick = () => famFill(true);
 addEventListener('aos:account', e => { if (e.detail && view === 'edit') famFill(false); });   // signed in (the family sign-in sheet): fill it in
@@ -1512,7 +1512,7 @@ function askPin(job, then, back = 'locked') {
 function pinPrompt(msg = '', bad = false) {
   $('pinTitle').textContent = pad.job === 'check' ? 'Enter your PIN' : pad.job === 'choose' ? 'Choose a 4-digit PIN' : 'Enter it again';
   const wait = lockedOut();
-  $('pinSub').textContent = wait ? `Too many tries. Try again in ${wait} s.` : msg || (pad.job === 'choose' ? 'It locks the address and token against changes.' : '');
+  $('pinSub').textContent = wait ? `Too many tries. Try again in ${wait} s.` : msg;
   $('pinSub').className = 'pin-sub' + (bad || wait ? ' bad' : '');
   for (const b of $('pinPad').querySelectorAll('[data-k]')) if (/\d/.test(b.dataset.k)) b.disabled = !!wait;
   if (wait) setTimeout(() => { if (view === 'pin') pinPrompt(); }, 1000);
@@ -1602,7 +1602,7 @@ function cleanUrl(raw) {
   if (!/^https?:$/.test(u.protocol)) throw new Error('The address should start with https://');
   const local = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/.test(u.hostname);   // exactly these, not localhost.example.com
   if (location.protocol === 'https:' && u.protocol === 'http:' && !local)
-    throw new Error('That address is http://. This app is on https, so the browser blocks it. Use your Nabu Casa address (https://…ui.nabu.casa).');
+    throw new Error('Use an https:// address, such as your Nabu Casa one.');
   return u.origin;
 }
 
@@ -1725,7 +1725,7 @@ const SHARE = {
     const go = () => {
       this.link = link;
       showView('join');
-      $('jnFrom').textContent = 'Someone shared their Home with this device. Enter the 10-character code they told you.';
+      $('jnFrom').textContent = 'Enter the code they told you.';
       $('jnCode').value = ''; $('jnStatus').className = 'status'; $('jnStatus').textContent = '';
       $('jnName').value = /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'This device';
       $('jnIos').hidden = !(navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent));

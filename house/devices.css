@@ -608,7 +608,6 @@
 .es-item b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .es-item em { font-style: normal; font-size: 11px; opacity: .5; margin-left: 6px; }
 .es-item.idle { opacity: .45; }
-.es-list .tnote { margin: 8px 0 0; }
 
 /* ---- thermostat schedules ---- */
 .alert.sched { background: rgba(255,255,255,0.14); }

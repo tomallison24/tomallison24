@@ -461,6 +461,7 @@ const AUTOS = family({
     const tellName = id => id.startsWith('notify:') ? auCap(id.slice(7).replace(/^mobile_app_/, '')) : auName(id);
     const paras = r.desc.split(/\n+/).map(p => p.trim()).filter(Boolean);
     const more = paras.join(' ').length > r.what.length + 2;
+    const src = [mode === 'live' && r.last ? `Last ran ${esc(when)}.` : '', r.state === 'missing' ? 'Not in Home Assistant.' : ''].filter(Boolean).join(' ');
     return {
       title: r.name, accent: acc, pill: pillHTML2(esc(this.status(r).split(' · ')[0])),
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), acc, {}, 150),
@@ -476,9 +477,7 @@ const AUTOS = family({
         r.scripts.length ? ['scripts', lbl('STARTS SCRIPTS') + grp(r.scripts.map(id => row('play', esc((auScript(id) || {}).alias || auName(id)))).join(''), true)] : null,
         r.helpers.length ? ['helpers', lbl('HELPERS') + `<p class="tnote au-helpers">${esc(r.helpers.map(auName).join(' · '))}</p>`] : null,
         more ? ['full', lbl('IN FULL') + `<div class="au-desc au-full">${paras.map(p => `<p>${esc(p)}</p>`).join('')}</div>`] : null,
-        ['src', `<p class="tnote">${mode === 'live' && r.last ? `Last ran ${esc(when)}. ` : ''}${r.state === 'missing'
-          ? 'In ha-config\'s automations.yaml but not in Home Assistant: it was removed there, or Home Assistant turned it down (a mistake in it). '
-          : ''}${a.src === 'ha' ? 'Read from Home Assistant.' : a.src === 'copy' ? 'Read from Home\'s copy of ha-config\'s automations.yaml.' : 'Home has no details for this one yet.'} Run and change it in Home Assistant.</p>`],
+        src ? ['src', `<p class="tnote">${src}</p>`] : null,
       ],
     };
   },

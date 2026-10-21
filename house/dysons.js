@@ -158,7 +158,7 @@ family({
           const w = dysonW(y), heat = num(y.heated), run = num(y.runtime);
           // Home Assistant's own daily meter for this unit; before it exists, the same sum from today's hours.
           const today = estToday(y.id) ?? (isNaN(heat) ? null : heat * 1.5 + Math.max(0, (isNaN(run) ? 0 : run) - heat) * 0.006);
-          return energyPart([['NOW', fmtW(w)], ['TODAY', fmtKwh(today)]], true, '1,500 W while the element heats, 6 W while only the fan runs (measured at a low speed).');
+          return energyPart([['NOW', fmtW(w)], ['TODAY', fmtKwh(today)]], true);
         })(),
         ['read', lbl('READINGS') + grp(
           readRow('filter', y.filterName || 'Filter', isNaN(fl) ? '—' : Math.round(fl) + '%', fl <= 10 ? 'due' : '')

@@ -435,7 +435,8 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#foot [data-action="location"]');
     await page.waitForSelector('#sheetWrap.open #designBox [data-design]');
     assert.equal(await checked('vintage'), 'true'); assert.equal(await checked('glass'), 'false');
-    assert.equal(await page.$eval('#designNote', e => e.textContent), 'Just on this phone, and at once.');
+    assert.equal(await page.$('#designNote'), null, 'no note under Design');
+    assert.equal(await page.$$eval('#sheetWrap .sheet-body > p.note', ps => ps.length), 0, 'no paragraph on where the forecast comes from');
     if (SHOTS) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, 'settings-vintage.png') }); }
     await page.click('#designBox [data-design="glass"]');
     assert.equal(await look(), 'glass'); assert.equal(await checked('glass'), 'true'); assert.equal(await checked('vintage'), 'false');
