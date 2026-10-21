@@ -386,6 +386,7 @@ if (window.top !== window.self) {
   function setView(v) {
     st.view = VIEW_IDS.includes(v) ? v : 'week'; ls.set(K.view, st.view);
     closeViewMenu(); render(); animateIn(main); window.scrollTo({ top: 0 });
+    if (st.view === 'health') loadHealth(Date.now() - healthSt.at > 60e3);   // fresh readings each time you open it
   }
 
   // ---------------------------------------------------------------------
