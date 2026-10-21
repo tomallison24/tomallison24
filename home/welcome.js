@@ -95,7 +95,8 @@
         'Fitness: Ipsy, off until you turn it on in Settings, finds patterns across your workouts, steps, meds and health: it quotes the numbers and how many days they rest on, never claims a cause, and gives no medical advice. It only reads; it can\'t change your log. Only the days and stats a question needs go to Claude, through aOS, and Anthropic doesn\'t train on them; Ipsy doesn\'t search the web in Fitness',
         'Every app: the explanations under settings are gone, and each switch says what it does in one short line',
         'Fitness: Health fetches fresh readings each time you open it',
-        'Fitness: Health at a glance: a tile each for Activity (Move and Exercise rings), Heart, Sleep (a Sleep score of Fitness\'s own, not Apple\'s) and Vitals, with a dot for Good, Check or Off against healthy ranges (CDC, AHA, FDA) or your own usual. Tap a tile for its charts over 7, 30 or 90 days, sleep stages and trends. A Move goal in Settings > Steps'],
+        'Fitness: Health at a glance: a tile each for Activity (Move and Exercise rings), Heart, Sleep (a Sleep score of Fitness\'s own, not Apple\'s) and Vitals, with a dot for Good, Check or Off against healthy ranges (CDC, AHA, FDA) or your own usual. Tap a tile for its charts over 7, 30 or 90 days, sleep stages and trends. A Move goal in Settings > Steps',
+        'Fitness: vitals alerts: if even one of your vitals is off (outside the healthy range or your usual, as the Vitals tile counts them), aOS notifies you, once a day at most; tap it to open Health on that day. The notification says only "A vital is off your usual". Turn it off in Fitness Settings > Health; it needs aOS notifications on'],
       apps: {
         fitness: { highlights: ['Health: activity, heart, sleep and vitals from your iPhone', 'Steps from Apple Health, Apple Watch included', 'Turn on Ipsy in Settings to find patterns'],
           tour: [
