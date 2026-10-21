@@ -226,6 +226,6 @@ window.MealsIpsy = function (app) {
     intro: 'Hi, I’m Ipsy! I can swap a night’s dinner, plan a new week around the deals, find what’s on sale, or tell you what you can make with what you have, always keeping to what the family never eats.',
     placeholder: 'Ask Ipsy about dinner',
     suggestions: ['What’s for dinner tonight?', 'Swap Thursday for something quicker', 'What’s on sale this week?', 'What can I make with ground beef?'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and whatever Ipsy looks at to answer it (the family’s plans, deals and settings in Meals) go to Claude through the family server, which keeps only a count of questions. Ipsy can change the family’s dinners, and everyone in the family sees what it changes: each change shows here with Undo, and it asks first before replacing, saving or discarding a whole week.',
+    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the plans and deals it reads, go there through the family server. Everyone in the family sees its changes, each with Undo, and it asks first before replacing a whole week.',
   };
 };

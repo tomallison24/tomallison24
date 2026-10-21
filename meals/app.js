@@ -153,13 +153,13 @@ if (window.top !== window.self) {
   }
   function dinners() {
     const p = data.plan, d = data.draft;
-    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.days, 'dinner') + '…', 'Different every night, and nothing the family avoids. This takes about half a minute.');
+    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.days, 'dinner') + '…', 'About half a minute.');
     let h = '';
     if (d && d.meals && d.meals.length) {
       // a new plan to look over: nothing is saved until someone accepts it
       // the choice first, where it's seen; the dinners under it
       h += '<div class="card accept" style="--i:1"><strong>New plan · not saved yet</strong>'
-        + '<p>' + esc([cap(d.meat), 'for ' + d.people, where(d)].filter(Boolean).join(' · ')) + '. Accept it to save these dinners, with their dates, and their shopping list for the family.</p>'
+        + '<p>' + esc([cap(d.meat), 'for ' + d.people, where(d)].filter(Boolean).join(' · ')) + '</p>'
         + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions() + '</select></div>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="accept">Accept plan</button><button class="btn" type="button" data-act="again"' + (noAI() ? ' disabled' : '') + '>Try again</button></div>'
         + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
@@ -168,9 +168,9 @@ if (window.top !== window.self) {
       const when = p.dates && p.dates.length ? span({ start: p.dates[0], end: p.dates[p.dates.length - 1] }) : dayLabel(isoDay(new Date(p.at)));
       h += '<p class="sechead"><span>' + esc([cap(p.meat), 'for ' + p.people, where(p)].filter(Boolean).join(' · ')) + '</span><span>' + esc(when) + '</span></p>' + nights(p, 'plan', 1);
       if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 1) + '"><p><b>Tip:</b> ' + esc(p.tip) + '</p></div>';
-      if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '. Everyone in the family sees this plan.</p>';
+      if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '.</p>';
     } else {
-      h += '<div class="card" style="--i:1"><strong>No dinners planned yet</strong><p>Pick a meat, and Meals plans a few nights of different dinners for the family: a different cuisine and way of cooking each night, using this week’s deals. Accept the plan you like, and it’s saved with its shopping list.</p>'
+      h += '<div class="card" style="--i:1"><strong>No dinners planned yet</strong>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="plan"' + (noAI() ? ' disabled' : '') + '>Plan dinners</button></div></div>';
     }
     // every accepted plan, as Fitness keeps every workout: the family server's last 52, then older ones
@@ -179,8 +179,8 @@ if (window.top !== window.self) {
     if (log.length || (olderOn && sheetHas.size)) h += '<p class="sechead"><span>Past plans</span><span>' + log.length + '</span></p><div class="rgroup">'
       + log.map(e => '<button class="rowbtn" type="button" data-past="' + esc(e.id) + '"><span>' + esc(span(e) + ' · ' + cap(e.meat) + (e.shop && e.shop !== 'all' && storeById(e.shop) ? ' · ' + storeById(e.shop).name : e.shopName ? ' · ' + e.shopName : ''))
         + (p && p.id === e.id ? ' <span class="prime">Current</span>' : '') + '<span class="sub">' + esc(e.titles.join(' · ')) + '</span></span></button>').join('')
-      + (olderOn ? '<button class="rowbtn" type="button" data-act="older"' + (older.busy ? ' disabled' : '') + '><span class="ic">' + ICON.sheet + '</span><span>' + (older.busy ? 'Looking in the Sheet…' : 'Older plans')
-        + '<span class="sub">From the family’s Google Sheet, which keeps every plan</span></span></button>' : '') + '</div>';
+      + (olderOn ? '<button class="rowbtn" type="button" data-act="older"' + (older.busy ? ' disabled' : '') + '><span class="ic">' + ICON.sheet + '</span><span>' + (older.busy ? 'Looking in the Sheet…' : 'Show older plans from the Sheet')
+        + '</span></button>' : '') + '</div>';
     return h;
   }
 
@@ -198,21 +198,21 @@ if (window.top !== window.self) {
         + '<div class="btns"><button class="btn" type="button" data-act="find-all"' + off + '>' + (n < mine().length ? 'Find deals at the rest' : 'All found') + '</button></div></div>';
     } else {
       const card = store.cardName && (data.settings.cards || []).includes(store.card) ? ' · ' + store.cardName + ' prices' : '';
-      h += '<p>' + esc(store.where.replace(/^[^,]+,\s*/, '') + ' · ' + (d && d.items && d.items.length ? (thisWeek(d) ? 'This week' : 'An earlier week') + ', ' + L.weekLabel(d.week, d.validFrom, d.validTo) : 'Sales usually run Wednesday to Tuesday') + card) + '</p>'
+      h += '<p>' + esc(store.where.replace(/^[^,]+,\s*/, '') + (d && d.items && d.items.length ? ' · ' + (thisWeek(d) ? 'This week' : 'An earlier week') + ', ' + L.weekLabel(d.week, d.validFrom, d.validTo) : '') + card) + '</p>'
         + '<div class="btns"><button class="btn" type="button" data-act="find"' + off + '>' + (thisWeek(d) ? 'Look again' : 'Find this week’s deals') + '</button>'
         + '<button class="btn quiet" type="button" data-act="paste"' + off + '>Paste deals</button></div></div>';
     }
     if (st.busy === 'deals') return h + busyCard('Looking for this week’s sales…', st.finding || 'This can take up to a minute.');
     // all stores: the same thing at different stores side by side, to compare
     const items = all ? weekItems(data.settings.stores || []).items.sort((a, b) => a.name.localeCompare(b.name, 'en-US')) : d && d.items ? d.items.map(x => ({ ...x, at: store })) : [];
-    if (!items.length) return h + '<div class="empty" style="--i:2"><strong>No deals yet</strong>' + (all ? 'Find each store’s deals, and they all show here together, sorted like a grocery list.' : 'Find this week’s deals, or paste them from ' + esc(store.name) + '’s app, and they’re sorted here like a grocery list.') + '</div>';
+    if (!items.length) return h + '<div class="empty" style="--i:2"><strong>No deals yet</strong></div>';
     h += L.sections(items, x => x.name).map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.length + '</span></p><div class="rgroup" style="--i:' + (i + 2) + '">'
       + g.items.map(x => '<div class="drow"><span class="dn">' + esc(x.name) + ((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).length ? '<small>' + esc((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).join(' · ')) + '</small>' : '') + '</span>'
         + '<span class="dp">' + esc(x.price || '') + memberTag(x) + (x.regular ? '<small>usually ' + esc(x.regular) + '</small>' : '') + '</span></div>').join('') + '</div>').join('');
     h += '<button class="btn okbtn" type="button" data-act="plan-deals"' + (noAI() ? ' disabled' : '') + '>Plan dinners with ' + (all ? 'the best of these' : 'these deals') + '</button>';
     const src = all ? [] : (d.sources || []);
-    if (src.length) h += '<p class="src">Found on: ' + src.map(u => { let host = u; try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>'; }).join(', ') + '. Check prices in the store: they can be wrong or change.</p>';
-    else h += '<p class="src">' + (!all && d.how === 'paste' ? 'From the sales you pasted. ' : '') + 'Check prices in the store: they can change.</p>';
+    if (src.length) h += '<p class="src">Found on: ' + src.map(u => { let host = u; try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>'; }).join(', ') + '.</p>';
+    else if (!all && d.how === 'paste') h += '<p class="src">From the sales you pasted.</p>';
     return h;
   }
 
@@ -224,7 +224,7 @@ if (window.top !== window.self) {
   function shop() { return shopOf(data.plan); }
   function list() {
     const p = data.plan;
-    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan on Dinners, and everything it needs shows here, sorted like a grocery list.' : 'Plan dinners and accept the plan, and everything they need shows here, sorted like a grocery list.') + '</div>';
+    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan on Dinners.' : 'Plan dinners first.') + '</div>';
     if (ticks.at !== p.at) ticks = { at: p.at, keys: [] };
     const s = shop(), done = new Set(ticks.keys);
     const row = x => '<button class="irow" type="button" role="checkbox" aria-checked="' + done.has(x.key) + '" data-key="' + esc(x.key) + '"><span class="box">' + ICON.tick + '</span>'
@@ -234,8 +234,7 @@ if (window.top !== window.self) {
     let h = groups.map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.filter(x => !done.has(x.key)).length + '</span></p><div class="rgroup" style="--i:' + (i + 1) + '">' + g.items.map(row).join('') + '</div>').join('');
     if (s.pantry.length) h += '<p class="sechead"><span>You probably have</span><span>' + s.pantry.length + '</span></p><div class="rgroup">' + s.pantry.map(row).join('') + '</div>';
     h += '<div class="card"><div class="btns" style="margin-top:0"><button class="btn" type="button" data-act="copy">' + ICON.copy + 'Copy the list</button>'
-      + (done.size ? '<button class="btn quiet" type="button" data-act="untick">Clear ticks</button>' : '') + '</div></div>'
-      + '<p class="hint">Copy it into a grocery list in Notes, or anywhere. Ticks stay on this phone.</p>';
+      + (done.size ? '<button class="btn quiet" type="button" data-act="untick">Clear ticks</button>' : '') + '</div></div>';
     return h;
   }
 
@@ -329,7 +328,7 @@ if (window.top !== window.self) {
       + mine().map(x => '<option value="' + x.id + '"' + (form.shop === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>'
       + '<div class="frow"><label for="pDeals">Use this week’s deals</label>' + dealsPick() + '</div>'
       + '<div class="frow"><label class="vh" for="pNote">Anything else</label><input class="txt" id="pNote" maxlength="200" placeholder="Anything else? (kid-friendly, no spice…)" value="' + esc(form.note) + '"></div></div>'
-      + '<p class="hint">Never ' + esc((data.settings.avoid || []).join(' or ') || 'anything you’ve listed') + ': every plan is checked before it’s kept. Change this in settings (the gear).</p>'
+      + ((data.settings.avoid || []).length ? '<p class="hint">Never ' + esc(data.settings.avoid.join(' or ')) + '.</p>' : '')
       + '<button class="btn okbtn" type="button" id="planGo">Plan ' + plural(form.days, 'dinner') + '</button>';
     openSheet('planSheet');
   }
@@ -356,7 +355,7 @@ if (window.top !== window.self) {
     try {
       const j = await api('plan', ask);
       data.draft = j.draft; ls.set(KEY, data);
-      st.busy = null; toast('Here’s a plan. Accept it to save it and its shopping list, or try again.', null, 6000);
+      st.busy = null; toast('Here’s a plan. Accept it to save it.', null, 6000);
     } catch (e) { st.busy = null; toast(say(e.code), null, 8000); }
     render();
   }
@@ -403,7 +402,7 @@ if (window.top !== window.self) {
       + (m.why ? '<p class="hint" style="margin:0 2px">' + esc(m.why) + '</p>' : '')
       + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li>' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + (deal ? ' ' + saleTag({ deal }, p) : '') + '</li>'; }).join('') + '</ul></div>'
       + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li>' + esc(s) + '</li>').join('') + '</ol></div>'
-      + '<p class="hint">Made by AI: check times and temperatures, and labels on anything packaged for what the family avoids.</p>';
+      + '<p class="hint">Made by AI: check times, temperatures and labels.</p>';
     openSheet('recipeSheet');
   }
 
@@ -414,19 +413,17 @@ if (window.top !== window.self) {
     const model = modelName();
     const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
     $('setBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="hint">Just on this phone, and at once.</p>'
       + '<p class="label">Account</p><div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
-      + esc(user ? 'The plan, deals and settings are the family’s: everyone signed in sees the same.' : 'Sign in with your family account to plan for the family.') + '</p>'
+      + (user ? '' : 'Sign in to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
       + (data.stores || STORES).map(x => '<button class="opt" type="button" role="checkbox" data-store="' + x.id + '" aria-checked="' + draft.stores.includes(x.id) + '">' + esc(x.name) + '</button>').join('') + '</div>'
-      + '<p class="hint">Their deals, and plans across them. All near Apex and Cary.</p>'
+      + '<p class="hint">Deals and plans come from these stores.</p>'
       + '<p class="label">Member cards</p><div class="opts" id="sCards" role="group" aria-label="Member cards">'
       + CARDS.map(([k, n]) => '<button class="opt" type="button" role="checkbox" data-card="' + k + '" aria-checked="' + draft.cards.includes(k) + '">' + esc(n) + '</button>').join('') + '</div>'
       + '<p class="hint">With a card, deals show its member prices.</p>'
       + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>').join('') + '</div>'
       + '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
-      + '<p class="hint">“Tree nuts” covers almonds, cashews, pecans, walnuts, pistachios, pine nuts, pesto and the like; peanuts are fine. Anything else you add is checked by its name.</p>'
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
   let draftAvoid = null, draft = { stores: [], cards: [] };

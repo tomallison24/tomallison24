@@ -301,6 +301,6 @@ window.OrdersIpsy = function (app) {
     intro: 'Hi, I’m Ipsy! I can find an order, fix its details, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
     placeholder: 'Ask Ipsy about your orders',
     suggestions: ['What’s arriving this week?', 'Find duplicate orders and merge them', 'Is anything late?', 'Check Gmail for orders I’m missing'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and whatever Ipsy looks at to answer it (your orders, and any email it opens in your Gmail) go to Claude through the family server, which keeps only a count of questions. Orders you mark Private, and their emails, are hidden from Ipsy, and you can turn off its Gmail in Settings. Ipsy can change, delete and merge orders: each change shows here with Undo.',
+    consent: 'Ipsy runs on Claude, by Anthropic: your questions, orders and the emails it opens go there through the family server. It can change orders, each with Undo; Private ones stay hidden.',
   };
 };
