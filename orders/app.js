@@ -1377,7 +1377,7 @@ if (window.top !== window.self) {
         screen: () => st.q ? 'search results' + (orders.some(o => o.private) ? '' : ' for "' + st.q + '"') : TAB_NAMES[st.tab] || 'the order list',   // a search could name a private order
       }),
     });
-    setTimeout(autoCheck, 2500);   // anything already in To check (a read of Gmail checks again when it's done)
+    setTimeout(autoCheck, 2500);   // To check and orders on their way with an email Ipsy hasn't read (a read of Gmail checks again when it's done)
   }
 
   // For the tests (orders/scripts/app-test.mjs) only.
