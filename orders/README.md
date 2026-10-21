@@ -202,20 +202,26 @@ is a one-time tidy per phone, **not a rule**: orders that go quiet later stay
 where they are until you mark them. The delivered date it gives is the last
 news, not the real arrival.
 
-## Ipsy checks To check (and any order)
+## Ipsy keeps orders up to date (and checks any order)
 
 **By itself.** After each read of Gmail (and when Orders opens), Ipsy goes
-through the orders marked *Check details* that came from an email and checks
-each one, quietly, at most 10 at a time: the same check as below, with no
-tap. Each email is checked once (a new email about the order is checked
-again). A fix shows in Ipsy's chat with **Undo**, and Ipsy says in a little
-bubble by its corner what it did (*I fixed 2 orders in To check; 1 still needs
-you*). What it can't fix (an order nothing has been heard about for weeks, an
-item the store says is unavailable) stays in To check for you.
+through the orders that came from an email and are either marked *Check
+details* or still on their way (ordered, shipped, out for delivery, ready for
+pickup), and checks each one whose newest email it hasn't read yet, quietly,
+To check first, at most 10 at a time: the same check as below, with no tap. So
+when a store's shipping or delivered email arrives, Ipsy reads it too and moves
+the order on, without **Have Ipsy check this order** on each one. Each email is
+checked once (a new email about the order is checked again). A fix shows in
+Ipsy's chat with **Undo**, and Ipsy says in a little bubble by its corner what
+it did (*I updated 2 orders; 1 still needs you in To check*). What it can't fix
+(an order nothing has been heard about for weeks, an item the store says is
+unavailable) stays in To check for you. An order with no new email isn't read
+again: re-reading the same email wouldn't tell Ipsy anything new.
 
 - **Offered once.** The first time there's something to check, Ipsy asks from
-  its corner; nothing is sent until you say yes. **Settings > Ipsy > Ipsy checks
-  To check** turns it on or off.
+  its corner; nothing is sent until you say yes. **Settings > Ipsy > Ipsy keeps
+  orders up to date** turns it on or off (it was *Ipsy checks To check*; a yes
+  given then still counts).
 - It never asks for Face ID by itself: signed out, it waits (and says so).
 - It stops for the day at the daily limit below, and tries again later.
 
