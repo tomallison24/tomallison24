@@ -42,9 +42,11 @@ the week, and for each day what you did.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
-- **Week, Analysis and Meds**: pick between them from the pill at the
+- **Week, Analysis, Meds and Health**: pick between them from the pill at the
   bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
   it, and the app remembers the view you were on. See below.
+- **Ipsy**: once you turn it on in Settings, ask it about patterns in your own
+  workouts, steps, meds and health stats. See Ipsy, below.
 - **Steps**: each day shows its steps beside it (a shoe and the count, in the
   accent once you reach your goal), the week's totals add **steps a day**, and
   a day's sheet starts with its steps and a bar to the goal. See Steps, below.
@@ -76,6 +78,60 @@ aOS can erase it (aOS → Account → **Erase aOS from a lost phone**).
 The sums are in `meds.js`, separate from the page, so they can be tested on
 their own.
 
+## Health
+
+A page of its own (**Health** in the view picker) with your own Apple Health
+readings from your iPhone, read through the family's Home Assistant: the Home
+Assistant app (2026.9 and later) has an Apple Health sensor for each, turned on
+one by one. Like Meds, it's for you alone and asks you to sign in first.
+
+- **A day at a time**: today when it opens; the arrows (or a sideways swipe) go
+  back a day, and the calendar button comes back to today.
+- **Four cards**, each reading with its value, its last 7 days as a small line,
+  and the 7-day average before it (with the change, as a percentage). A reading
+  with nothing that day isn't shown, nor a card with none.
+
+| Card | Readings (the sensor's name in the Home Assistant app) | A day's value |
+|---|---|---|
+| Activity | Health Steps, Active Energy, Resting Energy, Walking + Running Distance, Exercise Time, Flights Climbed | the day's total (the last reading before the reset at midnight) |
+| Heart | Heart Rate, Resting Heart Rate, Heart Rate Variability, Walking Heart Rate Average | the day's last reading; Heart Rate, the day's average |
+| Sleep | Sleep Duration, In Bed, Awake, Core Sleep, Deep Sleep, REM Sleep | the night that ended that morning (Apple's sleep day runs 18:00 to 18:00), shown as "6 h 25 m" |
+| Vitals | Blood Oxygen, Respiratory Rate, Body Temperature, Basal Body Temperature, Blood Pressure Systolic and Diastolic, Blood Glucose, VO2 Max | the day's last reading |
+
+  Not the Core Motion sensors (Steps, Distance, Floors Ascended, Pace,
+  Cadence), and not the body measurements or water. The list is
+  `health.js` (each reading's key, name, sensor, unit and how a day is summed),
+  which the page and the server both read.
+- **Steps**: once your phone has **Health Steps**, it is the day's steps
+  (it counts an Apple Watch's too), in place of the motion chip's Steps sensor.
+  A number you type in still wins.
+- **Analysis** adds a **Health** section: your average sleep a night, resting
+  heart rate, heart rate variability and active energy a day over the window,
+  each against the window before (only those with readings).
+
+**Setting it up** (each person, once): in the Home Assistant app on your iPhone,
+**Settings › Companion App › Sensors**, turn on the Apple Health sensors you
+want (they may be under **Labs**) and allow Health when asked. Many read
+"Unavailable" until Health has been allowed, or without an Apple Watch (heart
+rate, sleep stages, blood oxygen); Fitness skips those quietly. Your iPhone must
+be linked in **Settings › Steps** (below); that's how Fitness knows which phone
+is yours. Until anything comes in, the page says how.
+
+**How it's read** (`functions/fitness/api`, `GET health?days=1..10`): only the
+phone linked to you. The server finds that phone's Health sensors once a day
+(an hour while there are none): with an admin's token, the sensors on the same
+device as your Steps sensor, matched by name; otherwise `sensor.<phone>_<name>`,
+kept if Home Assistant has it (`health:<your id>` in the accounts' KV). Then one
+history request for those sensors, summed into days on the family's calendar
+(America/New_York). The phone asks for the days since it last asked (2 at least,
+10 at most; Home Assistant keeps 10).
+
+**Privacy**: the Home Assistant token stays on the server, as for steps; no
+phone holds it. Your readings are in Home Assistant's history (as every sensor
+is), on your phone (`data.health`, the last 90 days once synced), and in the
+owner's family Fitness Sheet (its **Health** tab), where each phone only ever
+gets its own person's rows. Sign out and erase takes them off the phone.
+
 ## Steps
 
 Each day's steps, typed in or read from your own iPhone.
@@ -84,7 +140,8 @@ Each day's steps, typed in or read from your own iPhone.
   never replaced by your iPhone's; clear it and your iPhone's fills it in again.
 - **From your iPhone**: the Home Assistant app on an iPhone has a **Steps**
   sensor: the phone's own motion chip, steps since midnight (it isn't Apple
-  Health, so an Apple Watch's steps aren't in it). Fitness reads it through
+  Health, so an Apple Watch's steps aren't in it; with the Apple Health
+  sensors on, Fitness reads **Health Steps** instead: see Health). Fitness reads it through
   aOS (`../fitness/api/`, `functions/fitness/api`), which holds the Home
   Assistant token, so no phone keeps one that could run the house. Link your
   phone once in **Settings → Steps**: pick it from the list (or type its
@@ -110,6 +167,52 @@ each iPhone, in the Home Assistant app: **Settings → Companion App →
 Sensors → Steps** on, and Motion & Fitness allowed. If the sensor reads
 `unavailable` in Home Assistant, check those, and that the server's **Sensors
 Sent** setting (Settings → Companion App → your server → Privacy) isn't off.
+
+## Ipsy
+
+Ipsy, the AllisonOS helper you chat with (`../home/ipsy.js`), looks for
+patterns in your own days: "How did I sleep after leg days?", "Is my resting
+heart rate trending down?", "Did I miss meds more on low-sleep days?".
+
+- **Off until you turn it on**: **Settings → Ipsy → Ask Ipsy about your
+  patterns**, just on this phone, and signed in only (it goes through your
+  family account). Off, there is no Ipsy button; turning it off also clears its
+  chat from the phone. On, it sits just above the bottom row on the left.
+- **What leaves the phone**: only the days and stats a question needs, as Ipsy
+  looks at them, go to Claude (Anthropic) through aOS (`functions/fitness/api`,
+  POST `ipsy`, `server/ipsy.js`), which keeps nothing but a count of questions
+  (80 a person a day). Anthropic doesn't train on it. The chat asks once before
+  the first question, and says so.
+- **No web search** in Fitness: the route sends Claude Fitness's own tools only
+  (`requestHead({ web: false })`), and Ipsy's instructions don't offer it, so
+  nothing about your health can end up in a search query.
+- **Read-only**: its tools (`ipsy-tools.js`) run on the phone and never change
+  the log. Each reads at most about 120 days (a year of weeks for summary):
+  - `days(from, to, include?)`: each day's workouts, volume, steps, meds and
+    supplements taken, missed and taken as needed (by your own names for them),
+    and health stats;
+  - `summary(from, to)`: week by week, days trained, sets by muscle group,
+    volume, cardio minutes, average steps, the share of meds taken, and the
+    average of each health stat;
+  - `compare(metric_a, metric_b, from, to, lag_days?)`: two daily numbers
+    (steps, volume, sets, cardio_min, trained, group:legs, meds_taken,
+    meds_missed, adherence, med:<name>, or a health stat) side by side, the
+    second some days later if asked, with the correlation (Pearson's r) and how
+    many days it rests on, worked out on the phone;
+  - `meds()`: your list, with how often each was taken over 30 days;
+  - `context()`: today, the screen, how far back the phone keeps, the health
+    stats there are.
+  Days older than the 90 the phone keeps are fetched from the family's Sheet
+  first, as the week and Analysis do; if it can't be reached, Ipsy says it used
+  only the phone's days. Health stats are named by `health.js`
+  (`FitnessHealth`) when it's there.
+- **How it answers**: it looks before it answers, quotes the numbers and how
+  many days a pattern rests on, says "pattern", never "cause", calls a small
+  sample too little to go on, gives no diagnosis or medical advice (it suggests
+  a doctor for anything medical), and only ever sees your own data, so it never
+  mentions anyone else in the family.
+- `FITNESS_IPSY_MODEL` (a Pages secret) names another model than Claude
+  Sonnet 5.5.
 
 ## Sign out and erase
 
@@ -312,7 +415,7 @@ iPhone, it keeps separate storage, and Calendar can't see its log.
 unchanged, plus Fitness's own pieces, then the Vintage block (`<style
 id="vintage">`, see The two designs). The day sheet is the same
 Liquid Glass sheet as Calendar's. `app.js` is the app, `analysis.js` does
-Analysis's comparisons, and `sw.js` is the offline shell.
+Analysis's comparisons, `ipsy-tools.js` is Ipsy's tools, and `sw.js` is the offline shell.
 
 - **Security**: a strict Content Security Policy (no inline script), and the
   app refuses to run inside another page's frame.
@@ -321,7 +424,8 @@ Analysis's comparisons, and `sw.js` is the offline shell.
   updated }], exercises: [{ id, group, name, updated }], meds: [{ id, name,
   dose, kind, slots, days, prn, paused, since, updated }], doses: [{ id, med,
   name, date, slot, at, updated }], steps: [{ id (the date), date, n, src:
-  'ha' | 'you', updated }] }`. The second list holds the exercises you typed in
+  'ha' | 'you', updated }], health: [{ id (the date), date, m: { <health.js key>:
+  value }, updated }] }`. The second list holds the exercises you typed in
   yourself. The step goal is `allison-fitness-v1-step-goal`. For a hold, `reps` is the
   seconds and `timed` is true. Deletions are kept as "graves" in
   `allison-fitness-v1-graves`, so a sync can pass them on. Nothing leaves
@@ -351,8 +455,13 @@ its own person's). The script is [`google-sheet-sync.gs`](google-sheet-sync.gs).
   iPhone or were typed in. These came with version 2 of the script: a Sheet
   set up before then keeps the workouts only, until the owner pastes the
   script in again and deploys a new version.
-- Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps` and `_deleted`
-  tabs, which the app reads back.
+- **Health** (version 4 of the script): a row a day for each person (Who,
+  Date, Day, then a column for each reading: Steps, Active energy (kcal), …,
+  Asleep (min), …, VO2 max (mL/kg/min)). Until the owner pastes in version 4
+  and deploys it, Health stays on the phone (all of it, not just 90 days) and
+  syncs once the script keeps it.
+- Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps`, `_health` and
+  `_deleted` tabs, which the app reads back.
 
 **Kept on the phone for 90 days**: once it has synced, the phone keeps the
 last 90 days of workouts, doses and steps (after each sync; your list of meds
@@ -395,6 +504,10 @@ node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a d
 node fitness/scripts/meds-test.mjs                               # Meds' sums: what's due, taken over 7 and 30 days, streaks; Analysis's steps windows
 node fitness/scripts/steps-api-test.mjs                          # functions/fitness/api: linking your own phone, no one else's, the token kept on the server, the counts
 node fitness/scripts/meds-steps-test.mjs [repo root] [screenshot dir]   # Meds and Steps in the page, the Sheet keeping them and the phone keeping 30 days, Sign out and erase, aOS's Lost a phone?
+node fitness/scripts/ipsy-api-test.mjs                           # functions/fitness/api POST ipsy: signed in only, Fitness's tools and no web tools, the daily cap
+node fitness/scripts/ipsy-test.mjs [repo root] [screenshot dir]  # Ipsy: its tools' numbers on a made-up log, off by default, Settings, where it sits, a chat, read-only, older days
+node fitness/scripts/health-api-test.mjs                         # functions/fitness/api's health: finding a phone's Health sensors (by device, by guessing), only your own, the day sums
+node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the cards, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps

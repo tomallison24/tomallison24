@@ -35,6 +35,9 @@
 //     scripts), and no inline <script> in the page
 // Worth doing (warnings):
 //   - its sw.js CACHE named after the app ('<id>-vN')
+//   - Ipsy: a page that loads ../home/ipsy.js lists it in sw.js SHELL and lets
+//     connect-src 'self'; with ipsy-tools.js (Ipsy to chat with) it lists that too,
+//     and its functions/<app>/api answers ipsy
 // And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow.
 //   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
 import fs from 'fs';
@@ -184,6 +187,15 @@ for (const id of ids) {
   if (SKY.has(id)) {
     rule(/<script\s+src="\.\.\/home\/sky\.js"/.test(html), 'a Vintage design loads ../home/sky.js (in <head>): the day and night sky every Vintage app shares');
     rule(list.includes('../home/sky.js'), 'sw.js SHELL should list ../home/sky.js, so the sky works offline');
+  }
+  // Ipsy (../home/ipsy.js): offline with its tools, and a route of the app's own that answers it.
+  if (/<script\s+src="\.\.\/home\/ipsy\.js"/.test(html)) {
+    rule(list.includes('../home/ipsy.js'), 'sw.js SHELL should list ../home/ipsy.js, since the page loads Ipsy');
+    if (/<script\s+src="ipsy-tools\.js"/.test(html)) {   // Ipsy to chat with (aOS only shows it off)
+      rule(list.includes('ipsy-tools.js'), 'sw.js SHELL should list ipsy-tools.js, Ipsy\'s tools here');
+      rule(/['"]ipsy['"]/.test(read('functions/' + dir + '/api/[[route]].js') || ''), 'has Ipsy\'s tools, but functions/' + dir + '/api answers no POST ipsy (server/ipsy.js ipsyStep)');
+    }
+    rule(/connect-src[^;]*'self'/.test((/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html) || [])[1] || ''), "loads Ipsy, so its policy's connect-src needs 'self' (Ipsy asks ../" + dir + '/api/ipsy)');
   }
   rule(!/fonts\.(googleapis|gstatic)\.com|<link[^>]+rel="stylesheet"[^>]+href="https?:/i.test(html), 'loads a web font or stylesheet from another site: AllisonOS uses the system font, and nothing from elsewhere');
   if (store) rule(/--tile:/.test(html), 'doesn’t use the faint cards every app shares (--tile / --tile-edge)');

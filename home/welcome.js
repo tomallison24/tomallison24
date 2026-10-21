@@ -85,6 +85,21 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '1.8', date: '2026-10-21', title: 'Health, with Ipsy',
+      highlights: ['Fitness: your Apple Health stats, every day',
+        'Activity, heart, sleep and vitals, from your own iPhone',
+        'Ask Ipsy how your sleep, workouts and meds line up'],
+      notes: ['Fitness: a Health page (the view picker: Week, Analysis, Meds, Health) shows each day\'s Activity (Health steps, active and resting energy, distance, exercise time, flights), Heart (heart rate, resting heart rate, heart rate variability, walking heart rate), Sleep (sleep, in bed, awake, core, deep, REM) and Vitals (blood oxygen, respiratory rate, body and basal temperature, blood pressure, glucose, VO2 max), with a 7-day trend. It reads the Apple Health sensors of the Home Assistant app on your own iPhone (turn them on in the Home Assistant app, and give it Health access), through the iPhone you linked for steps; each person sees only their own',
+        'Fitness: daily steps come from Apple Health when your iPhone shares them (they include your Apple Watch); the phone\'s own count stays the fallback, and steps you type in still win',
+        'Fitness: each day\'s health stats are kept in the family\'s Fitness Sheet (a Health tab), so they last beyond Home Assistant\'s 10 days; Analysis has a Health section',
+        'Fitness: Ipsy, off until you turn it on in Settings, finds patterns across your workouts, steps, meds and health: it quotes the numbers and how many days they rest on, never claims a cause, and gives no medical advice. It only reads; it can\'t change your log. Only the days and stats a question needs go to Claude, through aOS, and Anthropic doesn\'t train on them; Ipsy doesn\'t search the web in Fitness'],
+      apps: {
+        fitness: { highlights: ['Health: activity, heart, sleep and vitals from your iPhone', 'Steps from Apple Health, Apple Watch included', 'Turn on Ipsy in Settings to find patterns'],
+          tour: [
+            { sel: '#viewBtn', t: 'Health', d: 'Pick Health here: each day\'s activity, heart, sleep and vitals from your own iPhone, with a 7-day trend. Only you see yours.', g: 'tap' },
+            { sel: '#setBtn', t: 'Ipsy', d: 'Turn on Ipsy in Settings, then ask how your sleep, workouts and meds line up. It only reads, and never searches the web here.', g: 'tap' },
+          ] },
+      } },
     { v: '1.7.1', date: '2026-10-20', title: 'One Sheet for the family',
       highlights: ['Each app\'s Google Sheet is now its record, one for the whole family',
         'In Fitness, Drinks, Podcasts and Orders you only ever see your own',

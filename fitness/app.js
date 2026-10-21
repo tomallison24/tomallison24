@@ -37,8 +37,14 @@
 //   the family's Home Assistant through ../fitness/api (functions/fitness/api),
 //   which keeps the Home Assistant token off the phone and gives each person
 //   only their own phone's steps. A daily goal, set in Settings.
+// - Health, a page of its own (the fourth view): your own Apple Health readings, a day at
+//   a time (Activity, Heart, Sleep, Vitals; health.js lists them), read from your
+//   iPhone's Health sensors in Home Assistant through ../fitness/api, as steps are.
+//   Signed in only, as Meds. Health Steps (with an Apple Watch's) is then the day's steps.
 // - Once synced, dated items older than 90 days are kept in the Sheet only,
 //   not on the phone; looking back fetches them.
+// - Ipsy, if you turn it on in Settings: ask it about patterns in your own days
+//   (ipsy-tools.js, read-only; Claude through ../fitness/api, no web search).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -59,7 +65,8 @@ if (window.top !== window.self) {
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const KEY = 'allison-fitness-v1';
   const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period',
-    goal: KEY + '-step-goal', stepsLink: KEY + '-steps-link', health: KEY + '-sheet-health' };
+    goal: KEY + '-step-goal', stepsLink: KEY + '-steps-link', health: KEY + '-sheet-health',
+    healthLink: KEY + '-health-link', healthUnits: KEY + '-health-units', sheetKeepsHealth: KEY + '-sheet-keeps-health' };
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
@@ -75,6 +82,7 @@ if (window.top !== window.self) {
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5.2v13.6M5.2 12h13.6"/></svg>',
     minus: '<svg viewBox="0 0 24 24" class="b"><path d="M5.2 12h13.6"/></svg>',
     down: '<svg viewBox="0 0 24 24" class="b"><path d="M12 5v13.4M6.4 12.8l5.6 5.6 5.6-5.6"/></svg>',
+    heart: '<svg viewBox="0 0 24 24"><path d="M12 20.2s-7.8-4.6-7.8-10.4a4.3 4.3 0 0 1 7.8-2.5 4.3 4.3 0 0 1 7.8 2.5c0 5.8-7.8 10.4-7.8 10.4z"/><path d="M6.4 12.2h3l1.4-2.6 2.2 4.6 1.4-2h3.2"/></svg>',
   };
   const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
 
@@ -175,7 +183,8 @@ if (window.top !== window.self) {
   //          a day), days: [0-6] (Sunday 0; none: every day), prn (as needed), paused, since, updated}]
   //   doses  [{id, med, name, date, slot ('am'|'mid'|'pm'|'bed'|'day'|'prn'), at (when, today), updated}]
   //   steps  [{id: the date, date, n, src: 'ha' (your iPhone, from Home Assistant) | 'you', updated}]
-  const data = { logs: [], exercises: [], meds: [], doses: [], steps: [] };
+  //   health [{id: the date, date, m: {key: value} (health.js's keys), updated}] your Apple Health, a row a day
+  const data = { logs: [], exercises: [], meds: [], doses: [], steps: [], health: [] };
   let graves = {};
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
   const okLog = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && typeof x.exercise === 'string' && x.exercise.trim() && typeof x.group === 'string';
@@ -183,6 +192,7 @@ if (window.top !== window.self) {
   const okMed = x => x && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim();
   const okDose = x => x && typeof x.id === 'string' && typeof x.med === 'string' && ISO.test(x.date || '') && typeof x.slot === 'string';
   const okStep = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && x.id === x.date && +x.n >= 0;
+  const okHealth = x => x && typeof x.id === 'string' && ISO.test(x.date || '') && x.id === x.date && x.m && typeof x.m === 'object' && !Array.isArray(x.m);
   function load() {
     const d = ls.json(KEY, null) || {};
     data.logs = Array.isArray(d.logs) ? d.logs.filter(okLog) : [];
@@ -190,12 +200,13 @@ if (window.top !== window.self) {
     data.meds = Array.isArray(d.meds) ? d.meds.filter(okMed) : [];
     data.doses = Array.isArray(d.doses) ? d.doses.filter(okDose) : [];
     data.steps = Array.isArray(d.steps) ? d.steps.filter(okStep) : [];
+    data.health = Array.isArray(d.health) ? d.health.filter(okHealth) : [];
     const g = ls.json(K.graves, {}); graves = g && typeof g === 'object' && !Array.isArray(g) ? g : {};
     initShadow();
   }
   // What each item looked like at the last save (as in Travel).
   const shadow = new Map();
-  const kinds = () => [['logs', data.logs], ['exercises', data.exercises], ['meds', data.meds], ['doses', data.doses], ['steps', data.steps]];
+  const kinds = () => [['logs', data.logs], ['exercises', data.exercises], ['meds', data.meds], ['doses', data.doses], ['steps', data.steps], ['health', data.health]];
   function initShadow() {
     shadow.clear();
     kinds().forEach(([kind, arr]) => arr.forEach(it => {
@@ -214,7 +225,7 @@ if (window.top !== window.self) {
   }
   let storeWarned = false;
   function persist() {
-    const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps })) && ls.set(K.graves, JSON.stringify(graves));
+    const ok = ls.set(KEY, JSON.stringify({ v: 2, logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, health: data.health })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Fitness: storage is full.' + (lastSyncAt ? ' Your log is safe in the Google Sheet.' : '')); }
     shareCal();
   }
@@ -267,9 +278,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  const VIEW_IDS = ['week', 'analysis', 'meds'];
+  const VIEW_IDS = ['week', 'analysis', 'meds', 'health'];
   const st = { week: weekStartOf(today()), day: null, form: null, view: VIEW_IDS.includes(ls.get(K.view, 'week')) ? ls.get(K.view, 'week') : 'week', period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week',
-    medDay: today(), medForm: null };
+    medDay: today(), medForm: null, healthDay: today() };
   const blankForm = () => ({ editing: null, group: null, exercise: '', other: '', weight: '', reps: 10, sets: 3, timed: false, q: '', mins: 20, dist: '' });
 
   // ---------------------------------------------------------------------
@@ -282,7 +293,7 @@ if (window.top !== window.self) {
     if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = ICON[v.icon]; }
     if (!$('viewMenu').hidden) drawViewMenu();
     $('fab').setAttribute('aria-label', st.view === 'meds' ? 'Add a medication or supplement' : 'Log today’s workout');
-    if (st.view === 'analysis') renderAnalysis(); else if (st.view === 'meds') renderMeds(); else renderWeek();
+    if (st.view === 'analysis') renderAnalysis(); else if (st.view === 'meds') renderMeds(); else if (st.view === 'health') renderHealth(); else renderWeek();
   }
   function renderWeek() {
     const ws = st.week, we = addDays(ws, 6), tod = today();
@@ -329,7 +340,7 @@ if (window.top !== window.self) {
   }
   function goWeek(n) { st.week = addDays(st.week, 7 * n); render(); animateIn(main); }
   main.addEventListener('click', e => {
-    if (st.view === 'meds') return;   // its own taps, below
+    if (st.view === 'meds' || st.view === 'health') return;   // their own taps, below
     const a = e.target.closest('[data-act]');
     if (a) { goWeek(a.dataset.act === 'prev' ? -1 : 1); return; }
     const d = e.target.closest('[data-day]');
@@ -343,7 +354,7 @@ if (window.top !== window.self) {
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goWeek(dx < 0 ? 1 : -1);
   });
-  $('todayBtn').onclick = () => { st.week = weekStartOf(today()); st.medDay = today(); render(); animateIn(main); };
+  $('todayBtn').onclick = () => { st.week = weekStartOf(today()); st.medDay = today(); st.healthDay = today(); render(); animateIn(main); };
   $('fab').onclick = () => {
     if (st.view === 'meds') { if (signedIn()) openMed(null); return; }
     st.week = weekStartOf(today()); render(); openDay(today());
@@ -356,6 +367,10 @@ if (window.top !== window.self) {
     { id: 'week', name: 'Week', icon: 'week', sum: () => { const n = new Set(data.logs.filter(x => x.date >= weekStartOf(today()) && x.date <= today()).map(x => x.date)).size; return n ? plural(n, 'day') + ' trained this week' : 'Log each day’s workout'; } },
     { id: 'analysis', name: 'Analysis', icon: 'chart', sum: () => { const a = analysisNow(); return a.hasNow || a.hasBefore ? 'Improving ' + a.up.length + ' · needs work ' + (a.down.length + a.missed.length + a.dropped.length + (a.cardioMissed ? 1 : 0)) : 'Where you’re improving, and what needs work'; } },
     { id: 'meds', name: 'Meds', icon: 'pill', sum: () => { const due = signedIn() ? dueOn(today()) : []; return due.length ? due.filter(x => doseOf(x.m.id, today(), x.slot)).length + ' of ' + due.length + ' taken today' : 'Medications and supplements you take'; } },
+    { id: 'health', name: 'Health', icon: 'heart', sum: () => {
+      const s = signedIn() ? hval(today(), 'sleep') : null, r = signedIn() ? hval(today(), 'hr_rest') : null;
+      return s != null || r != null ? [s != null ? 'Slept ' + HL.fmt('sleep', s) : '', r != null ? 'resting ' + HL.fmt('hr_rest', r) : ''].filter(Boolean).join(' · ') : 'Activity, heart, sleep and vitals from Apple Health';
+    } },
   ];
   function drawViewMenu() {
     $('viewMenu').innerHTML = VIEWS.map(v => '<button type="button" role="option" data-view="' + v.id + '" aria-selected="' + (v.id === st.view) + '"><span class="ic">' + ICON[v.icon] + '</span><span class="k">' + esc(v.name) + '<small>' + esc(v.sum()) + '</small></span><span class="tick">' + ICON.tick + '</span></button>').join('');
@@ -388,8 +403,8 @@ if (window.top !== window.self) {
     const P = PERIODS[st.period], a = analysisNow(), r = a.range;
     const seg = '<div class="seg two small slides" role="radiogroup" aria-label="Compare" style="--i:0">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
     const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
-    const sw = A.steps(data.steps, today(), P.days, goal(), pruneFrom());
-    if (!a.hasNow && !a.hasBefore && !sw.any) {
+    const sw = A.steps(data.steps, today(), P.days, goal(), pruneFrom()), hh = healthTiles(r, P);
+    if (!a.hasNow && !a.hasBefore && !sw.any && !hh) {
       main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few workouts and this fills in: where you’re getting stronger, and what needs work.</div>';
       slideSeg(); return;
     }
@@ -423,7 +438,7 @@ if (window.top !== window.self) {
       + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
       + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
       + '<p class="sechead" style="--i:4">Sets by muscle group<span>' + (a.hasBefore ? 'change vs before' : '') + '</span></p><div class="rgroup bars" id="anGroups" style="--i:4">' + bars + '</div>'
-      + drinksHtml(r, P)
+      + drinksHtml(r, P) + hh
       + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time, and cardio by speed (distance ÷ time) when you log a distance, otherwise by minutes. Volume counts weighted sets only.</p>';
     slideSeg();
   }
@@ -439,6 +454,18 @@ if (window.top !== window.self) {
     };
     const b = sw.before && sw.before.days ? sw.before : null, n = sw.now || { avg: 0, met: 0 };
     return tile('Steps a day', n.avg, b && b.avg) + tile('Days at goal (' + compact(goal()) + ')', n.met, b && b.met);
+  }
+  // Health, from Apple Health: the averages of a few readings over the window, each against the
+  // window before; only the ones with something in this window, and nothing at all without.
+  function healthTiles(r, P) {
+    const tiles = [['sleep', 'Asleep a night'], ['hr_rest', 'Resting HR (bpm)'], ['hrv', 'HRV (ms)'], ['active_kcal', 'Active energy (kcal)']].map(([k, label]) => {
+      const now = havg(k, r.from, r.to); if (now == null) return '';
+      const before = r.beforeFrom < (pruneFrom() || '') ? null : havg(k, r.beforeFrom, r.beforeTo);
+      const d = before == null ? 0 : HL.round(k, now - before), dir = before == null || !d ? '' : d > 0 ? 'up' : 'down';
+      const delta = before == null ? 'nothing before' : !d ? 'same as before' : (d > 0 ? '+' : '−') + HL.parts(k, Math.abs(d)).v;
+      return '<div class="kpi" aria-label="' + esc(label + ': ' + HL.fmt(k, now) + ', ' + (dir ? (dir === 'up' ? 'up ' : 'down ') + HL.fmt(k, Math.abs(d)) + ' on ' + P.before : delta)) + '"><span class="kl">' + esc(label) + '</span><span class="kv">' + esc(HL.parts(k, now).v) + '</span><span class="kd ' + dir + '">' + (dir ? (dir === 'up' ? '↑ ' : '↓ ') : '') + esc(delta) + '</span></div>';
+    }).filter(Boolean);
+    return tiles.length ? '<p class="sechead" style="--i:6">Health<span>a day, from Apple Health</span></p><div class="kpis" id="anHealth" style="--i:6">' + tiles.join('') + '</div>' : '';
   }
   // Drinks, beside your training: your own standard drinks and alcohol-free
   // days in the same two windows, from your Drinks log in your family account
@@ -904,6 +931,132 @@ if (window.top !== window.self) {
   }
 
   // ---------------------------------------------------------------------
+  // Health: your own Apple Health, a day at a time, read from your iPhone's Health
+  // sensors in Home Assistant through ../fitness/api (functions/fitness/api: only
+  // the phone linked to you, summed into days there). A page of its own (the view
+  // picker's fourth), signed in only, as Meds. Each day is a row (data.health), kept
+  // and synced like steps; a fetch only ever adds to it (the newest value wins).
+  // health.js lists the readings, their units and how each is shown.
+  // ---------------------------------------------------------------------
+  const HL = window.FitnessHealth;
+  const healthOn = day => data.health.find(x => x.date === day);
+  const num = v => v === '' || v == null || !isFinite(+v) ? null : +v;
+  const hval = (day, k) => { const x = healthOn(day); return x && x.m ? num(x.m[k]) : null; };
+  // The average of a reading over the days from a to b that have it (null: none).
+  function havg(k, a, b) {
+    let s = 0, n = 0;
+    for (const x of data.health) if (x.date >= a && x.date <= b && x.m) { const v = num(x.m[k]); if (v != null) { s += v; n++; } }
+    return n ? s / n : null;
+  }
+  // The unit Home Assistant gave, where a phone may differ (°C, mmol/L, km); else health.js's.
+  const hunit = k => { const u = (ls.json(K.healthUnits, {}) || {})[k]; return ['temp', 'temp_basal', 'glucose', 'dist_mi'].includes(k) && typeof u === 'string' && u && u.length <= 8 ? u : HL.get(k).unit; };
+  // The last 7 days, a small line; today's dot at its end.
+  function spark(day, k) {
+    const vals = []; for (let i = -6; i <= 0; i++) vals.push(hval(addDays(day, i), k));
+    const got = vals.map((v, i) => [i, v]).filter(p => p[1] != null);
+    if (got.length < 2) return '<span class="spark" aria-hidden="true"></span>';
+    const lo = Math.min(...got.map(p => p[1])), hi = Math.max(...got.map(p => p[1])), W = 52, Hh = 22;
+    const xy = ([i, v]) => [(2 + i * (W - 4) / 6).toFixed(1), (hi === lo ? Hh / 2 : Hh - 3 - (v - lo) / (hi - lo) * (Hh - 6)).toFixed(1)];
+    const last = got[got.length - 1];
+    return '<span class="spark" aria-hidden="true"><svg viewBox="0 0 ' + W + ' ' + Hh + '"><polyline points="' + got.map(p => xy(p).join(',')).join(' ') + '"/>'
+      + (last[0] === 6 ? '<circle cx="' + xy(last)[0] + '" cy="' + xy(last)[1] + '" r="2.4"/>' : '') + '</svg></span>';
+  }
+  function renderHealth() {
+    const tod = today(), day = st.healthDay;
+    st.healthOnToday = day === tod; loadOlder(addDays(day, -13), day);
+    $('todayBtn').hidden = day === tod;
+    if (!signedIn()) {
+      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to see your Health</strong>Your Apple Health readings are private to you. Signing in with Face ID reads them from your own iPhone, and means you can erase them from a lost phone (aOS → Account → Lost a phone?).'
+        + '<button class="btn" type="button" id="hSignin">Sign in with Face ID</button></div>';
+      return;
+    }
+    const nav = '<div class="navrow" style="--i:0"><button class="iconbtn glass" type="button" data-hday="-1" aria-label="Day before">' + ICON.chevL + '</button><span class="lbl">'
+      + esc((day === tod ? 'Today · ' : day === addDays(tod, -1) ? 'Yesterday · ' : '') + fmt(day, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(day) ? undefined : 'numeric' }))
+      + '</span><button class="iconbtn glass" type="button" data-hday="1" aria-label="Day after"' + (day >= tod ? ' disabled' : '') + '>' + ICON.chevR + '</button></div>';
+    const any = data.health.some(x => x.m && Object.keys(x.m).some(k => HL.get(k) && num(x.m[k]) != null));
+    if (!any) {
+      const link = ls.json(K.healthLink, null) || {};
+      main.innerHTML = nav + '<div class="empty" id="hEmpty" style="--i:1"><strong>Your Apple Health, here</strong>'
+        + 'Your activity, heart, sleep and vitals, from Apple Health on your iPhone, through the family’s Home Assistant. To start: in the Home Assistant app on your iPhone, turn on the Apple Health sensors you want (Settings › Companion App › Sensors, under Apple Health; they may be under Labs) and allow Health. '
+        + (link.linked === false ? 'Then link your iPhone here, in Fitness: Settings › Steps.' : 'Your iPhone is linked in Fitness (Settings › Steps), so they come in on their own.')
+        + '<button class="btn" type="button" data-hset>' + (link.linked === false ? 'Link your iPhone' : 'Open Settings') + '</button></div>' + healthHint();
+      return;
+    }
+    const v = k => hval(day, k);
+    let list = '';
+    for (const c of HL.CATS) {
+      const rows = HL.METRICS.filter(m => m.cat === c.id && v(m.key) != null).map(m => {
+        const val = v(m.key), p = HL.parts(m.key, val, hunit(m.key)), avg = havg(m.key, addDays(day, -7), addDays(day, -1));
+        let trend = '';
+        if (avg != null) {
+          const d = HL.round(m.key, val - avg), pct = avg ? Math.round(Math.abs(val - avg) / avg * 100) : 0;
+          trend = '7-day avg ' + HL.parts(m.key, avg, hunit(m.key)).v + (d && pct ? ' · ' + (d > 0 ? '↑' : '↓') + pct + '%' : '');
+        }
+        const said = m.label + ': ' + HL.fmt(m.key, val, hunit(m.key)) + (avg != null ? ', 7-day average ' + HL.fmt(m.key, avg, hunit(m.key)) : '');
+        return '<div class="hrow" data-k="' + m.key + '" role="group" aria-label="' + esc(said) + '"><span class="ht">' + esc(m.label) + (trend ? '<small>' + esc(trend) + '</small>' : '') + '</span>'
+          + spark(day, m.key) + '<span class="hv">' + esc(p.u === '%' ? p.v + '%' : p.v) + (p.u && p.u !== '%' ? '<small>' + esc(p.u) + '</small>' : '') + '</span></div>';
+      });
+      if (rows.length) list += '<p class="sechead">' + esc(c.name) + '</p><div class="rgroup hcard" data-cat="' + c.id + '">' + rows.join('') + '</div>';
+    }
+    main.innerHTML = nav + '<div class="hlist" style="--i:1">' + (list || '<div class="dempty rgroup">Nothing from Apple Health ' + (day === tod ? 'yet today' : 'on this day') + '.</div>') + '</div>' + healthHint();
+  }
+  const healthHint = () => '<p class="hint">From Apple Health on your iPhone, through the family’s Home Assistant, which keeps 10 days: only you see yours. '
+    + (lastSyncAt ? 'Kept in the family’s Google Sheet, where only you see yours; this phone keeps the last 90 days.' : 'Kept on this phone until it syncs with the family’s Google Sheet.') + ' Sleep is the night that ended that morning.</p>';
+  main.addEventListener('click', async e => {
+    if (st.view !== 'health') return;
+    if (e.target.closest('#hSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to see your Apple Health.')) { render(); loadHealth(true); } return; }
+    const nd = e.target.closest('[data-hday]');
+    if (nd) { const d = addDays(st.healthDay, +nd.dataset.hday); if (d <= today()) { st.healthDay = d; render(); } return; }
+    if (e.target.closest('[data-hset]')) $('setBtn').click();
+  });
+  // A sideways swipe moves a day, as on Meds.
+  let hx = null, hy = 0;
+  main.addEventListener('touchstart', e => { if (st.view === 'health' && e.touches.length === 1 && e.target.closest('.hlist')) { hx = e.touches[0].clientX; hy = e.touches[0].clientY; } else hx = null; }, { passive: true });
+  main.addEventListener('touchend', e => {
+    if (hx === null) return;
+    const t = e.changedTouches[0], dx = t.clientX - hx, dy = t.clientY - hy; hx = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { const d = addDays(st.healthDay, dx < 0 ? 1 : -1); if (d <= today()) { st.healthDay = d; render(); animateIn(main); } }
+  });
+  // At most every 10 minutes: the days since the last fetch (two at least: last night's sleep and
+  // yesterday's totals settle in the morning), the last 10 the first time.
+  const healthSt = { at: 0, busy: false };
+  async function loadHealth(force) {
+    if (!token() || healthSt.busy || !navigator.onLine) return;
+    const link = ls.json(K.healthLink, null) || {};
+    if (!force && Date.now() - healthSt.at < 10 * 60e3) return;
+    if (!force && link.linked === false && Date.now() - (link.at || 0) < 6 * 3600e3) return;   // not linked: look again now and then
+    healthSt.busy = true; healthSt.at = Date.now();
+    try {
+      const gap = link.last && ISO.test(link.last) ? Math.round((noon(today()) - noon(link.last)) / 864e5) : 99;
+      const r = await fapi('health?days=' + Math.max(2, Math.min(10, gap + 1)));
+      ls.set(K.healthLink, JSON.stringify({ linked: true, at: Date.now(), last: today() }));
+      if (r.units && typeof r.units === 'object') ls.set(K.healthUnits, JSON.stringify(r.units));
+      takeHealth(r.days);
+    } catch (e) {
+      if (e.message === 'not-linked') { ls.set(K.healthLink, JSON.stringify({ linked: false, at: Date.now() })); if (st.view === 'health' && !st.day) render(); }
+    } finally { healthSt.busy = false; }
+  }
+  // { date: { key: value } } from the server, into the days kept here. Health Steps also go to the
+  // day's steps (as your iPhone's: a number you typed in still wins).
+  function takeHealth(days) {
+    if (!days || typeof days !== 'object') return;
+    const from = pruneFrom(), max = addDays(today(), 1), pts = [];
+    let changed = false;
+    for (const [d, m] of Object.entries(days)) {
+      if (!ISO.test(d) || d > max || (from && d < from) || !m || typeof m !== 'object') continue;
+      const got = {};
+      for (const [k, raw] of Object.entries(m)) { const x = HL.get(k) ? HL.round(k, raw) : null; if (x != null) got[k] = x; }
+      if (!Object.keys(got).length) continue;
+      if (got.steps != null) pts.push([noon(d).getTime(), got.steps]);
+      const x = healthOn(d);
+      if (!x) { data.health.push({ id: d, date: d, m: got }); changed = true; continue; }
+      if (Object.keys(got).some(k => x.m[k] !== got[k])) { x.m = Object.assign({}, x.m, got); changed = true; }
+    }
+    if (changed) { save(); if (!st.day && (st.view === 'health' || st.view === 'analysis')) render(); }
+    if (pts.length) takeSteps(pts);
+  }
+
+  // ---------------------------------------------------------------------
   // Steps: typed in on a day, or read from your own iPhone. The Home Assistant
   // app's Steps sensor counts the phone's own steps since midnight; the
   // family's Home Assistant keeps 10 days of it, and ../fitness/api reads
@@ -970,12 +1123,15 @@ if (window.top !== window.self) {
   let lastSyncAt = +ls.get(K.syncAt, 0) || 0;
   // Synced with the family Sheet at least once: from then on the phone keeps 90 days of dated items.
   let synced = ls.get(K.health, '') === 'family';
-  const KEEP_DAYS = 90, DATED = ['logs', 'doses', 'steps'];
+  const KEEP_DAYS = 90, DATED = ['logs', 'doses', 'steps', 'health'];
   const pruneFrom = () => synced ? addDays(today(), -(KEEP_DAYS - 1)) : null;
+  // The Sheet's script keeps Health from its VERSION 4: until it answers with it, Health stays whole on the phone.
+  let sheetKeepsHealth = ls.get(K.sheetKeepsHealth, '') === '1';
   function prune() {
     const from = pruneFrom(); if (!from) return;
     let n = 0;
     for (const kind of DATED) {
+      if (kind === 'health' && !sheetKeepsHealth) continue;
       const arr = data[kind];
       for (let i = arr.length - 1; i >= 0; i--) if (arr[i].date < from && !older.has(arr[i].date)) { shadow.delete(kind + ':' + arr[i].id); arr.splice(i, 1); n++; }   // no grave: the Sheet keeps it
     }
@@ -1045,6 +1201,11 @@ if (window.top !== window.self) {
     data.meds = mergeKind('meds', data.meds, (res.meds || []).filter(okMed));
     data.doses = mergeKind('doses', data.doses.filter(recent), (res.doses || []).filter(okDose).filter(recent));
     data.steps = mergeKind('steps', data.steps.filter(recent), (res.steps || []).filter(okStep).filter(recent));
+    // Health: only from a script that keeps it (VERSION 4); an older one leaves it as it is here
+    if (Array.isArray(res.health)) {
+      if (!sheetKeepsHealth) { sheetKeepsHealth = true; ls.set(K.sheetKeepsHealth, '1'); }
+      data.health = mergeKind('health', data.health.filter(recent), res.health.filter(okHealth).filter(recent));
+    }
     initShadow(); persist(); prune();
     if (localNewer) syncAgain = true;
     render();
@@ -1064,7 +1225,7 @@ if (window.top !== window.self) {
     let ok = false;
     try {
       track(); persist();
-      const res = await SH().sync('fitness', { action: 'sync', v: 3, window: KEEP_DAYS, today: today(), logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, graves }, { ask: loud });
+      const res = await SH().sync('fitness', { action: 'sync', v: 4, window: KEEP_DAYS, today: today(), logs: data.logs, exercises: data.exercises, meds: data.meds, doses: data.doses, steps: data.steps, health: data.health, graves }, { ask: loud });
       if (res.app && res.app !== APP) throw new Error('not-json');
       if (!res.aos) throw new Error('old-script');
       lastSyncAt = Date.now(); ls.set(K.syncAt, String(lastSyncAt));
@@ -1093,7 +1254,7 @@ if (window.top !== window.self) {
       const res = await SH().sync('fitness', { action: 'range', from, to: to < floor ? to : addDays(floor, -1) });
       for (let d = from; d <= to && d < floor; d = addDays(d, 1)) older.add(d);
       let n = 0;
-      for (const [kind, ok] of [['logs', okLog], ['doses', okDose], ['steps', okStep]]) for (const x of (res[kind] || []).filter(ok)) {
+      for (const [kind, ok] of [['logs', okLog], ['doses', okDose], ['steps', okStep], ['health', okHealth]]) for (const x of (res[kind] || []).filter(ok)) {
         if (data[kind].some(y => y.id === x.id) || graves[kind + ':' + x.id]) continue;
         data[kind].push(x); shadow.set(kind + ':' + x.id, JSON.stringify(Object.assign({}, x, { updated: undefined }))); n++;
       }
@@ -1139,7 +1300,8 @@ if (window.top !== window.self) {
     if (phones.err && phones.state === 'ok') link += row('', phones.err);
     const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
     box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>'
-      + '<p class="hint">From the Home Assistant app on your iPhone: its Steps sensor counts the phone’s own steps (not an Apple Watch’s). Turn it on in the Home Assistant app: Settings → Companion App → Sensors → Steps, and allow Motion &amp; Fitness. Only you see your steps. You can always type a day’s steps in instead.</p>' + links + '</div>'
+      + '<p class="hint">From the Home Assistant app on your iPhone: its Steps sensor counts the phone’s own steps (not an Apple Watch’s). Turn it on in the Home Assistant app: Settings → Companion App → Sensors → Steps, and allow Motion &amp; Fitness. With its Apple Health sensors on too (Health Steps counts an Apple Watch’s), Fitness reads those, and shows the rest on Health. Only you see your steps. You can always type a day’s steps in instead.</p>' + links + '</div>'
+      + ipsySetting()
       + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
       + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase<span class="sub">Erases Fitness’s log, Meds and Steps from this phone, and signs out. Sync to the Google Sheet first.</span></span></button>'
       + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?<span class="sub">How to erase aOS from it, step by step, in aOS</span></span></a></div></div>';
@@ -1149,8 +1311,9 @@ if (window.top !== window.self) {
     let b;
     if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
     if (e.target.closest('[data-pretry]')) { loadPhones(); return; }
+    if (e.target.closest('#stIpsy')) { await setIpsy(!ipsyOn()); renderSetMore(); return; }
     const linkTo = async (body, route) => {
-      try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); await loadPhones(); if (route === 'link') { loadSteps(true); toast('Linked. Your steps come in on their own.'); } }
+      try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); ls.set(K.healthLink, ''); await loadPhones(); if (route === 'link') { loadHealth(true).finally(() => loadSteps(true)); toast('Linked. Your steps come in on their own.'); } }
       catch (x) { phones.err = PHONE_ERR[x.message] || 'Couldn’t do that (' + x.message + ').'; renderSetMore(); }
     };
     if ((b = e.target.closest('[data-plink]'))) return linkTo({ entity: b.dataset.plink }, 'link');
@@ -1266,12 +1429,13 @@ if (window.top !== window.self) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (st.medOnToday || st.medDay > today()) st.medDay = today();   // left on today, back the next day: today again
+    if (st.healthOnToday || st.healthDay > today()) st.healthDay = today();
     if (!st.day) render();
     if (Date.now() - lastSyncAt > 30000) sync(false);
-    loadSteps(false);
+    loadHealth(false).finally(() => loadSteps(false));   // Health first: it finds Health Steps, which Steps then reads
   });
-  addEventListener('aos:account', e => { if (e.detail) { if (st.view === 'meds') render(); loadSteps(true); handOver().then(() => sync(false)); } });
-  setTimeout(() => loadSteps(false), 1200);
+  addEventListener('aos:account', e => { if (e.detail) { if (st.view === 'meds' || st.view === 'health') render(); loadHealth(true).finally(() => loadSteps(true)); handOver().then(() => sync(false)); } });
+  setTimeout(() => loadHealth(false).finally(() => loadSteps(false)), 1200);
   window.addEventListener('online', () => sync(false));
   setTimeout(() => handOver().finally(() => sync(false)), 600);
   // "Updated" pill, once, when a new version arrives (as in Notes and Calendar).
@@ -1288,6 +1452,42 @@ if (window.top !== window.self) {
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+  // Ipsy (../home/ipsy.js), the helper you chat with: off until you turn it on in Settings (this
+  // phone), and signed in only. It looks for patterns in your own days with ipsy-tools.js, which
+  // only reads; Claude answers through ../fitness/api (ipsy), with no web search.
+  function ipsyOn() { return ls.get(KEY + '-ipsy', '') === '1'; }
+  function ipsySetting() {
+    return '<div class="field"><p class="label">Ipsy</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stIpsy" aria-checked="' + ipsyOn() + '"><span class="grow">Ask Ipsy about your patterns'
+      + '<span class="sub">Only the days and stats a question needs go to Claude through aOS; Anthropic doesn’t train on them.' + (signedIn() ? '' : ' Signed in only.') + '</span></span><span class="switch" aria-hidden="true"></span></button></div></div>';
+  }
+  async function setIpsy(on) {
+    const A = window.AllisonOS && AllisonOS.account;
+    if (on && !signedIn() && !(A && await A.prompt('Sign in to ask Ipsy about your patterns.'))) return;
+    ls.set(KEY + '-ipsy', on ? '1' : '');
+    if (!on) { const n = document.getElementById('ipsyNew'); if (n) n.click(); lsDel('ipsy.fitness.chat'); }   // off: its chat goes too
+    placeIpsy();
+  }
+  let ipsy = null;
+  function placeIpsy() {
+    const slot = document.querySelector('.dock > .ipsyslot'), on = ipsyOn() && signedIn() && !!slot;
+    document.documentElement.classList.toggle('ipsy-on', on);
+    if (slot) slot.hidden = !on;
+    if (!on || ipsy || !window.AllisonOS || !AllisonOS.ipsy || !window.FitnessIpsy) return;
+    ipsy = AllisonOS.ipsy.mount({
+      app: 'fitness', name: 'Fitness', endpoint: '../fitness/api/ipsy', headers: { 'X-Fitness': '1' }, slot,
+      ...window.FitnessIpsy({
+        data, today, addDays, weekStartOf, groupName, pruneFrom, groups: GROUPS.map(g => ({ id: g.id, name: g.name })),
+        // older days from the Sheet (as the week and Analysis fetch them): true once they're all here
+        older: async (from, to) => { const floor = pruneFrom(); if (!floor || from >= floor) return true; await loadOlder(from, to); for (let d = from; d <= to && d < floor; d = addDays(d, 1)) if (!older.has(d)) return false; return true; },
+        screen: () => st.day ? 'the day ' + st.day + ', open' : (VIEWS.find(v => v.id === st.view) || { name: st.view }).name
+          + (st.view === 'week' ? ', the week of ' + st.week : st.view === 'analysis' ? ', ' + PERIODS[st.period].words + ' against ' + PERIODS[st.period].before : st.view === 'meds' ? ', ' + st.medDay : ''),
+      }),
+    });
+  }
+  placeIpsy();
+  addEventListener('aos:account', placeIpsy);
+
   // For the tests (fitness/scripts/app-test.mjs) only.
-  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises, loadSteps, takeSteps, pruneFrom, openMed };
+  window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises, loadSteps, takeSteps, pruneFrom, openMed,
+    loadHealth, takeHealth, healthDays: (from, to) => data.health.filter(x => x.date >= from && x.date <= to).sort((a, b) => a.date.localeCompare(b.date)) };
 })();
