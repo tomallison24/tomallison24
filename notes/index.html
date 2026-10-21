@@ -335,7 +335,6 @@ textarea.plain{resize:none;min-height:56px;font-size:15px;color:var(--muted)}
 .rowbtn:first-child{border-top:0}
 .rowbtn:active{background:var(--fill)}
 .rowbtn .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
-.rowbtn .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
 .danger{color:var(--danger)}
 .hint{font-size:12px;line-height:1.55;color:var(--faint);margin:0 4px}
 .tagrow{display:flex;align-items:center;gap:8px;padding:10px 12px 10px 16px;border-top:1px solid var(--hair-2)}
@@ -1036,7 +1035,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="field">
           <p class="label">Tags</p>
           <div class="box glass"><div class="tagedit" id="edTags"><input id="edTagInput" list="tagList" placeholder="Add tag" aria-label="Add tag" enterkeyhint="done"></div></div>
-          <p class="hint">Press Return to add, or type #tag in the note.</p>
         </div>
         <div class="field">
           <p class="label">Nudge me</p>
@@ -1061,7 +1059,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           <div class="rgroup glass"><button class="swrow" id="edOnly" type="button" role="switch" aria-checked="false" aria-describedby="edOnlyHint"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg><span class="grow">Just me</span><span class="switch" aria-hidden="true"></span></button></div>
           <p class="hint" id="edOnlyHint"></p>
           <div class="rgroup glass"><button class="swrow" id="edPrivate" type="button" role="switch" aria-checked="false" aria-describedby="edPrivHint"><svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg><span class="grow">Private</span><span class="switch" aria-hidden="true"></span></button></div>
-          <p class="hint" id="edPrivHint"></p>
+          <p class="hint" id="edPrivHint">Hides this note from Ipsy.</p>
         </div>
         <button class="btn quiet danger" id="edDelete" type="button">Delete note</button>
       </div>
@@ -1114,7 +1112,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="field" id="tdAisleField" hidden>
           <p class="label">Section</p>
           <div class="opts" id="tdAisle" role="radiogroup" aria-label="Store section"></div>
-          <p class="hint">Choosing one teaches the list: next time this item goes there by itself.</p>
         </div>
         <div class="field">
           <p class="label">Tags</p>
@@ -1145,7 +1142,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="field"><p class="label">Color</p><div class="swatches" id="lsColors" role="radiogroup" aria-label="List color"></div></div>
         <div class="field">
           <div class="rgroup glass"><button class="swrow" id="lsGrocery" type="button" role="switch" aria-checked="false"><svg viewBox="0 0 24 24"><path d="M3.4 4.4h2.2l2.3 10.4a1.6 1.6 0 0 0 1.6 1.2h8.2a1.6 1.6 0 0 0 1.6-1.2l1.3-6.2H6.6"/><circle cx="10" cy="19.6" r="1.3"/><circle cx="17.4" cy="19.6" r="1.3"/></svg><span class="grow">Sort into store sections</span><span class="switch" aria-hidden="true"></span></button></div>
-          <p class="hint">Groups the list by section (Produce, Meat, Dairy & Eggs…) in supermarket order. On by itself for lists called Groceries or Shopping.</p>
+          <p class="hint">Groups items by store section, in supermarket order.</p>
         </div>
         <div class="field">
           <div class="rgroup glass"><button class="swrow" id="lsOnly" type="button" role="switch" aria-checked="false" aria-describedby="lsOnlyHint"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/></svg><span class="grow">Just me</span><span class="switch" aria-hidden="true"></span></button></div>
@@ -1167,18 +1164,17 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" data-share="link">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M10.2 13.8a3.9 3.9 0 0 0 5.5 0l3.2-3.2a3.9 3.9 0 0 0-5.5-5.5l-1.1 1.1"/><path d="M13.8 10.2a3.9 3.9 0 0 0-5.5 0l-3.2 3.2a3.9 3.9 0 0 0 5.5 5.5l1.1-1.1"/></svg></span>
-            <span>Share link<span class="sub">Send by Messages or email. They copy it, open Notes and tap Paste.</span></span>
+            <span>Share link</span>
           </button>
           <button class="rowbtn" type="button" data-share="file">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M13.4 3H7.6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8.8a3 3 0 0 0 3-3V8.6z"/><path d="M13.4 3v3.6a2 2 0 0 0 2 2h4"/></svg></span>
-            <span>Save as a file<span class="sub">Save to iCloud Drive or Google Drive. They open it with Import.</span></span>
+            <span>Save as a file</span>
           </button>
           <button class="rowbtn" type="button" data-share="copy">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="12.4" height="12.4" rx="3"/><path d="M15.6 8.4V6.2a3 3 0 0 0-3-3H6.2a3 3 0 0 0-3 3v6.4a3 3 0 0 0 3 3h2.2"/></svg></span>
             <span>Copy text</span>
           </button>
         </div>
-        <p class="hint">They get their own copy. Later edits don't sync.</p>
       </div>
     </div>
   </div>
@@ -1191,7 +1187,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheethead"><h2 id="tgLbl">Tags</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="rgroup glass" id="tagRows"></div>
-        <p class="hint">Tags are shared by notes and reminders. Rename to update everything; rename onto an existing tag to merge. Deleting a tag keeps the items.</p>
       </div>
     </div>
   </div>
@@ -1206,7 +1201,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="field">   <!-- Design: Vintage or Standard, at once (app.js, ../home/design.js) -->
           <p class="label">Design</p>
           <div class="rgroup glass" id="bkDesign"></div>
-          <p class="hint">Just on this phone, and at once.</p>
         </div>
         <div class="field">
           <p class="label">Backup and sync</p>
@@ -1215,15 +1209,14 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="bkExport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Back up everything<span class="sub">One file with all notes, lists and reminders. Save it to iCloud Drive or Google Drive.</span></span>
+            <span>Back up everything</span>
           </button>
           <button class="rowbtn" type="button" id="bkImport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Import a file<span class="sub">A backup, or a note or reminder someone saved for you</span></span>
+            <span>Import a file</span>
           </button>
         </div>
         <input type="file" id="bkFile" accept=".json,application/json" hidden>
-        <p class="hint">This phone keeps its own copy. Signed in, it syncs with the family’s Google Sheet; until then, clearing the browser’s data deletes it, so back up now and then.</p>
       </div>
     </div>
   </div>
@@ -1236,7 +1229,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Not now"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button><h2 id="imLbl">Add shared items?</h2><div class="acts"><button class="iconbtn okbtn" id="imAdd" type="button" aria-label="Add"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><ul class="implist" id="imList"></ul></div>
-        <p class="hint" id="imHint">They'll be added as new copies. Nothing you already have is changed.</p>
+        <p class="hint" id="imHint" hidden></p>
         <button class="btn quiet" data-close type="button">Not now</button>
       </div>
     </div>
@@ -1262,7 +1255,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="lkLbl">Add it in your Notes app</h2></div>
       <div class="sheetbody">
-        <p class="hint">This opened in Safari, which keeps separate notes from the Notes app on your Home Screen. Copy the link, open Notes from your Home Screen, and tap the clipboard button next to the pencil.</p>
+        <p class="hint">Copy the link, then paste it in Notes on your Home Screen.</p>
         <button class="btn" id="lkCopy" type="button">Copy link</button>
         <input class="linkbox" id="lkLink" readonly hidden aria-label="Share link">
         <button class="btn quiet" id="lkHere" type="button">Add it here in Safari instead</button>
@@ -1307,7 +1300,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheethead"><h2 id="tdyLbl">Tidy up</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div id="tidyBody"></div>
-        <p class="hint">Deleted notes go to Trash for 30 days. Every change can be undone from the message at the bottom.</p>
       </div>
     </div>
   </div>
@@ -1330,7 +1322,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
             <input class="plain" id="puServer" type="url" inputmode="url" placeholder="https://notes-push.….workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false">
           </div>
           <button class="btn" id="puOn" type="button">Turn on notifications</button>
-          <p class="hint">The server is set up once (steps in the Notes README, “Notifications”). Signed in, each phone turns notifications on for itself.</p>
         </div>
         <div id="puOnBox" class="field" hidden>
           <p class="label">Lists that alert this phone</p>
@@ -1338,11 +1329,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           <div class="rgroup glass"><button class="swrow" id="puNudges" type="button" role="switch" aria-checked="true"><svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg><span class="grow">Note nudges</span><span class="switch" aria-hidden="true"></span></button></div>
           <p class="label">Reminders with a date but no time</p>
           <div class="box glass"><div class="inrow"><span style="flex:1;font-size:15px">Alert at</span><input type="time" id="puMorning" value="09:00" aria-label="Alert time for reminders without a time"></div></div>
-          <p class="hint">Each reminder has its own Alert (at the time, or before it) in its details. Other phones choose their own lists.</p>
           <div class="rgroup glass">
             <button class="rowbtn" type="button" id="puTest">
               <span class="ic"><svg viewBox="0 0 24 24"><path d="M6 10.8a6 6 0 0 1 12 0v3.4a3.6 3.6 0 0 0 1.1 2.6l.2.2a1 1 0 0 1-.7 1.7H5.4a1 1 0 0 1-.7-1.7l.2-.2A3.6 3.6 0 0 0 6 14.2z"/><path d="M9.9 20.9a2.4 2.4 0 0 0 4.2 0"/></svg></span>
-              <span>Send a test<span class="sub">A notification to this phone, now</span></span>
+              <span>Send a test</span>
             </button>
           </div>
           <button class="btn danger" id="puOffBtn" type="button">Turn off on this phone</button>

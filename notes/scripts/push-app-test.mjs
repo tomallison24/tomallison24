@@ -125,7 +125,7 @@ await upcoming();
 ok('bell in the Reminders header, no dot while off', await page.isVisible('#remBellBtn') && await page.isHidden('#remBellDot'));
 ok('reminder rows show the clock while notifications are off', await page.locator('.todo').first().locator('.tchip.bare svg circle').count() === 1);
 await page.click('#remBellBtn');
-ok('the sheet explains, and asks for the server address', (await page.textContent('#puStatus')).includes('even with Notes closed') && await page.isVisible('#puServer'));
+ok('the sheet says what it does in a line, and asks for the server address', (await page.textContent('#puStatus')) === 'Alerts this phone when a reminder or nudge is due.' && await page.isVisible('#puServer'));
 await page.fill('#puServer', '');
 await page.click('#puOn');
 ok('no address: says what to enter, sends nothing', (await page.textContent('#puStatus')).includes('workers.dev') && !calls.some(c => c.to === 'push'));

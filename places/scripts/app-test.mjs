@@ -127,7 +127,7 @@ const toList = async () => { if (await page.isVisible('#map')) { await page.clic
 
 ok('opens on the map', await page.isVisible('#map') && (await page.getAttribute('#viewBtn', 'aria-label')) === 'Show the list');
 await toList();
-ok('starts empty, with a hint how to add', (await page.textContent('#list')).includes('Tap + to add'));
+ok('starts empty, with a short line how to add', (await page.textContent('#list')).includes('Tap + to add one.'));
 
 // ---- add by search ----
 await page.click('#fab');
@@ -192,7 +192,7 @@ ok('Been shows its stars, price and the day you went', r.length === 1 && r[0].in
 // ---- visits ----
 await page.click('#list .row:has-text("Rioja")'); await page.waitForTimeout(300);
 await page.fill('#plDate', '2026-09-12'); await page.dispatchEvent('#plDate', 'change');
-ok('changing Went on replaces that visit rather than adding one', (await page.textContent('#plDateHint')).startsWith('The day you went'));
+ok('changing Went on replaces that visit rather than adding one', await page.isHidden('#plDateHint'));
 await page.click('#plAgain');
 ok('Went again today keeps the earlier visit', (await page.inputValue('#plDate')) === today && (await page.textContent('#plDateHint')).includes('Been 2 times') && (await page.textContent('#plDateHint')).includes('Sep 12'), await page.textContent('#plDateHint'));
 await page.click('#plSave'); await page.waitForTimeout(300);

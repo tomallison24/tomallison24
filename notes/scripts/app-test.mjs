@@ -487,7 +487,7 @@ await step('Settings > Design: the first section of Settings; Standard and back,
   assert.equal(await page.textContent('#bkLbl'), 'Settings');
   assert.equal(await page.$eval('#bkBody > :first-child .label', e => e.textContent), 'Design', 'Design is the first section');
   assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false');
-  assert.match(await page.textContent('#bkBody > :first-child .hint'), /Just on this phone, and at once/);
+  assert.equal(await page.$('#bkBody > :first-child .hint'), null, 'no explanation under Design');
   await shot(page, 'settings-vintage-light');
   await page.click('#bkDesign [data-design="glass"]'); await page.waitForTimeout(250);
   assert.equal(await look(page), 'glass', 'Standard at once');
@@ -604,7 +604,7 @@ await step('Ella\'s phone gets the family\'s notes, lists and reminders; Just me
   await ella.page.waitForSelector('#editor:not([hidden])');
   assert.equal(await ella.page.getAttribute('#edOnly', 'aria-checked'), 'false');
   assert.ok(await ella.page.isDisabled('#edOnly'), 'Tom\'s to switch, not hers');
-  assert.match(await ella.page.textContent('#edOnlyHint'), /Shared with the family\. Only the person who wrote it can make it Just me\./);
+  assert.match(await ella.page.textContent('#edOnlyHint'), /^Only the person who wrote it can make it Just me\.$/);
   await ella.page.click('#edDone');
 });
 
@@ -626,12 +626,12 @@ await step('Just me on a note: Ella\'s phones only; marked on it; Private stays 
   await p.waitForSelector('#editor:not([hidden])');
   await p.fill('#edTitle', 'Gift ideas'); await p.fill('#edBody', 'A kite for Tom');
   assert.ok(!(await p.isDisabled('#edOnly')), 'her own: hers to switch');
-  assert.match(await p.textContent('#edOnlyHint'), /^Shared with the family\. Just me keeps it to you\./);
+  assert.equal(await p.textContent('#edOnlyHint'), 'Only you see it, not the rest of the family.');
   await p.click('#edOnly');
   assert.equal(await p.getAttribute('#edOnly', 'aria-checked'), 'true');
-  assert.match(await p.textContent('#edOnlyHint'), /^Only you see it\./);
+  assert.equal(await p.textContent('#edOnlyHint'), 'Only you see it, not the rest of the family.', 'the same one sentence, on or off');
   assert.equal(await p.getAttribute('#edPrivate', 'aria-checked'), 'false', 'not Private: that only hides it from Ipsy');
-  assert.equal(await p.textContent('#edPrivHint'), 'Private hides this note from Ipsy.');
+  assert.equal(await p.textContent('#edPrivHint'), 'Hides this note from Ipsy.');
   await shot(p, 'just-me-note');
   await p.click('#edDone');
   await sentBy('ella', c => c.notes.some(n => n.title === 'Gift ideas' && n.only === true));

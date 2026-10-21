@@ -135,12 +135,11 @@
     if (!list.length) {
       const any = places.some(p => p.status === st.tab);
       h = '<div class="empty"><strong>' + (any ? 'Nothing matches' : st.tab === 'want' ? 'Nowhere yet' : 'Nothing rated yet') + '</strong>'
-        + (any ? 'Try another word or tag.' : st.tab === 'want' ? 'Tap + to add a place you’d like to go: search, use where you are, or paste a link from Apple Maps.'
-          : 'When you’ve been somewhere, open it and tap Been, then give it stars.') + '</div>';
+        + (any ? 'Try another word or tag.' : st.tab === 'want' ? 'Tap + to add one.' : 'Open a place and tap Been.') + '</div>';
     } else if (st.tab === 'want' && st.sort.want === 'soon') {
       const t = today(), soon = list.filter(p => p.planned && p.planned >= t), some = list.filter(p => !p.planned), gone = list.filter(p => p.planned && p.planned < t);
       for (const [label, g] of [['Coming up', soon], ['Someday', some], ['Date passed', gone]]) if (g.length) h += group(label, g);
-    } else h = group(st.sort[st.tab] === 'near' && !st.here ? 'Newest (tap Nearest again once location is allowed)' : SORTS[st.tab].find(s => s[0] === st.sort[st.tab])[1], list);
+    } else h = group(st.sort[st.tab] === 'near' && !st.here ? 'Newest' : SORTS[st.tab].find(s => s[0] === st.sort[st.tab])[1], list);
     const finding = st.q.trim().length >= 3 && !st.q.trim().startsWith('#') && st.found && st.found.length;
     if (finding && !list.length) h = '<p class="hint" style="margin:2px 10px">None of your places match.</p>';
     if (finding) h += '<section class="group"><h2><span>Businesses' + (st.here ? ', nearest first' : '') + '</span><span>' + st.found.length + '</span></h2>' + st.found.map(foundRow).join('') + '</section>';
@@ -510,8 +509,8 @@
     slide($('plPrice'), $('plPrice').querySelector('[aria-checked="true"]'), 'plPrice');   // redrawn: the thumb slides on from the last price (none chosen: it hides)
     $('plDateLbl').textContent = been ? 'Went on' : 'Planned for';
     const others = been ? p.visits.filter(v => v !== p.visited) : [];
-    $('plDateHint').textContent = been ? (others.length ? 'Been ' + (others.length + 1) + ' times. Before that: ' + others.map(fmtDate).join(', ') + '.' : 'The day you went. Been is sorted most recent first.')
-      : 'An event or a booking? Put its date here. Want to go is sorted soonest first.';
+    $('plDateHint').textContent = others.length ? 'Been ' + (others.length + 1) + ' times. Before that: ' + others.map(fmtDate).join(', ') + '.' : '';
+    $('plDateHint').hidden = !others.length;
     $('plAgain').hidden = !been || p.visited === today();
     $('plCal').hidden = !p.cal;
     $('plDate').value = (been ? p.visited : p.planned) || '';
@@ -523,7 +522,7 @@
     if (i && i.cuisine) rows.push(['🍴', esc(i.cuisine)]);
     $('plInfoField').hidden = !p.osm;
     $('plInfo').innerHTML = rows.length ? rows.map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + v + '</span></div>').join('')
-      : '<div><span class="v" style="color:var(--muted)">' + (p.infoLoading ? 'Looking it up…' : 'OpenStreetMap has no hours, phone or website for this place. Open in Apple Maps for more.') + '</span></div>';
+      : '<div><span class="v" style="color:var(--muted)">' + (p.infoLoading ? 'Looking it up…' : 'No hours, phone or website.') + '</span></div>';
     $('plMapRow').hidden = p.lat == null && !p.address;
   }
   async function loadInfo(p) {
