@@ -17,14 +17,14 @@ const log = (id, extra) => Object.assign({ id, date: '2026-10-05', group: 'shoul
 
 test('answers a GET with its name; only aOS, with the phrase and who\'s asking, gets in', () => {
   const s = fakeSheet(undefined, SECRET, TOM);
-  assert.deepEqual(s.get(), { ok: true, app: 'allison-fitness-sync', v: 3, aos: true });
+  assert.deepEqual(s.get(), { ok: true, app: 'allison-fitness-sync', v: 4, aos: true });
   assert.equal(s.post({ action: 'sync' }, { key: 'nope', who: 'tom' }).error, 'wrong-secret');
   assert.equal(s.post({ secret: SECRET, action: 'sync' }, {}).error, 'wrong-secret', 'a phone with the phrase in its request, as before aOS, gets nothing');
   assert.equal(s.post({ action: 'sync' }, { key: SECRET }).error, 'who');
   assert.equal(s.post({ action: 'sync' }, { key: SECRET, who: 'a b' }).error, 'who');
   assert.equal(s.post('not json').error, 'bad-request');
   assert.equal(fakeSheet(undefined, 'CHANGE-ME').post({ action: 'sync' }, { key: 'CHANGE-ME', who: 'tom' }).error, 'secret-not-set');
-  assert.deepEqual(s.post({ action: 'ping' }), { ok: true, app: 'allison-fitness-sync', v: 3, aos: true });
+  assert.deepEqual(s.post({ action: 'ping' }), { ok: true, app: 'allison-fitness-sync', v: 4, aos: true });
   // curly quotes and stray spaces in the phrase don't count against you
   assert.equal(fakeSheet(undefined, "tom's-code").post({ action: 'sync', logs: [] }, { key: ' tom’s-code ', who: 'tom' }).ok, true);
 });
@@ -100,7 +100,7 @@ test('Meds and Steps: kept and sent back, with readable Meds, Med list and Steps
     { id: 'd2', med: 'm2', name: 'Ibuprofen', date: '2026-10-06', slot: 'prn', at: 0, updated: T + 2 }];
   const steps = [{ id: '2026-10-05', date: '2026-10-05', n: 8412, src: 'ha', updated: T + 3 }, { id: '2026-10-06', date: '2026-10-06', n: 12000, src: 'you', updated: T + 3 }];
   const r = s.post({ secret: SECRET, action: 'sync', logs: [], exercises: [], meds, doses, steps, graves: {} });
-  assert.equal(r.v, 3);
+  assert.equal(r.v, 4);
   assert.equal(r.meds.length, 3); assert.equal(r.doses.length, 2); assert.equal(r.steps.length, 2);
   assert.deepEqual(s.tab('Meds'), [['Who', 'Date', 'Day', 'Time', 'Name', 'Dose', 'Type', 'When'],
     ['Tom', '2026-10-06', 'Tue', '', 'Ibuprofen', '200 mg', 'Medication', 'As needed'],
@@ -176,6 +176,30 @@ test('two people\'s steps on the same day are each their own (a day\'s steps hav
   const t = s.post({ action: 'sync', graves: {} }, TOM);
   assert.deepEqual(t.steps.map(x => x.n), [8000]); assert.equal(t.graves['steps:2026-10-05'], undefined);
   assert.deepEqual(s.tab('Steps').slice(1).map(r => [r[0], r[3]]), [['Tom', 8000]]);
+});
+
+test('Health: two people\'s days stay their own, a readable Health tab with Who, and the 90 days', () => {
+  const s = fakeSheet(undefined, SECRET);
+  assert.equal(s.tab('Health'), null, 'no Health tab until there is something in it');
+  const day = (date, m, u) => ({ id: date, date, m, updated: T + u });
+  s.post({ action: 'sync', health: [day('2026-10-05', { steps: 8412, sleep: 385, hr_rest: 54, resp: 14.5 }, 1), day('2026-05-01', { steps: 3000 }, 1)], graves: {} }, TOM);
+  s.post({ action: 'sync', health: [day('2026-10-05', { steps: 5100, vo2: 41.2 }, 2)], graves: {} }, ELLA);
+  const t = s.post({ action: 'sync', window: 90, today: '2026-10-20', graves: {} }, TOM);
+  assert.deepEqual(t.health.map(x => [x.id, x.m.steps]), [['2026-10-05', 8412]], 'his own, and only the last 90 days');
+  assert.deepEqual(s.post({ action: 'sync', window: 90, today: '2026-10-20', graves: {} }, ELLA).health.map(x => [x.id, x.m.steps]), [['2026-10-05', 5100]]);
+  assert.deepEqual(s.post({ action: 'range', from: '2026-04-01', to: '2026-05-31' }, TOM).health.map(x => x.id), ['2026-05-01'], 'older days, when asked for');
+  assert.deepEqual(s.post({ action: 'range', from: '2026-04-01', to: '2026-05-31' }, ELLA).health, []);
+  // newest wins, for that person's day only
+  s.post({ action: 'sync', health: [day('2026-10-05', { steps: 9000, sleep: 385, hr_rest: 54, resp: 14.5 }, 5)], graves: {} }, TOM);
+  const h = s.tab('Health');
+  assert.deepEqual(h[0].slice(0, 6), ['Who', 'Date', 'Day', 'Steps', 'Active energy (kcal)', 'Resting energy (kcal)']);
+  assert.equal(h[0].length, 3 + 24);
+  assert.ok(h[0].includes('Asleep (min)') && h[0].includes('VO2 max (mL/kg/min)') && h[0].includes('Resting heart rate (bpm)'));
+  const col = name => h[0].indexOf(name);
+  const rows = h.slice(1).map(r => [r[0], r[1], r[2], r[col('Steps')], r[col('Asleep (min)')], r[col('Resting heart rate (bpm)')], r[col('Respiratory rate (/min)')], r[col('VO2 max (mL/kg/min)')]]);
+  assert.deepEqual(rows, [['Ella', '2026-10-05', 'Mon', 5100, '', '', '', 41.2], ['Tom', '2026-10-05', 'Mon', 9000, 385, 54, 14.5, ''], ['Tom', '2026-05-01', 'Fri', 3000, '', '', '', '']]);
+  assert.ok(s.sheets.get('_health').hidden);
+  assert.ok(s.tab('_health').slice(1).every(r => /^(tom|ella)~/.test(r[0])), 'kept per person');
 });
 
 console.log('\n' + n + ' tests passed');

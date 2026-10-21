@@ -50,7 +50,8 @@ to the app's `sw.js` SHELL):
 
 ## The script's side (every `google-sheet-sync.gs`)
 
-Fitness's is the reference: `fitness/google-sheet-sync.gs` (VERSION 3).
+Fitness's is the reference: `fitness/google-sheet-sync.gs` (VERSION 4: VERSION 3 plus Health, kept per
+person like steps).
 
 - **`doGet`** answers `{ ok, app, v, aos: true }`.
 - **`caller(e)`** reads `e.parameter`, checks `key` against `SECRET` with `same()`, and `who` against
@@ -82,7 +83,7 @@ Fitness's is the reference: `fitness/google-sheet-sync.gs` (VERSION 3).
   - `{ action: 'range', from, to }` answers just the dated kinds' rows from those days (no graves, no
     merge), for looking back.
 - **Readable tabs** start with a **Who** column (`db.people[ownerOf(it)]`).
-- **An id two people can share** (a day's steps in Fitness, whose id is the day; an alcohol-free day
+- **An id two people can share** (a day's steps or Health in Fitness, whose id is the day; an alcohol-free day
   or the goals in Drinks; a show or an episode in Podcasts, whose id comes from its feed) is kept
   per person: the script stores it under `<who>~<id>` (Podcasts: `<who>/<id>`), graves too, and sends
   each phone its own by the plain id. Otherwise the second person's would be refused as someone else's.

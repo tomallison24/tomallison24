@@ -42,7 +42,7 @@ the week, and for each day what you did.
 - **Change or delete**: tap a logged exercise to change it, or its ✕ to
   delete it. Deleting gives you an **Undo**.
 - **+**: logs today's workout from any week.
-- **Week, Analysis and Meds**: pick between them from the pill at the
+- **Week, Analysis, Meds and Health**: pick between them from the pill at the
   bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
   it, and the app remembers the view you were on. See below.
 - **Steps**: each day shows its steps beside it (a shoe and the count, in the
@@ -76,6 +76,60 @@ aOS can erase it (aOS → Account → **Erase aOS from a lost phone**).
 The sums are in `meds.js`, separate from the page, so they can be tested on
 their own.
 
+## Health
+
+A page of its own (**Health** in the view picker) with your own Apple Health
+readings from your iPhone, read through the family's Home Assistant: the Home
+Assistant app (2026.9 and later) has an Apple Health sensor for each, turned on
+one by one. Like Meds, it's for you alone and asks you to sign in first.
+
+- **A day at a time**: today when it opens; the arrows (or a sideways swipe) go
+  back a day, and the calendar button comes back to today.
+- **Four cards**, each reading with its value, its last 7 days as a small line,
+  and the 7-day average before it (with the change, as a percentage). A reading
+  with nothing that day isn't shown, nor a card with none.
+
+| Card | Readings (the sensor's name in the Home Assistant app) | A day's value |
+|---|---|---|
+| Activity | Health Steps, Active Energy, Resting Energy, Walking + Running Distance, Exercise Time, Flights Climbed | the day's total (the last reading before the reset at midnight) |
+| Heart | Heart Rate, Resting Heart Rate, Heart Rate Variability, Walking Heart Rate Average | the day's last reading; Heart Rate, the day's average |
+| Sleep | Sleep Duration, In Bed, Awake, Core Sleep, Deep Sleep, REM Sleep | the night that ended that morning (Apple's sleep day runs 18:00 to 18:00), shown as "6 h 25 m" |
+| Vitals | Blood Oxygen, Respiratory Rate, Body Temperature, Basal Body Temperature, Blood Pressure Systolic and Diastolic, Blood Glucose, VO2 Max | the day's last reading |
+
+  Not the Core Motion sensors (Steps, Distance, Floors Ascended, Pace,
+  Cadence), and not the body measurements or water. The list is
+  `health.js` (each reading's key, name, sensor, unit and how a day is summed),
+  which the page and the server both read.
+- **Steps**: once your phone has **Health Steps**, it is the day's steps
+  (it counts an Apple Watch's too), in place of the motion chip's Steps sensor.
+  A number you type in still wins.
+- **Analysis** adds a **Health** section: your average sleep a night, resting
+  heart rate, heart rate variability and active energy a day over the window,
+  each against the window before (only those with readings).
+
+**Setting it up** (each person, once): in the Home Assistant app on your iPhone,
+**Settings › Companion App › Sensors**, turn on the Apple Health sensors you
+want (they may be under **Labs**) and allow Health when asked. Many read
+"Unavailable" until Health has been allowed, or without an Apple Watch (heart
+rate, sleep stages, blood oxygen); Fitness skips those quietly. Your iPhone must
+be linked in **Settings › Steps** (below); that's how Fitness knows which phone
+is yours. Until anything comes in, the page says how.
+
+**How it's read** (`functions/fitness/api`, `GET health?days=1..10`): only the
+phone linked to you. The server finds that phone's Health sensors once a day
+(an hour while there are none): with an admin's token, the sensors on the same
+device as your Steps sensor, matched by name; otherwise `sensor.<phone>_<name>`,
+kept if Home Assistant has it (`health:<your id>` in the accounts' KV). Then one
+history request for those sensors, summed into days on the family's calendar
+(America/New_York). The phone asks for the days since it last asked (2 at least,
+10 at most; Home Assistant keeps 10).
+
+**Privacy**: the Home Assistant token stays on the server, as for steps; no
+phone holds it. Your readings are in Home Assistant's history (as every sensor
+is), on your phone (`data.health`, the last 90 days once synced), and in the
+owner's family Fitness Sheet (its **Health** tab), where each phone only ever
+gets its own person's rows. Sign out and erase takes them off the phone.
+
 ## Steps
 
 Each day's steps, typed in or read from your own iPhone.
@@ -84,7 +138,8 @@ Each day's steps, typed in or read from your own iPhone.
   never replaced by your iPhone's; clear it and your iPhone's fills it in again.
 - **From your iPhone**: the Home Assistant app on an iPhone has a **Steps**
   sensor: the phone's own motion chip, steps since midnight (it isn't Apple
-  Health, so an Apple Watch's steps aren't in it). Fitness reads it through
+  Health, so an Apple Watch's steps aren't in it; with the Apple Health
+  sensors on, Fitness reads **Health Steps** instead: see Health). Fitness reads it through
   aOS (`../fitness/api/`, `functions/fitness/api`), which holds the Home
   Assistant token, so no phone keeps one that could run the house. Link your
   phone once in **Settings → Steps**: pick it from the list (or type its
@@ -321,7 +376,8 @@ Analysis's comparisons, and `sw.js` is the offline shell.
   updated }], exercises: [{ id, group, name, updated }], meds: [{ id, name,
   dose, kind, slots, days, prn, paused, since, updated }], doses: [{ id, med,
   name, date, slot, at, updated }], steps: [{ id (the date), date, n, src:
-  'ha' | 'you', updated }] }`. The second list holds the exercises you typed in
+  'ha' | 'you', updated }], health: [{ id (the date), date, m: { <health.js key>:
+  value }, updated }] }`. The second list holds the exercises you typed in
   yourself. The step goal is `allison-fitness-v1-step-goal`. For a hold, `reps` is the
   seconds and `timed` is true. Deletions are kept as "graves" in
   `allison-fitness-v1-graves`, so a sync can pass them on. Nothing leaves
@@ -351,8 +407,13 @@ its own person's). The script is [`google-sheet-sync.gs`](google-sheet-sync.gs).
   iPhone or were typed in. These came with version 2 of the script: a Sheet
   set up before then keeps the workouts only, until the owner pastes the
   script in again and deploys a new version.
-- Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps` and `_deleted`
-  tabs, which the app reads back.
+- **Health** (version 4 of the script): a row a day for each person (Who,
+  Date, Day, then a column for each reading: Steps, Active energy (kcal), …,
+  Asleep (min), …, VO2 max (mL/kg/min)). Until the owner pastes in version 4
+  and deploys it, Health stays on the phone (all of it, not just 90 days) and
+  syncs once the script keeps it.
+- Hidden `_logs`, `_exercises`, `_meds`, `_doses`, `_steps`, `_health` and
+  `_deleted` tabs, which the app reads back.
 
 **Kept on the phone for 90 days**: once it has synced, the phone keeps the
 last 90 days of workouts, doses and steps (after each sync; your list of meds
@@ -395,6 +456,8 @@ node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a d
 node fitness/scripts/meds-test.mjs                               # Meds' sums: what's due, taken over 7 and 30 days, streaks; Analysis's steps windows
 node fitness/scripts/steps-api-test.mjs                          # functions/fitness/api: linking your own phone, no one else's, the token kept on the server, the counts
 node fitness/scripts/meds-steps-test.mjs [repo root] [screenshot dir]   # Meds and Steps in the page, the Sheet keeping them and the phone keeping 30 days, Sign out and erase, aOS's Lost a phone?
+node fitness/scripts/health-api-test.mjs                         # functions/fitness/api's health: finding a phone's Health sensors (by device, by guessing), only your own, the day sums
+node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the cards, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps
