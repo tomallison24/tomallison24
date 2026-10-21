@@ -39,6 +39,8 @@
 //   only their own phone's steps. A daily goal, set in Settings.
 // - Once synced, dated items older than 90 days are kept in the Sheet only,
 //   not on the phone; looking back fetches them.
+// - Ipsy, if you turn it on in Settings: ask it about patterns in your own days
+//   (ipsy-tools.js, read-only; Claude through ../fitness/api, no web search).
 
 // Refuse to run inside another page's frame (see Mail's app.js for why).
 if (window.top !== window.self) {
@@ -1140,6 +1142,7 @@ if (window.top !== window.self) {
     const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
     box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>'
       + '<p class="hint">From the Home Assistant app on your iPhone: its Steps sensor counts the phone’s own steps (not an Apple Watch’s). Turn it on in the Home Assistant app: Settings → Companion App → Sensors → Steps, and allow Motion &amp; Fitness. Only you see your steps. You can always type a day’s steps in instead.</p>' + links + '</div>'
+      + ipsySetting()
       + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
       + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase<span class="sub">Erases Fitness’s log, Meds and Steps from this phone, and signs out. Sync to the Google Sheet first.</span></span></button>'
       + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?<span class="sub">How to erase aOS from it, step by step, in aOS</span></span></a></div></div>';
@@ -1149,6 +1152,7 @@ if (window.top !== window.self) {
     let b;
     if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
     if (e.target.closest('[data-pretry]')) { loadPhones(); return; }
+    if (e.target.closest('#stIpsy')) { await setIpsy(!ipsyOn()); renderSetMore(); return; }
     const linkTo = async (body, route) => {
       try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); await loadPhones(); if (route === 'link') { loadSteps(true); toast('Linked. Your steps come in on their own.'); } }
       catch (x) { phones.err = PHONE_ERR[x.message] || 'Couldn’t do that (' + x.message + ').'; renderSetMore(); }
@@ -1287,6 +1291,41 @@ if (window.top !== window.self) {
   })();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: off until you turn it on in Settings (this
+  // phone), and signed in only. It looks for patterns in your own days with ipsy-tools.js, which
+  // only reads; Claude answers through ../fitness/api (ipsy), with no web search.
+  function ipsyOn() { return ls.get(KEY + '-ipsy', '') === '1'; }
+  function ipsySetting() {
+    return '<div class="field"><p class="label">Ipsy</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stIpsy" aria-checked="' + ipsyOn() + '"><span class="grow">Ask Ipsy about your patterns'
+      + '<span class="sub">Only the days and stats a question needs go to Claude through aOS; Anthropic doesn’t train on them.' + (signedIn() ? '' : ' Signed in only.') + '</span></span><span class="switch" aria-hidden="true"></span></button></div></div>';
+  }
+  async function setIpsy(on) {
+    const A = window.AllisonOS && AllisonOS.account;
+    if (on && !signedIn() && !(A && await A.prompt('Sign in to ask Ipsy about your patterns.'))) return;
+    ls.set(KEY + '-ipsy', on ? '1' : '');
+    if (!on) { const n = document.getElementById('ipsyNew'); if (n) n.click(); lsDel('ipsy.fitness.chat'); }   // off: its chat goes too
+    placeIpsy();
+  }
+  let ipsy = null;
+  function placeIpsy() {
+    const slot = document.querySelector('.dock > .ipsyslot'), on = ipsyOn() && signedIn() && !!slot;
+    document.documentElement.classList.toggle('ipsy-on', on);
+    if (slot) slot.hidden = !on;
+    if (!on || ipsy || !window.AllisonOS || !AllisonOS.ipsy || !window.FitnessIpsy) return;
+    ipsy = AllisonOS.ipsy.mount({
+      app: 'fitness', name: 'Fitness', endpoint: '../fitness/api/ipsy', headers: { 'X-Fitness': '1' }, slot,
+      ...window.FitnessIpsy({
+        data, today, addDays, weekStartOf, groupName, pruneFrom, groups: GROUPS.map(g => ({ id: g.id, name: g.name })),
+        // older days from the Sheet (as the week and Analysis fetch them): true once they're all here
+        older: async (from, to) => { const floor = pruneFrom(); if (!floor || from >= floor) return true; await loadOlder(from, to); for (let d = from; d <= to && d < floor; d = addDays(d, 1)) if (!older.has(d)) return false; return true; },
+        screen: () => st.day ? 'the day ' + st.day + ', open' : (VIEWS.find(v => v.id === st.view) || { name: st.view }).name
+          + (st.view === 'week' ? ', the week of ' + st.week : st.view === 'analysis' ? ', ' + PERIODS[st.period].words + ' against ' + PERIODS[st.period].before : st.view === 'meds' ? ', ' + st.medDay : ''),
+      }),
+    });
+  }
+  placeIpsy();
+  addEventListener('aos:account', placeIpsy);
 
   // For the tests (fitness/scripts/app-test.mjs) only.
   window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises, loadSteps, takeSteps, pruneFrom, openMed };
