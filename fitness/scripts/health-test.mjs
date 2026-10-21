@@ -132,10 +132,10 @@ await test('a tile each for Activity, Heart, Sleep and Vitals, with a status dot
   assert.deepEqual(await page.$$eval('#main .hgrid > .htile', els => els.map(e => e.dataset.hcat)), ['activity', 'heart', 'sleep', 'vitals']);
   assert.equal(await page.$('.hrow, .hcard, .spark'), null, 'no list of readings or sparklines on the page itself');
   const tile = async c => page.evaluate(c => { const t = document.querySelector('.htile[data-hcat="' + c + '"]'); return { s: t.dataset.s, word: t.querySelector('.hstat').textContent, big: t.querySelector('.hbig').textContent, sub: (t.querySelector('.hsub') || {}).textContent || '', label: t.getAttribute('aria-label') }; }, c);
-  // Activity: 8,000 steps under the 10,000 goal, 20 min exercise (120 over the week): Check, never Off
+  // Activity: 8,000 steps under the 10,000 goal, 20 min exercise (120 over the week): today isn't over, so "So far", not Check
   const act = await tile('activity');
-  assert.deepEqual([act.s, act.word, act.big], ['watch', 'Check', '8,000steps']);
-  assert.match(act.label, /^Activity, Check\. 8,000 steps, Move 500 of 500 kcal, Exercise 20 of 30 min$/);
+  assert.deepEqual([act.s, act.word, act.big], ['none', 'So far', '8,000steps']);
+  assert.match(act.label, /^Activity, So far\. 8,000 steps, Move 500 of 500 kcal, Exercise 20 of 30 min$/);
   // the rings: Move full (500 of 500), Exercise two thirds
   assert.deepEqual(await page.$$eval('.htile[data-hcat="activity"] .hrings .arc', els => els.map(e => [e.classList[1], e.getAttribute('stroke-dasharray')])), [['mv', '100.0 100'], ['ex', '66.7 100']]);
   // Heart: resting heart rate, within your usual
@@ -232,12 +232,13 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   assert.deepEqual((await page.$$eval('#hBody .hm', els => els.map(e => e.dataset.k))).slice(0, 3), ['steps', 'active_kcal', 'exercise_min'], 'the rings\' readings first');
   assert.equal(await page.$$eval('.hm[data-k="steps"] .bar', els => els.length), 6);
   assert.equal(await page.$$eval('.hm[data-k="steps"] .goal', els => els.length), 1, 'the step goal, a line');
-  assert.match(await page.textContent('.hm[data-k="steps"] .hmh'), /Steps\s*Check\s*8,000steps/);
+  assert.match(await page.textContent('.hm[data-k="steps"] .hmh'), /^Steps\s*8,000steps$/, 'today, short of the goal: no dot yet');
   const svg = page.locator('.hm[data-k="steps"] .hchart svg'), box = await svg.boundingBox();
   await svg.click({ position: { x: box.width * 0.5 / 7, y: box.height / 2 } });
   assert.equal(await page.evaluate(() => __fitness.st.hsel), ymd(day(-6)));
   assert.equal(await page.textContent('#hBody .hwhen'), fmtDay(day(-6)));
   assert.match(await page.textContent('.hm[data-k="steps"] .hmv'), /^8,600steps$/);
+  assert.match(await page.textContent('.hm[data-k="steps"] .hmh'), /Steps\s*Check\s*8,600steps/, 'a day that\'s over, short of the goal: Check');
   assert.equal(await page.$$eval('.hm[data-k="steps"] .bar.on', els => els.length), 1);
   // every chart shows the day picked
   assert.match(await page.textContent('.hm[data-k="active_kcal"] .hmv'), /^560kcal$/);
@@ -276,7 +277,7 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   await page.click('#setSheet .sheethead [data-close]');
   assert.equal(await page.getAttribute('.htile[data-hcat="activity"] .arc.mv', 'stroke-dasharray'), '50.0 100');
   assert.match(await page.getAttribute('.htile[data-hcat="activity"]', 'aria-label'), /8,000 steps, Move 500 of 1000 kcal/);
-  assert.equal(await page.textContent('.htile[data-hcat="activity"] .hstat'), 'Check', 'steps at the 8,000 goal, but 120 min of exercise this week');
+  assert.equal(await page.textContent('.htile[data-hcat="activity"] .hstat'), 'Good', 'steps at the 8,000 goal; the 120 min of exercise this week is not judged till the day is over');
   await ctx.close();
 });
 

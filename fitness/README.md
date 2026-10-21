@@ -109,8 +109,8 @@ tested in `scripts/health-status-test.mjs`):
 | Reading | Good | Check | Off |
 |---|---|---|---|
 | Asleep | 7 h or more | under 7 h | far under your usual |
-| Steps | at your daily goal | under it | never |
-| Exercise | 150 min over the last 7 days | under it | never |
+| Steps | at your daily goal | under it (today: no dot till the day's over, "So far") | never |
+| Exercise | 150 min over the last 7 days | under it (not judged today) | never |
 | Resting heart rate | 60-100, or under 60 when that's your usual | over your usual; under 60 and under your usual | over 100, or far over your usual |
 | Blood pressure (AHA) | under 120/80 | 120-139 or 80-89 | 140+ or 90+, or far over your usual |
 | Blood oxygen | 95-100% | 90-94% | under 90%, or far under your usual |

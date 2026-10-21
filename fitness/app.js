@@ -953,10 +953,10 @@ if (window.top !== window.self) {
   // At a glance: a tile for each of Activity, Heart, Sleep and Vitals, with a status dot (health.js
   // judges each reading against the healthy ranges and your own usual) and one headline; tapping one
   // opens its sheet (hSheet): each reading's chart over 7, 30 or 90 days, with its range shaded.
-  const hopts = day => ({ day, stepGoal: goal(), moveGoal: moveGoal() });
+  const hopts = day => ({ day, today: today(), stepGoal: goal(), moveGoal: moveGoal() });
   const STAT = { good: 'Good', watch: 'Check', bad: 'Off' };
   const statWord = (s, has) => STAT[s] || (has ? 'Not rated' : 'No data');
-  const statPill = (s, has) => '<span class="hstat" data-s="' + s + '"><i class="hdot" aria-hidden="true"></i>' + statWord(s, has) + '</span>';
+  const statPill = (s, has, word) => '<span class="hstat" data-s="' + s + '"><i class="hdot" aria-hidden="true"></i>' + (word || statWord(s, has)) + '</span>';
   const hnum = (k, v) => { const p = HL.parts(k, v, hunit(k)); return esc(p.u === '%' ? p.v + '%' : p.v) + (p.u && p.u !== '%' ? '<small>' + esc(p.u) + '</small>' : ''); };
   const dayWord = d => d === today() ? 'Today' : d === addDays(today(), -1) ? 'Yesterday' : fmt(d, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(d) ? undefined : 'numeric' });
   // Move (active energy against the Move goal) and Exercise (minutes against 30), as two rings.
@@ -977,8 +977,9 @@ if (window.top !== window.self) {
     const has = c => HL.METRICS.some(m => m.cat === c && all[m.key]);
     const tile = (c, i, main, sub, said) => {
       const s = cat(c), name = HL.CATS.find(x => x.id === c).name;
-      return '<button class="htile" type="button" data-hcat="' + c + '" data-s="' + s + '" style="--i:' + i + '" aria-label="' + esc(name + ', ' + statWord(s, has(c)) + (said ? '. ' + said : '')) + '">'
-        + '<span class="htop"><span class="hname">' + esc(name) + '</span>' + statPill(s, has(c)) + '</span>'
+      const word = c === 'activity' && s === 'none' && has(c) && day === today() ? 'So far' : statWord(s, has(c));   // today's goals aren't judged till the day's over
+      return '<button class="htile" type="button" data-hcat="' + c + '" data-s="' + s + '" style="--i:' + i + '" aria-label="' + esc(name + ', ' + word + (said ? '. ' + said : '')) + '">'
+        + '<span class="htop"><span class="hname">' + esc(name) + '</span>' + statPill(s, has(c), word) + '</span>'
         + '<span class="hmain">' + main + '</span>' + (sub ? '<span class="hsub">' + esc(sub) + '</span>' : '') + '</button>';
     };
     // Activity: the steps, beside the Move and Exercise rings
@@ -1637,7 +1638,7 @@ if (window.top !== window.self) {
       app: 'fitness', name: 'Fitness', endpoint: '../fitness/api/ipsy', headers: { 'X-Fitness': '1' }, slot,
       ...window.FitnessIpsy({
         data, today, addDays, weekStartOf, groupName, pruneFrom, groups: GROUPS.map(g => ({ id: g.id, name: g.name })),
-        goals: () => ({ stepGoal: goal(), moveGoal: moveGoal() }),   // for Health's statuses (health.js)
+        goals: () => ({ today: today(), stepGoal: goal(), moveGoal: moveGoal() }),   // for Health's statuses (health.js)
         // older days from the Sheet (as the week and Analysis fetch them): true once they're all here
         older: async (from, to) => { const floor = pruneFrom(); if (!floor || from >= floor) return true; await loadOlder(from, to); for (let d = from; d <= to && d < floor; d = addDays(d, 1)) if (!older.has(d)) return false; return true; },
         screen: () => st.day ? 'the day ' + st.day + ', open' : (VIEWS.find(v => v.id === st.view) || { name: st.view }).name

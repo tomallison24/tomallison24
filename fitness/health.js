@@ -134,10 +134,11 @@
         const T = typical(key, history, day);
         return T && T.mean - v > T.far ? 'bad' : 'watch';
       }
-      case 'steps': return v >= (+o.stepGoal > 0 ? +o.stepGoal : 10000) ? 'good' : 'watch';
+      // Short of a goal today isn't judged yet (the day isn't over): no dot until it's met.
+      case 'steps': return v >= (+o.stepGoal > 0 ? +o.stepGoal : 10000) ? 'good' : day && day === o.today ? 'none' : 'watch';
       case 'exercise_min': {   // the 150 minutes a week: this day and the 6 before
         const week = v + (day ? series(key, history, shift(day, -6), shift(day, -1)).reduce((s, p) => s + p[1], 0) : 0);
-        return week >= 150 ? 'good' : 'watch';
+        return week >= 150 ? 'good' : day && day === o.today ? 'none' : 'watch';
       }
       case 'hr_rest': {   // over 100 is red; under 60 is fine when it's your usual
         if (v > 100) return 'bad';

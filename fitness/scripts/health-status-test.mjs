@@ -76,6 +76,12 @@ test('activity: steps against your goal, exercise 150 min over 7 days; never red
   assert.equal(H.status('exercise_min', 30, ex, { day: DAY }), 'good', '30 + 6 × 20 = 150');
   assert.equal(H.status('exercise_min', 29, ex, { day: DAY }), 'watch');
   assert.equal(H.status('exercise_min', 0, [], { day: DAY }), 'watch');
+  // today isn't over: short of a goal isn't judged yet; met is still good
+  assert.equal(H.status('steps', 7999, [], { day: DAY, today: DAY, stepGoal: 8000 }), 'none');
+  assert.equal(H.status('steps', 8000, [], { day: DAY, today: DAY, stepGoal: 8000 }), 'good');
+  assert.equal(H.status('exercise_min', 29, ex, { day: DAY, today: DAY }), 'none');
+  assert.equal(H.status('exercise_min', 30, ex, { day: DAY, today: DAY }), 'good');
+  assert.equal(H.status('steps', 7999, [], { day: back(1), today: DAY, stepGoal: 8000 }), 'watch', 'a day that is over');
   for (const k of ['active_kcal', 'rest_kcal', 'dist_mi', 'flights']) assert.equal(H.status(k, 1, [], { day: DAY }), 'none', k);
 });
 
