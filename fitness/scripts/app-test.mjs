@@ -706,7 +706,7 @@ await test('Settings > Design: Vintage, then Standard and back, at once, kept ac
   await p.click('#setBtn');
   await p.waitForSelector('#setSheet:not([hidden])');
   assert.equal(await p.textContent('#setBody .label'), 'Design', 'Design is the first section');
-  assert.match(await p.textContent('#setBody .hint'), /Just on this phone, and at once\./);
+  assert.equal(await p.$$eval('#setBody .hint', e => e.length), 0, 'no explanations in Settings');
   assert.equal(await p.getAttribute('#setBody [data-design="vintage"]', 'aria-checked'), 'true');
   assert.equal(await p.getAttribute('#setBody [data-design="glass"]', 'aria-checked'), 'false');
   await shot(p, '18-settings-vintage');

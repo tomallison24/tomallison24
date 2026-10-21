@@ -405,7 +405,7 @@ if (window.top !== window.self) {
     const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
     const sw = A.steps(data.steps, today(), P.days, goal(), pruneFrom()), hh = healthTiles(r, P);
     if (!a.hasNow && !a.hasBefore && !sw.any && !hh) {
-      main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few workouts and this fills in: where you’re getting stronger, and what needs work.</div>';
+      main.innerHTML = seg + note + '<div class="empty" style="--i:1"><strong>Nothing to compare yet</strong>Log a few workouts to start.</div>';
       slideSeg(); return;
     }
     // Totals, each with its change against the window before.
@@ -438,8 +438,7 @@ if (window.top !== window.self) {
       + '<p class="sechead" style="--i:2">Improving</p><div class="rgroup" id="anUp" style="--i:2">' + (improving || '<div class="dempty">' + (a.hasNow ? 'Nothing stronger than before yet. Keep at it.' : 'Nothing logged in ' + P.words + '.') + '</div>') + quiet('New', a.fresh) + '</div>'
       + '<p class="sechead" style="--i:3">Needs work</p><div class="rgroup" id="anWork" style="--i:3">' + (work || '<div class="dempty">' + (a.hasBefore ? 'Nothing has slipped. Nice.' : 'Nothing logged in ' + P.before + ' to compare with.') + '</div>') + quiet('Holding steady', a.same) + '</div>'
       + '<p class="sechead" style="--i:4">Sets by muscle group<span>' + (a.hasBefore ? 'change vs before' : '') + '</span></p><div class="rgroup bars" id="anGroups" style="--i:4">' + bars + '</div>'
-      + drinksHtml(r, P) + hh
-      + '<p class="hint">Strength is compared by estimated one-rep max (weight × (1 + reps ÷ 30)), so a heavier weight for fewer reps can still count as stronger. Bodyweight moves are compared by reps, holds by time, and cardio by speed (distance ÷ time) when you log a distance, otherwise by minutes. Volume counts weighted sets only.</p>';
+      + drinksHtml(r, P) + hh;
     slideSeg();
   }
   // Steps, as two more totals: the average a day (over the days with a count) and
@@ -575,7 +574,7 @@ if (window.top !== window.self) {
       const name = isOther ? f.other.trim() : f.exercise;
       const last = name && lastOf(name, day, f.editing);
       if (last) form += '<p class="hint">Last time, ' + esc(fmt(last.date, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(last.date) ? undefined : 'numeric' })) + ': ' + esc(fmtLine(last)) + '</p>';
-    } else form += '<p class="hint">' + (f.exercise === OTHER && f.other ? 'Now pick the muscle group for ' + esc(f.other) + '.' : 'Search, or pick a muscle group and then the exercise.') + '</p>';
+    } else if (f.exercise === OTHER && f.other) form += '<p class="hint">Now pick the muscle group for ' + esc(f.other) + '.</p>';
     form += '<div class="formbtns">' + (f.editing ? '<button class="btn quiet" type="button" id="fxCancel">Cancel</button>' : '')
       + '<button class="btn" type="button" id="fxAdd"' + (formReady() ? '' : ' disabled') + '>' + (f.editing ? 'Save changes' : 'Add to ' + esc(day === today() ? 'today' : fmt(day, { weekday: 'long' }))) + '</button></div>';
     return groups + form;
@@ -792,7 +791,7 @@ if (window.top !== window.self) {
     st.medOnToday = day === tod; loadOlder(day, day);
     $('todayBtn').hidden = day === tod;
     if (!signedIn()) {
-      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to use Meds</strong>Meds stays private to you, on this phone. Signing in with Face ID means you can erase it from a lost phone (aOS → Account → Lost a phone?).'
+      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to use Meds</strong>'
         + '<button class="btn" type="button" id="mdSignin">Sign in with Face ID</button></div>';
       return;
     }
@@ -800,8 +799,8 @@ if (window.top !== window.self) {
       + esc((day === tod ? 'Today · ' : day === addDays(tod, -1) ? 'Yesterday · ' : '') + fmt(day, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(day) ? undefined : 'numeric' }))
       + '</span><button class="iconbtn glass" type="button" data-mday="1" aria-label="Day after"' + (day >= tod ? ' disabled' : '') + '>' + ICON.chevR + '</button></div>';
     if (!data.meds.length) {
-      main.innerHTML = nav + '<div class="empty" style="--i:1"><strong>What do you take?</strong>Add each medication or supplement once, with when you take it. Then tick them off here each day.'
-        + '<button class="btn" type="button" data-madd>Add a medication or supplement</button></div>' + medsHint();
+      main.innerHTML = nav + '<div class="empty" style="--i:1"><strong>What do you take?</strong>'
+        + '<button class="btn" type="button" data-madd>Add a medication or supplement</button></div>';
       return;
     }
     const due = dueOn(day), done = due.filter(x => doseOf(x.m.id, day, x.slot)).length;
@@ -839,10 +838,8 @@ if (window.top !== window.self) {
       + '<p class="anote" style="--i:1">' + (due.length ? esc(done + ' of ' + due.length + ' taken') : '&nbsp;') + '</p>'
       + '<div class="medlist" style="--i:1">' + list + '</div>'
       + '<p class="sechead" style="--i:2">What you take</p><div class="rgroup" style="--i:2">' + mine
-      + '<button class="xrow add" type="button" data-madd><span class="xt">Add a medication or supplement</span>' + ICON.plus + '</button></div>'
-      + medsHint();
+      + '<button class="xrow add" type="button" data-madd><span class="xt">Add a medication or supplement</span>' + ICON.plus + '</button></div>';
   }
-  const medsHint = () => '<p class="hint">' + (lastSyncAt ? 'In the family’s Google Sheet, where only you see yours. This phone keeps the last 90 days.' : 'Only on this phone until it syncs with the family’s Google Sheet: sign in, and it syncs by itself.') + ' Lost your phone? aOS → Account → Lost a phone?</p>';
   function toggleDose(mid, slot) {
     const day = st.medDay, x = doseOf(mid, day, slot), m = data.meds.find(y => y.id === mid);
     if (x) data.doses.splice(data.doses.indexOf(x), 1);
@@ -851,7 +848,7 @@ if (window.top !== window.self) {
   }
   main.addEventListener('click', async e => {
     if (st.view !== 'meds') return;
-    if (e.target.closest('#mdSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to use Meds, so you can erase it from a lost phone.')) { render(); loadSteps(true); } return; }
+    if (e.target.closest('#mdSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to use Meds.')) { render(); loadSteps(true); } return; }
     const nd = e.target.closest('[data-mday]');
     if (nd) { const d = addDays(st.medDay, +nd.dataset.mday); if (d <= today()) { st.medDay = d; render(); } return; }
     const tk = e.target.closest('[data-take]');
@@ -894,10 +891,10 @@ if (window.top !== window.self) {
       + '<div class="frow"><input class="txt" id="mdDose" type="text" maxlength="40" placeholder="Dose, like 1000 IU or 2 capsules (optional)" autocomplete="off" aria-label="Dose" value="' + esc(f.dose) + '"></div></div>'
       + '<div class="field"><p class="label">Type</p><div class="opts" role="radiogroup" aria-label="Type">' + Object.entries(KIND).map(([k, n]) => chip('data-mkind', k, f.kind === k, n, true)).join('') + '</div></div>'
       + '<div class="field"><p class="label">When</p><div class="opts" role="group" aria-label="When">' + SLOTS.map(([k, n]) => chip('data-mslot', k, !f.prn && f.slots.includes(k), n)).join('') + chip('data-mprn', '1', f.prn, 'As needed') + '</div>'
-      + '<p class="hint">' + (f.prn ? 'Logged each time you take it, never counted as missed.' : f.slots.length ? 'One tick for each, every day it’s due.' : 'None picked: once a day, any time.') + '</p></div>'
+      + '<p class="hint">' + (f.prn ? 'Logged each time, never counted as missed.' : f.slots.length ? 'One tick for each, every day it’s due.' : 'None picked: once a day, any time.') + '</p></div>'
       + (f.prn ? '' : '<div class="field"><p class="label">Days</p><div class="opts" role="group" aria-label="Days">' + WEEKDAYS.map((n, i) => chip('data-mwd', i, f.days.includes(i), n)).join('') + '</div></div>')
       + '<div class="formbtns">' + (f.editing ? '<button class="btn quiet" type="button" id="mdPause">' + (f.paused ? 'Resume' : 'Pause') + '</button>' : '') + '<button class="btn" type="button" id="mdSave"' + (f.name.trim() ? '' : ' disabled') + '>' + (f.editing ? 'Save' : 'Add') + '</button></div>'
-      + (f.editing ? '<button class="btn danger" type="button" id="mdDel">Delete</button><p class="hint">Pause keeps it in your list without anything due. Delete takes it off the list; the days you took it stay in your history.</p>' : '');
+      + (f.editing ? '<button class="btn danger" type="button" id="mdDel">Delete</button><p class="hint">Pause stops it coming due; deleting keeps your history.</p>' : '');
   }
   const mbody = $('medBody');
   mbody.addEventListener('input', e => {
@@ -966,7 +963,7 @@ if (window.top !== window.self) {
     st.healthOnToday = day === tod; loadOlder(addDays(day, -13), day);
     $('todayBtn').hidden = day === tod;
     if (!signedIn()) {
-      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to see your Health</strong>Your Apple Health readings are private to you. Signing in with Face ID reads them from your own iPhone, and means you can erase them from a lost phone (aOS → Account → Lost a phone?).'
+      main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to see your Health</strong>'
         + '<button class="btn" type="button" id="hSignin">Sign in with Face ID</button></div>';
       return;
     }
@@ -977,9 +974,8 @@ if (window.top !== window.self) {
     if (!any) {
       const link = ls.json(K.healthLink, null) || {};
       main.innerHTML = nav + '<div class="empty" id="hEmpty" style="--i:1"><strong>Your Apple Health, here</strong>'
-        + 'Your activity, heart, sleep and vitals, from Apple Health on your iPhone, through the family’s Home Assistant. To start: in the Home Assistant app on your iPhone, turn on the Apple Health sensors you want (Settings › Companion App › Sensors, under Apple Health; they may be under Labs) and allow Health. '
-        + (link.linked === false ? 'Then link your iPhone here, in Fitness: Settings › Steps.' : 'Your iPhone is linked in Fitness (Settings › Steps), so they come in on their own.')
-        + '<button class="btn" type="button" data-hset>' + (link.linked === false ? 'Link your iPhone' : 'Open Settings') + '</button></div>' + healthHint();
+        + (link.linked === false ? 'Link your iPhone to start.' : 'Turn on Health sensors in the Home Assistant app.')
+        + '<button class="btn" type="button" data-hset>' + (link.linked === false ? 'Link your iPhone' : 'Open Settings') + '</button></div>';
       return;
     }
     const v = k => hval(day, k);
@@ -998,10 +994,8 @@ if (window.top !== window.self) {
       });
       if (rows.length) list += '<p class="sechead">' + esc(c.name) + '</p><div class="rgroup hcard" data-cat="' + c.id + '">' + rows.join('') + '</div>';
     }
-    main.innerHTML = nav + '<div class="hlist" style="--i:1">' + (list || '<div class="dempty rgroup">Nothing from Apple Health ' + (day === tod ? 'yet today' : 'on this day') + '.</div>') + '</div>' + healthHint();
+    main.innerHTML = nav + '<div class="hlist" style="--i:1">' + (list || '<div class="dempty rgroup">Nothing from Apple Health ' + (day === tod ? 'yet today' : 'on this day') + '.</div>') + '</div>';
   }
-  const healthHint = () => '<p class="hint">From Apple Health on your iPhone, through the family’s Home Assistant, which keeps 10 days: only you see yours. '
-    + (lastSyncAt ? 'Kept in the family’s Google Sheet, where only you see yours; this phone keeps the last 90 days.' : 'Kept on this phone until it syncs with the family’s Google Sheet.') + ' Sleep is the night that ended that morning.</p>';
   main.addEventListener('click', async e => {
     if (st.view !== 'health') return;
     if (e.target.closest('#hSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to see your Apple Health.')) { render(); loadHealth(true); } return; }
@@ -1138,7 +1132,7 @@ if (window.top !== window.self) {
     if (n) persist();
   }
   const SYNC_ERRORS = {
-    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Fitness keeps everything on this phone.',
+    signin: 'Sign in to sync your log.',
     'no-sheet': 'The family’s Fitness Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
     'wrong-secret': 'aOS’s phrase for the Fitness Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
     'old-script': 'The Fitness Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
@@ -1265,7 +1259,7 @@ if (window.top !== window.self) {
   // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js);
   // Steps (the daily goal, and linking your own iPhone); and signing out and erasing this phone.
   $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
-    + '<p class="hint">Just on this phone, and at once.</p><div id="setMore"></div>';
+    + '<div id="setMore"></div>';
   if (window.aosDesign) aosDesign.bind($('setBody'));
   $('setBtn').onclick = () => { renderSetMore(); openSheet('setSheet'); loadPhones(); };
   const phones = { state: 'idle', data: null, err: '' };
@@ -1288,23 +1282,22 @@ if (window.top !== window.self) {
     const box = $('setMore'); if (!box) return;
     const d = phones.data || {}, row = (t, sub, btn) => '<div class="frow"><span class="l">' + esc(t) + (sub ? '<small class="sub">' + esc(sub) + '</small>' : '') + '</span>' + (btn || '') + '</div>';
     let link = '';
-    if (phones.state === 'signin') link = row('Your iPhone’s steps', 'Sign in to read them from Home Assistant', '<button class="btn quiet sm" type="button" data-psignin>Sign in</button>');
+    if (phones.state === 'signin') link = row('Your iPhone’s steps', 'Sign in to link your iPhone', '<button class="btn quiet sm" type="button" data-psignin>Sign in</button>');
     else if (phones.state === 'loading' || phones.state === 'idle') link = row('Your iPhone’s steps', 'Checking Home Assistant…');
     else if (phones.state === 'error') link = row('Your iPhone’s steps', phones.err, '<button class="btn quiet sm" type="button" data-pretry>Try again</button>');
-    else if (d.linked) link = row('Your iPhone: ' + (d.linked.name || d.linked.entity), 'Steps come in on their own. ' + d.linked.entity, '<button class="btn quiet sm" type="button" data-punlink>Unlink</button>');
+    else if (d.linked) link = row('Your iPhone: ' + (d.linked.name || d.linked.entity), d.linked.entity, '<button class="btn quiet sm" type="button" data-punlink>Unlink</button>');
     else {
-      link = row('Link your iPhone', d.list === false ? 'Type your phone’s step sensor, from Home Assistant' : d.phones && d.phones.length ? 'Pick your own phone. No one else can link it after you.' : 'No step sensors found that aren’t linked already.');
+      link = row('Link your iPhone', d.list === false ? 'Type your phone’s step sensor' : d.phones && d.phones.length ? 'Pick your own phone' : 'No step sensors found that aren’t linked already.');
       if (d.list !== false) link += (d.phones || []).map(p => row(p.name || p.entity, p.entity, '<button class="btn sm" type="button" data-plink="' + esc(p.entity) + '">Link</button>')).join('');
       else link += '<div class="frow"><input class="txt" id="stEntity" type="text" placeholder="sensor.your_iphone_steps" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Step sensor"><button class="btn sm" type="button" data-plinktyped>Link</button></div>';
     }
     if (phones.err && phones.state === 'ok') link += row('', phones.err);
     const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
-    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>'
-      + '<p class="hint">From the Home Assistant app on your iPhone: its Steps sensor counts the phone’s own steps (not an Apple Watch’s). Turn it on in the Home Assistant app: Settings → Companion App → Sensors → Steps, and allow Motion &amp; Fitness. With its Apple Health sensors on too (Health Steps counts an Apple Watch’s), Fitness reads those, and shows the rest on Health. Only you see your steps. You can always type a day’s steps in instead.</p>' + links + '</div>'
+    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>' + links + '</div>'
       + ipsySetting()
       + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
-      + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase<span class="sub">Erases Fitness’s log, Meds and Steps from this phone, and signs out. Sync to the Google Sheet first.</span></span></button>'
-      + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?<span class="sub">How to erase aOS from it, step by step, in aOS</span></span></a></div></div>';
+      + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase</span></button>'
+      + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?</span></a></div></div>';
   }
   $('setBody').addEventListener('change', e => { if (e.target.id === 'stGoal') { ls.set(K.goal, e.target.value); render(); } });
   $('setBody').addEventListener('click', async e => {
@@ -1321,7 +1314,7 @@ if (window.top !== window.self) {
     if (e.target.closest('[data-punlink]')) return linkTo({}, 'unlink');
     if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
     if (e.target.closest('#setErase')) {
-      const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone? The family’s Google Sheet keeps your copy: sign in again to get it back.' : 'Sign out and erase Fitness from this phone? It hasn’t synced with the family’s Google Sheet, so your log, Meds and Steps will be gone.';
+      const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone (the Sheet keeps a copy)?' : 'Sign out and erase Fitness from this phone, losing your unsynced log, Meds and Steps?';
       if (!confirm(msg)) return;
       if (lastSyncAt) await sync(true);
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
@@ -1458,7 +1451,7 @@ if (window.top !== window.self) {
   function ipsyOn() { return ls.get(KEY + '-ipsy', '') === '1'; }
   function ipsySetting() {
     return '<div class="field"><p class="label">Ipsy</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stIpsy" aria-checked="' + ipsyOn() + '"><span class="grow">Ask Ipsy about your patterns'
-      + '<span class="sub">Only the days and stats a question needs go to Claude through aOS; Anthropic doesn’t train on them.' + (signedIn() ? '' : ' Signed in only.') + '</span></span><span class="switch" aria-hidden="true"></span></button></div></div>';
+      + '<span class="sub">Ipsy finds patterns in your workouts, sleep and meds.</span></span><span class="switch" aria-hidden="true"></span></button></div></div>';
   }
   async function setIpsy(on) {
     const A = window.AllisonOS && AllisonOS.account;
