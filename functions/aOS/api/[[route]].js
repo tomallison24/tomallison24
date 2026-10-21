@@ -322,6 +322,7 @@ export async function onRequest({ request, params, env }) {
       // Their step sensor is freed, so it can be linked again (functions/fitness/api).
       const steps = await db.get('steps:' + id);
       if (steps) { await db.delete('steps:by:' + steps); await db.delete('steps:' + id); }
+      await db.delete('health:' + id);
       return reply({ ok: true });
     }
 

@@ -15,19 +15,22 @@
  * Fitness, give it the phrase. Full steps: aOS/SHEETS.md.
  *
  * What it keeps in the Sheet:
- *   _logs, _exercises, _meds, _doses, _steps, _deleted, _people
+ *   _logs, _exercises, _meds, _doses, _steps, _health, _deleted, _people
  *                                  hidden tabs the app reads back from
  *                                  (one row per item, as JSON, with whose it is)
  *   Workouts                       every exercise logged, newest first, with Who
  *   Meds                           every dose ticked off, newest first, with Who
  *   Med list                       what each person takes, and when
  *   Steps                          each day's steps, newest first, with Who
+ *   Health                         each day's Apple Health readings (activity, heart,
+ *                                  sleep, vitals), newest first, with Who
  * The readable tabs are rebuilt on every change, so change things in the
  * app, not there. Each phone keeps the last 90 days of anything dated and
  * asks here for older days when you look back; this Sheet keeps them all.
  *
  * VERSION 2 added Meds and Steps; VERSION 3, one Sheet for the family
- * through aOS (who, by, the Who column, the 90 days and older on asking).
+ * through aOS (who, by, the Who column, the 90 days and older on asking);
+ * VERSION 4, Health.
  *
  * How changes merge: every logged exercise (and every exercise you typed
  * in) carries the time it was last changed; the newest version wins.
@@ -37,12 +40,12 @@
 
 const SECRET = 'CHANGE-ME';   // <- replace with your own long phrase, e.g. 'maple-otter-47-lantern-quiet'
 
-const APP = 'allison-fitness-sync', VERSION = 3;
-const DATA = {logs: '_logs', exercises: '_exercises', meds: '_meds', doses: '_doses', steps: '_steps'};
-const DATED = {logs: 'date', doses: 'date', steps: 'date'};   // what's kept on the phone by its day: the last 90
-// A day's steps have the day as their id, so two people's steps on one day share it: kept here as
-// '<who>~<day>', and sent back to each phone by the day alone.
-const PER_PERSON = {steps: true};
+const APP = 'allison-fitness-sync', VERSION = 4;
+const DATA = {logs: '_logs', exercises: '_exercises', meds: '_meds', doses: '_doses', steps: '_steps', health: '_health'};
+const DATED = {logs: 'date', doses: 'date', steps: 'date', health: 'date'};   // what's kept on the phone by its day: the last 90
+// A day's steps (and a day's Health) have the day as their id, so two people's on one day share it:
+// kept here as '<who>~<day>', and sent back to each phone by the day alone.
+const PER_PERSON = {steps: true, health: true};
 const MODE = 'personal';   // each person's own rows only (Notes and Travel are 'family': shared, with "Just me" items)
 const GRAVES = '_deleted', PEOPLE = '_people';
 const KEEP_DELETED_DAYS = 400;   // long enough that a phone left unopened for a year still hears of a deletion
@@ -259,6 +262,7 @@ function views(ss, db) {
   sh.setFrozenRows(1);
   sh.setColumnWidth(5, 240);
   medViews(ss, db);
+  healthView(ss, db);
   ss.getSheets().forEach(s => {
     const n = s.getName();
     if ((n === 'Sheet1' || n === 'Sheet 1') && s.getLastRow() === 0) ss.deleteSheet(s);
@@ -302,6 +306,26 @@ function medViews(ss, db) {
   ]), 2);
   const steps = Array.from(db.steps.values()).filter(x => x && isDay(x.date)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   table(ss, 'Steps', ['Who', 'Date', 'Day', 'Steps', 'From'], steps.map(x => [whoName(x, db), x.date, dayName(x.date), Number(x.n) || 0, x.src === 'ha' ? 'iPhone' : 'Typed in']));
+}
+
+// ---------- Health, readable ----------
+
+// Each day's Apple Health readings, one column a reading, in fitness/health.js's order (its keys;
+// keep the two in step). Sleep is in minutes.
+const HEALTH_COLUMNS = [
+  ['steps', 'Steps'], ['active_kcal', 'Active energy (kcal)'], ['rest_kcal', 'Resting energy (kcal)'], ['dist_mi', 'Walking + running (mi)'],
+  ['exercise_min', 'Exercise (min)'], ['flights', 'Flights climbed'],
+  ['hr', 'Heart rate (bpm)'], ['hr_rest', 'Resting heart rate (bpm)'], ['hrv', 'Heart rate variability (ms)'], ['hr_walk', 'Walking heart rate (bpm)'],
+  ['sleep', 'Asleep (min)'], ['in_bed', 'In bed (min)'], ['awake', 'Awake (min)'], ['core', 'Core sleep (min)'], ['deep', 'Deep sleep (min)'], ['rem', 'REM sleep (min)'],
+  ['spo2', 'Blood oxygen (%)'], ['resp', 'Respiratory rate (/min)'], ['temp', 'Body temperature (°F)'], ['temp_basal', 'Basal body temperature (°F)'],
+  ['bp_sys', 'Blood pressure systolic (mmHg)'], ['bp_dia', 'Blood pressure diastolic (mmHg)'], ['glucose', 'Blood glucose (mg/dL)'], ['vo2', 'VO2 max (mL/kg/min)'],
+];
+function healthView(ss, db) {
+  if (!db.health.size) return;   // nothing yet: no empty tab
+  const list = Array.from(db.health.values()).filter(x => x && isDay(x.date) && x.m && typeof x.m === 'object')
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || whoName(a, db).localeCompare(whoName(b, db)));
+  table(ss, 'Health', ['Who', 'Date', 'Day'].concat(HEALTH_COLUMNS.map(c => c[1])), list.map(x =>
+    [whoName(x, db), x.date, dayName(x.date)].concat(HEALTH_COLUMNS.map(c => { const v = Number(x.m[c[0]]); return x.m[c[0]] !== '' && x.m[c[0]] != null && isFinite(v) ? v : ''; }))));
 }
 
 function out(obj) {

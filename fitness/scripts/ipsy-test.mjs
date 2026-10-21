@@ -458,7 +458,7 @@ for (const width of [320, 375, 390, 430]) for (const design of ['glass', 'vintag
     assert.ok(R.summary.weeks.length >= 2);
     assert.deepEqual(R.meds.meds.map(m => m.name), ['Headache tabs', 'Pill B', 'Vitamin D', 'Fish oil']);
     const acts = await page.$$eval('.ipsy-act', e => e.map(x => x.textContent));
-    assert.ok(acts.includes('Comparing legs sets with sleep') && acts.some(a => a.startsWith('Looking at your days, ')) && acts.includes('Adding up your weeks') && acts.includes('Looking at your meds list'), acts.join(' | '));
+    assert.ok(acts.some(a => /^Comparing legs sets with sleep( duration)?$/.test(a)) && acts.some(a => a.startsWith('Looking at your days, ')) && acts.includes('Adding up your weeks') && acts.includes('Looking at your meds list'), acts.join(' | '));
     assert.equal(await page.$$eval('.ipsy-change', e => e.length), 0, 'nothing changed, so no Undo');
     assert.equal(await page.locator('.ipsy-it').last().locator('b').first().count(), 1);
     const logAfter = await page.evaluate(() => JSON.stringify({ logs: __fitness.data.logs, meds: __fitness.data.meds, doses: __fitness.data.doses, steps: __fitness.data.steps }));
