@@ -322,7 +322,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-offer.png') });
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
-    assert.match(await page.textContent('.ipsy-ask'), /keep your orders up to date by myself\? Whenever Gmail brings news about an order on its way/);
+    assert.match(await page.textContent('.ipsy-ask'), /keep your orders up to date by myself\? I’ll reread their emails with Claude/);
     await page.click('.ipsy-ask [data-ans="yes"]');
   });
 

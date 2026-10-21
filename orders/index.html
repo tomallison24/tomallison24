@@ -896,21 +896,18 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheetbody">
         <p class="label">Design</p>
         <div class="rgroup glass" id="stDesign"></div>
-        <p class="hint">Just on this phone, and at once.</p>
         <p class="label">Gmail</p>
         <div class="rgroup glass" id="stGmail"></div>
-        <p class="hint" id="stGmailHint"></p>
+        <p class="hint" id="stGmailHint" hidden></p>
         <p class="label">Ipsy</p>
         <div class="rgroup glass" id="stIpsy"></div>
-        <p class="hint">Ipsy reads the email of each order in To check again with Claude, through the family server (nothing is kept), and fixes what it can. Each fix shows in Ipsy’s chat with Undo. For signed-in family.</p>
         <p class="label">What counts as an order</p>
         <div class="rgroup glass" id="stKinds"></div>
-        <p class="hint" id="stKindsHint">Packages are always shown. Turning on another kind reads the last year of email again to find them.</p>
         <p class="label">Backup</p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="stExport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Back up everything<span class="sub">One file with every order. Save it to iCloud Drive or Google Drive.</span></span>
+            <span>Back up everything<span class="sub">One file with every order</span></span>
           </button>
           <button class="rowbtn" type="button" id="stImport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
@@ -918,7 +915,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
         </div>
         <input type="file" id="stFile" accept=".json,application/json" hidden>
-        <p class="hint">Emails are read on this phone, straight from Gmail. Only the orders found in them are kept, here and, once you’re signed in, in the family’s Google Sheet, where only you get yours.</p>
       </div>
     </div>
   </div>
@@ -931,7 +927,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="psLbl">Paste an order email</h2><div class="acts"><button class="iconbtn okbtn" id="psAdd" type="button" aria-label="Read it"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste the order email here" style="min-height:200px;color:var(--text)"></textarea></div>
-        <p class="hint" id="psHint">The text of an order, shipping or pickup email. Nothing is sent anywhere; it is read on this phone.</p>
+        <p class="hint" id="psHint" hidden></p>
       </div>
     </div>
   </div>

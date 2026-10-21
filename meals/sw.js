@@ -3,7 +3,7 @@
 // The family's plan and deals never pass through here: the last ones are kept
 // in this phone's storage by app.js, and the calls to the server (api/) are
 // left alone.
-const CACHE = 'meals-v6';
+const CACHE = 'meals-v7';
 const SHELL = ['./', 'index.html', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/aisles.js', '../home/slide.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js'];
 
 self.addEventListener('install', e => {

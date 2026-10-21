@@ -941,7 +941,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       </form>
       <p class="sechead"><span>Search on</span></p>
       <div class="rgroup glass" id="exLinks"></div>
-      <p class="hint">These open the sites with your search filled in. Book there; the confirmation email then shows up here by itself after the next Gmail check. Google Flights and Google Hotels have no public way for an app to fetch prices, so they are links rather than results inside the app.</p>
     </main>
   </section>
 
@@ -1005,7 +1004,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="addPaste">
             <span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="4.2" width="14" height="17" rx="3.2"/><path d="M9 4.4A1.8 1.8 0 0 1 10.8 2.6h2.4A1.8 1.8 0 0 1 15 4.4a1.4 1.4 0 0 1-1.4 1.4h-3.2A1.4 1.4 0 0 1 9 4.4z"/><path d="M8.8 11.4h6.4M8.8 15.4h4.2"/></svg></span>
-            <span>Paste a confirmation<span class="sub">Copy the text of a booking email (from any inbox) and it is read like the ones in Gmail</span></span>
+            <span>Paste a confirmation</span>
           </button>
         </div>
       </div>
@@ -1021,10 +1020,9 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheetbody">
         <p class="label" data-design-row hidden>Design</p>
         <div class="rgroup glass" id="stDesign" data-design-row hidden></div>
-        <p class="hint" data-design-row hidden>Just on this phone, and at once.</p>
         <p class="label">Gmail</p>
         <div class="rgroup glass" id="stGmail"></div>
-        <p class="hint" id="stGmailHint"></p>
+        <p class="hint" id="stGmailHint" hidden></p>
         <p class="label">Live flight status</p>
         <div class="box glass"><span class="hint" style="margin:0" id="stLive">Checking…</span></div>
         <p class="label">Smart help</p>
@@ -1050,7 +1048,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="stExport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Back up everything<span class="sub">One file with every booking. Save it to iCloud Drive or Google Drive.</span></span>
+            <span>Back up everything<span class="sub">One file with every booking</span></span>
           </button>
           <button class="rowbtn" type="button" id="stImport">
             <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
@@ -1058,7 +1056,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
           </button>
         </div>
         <input type="file" id="stFile" accept=".json,application/json" hidden>
-        <p class="hint">Emails are read on this phone, straight from Gmail. Only the bookings found in them are kept, here and, once you’re signed in, in the family’s Google Sheet.</p>
       </div>
     </div>
   </div>
@@ -1084,7 +1081,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
       <div class="sheethead"><button class="iconbtn" data-close type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button><h2 id="psLbl">Paste a confirmation</h2><div class="acts"><button class="iconbtn okbtn" id="psAdd" type="button" aria-label="Read it"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
         <div class="box glass"><textarea class="plain" id="psText" aria-label="Pasted text" placeholder="Paste the booking email here" style="min-height:200px;color:var(--text)"></textarea></div>
-        <p class="hint" id="psHint">The text of a flight, hotel or rental car confirmation. Nothing is sent anywhere; it is read on this phone.</p>
+        <p class="hint" id="psHint" hidden></p>
       </div>
     </div>
   </div>

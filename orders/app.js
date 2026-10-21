@@ -446,21 +446,19 @@ if (window.top !== window.self) {
     let h = '', i = 0;
     const group = (title, list) => '<p class="sechead"><span>' + esc(title) + '</span></p>' + list.map(o => card(o, i++)).join('');
     if (!orders.length) {
-      h = '<div class="empty glass"><strong>No orders yet</strong>'
-        + (hasGmail() ? 'Tap the envelope to look through Gmail for order, shipping and pickup emails.' : 'Connect Gmail and Orders finds your order, shipping and pickup emails by itself.')
-        + '</div><button class="btn" type="button" id="emptyGo">' + (hasGmail() ? 'Look in Gmail now' : 'Connect Gmail') + '</button>'
+      h = '<div class="empty glass"><strong>No orders yet</strong></div><button class="btn" type="button" id="emptyGo">' + (hasGmail() ? 'Look in Gmail now' : 'Connect Gmail') + '</button>'
         + '<button class="btn quiet" type="button" id="emptyAdd">Add an order by hand</button>';
     } else if (q) {
       const list = vis.filter(o => matches(o, q)).sort(byRecent);
       h = (list.length ? '<p class="resulthead">' + plural(list.length, 'result') + '</p>' + list.map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>No match</strong>Try a store, an item or an order number.</div>') + olderRow();
     } else if (st.tab === 'check') {
-      h = '<p class="hint">These were read from the words of an email, or nothing has been heard about them for a while. Open each one, fix anything wrong and tap “Looks right”.</p>' + check.sort(byRecent).map(o => card(o, i++)).join('');
+      h = check.sort(byRecent).map(o => card(o, i++)).join('');
     } else if (st.tab === 'done') {
       const secs = doneSections(done);
-      h = (secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing delivered yet</strong>Orders move here once they arrive or you pick them up.</div>') + olderRow();
+      h = (secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing delivered yet</strong></div>') + olderRow();
     } else {
       const secs = waySections(way);
-      h = secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing on the way</strong>New orders in Gmail show up here after the next check (the envelope, top right).</div>';
+      h = secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing on the way</strong></div>';
     }
     $('list').innerHTML = h;
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
@@ -482,8 +480,7 @@ if (window.top !== window.self) {
   function olderRow() {
     if (!synced) return '';
     if (past.end) return '<p class="hint olderhint">Nothing older in the family’s Google Sheet' + (past.day ? ' (before ' + esc(fmtDay(past.day)) + ')' : '') + '.</p>';
-    return '<button class="btn quiet" type="button" id="olderGo"' + (past.busy ? ' disabled' : '') + '>' + (past.busy ? 'Looking in the Sheet…' : 'Show older orders from the Sheet') + '</button>'
-      + '<p class="hint olderhint">This phone keeps the last 90 days, and every order still on its way. The rest are in the family’s Google Sheet' + (past.day ? ': shown here back to ' + esc(fmtDay(past.day)) : '') + '.</p>';
+    return '<button class="btn quiet" type="button" id="olderGo"' + (past.busy ? ' disabled' : '') + '>' + (past.busy ? 'Looking in the Sheet…' : 'Show older orders from the Sheet') + '</button>';
   }
   $('whenChips').addEventListener('click', e => {
     const b = e.target.closest('[data-when]'); if (!b) return;
@@ -559,14 +556,14 @@ if (window.top !== window.self) {
       acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
-    if (o.source && o.source.msgId && !o.private) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Ipsy is reading it…' : 'Have Ipsy check this order') + '<span class="sub">Ipsy reads this one email again with Claude and fixes what’s wrong. Nothing is kept.</span></span></button>');
+    if (o.source && o.source.msgId && !o.private) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Ipsy is reading it…' : 'Have Ipsy check this order') + '</span></button>');
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');
     if (isOpen(o)) acts.push('<button class="rowbtn" type="button" id="opDelivered"><span class="ic">' + I.check + '</span><span>' + (o.kind === 'pickup' ? 'Mark as picked up' : 'Mark as delivered') + '</span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
     // Private: hidden from Ipsy (ipsy-tools.js), with its emails; it still syncs and shows here as usual.
     h += '<div class="rgroup glass"><button class="swrow" type="button" role="switch" id="opPrivate" aria-checked="' + !!o.private + '">' + I.lock
-      + '<span class="grow">Private<span class="sub">' + (o.private ? 'Hidden from Ipsy, and so are its emails.' : 'Hide this order and its emails from Ipsy.') + '</span></span><span class="switch" aria-hidden="true"></span></button></div>';
-    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed by Ipsy, with Claude.' : '') + (o.auto ? ' Marked as received in a one-off clean-up: nothing had been heard for over ' + CLEANUP_DAYS + ' days.' : '') + '</p>';
+      + '<span class="grow">Private<span class="sub">Hides this order and its emails from Ipsy.</span></span><span class="switch" aria-hidden="true"></span></button></div>';
+    if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed by Ipsy.' : '') + (o.auto ? ' Marked as received in a clean-up.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;
   }
@@ -672,7 +669,7 @@ if (window.top !== window.self) {
   const ipsyAsked = async () => {
     if (ls.get(K.aiOk, '')) return true;
     if (!ipsy) return false;
-    const ok = await ipsy.ask('Ipsy reads an order’s email again with Claude to fix its details. The email’s text, without links, goes to Anthropic through the family server; nothing is kept. OK?', { yes: 'OK', no: 'Not now' });
+    const ok = await ipsy.ask('Send this order’s email to Claude, through the family server, to fix its details?', { yes: 'OK', no: 'Not now' });
     if (ok) ls.set(K.aiOk, '1');
     return ok;
   };
@@ -726,7 +723,7 @@ if (window.top !== window.self) {
       if (autoOffered) return;
       autoOffered = true;
       ipsy.hint('Want me to keep your orders up to date by myself?', async () => {
-        const ok = await ipsy.ask('Want me to keep your orders up to date by myself? Whenever Gmail brings news about an order on its way, or one lands in **To check**, I’ll read its email again with Claude (through the family server; nothing is kept) and fix what I can. Each fix shows here with Undo, and you can turn this off in Settings.', { yes: 'Yes, keep them up to date', no: 'Not now' });
+        const ok = await ipsy.ask('Want me to keep your orders up to date by myself? I’ll reread their emails with Claude and fix what I can, with Undo.', { yes: 'Yes, keep them up to date', no: 'Not now' });
         ls.set(K.ipsyAuto, ok ? '1' : '0');
         if (ok) { ls.set(K.aiOk, '1'); ipsy.close(); autoCheck(); }
       });
@@ -820,7 +817,6 @@ if (window.top !== window.self) {
       else ctl = '<input id="ef_' + k + '" data-k="' + k + '" type="' + (type === 'number' ? 'text' : type) + '"' + (type === 'number' ? ' inputmode="decimal"' : '') + ' value="' + esc(k === 'total' ? (o.total != null ? o.total : '') : o[k] || '') + '" placeholder="' + esc(ph) + '" autocomplete="off">';
       return '<div class="f' + (wide ? ' w' : '') + '"><label for="ef_' + k + '">' + esc(label) + '</label>' + ctl + '</div>';
     }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="Anything to remember">' + esc(o.notes || '') + '</textarea></div></div></div>';
-    if (!st.isNew) h += '<p class="hint">What you type here stays: an email that arrives later won’t change it.</p>';
     $('edBody').innerHTML = h;
   }
   $('edBody').addEventListener('change', e => { if (e.target.id === 'ef_kind') { readEdit(); renderEdit(); } });
@@ -872,12 +868,12 @@ if (window.top !== window.self) {
     let text = '';
     try { text = await navigator.clipboard.readText(); } catch {}
     if (text && text.trim().length > 20) return readPasted(text);
-    $('psText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
+    $('psText').value = ''; $('psHint').hidden = true; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
   }
   function readPasted(text) {
     const r = P.parseText(text);
     if (!r.orders.length) {
-      $('psText').value = text; $('psHint').textContent = 'No order found in that text. Add it by hand with the + button instead.';
+      $('psText').value = text; $('psHint').textContent = 'No order found in that text. Add it by hand with the + button instead.'; $('psHint').hidden = false;
       if ($('pasteSheet').hidden) openSheet('pasteSheet');
       return;
     }
@@ -1070,23 +1066,23 @@ if (window.top !== window.self) {
     let rows = '';
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new orders now<span class="sub">'
-        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' : 'Not checked yet.') + ' It also checks each time Orders opens.</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Reads every order email afresh and replaces what was read before. Orders you edited, checked or deleted stay as they are.</span></span></button>';
+        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Orders you edited, checked or deleted stay as they are</span></span></button>';
       if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
-      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Orders can read email, never send, change or delete it</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-    $('stIpsy').innerHTML = '<button class="swrow" type="button" role="switch" id="stIpsyAuto" aria-checked="' + (ls.get(K.ipsyAuto, '') === '1') + '"><span class="grow">Ipsy keeps orders up to date<span class="sub">Reads each new email about an order on its way, and To check, after each read of Gmail</span></span><span class="switch" aria-hidden="true"></span></button>'
-      + (PV ? '<button class="swrow" type="button" role="switch" id="stIpsyGmail" aria-checked="' + PV.gmail('orders') + '"><span class="grow">Ipsy can search Gmail<span class="sub">Off: Ipsy can’t search or read any email in your chats. Private orders’ emails are always hidden.</span></span><span class="switch" aria-hidden="true"></span></button>' : '');
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Orders only reads.'
-      : 'Orders looks for order, shipping and pickup emails in the last year of email (Mail’s Orders tag, and the big stores and carriers), then for new ones each time it opens. Promotions are skipped.';
+    $('stIpsy').innerHTML = '<button class="swrow" type="button" role="switch" id="stIpsyAuto" aria-checked="' + (ls.get(K.ipsyAuto, '') === '1') + '"><span class="grow">Ipsy keeps orders up to date<span class="sub">Ipsy rereads new order emails and To check, and fixes them.</span></span><span class="switch" aria-hidden="true"></span></button>'
+      + (PV ? '<button class="swrow" type="button" role="switch" id="stIpsyGmail" aria-checked="' + PV.gmail('orders') + '"><span class="grow">Ipsy can search Gmail<span class="sub">Lets Ipsy search and read your email in chats.</span></span><span class="switch" aria-hidden="true"></span></button>' : '');
+    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
+    $('stGmailHint').hidden = !viaMail;
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
   // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
   if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }
-  else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = $('stDesign').nextElementSibling.hidden = true;
+  else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = true;
   $('setBtn').onclick = openSettings;
   $('stIpsy').addEventListener('click', e => {
     if (e.target.closest('#stIpsyGmail')) { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('orders', !PV.gmail('orders')); renderSettings(); return; }
