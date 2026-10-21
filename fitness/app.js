@@ -42,6 +42,8 @@
 //   judges each reading), and a sheet of charts behind each; read from your
 //   iPhone's Health sensors in Home Assistant through ../fitness/api, as steps are.
 //   Signed in only, as Meds. Health Steps (with an Apple Watch's) is then the day's steps.
+//   Vitals alerts (Settings > Health): the phone sends your usual for each vital, and the
+//   server notifies you through aOS when one is off; ?view=health&day= opens that day.
 // - Once synced, dated items older than 90 days are kept in the Sheet only,
 //   not on the phone; looking back fetches them.
 // - Ipsy, if you turn it on in Settings: ask it about patterns in your own days
@@ -68,7 +70,7 @@ if (window.top !== window.self) {
   const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period',
     goal: KEY + '-step-goal', stepsLink: KEY + '-steps-link', health: KEY + '-sheet-health',
     healthLink: KEY + '-health-link', healthUnits: KEY + '-health-units', sheetKeepsHealth: KEY + '-sheet-keeps-health',
-    move: KEY + '-move-goal', hrange: KEY + '-health-range' };
+    move: KEY + '-move-goal', hrange: KEY + '-health-range', vitalsAlerts: KEY + '-vitals-alerts', vitalsSent: KEY + '-vitals-sent' };
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
@@ -965,12 +967,8 @@ if (window.top !== window.self) {
       + (f > 0 ? '<circle class="arc ' + cls + '" cx="22" cy="22" r="' + r + '" pathLength="100" stroke-dasharray="' + Math.min(100, f * 100).toFixed(1) + ' 100"/>' : '');
     return '<svg class="hrings" viewBox="0 0 44 44" aria-hidden="true"><g transform="rotate(-90 22 22)">' + arc(18.5, move, 'mv') + arc(11.5, ex, 'ex') + '</g></svg>';
   }
-  // Blood pressure counts once (the worse of its two numbers).
-  function vitalsOff(all) {
-    const s = {}; for (const m of HL.METRICS) if (m.cat === 'vitals' && all[m.key]) { const k = /^bp_/.test(m.key) ? 'bp' : m.key; s[k] = HL.worse(s[k] || 'none', all[m.key]); }
-    const v = Object.values(s);
-    return { n: v.length, rated: v.filter(x => x !== 'none').length, off: v.filter(x => x === 'watch' || x === 'bad').length };
-  }
+  // Vitals off (health.js, which the server's vitals alert uses too): blood pressure counts once.
+  const vitalsOff = all => HL.vitalsOff(all);
   function tilesHtml(day) {
     const o = hopts(day), all = HL.statuses(day, data.health, o), v = k => hval(day, k);
     const cat = c => HL.METRICS.filter(m => m.cat === c && all[m.key]).reduce((s, m) => HL.worse(s, all[m.key]), 'none');
@@ -1187,9 +1185,24 @@ if (window.top !== window.self) {
       ls.set(K.healthLink, JSON.stringify({ linked: true, at: Date.now(), last: today() }));
       if (r.units && typeof r.units === 'object') ls.set(K.healthUnits, JSON.stringify(r.units));
       takeHealth(r.days);
+      sendVitals();
     } catch (e) {
       if (e.message === 'not-linked') { ls.set(K.healthLink, JSON.stringify({ linked: false, at: Date.now() })); if (st.view === 'health' && !st.day) render(); }
     } finally { healthSt.busy = false; }
+  }
+  // Vitals alerts (Settings > Health, on unless turned off): the server looks at your newest vitals
+  // now and then and, if even one is off (health.js's vitalsOff, as the Vitals tile), notifies you
+  // through aOS, once a day at most (functions/fitness/api, alerts). It only sees the days Home
+  // Assistant keeps, so the phone sends your usual for each vital (health.js usualRanges: the 28
+  // days before today) and the switch: after each Health fetch, only when it changed (about once a day).
+  const vitalsAlertsOn = () => ls.get(K.vitalsAlerts, '1') !== '0';
+  let vitalsBusy = false;
+  async function sendVitals() {
+    if (!token() || !navigator.onLine || vitalsBusy) return;
+    const body = { on: vitalsAlertsOn(), day: today(), usual: HL.usualRanges(data.health, today()) }, sig = JSON.stringify(body);
+    if (ls.get(K.vitalsSent, '') === sig) return;
+    vitalsBusy = true;
+    try { await fapi('vitals', body); ls.set(K.vitalsSent, sig); } catch {} finally { vitalsBusy = false; }
   }
   // { date: { key: value } } from the server, into the days kept here. Health Steps also go to the
   // day's steps (as your iPhone's: a number you typed in still wins).
@@ -1459,6 +1472,8 @@ if (window.top !== window.self) {
     const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
     box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>'
       + '<div class="frow"><label for="stMove">Move goal</label><select id="stMove">' + opts(MOVE_GOALS, moveGoal(), g => g.toLocaleString('en-US') + ' kcal') + '</select></div>' + link + '</div>' + links + '</div>'
+      + '<div class="field"><p class="label">Health</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stVitals" aria-checked="' + vitalsAlertsOn() + '"><span class="grow">Vitals alerts'
+      + '<span class="sub">Alerts you when a vital is off your usual.</span></span><span class="switch" aria-hidden="true"></span></button></div></div>'
       + ipsySetting()
       + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
       + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase</span></button>'
@@ -1473,6 +1488,7 @@ if (window.top !== window.self) {
     if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
     if (e.target.closest('[data-pretry]')) { loadPhones(); return; }
     if (e.target.closest('#stIpsy')) { await setIpsy(!ipsyOn()); renderSetMore(); return; }
+    if (e.target.closest('#stVitals')) { ls.set(K.vitalsAlerts, vitalsAlertsOn() ? '0' : '1'); renderSetMore(); sendVitals(); return; }
     const linkTo = async (body, route) => {
       try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); ls.set(K.healthLink, ''); await loadPhones(); if (route === 'link') { loadHealth(true).finally(() => loadSteps(true)); toast('Linked. Your steps come in on their own.'); } }
       catch (x) { phones.err = PHONE_ERR[x.message] || 'Couldn’t do that (' + x.message + ').'; renderSetMore(); }
@@ -1581,6 +1597,12 @@ if (window.top !== window.self) {
   // Opened from Calendar's Fitness layer: ?date=YYYY-MM-DD opens that day.
   const q = new URLSearchParams(location.search).get('date');
   if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
+  // From the vitals alert (a notification, through aOS): ?view=health&day=YYYY-MM-DD opens Health on that day.
+  else if (new URLSearchParams(location.search).get('view') === 'health') {
+    const d = new URLSearchParams(location.search).get('day');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d || '') && !isNaN(noon(d)) && d <= today()) st.healthDay = d;
+    setView('health');
+  }
   // Another tab may have changed the log, or Calendar's week start.
   window.addEventListener('storage', e => {
     if (e.key !== KEY && e.key !== 'allison-calendar-v1-settings') return;

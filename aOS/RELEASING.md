@@ -181,6 +181,15 @@ secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; they win over the stored one
 - The Updates screen (Account → Updates, and aOS's What's new) tells each release simply: only its
   `highlights` (or, with none, its first notes), a short line each. Keep highlights short and high level;
   details belong in `notes`, which the log keeps but those screens don't show.
+- **Fitness's vitals alerts** go the same way: every hour `.github/workflows/fitness-vitals.yml`
+  (`fitness/scripts/vitals-check.mjs`) asks the site to check each linked person's newest vitals,
+  and anyone with even one off gets "A vital is off your usual. Open Fitness." (once a day at most;
+  tapping it opens Fitness's Health on that day). Nothing to set up: its key is derived from
+  `ANNOUNCE_KEY` above (HMAC of it with `fitness-vitals`), so it needs only the
+  `CLOUDFLARE_API_TOKEN` repository secret the release already has, and does nothing without it.
+  Behind Cloudflare Access it sends `ACCESS_CLIENT_ID` and `ACCESS_CLIENT_SECRET` as the announcement
+  does. Each person turns it off in Fitness → Settings → Health. See fitness/README.md, "Vitals
+  alerts". Tests: `node fitness/scripts/vitals-alert-test.mjs`.
 - Only aOS has a service worker that shows them so far: the other apps' own
   notifications (Notes' reminders) are separate, in `notes/push`.
 - Tests: `node aOS/scripts/push-api-test.mjs` (the server, with real encryption) and
