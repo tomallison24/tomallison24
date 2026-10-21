@@ -123,7 +123,7 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
       ok(scheme + ': Settings opens on Design, in a group of its own, with its hint', await page.evaluate(() => {
         const b = document.getElementById('stBody'), first = b.firstElementChild;
         return first.matches('p.label') && first.textContent === 'Design' && first.nextElementSibling.matches('.sgroup') && !!first.nextElementSibling.querySelector('.aos-design')
-          && first.nextElementSibling.nextElementSibling.matches('p.hint') && /Just on this phone/.test(first.nextElementSibling.nextElementSibling.textContent);
+          && first.nextElementSibling.nextElementSibling.matches('p.hint') && /Changes how Mail looks on this phone/.test(first.nextElementSibling.nextElementSibling.textContent);
       }));
       await shot(page, 'vintage-settings-' + scheme);
       ok(scheme + ': a mailbox: no script errors', !errs.length, errs.join(' | '));
@@ -193,7 +193,7 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
   ok('old address: in Vintage', got.look === 'vintage');
   await page.evaluate(() => document.getElementById('gear').click()); await page.waitForTimeout(600);   // (a click in the page: an update screen may be over it)
   ok('old address: the moved settings show in Settings', (await page.inputValue('#lab')) === 'Deals' && (await page.inputValue('#days')) === '7');
-  ok('old address: Sign-in returns to the address it was opened at (registered for Mail Vintage)', /\/mailvintage\/<\/code>/.test(await page.innerHTML('#stBody')));
+  ok('old address: Sign-in returns to the address it was opened at (registered for Mail Vintage)', /\/mailvintage\/$/.test(await page.evaluate(() => redirectUri())));
   // once only: a later change to the old keys is not copied again
   await page.evaluate(() => localStorage.setItem('mailv.label', 'Later'));
   await page.reload(); await page.waitForTimeout(900);

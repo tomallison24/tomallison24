@@ -331,7 +331,8 @@ await test('aOS: Lost a phone? step by step, and Sign out and erase my other dev
   await page.goto(BASE + '/aOS/#lost-phone');
   await page.waitForSelector('#lEraseOthers', { timeout: 8000 });
   const text = await page.textContent('.page.on');
-  for (const s of ['Find My', 'Erase This Device', 'Sign out and erase my other devices', 'Lost your only phone?', 'Erase All Content and Settings', 'What erasing can\'t do']) assert.ok(text.includes(s), s);
+  for (const s of ['Find My', 'Erase This Device', 'Sign out and erase my other devices', 'Lost your only phone?', 'Erase All Content and Settings']) assert.ok(text.includes(s), s);
+  assert.ok(!text.includes('What erasing can\'t do'), 'no explanations under the steps');
   await shot(page, 'aos-lost');
   await page.click('#lEraseOthers');
   await page.waitForFunction(() => /Done/.test(document.querySelector('#lErr').textContent));
