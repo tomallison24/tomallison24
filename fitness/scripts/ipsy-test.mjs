@@ -274,6 +274,27 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
     assert.equal(r.meds.find(m => m.name === 'Fish oil').paused, true);
   });
 
+  await step('with health.js: each day\'s health_status (only what was judged) and sleep_score; each week\'s sleep_score_avg and health_off_days', async () => {
+    const rows = []; for (let i = 0; i < 14; i++) rows.push({ date: D(i), m: { sleep: i === 0 ? 300 : 450, deep: 70, rem: 100, core: 280, in_bed: 480, hr_rest: 58 } });
+    const [days, summary] = await page.evaluate(async ([rows, today, from]) => {
+      await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = '/fitness/health.js'; s.onload = ok; s.onerror = bad; document.head.append(s); });
+      try {
+        const app = mkApp({ logs: [], steps: [], meds: [], doses: [], health: rows }, { today });
+        return [(await app.tools.days({ from, to: today, include: ['health'] })).content, (await app.tools.summary({ from, to: today })).content];
+      } finally { delete window.FitnessHealth; }
+    }, [rows, TODAY, D(13)]);
+    const t = days.days.find(x => x.date === TODAY), y = days.days.find(x => x.date === D(1));
+    assert.deepEqual(t.health_status, { hr_rest: 'good', sleep: 'bad' }, '5 h, far under a steady 7.5 h; the stages aren\'t judged');
+    assert.equal(t.sleep_score, 49);
+    assert.deepEqual([y.health_status, y.sleep_score], [{ hr_rest: 'good', sleep: 'good' }, 100]);
+    assert.match(days.health_status_means, /not a diagnosis/); assert.match(days.health_status_means, /not Apple/);
+    const wk = summary.weeks.at(-1);
+    assert.deepEqual(wk.health_off_days, { sleep: 1 });
+    assert.ok(wk.sleep_score_avg < 100 && wk.sleep_score_avg >= 49, String(wk.sleep_score_avg));
+    assert.ok(summary.weeks.slice(0, -1).every(w => !w.health_off_days && w.sleep_score_avg === 100));
+    assert.match(summary.health_status_means, /good/);
+  });
+
   await step('context: today, the screen, what the phone keeps, the groups, and the health stats there are', async () => {
     const r = await run('context', {}, { metrics: METRICS });
     assert.equal(r.today, TODAY); assert.match(r.screen, /^Week/);
