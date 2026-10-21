@@ -457,11 +457,10 @@ path.osm-dot{stroke:#FBF5E9}
         <span class="spinner" id="findSpin" hidden></span>
       </form>
       <div class="rgroup" id="results" hidden></div>
-      <p class="hint" id="findHint">Search finds places on OpenStreetMap, nearest first once Places knows where you are.</p>
       <div class="rgroup">
-        <button class="rowbtn" type="button" id="addHere"><span class="ic">📍</span><span>Add where I am<span class="sub">Uses your location, then you name it</span></span></button>
-        <button class="rowbtn" type="button" id="addPaste"><span class="ic">📋</span><span>Paste a map link<span class="sub">In Apple Maps or Google Maps: Share, then Copy</span></span></button>
-        <button class="rowbtn" type="button" id="addBlank"><span class="ic">✏️</span><span>Type it in<span class="sub">Just a name and notes, no map pin</span></span></button>
+        <button class="rowbtn" type="button" id="addHere"><span class="ic">📍</span><span>Add where I am</span></button>
+        <button class="rowbtn" type="button" id="addPaste"><span class="ic">📋</span><span>Paste a map link<span class="sub">In Maps: Share, then Copy</span></span></button>
+        <button class="rowbtn" type="button" id="addBlank"><span class="ic">✏️</span><span>Type it in</span></button>
       </div>
       <div class="box" id="pasteBox" hidden><textarea class="plain" id="pasteText" placeholder="Touch and hold, then Paste the link here" aria-label="Map link"></textarea><button class="linkbtn" id="pasteGo" type="button">Add</button></div>
     </div>
@@ -498,7 +497,7 @@ path.osm-dot{stroke:#FBF5E9}
       <div class="field">
         <p class="label" id="plDateLbl">Planned for</p>
         <div class="box"><div class="inrow"><input type="date" id="plDate" aria-label="Date"><button class="linkbtn" id="plDateClear" type="button">Clear</button><button class="linkbtn" id="plToday" type="button">Today</button><button class="linkbtn" id="plAgain" type="button">Went again today</button></div></div>
-        <p class="hint" id="plDateHint">An event or a booking? Put its date here. Want to go is sorted soonest first.</p>
+        <p class="hint" id="plDateHint" hidden></p>
         <p class="hint" id="plCal" hidden>📅 Added from the Family calendar.</p>
       </div>
       <div class="field">
@@ -510,8 +509,8 @@ path.osm-dot{stroke:#FBF5E9}
         <div class="box"><div class="info" id="plInfo"></div></div>
       </div>
       <div class="rgroup" id="plMapRow">
-        <button class="rowbtn" type="button" id="plDirections"><span class="ic">🧭</span><span>Directions<span class="sub">Opens Apple Maps</span></span></button>
-        <button class="rowbtn" type="button" id="plOpen"><span class="ic">🗺️</span><span>Open in Apple Maps<span class="sub">See it there: photos, reviews, Look Around</span></span></button>
+        <button class="rowbtn" type="button" id="plDirections"><span class="ic">🧭</span><span>Directions</span></button>
+        <button class="rowbtn" type="button" id="plOpen"><span class="ic">🗺️</span><span>Open in Apple Maps</span></button>
       </div>
       <button class="btn danger" id="plDelete" type="button">Delete place</button>
     </div>
@@ -528,7 +527,6 @@ path.osm-dot{stroke:#FBF5E9}
       <div class="field">
         <p class="label">Design</p>
         <div class="rgroup" id="setDesign"></div>
-        <p class="hint">Just on this phone, and at once.</p>
       </div>
     </div>
   </div>

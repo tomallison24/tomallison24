@@ -208,7 +208,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
   await step(tag + ': the first time, it says what is sent where and that it asks before every change', async () => {
     await page.click('.ipsy-btn');
     await page.waitForSelector('.ipsy-consent');
-    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*asks you before every change.*Undo.*repeating/);
+    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*asks before every change.*Undo.*Private/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     await page.click('#ipsyOk');
     assert.equal(await page.$$eval('.ipsy-chip[data-ask]', e => e.length), 4);

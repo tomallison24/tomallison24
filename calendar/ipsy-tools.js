@@ -440,9 +440,9 @@ window.CalendarIpsy = function (app) {
         + (st.api !== 'ok' && st.api !== 'checking' ? ' The Family calendar can’t be reached right now, so nothing can be changed.' : '')
         + (st.offline ? ' The phone is offline.' : '') + (gmailOn() ? '' : ' Gmail is turned off for Ipsy here (Settings).');
     },
-    intro: 'Hi, I’m Ipsy! I can search your Gmail for appointments, find what’s on, look for free time, and add, move or delete an event in the Family calendar. I always ask you first before I change anything.',
+    intro: 'Hi, I’m Ipsy! Ask me what’s on, or to add or move an event.',
     placeholder: 'Ask Ipsy about the calendar',
     suggestions: ['What’s on this week?', 'Find us a free evening next week', 'Find appointment emails in Gmail', 'What can you change here?'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the events Ipsy looks at to answer it (the Family calendar and the layers you have on, but not Drinks) go to Claude through the family server, which keeps only a count of questions. Ipsy asks you before every change, one event at a time, and each change shows here with Undo. It doesn’t change repeating events. Events you mark Private are hidden from Ipsy (it only knows that time is taken), and so are private notes and bookings in the layers. Connect Gmail in Calendar Settings; Ipsy asks separately before sharing email subjects, snippets or text with Claude. Email results remain in this device’s chat until New chat.',
+    consent: 'Your question and the events Ipsy reads go to Claude, by Anthropic, through the family server. It asks before every change (each shows with Undo), and never sees Private events.',
   };
 };

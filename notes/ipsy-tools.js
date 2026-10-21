@@ -392,9 +392,9 @@ window.NotesIpsy = function (app) {
         + (priv ? ', plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see' : '')
         + ', and ' + open + ' open reminders in the lists ' + app.lists.map(l => l.name).join(', ') + '. On screen: ' + app.screen() + '.';
     },
-    intro: 'Hi, I’m Ipsy! I can find a note, write or tidy one, add to your lists, check things off, sort the groceries into store sections, set a reminder, or look something up on the web.',
+    intro: 'Hi, I’m Ipsy! Ask me about your notes, lists and reminders.',
     placeholder: 'Ask Ipsy about your notes',
     suggestions: ['What’s on my grocery list?', 'Sort the groceries by aisle', 'Find my notes about the house', 'Remind me to call Mom tomorrow at 5'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and the notes, reminders and lists Ipsy reads to answer it go to Claude through the family server, which keeps only a count of questions. Private notes are hidden from Ipsy: it never sees them. Ipsy can write, change and check off things: each change shows here with Undo, and it asks before deleting a note.',
+    consent: 'Your question and the notes, reminders and lists Ipsy reads go to Claude, by Anthropic, through the family server. Private notes are hidden from Ipsy, every change shows with Undo, and it asks before deleting a note.',
   };
 };

@@ -431,7 +431,7 @@ await test('Settings > Design: Vintage, then Standard and back, at once and kept
   assert.equal(await p.textContent('#stBody .label'), 'Design', 'Design is the first section');
   assert.equal(await p.getAttribute('#stBody [data-design="vintage"]', 'aria-checked'), 'true');
   assert.equal(await p.getAttribute('#stBody [data-design="glass"]', 'aria-checked'), 'false');
-  assert.ok((await p.textContent('#stBody')).includes('Just on this phone, and at once.'));
+  assert.ok(!(await p.textContent('#stBody')).includes('Just on this phone'), 'no explanation under Design');
   await shot(p, '14-settings-vintage');
   await p.click('#stBody [data-design="glass"]'); await p.waitForTimeout(250);
   assert.equal(await look(), 'glass', 'Standard at once');

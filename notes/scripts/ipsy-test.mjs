@@ -212,7 +212,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await page.waitForSelector('.ipsy-bubble');
     await page.waitForFunction(() => document.querySelector('.ipsy-bubble').getAnimations().every(a => a.playState === 'finished'));
     const c = await page.textContent('.ipsy-consent');
-    assert.match(c, /notes, reminders and lists Ipsy reads to answer it go to Claude through the family server, which keeps only a count/);
+    assert.match(c, /notes, reminders and lists Ipsy reads go to Claude, by Anthropic, through the family server/);
     assert.match(c, /Private notes are hidden from Ipsy/); assert.match(c, /Undo/); assert.match(c, /asks before deleting a note/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-consent.png') });

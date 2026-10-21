@@ -46,7 +46,7 @@ async function allow(confirm) {
   if (!session()) throw Error('Connect Gmail in Calendar Settings > Gmail for Ipsy first.');
   if (sessionStorage.getItem(OK) === 'yes') return true;
   if (typeof confirm !== 'function') throw Error('Email sharing needs your permission in Ipsy.');
-  const yes = await confirm('Allow Ipsy to search and read Gmail? Relevant senders, subjects, snippets and email text go to Claude through the family server and remain in this device’s saved chat until New chat. Gmail access is read-only. Calendar changes still ask separately.', { yes: 'Yes, allow email access', no: 'No' });
+  const yes = await confirm('Allow Ipsy to search and read Gmail? Senders, subjects and email text go to Claude, and stay in this chat until New chat.', { yes: 'Yes, allow email access', no: 'No' });
   if (yes) sessionStorage.setItem(OK,'yes'); return !!yes;
 }
 const declined = { content: { declined: true, note: 'Email access declined. Do not retry unless the person requests it.' } };
@@ -73,17 +73,17 @@ export function mount() {
     const box = document.createElement('section'); box.className = 'box glass'; box.dataset.gmail = '1';
     const label = document.createElement('div'); label.className = 'label'; label.textContent = 'Gmail for Ipsy';
     const link = document.createElement('a'); link.className = 'btn'; link.href = new URL('../calendar/gmail-connect.html',location.href); link.textContent = session() ? 'Reconnect or switch Google account' : 'Connect Gmail';
-    const hint = () => 'Read-only Gmail for Calendar, separate from Mail and Orders. Reconnect when this browser session expires. Ipsy asks before sending email details to Claude. Emails about private Travel bookings are hidden from it.';
+    const hint = () => 'Lets Ipsy search and read this Gmail, read-only.';
     const p = document.createElement('p'); p.className = 'hint'; p.textContent = hint();
     box.append(label,p,link);
     const PV = window.AllisonOS?.ipsy?.privacy;
     if (PV) {   // Off: Ipsy can't search or read email here at all (home/ipsy.js, privacy.gmail)
       const tog = document.createElement('button'); tog.type = 'button'; tog.className = 'btn quiet'; tog.dataset.gmailIpsy = '1';
-      const say = () => { tog.textContent = PV.gmail('calendar') ? 'Turn off Gmail for Ipsy' : 'Turn on Gmail for Ipsy'; p.textContent = hint() + (PV.gmail('calendar') ? '' : ' Off: Ipsy can’t search or read any email here.'); };
+      const say = () => { tog.textContent = PV.gmail('calendar') ? 'Turn off Gmail for Ipsy' : 'Turn on Gmail for Ipsy'; p.textContent = hint(); };
       tog.onclick = () => { PV.gmail('calendar', !PV.gmail('calendar')); say(); };
       say(); box.append(tog);
     }
-    if (session()) { const off = document.createElement('button'); off.type = 'button'; off.className = 'btn quiet'; off.textContent = 'Disconnect Gmail'; off.onclick = () => { if (window.confirm('Disconnect Gmail on this device and clear Calendar Ipsy’s saved chat? Mail and Orders are not affected.')) { disconnect(); localStorage.removeItem('ipsy.calendar.chat'); location.reload(); } }; box.append(off); }
+    if (session()) { const off = document.createElement('button'); off.type = 'button'; off.className = 'btn quiet'; off.textContent = 'Disconnect Gmail'; off.onclick = () => { if (window.confirm('Disconnect Gmail and clear Ipsy’s chat in Calendar?')) { disconnect(); localStorage.removeItem('ipsy.calendar.chat'); location.reload(); } }; box.append(off); }
     b.append(box);
   }
   new MutationObserver(draw).observe(sheet,{childList:true,subtree:true}); draw();

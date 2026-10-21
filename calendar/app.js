@@ -140,13 +140,13 @@ if (window.top !== window.self) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '')) { st.sel = q.get('date'); st.view = ['day', 'week', 'month', 'year', 'list'].includes(q.get('view')) ? q.get('view') : 'day'; }
   const LAYER = {
     family: { name: 'Family', color: 'var(--cal)' },
-    holiday: { name: 'US Holidays', color: 'var(--hol)', sub: 'Worked out on this phone: federal holidays and the usual observances' },
+    holiday: { name: 'US Holidays', color: 'var(--hol)', sub: 'Federal holidays and the usual observances' },
     note: { name: 'Notes', color: 'var(--nt)', sub: 'Reminders with a date, and notes with a nudge' },
     travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and rental cars from Travel' },
     mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days from Mail' },
-    fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'The workouts logged in Fitness, one a day' },
-    drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your own standard drinks and alcohol-free days, from your account. Only you see them.' },
-    weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast line on each day, from Open-Meteo' },
+    fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'Workouts logged in Fitness' },
+    drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your drinks and alcohol-free days, seen only by you' },
+    weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast on each day' },
   };
   // Vintage draws the Family calendar in Retro mustard (--cal) and every Notes item in Retro plum, so
   // they keep apart from the layers' Retro colours; Standard (Sea glass) uses the colours iCloud and
@@ -362,7 +362,7 @@ if (window.top !== window.self) {
     if (ls.json({ note: 'allison-notes-v1', travel: 'allison-travel-v1', fitness: 'allison-fitness-v1' }[k], null)) return LAYER[k].sub;   // this browser has it
     if (st.layersState === 'signin') return 'Sign in to your family account first: open aOS.';
     if (st.layersState === 'off') return 'Family accounts aren’t switched on yet.';
-    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'If you use ' + LAYER[k].name + ', open it once, signed in, and it shows here';
+    if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'Open ' + LAYER[k].name + ' once, signed in, to show it here';
     return LAYER[k].sub;
   };
 
@@ -755,12 +755,11 @@ if (window.top !== window.self) {
     const keys = [...days.keys()].filter(d => d >= from).sort().slice(0, 120);
     const w = st.win || wantedWindow();
     let h = '<div class="navrow"><button class="textbtn" type="button" data-act="earlier">Earlier</button><span class="lbl">' + esc('From ' + medDate(from)) + '</span><button class="textbtn" type="button" data-act="fromToday">Today</button></div>';
-    if (!keys.length) h += '<div class="empty glass"><strong>Nothing coming up</strong>Nothing between ' + esc(medDate(from)) + ' and ' + esc(medDate(ymd(w.to - 1))) + '.</div>';
+    if (!keys.length) h += '<div class="empty glass"><strong>Nothing coming up</strong></div>';
     for (const d of keys) {
       const evs = days.get(d).sort((a, b) => (b.allDay - a.allDay) || a.start - b.start);
       h += '<div class="lsec"><div class="dayhead' + (d === today() ? ' today' : '') + '"><b>' + esc(d === today() ? 'Today' : d === addDays(today(), 1) ? 'Tomorrow' : fmt(noon(d), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(d), { day: 'numeric', month: 'long', year: partsOf(d).y === partsOf(today()).y ? undefined : 'numeric' })) + '</span>' + wxLine(d) + '</div><div class="rgroup glass">' + evs.map(x => evRow(x, { noPast: true })).join('') + '</div></div>';
     }
-    h += '<p class="hint" style="text-align:center">Events loaded up to ' + esc(medDate(ymd(w.to - 1))) + '. Look at a later month to load more.</p>';
     return h;
   }
 
@@ -768,9 +767,9 @@ if (window.top !== window.self) {
   function renderSearch() {
     $('title').firstChild.textContent = 'Search'; $('titleSub').textContent = '';
     const qs = st.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!qs.length) { main.innerHTML = '<div class="empty glass"><strong>Search events</strong>Titles, places and notes of everything loaded.</div>'; return; }
+    if (!qs.length) { main.innerHTML = '<div class="empty glass"><strong>Search events</strong></div>'; return; }
     const hits = st.occ.filter(x => matches(x, qs)).sort((a, b) => a.start - b.start).slice(0, 200);
-    if (!hits.length) { main.innerHTML = '<div class="empty glass"><strong>No matches</strong>Nothing loaded matches “' + esc(st.search) + '”.</div>'; return; }
+    if (!hits.length) { main.innerHTML = '<div class="empty glass"><strong>No matches</strong></div>'; return; }
     const days = new Map();
     for (const x of hits) { const d = x.allDay ? x.startDate : ymd(x.start); if (!days.has(d)) days.set(d, []); days.get(d).push(x); }
     let h = '<p class="resulthead">' + plural(hits.length, 'match') + (hits.length === 200 ? ' (first 200)' : '') + '</p>';
@@ -910,7 +909,7 @@ if (window.top !== window.self) {
     const o = x.o;
     let scope = 'all';
     if (o.recurring) {
-      scope = await pick('This is a repeating event', 'Move only this occurrence, or every occurrence from here on?', [['this', 'Only this event'], ['future', 'All future events']]);
+      scope = await pick('This is a repeating event', '', [['this', 'Only this event'], ['future', 'All future events']]);
       if (!scope) { render(); return; }
     }
     const f = formFrom(x); f.start = ns; f.end = ne;
@@ -1052,7 +1051,7 @@ if (window.top !== window.self) {
     $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
-        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '<span class="sub">' + esc(x.kind === 'holiday' ? '' : 'Where it comes from') + '</span></span></a>' : '') + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar<span class="sub">A copy, as an event of its own</span></span></button>' : '') + '</div>');
+        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '') + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
     $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="iconbtn" type="button" data-close aria-label="Done">' + ICON.close + '</button>';
     openSheet('evSheet');
     const del = $('evDelete'); if (del) del.onclick = () => deleteEvent(x);
@@ -1138,11 +1137,10 @@ if (window.top !== window.self) {
       + (f.alarms[0] ? '<div class="frow sub"><label for="edAlert2">Second Alert</label><select id="edAlert2">' + opt(alerts.concat(f.alarms[1] && !alerts.some(a => a[0] === f.alarms[1]) ? [[f.alarms[1], alarmWords({ minutes: I.parseDuration(f.alarms[1]) / MIN }, f.allDay)]] : []), f.alarms[1] || '') + '</select></div>' : '')
       + '<div class="frow"><span class="ic">' + ICON.busy + '</span><label for="edTransp">Show As</label><select id="edTransp">' + opt([['OPAQUE', 'Busy'], ['TRANSPARENT', 'Free']], f.transp) + '</select></div>'
       + '<div class="frow"><span class="ic">' + ICON.lock + '</span><label for="edPrivate">Private</label><button class="switch" id="edPrivate" type="button" role="switch" aria-checked="' + !!f.private + '" aria-label="Private"></button></div>'
-      + '</div>'
+      + '</div><p class="hint">Private hides this event from Ipsy.</p>'
       + '<div class="rgroup glass"><div class="frow"><span class="ic">' + ICON.link + '</span><input class="txt" id="edUrl" type="url" inputmode="url" placeholder="URL" value="' + esc(f.url) + '" autocomplete="off" autocapitalize="off"></div>'
       + '<div class="frow"><span class="ic">' + ICON.notes + '</span><textarea id="edNotes" placeholder="Notes">' + esc(f.notes) + '</textarea></div></div>'
-      + (ed.occ ? '<button class="btn quiet danger" type="button" id="edDelete">Delete Event</button>' : '')
-      + '<p class="hint">Saved to the ' + esc(st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud, so it shows on every phone with it, and the phone’s own Calendar does the alerting. Private hides it from Ipsy on every phone; it still shows in the calendar.</p>';
+      + (ed.occ ? '<button class="btn quiet danger" type="button" id="edDelete">Delete Event</button>' : '');
     wireEditor();
   }
   function wireEditor() {
@@ -1198,8 +1196,8 @@ if (window.top !== window.self) {
     let scope = 'all';
     if (x && x.o.recurring) {
       const changedRule = f.rule !== (function () { const r = I.parseRRule(rruleOf(x)); return I.fmtRRule(Object.assign({}, r, { COUNT: undefined, UNTIL: undefined })); })();
-      if (changedRule) scope = await pick('This is a repeating event', 'The repeat itself changed, so the change applies from here on or to the whole series.', [['future', 'All future events'], ['all', 'All events']]);
-      else scope = await pick('This is a repeating event', 'Save the changes for this occurrence only, for every occurrence from here on, or for all of them?', [['this', 'Only this event'], ['future', 'All future events'], ['all', 'All events']]);
+      if (changedRule) scope = await pick('This is a repeating event', '', [['future', 'All future events'], ['all', 'All events']]);
+      else scope = await pick('This is a repeating event', '', [['this', 'Only this event'], ['future', 'All future events'], ['all', 'All events']]);
       if (!scope) return;
     }
     $('edSave').disabled = true;
@@ -1341,7 +1339,7 @@ if (window.top !== window.self) {
     if (x.kind !== 'family') return;
     let scope = 'all';
     if (x.o.recurring) {
-      scope = await pick('Delete this repeating event', 'Delete only this occurrence, every occurrence from here on, or the whole series?', [['this', 'Delete This Event Only', 'danger'], ['future', 'Delete All Future Events', 'danger'], ['all', 'Delete All Events', 'danger']]);
+      scope = await pick('Delete this repeating event', '', [['this', 'Delete This Event Only', 'danger'], ['future', 'Delete All Future Events', 'danger'], ['all', 'Delete All Events', 'danger']]);
       if (!scope) return;
     } else {
       const ok = await pick('Delete “' + x.title + '”?', '', [['all', 'Delete Event', 'danger']]);
@@ -1393,19 +1391,18 @@ if (window.top !== window.self) {
       : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
     const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
     const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
-    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'If you use Mail, open it once, signed in, and its reminders show here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
+    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     $('stBody').innerHTML = ''
       + '<p class="label">Design</p><div class="rgroup glass">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="hint">Just on this phone, and at once.</p>'
       + '<p class="label">iCloud</p><div class="rgroup glass"><div class="status ' + status.cls + '"><i></i><span>' + status.text + '</span></div>'
-      + '<button class="rowbtn" type="button" id="stRefresh"><span class="ic">' + ICON.refresh + '</span><span>Check for changes now<span class="sub">Also happens when the app opens and every few minutes while it is open</span></span></button>'
+      + '<button class="rowbtn" type="button" id="stRefresh"><span class="ic">' + ICON.refresh + '</span><span>Check for changes now</span></button>'
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div><p class="hint">Every layer is optional: use the apps you want, and switch off the ones you don’t. Notes, Travel, Mail and Fitness each keep a copy of what they show here in your own family account (each signed in once), so they appear even though every app on an iPhone keeps its own storage. Only you see yours.</p>'
+      + '</div>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[0, 'Sunday'], [1, 'Monday']], settings.weekStart) + '</div>'
       + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'
@@ -1416,8 +1413,7 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="stDur">Length</label><select id="stDur">' + opt(DUR, settings.duration) + '</select></div>'
       + '<div class="frow"><label for="stAlert">Alert</label><select id="stAlert">' + opt(ALERTS_TIMED, settings.alertTimed) + '</select></div>'
       + '<div class="frow"><label for="stAlertAD">All-day alert</label><select id="stAlertAD">' + opt(ALERTS_ALLDAY, settings.alertAllDay) + '</select></div>'
-      + '</div>'
-      + '<p class="hint">Events are read from and written to iCloud through this site’s own small server piece, which holds the Apple ID and app-specific password so they never reach a phone. The phone keeps a copy of the events it last saw; nothing else is stored, and nothing is sent anywhere else except what Ipsy looks at when you ask it something.</p>';
+      + '</div>';
     $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); };
     const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
     slideSegs();

@@ -188,10 +188,10 @@
   // Yours: one you made (the Sheet writes whose each is, by), so you can make it Just me, or not.
   const isMine = it => !it.by || (!!meId() && it.by === meId());
   // The words under a Just-me switch (a note, a reminder, a list), and the switch itself.
-  const ONLY_ON = 'Only you see it. Nobody else in the family gets it.', ONLY_OFF = 'Shared with the family. Just me keeps it to you.';
-  const onlyHint = (it, made, on = ONLY_ON, off = ONLY_OFF) => !isMine(it)
-    ? (meId() ? 'Shared with the family. Only the person who ' + made + ' can make it Just me.' : 'Sign in to change who sees it.')
-    : it.only ? on : off;
+  const ONLY = 'Only you see it, not the rest of the family.';
+  const onlyHint = (it, made, what = ONLY) => !isMine(it)
+    ? (meId() ? 'Only the person who ' + made + ' can make it Just me.' : 'Sign in to change who sees it.')
+    : what;
   const flipOnly = it => { if (!isMine(it)) return; if (it.only) delete it.only; else it.only = true; };
   function persist(){ try { localStorage.setItem(KEY, JSON.stringify({notes, lists, todos})); localStorage.setItem(GRAVE_KEY, JSON.stringify(graves)); } catch(e){ storeFailed(); } shareCal(); }
   // Calendar's Notes layer: dated reminders and notes with a nudge, kept in your own
@@ -449,12 +449,12 @@
     $('collBack').hidden = !c;
     $('notesTitle').textContent = c ? collName(c) : 'Notes';
     let h = '';
-    if (!c && !searching && needsBackup()) h += '<div class="notice glass"><span>' + esc(backupStatus()) + ' Everything lives only in this browser.</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>';
+    if (!c && !searching && needsBackup()) h += '<div class="notice glass"><span>' + esc(backupStatus()) + '</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>';
 
     if (searching) {
       const res = alive().filter(n => (!c || c === 'trash' ? true : inColl(n, c) || (c === 'archive' && n.archived)) && noteMatches(n)).sort(byCreated);
       $('notesSub').textContent = plural(res.length, 'result') + (c ? ' in ' + collName(c) : '');
-      h += res.length ? grid(res, {date:true, flagArchived:true}) : '<div class="empty glass"><strong>No matching notes</strong>Try a different word or #tag.</div>';
+      h += res.length ? grid(res, {date:true, flagArchived:true}) : '<div class="empty glass"><strong>No matching notes</strong></div>';
     } else if (!c) {
       $('notesSub').textContent = plural(live.length, 'note') + syncLabel();
       const pinned = live.filter(n => n.pinned).sort(byCreated);
@@ -469,7 +469,7 @@
       if (tiles.length) h += '<section><h2 class="sechead">Collections</h2><div class="ctiles">' + tiles.join('') + '</div></section>';
       const recent = live.slice().sort(byCreated).slice(0, 5);
       if (recent.length) h += '<section><h2 class="sechead">Recent</h2><div class="rgroup glass nlist">' + recent.map(nrow).join('') + '</div></section>';
-      if (!live.length) h += '<div class="empty glass"><strong>No notes yet</strong>Tap the pencil to write one, or the clipboard to paste.</div>';
+      if (!live.length) h += '<div class="empty glass"><strong>No notes yet</strong>Tap the pencil to write one.</div>';
       const arch = alive().filter(n => n.archived).length, trash = notes.filter(n => n.deletedAt).length, nudges = live.filter(n => n.reminder).length, priv = live.filter(n => n.private).length, tidy = tidySuggestions().length;
       h += '<div class="morechips">'
         + '<button class="chip glass" type="button" data-coll="all">All notes <span class="n">' + live.length + '</span></button>'
@@ -481,7 +481,7 @@
         + '</div>';
     } else if (c === 'trash') {
       const list = notes.filter(n => n.deletedAt).sort((a, b) => b.deletedAt - a.deletedAt);
-      $('notesSub').textContent = plural(list.length, 'note') + ' · deleted for good after ' + TRASH_DAYS + ' days';
+      $('notesSub').textContent = plural(list.length, 'note');
       if (list.length) {
         h += '<button class="btn danger" type="button" id="emptyTrash">Empty Trash</button>';
         h += '<div class="rgroup glass nlist">' + list.map((n, i) => {
@@ -490,11 +490,11 @@
             + '<button class="textbtn" type="button" data-restore="' + esc(n.id) + '">Restore</button>'
             + '<button class="iconbtn danger" type="button" data-purge="' + esc(n.id) + '" aria-label="Delete for good">' + I.trash + '</button></div>';
         }).join('') + '</div>';
-      } else h += '<div class="empty glass"><strong>Trash is empty</strong>Deleted notes stay here for ' + TRASH_DAYS + ' days.</div>';
+      } else h += '<div class="empty glass"><strong>Trash is empty</strong></div>';
     } else {
       const list = alive().filter(n => inColl(n, c)).sort(c === 'nudges' ? (a, b) => new Date(a.reminder) - new Date(b.reminder) : byCreated);
-      $('notesSub').textContent = plural(list.length, 'note') + (c === 'nudges' ? ' · soonest first' : ' · newest first');
-      if (!list.length) h += '<div class="empty glass"><strong>Nothing here</strong>' + (c === 'archive' ? 'Swipe a note left and tap Archive to keep it out of the way.' : 'Notes you add here will show newest first.') + '</div>';
+      $('notesSub').textContent = plural(list.length, 'note');
+      if (!list.length) h += '<div class="empty glass"><strong>Nothing here</strong></div>';
       else if (c === 'nudges') h += grid(list);
       else {
         // Newest first, in month groups.
@@ -643,7 +643,7 @@
     if (stale.length) out.push({id:'stale', head:plural(stale.length, 'note') + ' untouched for 6 months', detail:names(stale), act:'Archive',
       run(){ stale.forEach(n => { n.archived = true; }); }});
     const untagged = live.filter(n => !n.tags.length);
-    if (untagged.length >= 3) out.push({id:'untagged', head:plural(untagged.length, 'note') + ' without a tag', detail:'Tag them so they land in a collection.', act:'Show them', open:'untagged'});
+    if (untagged.length >= 3) out.push({id:'untagged', head:plural(untagged.length, 'note') + ' without a tag', detail:names(untagged), act:'Show them', open:'untagged'});
     return out;
   }
   function openTidy(){ renderTidy(); openSheet('tidySheet'); }
@@ -651,7 +651,7 @@
     const list = tidySuggestions();
     $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns">' + esc(s.detail) + '</span></span>'
       + '<button class="textbtn" type="button" data-tidy="' + s.id + '">' + esc(s.act) + '</button></div>').join('') + '</div>'
-      : '<div class="empty glass"><strong>All tidy</strong>No duplicates, empty notes or stray tags.</div>';
+      : '<div class="empty glass"><strong>All tidy</strong></div>';
   }
   $('tidyBody').addEventListener('click', e => {
     const b = e.target.closest('[data-tidy]'); if (!b) return;
@@ -688,8 +688,6 @@
     $('edRemClear').hidden = !e.reminder;
     $('swatches').innerHTML = COLORS.map(c => '<button class="swatch" type="button" role="radio" data-color="'+c+'" data-sw="'+c+'" aria-label="'+(c === 'none' ? 'Clear glass' : c)+'" aria-checked="'+(e.color === c)+'"></button>').join('');
     $('edPrivate').setAttribute('aria-checked', !!e.private);
-    $('edPrivHint').textContent = e.private ? 'Hidden from Ipsy. Private doesn’t hide it from the family: Just me does.'
-      : 'Private hides this note from Ipsy.';
     // Just me: only you see it, on your phones; only the person who wrote it can set it, or clear it.
     $('edOnly').setAttribute('aria-checked', !!e.only);
     $('edOnly').disabled = !isMine(e);
@@ -854,8 +852,7 @@
 
     if (searching) h += '<p class="resulthead">'+plural(items.length, 'result')+' across all lists</p>';
     if (!items.length) {
-      h += '<div class="empty"><strong>'+(searching ? 'No matching reminders' : 'All clear')+'</strong>'
-        + (searching ? 'Try a different word or #tag.' : st.rview === 'today' ? 'Nothing due today. Enjoy it.' : 'Add one above.') + '</div>';
+      h += '<div class="empty"><strong>'+(searching ? 'No matching reminders' : 'All clear')+'</strong></div>';
     } else {
       const groups = new Map();
       const aisles = !searching && st.rlist && isGrocery(listById(st.rlist));
@@ -945,8 +942,8 @@
       if (!t.time && a > 0) a = Math.round(a / 1440) * 1440;
       $('tdAlert').innerHTML = (t.time ? ALERTS_TIMED : ALERTS_DAY)
         .map(([m, n]) => '<button class="opt" type="button" role="radio" data-a="'+m+'" aria-checked="'+(a === m)+'">'+n+'</button>').join('');
-      $('tdAlertHint').textContent = !push.on ? 'Turn on notifications with the bell at the top of Reminders to get this alert on this phone.'
-        : push.skip.includes(t.list) ? 'This phone doesn\u2019t get alerts for ' + listById(t.list).name + '. Change it with the bell at the top of Reminders.'
+      $('tdAlertHint').textContent = !push.on ? 'Turn on notifications with the bell to get this alert.'
+        : push.skip.includes(t.list) ? 'This phone doesn\u2019t get alerts for ' + listById(t.list).name + '.'
         : !t.time && a >= 0 ? 'Without a time, it alerts at ' + fmtClock(push.morning) + (a ? '' : ' on the day') + '.' : '';
     }
     $('tdPrio').innerHTML = ['None','Low','Medium','High'].map((p, i) => '<button class="opt" type="button" role="radio" data-p="'+i+'" aria-checked="'+(t.prio === i)+'">'+p+'</button>').join('');
@@ -1049,7 +1046,7 @@
     const l = st.listEdit;
     $('lsOnly').setAttribute('aria-checked', !!l.only);
     $('lsOnly').disabled = !isMine(l);
-    $('lsOnlyHint').textContent = onlyHint(l, 'made it', 'Only you see this list and its reminders.', 'Shared with the family. Just me keeps this list and its reminders to you.');
+    $('lsOnlyHint').textContent = onlyHint(l, 'made it', 'Only you see this list and its reminders.');
   }
   $('lsOnly').onclick = () => { flipOnly(st.listEdit); renderListOnly(); };
   $('lsName').addEventListener('input', renderListGrocery);
@@ -1143,7 +1140,7 @@
     const allTodos = pending.every(p => p.k === 'todo');
     $('imLbl').textContent = pending.length === 1 ? 'Add this ' + (pending[0].k === 'note' ? 'note' : 'reminder') + '?' : 'Add ' + pending.length + (allTodos ? ' reminders?' : ' items?');
     $('imList').innerHTML = pending.map(p => '<li>' + (p.k === 'note' ? 'Note: ' : 'Reminder: ') + esc(p.d.title || 'Untitled') + '</li>').join('');
-    $('imHint').textContent = hint || 'They\u2019ll be added as new copies. Nothing you already have is changed.';
+    $('imHint').textContent = hint || ''; $('imHint').hidden = !hint;
     openSheet('importSheet');
   }
   const str = (v, d = '') => typeof v === 'string' ? v : d;
@@ -1175,7 +1172,7 @@
     let items;
     try { items = JSON.parse(b64d(m[1])); } catch(e) { toast('That link is damaged. Ask for it to be sent again.'); return; }
     if (isIOS && !standalone()) offerOpenInApp(link, items);
-    else offerImport(items, 'Shared with you. It\u2019ll be added as a new copy.');
+    else offerImport(items);
   }
   window.addEventListener('hashchange', checkIncoming);
 
@@ -1232,7 +1229,7 @@
     if (/#sync=[\w-]+/.test(text)) { toast(SETUP_GONE); return; }
     const link = text.match(/#add=([\w-]+)/);
     if (link) {
-      try { offerImport(JSON.parse(b64d(link[1])), 'Shared with you. It’ll be added as a new copy.'); }
+      try { offerImport(JSON.parse(b64d(link[1]))); }
       catch(e) { toast('That link is damaged. Ask for it to be sent again.'); }
       return;
     }
@@ -1242,7 +1239,7 @@
     if (st.tab === 'rem') {
       const items = textToTodos(text);
       if (!items.length) { toast('Nothing to add from that.'); return; }
-      offerImport(items, 'Each line becomes a reminder in ' + items[0].d.list + '.');
+      offerImport(items, 'Into ' + items[0].d.list + '.');
     } else {
       openEditor(null, textToNote(text));
     }
@@ -1250,9 +1247,8 @@
 
   function openPasteSheet(){
     $('psLbl').textContent = st.tab === 'rem' ? 'Paste as reminders' : 'Paste as a note';
-    $('psHint').textContent = st.tab === 'rem'
-      ? 'Touch and hold in the box, tap Paste, then Add. Each line becomes a reminder.'
-      : 'Touch and hold in the box, tap Paste, then Add. The first line or heading becomes the title.';
+    $('psHint').textContent = st.tab === 'rem' ? 'One reminder per line.' : '';
+    $('psHint').hidden = st.tab !== 'rem';
     $('psText').value = '';
     openSheet('pasteSheet');
   }
@@ -1272,10 +1268,10 @@
     openSheet('linkSheet');
   }
   $('lkCopy').onclick = async () => {
-    try { await navigator.clipboard.writeText($('lkLink').value); toast('Copied. Now open Notes from your Home Screen and tap the clipboard button.'); closeSheet('linkSheet'); }
+    try { await navigator.clipboard.writeText($('lkLink').value); toast('Copied. Now paste it in Notes on your Home Screen.'); closeSheet('linkSheet'); }
     catch(e) { $('lkLink').hidden = false; $('lkLink').select(); toast('Select the link and copy it.'); }
   };
-  $('lkHere').onclick = () => { closeSheet('linkSheet'); if (openHereItems) offerImport(openHereItems, 'It’ll be added in this browser.'); };
+  $('lkHere').onclick = () => { closeSheet('linkSheet'); if (openHereItems) offerImport(openHereItems); };
 
   // ---------- recipes: tidy into ingredients + method, and cook step by step ----------
   // Rule-based, on the phone: section headings, quantities and cooking verbs.
@@ -1400,7 +1396,7 @@
     $('ckBar').style.width = (last ? c.i / last * 100 : 100) + '%';
     let h;
     if (sc.type === 'ing') {
-      h = '<p class="k">Before you start</p><h2 class="big">Ingredients</h2><p class="sub">Tap each one as you get it out.</p><ul class="ingl">'
+      h = '<p class="k">Before you start</p><h2 class="big">Ingredients</h2><ul class="ingl">'
         + c.r.groups.map((g, gi) => (g.name ? '<li class="gh">' + esc(g.name) + '</li>' : '')
           + g.items.map((x, xi) => { const k = gi + '-' + xi, on = c.ticked.has(k);
               return '<li><button type="button" data-ing="' + k + '" aria-pressed="' + on + '"><span class="bx">' + I.check + '</span><span>' + esc(x) + '</span></button></li>'; }).join('')).join('')
@@ -1458,7 +1454,7 @@
   let familySynced = false;
   try { familySynced = localStorage.getItem(KEY + '-family') === '1'; } catch(e) {}
   const SYNC_ERRORS = {
-    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Notes keeps everything on this phone.',
+    signin: 'Sign in to sync with the family’s Google Sheet.',
     'no-sheet': 'The family’s Notes Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
     'wrong-secret': 'aOS’s phrase for the Notes Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
     'old-script': 'The Notes Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
@@ -1620,7 +1616,7 @@
     return app ? 'the Notes app' : 'this browser';
   };
   // A setup link (#sync=…) from before aOS kept the Sheet: nothing to set up any more, and nothing in it is kept.
-  const SETUP_GONE = 'Setup links aren’t needed any more: sign in, and Notes syncs with the family’s Google Sheet by itself.';
+  const SETUP_GONE = 'Setup links aren’t needed any more: just sign in.';
   document.addEventListener('visibilitychange', () => { if (signedIn() && document.visibilityState === 'visible' && Date.now() - lastSyncAt > 30000) sync(); });
   window.addEventListener('online', () => { if (signedIn()) sync(); });
   // Signed in (here, or by Show completed before …): hand the old link over, then sync. Signed out: the title stops saying Synced.
@@ -1642,7 +1638,7 @@
   const bytesKey = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const fmtClock = hm => new Date('2000-01-01T' + (hm || '09:00')).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
   const PUSH_ERRORS = {
-    'signin':'Sign in first: notifications come from the family’s Google Sheet, for the family.',
+    'signin':'Sign in first to turn on notifications.',
     'no-sheet':'The notification server doesn’t have the family’s Google Sheet yet. The owner gives it the Sheet (Notes README, “Notifications”).',
     'wrong-secret':'The notification server’s phrase for the family’s Google Sheet doesn’t match any more. The owner gives it the new one (Notes README, “Notifications”).',
     'other-sheet':'This server already alerts for a different Google Sheet.',
@@ -1684,10 +1680,10 @@
     const on = push.on;
     $('puOff').hidden = on; $('puOnBox').hidden = !on;
     $('puStatus').textContent = !pushable()
-      ? (isIOS && !standalone() ? 'On iPhone, notifications only work in Notes opened from its own Home Screen icon. Open it from there and turn them on.' : 'This browser can’t show notifications.')
+      ? (isIOS && !standalone() ? 'Open Notes from its Home Screen icon to turn these on.' : 'This browser can’t show notifications.')
       : !signedIn() ? PUSH_ERRORS.signin
-      : on ? 'On in ' + place() + '. Reminders alert here at their Alert time, even with Notes closed.'
-      : 'Get an alert on this phone when a reminder is due or a note’s nudge comes round, even with Notes closed.';
+      : on ? 'On in ' + place() + '.'
+      : 'Alerts this phone when a reminder or nudge is due.';
     $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('puNudges').setAttribute('aria-checked', push.nudges);
     $('puMorning').value = push.morning;
@@ -1865,7 +1861,7 @@
       return '<div class="tagrow"><span class="grow"><input class="plain" id="tg'+i+'" value="'+esc(t)+'" data-old="'+esc(t)+'" aria-label="Rename tag '+esc(t)+'" style="font-weight:700"><span class="sub">'+parts.join(' · ')+'</span></span>'
         + (nc.get(t) ? '<button class="linkbtn" type="button" data-filter="'+esc(t)+'">Show notes</button>' : '')
         + '<button class="iconbtn danger" type="button" data-del="'+esc(t)+'" aria-label="Delete tag '+esc(t)+'">'+I.trash+'</button></div>';
-    }).join('') : '<div class="tagrow"><span class="sub">No tags yet. Add one from a note or reminder.</span></div>';
+    }).join('') : '<div class="tagrow"><span class="sub">No tags yet.</span></div>';
   }
   $('tagsBtn').onclick = $('remTagsBtn').onclick = () => { renderTagRows(); openSheet('tagsSheet'); };
   $('tagRows').addEventListener('change', e => {
