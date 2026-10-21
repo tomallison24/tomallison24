@@ -1307,7 +1307,8 @@ document.addEventListener('click', e => {
 });
 
 // ---------------------------------------------------------------------------
-// The drop-down: six views, one per kind of device, Favorites first - and
+// The drop-down: six views, one per kind of device, Favorites first, then the
+// automations - and
 // the app always opens on Favorites. Each view holds sections (Thermostats,
 // Heaters, ...) under small headings; the other families add theirs from
 // their own files (devices.js), and the views are laid out once all have.
@@ -1318,6 +1319,7 @@ const VIEWS = [
   { id: 'media', name: 'Media', icon: 'speaker', quiet: 'Quiet' },
   { id: 'security', name: 'Security', icon: 'shield', quiet: 'Disarmed' },
   { id: 'around', name: 'Around the house', icon: 'home', quiet: 'All quiet' },
+  { id: 'autos', name: 'Automations', icon: 'sync', quiet: 'All on' },   // every Home Assistant automation, to see (automations.js)
   { id: 'labs', name: 'Labs', icon: 'flask', quiet: 'Ideas' },   // designs tried out live (a labs.js); hidden while it has none
 ];
 const SECTIONS = [

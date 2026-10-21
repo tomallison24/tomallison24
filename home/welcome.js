@@ -102,7 +102,8 @@
         'Notes: Just me on a note, a reminder or a whole list: nobody else in the family gets it (Private still only hides a note from Ipsy). Finished reminders are kept on the phone for 90 days; Show completed before brings older ones back. Nudges for a Just me reminder only reach your own phones',
         'Places: on Notes\' Sheet, shared with the family, synced through aOS like the rest',
         'Travel: Just me on a booking, and on a trip; Show older trips from the Sheet brings back past trips',
-        'Meals: every plan the family accepts is kept in the Sheet with who planned it; Past plans shows the ones the family server no longer keeps, and Older plans reads them back a year at a time'],
+        'Meals: every plan the family accepts is kept in the Sheet with who planned it; Past plans shows the ones the family server no longer keeps, and Older plans reads them back a year at a time',
+        'Home: an Automations page (the view picker at the bottom) with every Home Assistant automation: what it does, when it runs, the devices it works with their state now, and whether it is on and when it last ran. Tap one for the full breakdown'],
       apps: {
         aos: { highlights: ['Each app\'s Google Sheet is now the family\'s record', 'The owner sets them up once, in Account > Google Sheets'],
           tour: [{ sel: '[data-acct]', t: 'Google Sheets', d: 'The owner sets up each app\'s Sheet once, in Account > Google Sheets, for the whole family. Nobody else has to do anything.', g: 'tap' }] },

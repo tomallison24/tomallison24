@@ -90,12 +90,13 @@ jobs:
               aOS/scripts/android-installed-test.mjs
               meals/scripts/app-test.mjs
               podcasts/scripts/app-test.mjs
-          # Drinks; Fitness's Meds and Steps, with Sign out and erase; and Private: what Orders, Travel and Calendar keep from Ipsy
+          # Drinks; Fitness's Meds and Steps, with Sign out and erase; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
           - group: drinks
             tests: |
               drinks/scripts/app-test.mjs
               fitness/scripts/meds-steps-test.mjs
               home/scripts/ipsy-private-test.mjs
+              house/scripts/automations-test.mjs
           # Home, News' table and match pages, Calendar
           - group: home
             tests: |
