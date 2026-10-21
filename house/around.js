@@ -190,7 +190,7 @@ family({
         ['all', side(BLINDS[0])],
         ['sides', lbl('EACH BLIND') + BLINDS.slice(1).map(side).join('')],
         ['guest', grp(swRow('guest', 'Guest mode', 'guest', guest, '250,144,62', { wait: tWaiting(dv('blinds', 'guest', 'Guest mode'), 'g'), dis: gone(GUEST) }), true)
-          + '<p class="tnote">Guest mode skips the 08:30 open and the sunset close; they catch up when it goes off.</p>'],
+          + '<p class="tnote">Skips the 08:30 open and the sunset close.</p>'],
       ],
     };
   },
@@ -394,8 +394,7 @@ const EN = [
 family({
   id: 'energy', name: 'Energy', icon: 'lightning', group: 'Around the house', order: 5,
   mount(el) {
-    el.innerHTML = EN.map(x => `<article class="en${x.id === 'total' ? ' big' : ''}" data-en="${x.id}"></article>`).join('')
-      + '<p class="tnote">Estimates, apart from the two plugs and the heaters. Total is lighting, climate, and fans & dehumidifiers - not the whole house, and without the $30 base charge.</p>';
+    el.innerHTML = EN.map(x => `<article class="en${x.id === 'total' ? ' big' : ''}" data-en="${x.id}"></article>`).join('');
   },
   render() {
     const total = num(EN[0].p);

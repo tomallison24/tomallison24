@@ -84,7 +84,7 @@ function tSchedChip(t) {
 // The popup: each schedule, its steps, the one under way lit, and its switch.
 function tSchedHTML(t) {
   const ids = tSchedules(t);
-  if (!ids.length) return `<p class="tnote">No Home Assistant schedule controls this thermostat.${t.kind === 'nest' ? ' A schedule kept in the Nest app isn\'t visible to Home Assistant.' : ''}</p>`;
+  if (!ids.length) return '<p class="tnote">No schedule.</p>';
   return ids.map(id => {
     const s = schRead(t, id);
     const steps = s.slots.map((slot, i) => `<div class="sstep${s.on && i === s.cur ? ' now' : ''}${s.on && i === s.next ? ' next' : ''}">

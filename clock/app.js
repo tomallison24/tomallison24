@@ -341,8 +341,8 @@ if (window.top !== window.self) {
     const q = $('cityQ').value, res = L.searchCities(q, 60), t = now();
     const have = new Set(cityMode === 'home' ? (S.set.home ? [S.set.home.tz + '|' + S.set.home.name] : []) : S.cities.map(c => c.tz + '|' + c.name));
     $('cityRes').hidden = !res.length;
-    $('cityHint').hidden = !!res.length;
-    $('cityHint').textContent = q.trim() ? 'No cities match “' + q.trim() + '”.' : 'Type a city, a country or a state: London, Japan, Texas.';
+    $('cityHint').hidden = !!res.length || !q.trim();
+    $('cityHint').textContent = q.trim() ? 'No cities match “' + q.trim() + '”.' : '';
     $('cityRes').innerHTML = res.map((c, i) => { const z = L.zoneParts(c.tz, t), on = have.has(c.tz + '|' + c.name);
       return `<button class="cres${on ? ' have' : ''}" type="button" data-i="${i}"><span class="cn"><b>${esc(c.name)}</b><small>${esc(c.where)}${on ? (cityMode === 'home' ? ' · main clock' : ' · added') : ''}</small></span><span class="cv">${esc(L.clockLine(z.h, z.mi, h24()))}</span></button>`; }).join('');
     $('cityRes')._res = res;
@@ -387,7 +387,7 @@ if (window.top !== window.self) {
     $('missed').innerHTML = S.missed.length ? `<div class="missed" role="status">${ICON.alert}<p>${S.missed.map(x => `<b>${esc(x.label)}</b> ${x.kind === 'timer' ? 'ended' : 'came due'} ${esc(pastLine(x.at))} while Clock was closed.`).join('<br>')}</p><button type="button" id="missedOk">OK</button></div>` : '';
     // Sleep | Wake Up
     const sl = S.sleep;
-    if (!sl.set) $('sleepCard').innerHTML = `<div class="sleepoff"><span>Set a bedtime and a wake-up alarm for the days you pick.</span><button class="btn quiet" type="button" id="sleepSetup">Set Up</button></div>`;
+    if (!sl.set) $('sleepCard').innerHTML = `<div class="sleepoff"><span>No sleep schedule</span><button class="btn quiet" type="button" id="sleepSetup">Set Up</button></div>`;
     else {
       const len = L.hoursText(L.sleepMinutes(sl));
       const state = !sl.on ? 'Off' : sl.skip ? 'Skipping ' + whenLine(sl.skip) : sl.days.length ? L.repeatText(sl.days) : 'No days picked';
@@ -740,7 +740,7 @@ if (window.top !== window.self) {
     if (S.tz !== hereZone()) { schedule(t); changed = true; }
     if (RING.length && AUD.playing && t - ringStart > 15 * 60e3) { stopSound(); $('rNote').textContent = 'Rang for 15 minutes.'; }
     if (changed) { save(); renderHead(); renderPane(S.tab); }
-    if (S.missed.length > missed) { const x = S.missed[S.missed.length - 1]; toast(x.label + (x.kind === 'timer' ? ' ended ' : ' came due ') + pastLine(x.at) + ', while Clock was closed. Alarms lists it.', null, 8000); }
+    if (S.missed.length > missed) { const x = S.missed[S.missed.length - 1]; toast(x.label + (x.kind === 'timer' ? ' ended ' : ' came due ') + pastLine(x.at) + ', while Clock was closed.', null, 8000); }
     paint();
   }
   function paint() {
@@ -772,13 +772,13 @@ if (window.top !== window.self) {
     catch { warnNight(false); }
   }
   function warnNight(ok) {
-    $('nWarn').textContent = ok ? 'The screen stays on while Nightstand is open. Keep your phone on charge.'
-      : 'This phone may still lock itself, and then alarms can’t ring. To be sure, set Settings › Display & Brightness › Auto-Lock to Never tonight.';
+    $('nWarn').textContent = ok ? 'Screen stays on: keep your phone on charge.'
+      : 'Set Auto-Lock to Never tonight, or alarms may not ring.';
   }
   function openNight() {
     const n = $('night');
     nightFocus = document.activeElement;
-    $('nWarn').textContent = 'wakeLock' in navigator ? 'Asking your phone to keep the screen on…' : '';
+    $('nWarn').textContent = '';
     n.hidden = false; lockPage(); paintNight(true); keepAwake(true); wake();
     $('nClose').focus();
   }
@@ -826,7 +826,7 @@ if (window.top !== window.self) {
   [['set24', 'h24'], ['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
   $('setTest').addEventListener('click', () => {
     const a = S.alarms.find(x => x.on) || S.alarms[0];
-    playSound(a ? a.sound : 'twinbell', 4000).then(ok => toast(ok ? 'Playing ' + L.soundName(a ? a.sound : 'twinbell') + '. If you can’t hear it, turn up the volume.' : 'Your phone didn’t play it. Check the volume and try again.'));
+    playSound(a ? a.sound : 'twinbell', 4000).then(ok => toast(ok ? 'Playing ' + L.soundName(a ? a.sound : 'twinbell') + '.' : 'Your phone didn’t play it. Check the volume and try again.'));
   });
 
   // ---------------------------------------------------------------------

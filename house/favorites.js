@@ -236,8 +236,7 @@ family({
               <span class="act-ic">${svg(actIcon(x), 18)}</span>
               <span class="act-k"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span>
               <span class="act-r"><time>${esc(actWhen(x.t))}</time>${who(x.w)}</span></div>`).join('')}</div>`
-            : `<p class="tnote">${gone(ACT_LOG) ? "Home Assistant has no activity log (sensor.signal_activity_log)." : 'Nothing has happened yet.'}</p>`],
-          ['note', '<p class="tnote">The latest 10 from the house\'s activity log, newest first. <b>Auto</b>: an automation or script did it. <b>You</b>: a tap. Neither: the device reported it.</p>'],
+            : `<p class="tnote">${gone(ACT_LOG) ? 'No activity log in Home Assistant.' : 'Nothing has happened yet.'}</p>`],
         ],
       };
     }
@@ -252,8 +251,7 @@ family({
           <label class="field"><span>Title</span><input id="bugTitle" maxlength="80" placeholder="What's wrong" autocomplete="off"></label>
           <label class="field"><span>Description</span><textarea id="bugDesc" maxlength="255" rows="4" placeholder="What happened, and where"></textarea></label></div>`],
         ['sev', lbl('SEVERITY') + segHTML('sev', [['Low', 'Low'], ['Medium', 'Medium'], ['High', 'High']], this.sev)],
-        ['go', `<div class="camacts"><button class="ghost big" data-a="logbug">${svg(ack ? 'check' : 'bug', 18)}${ack ? 'Logged' : 'Log bug'}</button></div>
-          <p class="tnote">Added to bug_log.md in the Home Assistant config, as the dashboard's Report a Bug does.</p>`],
+        ['go', `<div class="camacts"><button class="ghost big" data-a="logbug">${svg(ack ? 'check' : 'bug', 18)}${ack ? 'Logged' : 'Log bug'}</button></div>`],
       ],
     };
   },

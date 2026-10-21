@@ -901,7 +901,7 @@
   </nav>
 
   <div class="banner" id="banner" hidden>
-    <span><b>Preview</b>Sample readings. Taps change them here only.</span>
+    <span><b>Preview</b>Sample readings.</span>
     <button id="bannerBtn">Connect</button>
   </div>
   <section class="units" id="units" hidden></section>
@@ -920,7 +920,6 @@
       <div id="designBlock" hidden>
         <p class="label">Design</p>
         <div class="group" id="designBox"></div>
-        <p class="help">Just on this phone, and at once.</p>
       </div>
 
       <!-- Locked: what is saved. Changing or disconnecting needs the PIN. -->
@@ -943,9 +942,7 @@
       <!-- Devices with access: every token and sign-in of this Home Assistant user. -->
       <div class="view" id="vAccess" hidden>
         <div class="status" id="acStatus"></div>
-        <div class="group acc" id="acList"></div>
-        <p class="help">Everything that can get into Home Assistant as you: devices that joined through a share link (<b>Home · …</b>), other long-lived tokens, and sign-ins from the Home Assistant app or a browser. Remove one and it stops working at once. Home Assistant also alerts your phones and the tablet when a new one appears.</p>
-        <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
+        <div class="group acc" id="acList"></div>        <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
       </div>
 
       <!-- Share: a one-off link and a 10-character code, good for 5 minutes. -->
@@ -957,8 +954,7 @@
           <button class="btn primary" type="button" id="shSend">Send link</button>
         </div>
         <div class="status" id="shStatus"></div>
-        <p class="help">Send the link (Messages, AirDrop), then tell them the code <b>separately</b>. Both stop working after <b>5 minutes</b>. The device gets its own token, named <b>Home · its name</b>. To remove one later: Home Assistant → your profile → Security → Long-lived access tokens.</p>
-        <p class="help">It connects as you, with everything you can do.</p>
+        <p class="help">Send the link, then tell them the code <b>separately</b>.</p>
         <div class="btns"><button class="btn" type="button" id="shDone">Done</button></div>
       </div>
 
@@ -974,7 +970,7 @@
           <button class="btn" type="button" id="jnCancel">Cancel</button>
           <button class="btn primary" type="submit" id="jnGo">Join</button>
         </div>
-        <p class="help" id="jnIos" hidden>On an iPhone, Safari and the Home Screen app keep separate settings. To use Home as an app, add it to your Home Screen first, open it, and paste this link into <b>Address</b> under the gear. <button type="button" class="linkbtn" id="jnCopy">Copy link</button></p>
+        <p class="help" id="jnIos" hidden>For the Home Screen app, paste this link into <b>Address</b> there. <button type="button" class="linkbtn" id="jnCopy">Copy link</button></p>
       </form>
 
       <!-- Edit: the address and token. A saved token is never put back in the box. -->
@@ -993,9 +989,8 @@
           <button class="btn" type="button" id="haCancel" hidden>Cancel</button>
           <button class="btn primary" type="submit" id="haConnect">Connect</button>
         </div>
-        <p class="help">The address has to be <b>https</b> and reachable from your phone, such as your <b>Nabu Casa</b> address (in Home Assistant: Settings → Home Assistant Cloud, under Remote Access). A plain <b>http://</b> local address is blocked by the browser, because this app is served over https.</p>
-        <p class="help">Make a token in the Home Assistant app: <b>☰</b> → <b>your name</b> (bottom of the menu) → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>, then <b>Copy</b>: it's only shown once. It is kept on this phone only. <button type="button" class="linkbtn" id="haHow" hidden>Show me how</button></p>
-        <p class="help">Sent a share link? Paste it into <b>Address</b> and tap Connect.</p>
+        <p class="help">Address: your <b>https</b> address (such as Nabu Casa), or a share link.</p>
+        <p class="help">Token: in Home Assistant, <b>your name</b> → <b>Security</b> → <b>Long-lived access tokens</b>. <button type="button" class="linkbtn" id="haHow" hidden>Show me how</button></p>
       </form>
 
       <!-- PIN: enter it, or choose one (twice). -->
@@ -1050,13 +1045,13 @@
       <div data-s="hero"></div>
       <div data-s="tgt"></div>
       <div class="group first" data-s="power"></div>
-      <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Eco holds the wider Eco temperatures, which are set in the Nest app. Turn it off to go back to your own.</p></div>
+      <div data-s="ecoWrap"><div class="glbl">ECO</div><div class="group" data-s="eco"></div><p class="tnote">Holds the wider Eco temperatures set in the Nest app.</p></div>
       <div data-s="schedWrap"><div class="glbl">SCHEDULE</div><div data-s="sched"></div></div>
       <div data-s="modeWrap"><div class="glbl">MODE</div><div class="seg" data-s="mode"></div></div>
       <div data-s="fanSegWrap"><div class="glbl">FAN</div><div class="seg" data-s="fanSeg"></div></div>
-      <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">On: every time the Office changes, this AC follows it, 3° under its target (2° at 80° and up), and turns off when the Office does.</p></div>
+      <div data-s="syncWrap"><div class="glbl">SYNC</div><div class="group" data-s="sync"></div><p class="tnote">This AC follows the Office, 3° under its target.</p></div>
       <div class="glbl">READINGS</div><div class="group" data-s="read"></div>
-      <div class="glbl">ENERGY · ESTIMATED</div><div class="group" data-s="en"></div><p class="tnote" data-s="enNote"></p>
+      <div class="glbl">ENERGY · ESTIMATED</div><div class="group" data-s="en"></div>
     </div>
   </div>
 </div>
