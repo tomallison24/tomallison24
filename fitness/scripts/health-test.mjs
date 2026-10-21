@@ -8,7 +8,9 @@
 // the day's steps (a number typed in still wins); the Health tiles in Analysis;
 // the days kept and synced to the family's Google Sheet (the real
 // google-sheet-sync.gs on fake-sheet.mjs: its Health tab, with Who); private
-// when signed out; what to do when nothing has come in yet; and no sideways
+// when signed out; what to do when nothing has come in yet; the vitals alert (your
+// usual sent to the server, the switch in Settings, the alert's ?view=health&day=
+// link); and no sideways
 // scrolling at 320 px, in both designs, light and dark. Dates are relative to
 // today, so it works on any day.
 //
@@ -75,7 +77,7 @@ async function phone({ seed = null, session = SESSION, health = { entities: ENTI
   await ctx.route('**/calendar/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await ctx.route('**/fitness/api/**', r => {
     const u = r.request().url(), h = r.request().headers();
-    calls.push({ url: u, auth: h.authorization, x: h['x-fitness'] });
+    calls.push({ url: u, auth: h.authorization, x: h['x-fitness'], method: r.request().method(), body: r.request().postData() });
     const json = (b, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
     if (u.includes('/health')) return health ? json(health) : json({ error: 'not-linked' }, 404);
     if (u.includes('/steps')) return health ? json({ entity: 'sensor.test_iphone_health_steps', points: [] }) : json({ error: 'not-linked' }, 404);
@@ -352,6 +354,54 @@ await test('no sideways scrolling at 320 px, in both designs, light and dark', a
     }
     await ctx.close();
   }
+});
+
+await test('vitals alerts: your usual for each vital sent after a Health fetch (once while unchanged); the switch in Settings; the alert\'s link opens Health on its day', async () => {
+  const { ctx, page, calls } = await phone();
+  const posts = () => calls.filter(c => c.url.endsWith('/fitness/api/vitals')).map(c => ({ ...c, json: JSON.parse(c.body) }));
+  await open(page); await loaded(page);
+  await page.waitForFunction(() => localStorage.getItem('allison-fitness-v1-vitals-sent'), null, { timeout: 8000 });
+  let p = posts();
+  assert.equal(p.length, 1);
+  assert.equal(p[0].method, 'POST'); assert.equal(p[0].x, '1'); assert.equal(p[0].auth, 'Bearer made.up');
+  assert.equal(p[0].json.on, true, 'on unless turned off');
+  assert.equal(p[0].json.day, TODAY);
+  const want = await page.evaluate(d => FitnessHealth.usualRanges(__fitness.data.health, d), TODAY);
+  assert.deepEqual(p[0].json.usual, want, 'health.js\'s usual, from the days the phone keeps');
+  assert.deepEqual(Object.keys(p[0].json.usual).sort(), ['bp_dia', 'bp_sys', 'glucose', 'resp', 'spo2', 'temp', 'temp_basal', 'vo2']);
+  assert.ok(p[0].json.usual.resp && p[0].json.usual.vo2, 'a usual where there are 7 days of readings');
+  assert.equal(p[0].json.usual.spo2, null, 'none without them');
+  assert.ok(Object.keys(p[0].json).every(k => ['on', 'day', 'usual'].includes(k)), 'nothing else: no readings');
+  // opened again, nothing changed: not sent again
+  await page.evaluate(() => __fitness.loadHealth(true)); await page.waitForTimeout(800);
+  assert.equal(posts().length, 1);
+  // Settings > Health > Vitals alerts: on, one sentence; off reaches the server
+  await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
+  const sw = await page.$eval('#stVitals', b => [b.getAttribute('role'), b.getAttribute('aria-checked'), b.querySelector('.grow').firstChild.textContent, b.querySelector('.sub').textContent, b.closest('.field').querySelector('.label').textContent]);
+  assert.deepEqual(sw, ['switch', 'true', 'Vitals alerts', 'Alerts you when a vital is off your usual.', 'Health']);
+  assert.ok(await page.evaluate(() => { const v = document.getElementById('stVitals'), i = document.getElementById('stIpsy'); return !!(v && i && (v.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING)); }), 'just before Ipsy');
+  await page.click('#stVitals');
+  await page.waitForFunction(() => document.getElementById('stVitals').getAttribute('aria-checked') === 'false');
+  for (let i = 0; i < 40 && posts().length < 2; i++) await page.waitForTimeout(100);
+  p = posts();
+  assert.equal(p.length, 2);
+  assert.equal(p[1].json.on, false);
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-vitals-alerts')), '0');
+  await page.click('#stVitals');
+  for (let i = 0; i < 40 && posts().length < 3; i++) await page.waitForTimeout(100);
+  assert.equal(posts()[2].json.on, true, 'and back on');
+  await page.keyboard.press('Escape');
+  // the alert opens ../fitness/?view=health&day=<day>: Health on that day, from any view
+  await page.evaluate(() => localStorage.setItem('allison-fitness-v1-view', 'week'));
+  await page.goto(BASE + '/fitness/?view=health&day=' + YESTERDAY); await page.waitForFunction(() => window.__fitness); await page.waitForSelector('.htile');
+  assert.equal(await page.textContent('#viewName'), 'Health');
+  assert.equal(await page.evaluate(() => __fitness.st.healthDay), YESTERDAY);
+  assert.match(await page.textContent('#main .navrow .lbl'), /^Yesterday · /);
+  assert.equal(await page.$eval('.htile[data-hcat="vitals"] .hbig', e => e.textContent), '1 off', 'the day the alert was about, with what was off');
+  // a day still to come, or not a day: Health on today
+  await page.goto(BASE + '/fitness/?view=health&day=2999-01-01'); await page.waitForFunction(() => window.__fitness);
+  assert.equal(await page.evaluate(() => __fitness.st.healthDay), TODAY);
+  await ctx.close();
 });
 
 assert.deepEqual(errors, [], 'no script errors');

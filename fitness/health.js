@@ -79,7 +79,8 @@
   // blood oxygen 95-100%; breathing 12-20 a minute. Everything else is judged against your own usual
   // (typical, below). Activity and sleep are never red, except sleep far under your usual.
   // history: the days kept ([{ date, m: { key: value } }], data.health), or plain numbers already
-  // picked; opts: { day (the day judged, YYYY-MM-DD), stepGoal, moveGoal }.
+  // picked; opts: { day (the day judged, YYYY-MM-DD), stepGoal, moveGoal, usual (your usual given,
+  // from usualRanges, in place of working it out from history) }.
   // ---------------------------------------------------------------------------------------------
   const DAY = 864e5;
   const shift = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
@@ -116,9 +117,17 @@
   }
   const ORDER = { none: 0, good: 1, watch: 2, bad: 3 };
   const worse = (a, b) => ORDER[a] >= ORDER[b] ? a : b;
+  // Your usual as given (opts.usual: { key: { lo, hi, mean, far } | null }, from usualRanges below:
+  // the server judges with the ranges a phone sent, as it only sees a few days), else worked out
+  // from history as always. A key opts.usual doesn't have is worked out from history.
+  function typicalFor(key, history, o) {
+    if (!(o && o.usual && typeof o.usual === 'object' && Object.prototype.hasOwnProperty.call(o.usual, key))) return typical(key, history, o && o.day);
+    const T = o.usual[key];
+    return T && ['lo', 'hi', 'mean', 'far'].every(k => typeof T[k] === 'number' && isFinite(T[k])) ? T : null;
+  }
   // Against your usual, in the direction that matters ('high', 'low' or 'both'): null without a usual yet.
-  function usual(key, v, history, day, dir) {
-    const T = typical(key, history, day);
+  function usual(key, v, history, o, dir) {
+    const T = typicalFor(key, history, o);
     if (!T) return null;
     const d = v - T.mean, up = dir !== 'low', down = dir !== 'high';
     if ((up && d > T.far) || (down && -d > T.far)) return 'bad';
@@ -131,7 +140,7 @@
     switch (key) {
       case 'sleep': {   // 7 h+ is good; under it, check; red only when far under your usual
         if (v >= 420) return 'good';
-        const T = typical(key, history, day);
+        const T = typicalFor(key, history, o);
         return T && T.mean - v > T.far ? 'bad' : 'watch';
       }
       // Short of a goal today isn't judged yet (the day isn't over): no dot until it's met.
@@ -142,22 +151,22 @@
       }
       case 'hr_rest': {   // over 100 is red; under 60 is fine when it's your usual
         if (v > 100) return 'bad';
-        const T = typical(key, history, day);
+        const T = typicalFor(key, history, o);
         if (!T) return 'good';
         if (v - T.mean > T.far) return 'bad';
         if (v > T.hi) return 'watch';
         return v < 60 && v < T.lo ? 'watch' : 'good';
       }
-      case 'spo2': return worse(v >= 95 ? 'good' : v >= 90 ? 'watch' : 'bad', usual(key, v, history, day, 'low') || 'none');
-      case 'resp': return worse(v >= 12 && v <= 20 ? 'good' : 'watch', usual(key, v, history, day, 'both') || 'none');
+      case 'spo2': return worse(v >= 95 ? 'good' : v >= 90 ? 'watch' : 'bad', usual(key, v, history, o,'low') || 'none');
+      case 'resp': return worse(v >= 12 && v <= 20 ? 'good' : 'watch', usual(key, v, history, o,'both') || 'none');
       // Blood pressure, the AHA's: under 120/80 normal; 120-129 and under 80 elevated; 130-139 or
       // 80-89 stage 1; 140+ or 90+ stage 2 (and over 180/120 a crisis). Each number on its own: the
       // pair's category is the worse of the two. A reading far over your usual is red too.
-      case 'bp_sys': return worse(v >= 140 ? 'bad' : v >= 120 ? 'watch' : 'good', usual(key, v, history, day, 'high') || 'none');
-      case 'bp_dia': return worse(v >= 90 ? 'bad' : v >= 80 ? 'watch' : 'good', usual(key, v, history, day, 'high') || 'none');
-      case 'hr': case 'hr_walk': return usual(key, v, history, day, 'high') || 'none';
-      case 'hrv': case 'vo2': return usual(key, v, history, day, 'low') || 'none';
-      case 'temp': case 'temp_basal': case 'glucose': return usual(key, v, history, day, 'both') || 'none';
+      case 'bp_sys': return worse(v >= 140 ? 'bad' : v >= 120 ? 'watch' : 'good', usual(key, v, history, o,'high') || 'none');
+      case 'bp_dia': return worse(v >= 90 ? 'bad' : v >= 80 ? 'watch' : 'good', usual(key, v, history, o,'high') || 'none');
+      case 'hr': case 'hr_walk': return usual(key, v, history, o,'high') || 'none';
+      case 'hrv': case 'vo2': return usual(key, v, history, o,'low') || 'none';
+      case 'temp': case 'temp_basal': case 'glucose': return usual(key, v, history, o,'both') || 'none';
       default: return 'none';   // the rest of Activity, and the sleep stages: shown, not judged
     }
   }
@@ -171,6 +180,27 @@
   function catStatus(cat, day, history, opts) {
     const all = statuses(day, history, opts);
     return METRICS.filter(m => m.cat === cat && all[m.key]).reduce((s, m) => worse(s, all[m.key]), 'none');
+  }
+  // The vitals off on a day, as the Vitals tile counts them, and the server's vitals alert
+  // (functions/fitness/api, alerts/check) with it: all, a day's statuses (above) -> { n: readings,
+  // rated: judged, off: 'watch' or 'bad' }. Blood pressure counts once (the worse of its two numbers).
+  function vitalsOff(all) {
+    const s = {}; for (const m of METRICS) if (m.cat === 'vitals' && all && all[m.key]) { const k = /^bp_/.test(m.key) ? 'bp' : m.key; s[k] = worse(s[k] || 'none', all[m.key]); }
+    const v = Object.values(s);
+    return { n: v.length, rated: v.filter(x => x !== 'none').length, off: v.filter(x => x === 'watch' || x === 'bad').length };
+  }
+  // Your usual for each vital on a day (the 28 days before it, as typical), small enough to send: the
+  // phone sends it for the vitals alert, as the server only sees the days Home Assistant keeps.
+  // -> { key: { lo, hi, mean, far } | null (no usual yet) }, for opts.usual.
+  const r3 = x => Math.round(x * 1000) / 1000;
+  function usualRanges(history, day) {
+    const out = {};
+    for (const m of METRICS) {
+      if (m.cat !== 'vitals') continue;
+      const T = typical(m.key, history, day);
+      out[m.key] = T ? { lo: r3(T.lo), hi: r3(T.hi), mean: r3(T.mean), far: r3(T.far) } : null;
+    }
+    return out;
   }
   // The healthy range a chart shades ({ lo, hi }; hi null: "at least", drawn as a line), where there is one.
   function band(key, opts) {
@@ -244,5 +274,5 @@
   }
 
   root.FitnessHealth = { METRICS, CATS, get, label, round, parts, fmt, hm, hmShort,
-    shift, series, typical, status, statuses, catStatus, worse, band, trend, sleepScore, sleepLevel, NEAR, FAR };
+    shift, series, typical, status, statuses, catStatus, vitalsOff, usualRanges, worse, band, trend, sleepScore, sleepLevel, NEAR, FAR };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,38 @@
+# Fitness's vitals alert: every hour, asks the site to look at each linked person's newest vitals
+# (functions/fitness/api, alerts/begin and alerts/check) and to notify anyone with even one off,
+# through aOS, once a day at most (fitness/README.md, "Vitals alerts"). The key is derived from the
+# Cloudflare token the release already uses (fitness/scripts/vitals-check.mjs), so there is nothing
+# to set up; until CLOUDFLARE_API_TOKEN exists it does nothing, so it is safe to leave on.
+name: Fitness vitals
+
+on:
+  schedule:
+    # Every hour, off the hour (GitHub delays or drops runs at busy times).
+    - cron: '41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fitness-vitals
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Pinned to exact commits (version in the comment), as in the other
+      # workflows: a tag can be moved to new code, and this job can read the
+      # repo's secrets.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        with:
+          node-version: 22
+      - name: Check the family's vitals
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
+        run: node fitness/scripts/vitals-check.mjs https://tomallison24-news.pages.dev

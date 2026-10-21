@@ -172,6 +172,35 @@ is), on your phone (`data.health`, the last 90 days once synced), and in the
 owner's family Fitness Sheet (its **Health** tab), where each phone only ever
 gets its own person's rows. Sign out and erase takes them off the phone.
 
+### Vitals alerts
+
+If even one of your vitals is off (Check or Off: outside the healthy range or your usual, exactly
+as the Vitals tile counts them, `health.js` `statuses` + `vitalsOff`, blood pressure once), aOS
+notifies you: **Fitness** · "A vital is off your usual. Open Fitness." Nothing more on the lock
+screen (no number, no name). Tapping it opens `../fitness/?view=health&day=<that day>`: Health on
+the day it was about.
+
+- **On** unless turned off in **Settings › Health › Vitals alerts**. It needs aOS notifications on
+  (aOS → Your account → Notifications): with none, nothing is sent.
+- **Once a day at most**, and never twice about the same day. Only today's readings (on the
+  family's calendar), else yesterday's; none older than 36 hours.
+- **How**: every hour a schedule (`.github/workflows/fitness-vitals.yml`,
+  `scripts/vitals-check.mjs`) asks the server (`functions/fitness/api`, `alerts/begin`, then
+  `alerts/check` one person at a time) to read each linked person's newest vitals from Home
+  Assistant and judge them with `health.js`. Your usual needs 28 days, more than Home Assistant
+  keeps, so after each Health fetch your phone sends it (`POST vitals`: `health.js`
+  `usualRanges`, each vital's usual range, and the switch), only when it changed: about once a
+  day. Until it has, only the healthy ranges are judged. Kept as `vitals:<id>`; the last alert as
+  `vitals-sent:<id>` (3 days).
+- **Nothing to set up**: the schedule's key is derived from the one each release already puts on
+  the site (`ANNOUNCE_KEY`, aOS/RELEASING.md, Notifications). Without the Cloudflare token the
+  schedule does nothing.
+- **Privacy**: the server keeps your usual ranges, never a day's readings; the schedule's log has
+  only how many people were checked and alerted.
+- **On iPhone** the notification is aOS's (Fitness has no notifications of its own), so tapping it
+  opens aOS first, which opens Fitness's address: a Home Screen Fitness keeps its own storage, so it
+  may open in Safari's view of it.
+
 ## Steps
 
 Each day's steps, typed in or read from your own iPhone.
@@ -548,7 +577,8 @@ node fitness/scripts/ipsy-api-test.mjs                           # functions/fit
 node fitness/scripts/ipsy-test.mjs [repo root] [screenshot dir]  # Ipsy: its tools' numbers on a made-up log, off by default, Settings, where it sits, a chat, read-only, older days
 node fitness/scripts/health-api-test.mjs                         # functions/fitness/api's health: finding a phone's Health sensors (by device, by guessing), only your own, the day sums
 node fitness/scripts/health-status-test.mjs                      # health.js: your usual, each reading's status, a category's, chart ranges, trends, the Sleep score
-node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the tiles, rings, the sheets (range, tapping a bar), the Move goal, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs
+node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the tiles, rings, the sheets (range, tapping a bar), the Move goal, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs, the vitals alert's usual sent, its switch and link
+node fitness/scripts/vitals-alert-test.mjs                       # the vitals alert's server and schedule: one off alerts, all usual doesn't, once a day, turned off, no notifications, too old, the key
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps

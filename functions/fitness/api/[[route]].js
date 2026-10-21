@@ -37,6 +37,22 @@
 //                        your health can end up in a search query. The key is ANTHROPIC_API_KEY.
 //                        Nothing about a conversation is kept: only IPSY_DAILY questions a person a day
 //                        are counted (fitness:ipsy:<user id>:<day>, gone after two days).
+//   POST vitals          { on, day, usual: { key: { lo, hi, mean, far } | null } } -> { ok } your vitals
+//                        alert's switch (Fitness Settings > Health > Vitals alerts) and your usual for
+//                        each vital (health.js usualRanges, the 28 days before day, which Home Assistant's
+//                        10 days can't give), sent by your phone after a Health fetch when they change
+//   POST alerts/begin    {} -> { people: [id, ...] } (the scheduled check only, .github/workflows/
+//                        fitness-vitals.yml, with its key: no session) who to check: linked, with
+//                        aOS notifications on (push:<id>), the alert not turned off, not alerted today
+//   POST alerts/check    { to } -> { alerted, sent, failed, gone } | { skipped } | { error } one person:
+//                        their newest vitals (today's, else yesterday's; none older than 36 hours) judged
+//                        by health.js as the Vitals tile judges them (statuses + vitalsOff, against the
+//                        healthy ranges and the usual their phone sent). Even one off: a notification
+//                        through aOS, "A vital is off your usual. Open Fitness." (nothing more: no
+//                        number, no name), opening ../fitness/?view=health&day=<that day>. Once a day
+//                        at most, and never twice for the same day. Readings are never logged or answered.
+//                        The key is derived from ANNOUNCE_KEY (the release's, aOS/scripts/announce.mjs),
+//                        so there is nothing to set up; without it these answer 404.
 //
 // The Health sensors end in _steps too (Health Steps): they are never offered or linked as a phone.
 //
@@ -49,11 +65,14 @@
 //   health:<user id>      { entity, at, how, map: { key: entity_id }, units, scale } that phone's
 //                         Apple Health sensors, looked for again after a day (an hour while it has
 //                         none, so turning them on shows soon); gone on an unlink
+//   vitals:<user id>      { on, day, usual, at } the vitals alert's switch and usual (POST vitals)
+//   vitals-sent:<user id> { on: the day it was sent, day: the day it was about } (3 days)
 // Written only on a link or an unlink (and health: when its sensors are looked for). The address is the one the owner set
 // for the Home app (config:home). The X-Fitness header stops other web pages
 // calling this (as X-Drinks does). Everything here needs the family session.
 
-import { reply, kv, getJSON, sessionUser } from '../../../server/auth.js';
+import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
+import { devices, message, sendTo } from '../../../server/push.js';
 import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, persona, modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
 
 export { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES };
@@ -241,9 +260,135 @@ async function healthOf(env, db, me, mine) {
   return c;
 }
 
-export async function onRequest({ request, params, env }, f = fetch) {
+// ---------------------------------------------------------------------------
+// The vitals alert: a notification when even one of your newest vitals is off (the Vitals tile's
+// "N off": health.js statuses + vitalsOff), checked by a schedule (alerts/begin, alerts/check).
+// ---------------------------------------------------------------------------
+export const VITALS_ALERT = { title: 'Fitness', body: 'A vital is off your usual. Open Fitness.', tag: 'fitness-vitals' };
+export const FRESH = 36 * 36e5;   // a reading older than this never alerts
+const VITALS = H.METRICS.filter(m => m.cat === 'vitals').map(m => m.key);
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// What a phone sends (POST vitals), checked: the switch, the day its usual is for, and each vital's
+// usual (numbers only, or null). Anything else is dropped. null: not that shape.
+export function cleanVitals(b) {
+  if (!b || typeof b !== 'object' || typeof b.on !== 'boolean') return null;
+  const ok = x => typeof x === 'number' && isFinite(x) && Math.abs(x) < 1e5, usual = {};
+  const src = b.usual && typeof b.usual === 'object' ? b.usual : {};
+  for (const k of VITALS) {
+    const T = src[k];
+    usual[k] = T && typeof T === 'object' && ['lo', 'hi', 'mean', 'far'].every(f => ok(T[f])) ? { lo: T.lo, hi: T.hi, mean: T.mean, far: T.far } : null;
+  }
+  return { on: b.on, day: ISO_DAY.test(String(b.day || '')) ? String(b.day) : '', usual };
+}
+
+// The time of each vital's last reading on each day: { day: { key: ms } } (the reading standing at
+// `from` left out, as rollup leaves it out).
+function lastAt(history, entities, from) {
+  const keyOf = new Map(Object.entries(entities || {}).map(([k, e]) => [e, k])), day = dayOf(), out = {};
+  for (const list of Array.isArray(history) ? history : []) {
+    const first = Array.isArray(list) && list[0], key = first && keyOf.get(first.entity_id);
+    if (!key) continue;
+    for (const [t] of points(list)) { if (t <= from + 1000) continue; const d = day(t), o = out[d] || (out[d] = {}); o[key] = Math.max(o[key] || 0, t); }
+  }
+  return out;
+}
+
+// The day to alert about, or null: today (on the family's calendar), else yesterday, skipping a day
+// already alerted (after: the last one) and any reading older than FRESH. A day's vitals are judged
+// as Fitness's Vitals tile judges them: health.js statuses (the healthy ranges, and your usual as
+// your phone sent it) and vitalsOff; even one off is enough.
+export function offDay(history, entities, from, { today, now = Date.now(), usual, after, scale } = {}) {
+  const days = rollup(history, entities, from, scale), at = lastAt(history, entities, from);
+  for (const d of [today, addDay(today, -1)]) {
+    if (after && d <= after) continue;
+    const m = {};
+    for (const [k, v] of Object.entries(days[d] || {})) if (VITALS.includes(k) && at[d] && at[d][k] && now - at[d][k] <= FRESH) m[k] = v;
+    if (!Object.keys(m).length) continue;
+    const all = H.statuses(d, [{ date: d, m }], { day: d, today, usual: usual && typeof usual === 'object' ? usual : {} });
+    if (H.vitalsOff(all).off > 0) return d;
+  }
+  return null;
+}
+
+// The schedule's key: derived from ANNOUNCE_KEY (the release workflow puts it on the Pages project),
+// so the scheduled check has nothing of its own to set up: HMAC-SHA256(ANNOUNCE_KEY, 'fitness-vitals').
+const enc = s => new TextEncoder().encode(s);
+export async function alertsKey(announceKey) {
+  const k = await crypto.subtle.importKey('raw', enc(String(announceKey)), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return [...new Uint8Array(await crypto.subtle.sign('HMAC', k, enc('fitness-vitals')))].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function alertsKeyOk(request, env) {
+  const base = String((env && env.ANNOUNCE_KEY) || ''), got = (request.headers.get('Authorization') || '').replace(/^Bearer /, '');
+  if (base.length < 32 || !got) return false;
+  const h = async s => new Uint8Array(await crypto.subtle.digest('SHA-256', enc(s)));
+  const [a, b] = await Promise.all([h(await alertsKey(base)), h(got)]);
+  return a.every((x, i) => x === b[i]);
+}
+
+// Whether to look at someone at all: in the family, linked, with aOS notifications on, the alert not
+// turned off, and not alerted today. -> { mine, pref, sent } or { skipped }
+async function alertable(db, id, today) {
+  const u = await getJSON(db, 'user:' + id);
+  if (!u || u.removed) return { skipped: 'unknown' };
+  const mine = await db.get('steps:' + id);
+  if (!mine) return { skipped: 'not-linked' };
+  if (!(await devices(db, id)).length) return { skipped: 'no-phones' };
+  const pref = (await getJSON(db, 'vitals:' + id)) || {};
+  if (pref.on === false) return { skipped: 'off' };
+  const sent = (await getJSON(db, 'vitals-sent:' + id)) || {};
+  if (sent.on === today) return { skipped: 'already' };
+  return { mine, pref, sent };
+}
+
+// -> { status, body }. One person per check, as aOS's announcement: a request never has much to do.
+export async function vitalsAlerts(db, env, request, step, b, { push = sendTo, now = Date.now() } = {}) {
+  if (!env || !env.ANNOUNCE_KEY) return { status: 404, body: { error: 'not-found' } };
+  if (!(await alertsKeyOk(request, env))) return { status: 403, body: { error: 'key' } };
+  const today = dayOf()(now);
+  if (step === 'begin') {
+    const people = [];
+    let cursor;
+    do {
+      const page = await db.list({ prefix: 'steps:by:', cursor });
+      for (const k of page.keys) { const id = await db.get(k.name); if (id && !people.includes(id) && !(await alertable(db, id, today)).skipped) people.push(id); }
+      cursor = page.list_complete ? null : page.cursor;
+    } while (cursor);
+    return { status: 200, body: { people } };
+  }
+  if (step !== 'check') return { status: 404, body: { error: 'not-found' } };
+  const id = String((b && b.to) || ''), who = await alertable(db, id, today);
+  if (who.skipped) return { status: 200, body: { skipped: who.skipped } };
+  try {
+    const c = await healthOf(env, db, { id }, who.mine), entities = {};
+    for (const [k, e] of Object.entries(c.map || {})) if (VITALS.includes(k) && SENSOR.test(e)) entities[k] = e;
+    if (!Object.keys(entities).length) return { status: 200, body: { skipped: 'no-vitals' } };
+    const from = midnight(addDay(today, -1));
+    const r = await ha(env, db, '/api/history/period/' + encodeURIComponent(new Date(from).toISOString()) + '?filter_entity_id=' + Object.values(entities).join(',')
+      + '&end_time=' + encodeURIComponent(new Date(now + 60e3).toISOString()) + '&minimal_response&no_attributes&significant_changes_only=0');
+    if (!r.ok) return { status: 200, body: { error: 'ha-' + r.status } };
+    const day = offDay(JSON.parse(await r.text()), entities, from, { today, now, usual: who.pref.usual, after: who.sent.day, scale: c.scale });
+    if (!day) return { status: 200, body: { alerted: false } };
+    const res = await push(db, env, id, message({ ...VITALS_ALERT, url: '../fitness/?view=health&day=' + day }));
+    if (res && res.sent) await putJSON(db, 'vitals-sent:' + id, { on: today, day }, 3 * 864e2);
+    return { status: 200, body: { alerted: !!(res && res.sent), sent: (res && res.sent) || 0, failed: (res && res.failed) || 0, gone: (res && res.gone) || 0 } };
+  } catch (e) {
+    return { status: 200, body: { error: e.message || 'error' } };
+  }
+}
+
+export async function onRequest({ request, params, env }, f = fetch, opts = {}) {
   const route = [].concat(params.route || []).join('/');
   const method = request.method.toUpperCase();
+  // The scheduled vitals check (no session: its own key)
+  if (route.startsWith('alerts/')) {
+    const db = kv(env);
+    if (!db) return reply({ error: 'storage' }, 503);
+    if (method !== 'POST') return reply({ error: 'not-found' }, 404);
+    let b = {}; try { b = JSON.parse(await request.text() || '{}'); } catch {}
+    const r = await vitalsAlerts(db, env, request, route.slice(7), b, opts);
+    return reply(r.body, r.status);
+  }
   if (request.headers.get('X-Fitness') !== '1') return reply({ error: 'header' }, 400);
   const db = kv(env);
   if (!db) return reply({ error: 'storage' }, 503);
@@ -253,6 +398,15 @@ export async function onRequest({ request, params, env }, f = fetch) {
     if (method !== 'POST') return reply({ error: 'not-found' }, 404);
     if (!env.ANTHROPIC_API_KEY) return reply({ error: 'no-ai' }, 503);
     return ipsyStep({ env, request, db, me, app: 'fitness', head: ipsyRequestHead(env) }, f);
+  }
+  if (route === 'vitals') {
+    if (method !== 'POST') return reply({ error: 'not-found' }, 404);
+    const text = await request.text();
+    let b = null; if (text.length <= 4000) { try { b = JSON.parse(text || 'null'); } catch {} }
+    const rec = cleanVitals(b);
+    if (!rec) return reply({ error: 'vitals' }, 400);
+    await db.put('vitals:' + me.id, JSON.stringify({ ...rec, at: Date.now() }));
+    return reply({ ok: true });
   }
   try {
     const mine = await db.get('steps:' + me.id);
