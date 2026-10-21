@@ -25,10 +25,10 @@
 //                     conversation is kept here: only a count, news:ipsy:<user id>:<day>, of IPSY_DAILY
 //                     questions a person a day (the steps a question takes aren't counted).
 //
-// The model: Claude Opus 5.5, at low effort, through Anthropic's API with the key the owner
+// The model: Claude Sonnet 5.5, at low effort, through Anthropic's API with the key the owner
 // adds as a Pages secret, ANTHROPIC_API_KEY (the same one Meals uses; news.yml puts it).
 // NEWS_AI_MODEL names another model (claude-haiku-5-5 is the cheapest). No key: everything
-// answers { error: 'no-ai' }. Opus 5.5's safety classifiers can decline a request, and
+// answers { error: 'no-ai' }. Sonnet 5.5's safety classifiers can decline a request, and
 // science stories (Stem cells) can set them off, so the request opts into Anthropic's
 // server-side fallbacks; a story it still won't read answers { error: 'ai-refused' }.
 //
@@ -42,7 +42,7 @@
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
 import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep } from '../../../server/ipsy.js';
 
-export const MODEL = 'claude-opus-5-5';
+export const MODEL = 'claude-sonnet-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 const TIMEOUT_MS = 60e3;

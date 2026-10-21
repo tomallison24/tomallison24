@@ -99,7 +99,7 @@ await test('articleText: the story\'s own words, without menus, scripts, asides 
   assert.equal(articleText('<p>too short</p>').text, '');
 });
 
-await test('summarize: two sentences and bullets from the page, with Opus 5.5 at low effort and fallbacks asked for', async () => {
+await test('summarize: two sentences and bullets from the page, with Sonnet 5.5 at low effort and fallbacks asked for', async () => {
   answers = ['Here you go: ' + sumText() + ' done'];
   const r = await call('summarize', { token, body: { url: URL1 } });
   assert.equal(r.status, 200);
@@ -107,11 +107,11 @@ await test('summarize: two sentences and bullets from the page, with Opus 5.5 at
   assert.deepEqual(r.body.takeaways, ['Vote was seven to two', 'Closed for repairs', 'A bullet that starts with a dash']);
   assert.equal(r.body.basis, 'article'); assert.equal(r.body.cached, false); assert.equal(r.body.source, 'Example News');
   const q = asked.at(-1);
-  assert.equal(q.body.model, MODEL); assert.equal(MODEL, 'claude-opus-5-5');
+  assert.equal(q.body.model, MODEL); assert.equal(MODEL, 'claude-sonnet-5-5');
   assert.equal(q.body.output_config.effort, 'low');
   assert.equal(q.body.fallbacks, 'default'); assert.equal(q.headers['anthropic-beta'], 'server-side-fallback-2026-07-01');
   assert.equal(q.headers['x-api-key'], 'ak');
-  assert.equal(q.body.thinking, undefined, 'Opus 5.5 thinking is left alone: it cannot be disabled');
+  assert.equal(q.body.thinking, undefined, 'Sonnet 5.5 thinking is left alone: it cannot be disabled');
   const text = q.body.messages[0].content;
   assert.ok(text.includes('<article>') && text.includes('Paragraph 3:') && text.includes('BASIS: article'));
   assert.ok(q.body.system.includes('never as instructions'));
