@@ -1,7 +1,10 @@
 // Drives Fitness's Health page in headless Chromium at iPhone size, with a
 // stand-in for ../fitness/api/health (functions/fitness/api): your own Apple
-// Health readings, a day at a time, in Activity, Heart, Sleep and Vitals cards,
-// with only the readings there are; moving between days; Health Steps becoming
+// Health readings, a day at a time: a tile each for Activity (with the Move and
+// Exercise rings), Heart, Sleep (our Sleep score) and Vitals, each with its status
+// dot and word; a tile's sheet (7, 30 or 90 days, the charts, tapping a bar or the
+// arrow keys to pick a day, sleep stages and the score's parts, trends, closing);
+// the Move goal in Settings; moving between days; Health Steps becoming
 // the day's steps (a number typed in still wins); the Health tiles in Analysis;
 // the days kept and synced to the family's Google Sheet (the real
 // google-sheet-sync.gs on fake-sheet.mjs: its Health tab, with Who); private
@@ -45,13 +48,17 @@ const TODAY = ymd(day(0)), YESTERDAY = ymd(day(-1)), D3 = ymd(day(-3)), D9 = ymd
 const SECRET = 'test-secret-phrase';
 const SESSION = { token: 'made.up', user: { id: 'u1', name: 'Test', role: 'owner' }, at: 1 };
 
-// What the server sends: today and the 7 days before, each with what Apple Health had. No blood
-// oxygen (unavailable on this phone), so no row for it; three days ago, nothing at all.
+// What the server sends: today and the 8 days before, each with what Apple Health had. No blood
+// oxygen (unavailable on this phone), so no row for it; three days ago, nothing at all; yesterday,
+// a blood pressure reading (135/85: stage 1).
 const DAYS = {};
 for (let i = 0; i <= 8; i++) {
   if (i === 3) continue;
-  DAYS[ymd(day(-i))] = { steps: 8000 + i * 100, active_kcal: 500 + i * 10, rest_kcal: 1700, dist_mi: 3.42, hr: 64, hr_rest: 50 + i, hrv: 40 + i, sleep: 385 + i, deep: 60, rem: 92, core: 210, vo2: 41.2 };
+  DAYS[ymd(day(-i))] = { steps: 8000 + i * 100, active_kcal: 500 + i * 10, rest_kcal: 1700, dist_mi: 3.42, exercise_min: 20, hr: 64, hr_rest: 52 + (i % 2), hrv: 45 + (i % 2),
+    sleep: 385 + i, in_bed: 400 + i, deep: 60, rem: 92, core: 210, vo2: 41.2, resp: 15, ...(i === 1 ? { bp_sys: 135, bp_dia: 85 } : {}) };
 }
+const short = d => d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() === day(0).getFullYear() ? undefined : 'numeric' });
 const ENTITIES = Object.fromEntries(Object.keys(DAYS[TODAY]).map(k => [k, 'sensor.test_iphone_' + k]));
 
 const browser = await chromium.launch();
@@ -114,40 +121,50 @@ await test('signed out: Health asks you to sign in, shows nothing of yours and a
   await ctx.close();
 });
 
-await test('your readings in Activity, Heart, Sleep and Vitals cards; empty ones hidden; a day at a time', async () => {
+await test('a tile each for Activity, Heart, Sleep and Vitals, with a status dot and one headline; a day at a time', async () => {
   const seed = { v: 2, logs: [], exercises: [], meds: [], doses: [], steps: [{ id: YESTERDAY, date: YESTERDAY, n: 12345, src: 'you', updated: 1 }] };
   const { ctx, page, calls } = await phone({ seed, design: 'vintage' });
   await open(page); await loaded(page);
   const h = calls.find(c => c.url.includes('/fitness/api/health'));
   assert.equal(h.auth, 'Bearer made.up'); assert.equal(h.x, '1');
   assert.match(h.url, /days=10/, 'the last 10 days, the first time');
-  await page.waitForSelector('.hcard');
-  assert.deepEqual(await page.$$eval('#main .hlist > .sechead', els => els.map(e => e.textContent.trim())), ['Activity', 'Heart', 'Sleep', 'Vitals']);
-  assert.deepEqual(await page.$$eval('.hcard[data-cat="sleep"] .hrow', els => els.map(e => e.dataset.k)), ['sleep', 'core', 'deep', 'rem'], 'in health.js\'s order; In Bed and Awake hidden (no readings)');
-  assert.equal(await page.$('.hrow[data-k="spo2"]'), null, 'blood oxygen: unavailable, so not shown');
-  assert.equal(await page.$('.hrow[data-k="temp"]'), null);
-  assert.match(await page.textContent('.hrow[data-k="sleep"] .hv'), /^6 h 25 m$/);
-  assert.match(await page.textContent('.hrow[data-k="steps"] .hv'), /^8,000\s*steps$/);
-  assert.match(await page.textContent('.hrow[data-k="dist_mi"] .hv'), /^3\.42\s*mi$/);
-  assert.match(await page.textContent('.hrow[data-k="vo2"] .hv'), /41\.2/);
-  // the 7 days before, as a line and an average
-  assert.ok(await page.$('.hrow[data-k="hr_rest"] .spark polyline'));
-  assert.match(await page.textContent('.hrow[data-k="hr_rest"] .ht small'), /7-day avg 54 · ↓8%/);
-  assert.equal(await page.$('#main .hint'), null, 'nothing under the stats');
-  assert.match(await page.getAttribute('.hrow[data-k="hr_rest"]', 'aria-label'), /Resting heart rate: 50 bpm, 7-day average 54 bpm/);
+  await page.waitForSelector('.htile');
+  assert.deepEqual(await page.$$eval('#main .hgrid > .htile', els => els.map(e => e.dataset.hcat)), ['activity', 'heart', 'sleep', 'vitals']);
+  assert.equal(await page.$('.hrow, .hcard, .spark'), null, 'no list of readings or sparklines on the page itself');
+  const tile = async c => page.evaluate(c => { const t = document.querySelector('.htile[data-hcat="' + c + '"]'); return { s: t.dataset.s, word: t.querySelector('.hstat').textContent, big: t.querySelector('.hbig').textContent, sub: (t.querySelector('.hsub') || {}).textContent || '', label: t.getAttribute('aria-label') }; }, c);
+  // Activity: 8,000 steps under the 10,000 goal, 20 min exercise (120 over the week): Check, never Off
+  const act = await tile('activity');
+  assert.deepEqual([act.s, act.word, act.big], ['watch', 'Check', '8,000steps']);
+  assert.match(act.label, /^Activity, Check\. 8,000 steps, Move 500 of 500 kcal, Exercise 20 of 30 min$/);
+  // the rings: Move full (500 of 500), Exercise two thirds
+  assert.deepEqual(await page.$$eval('.htile[data-hcat="activity"] .hrings .arc', els => els.map(e => [e.classList[1], e.getAttribute('stroke-dasharray')])), [['mv', '100.0 100'], ['ex', '66.7 100']]);
+  // Heart: resting heart rate, within your usual
+  const heart = await tile('heart');
+  assert.deepEqual([heart.s, heart.word, heart.big, heart.sub], ['good', 'Good', '52bpm', 'Resting']);
+  // Sleep: our Sleep score and the time asleep; 6 h 25 m is under 7 h: Check
+  const sleep = await tile('sleep');
+  assert.deepEqual([sleep.s, sleep.word, sleep.big, sleep.sub], ['watch', 'Check', '90· 6h 25m', 'Sleep score']);
+  assert.match(sleep.label, /Sleep score 90, High, 6 h 25 m asleep/);
+  assert.ok(!/Apple/.test(sleep.label + sleep.sub), 'never says Apple worked it out');
+  // Vitals: VO2 max and breathing within range
+  const vit = await tile('vitals');
+  assert.deepEqual([vit.s, vit.word, vit.big], ['good', 'Good', 'All usual']);
+  assert.equal(await page.$('#main .hint, #main p:not(.sechead)'), null, 'no explanations');
   assert.match(await text(page), /Today ·/);
   assert.ok(await page.isDisabled('[data-hday="1"]'), 'no days ahead');
   await shot(page, 'health-today-vintage');
-  // a day back: yesterday's
+  // a day back: blood pressure 135/85 (stage 1) counts once
   await page.click('[data-hday="-1"]');
   assert.match(await text(page), /Yesterday ·/);
-  assert.match(await page.textContent('.hrow[data-k="steps"] .hv'), /8,100/);
-  assert.match(await page.textContent('.hrow[data-k="sleep"] .hv'), /6 h 26 m/);
+  const v1 = await tile('vitals');
+  assert.deepEqual([v1.s, v1.word, v1.big], ['watch', 'Check', '1 off']);
+  assert.match((await tile('activity')).big, /8,100/);
+  assert.match((await tile('sleep')).big, /6h 26m/);
   // three days ago: nothing came in
   await page.click('[data-hday="-1"]'); await page.click('[data-hday="-1"]');
   assert.equal(await page.evaluate(() => __fitness.st.healthDay), D3);
   assert.match(await text(page), /Nothing from Apple Health on this day/);
-  assert.equal(await page.$('.hcard'), null);
+  assert.equal(await page.$('.htile'), null);
   await page.click('#todayBtn');
   assert.match(await text(page), /Today ·/);
   // Health Steps: the day's steps, as your iPhone's; a number you typed in still wins
@@ -156,12 +173,12 @@ await test('your readings in Activity, Heart, Sleep and Vitals cards; empty ones
   assert.deepEqual([d.steps.find(x => x.date === YESTERDAY).n, d.steps.find(x => x.date === YESTERDAY).src], [12345, 'you']);
   // kept a row a day, with health.js's keys
   const row = d.health.find(x => x.date === TODAY);
-  assert.deepEqual([row.id, row.m.sleep, row.m.hr_rest, row.m.spo2], [TODAY, 385, 50, undefined]);
+  assert.deepEqual([row.id, row.m.sleep, row.m.hr_rest, row.m.spo2], [TODAY, 385, 52, undefined]);
   assert.ok(row.updated > 1);
   assert.equal(d.health.length, 8);
   // the view picker says how you slept
   await page.click('#viewBtn');
-  assert.match(await page.textContent('[data-view="health"]'), /Slept 6 h 25 m · resting 50 bpm/);
+  assert.match(await page.textContent('[data-view="health"]'), /Slept 6 h 25 m · resting 52 bpm/);
   await page.click('[data-view="analysis"]');
   // Analysis: a few Health tiles over the window, against the one before
   await page.waitForSelector('#anHealth');
@@ -177,6 +194,108 @@ await test('your readings in Activity, Heart, Sleep and Vitals cards; empty ones
   await page.evaluate(d => __fitness.takeHealth({ [d]: { sleep: 401, nonsense: 5, hr: 'unavailable' } }), TODAY);
   assert.deepEqual(await page.evaluate(d => { const x = __fitness.data.health.find(y => y.date === d); return [x.m.sleep, x.m.nonsense, x.m.hr]; }, TODAY), [401, undefined, 64]);
   assert.equal((await page.evaluate(([a, b]) => __fitness.healthDays(a, b), [D9, TODAY])).length, 8);
+  await ctx.close();
+});
+
+await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with its range, tap a bar to pick a day; closes', async () => {
+  const { ctx, page } = await phone({ design: 'glass' });
+  await open(page); await loaded(page); await page.waitForSelector('.htile');
+  // Heart
+  await page.click('.htile[data-hcat="heart"]');
+  await page.waitForSelector('#hSheet:not([hidden])');
+  assert.equal(await page.textContent('#hLbl'), 'Heart');
+  assert.deepEqual(await page.$$eval('#hBody [data-hrange]', bs => bs.map(b => [b.textContent, b.getAttribute('aria-pressed')])), [['7 days', 'true'], ['30 days', 'false'], ['90 days', 'false']]);
+  assert.deepEqual(await page.$$eval('#hBody .hm', els => els.map(e => e.dataset.k)), ['hr_rest', 'hr', 'hrv'], 'resting heart rate first; only the readings there are');
+  assert.equal(await page.textContent('#hBody .hwhen'), 'Today');
+  assert.match(await page.textContent('.hm[data-k="hr_rest"] .hmh'), /Resting heart rate\s*Good\s*52bpm/);
+  assert.equal(await page.$$eval('.hm[data-k="hr_rest"] .hchart .dot', els => els.length), 6, 'a dot a day with a reading (none three days ago)');
+  assert.equal(await page.$$eval('.hm[data-k="hr_rest"] .hchart .band', els => els.length), 1, 'your usual, shaded');
+  assert.match(await page.getAttribute('.hm[data-k="hr_rest"] .hchart', 'aria-label'), /^Resting heart rate, the last 7 days, your usual \d+ to \d+ bpm\. Arrow keys pick a day\.$/);
+  assert.deepEqual(await page.$$eval('.hm[data-k="hr_rest"] .hax span', els => els.map(e => e.textContent)), [short(day(-6)), short(day(0))]);
+  assert.equal(await page.textContent('#hBody .hfoot'), 'Ranges: CDC, AHA, FDA. Not medical advice.');
+  assert.equal(await page.$('#hBody .htr'), null, 'no trends when there are none');
+  // 30 and 90 days: the dates widen, the choice is kept
+  await page.click('[data-hrange="30"]');
+  assert.equal(await page.getAttribute('[data-hrange="30"]', 'aria-pressed'), 'true');
+  assert.deepEqual(await page.$$eval('.hm[data-k="hr_rest"] .hax span', els => els.map(e => e.textContent)), [short(day(-29)), short(day(0))]);
+  await page.click('[data-hrange="90"]');
+  assert.equal(await page.textContent('.hm[data-k="hr_rest"] .hax span'), short(day(-89)));
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-health-range')), '90');
+  await page.click('[data-hrange="7"]');
+  // close (the button), and with Escape
+  await page.click('#hSheet .sheethead [data-close]');
+  assert.ok(await page.isHidden('#hSheet'));
+  assert.equal(await page.evaluate(() => __fitness.st.hcat), null);
+  // Activity: tap a bar to pick that day
+  await page.click('.htile[data-hcat="activity"]');
+  await page.waitForSelector('#hSheet:not([hidden])');
+  assert.deepEqual((await page.$$eval('#hBody .hm', els => els.map(e => e.dataset.k))).slice(0, 3), ['steps', 'active_kcal', 'exercise_min'], 'the rings\' readings first');
+  assert.equal(await page.$$eval('.hm[data-k="steps"] .bar', els => els.length), 6);
+  assert.equal(await page.$$eval('.hm[data-k="steps"] .goal', els => els.length), 1, 'the step goal, a line');
+  assert.match(await page.textContent('.hm[data-k="steps"] .hmh'), /Steps\s*Check\s*8,000steps/);
+  const svg = page.locator('.hm[data-k="steps"] .hchart svg'), box = await svg.boundingBox();
+  await svg.click({ position: { x: box.width * 0.5 / 7, y: box.height / 2 } });
+  assert.equal(await page.evaluate(() => __fitness.st.hsel), ymd(day(-6)));
+  assert.equal(await page.textContent('#hBody .hwhen'), fmtDay(day(-6)));
+  assert.match(await page.textContent('.hm[data-k="steps"] .hmv'), /^8,600steps$/);
+  assert.equal(await page.$$eval('.hm[data-k="steps"] .bar.on', els => els.length), 1);
+  // every chart shows the day picked
+  assert.match(await page.textContent('.hm[data-k="active_kcal"] .hmv'), /^560kcal$/);
+  // the arrow keys move it
+  await page.focus('.hm[data-k="steps"] .hchart');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.evaluate(() => __fitness.st.hsel), ymd(day(-5)));
+  assert.equal(await page.evaluate(() => document.activeElement.closest('.hchart') && document.activeElement.dataset.k), 'steps', 'focus stays on the chart');
+  // three days ago had nothing: a dash
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  assert.equal(await page.textContent('.hm[data-k="steps"] .hmv'), '—');
+  await page.keyboard.press('Escape');
+  assert.ok(await page.isHidden('#hSheet'));
+  // Sleep: stages stacked under a 7 h line, and the Sleep score's parts
+  await page.click('.htile[data-hcat="sleep"]');
+  await page.waitForSelector('#hSheet:not([hidden])');
+  assert.equal(await page.textContent('#hLbl'), 'Sleep');
+  assert.match(await page.textContent('.hm[data-k="sleep"] .hmh'), /Asleep\s*Check\s*6 h 25 m/);
+  assert.equal(await page.$$eval('.hm[data-k="sleep"] .stg', els => els.length), 18, 'deep, core and REM for 6 nights');
+  assert.equal(await page.$$eval('.hm[data-k="sleep"] .goal', els => els.length), 1);
+  assert.deepEqual(await page.$$eval('.hm[data-k="sleep"] .hleg span', els => els.map(e => e.textContent)), ['Deep 1h', 'Core 3h 30m', 'REM 1h 32m', 'Awake']);
+  assert.equal(await page.textContent('.hscore .hsh b'), '90');
+  assert.match(await page.textContent('.hscore .hsh'), /Sleep score\s*High/);
+  assert.deepEqual(await page.$$eval('.hscore .hsr', els => els.map(e => [e.dataset.part, e.querySelector('.hsv').textContent, e.querySelector('.hsp').textContent])),
+    [['duration', '6h 25m', '40/50'], ['deep', '16%', '15/15'], ['rem', '24%', '20/20'], ['efficiency', '96%', '15/15']]);
+  assert.deepEqual(await page.$$eval('#hBody .hm', els => els.map(e => e.dataset.k)), ['sleep', 'in_bed']);
+  await shot(page, 'health-sleep-sheet-glass');
+  await page.click('#hSheet .sheethead [data-close]');
+  // Settings: a Move goal beside the step goal; the Move ring follows it
+  await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
+  assert.equal(await page.$eval('#stMove', s => s.value), '500');
+  assert.equal(await page.$eval('label[for="stMove"]', l => l.textContent), 'Move goal');
+  await page.selectOption('#stMove', '1000');
+  assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-move-goal')), '1000');
+  await page.selectOption('#stGoal', '8000');
+  await page.click('#setSheet .sheethead [data-close]');
+  assert.equal(await page.getAttribute('.htile[data-hcat="activity"] .arc.mv', 'stroke-dasharray'), '50.0 100');
+  assert.match(await page.getAttribute('.htile[data-hcat="activity"]', 'aria-label'), /8,000 steps, Move 500 of 1000 kcal/);
+  assert.equal(await page.textContent('.htile[data-hcat="activity"] .hstat'), 'Check', 'steps at the 8,000 goal, but 120 min of exercise this week');
+  await ctx.close();
+});
+
+await test('trends: where your last 7 days differ from your usual average; and Off in red when far off', async () => {
+  // 40 days of a resting heart rate around 60, the last 7 at 55; blood oxygen 88 today
+  const health = [];
+  for (let i = 0; i < 40; i++) { const d = ymd(day(-i)); health.push({ id: d, date: d, m: { hr_rest: i < 7 ? 55 : 60 + (i % 2), spo2: i ? 97 : 88 }, updated: 1 }); }
+  const seed = { v: 2, logs: [], exercises: [], meds: [], doses: [], steps: [], health };
+  const { ctx, page } = await phone({ seed, health: null });
+  await open(page); await page.waitForSelector('.htile');
+  assert.deepEqual(await page.$eval('.htile[data-hcat="vitals"]', t => [t.dataset.s, t.querySelector('.hstat').textContent, t.querySelector('.hbig').textContent]), ['bad', 'Off', '1 off']);
+  assert.equal(await page.$eval('.htile[data-hcat="sleep"] .hstat', e => e.textContent), 'No data');
+  assert.equal(await page.$eval('.htile[data-hcat="sleep"] .hbig', e => e.textContent), '—');
+  await page.click('.htile[data-hcat="heart"]');
+  await page.waitForSelector('#hSheet:not([hidden])');
+  assert.match(await page.textContent('#hBody .htr[data-k="hr_rest"]'), /^↓Resting heart rate down 5 bpmvs your 90-day average$/);
+  await page.click('#hSheet .sheethead [data-close]');
+  await page.click('.htile[data-hcat="vitals"]');
+  assert.match(await page.textContent('.hm[data-k="spo2"] .hmh'), /Blood oxygen\s*Off\s*88%/);
   await ctx.close();
 });
 
@@ -217,11 +336,19 @@ await test('the family Sheet keeps each day\'s Health, in its Health tab with Wh
 await test('no sideways scrolling at 320 px, in both designs, light and dark', async () => {
   for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['glass', 'light'], ['vintage', 'dark']]) {
     const { ctx, page } = await phone({ design, scheme, viewport: { width: 320, height: 640 } });
-    await open(page); await loaded(page); await page.waitForSelector('.hcard');
-    const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, win: window.innerWidth, wide: [...document.querySelectorAll('#main *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 0.5).map(e => e.className || e.tagName).slice(0, 5) }));
+    await open(page); await loaded(page); await page.waitForSelector('.htile');
+    const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, win: window.innerWidth, wide: [...document.querySelectorAll('#main *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 0.5).map(e => e.className.baseVal != null ? e.className.baseVal : e.className || e.tagName).slice(0, 5) }));
     assert.ok(w.doc <= w.win, design + '/' + scheme + ': ' + JSON.stringify(w));
     assert.deepEqual(w.wide, [], design + '/' + scheme);
     await shot(page, 'health-320-' + design + '-' + scheme);
+    // and each sheet: nothing wider than it
+    for (const c of ['sleep', 'activity']) {
+      await page.click('.htile[data-hcat="' + c + '"]'); await page.waitForSelector('#hSheet:not([hidden])'); await page.waitForTimeout(500);
+      const s = await page.evaluate(() => { const r = document.querySelector('#hBody').getBoundingClientRect(); return [...document.querySelectorAll('#hBody *')].filter(e => { const b = e.getBoundingClientRect(); return b.width && (b.right > r.right + 0.5 || b.left < r.left - 0.5); }).map(e => e.className.baseVal != null ? e.className.baseVal : e.className || e.tagName).slice(0, 5); });
+      assert.deepEqual(s, [], design + '/' + scheme + ' ' + c + ' sheet');
+      if (c === 'sleep') await shot(page, 'health-320-sleep-' + design + '-' + scheme);
+      await page.keyboard.press('Escape');
+    }
     await ctx.close();
   }
 });

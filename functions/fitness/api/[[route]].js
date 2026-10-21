@@ -63,11 +63,11 @@ export const ipsyModelOf = env => modelOf(env, 'FITNESS_IPSY_MODEL');
 // about 120 days (a year of weeks for summary), answered as compact JSON.
 const METRIC = { type: 'string', description: 'A daily number: steps, volume (lb lifted: weight × reps × sets), sets, cardio_min, trained (1 a day with a workout, else 0), group:<muscle group> (that group\'s sets: group:legs, group:chest...), meds_taken, meds_missed, adherence (share of the day\'s due doses taken, 0 to 1), med:<name> (that one\'s share taken), or a health stat\'s key (context lists the ones there are)' };
 export const IPSY_CLIENT_TOOLS = [
-  T('days', 'Day by day, from one date to another (at most 120 days): each day\'s workouts (muscle group, exercise, sets × reps at a weight in lb, a hold\'s seconds, or cardio minutes and distance), its volume, steps, the meds and supplements taken, missed and taken as needed (by the person\'s own names), and health stats. Days with nothing are left out.', {
+  T('days', 'Day by day, from one date to another (at most 120 days): each day\'s workouts (muscle group, exercise, sets × reps at a weight in lb, a hold\'s seconds, or cardio minutes and distance), its volume, steps, the meds and supplements taken, missed and taken as needed (by the person\'s own names), and health stats, with health_status for the readings judged (good, watch or bad against healthy ranges or their usual) and sleep_score (Fitness\'s own, 0 to 100). Days with nothing are left out.', {
     from: DAY, to: DAY,
     include: { type: 'array', items: { type: 'string', enum: ['workouts', 'steps', 'meds', 'health'] }, description: 'Only these parts (default: all)' },
   }, ['from', 'to']),
-  T('summary', 'Week by week, from one date to another (at most 53 weeks): days trained, sets per muscle group, total volume, cardio minutes, average steps, the share of due meds taken, and the average of each health stat.', {
+  T('summary', 'Week by week, from one date to another (at most 53 weeks): days trained, sets per muscle group, total volume, cardio minutes, average steps, the share of due meds taken, and the average of each health stat, the average sleep score and the days each health stat was at watch or bad.', {
     from: DAY, to: DAY,
   }, ['from', 'to']),
   T('compare', 'Line up two daily numbers over a stretch of days (at most 120), the second lag_days later (sleep against the next day\'s volume: lag_days 1), and work out how closely they go together on the phone: the paired days, each one\'s average, and the correlation r (Pearson, -1 to 1) with n, how many days it rests on.', {

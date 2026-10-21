@@ -87,9 +87,49 @@ one by one. Like Meds, it's for you alone and asks you to sign in first.
 
 - **A day at a time**: today when it opens; the arrows (or a sideways swipe) go
   back a day, and the calendar button comes back to today.
-- **Four cards**, each reading with its value, its last 7 days as a small line,
-  and the 7-day average before it (with the change, as a percentage). A reading
-  with nothing that day isn't shown, nor a card with none.
+- **Four tiles**, Activity, Heart, Sleep and Vitals, each with a status dot and
+  its word (Good, Check, Off; grey: nothing judged) and one headline:
+  - Activity: the day's steps beside two rings, **Move** (active energy against
+    the Move goal, 500 kcal unless set in **Settings › Steps**) and **Exercise**
+    (minutes against 30).
+  - Heart: resting heart rate (else the day's average).
+  - Sleep: the **Sleep score** and the time asleep ("82 · 7h 20m").
+  - Vitals: "All usual", or how many are off.
+- **Tap a tile** for its sheet: 7, 30 or 90 days (what the phone keeps, and the
+  Sheet's older days), each reading's value on the chosen day with its dot, and
+  a chart with the healthy range (or your usual) shaded, or a goal as a line;
+  tap a bar (or use the arrow keys) to pick a day. Sleep's sheet stacks each
+  night's stages (deep, core, REM, awake) under a 7-hour line, with the Sleep
+  score's four parts. **Trends** say where your last 7 days differ from your
+  90-day (or 28-day) average. Ranges: CDC, AHA, FDA. Not medical advice.
+
+**How a reading is judged** (`health.js`: `status`, `typical`, `catStatus`;
+tested in `scripts/health-status-test.mjs`):
+
+| Reading | Good | Check | Off |
+|---|---|---|---|
+| Asleep | 7 h or more | under 7 h | far under your usual |
+| Steps | at your daily goal | under it | never |
+| Exercise | 150 min over the last 7 days | under it | never |
+| Resting heart rate | 60-100, or under 60 when that's your usual | over your usual; under 60 and under your usual | over 100, or far over your usual |
+| Blood pressure (AHA) | under 120/80 | 120-139 or 80-89 | 140+ or 90+, or far over your usual |
+| Blood oxygen | 95-100% | 90-94% | under 90%, or far under your usual |
+| Respiratory rate | 12-20 a minute | outside it, or outside your usual | far from your usual |
+| HRV, VO2 max | within your usual | under it | far under it |
+| Heart rate, walking heart rate | within your usual | over it | far over it |
+| Temperatures, glucose | within your usual | outside it | far from it |
+
+Your **usual** is the mean ± 1.5 SD of the 28 days before (7 days with a
+reading at least, else nothing is judged on it); **far** is beyond ± 3 SD, with
+a smallest gap for each reading so a very steady one isn't flagged for a small
+change. The rest of Activity and the sleep stages are shown, not judged.
+
+**Sleep score** (`sleepScore`): Fitness's own, 0 to 100 (Apple Health has
+none): duration 50 (full for 7-9 h asleep, 0 at 4 h), deep sleep's share 15
+(full at 13-23%: Apple Watch tends to underestimate deep sleep), REM's share 20
+(full at 20-25%), efficiency 15 (asleep ÷ in bed, full at 85%). Without stages,
+the parts there are share the 100. 0-40 Very low, 41-60 Low, 61-80 OK, 81-95
+High, 96+ Very high.
 
 | Card | Readings (the sensor's name in the Home Assistant app) | A day's value |
 |---|---|---|
@@ -507,7 +547,8 @@ node fitness/scripts/meds-steps-test.mjs [repo root] [screenshot dir]   # Meds a
 node fitness/scripts/ipsy-api-test.mjs                           # functions/fitness/api POST ipsy: signed in only, Fitness's tools and no web tools, the daily cap
 node fitness/scripts/ipsy-test.mjs [repo root] [screenshot dir]  # Ipsy: its tools' numbers on a made-up log, off by default, Settings, where it sits, a chat, read-only, older days
 node fitness/scripts/health-api-test.mjs                         # functions/fitness/api's health: finding a phone's Health sensors (by device, by guessing), only your own, the day sums
-node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the cards, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs
+node fitness/scripts/health-status-test.mjs                      # health.js: your usual, each reading's status, a category's, chart ranges, trends, the Sleep score
+node fitness/scripts/health-test.mjs [repo root] [screenshot dir]  # the Health page: the tiles, rings, the sheets (range, tapping a bar), the Move goal, days, Health Steps as steps, Analysis, the Sheet's Health tab, signed out, 320 px in both designs
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps
