@@ -29,7 +29,7 @@ jobs:
       - run: node meals/scripts/api-test.mjs && node notes/scripts/ipsy-api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs && node news/scripts/ai-test.mjs
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
-      - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node notes/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs && node fitness/scripts/meds-test.mjs && node fitness/scripts/steps-api-test.mjs && node travel/scripts/sheet-test.mjs
+      - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node notes/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs && node fitness/scripts/meds-test.mjs && node fitness/scripts/steps-api-test.mjs && node fitness/scripts/ipsy-api-test.mjs && node travel/scripts/sheet-test.mjs
       - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
@@ -105,10 +105,11 @@ jobs:
               news/scripts/table-test.mjs
               news/scripts/match-test.mjs
               calendar/scripts/app-test.mjs
-          # Fitness, Clock, Notes, and Ipsy in Travel
+          # Fitness, Clock, Notes, and Ipsy in Travel and Fitness
           - group: apps
             tests: |
               fitness/scripts/app-test.mjs
+              fitness/scripts/ipsy-test.mjs
               clock/scripts/app-test.mjs
               notes/scripts/aisles-app-test.mjs
               notes/scripts/push-app-test.mjs

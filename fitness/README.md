@@ -45,6 +45,8 @@ the week, and for each day what you did.
 - **Week, Analysis and Meds**: pick between them from the pill at the
   bottom of the screen (**Week ⌃**), as in Home. The menu opens upwards from
   it, and the app remembers the view you were on. See below.
+- **Ipsy**: once you turn it on in Settings, ask it about patterns in your own
+  workouts, steps, meds and health stats. See Ipsy, below.
 - **Steps**: each day shows its steps beside it (a shoe and the count, in the
   accent once you reach your goal), the week's totals add **steps a day**, and
   a day's sheet starts with its steps and a bar to the goal. See Steps, below.
@@ -110,6 +112,52 @@ each iPhone, in the Home Assistant app: **Settings → Companion App →
 Sensors → Steps** on, and Motion & Fitness allowed. If the sensor reads
 `unavailable` in Home Assistant, check those, and that the server's **Sensors
 Sent** setting (Settings → Companion App → your server → Privacy) isn't off.
+
+## Ipsy
+
+Ipsy, the AllisonOS helper you chat with (`../home/ipsy.js`), looks for
+patterns in your own days: "How did I sleep after leg days?", "Is my resting
+heart rate trending down?", "Did I miss meds more on low-sleep days?".
+
+- **Off until you turn it on**: **Settings → Ipsy → Ask Ipsy about your
+  patterns**, just on this phone, and signed in only (it goes through your
+  family account). Off, there is no Ipsy button; turning it off also clears its
+  chat from the phone. On, it sits just above the bottom row on the left.
+- **What leaves the phone**: only the days and stats a question needs, as Ipsy
+  looks at them, go to Claude (Anthropic) through aOS (`functions/fitness/api`,
+  POST `ipsy`, `server/ipsy.js`), which keeps nothing but a count of questions
+  (80 a person a day). Anthropic doesn't train on it. The chat asks once before
+  the first question, and says so.
+- **No web search** in Fitness: the route sends Claude Fitness's own tools only
+  (`requestHead({ web: false })`), and Ipsy's instructions don't offer it, so
+  nothing about your health can end up in a search query.
+- **Read-only**: its tools (`ipsy-tools.js`) run on the phone and never change
+  the log. Each reads at most about 120 days (a year of weeks for summary):
+  - `days(from, to, include?)`: each day's workouts, volume, steps, meds and
+    supplements taken, missed and taken as needed (by your own names for them),
+    and health stats;
+  - `summary(from, to)`: week by week, days trained, sets by muscle group,
+    volume, cardio minutes, average steps, the share of meds taken, and the
+    average of each health stat;
+  - `compare(metric_a, metric_b, from, to, lag_days?)`: two daily numbers
+    (steps, volume, sets, cardio_min, trained, group:legs, meds_taken,
+    meds_missed, adherence, med:<name>, or a health stat) side by side, the
+    second some days later if asked, with the correlation (Pearson's r) and how
+    many days it rests on, worked out on the phone;
+  - `meds()`: your list, with how often each was taken over 30 days;
+  - `context()`: today, the screen, how far back the phone keeps, the health
+    stats there are.
+  Days older than the 90 the phone keeps are fetched from the family's Sheet
+  first, as the week and Analysis do; if it can't be reached, Ipsy says it used
+  only the phone's days. Health stats are named by `health.js`
+  (`FitnessHealth`) when it's there.
+- **How it answers**: it looks before it answers, quotes the numbers and how
+  many days a pattern rests on, says "pattern", never "cause", calls a small
+  sample too little to go on, gives no diagnosis or medical advice (it suggests
+  a doctor for anything medical), and only ever sees your own data, so it never
+  mentions anyone else in the family.
+- `FITNESS_IPSY_MODEL` (a Pages secret) names another model than Claude
+  Sonnet 5.5.
 
 ## Sign out and erase
 
@@ -312,7 +360,7 @@ iPhone, it keeps separate storage, and Calendar can't see its log.
 unchanged, plus Fitness's own pieces, then the Vintage block (`<style
 id="vintage">`, see The two designs). The day sheet is the same
 Liquid Glass sheet as Calendar's. `app.js` is the app, `analysis.js` does
-Analysis's comparisons, and `sw.js` is the offline shell.
+Analysis's comparisons, `ipsy-tools.js` is Ipsy's tools, and `sw.js` is the offline shell.
 
 - **Security**: a strict Content Security Policy (no inline script), and the
   app refuses to run inside another page's frame.
@@ -395,6 +443,8 @@ node fitness/scripts/app-test.mjs [repo root] [screenshot dir]   # the week, a d
 node fitness/scripts/meds-test.mjs                               # Meds' sums: what's due, taken over 7 and 30 days, streaks; Analysis's steps windows
 node fitness/scripts/steps-api-test.mjs                          # functions/fitness/api: linking your own phone, no one else's, the token kept on the server, the counts
 node fitness/scripts/meds-steps-test.mjs [repo root] [screenshot dir]   # Meds and Steps in the page, the Sheet keeping them and the phone keeping 30 days, Sign out and erase, aOS's Lost a phone?
+node fitness/scripts/ipsy-api-test.mjs                           # functions/fitness/api POST ipsy: signed in only, Fitness's tools and no web tools, the daily cap
+node fitness/scripts/ipsy-test.mjs [repo root] [screenshot dir]  # Ipsy: its tools' numbers on a made-up log, off by default, Settings, where it sits, a chat, read-only, older days
 ```
 
 `fake-sheet.mjs` is a small in-memory stand-in for the parts of Google Apps

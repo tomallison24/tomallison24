@@ -6,7 +6,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
-const root = process.cwd(), apps = ['orders','travel','meals','calendar','notes','news'];
+const root = process.cwd(), apps = ['orders','travel','meals','calendar','notes','news','fitness'];
 const server = http.createServer((req,res) => {
   let name = decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if (name.endsWith('/')) name += 'index.html';
@@ -36,7 +36,8 @@ try {
       },{app,design});
       await page.addScriptTag({url:base + '/home/ipsy.js'});
       await page.evaluate(app => {
-        const selectors = {calendar:'.dockr .ipsyslot',notes:'.dock > .ipsyslot',travel:'#ipsySlot',meals:'.dock > span'};
+        const selectors = {calendar:'.dockr .ipsyslot',notes:'.dock > .ipsyslot',travel:'#ipsySlot',meals:'.dock > span',fitness:'.dock > .ipsyslot'};
+        if (app === 'fitness') document.querySelector('.dock > .ipsyslot').hidden = false;   // off until turned on in Settings (fitness/app.js)
         window.AllisonOS.ipsy.mount({app,name:app,endpoint:'../' + app + '/api/ipsy',headers:{},intro:'Visual test',placeholder:'Ask Ipsy',suggestions:[],consent:'Visual test only; nothing is sent.',label:()=>'',tools:{},context:()=> 'Visual test',slot:selectors[app] ? document.querySelector(selectors[app]) : null});
       },app);
       const label = [app,width,design,scheme].join('/');
@@ -49,8 +50,8 @@ try {
         assert.ok(rect.x >= tabs.x + tabs.width + 2,label + ': clear of tabs');
         assert.ok(rect.x + rect.width <= fab.x,label + ': clear of new event');
       }
-      if (['notes','travel'].includes(app)) {
-        const slot = await page.locator(app === 'notes' ? '.dock > .ipsyslot' : '#ipsySlot').boundingBox();
+      if (['notes','travel','fitness'].includes(app)) {
+        const slot = await page.locator(app === 'travel' ? '#ipsySlot' : '.dock > .ipsyslot').boundingBox();
         assert.ok(slot.width >= rect.width && slot.height >= rect.height,label + ': slot fits');
       }
       const idle = await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationName);
