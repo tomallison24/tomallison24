@@ -226,6 +226,52 @@ function auDerive(cfg, named) {
   }
   return out;
 }
+// What a call does to its device, in words: "Turns off", "Sets to 25%", "Opens".
+// A number from a template is "Sets brightness" and the like; vars fills a
+// service named by one ("switch.turn_{{ state }}", with the state handed to the script).
+const auNum = v => typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(String(v)) ? Number(v) : null;
+function auDoes(svc, data = {}, vars = {}) {
+  svc = String(svc).replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => typeof vars[k] === 'string' ? vars[k] : m);
+  if (/[{%]/.test(svc)) return '';
+  const [d, sv] = svc.split('.'), n = k => auNum(data[k]);
+  if (sv === 'turn_off' || (sv === 'set_hvac_mode' && data.hvac_mode === 'off')) return 'Turns off';
+  if (sv === 'turn_on') return d === 'light' && n('brightness_pct') != null ? `Sets to ${n('brightness_pct')}%` : d === 'light' && data.brightness_pct != null ? 'Sets brightness' : 'Turns on';
+  if (sv === 'toggle') return 'Toggles';
+  if (sv === 'set_cover_position') return n('position') === 100 ? 'Opens' : n('position') === 0 ? 'Closes' : n('position') != null ? `Sets to ${n('position')}%` : 'Moves';
+  if (sv === 'open_cover') return 'Opens';
+  if (sv === 'close_cover') return 'Closes';
+  if (sv === 'set_hvac_mode') return /[{%]/.test(data.hvac_mode || '{') ? 'Sets mode' : `Sets to ${auCap(data.hvac_mode === 'heat_cool' ? 'auto' : data.hvac_mode)}`;
+  if (sv === 'set_temperature') return 'Sets temperature';
+  if (sv === 'set_preset_mode') return /[{%]/.test(data.preset_mode || '{') ? 'Sets preset' : data.preset_mode === 'none' ? '' : `Sets to ${auCap(data.preset_mode)}`;
+  if (sv === 'set_fan_mode') return 'Sets fan';
+  if (sv === 'set_percentage') return n('percentage') != null ? `Sets speed ${n('percentage')}%` : 'Sets speed';
+  if (sv === 'media_stop') return 'Stops';
+  if (sv === 'volume_set') return n('volume_level') != null ? `Volume ${Math.round(n('volume_level') * 100)}%` : 'Sets volume';
+  if (sv === 'select_sound_mode') return /[{%]/.test(data.sound_mode || '{') ? 'Plays a sound' : `Plays ${auCap(data.sound_mode).replace(/([a-z])([A-Z])/g, '$1 $2')}`;
+  if (sv === 'speak') return 'Speaks an alert';
+  if (sv === 'alarm_arm_away' || sv === 'alarm_arm_home' || sv === 'alarm_arm_night') return 'Arms';
+  if (sv === 'alarm_disarm') return 'Disarms';
+  if (d === 'blink' && sv === 'trigger_camera') return 'Takes a snapshot';
+  if (sv === 'update_entity') return '';
+  return auCap(sv);
+}
+// Into eff (entity -> what is done to it) and dynEff (a kind of device worked through a template -> the same).
+function auEffects(node, eff, dynEff, vars) {
+  if (Array.isArray(node)) { for (const x of node) auEffects(x, eff, dynEff, vars); return; }
+  if (!node || typeof node !== 'object') return;
+  const svc = node.action || node.service;
+  if (typeof svc === 'string' && !/^(script|notify|input_\w+|timer|counter)\./.test(svc)) {
+    const data = node.data || {}, word = auDoes(svc, data, vars);
+    const dom = AU_SVC_DOM[svc.split('.')[0]] || svc.split('.')[0];
+    const ids = [];
+    for (const [k, v] of Object.entries({ ...(node.target || {}), ...data, ...(node.entity_id ? { entity_id: node.entity_id } : {}) })) {
+      if (!/entity_id$/.test(k)) continue;
+      for (const x of auList(v)) if (typeof x === 'string') { if (/[{%]/.test(x)) { if (word) (dynEff[dom] = dynEff[dom] || new Set()).add(word); } else ids.push(...x.split(',').map(y => y.trim())); }
+    }
+    if (word) for (const id of ids) (eff[id] = eff[id] || new Set()).add(word);
+  }
+  for (const v of Object.values(node)) if (v && typeof v === 'object') auEffects(v, eff, dynEff, vars);
+}
 // The service's own kind of device, where it isn't an entity's (blink.trigger_camera).
 const AU_SVC_DOM = { blink: 'camera' };
 // The config of a script the automation starts: Home Assistant's, else the copy's.
@@ -258,7 +304,7 @@ const AUTOS = family({
     const s = a.ent ? st(a.ent) : null, A = s ? s.attributes : {}, c = a.cfg || {};
     const name = A.friendly_name || c.alias || auCap(a.ent.split('.')[1] || a.cid);
     const trig = auList(c.triggers || c.trigger), cond = auList(c.conditions || c.condition), acts = auList(c.actions || c.action);
-    const { controls, watches, tells, scripts, helpers, group } = this.parts(a, c, trig, cond, acts);
+    const { controls, watches, tells, scripts, helpers, group, does } = this.parts(a, c, trig, cond, acts);
     const desc = String(c.description || '').trim();
     const first = desc.split(/\n/)[0].replace(/\s+/g, ' ');
     // The description's first sentence (two, when the first is a few words: "Safety net.")
@@ -267,7 +313,7 @@ const AUTOS = family({
     const state = a.missing ? 'missing' : !s ? 'gone' : s.state === 'unavailable' ? 'unavailable' : Number(A.current) > 0 ? 'running' : s.state === 'off' ? 'off' : 'on';
     const last = A.last_triggered || null, lastMs = last ? Date.parse(last) : 0;
     const today = lastMs && new Date(lastMs).toDateString() === new Date().toDateString();
-    return { a, name, desc, what, trig, cond, controls, watches, tells, scripts, helpers, group, state, last, lastMs, today, mode: c.mode || 'single',
+    return { a, name, desc, what, trig, cond, controls, watches, tells, scripts, helpers, group, does, state, last, lastMs, today, mode: c.mode || 'single',
       when: [...new Set(trig.map(auTrigger))] };
   },
 
@@ -320,7 +366,19 @@ const AUTOS = family({
     const byWatch = scripts.length ? watches.map(auKindOf).find(Boolean) : null;
     const group = a.missing ? 'missing' : kinds.length >= 3 || (kinds.length === 2 && (asked || watches.some(isWho))) ? 'routine'
       : byName || kinds[0] || (tells.length ? 'alerts' : byWatch || 'helpers');
-    const out = { controls, watches, tells, scripts, helpers, group, ver: this.cfgVer, missing: !!a.missing };
+    // What it does to each device it controls: its own calls, then its scripts' (with what it hands them).
+    const eff = {}, dynEff = {}, vars = {};
+    (function walk(n) {
+      if (Array.isArray(n)) return n.forEach(walk);
+      if (!n || typeof n !== 'object') return;
+      if (/^script\./.test(n.action || n.service || '') && n.data) for (const [k, v] of Object.entries(n.data.variables || n.data)) if (typeof v === 'string' && !/[{%]/.test(v)) vars[k] = v;
+      Object.values(n).forEach(walk);
+    })(acts);
+    auEffects(acts, eff, dynEff, {});
+    for (const id of via) { const sc = auScript(id); if (sc) auEffects(sc.sequence || [], eff, dynEff, vars); }
+    const does = {};
+    for (const id of controls) { const w = new Set([...(eff[id] || []), ...(eff[id] ? [] : dynEff[auDomain(id)] || [])]); if (w.size) does[id] = [...w].slice(0, 2).join(' · '); }
+    const out = { controls, watches, tells, scripts, helpers, group, does, ver: this.cfgVer, missing: !!a.missing };
     this.cache.set(c, out);
     return out;
   },
@@ -396,7 +454,9 @@ const AUTOS = family({
     const a = this.find(id); if (!a) return null;
     const r = this.read(a), g = AU_GROUPS.find(x => x.id === r.group), acc = AU_ACC[g.id];
     const row = (ic, k, v = '') => `<div class="rowi">${icon(ic)}<span class="k">${k}</span>${v ? `<span class="v">${v}</span>` : ''}</div>`;
-    const devRows = ids => grp(ids.map(id => row(AU_ICON[auDomain(id)] || 'home', esc(auName(id)), esc(this.devState(id)))).join(''), true);
+    // A device: its name with its state now under it, and on the right what this automation does to it.
+    const devRows = (ids, does = {}) => grp(ids.map(id => { const now = this.devState(id);
+      return row(AU_ICON[auDomain(id)] || 'home', `${esc(auName(id))}${now ? `<small>Now ${esc(now.charAt(0).toLowerCase() + now.slice(1))}</small>` : ''}`, esc(does[id] || '')); }).join(''), true);
     const when = r.last ? new Date(r.last).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never';
     const tellName = id => id.startsWith('notify:') ? auCap(id.slice(7).replace(/^mobile_app_/, '')) : auName(id);
     const paras = r.desc.split(/\n+/).map(p => p.trim()).filter(Boolean);
@@ -406,7 +466,7 @@ const AUTOS = family({
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), acc, {}, 150),
       parts: [
         ['stats', statsHTML([['Status', esc(this.status(r).split(' · ')[0])], ['Last ran', mode === 'live' ? esc(r.last ? ago(r.last) : 'Never') : '—']])],
-        r.controls.length ? ['does', lbl('CONTROLS') + devRows(r.controls)] : null,
+        r.controls.length ? ['does', lbl('CONTROLS') + devRows(r.controls, r.does)] : null,
         r.watches.length ? ['watch', lbl('WATCHES') + devRows(r.watches)] : null,
         !r.controls.length && !r.watches.length ? ['none', `<p class="tnote">${r.tells.length ? 'Works no device: it sends a notification.' : 'Works no device: only the dashboard\'s helpers.'}</p>`] : null,
         ['what', lbl('WHAT IT DOES') + `<div class="au-desc"><p>${esc(r.what || (r.a.cfg ? 'No description.' : 'Not in Home\'s copy of the automations yet.'))}</p></div>`],

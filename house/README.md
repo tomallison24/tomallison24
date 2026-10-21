@@ -400,8 +400,9 @@ turns one on or off or runs it - that stays in Home Assistant.
 - **The view is only the names**, by group, so it stays uncluttered. The
   drop-down line says how many are running, ran today and are off.
 - **Tap a name** for its popup: its **status** (On, Off, Running now) and when
-  it last ran, then the devices it **controls** and **watches**, each with its
-  state now ("Office Blinds · Open 40%"), then what it does (its description's
+  it last ran, then the devices it **controls**, each with what it does to it
+  on the right ("Turns off", "Sets to 25%", "Opens") and its state now under
+  its name ("Now 25%"), and those it **watches**, then what it does (its description's
   first sentence), when it **runs** (its triggers in words: "At 8:30 AM",
   "1 h before sunset", "When Elena arrives home"), **only if**, who it
   notifies, the scripts it starts, the helpers it uses and the whole

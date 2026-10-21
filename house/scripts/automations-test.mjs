@@ -125,7 +125,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     const p = await popup(page, 'automation.1785890100001');
     assert.equal(p.title, 'Blinds - Open Office Blinds at 08:30');
     assert.equal(p.pill, 'On');
-    assert.match(p.body, /^\s*Status\s*On\s*Last ran\s*—\s*CONTROLS\s*Office blinds\s*Open 50%/);
+    assert.match(p.body, /^\s*Status\s*On\s*Last ran\s*—\s*CONTROLS\s*Office blinds\s*Now open 50%\s*Opens/, 'its state now, and what it does to it');
     assert.match(p.body, /WHAT IT DOES\s*Opens both VELUX office blinds fully each morning\./);
     assert.match(p.body, /RUNS\s*At 8:30 AM/);
     assert.match(p.body, /ONLY IF\s*Guest mode is off/);
@@ -142,7 +142,11 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     const home = await popup(page, 'automation.home_first_one_back');
     assert.match(home.body, /CONTROLS\s*Garage camera motion detection/);
     assert.doesNotMatch(home.body.split('WATCHES')[0], /Yard/, 'the Yard is only named in the push');
-    assert.doesNotMatch((await popup(page, 'automation.1785000000001')).body, /NOTIFIES/);
+    const gn = (await popup(page, 'automation.1785000000001')).body;
+    assert.doesNotMatch(gn, /NOTIFIES/);
+    assert.match(gn, /Elena lamp\s*(Now [^A-Z]*)?Sets to 1%/);
+    // Away turns the lamps off, whatever they are at now (the Sunset Ladder may have them at 25%).
+    assert.match((await popup(page, 'automation.away_everyone_out')).body, /Side lamps\s*Now 25%\s*Turns off/);
   });
   await test(`${label}: no script errors`, async () => assert.deepEqual(errors, []));
   await ctx.close();
@@ -158,7 +162,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     const bl = await popup(page, 'automation.blinds_open_office_blinds_at_08_30');
     assert.equal(bl.pill, 'Off');
     assert.match(bl.body, /Last ran\s*Never/);
-    assert.match(bl.body, /CONTROLS\s*Office Blinds\s*Open 40%/, 'the device\'s own name and state');
+    assert.match(bl.body, /CONTROLS\s*Office Blinds\s*Now open 40%\s*Opens/, 'the device\'s own name and state, and what it does');
     assert.equal((await popup(page, 'automation.mom_s_awake')).pill, 'Running now');
     assert.match(await page.textContent('#secSum'), /1 running · 2 ran today · 1 off/);
   });
@@ -181,7 +185,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     await page.waitForFunction(() => document.querySelector('#g-autos [data-dv="autos:automation.porch_at_dusk"]')
       && document.querySelector('#g-autos [data-dv="autos:automation.porch_at_dusk"]').closest('.au-group').querySelector('.vsec-h span').textContent === 'Lights');
     const p = await popup(page, 'automation.porch_at_dusk');
-    assert.match(p.body, /CONTROLS\s*Porch Light\s*Off/);
+    assert.match(p.body, /CONTROLS\s*Porch Light\s*Now off\s*Turns on/);
     assert.match(p.body, /WHAT IT DOES\s*Turns the porch light on at dusk\./);
     assert.match(p.body, /RUNS\s*15 min before sunset/);
     assert.match(p.body, /Read from Home Assistant\./);
