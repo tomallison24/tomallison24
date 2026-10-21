@@ -278,7 +278,6 @@ if (window.top !== window.self) {
       + '<div class="frow"><label for="fTime">Time <small>optional</small></label><input type="time" id="fTime" value="' + esc(f.time) + '"></div>'
       + '<div class="frow"><input class="txt" id="fNote" type="text" maxlength="200" autocomplete="off" placeholder="Note (optional)" aria-label="Note" value="' + esc(f.note) + '"></div>'
       + '</div>'
-      + (f.cat === 'cocktail' ? '<p class="hint">For a cocktail, log the spirit in it: 2 oz of 40% is a typical one.</p>' : '')
       + '<p class="calc" id="fCalc">' + calcLine(sd) + '</p>'
       + '<div class="formbtns"><button class="btn quiet" type="button" id="fCancel">Cancel</button><button class="btn" type="button" id="fSave">' + (f.editing ? 'Save' : 'Add') + '</button></div>';
   }
@@ -373,28 +372,26 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const A = () => window.AllisonOS && window.AllisonOS.account;
   function renderMore() {
-    const g = goals(), user = A() && A().user();
+    const g = goals();
     const ACCT = {
-      ok: ['In the family’s Google Sheet', 'Only you see yours' + (user ? ', ' + user.name : '') + ', on any phone you sign in on. Last synced ' + ago(lastSyncAt) + '.'],
-      syncing: ['Syncing…', 'With the family’s Google Sheet.'],
-      signin: ['On this phone only', 'Sign in with your family account to keep your log in the family’s Google Sheet and on your other phones. Only you see yours.'],
-      offline: ['Offline', 'Changes will sync when you’re back online.'],
+      ok: ['In the family’s Google Sheet', 'Last synced ' + ago(lastSyncAt) + '.'],
+      syncing: ['Syncing…', ''],
+      signin: ['On this phone only', 'Sign in to sync your log.'],
+      offline: ['Offline', ''],
       error: ['Couldn’t sync just now', SYNC_ERRORS[syncErr] || 'Your log is safe on this phone. Trying again shortly.'],
       idle: [signedIn() ? 'Checking…' : 'On this phone only', ''],
     }[syncState === 'syncing' && settled !== 'idle' ? settled : syncState] || ['', ''];
     $('moreBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="hint">Just on this phone, and at once.</p>'
       + '<div class="rgroup acct" id="acct"><p><strong>' + esc(ACCT[0]) + '</strong>' + esc(ACCT[1]) + '</p>'
       + (!signedIn() ? '<button class="btn" type="button" id="signIn">Sign in with Face ID</button>' : '') + '</div>'
       + '<p class="label">Your goals</p><div class="rgroup">'
       + '<div class="frow"><label for="gWeek">A week, at most</label><select id="gWeek">' + opts(withVal([0, 3, 5, 7, 10, 12, 14, 18, 21, 25, 30], g.week), g.week, v => +v ? v + ' drinks' : 'No limit') + '</select></div>'
       + '<div class="frow"><label for="gDay">A day, at most</label><select id="gDay">' + opts(withVal([1, 2, 3, 4, 5, 6, 8, 10], g.day), g.day, v => plural(+v, 'drink')) + '</select></div>'
       + '<div class="frow"><label for="gAf">Alcohol-free days a week</label><select id="gAf">' + opts([0, 1, 2, 3, 4, 5, 6, 7], g.af) + '</select></div></div>'
-      + '<p class="hint">In standard drinks (14 g of alcohol each).</p>'
       + '<p class="label">Your data</p><div class="rgroup">'
-      + '<button class="rowbtn" type="button" id="importBtn"><span class="ic">' + ICON.import + '</span><span>Bring in ABV Tracker history<span class="sub">Its JSON backup, or its Google Sheet’s Log tab downloaded as CSV</span></span></button>'
-      + '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + ICON.export + '</span><span>Export<span class="sub">Everything you’ve logged, as a spreadsheet (CSV)</span></span></button>'
-      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone' + (synced ? ' and the family’s Google Sheet (yours only)' : '') + '</span></span></button></div>';
+      + '<button class="rowbtn" type="button" id="importBtn"><span class="ic">' + ICON.import + '</span><span>Bring in ABV Tracker history<span class="sub">JSON backup or Log tab CSV</span></span></button>'
+      + '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + ICON.export + '</span><span>Export<span class="sub">As a CSV spreadsheet</span></span></button>'
+      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone' + (synced ? ' and the Sheet' : '') + '</span></span></button></div>';
   }
   const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); if (syncState !== 'syncing') sync(false); };
@@ -408,7 +405,7 @@ if (window.top !== window.self) {
   });
   more.addEventListener('click', async e => {
     if (e.target.closest('#signIn')) {
-      try { await A().signIn(); toast('Signed in. Syncing your log with the family’s Google Sheet.'); await handOver(); sync(true); }
+      try { await A().signIn(); toast('Signed in. Syncing your log.'); await handOver(); sync(true); }
       catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
@@ -484,7 +481,7 @@ if (window.top !== window.self) {
   if (whose) ls.set(K.who, whose);
   ls.del(K.sync); ls.del(K.sheetAt);   // the family account's sync marker and the old Sheet's: gone with them
   const SYNC_ERRORS = {
-    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Drinks keeps your log on this phone.',
+    signin: 'Sign in to sync your log.',
     'no-sheet': 'The family’s Drinks Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
     'wrong-secret': 'aOS’s phrase for the Drinks Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
     'old-script': 'The Drinks Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',
@@ -787,7 +784,7 @@ if (window.top !== window.self) {
   const selOf = (n, last) => tr.sel != null && tr.sel >= 0 && tr.sel < n ? tr.sel : last;
   // The week you tapped, or else the newest with something in it.
   const lastWith = ws => { for (let i = ws.length - 1; i >= 0; i--) if (ws[i].hasData) return i; return ws.length - 1; };
-  const notLogged = T => { const k = sum(T.weeks, w => w.notRecorded); return k ? '<p class="anote">' + plural(k, 'day') + ' in these weeks weren’t logged. They’re left out of the averages, so a week with gaps can read low.</p>' : ''; };
+  const notLogged = T => { const k = sum(T.weeks, w => w.notRecorded); return k ? '<p class="anote">' + plural(k, 'day') + ' not logged.</p>' : ''; };
 
   const TV = [
     { id: 'compare', name: 'Compared with before', sub: () => '',
@@ -798,7 +795,7 @@ if (window.top !== window.self) {
         const P = PERIODS[st.period], a = C.compare(data.entries, data.days, T.tod, P.days), r = a.range, n = a.now, b = a.before;
         const seg = '<div class="seg slides" role="radiogroup" aria-label="Compare">' + Object.entries(PERIODS).map(([k, p]) => '<button type="button" data-period="' + k + '" aria-pressed="' + (st.period === k) + '">' + p.name + '</button>').join('') + '</div>';
         const note = '<p class="anote">' + esc(short(r.from) + ' – ' + short(r.to) + ' against ' + short(r.beforeFrom) + ' – ' + short(r.beforeTo)) + '</p>';
-        if (!a.hasNow && !a.hasBefore) return seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>';
+        if (!a.hasNow && !a.hasBefore) return seg + note + '<div class="empty"><strong>Nothing to compare yet</strong>Log a few days to start.</div>';
     // Four numbers, each against the window before. Fewer drinks is better; more alcohol-free days is better.
         const cmp = (label, now, before, lowerIsBetter) => {
           const has = now !== null, d = has && before !== null ? C.round(now - before, 1) : null;
@@ -815,14 +812,13 @@ if (window.top !== window.self) {
         const k = C.streaks(data.entries, data.days, T.tod);
         const rows = '<div class="xrow"><span class="xt">Alcohol-free in a row<small>Your best: ' + plural(k.best, 'day') + '</small></span><span class="xv">' + plural(k.current, 'day') + '</span></div>'
           + (n.heaviest ? '<div class="xrow"><span class="xt">Most in one day<small>' + esc(fmt(n.heaviest.date, { weekday: 'long', day: 'numeric', month: 'short' })) + '</small></span><span class="xv">' + f1(n.heaviest.sd) + '</span></div>' : '')
-          + (n.notRecorded ? '<div class="xrow"><span class="xt">Days not logged<small>Left out of the average. Tap a day in the week to fill it in.</small></span><span class="xv">' + n.notRecorded + '</span></div>' : '');
+          + (n.notRecorded ? '<div class="xrow"><span class="xt">Days not logged</span><span class="xv">' + n.notRecorded + '</span></div>' : '');
         const cats = Object.entries(n.cats).sort((p, q) => q[1] - p[1]);
         const max = Math.max(0.1, ...cats.map(c => c[1]));
         const bars = cats.map(([c, v]) => '<div class="gbar" data-c="' + esc(c) + '" aria-label="' + esc(catName(c) + ': ' + f1(v) + ' standard drinks') + '"><span class="gn"><i class="cdot"></i>' + esc(catName(c)) + '</span><span class="gt"><span class="bar" style="width:' + (v / max * 72).toFixed(1) + '%"></span><span class="gv">' + f1(v) + '</span></span></div>').join('');
         return seg + note + kpis
           + '<div class="rgroup">' + rows + '</div>'
-          + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '')
-          + '<p class="hint">In standard drinks: 14 g of alcohol each (the US measure), such as 12 oz of 5% beer or 1.5 oz of 40% spirits. The average counts the days you logged, drinks or alcohol-free.</p>';
+          + (bars ? '<p class="label">By drink</p><div class="rgroup bars">' + bars + '</div>' : '');
       } },
     { id: 'weekly', name: 'Weekly drinks',
       icon: '<svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20V10M20 20V15"/></svg>',
@@ -851,7 +847,7 @@ if (window.top !== window.self) {
       sum: T => !T.g.week ? 'No weekly limit set' : T.goals.counted ? T.goals.over + ' of ' + T.goals.counted + ' weeks over' : 'Nothing logged yet',
       draw(T) {
         const g = T.g, ws = T.weeks, r = T.goals;
-        if (!g.week) return '<div class="empty"><strong>No weekly limit set</strong>Set “A week, at most” in More (the person button), and this shows which weeks went over.</div>';
+        if (!g.week) return '<div class="empty"><strong>No weekly limit set</strong>Set one in More.</div>';
         const kind = w => !w.hasData ? 'none' : w.over ? 'over' : w.partial ? 'going' : 'ok';
         const sym = { none: '–', over: '▲', going: '…', ok: '✓' };
         const word = { none: 'nothing logged', over: 'over', going: 'so far, under', ok: 'under' };
@@ -864,14 +860,14 @@ if (window.top !== window.self) {
         return kpis([kpi('Weeks over', r.over + ' of ' + r.counted, 'limit ' + g.week + ' a week'), kpi('Under your limit', String(r.under), r.noData + ' not logged'),
             kpi('Running under now', plural(r.runUnder, 'week'), 'in a row'), kpi('Best run under', plural(r.bestRun, 'week'), 'in these ' + WEEKS)])
           + strip + '<p class="anote">✓ under your limit · ▲ over · … this week so far, under it · – nothing logged</p>'
-          + rows + '<p class="anote">A week counts once it’s over, or once it’s finished. Weeks with nothing logged aren’t counted.</p>';
+          + rows;
       } },
     { id: 'top', name: 'Top drinks',
       icon: '<svg viewBox="0 0 24 24"><path d="M6.4 4h11.2l-1 6.2a4.6 4.6 0 0 1-9.2 0zM12 14.8V20M8.4 20h7.2"/></svg>',
       sum: T => { const t = C.topDrinks(data.entries, T.from, T.tod, 'name').sort((a, b) => b.qty - a.qty)[0]; return t ? t.label + ' most often' : 'Nothing logged yet'; },
       draw(T) {
         const all = C.topDrinks(data.entries, T.from, T.tod, tr.group), total = sum(all, x => x.sd);
-        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong>Only alcohol-free days so far.</div>';
+        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong></div>';
         const pc = x => total ? Math.round(x.sd / total * 100) : 0;
         const row = (x, text, v, max) => '<div class="gbar" data-c="' + esc(x.cat) + '" aria-label="' + esc(x.label + ': ' + text) + '"><span class="gn"><i class="cdot"></i><span class="nm">' + esc(x.label) + '</span></span><span class="gt"><span class="bar" style="width:' + (v / max * 55).toFixed(1) + '%"></span><span class="gv">' + esc(text) + '</span></span></div>';
         const list = (arr, text, val) => {
@@ -888,8 +884,7 @@ if (window.top !== window.self) {
         return seg + callout
           + '<p class="label">Had most often</p>' + list(byQty, x => plural(Math.round(x.qty), 'drink'), x => x.qty)
           + '<p class="label">Adds up to the most</p>' + list(bySd, x => f1(x.sd) + ' · ' + pc(x) + '%', x => x.sd)
-          + tview(['Drink', 'Drinks', 'Std drinks'], byQty.map(x => [x.label, String(Math.round(x.qty)), f1(x.sd)]))
-          + '<p class="hint">Drinks with the same name are counted together, whatever their size. A drink with no name is counted as its kind. Standard drinks are 14 g of alcohol each.</p>';
+          + tview(['Drink', 'Drinks', 'Std drinks'], byQty.map(x => [x.label, String(Math.round(x.qty)), f1(x.sd)]));
       } },
     { id: 'days', name: 'Days of the week',
       icon: '<svg viewBox="0 0 24 24"><rect x="4" y="5.4" width="16" height="14.6" rx="3"/><path d="M4 10h16M8.6 3.6v3.2M15.4 3.6v3.2M8.6 14h.01M12 14h.01M15.4 14h.01"/></svg>',
@@ -905,8 +900,7 @@ if (window.top !== window.self) {
           + (hi && tot ? '<p class="callout"><b>' + DOW[hi.dow] + 's</b> are your heaviest: ' + f1(hi.avg) + ' standard drinks on average, ' + Math.round(hi.share * 100) + '% of all you drank in these ' + WEEKS + ' weeks.</p>' : '')
           + '<div class="chartcard">' + readout(i < 0 ? 'Tap a day to see it.' : say(d[i])) + chart
           + legend([['', 'Average on that day'], ['over', 'Over your daily limit (▲)'], ['lim', 'Daily limit']].filter(x => g.day || x[0] === ''))
-          + tview(['Day', 'Average', 'Share', 'Days drank'], d.map(x => [DOW[x.dow], x.avg == null ? 'not logged' : f1(x.avg), Math.round(x.share * 100) + '%', x.drinkingDays + ' of ' + x.recorded])) + '</div>'
-          + '<p class="anote">The average counts the days of that name you logged, drinks or alcohol-free.</p>';
+          + tview(['Day', 'Average', 'Share', 'Days drank'], d.map(x => [DOW[x.dow], x.avg == null ? 'not logged' : f1(x.avg), Math.round(x.share * 100) + '%', x.drinkingDays + ' of ' + x.recorded])) + '</div>';
       } },
     { id: 'free', name: 'Alcohol-free days',
       icon: '<svg viewBox="0 0 24 24"><path d="M12 3.4c4.6 3.4 6.6 6.4 6.6 9.4a6.6 6.6 0 0 1-13.2 0c0-3 2-6 6.6-9.4zM9.4 13.2l2.2 2.2 3.4-3.8"/></svg>',
@@ -920,8 +914,7 @@ if (window.top !== window.self) {
             kpi('Alcohol-free in a row', plural(k.current, 'day'), 'now'), kpi('Your best', plural(k.best, 'day'), 'in a row')])
           + '<div class="chartcard">' + readout(say(ws[i])) + chart
           + legend([['af', 'Alcohol-free days'], ['part', 'Lighter: this week so far'], ['gl', 'Your goal']].filter(x => g.af || x[0] !== 'gl'))
-          + tview(['Week', 'Alcohol-free', 'Drank on'], ws.map(w => [wk(w), w.hasData ? String(w.afDays) : 'not logged', w.hasData ? String(w.drinkingDays) : '—'])) + '</div>'
-          + '<p class="anote">A day only counts if you marked it alcohol-free. Days you didn’t log don’t.</p>';
+          + tview(['Week', 'Alcohol-free', 'Drank on'], ws.map(w => [wk(w), w.hasData ? String(w.afDays) : 'not logged', w.hasData ? String(w.drinkingDays) : '—'])) + '</div>';
       } },
     { id: 'heavy', name: 'Days over the limit',
       icon: '<svg viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6zM12 10v4.2M12 16.9h.01"/></svg>',
@@ -937,15 +930,14 @@ if (window.top !== window.self) {
             kpi('Most in a week', most && most.overDays ? String(most.overDays) : '0', most && most.overDays ? short(most.start) : ''), kpi('Your daily limit', String(g.day), 'standard drinks')])
           + '<div class="chartcard">' + readout(say(ws[i])) + chart
           + legend([['heavy', 'Days over your daily limit'], ['part', 'Lighter: this week so far']])
-          + tview(['Week', 'Days over'], ws.map(w => [wk(w), w.hasData ? String(w.overDays) : 'not logged'])) + '</div>'
-          + '<p class="anote">A weekly total can look fine while one night runs high. This counts those nights.</p>';
+          + tview(['Week', 'Days over'], ws.map(w => [wk(w), w.hasData ? String(w.overDays) : 'not logged'])) + '</div>';
       } },
     { id: 'strength', name: 'Strength and size',
       icon: '<svg viewBox="0 0 24 24"><path d="M3.6 16.4l5-6 4 3.6 7.8-8.6M15 5.4h5.4V11"/></svg>',
       sum: T => { const w = T.weeks.filter(x => x.abv != null); return w.length ? strengthAll(T).toFixed(1) + '% average strength' : 'Nothing logged yet'; },
       draw(T) {
         const ws = T.weeks, i = selOf(ws.length, lastWith(ws)), all = ws.filter(w => w.abv != null);
-        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong>Only alcohol-free days so far.</div>';
+        if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong></div>';
         const say = w => w.abv == null ? '<b>' + esc(wk(w)) + '</b> · no drinks' : '<b>' + esc(wk(w)) + '</b> · <b>' + w.abv.toFixed(1) + '%</b> average strength · <b>' + (Math.round(w.perDrink * 100) / 100).toLocaleString('en-US') + '</b> standard drinks in an average drink';
         const abvs = all.map(w => w.abv), pd = all.map(w => w.perDrink);
         const a = span(Math.min(...abvs) - 0.2, Math.max(...abvs) + 0.2), b = span(Math.min(...pd) - 0.05, Math.max(...pd) + 0.05);
@@ -958,8 +950,7 @@ if (window.top !== window.self) {
           + '<p class="label" style="margin:0 4px 2px">Average strength (ABV)</p>' + c1
           + '<p class="label" style="margin:12px 4px 2px">Standard drinks in an average drink</p>' + c2
           + legend([['dk', 'Each dot is a week']])
-          + tview(['Week', 'Strength', 'Std per drink'], ws.map(w => [wk(w), w.abv == null ? '—' : w.abv.toFixed(1) + '%', w.perDrink == null ? '—' : (Math.round(w.perDrink * 100) / 100).toLocaleString('en-US')])) + '</div>'
-          + '<p class="anote">Strength is the alcohol over all the liquid you drank, so a bigger glass of a stronger drink moves it more. These scales don’t start at zero.</p>';
+          + tview(['Week', 'Strength', 'Std per drink'], ws.map(w => [wk(w), w.abv == null ? '—' : w.abv.toFixed(1) + '%', w.perDrink == null ? '—' : (Math.round(w.perDrink * 100) / 100).toLocaleString('en-US')])) + '</div>';
       } },
   ];
   const TVdays = T => C.weekdays(data.entries, data.days, T.from, T.tod, T.tod).slice().sort((p, q) => ((p.dow - (weekStartsSunday() ? 0 : 1) + 7) % 7) - ((q.dow - (weekStartsSunday() ? 0 : 1) + 7) % 7));
@@ -973,7 +964,7 @@ if (window.top !== window.self) {
     if (!TV.some(x => x.id === tr.view)) tr.view = TV[0].id;
     const T = tr.T = trendData(), v = TV.find(x => x.id === tr.view), has = T.weeks.some(w => w.hasData);
     $('trBody').innerHTML = '<div class="thead"><h2>' + esc(v.name) + '</h2><small>' + esc(v.sub ? v.sub(T) : short(T.from) + ' – ' + short(T.tod)) + '</small></div>'
-      + (has ? v.draw(T) : '<div class="empty"><strong>Nothing to chart yet</strong>Log a few days, drinks or alcohol-free, and this fills in.</div>');
+      + (has ? v.draw(T) : '<div class="empty"><strong>Nothing to chart yet</strong>Log a few days to start.</div>');
     $('trName').textContent = v.name; $('trIcon').innerHTML = v.icon;
     if (!$('trMenu').hidden) drawTrMenu();
     const box = $('trBody').querySelector('.seg');

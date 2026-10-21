@@ -1033,7 +1033,7 @@ const presetBusy = new Set();
 function autoTagsHTML() {
   const counts = state.labelCounts || {};
   return '<div class="card"><h2>Auto-tags</h2>' +
-    '<p class="cnote">Gmail tags these the moment mail arrives, even with the app closed. They stay in your inbox, and Tidy never touches them. Tap one to see what it tags.</p>' +
+    '<p class="cnote">Each switch tags matching mail as it arrives.</p>' +
     '<ul class="list">' + PRESETS.map(p => {
       const on = !!presetFilter(p), busy = presetBusy.has(p.name), n = counts[labelByName(p.name)?.id];
       const line = esc(p.about) + (on && n ? ' · ' + n.toLocaleString() : '');
@@ -1399,14 +1399,14 @@ function tidyHTML() {
   const sw = (act, v, label) => '<div class="frow"><span class="l">' + label + '</span><button class="switch" role="switch" data-act="' + act + '" aria-checked="' + v + '" aria-label="' + label + '"></button></div>';
   return '<p class="label">Inbox clean-up</p>' +
     '<div class="sgroup">' + sw('mkt-toggle', mon, 'Move marketing out of the inbox') + '</div>' +
-    '<p class="hint">As the app opens, Gmail’s Promotions (and Cars.com’s saved-search alerts) go to ' + esc(settings.label) + ', which is emptied after ' + settings.days + ' days.' +
+    '<p class="hint">Moves Promotions to ' + esc(settings.label) + ', emptied after ' + settings.days + ' days.' +
       (mon && mlast ? since(mlast) : '') + '</p>' +
     '<div class="sgroup">' + sw('tidy-toggle', on, 'Tidy old unread mail') + '</div>' +
-    '<p class="hint">Once a day, archives unread mail left ' + TIDY_DAYS + ' days that is automated and from a stranger, under “' + TIDY_LABEL + '” (kept, never deleted).' +
-      (on && last ? since(last) : '') + ' Banks, alerts, receipts, tagged mail and people you’ve written to always stay.</p>' +
+    '<p class="hint">Daily, archives automated mail from strangers unread for ' + TIDY_DAYS + ' days.' +
+      (on && last ? since(last) : '') + '</p>' +
     '<div class="sgroup">' +
-      '<button class="rowbtn" type="button" data-act="tidy-preview"><span class="ic">' + ICON.eye + '</span><span>Preview Tidy<span class="sub">What it would archive, before anything is changed</span></span></button>' +
-      '<button class="rowbtn" type="button" data-act="tidy-see"><span class="ic">' + ICON.archive + '</span><span>See tidied mail<span class="sub">Everything Tidy has archived</span></span></button>' +
+      '<button class="rowbtn" type="button" data-act="tidy-preview"><span class="ic">' + ICON.eye + '</span><span>Preview Tidy</span></button>' +
+      '<button class="rowbtn" type="button" data-act="tidy-see"><span class="ic">' + ICON.archive + '</span><span>See tidied mail</span></button>' +
       (keeps.length ? '<div class="frow"><span class="l">Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
         (showKeeps ? keeps.map(e => '<div class="frow"><span class="l">' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '') +
     '</div>';
@@ -1420,8 +1420,7 @@ async function openTidyPreview() {
   backToSettings = !!state.sheet?.settings;
   state.sheet = { tidy: true };
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Tidy preview">' +
-    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note" id="tidy-progress">' + ICON.spin + ' Nothing is changed yet.</p>' +
-    '<p class="note">It goes gently, a few emails a second, so Gmail doesn’t ask the app to slow down. You can close this and keep using Mail.</p></div>';
+    '<div class="grab"></div><h3>Looking through old unread mail…</h3><p class="note" id="tidy-progress">' + ICON.spin + ' Nothing is changed yet.</p></div>';
   el.classList.remove('hide', 'leaving');
   const mine = state.sheet, alive = () => state.sheet === mine;
   const say = t => { const p = $('#tidy-progress'); if (p && alive()) p.innerHTML = ICON.spin + ' ' + t; };
@@ -1465,7 +1464,7 @@ function drawTidyPreview() {
     '<p class="note">Looked at ' + plan.looked + ' unread ' + (plan.looked === 1 ? 'conversation' : 'conversations') + ' older than ' + TIDY_DAYS + ' days, oldest first' +
       (plan.skipped ? ' (' + plan.skipped + ' kept on an earlier look were skipped)' : '') + '. ' +
       (plan.left ? plan.left + ' more wait for the next look. ' : '') +
-      (n ? 'These are archived under “' + TIDY_LABEL + '” — not deleted. Tap Keep to leave a sender in the inbox for good.' : 'None of them look automated from a stranger.') + '</p>' +
+      (n ? '' : 'None of them look automated from a stranger.') + '</p>' +
     (n ? '<ul class="tidylist">' + rows + '</ul>' : '') +
     (kept ? '<h4 class="tidyh">Kept</h4><ul class="tidylist keeps">' + kept + '</ul>' + (plan.keep.length > 12 ? '<p class="note">…and ' + (plan.keep.length - 12) + ' more.</p>' : '') : '') +
     (n ? '<button class="btn" data-act="tidy-now">Tidy ' + n + ' now</button>' : '') +
@@ -1839,7 +1838,7 @@ function footHTML() {
 
 function viewSetup() {
   return '<div class="card panel">' +
-    '<p><strong>One-time setup.</strong> This app talks to Gmail straight from your phone, so it needs an OAuth client ID of your own. It takes about three minutes.</p>' +
+    '<p><strong>One-time setup:</strong> your own Google OAuth client ID.</p>' +
     '<ol>' +
       '<li>Open <code>console.cloud.google.com</code> and create a project.</li>' +
       '<li>APIs &amp; Services → Library → enable <strong>Gmail API</strong>.</li>' +
@@ -1851,7 +1850,6 @@ function viewSetup() {
     '</ol>' +
     '<input type="text" id="cid" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com" value="' + esc(ls.get(K.clientId, '')) + '">' +
     '<button class="btn" data-act="save-cid">Save and connect</button>' +
-    '<p class="note">The client ID is not a secret and stays on this device. Nothing is sent anywhere but Google.</p>' +
   '</div>';
 }
 
@@ -1859,7 +1857,7 @@ function viewSignIn() {
   return '<div class="card panel signin">' +
     '<div class="hero">' + ICON.tag + '</div>' +
     (state.error ? '<p class="note bad">' + esc(state.error) + '</p>' : '') +
-    (state.notice ? '<p class="note">Google couldn’t renew your sign-in on its own this time — one tap and you’re back.</p>' : '') +
+    (state.notice ? '<p class="note">Sign in again to carry on.</p>' : '') +
     '<button class="btn" data-act="signin">Connect Gmail</button>' +
     '<button class="btn ghost" data-act="signin-pick">Use a different account</button>' +
     (BUILT_IN_CLIENT_ID ? '' : '<button class="btn ghost" data-act="forget-cid">Change client ID</button>') +
@@ -1893,7 +1891,7 @@ function viewList() {
 
 function viewRules() {
   if (!canFilter()) {
-    return '<div class="card"><div class="empty">Filter permission was not granted, so tags can\'t be set up.<br>Reconnect and allow "manage your filters".</div></div>';
+    return '<div class="card"><div class="empty">Tags need filter permission.<br>Reconnect and allow "manage your filters".</div></div>';
   }
   if (state.rulesError) return '<div class="card"><div class="empty">' + esc(state.rulesError) + '</div></div>';
   if (state.rules === null) return listSkeleton(4);
@@ -1907,7 +1905,6 @@ function viewRules() {
     '<input type="text" id="rule-tag" list="tag-names" autocomplete="off" autocapitalize="sentences" placeholder="Tag — e.g. Sofia’s school">' +
     '<datalist id="tag-names">' + names.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist>' +
     '<button class="btn" data-act="add-rule">Add tag</button>' +
-    '<p class="note">Or swipe right on any email. Mail already in your mailbox is tagged too, and it all stays in your inbox. Choose “' + esc(settings.label) + '” to send it to the bucket instead.</p>' +
   '</div>';
 
   const groups = new Map();
@@ -1948,14 +1945,14 @@ function viewRules() {
 
   const others = tags().filter(l => !yours.includes(l));
   const otherCard = others.length ? '<div class="card"><h2>Other labels in Gmail</h2>' +
-    '<p class="cnote">Not used as tags, so not in the mailbox menu. Switch one on to filter by it.</p><ul class="list">' +
+    '<p class="cnote">Switch one on to show it in the mailbox menu.</p><ul class="list">' +
     others.map(l => labelRow(l, size(l.id) ? esc(size(l.id)) : '&nbsp;', '<span class="gtools">' + chipBtn(l) + delBtn(l, 'label') + '</span>')).join('') +
     '</ul></div>' : '';
 
   const left = userLabels().filter(l => leftover(l) && !shown.has(l.id));
   const clearable = left.filter(l => !leftover(l).keep);
   const leftCard = left.length ? '<div class="card"><h2>Left by other apps</h2>' +
-    '<p class="cnote">Old folders other mail apps and services made in your Gmail. Hidden here. Deleting one takes the label off; the emails stay.</p><ul class="list">' +
+    '<ul class="list">' +
     left.map(l => {
       const o = leftover(l);
       const line = esc(o.keep || 'From ' + o.who) + (size(l.id) ? ' · ' + esc(size(l.id)) : '');
@@ -1964,7 +1961,7 @@ function viewRules() {
     (clearable.length ? '<div class="more"><button class="danger" data-act="del-leftovers">' + ICON.bin + 'Delete all ' + clearable.length + ' unused</button></div>' : '') +
     '</div>' : '';
 
-  const none = yours.length ? '' : '<div class="card"><div class="empty">No tags yet.<br>Swipe right on an email from the school — or anyone — to tag everything they send.</div></div>';
+  const none = yours.length ? '' : '<div class="card"><div class="empty">No tags yet.<br>Swipe right on an email to tag its sender.</div></div>';
   return autoTagsHTML() + form + none + yours.map(tagCard).join('') + otherCard + leftCard;
 }
 
@@ -1973,7 +1970,7 @@ function viewSettings() {
   const UP = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.6"/><path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0"/><path d="M16.6 5a3.4 3.4 0 0 1 0 6.6"/><path d="M18.2 14a5.6 5.6 0 0 1 3 5.2"/></svg>';
   const OUT = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M10 4H6.8A2.8 2.8 0 0 0 4 6.8v10.4A2.8 2.8 0 0 0 6.8 20H10"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9.6"/></svg>';
   return (window.aosDesign ? '<p class="label">Design</p><div class="sgroup">' + aosDesign.picker() + '</div>' +
-      '<p class="hint">Just on this phone, and at once.</p>' : '') +
+      '<p class="hint">Changes how Mail looks on this phone.</p>' : '') +
     '<p class="label">Account</p>' +
     '<div class="sgroup">' +
       '<div class="frow"><span class="l">Signed in</span><span class="v">' + esc(state.me || '—') + '</span></div>' +
@@ -1986,13 +1983,11 @@ function viewSettings() {
       '<div class="frow"><label for="lab">Bucket label</label><input type="text" id="lab" maxlength="40" value="' + esc(settings.label) + '" autocomplete="off"></div>' +
       '<div class="frow"><label for="days">Delete after</label><span class="num"><input type="number" id="days" min="1" max="30" value="' + settings.days + '"> days</span></div>' +
     '</div>' +
-    '<p class="hint">Mail is moved to the Trash, where Gmail deletes it for good after 30 days — so there is always a way back. The tick saves these two.</p>' +
     tidyHTML() +
     '<p class="label">App icon</p>' +
     '<div class="sgroup"><div class="frow"><span class="l">Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div></div>' +
     notifyHTML() +
-    blockedHTML() +
-    '<p class="hint">Redirect URI registered for this build:<br><code class="url">' + esc(redirectUri()) + '</code></p>';
+    blockedHTML();
 }
 
 // Settings is a sheet over whatever Mail is showing, as in every other app. It is
@@ -2045,7 +2040,7 @@ function notifyHTML() {
         '<div class="frow"><input type="url" id="push-url" placeholder="https://mail-push….workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Notification server address"></div>' +
         '<button class="rowbtn" type="button" data-act="push-url-save"><span>Save address</span></button>' +
       '</div>' +
-      '<p class="hint">These need the small notification server in <code>mail/push</code> (see the README, “Notifications”). Once it is deployed, paste its address.</p>';
+      '<p class="hint">Paste the notification server’s address.</p>';
   }
   return '<p class="label">Notifications</p>' +
     '<div class="sgroup"><div class="frow"><span class="l">New-mail notifications</span><span class="v">' + (on ? 'On' : 'Off') + '</span></div></div>' +
@@ -2056,7 +2051,7 @@ function notifyHTML() {
       (on ? '<button class="rowbtn" type="button" data-act="notify-test"><span>Send a test</span></button><button class="rowbtn" type="button" data-act="notify-off"><span>Turn off</span></button>' : '') +
       '<button class="rowbtn" type="button" data-act="push-url-change"><span>Change server</span></button>' +
     '</div>' +
-    '<p class="hint">From ' + esc(url.replace(/^https:\/\//, '')) + '. It sees senders and subjects, never what an email says; the notification itself is encrypted for this phone.</p>';
+    '<p class="hint">Choose which new mail notifies this phone.</p>';
 }
 
 async function pushCall(path, body) {
@@ -2141,8 +2136,7 @@ function blockedHTML() {
   const list = blockedList();
   return '<p class="label">Blocked senders</p>' +
     '<div class="sgroup"><div class="frow"><span class="l">Blocked senders</span><span class="v">' + (list.length || 'none') + '</span></div>' +
-    list.map(b => '<div class="frow"><span class="l">' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') + '</div>' +
-    (list.length ? '<p class="hint">Unblocking lets their new mail in. Anything already in the Trash stays there until Gmail empties it after 30 days.</p>' : '');
+    list.map(b => '<div class="frow"><span class="l">' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') + '</div>';
 }
 
 
@@ -2836,8 +2830,7 @@ async function doBlock(email, name) {
   if (email === (state.me || '').toLowerCase()) return toast('That’s you — you can’t block yourself', { bad: true });
   const ok = await confirmSheet({
     title: 'Block ' + (name && name !== email ? name : email) + '?',
-    body: 'New mail from <b>' + esc(email) + '</b> will go straight to the Trash, and their mail already here goes there too. ' +
-      'Nothing is sent to them. Unblock any time in Settings.',
+    body: 'Mail from <b>' + esc(email) + '</b>, new and already here, goes to the Trash.',
     yes: 'Block',
   });
   if (!ok) return;
@@ -2878,17 +2871,16 @@ function unsubSheet(m) {
   const el = $('#sheet');
   let body, go;
   if (!u.trusted) {
-    body = 'Gmail couldn’t confirm this really comes from <b>' + esc(m.from.host) + '</b>. Unsubscribing from a sender like that can tell a spammer your address works. ' +
-      'Block them instead — nothing is sent to them.';
+    body = 'Gmail couldn’t confirm this comes from <b>' + esc(m.from.host) + '</b>: block them instead.';
     go = '<button class="btn danger" data-act="block-sender" data-email="' + esc(u.email) + '">' + ICON.block + ' Block ' + esc(u.email) + '</button>';
   } else if (u.oneClick) {
-    body = 'Sends ' + esc(who) + ' a one-click unsubscribe request, the same way Gmail’s own Unsubscribe does. It can take a few days for their mail to stop.';
+    body = 'Sends ' + esc(who) + ' a one-click unsubscribe request.';
     go = '<button class="btn" data-act="unsub-go">Unsubscribe</button>';
   } else if (u.mailto) {
-    body = 'Sends an unsubscribe email from your Gmail to <b>' + esc(mailtoOf(u.mailto)?.to || '') + '</b>. It will show in your Sent mail. It can take a few days for their mail to stop.';
+    body = 'Sends an unsubscribe email from your Gmail to <b>' + esc(mailtoOf(u.mailto)?.to || '') + '</b>.';
     go = '<button class="btn" data-act="unsub-go">Send Unsubscribe Email</button>';
   } else {
-    body = esc(who) + ' only offers an unsubscribe page. It opens in Safari, and you finish there.';
+    body = 'Opens ' + esc(who) + '’s unsubscribe page in Safari.';
     go = '<a class="btn" data-act="unsub-web" href="' + esc(u.https) + '" target="_blank" rel="noopener noreferrer">Open Unsubscribe Page</a>';
   }
   el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
@@ -2961,7 +2953,7 @@ async function readerMore() {
   if (pick === 'tidy-allow') { setTidyKeep(who.email, false); toast('Tidy can tidy ' + who.email + ' again'); }
   if (pick === 'remind') {
     const item = r.item, opts = remindChoices();
-    const when = await choiceSheet({ title: 'Remind Me', body: 'It leaves the inbox now and comes back to the top of it, unread, on the day.',
+    const when = await choiceSheet({ title: 'Remind Me',
       options: opts.map((o, i) => ({ id: String(i), label: o.label + ' · ' + shortDate(o.date), primary: i === 0 })) });
     if (when != null) remindMe(item, opts[Number(when)].date);
   }
@@ -3133,8 +3125,8 @@ function openSheet(item) {
     '<div class="sheet" role="dialog" aria-modal="true" aria-label="Tag sender">' +
       '<div class="grab"></div>' +
       '<h3>Tag ' + (rule.kind === 'domain' ? 'everything from ' : 'mail from ') + who + '</h3>' +
-      '<p class="note">This message, what’s already in your mailbox, and all new mail ' +
-        (rule.kind === 'domain' ? 'from anyone at ' + esc(rule.label) : 'from this address') + '. It stays in your inbox.</p>' +
+      '<p class="note">Past and new mail ' +
+        (rule.kind === 'domain' ? 'from anyone at ' + esc(rule.label) : 'from this address') + ', kept in your inbox.</p>' +
       (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + tagHue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
       '<input type="text" id="newtag" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="' + (list.length ? 'Or a new tag' : 'New tag') + ' — e.g. Sofia’s school">' +
       '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
@@ -3978,7 +3970,7 @@ document.addEventListener('click', async e => {
       const yes = await confirmSheet({
         title: 'Delete “' + l.name + '”?',
         body: (n ? 'The label comes off ' + n.toLocaleString() + ' email' + (n === 1 ? '' : 's') : 'No emails have this label') +
-          ', and any rules for it stop. The emails themselves stay in your mailbox. This can’t be undone.',
+          ', and its rules stop; the emails stay.',
         yes: 'Delete',
       });
       if (!yes) return;
@@ -3996,7 +3988,7 @@ document.addEventListener('click', async e => {
       const yes = await confirmSheet({
         title: 'Delete ' + list.length + ' old labels?',
         body: list.map(l => '<span class="chip">' + esc(l.name) + '</span>').join(' ') +
-          '<br><br>They come off any emails that have them; the emails stay. Notes and Unroll.me are left alone. This can’t be undone.',
+          '<br><br>They come off their emails; the emails stay.',
         yes: 'Delete ' + list.length + ' labels',
       });
       if (!yes) return;
@@ -4071,7 +4063,7 @@ document.addEventListener('click', async e => {
     case 'tidy-toggle':
       if (tidyOn()) { ls.del(K.tidy); toast('Tidy is off'); return render(); }
       ls.set(K.tidy, 'on'); ls.del(K.tidied);     // due now: the first run starts in the background, gently
-      toast('Tidy is on — it works through old mail in the background, a little each day', { ms: 5000 });
+      toast('Tidy is on', { ms: 5000 });
       render();
       return tidyDaily().catch(() => {});
     case 'tidy-keeps': showKeeps = !showKeeps; return render();

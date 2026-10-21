@@ -225,7 +225,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await step(tag + ': Ipsy opens a chat that asks once before the first question', async () => {
     await page.click('.ipsy-btn');
     await page.waitForSelector('.ipsy-bubble');
-    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*everyone in the family sees.*Undo.*asks first/);
+    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*Everyone in the family sees.*Undo.*asks first/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-consent.png') });
     await page.click('#ipsyOk');

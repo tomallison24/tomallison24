@@ -537,20 +537,16 @@ if (window.top !== window.self) {
 
     let h = '';
     if (!bookings.length) {
-      h = '<div class="empty glass"><strong>No trips yet</strong>'
-        + (hasGmail() ? 'Tap the envelope to look through Gmail for flight, hotel and rental car confirmations.' : 'Connect Gmail and Travel finds your flight, hotel and rental car confirmations by itself.')
-        + '</div><button class="btn" type="button" id="emptyGo">' + (hasGmail() ? 'Look in Gmail now' : 'Connect Gmail') + '</button>'
+      h = '<div class="empty glass"><strong>No trips yet</strong></div><button class="btn" type="button" id="emptyGo">' + (hasGmail() ? 'Look in Gmail now' : 'Connect Gmail') + '</button>'
         + '<button class="btn quiet" type="button" id="emptyAdd">Add a booking by hand</button>';
     } else if (st.when === 'check') {
       const list = checkList().sort((a, b) => (startOf(a) || '9999').localeCompare(startOf(b) || '9999'));
-      h = '<p class="hint">These need a look: an email with no date in it, or one read from its words rather than its booking data, so the details may be off. Open each one, add or fix what is wrong and tap “Looks right”.</p>'
-        + '<div class="tl glass">' + list.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
+      h = '<div class="tl glass">' + list.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
     } else {
       if (st.when === 'upcoming') h += heroHTML(groups);
       const list = st.when === 'past' ? past : up;
       if (list.length) h += list.map(tripCard).join('');
-      else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong>'
-        + (st.when === 'past' ? 'Trips move here the day after they end.' : 'New bookings in Gmail show up here after the next check (the envelope, top right).') + '</div>';
+      else h += '<div class="empty glass"><strong>' + (st.when === 'past' ? 'No past trips' : 'Nothing coming up') + '</strong></div>';
       if (st.when === 'past') h += olderHTML();
     }
     $('list').innerHTML = h;
@@ -648,13 +644,11 @@ if (window.top !== window.self) {
     h += '<button class="btn quiet" type="button" id="tpAdd">' + I.plus + 'Add a booking to this trip</button>';
     const priv = g.items.filter(b => b.private).length, all = priv === g.items.length;
     // Just me trip: every booking in it that is yours (someone else's stays shared: only they can change that)
-    const yours = g.items.filter(mine), only = yours.filter(b => b.only).length, theirs = g.items.length - yours.length;
+    const yours = g.items.filter(mine), only = yours.filter(b => b.only).length;
     const jm = !!yours.length && only === yours.length;
     h += '<div class="opts"><button class="opt" type="button" id="tpPriv" aria-pressed="' + all + '">' + I.lock + 'Private trip</button>'
-      + (yours.length ? '<button class="opt" type="button" id="tpOnly" aria-pressed="' + jm + '">' + I.me + 'Just me trip</button>' : '') + '</div><p class="hint">'
-      + (all ? 'Private: hidden from Ipsy, this trip and its emails. The family still sees it.' : priv ? plural(priv, 'booking') + ' in this trip ' + (priv === 1 ? 'is' : 'are') + ' private. Private trip hides them all from Ipsy.' : 'Private trip hides this trip and its emails from Ipsy.') + '</p>';
-    if (yours.length) h += '<p class="hint" id="tpOnlyHint">' + (jm ? 'Just me: only you see this trip. It isn’t shared with the family.' : only ? plural(only, 'booking') + ' in this trip ' + (only === 1 ? 'is' : 'are') + ' Just me. Just me trip: only you see it.' : 'Shared with the family. Just me trip: only you see it.')
-      + (theirs ? ' ' + plural(theirs, 'booking') + ' in it ' + (theirs === 1 ? 'is' : 'are') + ' someone else’s, and stay' + (theirs === 1 ? 's' : '') + ' shared.' : '') + '</p>';
+      + (yours.length ? '<button class="opt" type="button" id="tpOnly" aria-pressed="' + jm + '">' + I.me + 'Just me trip</button>' : '') + '</div><p class="hint">Private trip hides this trip and its emails from Ipsy.</p>';
+    if (yours.length) h += '<p class="hint" id="tpOnlyHint">Just me trip: only you see it, not the family.</p>';
     else h += '<p class="hint">' + esc(g.items.some(b => b.by) && whose(g.items[0]) ? whose(g.items[0]) + '’s trip, shared with the family.' : 'Shared with the family.') + '</p>';
     // Search for more around this trip.
     const flights = g.live.filter(b => b.type === 'flight');
@@ -735,7 +729,7 @@ if (window.top !== window.self) {
     }
     const place = b.type === 'hotel' ? [b.name, b.address].filter(Boolean).join(', ') : b.type === 'car' ? b.pickupPlace : b.type === 'other' ? b.place : '';
     if (place) rows.push(linkRow(LINKS.maps(place), 'Map', place, I.map));
-    if (!st.isNew && startOf(b)) rows.push('<button class="rowbtn" type="button" id="bkCal"><span class="ic">' + I.cal + '</span><span>Add to calendar<span class="sub">The phone’s calendar does the reminding</span></span></button>');
+    if (!st.isNew && startOf(b)) rows.push('<button class="rowbtn" type="button" id="bkCal"><span class="ic">' + I.cal + '</span><span>Add to calendar</span></button>');
     if (b.type === 'flight' && b.from && b.to) rows.push(linkRow(LINKS.googleFlights(b.from, b.to, (b.dep || '').slice(0, 10)), 'This route on Google Flights', b.from + ' → ' + b.to, I.search));
     if (b.type === 'hotel' && (b.city || b.address)) rows.push(linkRow(LINKS.googleHotels(b.city || b.address, b.checkIn, b.checkOut), 'Other hotels nearby', 'Google Hotels, same dates', I.search));
     if (rows.length) h += '<div class="rgroup glass">' + rows.join('') + '</div>';
@@ -745,10 +739,10 @@ if (window.top !== window.self) {
       h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button>'
         + '<button class="opt" type="button" id="bkPriv" aria-pressed="' + !!b.private + '">' + I.lock + 'Private</button>'
         + (own ? '<button class="opt" type="button" id="bkOnly" aria-pressed="' + !!b.only + '">' + I.me + 'Just me</button>' : '') + '</div>'
-        + '<p class="hint">' + (b.private ? 'Private: hidden from Ipsy, and so is its email. The family still sees it.' : 'Private hides this booking and its email from Ipsy.') + '</p>'
+        + '<p class="hint">Private hides this booking and its email from Ipsy.</p>'
         // Just me is its own person's to set: someone else's booking just says whose it is
         + '<p class="hint" id="bkOnlyHint">' + (!own ? esc((who ? who + '’s' : 'Someone else’s') + ' booking, shared with the family.')
-          : b.only ? 'Just me: only you see it. It isn’t shared with the family or put in the Family calendar.' : 'Shared with the family. Just me: only you see it.') + '</p>';
+          : 'Just me: only you see it, not the family.') + '</p>';
       h += '<button class="btn quiet danger" type="button" id="bkDel">Delete booking</button>';
     }
     $('bkBody').innerHTML = h;
@@ -857,12 +851,12 @@ if (window.top !== window.self) {
     try { text = await navigator.clipboard.readText(); } catch {}
     if (text && oldSetupLink(text)) return;
     if (text && text.trim().length > 20) return readPasted(text);
-    $('psText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
+    $('psText').value = ''; $('psHint').hidden = true; openSheet('pasteSheet'); setTimeout(() => $('psText').focus(), 300);
   }
   function readPasted(text) {
     const r = P.parseText(text);
     if (!r.bookings.length) {
-      $('psText').value = text; $('psHint').textContent = 'No flight, hotel or car booking found in that text. Add it by hand with the + button instead.';
+      $('psText').value = text; $('psHint').textContent = 'No flight, hotel or car booking found in that text. Add it by hand with the + button instead.'; $('psHint').hidden = false;
       if ($('pasteSheet').hidden) openSheet('pasteSheet');
       return;
     }
@@ -1231,10 +1225,10 @@ if (window.top !== window.self) {
     if (v) h += '<span class="st ' + v.cls + '">' + esc(v.text) + '</span>';
     h += '<button class="iconbtn" type="button" id="bkLiveGo" aria-label="Check again">' + I.refresh + '</button></div>';
     if (loading || inflight.has(b.id)) h += '<p class="hint" style="margin:0">Checking…</p>';
-    else if (liveAvail === false) h += '<p class="hint" style="margin:0">Live status isn’t set up on this copy of the site. It works on the Cloudflare site once the flight data key is added (Travel README, “Live flight status”).</p>';
-    else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">Shows from 36 hours before take-off until the flight has landed.</p>';
+    else if (liveAvail === false) h += '<p class="hint" style="margin:0">Live status isn’t set up on this copy of the site.</p>';
+    else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">Shows from 36 hours before take-off.</p>';
     else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc({ limit: 'The flight data service’s monthly allowance is used up.', 'key-refused': 'The flight data service refused the key.', unreachable: 'Couldn’t reach the flight data service.' }[x.error] || 'Couldn’t get the status just now.') + '</p>';
-    else if (x && !x.found) h += '<p class="hint" style="margin:0">No live data for ' + esc(flightName(b)) + ' on this date yet. Check the flight number and date.</p>';
+    else if (x && !x.found) h += '<p class="hint" style="margin:0">No live data for ' + esc(flightName(b)) + ' on this date yet.</p>';
     else if (v) {
       const d = v.l.departure || {}, a = v.l.arrival || {};
       const cell = (label, big, small, old) => '<div class="cell"><span>' + esc(label) + '</span><b>' + esc(big || '—') + '</b>' + (old ? '<s>' + esc(old) + '</s>' : '') + (small ? '<i>' + esc(small) + '</i>' : '') + '</div>';
@@ -1242,7 +1236,7 @@ if (window.top !== window.self) {
       const was = e => (e.revised || e.predicted) && e.scheduled && localHM((e.revised || e.predicted).local) !== localHM(e.scheduled.local) ? localHM(e.scheduled.local) : '';
       h += '<div class="grid2">' + cell('Departs ' + (d.iata || b.from || ''), t(d), [d.terminal ? 'Terminal ' + d.terminal : '', d.gate ? 'Gate ' + d.gate : ''].filter(Boolean).join(' · '), was(d))
         + cell('Lands ' + (a.iata || b.to || ''), t(a), [a.terminal ? 'Terminal ' + a.terminal : '', a.gate ? 'Gate ' + a.gate : '', a.belt ? 'Bags: belt ' + a.belt : ''].filter(Boolean).join(' · '), was(a)) + '</div>';
-      h += '<p class="hint" style="margin:0">Checked ' + esc(ago(v.at)) + (v.l.aircraft ? ' · ' + esc(v.l.aircraft) : '') + '. From AeroDataBox; times are local to each airport.</p>';
+      h += '<p class="hint" style="margin:0">Checked ' + esc(ago(v.at)) + (v.l.aircraft ? ' · ' + esc(v.l.aircraft) : '') + '. Local times.</p>';
     } else h += '<p class="hint" style="margin:0">Not checked yet.</p>';
     box.innerHTML = h;
   }
@@ -1553,7 +1547,7 @@ if (window.top !== window.self) {
     if (ipsy) ipsy.working(true);
     try {
       if (aiAvail === null) await pingLive();
-      if (!aiAvail) { toast('AI isn’t set up on this copy of the site (Travel README, “Smart help”).'); return; }
+      if (!aiAvail) { toast('AI isn’t set up on this copy of the site.'); return; }
       if (!getToken()) { toast('Connect Gmail first, so Travel can read the emails.'); return; }
       const todo = g.items.filter(b => !b.private && !isPast(b) && b.status !== 'cancelled' && !b.ride && P.missingFields(b).length);
       const { queue, noMail } = await mailQueue(todo);
@@ -1590,7 +1584,7 @@ if (window.top !== window.self) {
       if (autoOffered) return;
       autoOffered = true;
       ipsy.hint(plural(todo.length, 'booking') + (todo.length === 1 ? ' is' : ' are') + ' missing details. Want me to look?', async () => {
-        const ok = await ipsy.ask('Want me to fill in what your upcoming bookings are missing, by myself? I’ll read each one’s email again (a short excerpt, without names, numbers or prices, goes to Claude through the family server; nothing is kept), now and whenever Gmail brings a booking that’s missing something. What I fill in is marked **Check**, with Undo here, and you can turn this off in Settings.', { yes: 'Yes, check them', no: 'Not now' });
+        const ok = await ipsy.ask('Want me to fill in what your upcoming bookings are missing, by myself? I’ll send Claude a short excerpt of each email, and mark what I fill in **Check**, with Undo.', { yes: 'Yes, check them', no: 'Not now' });
         ls.set(K.ipsyAuto, ok ? '1' : '0');
         if (ok) { ipsy.close(); ipsyAutoCheck(); }
       });
@@ -1821,9 +1815,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   function scanSummary() {
     const i = ls.json(K.scanInfo, null);
-    if (!i) return 'Nothing yet. The emails Travel looks at, and what it made of each, will be listed here.';
-    return (i.ok ? 'Last look ' + ago(i.at) + ': ' + plural(i.read, 'email') + ' read, ' + plural(i.found, 'booking') + ' found' + (i.failed ? ', ' + i.failed + ' not downloaded' : '') + (i.rebuilt ? ' (the mail was read again after an update)' : '') + '.'
-      : 'Last look ' + ago(i.at) + ' stopped: ' + (i.err || 'something went wrong') + '. It tries again next time.') + ' Tap to see them.';
+    if (!i) return 'Nothing yet';
+    return i.ok ? 'Last look ' + ago(i.at) + ': ' + plural(i.read, 'email') + ' read, ' + plural(i.found, 'booking') + ' found' + (i.failed ? ', ' + i.failed + ' not downloaded' : '')
+      : 'Last look ' + ago(i.at) + ' stopped: ' + (i.err || 'something went wrong');
   }
   function openLog() {
     const list = ls.json(K.scanLog, []), i = ls.json(K.scanInfo, null);
@@ -1831,7 +1825,8 @@ if (window.top !== window.self) {
     if (!list.length) h = '<div class="box glass"><span class="hint" style="margin:0">No emails read yet.</span></div>';
     else h = '<div class="rgroup glass">' + list.map(e => '<div class="logrow"><div class="lgt"><b>' + esc(e.subj || '(no subject)') + '</b><span>' + esc([e.from, e.at ? new Date(e.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''].filter(Boolean).join(' · ')) + '</span></div><span class="lgo' + (/^(no booking|couldn)/.test(e.out || '') ? ' no' : '') + '">' + esc(e.out || '') + '</span></div>').join('') + '</div>';
     $('lgBody').innerHTML = h;
-    $('lgHint').textContent = (i ? plural(i.listed, 'email') + ' matched Travel’s search in the last look. ' : '') + 'An email that is not here was not matched: Travel only looks at mail that is not in Promotions and has the Travel label, a word like confirmation or reservation in its subject, or comes from a known airline, hotel group, rental car company or booking site.';
+    $('lgHint').textContent = i ? plural(i.listed, 'email') + ' matched Travel’s search in the last look.' : '';
+    $('lgHint').hidden = !i;
     closeSheet('setSheet'); openSheet('logSheet');
   }
   function renderSettings() {
@@ -1840,28 +1835,27 @@ if (window.top !== window.self) {
     let rows = '';
     if (own || viaMail || ever) {
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
-        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' : 'Not checked yet.') + ' It also checks each time Travel opens.</span></span></button>';
+        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
       rows += '<button class="rowbtn" type="button" id="stLog"><span class="ic">' + I.mail + '</span><span>What Travel read<span class="sub">' + esc(scanSummary()) + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Reads every booking email afresh and replaces what was read before. Bookings you edited, checked or deleted stay as they are.</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Bookings you edited, checked or deleted stay as they are</span></span></button>';
       if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
-      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only: Travel can read email, never send, change or delete it</span></span></button>';
+      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
     }
     $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser. Travel only reads.'
-      : 'Travel looks for confirmations from airlines, hotels and rental car companies in the last year of email, then for new ones each time it opens. Promotions are skipped.';
-    $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : calOn() ? 'On. Flights, hotels and rental cars in the Family calendar show up here, and your confirmed bookings are added to it. Nothing is added twice.' : 'Off';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up. It needs the ANTHROPIC_API_KEY secret (Travel README).' : aiOn() ? 'On. A trip with something missing gets a Have Ipsy check button. Only a short excerpt of that booking’s email is sent (no names, numbers or prices). What Ipsy fills in is marked “Check”, with Undo. To ask about your trips or change them, chat with Ipsy, the little stem cell at the bottom left.' + modelsLine() : 'Off. No Have Ipsy check button, and Ipsy doesn’t check by itself. Ipsy, at the bottom left, is still there to chat with.';
+    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
+    $('stGmailHint').hidden = !viaMail;
+    $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : (calOn() ? 'On. ' : 'Off. ') + 'Shares bookings with the Family calendar, both ways.';
+    $('stAiSub').textContent = aiAvail === false ? 'Not set up on this copy of the site.' : aiOn() ? 'On. Ipsy fills in a trip’s missing details from its email.' + modelsLine() : 'Off. Ipsy fills in a trip’s missing details from its email.';
     const auto = ls.get(K.ipsyAuto, '');
     $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
-    $('stIpsyAutoSub').textContent = auto === '1' ? 'On. After each read of Gmail, Ipsy checks the upcoming bookings that are missing something, once per email, up to 10 at a time.'
-      : auto === '0' ? 'Off. Ipsy checks a trip only when you press Have Ipsy check.' : 'Ipsy asks you first, the next time a booking is missing something.';
+    $('stIpsyAutoSub').textContent = (auto === '1' ? 'On. ' : auto === '0' ? 'Off. ' : 'Asks first. ') + 'Ipsy checks new bookings that are missing details.';
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     $('stIpsyGmailOpt').hidden = !PV;
-    if (PV) $('stIpsyGmailSub').textContent = PV.gmail('travel') ? 'On. In a chat, Ipsy can search and read your Gmail, read-only. Private bookings’ emails are always hidden.' : 'Off. Ipsy can’t search or read any email in your chats.';
+    if (PV) $('stIpsyGmailSub').textContent = (PV.gmail('travel') ? 'On. ' : 'Off. ') + 'Lets Ipsy search and read your email in chats.';
     const n = lookupsThisMonth();
-    $('stLive').textContent = liveAvail === true ? 'Working. Flights are checked from 36 hours before take-off until they land. ' + plural(n, 'lookup') + ' this month on this phone (stops at ' + LOOKUPS_A_MONTH + ' to stay in the free allowance).'
-      : liveAvail === false ? 'Not available on this copy of the site. It works on the Cloudflare copy once the AERODATABOX_KEY secret is added (Travel README).'
+    $('stLive').textContent = liveAvail === true ? 'Working. ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.'
+      : liveAvail === false ? 'Not available on this copy of the site.'
       : 'Checking…';
   }
   function openSettings() {
@@ -2071,12 +2065,9 @@ if (window.top !== window.self) {
   }
   // The end of Past: where older trips are, and a button to get them when they didn't come by themselves.
   function olderHTML() {
-    const floor = pruneFrom(); if (!floor) return '';
-    const since = esc(fmtDay(floor, { weekday: undefined, year: 'numeric' }));
-    if (older === 'done') return '<p class="hint" id="olderHint">Trips that ended before ' + since + ' come from the family’s Google Sheet.</p>';
-    if (older === 'loading') return '<p class="hint" id="olderHint">Getting older trips from the family’s Google Sheet…</p>';
-    return '<button class="btn quiet" type="button" id="olderBtn">Show older trips from the Sheet</button><p class="hint" id="olderHint">Trips that ended before ' + since
-      + ' are kept in the family’s Google Sheet' + (signedIn() ? '.' : '. Sign in to see them here.') + '</p>';
+    if (!pruneFrom() || older === 'done') return '';
+    if (older === 'loading') return '<p class="hint" id="olderHint">Getting older trips from the Sheet…</p>';
+    return '<button class="btn quiet" type="button" id="olderBtn">Show older trips from the Sheet</button>' + (signedIn() ? '' : '<p class="hint" id="olderHint">Sign in to see older trips.</p>');
   }
   // The sync's state shows only in the trips' subtitle (Synced, Syncing…, Not synced, Offline).
   function renderSyncStatus() {
@@ -2085,7 +2076,7 @@ if (window.top !== window.self) {
   // An old setup link (#sync=…, pasted): aOS keeps the family's Sheet now, so there's nothing to set up.
   function oldSetupLink(text) {
     if (!/#sync=[\w-]+/.test(String(text))) return false;
-    toast('That’s an old Sheet setup link. aOS keeps the family’s Google Sheet now, so there’s nothing to set up: just sign in.', null, 6000);
+    toast('That’s an old Sheet setup link: there’s nothing to set up. Just sign in.', null, 6000);
     return true;
   }
   document.addEventListener('visibilitychange', () => {

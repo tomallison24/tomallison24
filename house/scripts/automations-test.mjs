@@ -129,7 +129,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     assert.match(p.body, /WHAT IT DOES\s*Opens both VELUX office blinds fully each morning\./);
     assert.match(p.body, /RUNS\s*At 8:30 AM/);
     assert.match(p.body, /ONLY IF\s*Guest mode is off/);
-    assert.match(p.body, /Home's copy of ha-config's automations\.yaml/);
+    assert.doesNotMatch(p.body, /Read from|automations\.yaml|Run and change it/, 'no note on where it was read from');
   });
   await test(`${label}: what Home Assistant's own list says: the mirror only reads the thermostats, seconds kept, devices made by a template found, Goodnight sends nothing itself`, async () => {
     const mirror = await popup(page, 'automation.signal_lr_setpoint_mirror');
@@ -188,7 +188,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     assert.match(p.body, /CONTROLS\s*Porch Light\s*Now off\s*Turns on/);
     assert.match(p.body, /WHAT IT DOES\s*Turns the porch light on at dusk\./);
     assert.match(p.body, /RUNS\s*15 min before sunset/);
-    assert.match(p.body, /Read from Home Assistant\./);
+    assert.doesNotMatch(p.body, /Read from/, 'no note on where it was read from');
     assert.equal(asked.length, 4, 'each automation asked for once');
   });
   await test('live, an admin: no script errors', async () => assert.deepEqual(errors, []));

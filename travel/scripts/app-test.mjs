@@ -436,11 +436,11 @@ await step('Just me on a booking of yours: only you see it, with a small Just me
   await page.click('#tpBody .ev[data-bk="h-tom"]');
   await page.waitForSelector('#bkSheet:not([hidden])');
   assert.equal(await page.getAttribute('#bkOnly', 'aria-pressed'), 'false');
-  assert.match(await page.textContent('#bkOnlyHint'), /Shared with the family\. Just me: only you see it\./);
+  assert.equal(await page.textContent('#bkOnlyHint'), 'Just me: only you see it, not the family.');
   assert.match(await page.textContent('#bkBody'), /Private hides this booking and its email from Ipsy\./, 'Private says Ipsy');
   await page.click('#bkOnly');
   assert.equal(await page.getAttribute('#bkOnly', 'aria-pressed'), 'true');
-  assert.match(await page.textContent('#bkOnlyHint'), /^Just me: only you see it\./);
+  assert.equal(await page.textContent('#bkOnlyHint'), 'Just me: only you see it, not the family.', 'the same one line, on or off');
   assert.equal(await page.getAttribute('#bkPriv', 'aria-pressed'), 'false', 'and it isn\'t Private');
   await page.click('#bkDone');
   assert.ok(await page.isVisible('#tpBody .ev[data-bk="h-tom"] .st.jm'), 'the Just me pill on its row');
@@ -471,10 +471,10 @@ await step('Ella\'s phone: the family\'s shared bookings, none of Tom\'s Just me
 await step('a Just me trip: Tom\'s trip page makes all of it his alone, and Ella\'s phone lets it go at her next sync', async () => {
   const { page } = tom;
   assert.equal(await page.getAttribute('#tpOnly', 'aria-pressed'), 'false', 'one of two is Just me: not the whole trip');
-  assert.match(await page.textContent('#tpOnlyHint'), /1 booking in this trip is Just me/);
+  assert.equal(await page.textContent('#tpOnlyHint'), 'Just me trip: only you see it, not the family.');
   await page.click('#tpOnly');
   assert.equal(await page.getAttribute('#tpOnly', 'aria-pressed'), 'true');
-  assert.match(await page.textContent('#tpOnlyHint'), /^Just me: only you see this trip\./);
+  assert.equal(await page.textContent('#tpOnlyHint'), 'Just me trip: only you see it, not the family.', 'the same one line, on or off');
   await page.click('#tpDone');
   assert.ok(await page.isVisible('.trip[data-trip] .st.jm'), 'the trip card says Just me');
   await until(() => ['f-tom', 'h-tom'].every(id => sentLast(id) && sentLast(id).only));   // both sent as Just me
@@ -492,7 +492,7 @@ await step('Past: trips that ended more than 90 days ago come back from the Shee
   await page.click('[data-when="past"]');
   await page.waitForFunction(() => /Lisbon/.test(document.getElementById('list').textContent), null, { timeout: 5000 });
   assert.ok(sheetCalls.slice(before).some(c => c.action === 'range' && c.from === '2000-01-01'), 'asked for older days');
-  assert.match(await page.textContent('#olderHint'), /come from the family’s Google Sheet/);
+  assert.equal(await page.$('#olderHint'), null, 'no explanation once they came back');
   assert.ok(/Chicago/.test(await page.textContent('#list')), 'with the recent past trip');
   assert.deepEqual(errs, []);
   await tom.ctx.close();

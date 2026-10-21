@@ -123,7 +123,7 @@ for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
     assert.equal(await row.locator('[data-rel]').innerText(), 'Today, 13 hr ahead');
     assert.match(await row.locator('[data-t]').innerText(), /^9:00\s*PM$/);
     await page.click('#addBtn'); await page.fill('#cityQ', 'zzqx');
-    assert.match(await text(page, '#cityHint'), /No cities match/);
+    assert.equal(await text(page, '#cityHint'), 'No cities match “zzqx”.');
     await page.click('#citySheet .sheethead [data-close]');
     await page.click('#editBtn');
     assert.equal(await text(page, '#editBtn'), 'Done');
@@ -139,6 +139,7 @@ for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
     await page.click('#tabs [data-tab="alarms"]');
     assert.equal(await text(page, '#title'), 'Alarms');
     assert.equal(await text(page, '#sub'), 'No alarms on');
+    assert.equal(await page.locator('#p-alarms .hint').count(), 0);   // no paragraph explaining how alarms ring
     await page.click('#addBtn');
     await page.fill('#alTime', '08:02');
     await page.fill('#alLabel', '<b>Gym</b>');
@@ -269,7 +270,7 @@ for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
     await page.waitForSelector('#night', { state: 'visible' });
     assert.match(await text(page, '#nTime'), /^8:\d\d\s*AM$/);
     assert.match(await text(page, '#nAlarm'), /Wake Up 6:30 AM tomorrow/);
-    await page.waitForFunction(() => /stays on|may still lock/.test(document.getElementById('nWarn').textContent), null, { timeout: 5000 });   // it says whether the screen stays on
+    await page.waitForFunction(() => /^(Screen stays on: keep your phone on charge\.|Set Auto-Lock to Never tonight, or alarms may not ring\.)$/.test(document.getElementById('nWarn').textContent), null, { timeout: 5000 });   // it says whether the screen stays on
     await shot(page, scheme + '-nightstand');
     await page.keyboard.press('Escape');
     await page.waitForSelector('#night', { state: 'hidden' });

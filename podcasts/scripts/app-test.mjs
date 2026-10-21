@@ -476,9 +476,9 @@ await test('Settings > Design: the first section; Standard and back at once (the
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   assert.equal(await look(), 'vintage');
   await openSettings(p);
-  assert.deepEqual(await p.$$eval('#setSheet .sheetbody > *', els => els.slice(0, 3).map(e => e.id || e.className)), ['label', 'setDesign', 'hint'], 'Design comes first: its label, the rows, the hint');
+  assert.deepEqual(await p.$$eval('#setSheet .sheetbody > *', els => els.slice(0, 3).map(e => e.id || e.className)), ['label', 'setDesign', 'label'], 'Design comes first: its label and the rows, then the next setting');
   assert.equal(await p.textContent('#setSheet .sheetbody > .label'), 'Design');
-  assert.equal(await p.textContent('#setDesign + .hint'), 'Just on this phone, and at once.');
+  assert.equal(await p.$('#setSheet .hint'), null, 'no explanations in Settings');
   assert.equal(await p.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true');
   await p.click('#setDesign [data-design="glass"]'); await p.waitForTimeout(300);
   assert.equal(await look(), 'glass', 'Standard at once');

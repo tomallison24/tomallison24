@@ -441,8 +441,7 @@
   .note { font-size: 14px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
   /* Settings > Design, the first section of the Places sheet: the rows are ../home/design.js's */
   #designLabel { margin-top: 6px; }
-  .note.design { margin-top: 8px; }
-  .note.design:not([hidden]) + .search { margin-top: 18px; }
+  #designBox:not([hidden]) + .search { margin-top: 18px; }
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -688,7 +687,6 @@ svg.i{filter:none}
       <!-- Settings > Design: Vintage or Standard, just on this phone (app.js fills it from ../home/design.js) -->
       <div class="label" id="designLabel" hidden>Design</div>
       <div class="list" id="designBox" hidden></div>
-      <p class="note design" id="designNote" hidden>Just on this phone, and at once.</p>
       <label class="search"><span id="searchIcon"></span><input id="q" type="search" placeholder="Add a city" autocomplete="off" enterkeyhint="search"></label>
       <div class="list" id="results"></div>
       <div class="label">Your places</div>
@@ -697,9 +695,7 @@ svg.i{filter:none}
       <div class="seg" id="units">
         <button data-u="us" aria-pressed="true">°F · mph · in</button>
         <button data-u="metric" aria-pressed="false">°C · km/h · mm</button>
-      </div>
-      <p class="note">Forecasts, current conditions and alerts come from the National Weather Service. Outside the US, or if the NWS is down, the forecast comes from Open-Meteo, and place names may come from BigDataCloud. In the continental US, when rain starts or stops comes from Open-Meteo's 15-minute forecast. Your location goes only to those services.</p>
-    </div>
+      </div>    </div>
   </section>
 </div>
 

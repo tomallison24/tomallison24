@@ -21,7 +21,7 @@
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
-    clock: [['ok', 'Nothing: your alarms stay on this phone']],
+    clock: [['ok', 'Nothing']],
     mail: [['once', 'Sign in with your own Google account']],
     calendar: [['ok', 'Your family account (Face ID)']],
     news: [['ok', 'Nothing']],
@@ -30,10 +30,10 @@
     podcasts: [['ok', 'Nothing']],
     travel: [['ok', 'Your family account (Face ID)'], ['once', 'Your Google account, to find trips in Gmail (optional)']],
     places: [['once', 'The family Google Sheet, to share lists (optional)']],
-    orders: [['ok', 'Your family account (Face ID), only for Ipsy'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
+    orders: [['ok', 'Your family account (Face ID), for Ipsy'], ['once', 'Your Google account, to find orders in Gmail (optional)']],
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
-    drinks: [['ok', 'Your family account (Face ID), so your log is kept, private to you']],
-    meals: [['ok', 'Your family account (Face ID): the plan and deals are the family\'s']],
+    drinks: [['ok', 'Your family account (Face ID)']],
+    meals: [['ok', 'Your family account (Face ID)']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
   };
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
@@ -72,7 +72,7 @@
     const id = b.dataset.gone; b.disabled = true;
     try { await ACC.call('installed', { app: id, removed: true }); } catch (e) { b.disabled = false; b.textContent = 'Couldn’t reach aOS. Try again?'; return; }
     INST.delete(id); paintGets(); b.disabled = false;
-    b.insertAdjacentHTML('afterend', `<p class="gone-note">Shows Get now. Open ${esc(D.NAMES[id])} from your Home Screen and it’s back to Installed.</p>`);
+    b.insertAdjacentHTML('afterend', '<p class="gone-note">Shows Get now.</p>');
   }
   const learnInstalled = st => { const a = (st && st.user && st.user.apps) || {}; INST = new Set(Object.keys(a).filter(k => Date.now() - a[k] < 90 * 864e5)); paintGets(); repaintLists(); };
   // an app the newest (non-silent) release changed says so under its name
@@ -105,15 +105,12 @@
   const meet = (id, k) => ({ id, k, h: HEAD[id] || `${D.NAMES[id]}: ${T(id).tag}`, art: (T(id).cards[0] || {}).i, body: () => T(id).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') });
   const NEWS = { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } };
   const SETUP = { house: { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
-      <p>Home shows your whole house: heating, lights, cameras and more, from your family's Home Assistant.</p>
-      <h3>1. The address fills itself in</h3><p>Signed in to your family account, Home already knows where your house is. Nothing to type.</p>
-      <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> at the bottom → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>. Name it <b>AllisonOS</b> and your name, and tap <b>Copy</b> straight away: it's only shown once.</p>
-      <p class="muted">Home shows these steps animated, the first time you open it.</p>
+      <h3>1. Sign in</h3><p>The address fills itself in.</p>
+      <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>, then <b>Copy</b>.</p>
       <h3>3. Paste and connect</h3><p>Open Home, tap the gear, paste the token, tap <b>Connect</b>, and choose a PIN.</p>` } };
   const FAM = { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
-      <p>Your family account is a passkey in your iCloud Keychain. Every AllisonOS app signs in with one Face ID tap, even though each keeps its own storage.</p>
-      <h3>Private to your family</h3><p>Calendar and Travel only answer people signed in to the family. Removing someone signs them out of every app straight away.</p>
-      <h3>Invite someone</h3><p>Under your account (top right): a link for one person, good once for 24 hours.</p>` };
+      <p>Every AllisonOS app signs in with one Face ID tap.</p>
+      <h3>Invite someone</h3><p>Under your account, top right.</p>` };
   // Meet Ipsy: the helper you chat with (home/ipsy.js), a little stem cell that changes shape as it works.
   // While a release that introduces it is fresh (its intro: 'ipsy'), it leads Today, big, telling what it can
   // do in a speech bubble as it turns from one cell into the next; after that it joins the mix.
@@ -126,13 +123,11 @@
   const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt through your things'],
     ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
-      <p>Ipsy is a little stem cell you can chat with. It lives in the bottom left corner of ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}, and it runs on Claude, by Anthropic.</p>
+      <p>A little stem cell you can chat with, in ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}.</p>
       <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
-      <h3>It does the work</h3><p>Ipsy finds things, fixes details, adds and tidies, in the app you’re in. <b>Every change shows in the chat with Undo.</b> In Calendar, the family’s shared calendar, it asks you first before adding, changing or deleting anything, one event at a time.</p>
-      <h3>Gmail, flights and the web</h3><p>In Orders and Travel it reads your Gmail (it can’t send, change or delete email). Travel’s Ipsy looks up live flight status, even for flights that aren’t in your email, and every Ipsy can search the web for anything current.</p>
+      <h3>It does the work</h3><p>Ipsy finds, fixes, adds and tidies in the app you’re in. Every change has Undo.</p>
       <h3>A cell of many shapes</h3><div class="ipsy-forms">${IPSY_FORMS.map(([f, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-form="${f}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
-      <h3>What it shares</h3><p>Your question, and whatever Ipsy looks at in that app to answer it, goes to Claude through the family server, which keeps only a count of questions. Ipsy only has what its app already has: no new passwords or access. It’s for signed-in family and asks once in each app before your first question.</p>
-      <h3>Where to find it</h3><p>Open any of those apps and tap the little cell in the bottom left corner.</p>` };
+      <h3>Where to find it</h3><p>Tap the little cell in the bottom left corner.</p>` };
   const ipsyStage = (cls, line) => `<div class="${cls}" data-ipsy-stage></div><p class="ipsy-say" aria-hidden="true"><span>${esc(line)}</span></p>`;
   // Brings every Ipsy on the page to life: the card's and the page's tell what it can do, one shape at a time.
   let ipsyTimer = 0;
@@ -259,7 +254,7 @@
   function designSheet(id) {
     const goHtml = ap => INST.has(ap) ? `<a class="get big done" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Installed</a>` : `<a class="get big" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Open ${esc(D.NAMES[ap])} to add it</a>`;
     const ap0 = appOf(id);
-    const el = page(`<div class="dsheet"><h1>Make ${esc(D.NAMES[id])} yours</h1><p>Pick a design. You can add both, and change your mind later on ${esc(D.NAMES[id])}’s page.</p>
+    const el = page(`<div class="dsheet"><h1>Make ${esc(D.NAMES[id])} yours</h1><p>Pick a design.</p>
       <div class="dlist" role="listbox" aria-label="Design">${dopts(id)}</div><div class="dgo">${goHtml(ap0)}</div></div>`, { up: true, c: HUE[ap0] });
     el.addEventListener('click', ev => {
       const o = ev.target.closest('.dopt'); if (!o) return;
@@ -296,8 +291,8 @@
   // the owner picks a plan here. Only the owner changes it; everyone sees it. The
   // trial is once per family. Switched off deletes nothing: it's all there again.
   const PLANS = [
-    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, fully customizable, plus new app building: apps you make for your own needs' },
-    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, fully customizable. No new app building' },
+    { id: 'proplus', n: 'Pro+', p: 35, d: 'Every stock app, customizable, plus new app building' },
+    { id: 'pro', n: 'Pro', p: 15, d: 'Every stock app, customizable' },
     { id: 'trial', n: 'Trial', p: 0, d: 'The stock apps, free for 7 days, once' },
   ];
   const DAY = 864e5;
@@ -306,15 +301,13 @@
   const shortDay = t => new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   const planLive = p => !p || !p.ends || Date.now() < p.ends;
   const OFF = 'every app but aOS switches off';
-  const KEPT = ' Nothing is deleted: it\'s all there when a plan starts again.';
   function planNote(cur, me, owner) {
     const fun = ' Just for fun: nothing is charged.';
-    if (!cur) return (state ? 'The family\'s plan is kept in the family account: it shows here once that\'s set up and reachable.' : 'Checking…') + fun;
-    const who = owner ? '' : ' The owner manages the family\'s plan.';
-    if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ` Choose ${cur.id === 'trial' ? 'Pro or Pro+' : 'a plan'} to turn them back on.` : ''}${KEPT}${who}${fun}`;
-    if (cur.id === 'trial') { const left = Math.ceil((cur.ends - Date.now()) / DAY); return `${left} ${left === 1 ? 'day' : 'days'} left in the trial: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`; }
-    if (cur.cancelled) return `${me.n} is canceled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${who}${fun}`;
-    return `${me.n}, $${me.p} a month, since ${onDay(cur.since)}. Renews ${onDay(cur.renews)}.${who}${fun}`;
+    if (!cur) return state ? '' : 'Checking…';
+    if (!planLive(cur)) return `${cur.id === 'trial' ? 'The trial' : me.n} ended on ${onDay(cur.ends)}: every app but aOS is off.${owner ? ` Choose ${cur.id === 'trial' ? 'Pro or Pro+' : 'a plan'} to turn them back on.` : ''}${fun}`;
+    if (cur.id === 'trial') { const left = Math.ceil((cur.ends - Date.now()) / DAY); return `${left} ${left === 1 ? 'day' : 'days'} left in the trial: it ends on ${onDay(cur.ends)}, and ${OFF} then.${fun}`; }
+    if (cur.cancelled) return `${me.n} is canceled: it ends on ${onDay(cur.ends)}, and ${OFF} then.${fun}`;
+    return `${me.n}, $${me.p} a month, since ${onDay(cur.since)}. Renews ${onDay(cur.renews)}.${fun}`;
   }
   // ui: { pick: plan id } to confirm a switch, { cancel: true } to confirm cancelling, { err }
   function paintPlans(ui = {}) {
@@ -326,7 +319,7 @@
     let rows = PLANS.map(p => `<button type="button" class="plan" data-plan="${p.id}" aria-pressed="${!!cur && live && p.id === cur.id}"${owner && !usedUp(p) ? '' : ' disabled'}>
         <span class="pn"><b>${esc(p.n)}${badge(p)}</b><i>${esc(p.d)}</i></span><span class="pp">${price(p)}</span></button>`).join('');
     if (owner && to) rows += `<div class="pick"><div class="row2"><button type="button" data-plan-no>Not now</button><button type="button" class="go" data-plan-ok="${to.id}">${to.id === 'trial' ? 'Start the 7-day trial' : `Switch to ${esc(to.n)}`}</button></div></div>`;
-    else if (owner && ui.cancel) rows += `<div class="pick"><p>${esc(me.n)} stays on until ${esc(onDay(cur.renews))}. Then ${OFF}, until a plan is chosen again. Nothing is deleted.</p><div class="row2"><button type="button" data-plan-no>Keep ${esc(me.n)}</button><button type="button" class="go stop" data-plan-stop>Cancel ${esc(me.n)}</button></div></div>`;
+    else if (owner && ui.cancel) rows += `<div class="pick"><p>${esc(me.n)} stays on until ${esc(onDay(cur.renews))}, then ${OFF}.</p><div class="row2"><button type="button" data-plan-no>Keep ${esc(me.n)}</button><button type="button" class="go stop" data-plan-stop>Cancel ${esc(me.n)}</button></div></div>`;
     else if (owner && live && cur.id !== 'trial') rows += cur.cancelled ? `<button type="button" class="pact" data-plan-resume>Keep ${esc(me.n)}</button>` : `<button type="button" class="pact stop" data-plan-cancel>Cancel ${esc(me.n)}</button>`;
     box.innerHTML = rows;
     $('planNote').innerHTML = (ui.err ? `<span class="perr">${esc(ui.err)}</span> ` : '') + esc(planNote(cur, me, owner));
@@ -403,47 +396,41 @@
   function lostPage() {
     const u = user();
     const el = page(`<h1 class="ptitle">Lost a phone?</h1>
-      <p class="note" style="font-size:15px;margin:0 4px">How to sign out of aOS and erase what it keeps on a phone you've lost, or one you're selling or handing on.</p>
       <div class="glbl">1. First: Find My</div>
-      <div class="group acct lost"><div><h3>The only sure way</h3><ol>
-        <li>On another Apple device, open the <b>Find My</b> app, or go to <b>icloud.com/find</b> in a browser, and sign in with your Apple Account.</li>
+      <div class="group acct lost"><div><ol>
+        <li>Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.</li>
         <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
-        <li>If you won't get it back, choose <b>Erase This Device</b>. That erases the whole phone, aOS with it, the next time it's online.</li></ol></div></div>
+        <li>If it's gone for good, choose <b>Erase This Device</b>.</li></ol></div></div>
       <div class="glbl">2. Erase aOS from your other devices</div>
       <div class="group acct lost"><div><ol>
-        <li>Back up first, from a phone you still have: open each app there, signed in and online. It syncs with the family's Google Sheet by itself, so whatever the lost phone had sent is safe there.</li>
-        <li>Here in aOS, signed in, tap <b>Sign out and erase my other devices</b>.</li>
-        <li>Every aOS app of yours, on every other device, erases what it keeps on that phone the next time it opens with internet, and signs out.</li>
-        <li>That includes the other aOS apps on <b>this</b> phone (an iPhone keeps each Home Screen app apart, so aOS can't tell them from the lost phone's). Open each one, sign in with Face ID, and its Google Sheet or family account fills it back in.</li></ol>
-        ${u ? `<button type="button" class="soft danger" id="lEraseOthers">Sign out and erase my other devices</button><div class="err" id="lErr"></div>` : `<p>Sign in to aOS first (Account), then come back here.</p>`}</div></div>
+        <li>Back up first: open each app, online, on a phone you still have.</li>
+        <li>Here in aOS, tap <b>Sign out and erase my other devices</b>.</li>
+        <li>Each of your aOS apps elsewhere erases itself when it next opens online.</li>
+        <li>On <b>this</b> phone, open each other aOS app and sign in again.</li></ol>
+        ${u ? `<button type="button" class="soft danger" id="lEraseOthers">Sign out and erase my other devices</button><div class="err" id="lErr"></div>` : `<p>Sign in to aOS first.</p>`}</div></div>
       <div class="glbl">3. Lost your only phone?</div>
       <div class="group acct lost"><div><ol>
-        <li>On a new iPhone signed in to your Apple Account, open aOS in Safari and sign in: your passkey comes with your iCloud Keychain. Then do step 2.</li>
-        <li>Or ask the owner: in aOS, <b>Account → Lost a phone?</b>, they can erase your devices for you. Your account stays; sign in again on your new phone.</li></ol>
+        <li>On a new iPhone, open aOS in Safari, sign in, then do step 2.</li>
+        <li>Or ask the owner to erase your devices from their <b>Lost a phone?</b> page.</li></ol>
         ${u && u.role === 'owner' ? '<div class="fam" id="lFam"><p>Loading the family…</p></div>' : ''}</div></div>
       <div class="glbl">4. Just this phone</div>
-      <div class="group acct lost"><div><p>Selling it or handing it on? Erase each aOS app on it yourself:</p><ol>
+      <div class="group acct lost"><div><ol>
         <li>In <b>Fitness</b>: Settings (the gear) → <b>Sign out and erase</b>.</li>
-        <li>In aOS: the button below. It erases what aOS itself keeps on this phone.</li>
-        <li>For every app, at once: <b>Settings → General → Transfer or Reset iPhone → Erase All Content and Settings</b> erases the whole phone.</li></ol>
-        <button type="button" class="soft danger" id="lEraseHere">Sign out and erase aOS on this phone</button></div></div>
-      <div class="glbl">What erasing can't do</div>
-      <div class="group acct lost"><div><ul>
-        <li>An app erases itself only when it's opened with internet. A phone kept offline, or an app never opened again, keeps its data behind the phone's passcode. Find My is the only sure way.</li>
-        <li>Only apps you've signed in to can hear it. Fitness asks you to sign in for Meds and Steps, so they can.</li>
-        <li>What's in your family account or your own Google Sheets isn't erased: it's how you get it back.</li></ul></div></div>`);
+        <li>In aOS: tap the button below.</li>
+        <li>For the whole phone: <b>Settings → General → Transfer or Reset iPhone → Erase All Content and Settings</b>.</li></ol>
+        <button type="button" class="soft danger" id="lEraseHere">Sign out and erase aOS on this phone</button></div></div>`);
     const lErr = el.querySelector('#lErr');
     if (el.querySelector('#lEraseOthers')) el.querySelector('#lEraseOthers').onclick = async e => {
       const b = e.currentTarget;
-      if (!confirm('Sign out and erase every other device? Each aOS app there, and the other aOS apps on this phone, erases what it keeps when it next opens. Back up first.')) return;
+      if (!confirm('Sign out and erase every other device, and the other aOS apps on this phone?')) return;
       busy(b, true); lErr.textContent = ''; lErr.style.color = '';
       try { await ACC.signOutOthers(true);
-        lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done. Each of your other aOS apps erases itself the next time it opens online.'; }
+        lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done: each erases itself when it next opens online.'; }
       catch (x) { lErr.textContent = why(x); }
       busy(b, false);
     };
     el.querySelector('#lEraseHere').onclick = () => {
-      if (!confirm('Sign out and erase what aOS keeps on this phone? The other apps keep theirs: erase each in its own Settings.')) return;
+      if (!confirm('Sign out and erase what aOS keeps on this phone?')) return;
       AllisonOS.erase();
     };
     if (u && u.role === 'owner') paintLostFamily(el.querySelector('#lFam'));
@@ -455,7 +442,7 @@
     box.onclick = async e => {
       const b = e.target.closest('[data-erase]'); if (!b) return;
       const name = b.parentElement.querySelector('span').textContent;
-      if (!confirm(`Erase aOS from ${name}'s devices? Every aOS app of theirs signs out and erases what it keeps when it next opens online. Their account stays: they sign in again on a new phone.`)) return;
+      if (!confirm(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`)) return;
       busy(b, true);
       try { await ACC.call('erase', { id: b.dataset.erase }); b.textContent = 'Erased'; } catch (x) { b.textContent = why(x); busy(b, false); }
     };
@@ -490,8 +477,7 @@
     const hello = u ? `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${esc(u.name.split(/\s+/)[0])}` : 'Welcome home';
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
-    $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2>
-      <p>Every app here is chosen for our family: ${D.CORE.length} core apps and ${D.FAMILY.length} made just for us, with one account.</p></div>
+    $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2></div>
       ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
 
@@ -509,11 +495,11 @@
     const st = await getState(); paintSigninCard(); paintAvatars();
     if (!box.isConnected) return;
     if (st.error) { box.innerHTML = `<div><p>Accounts can\'t be reached right now (${esc(st.error === 'network' ? 'no connection' : 'error ' + st.error)}${/\.pages\.dev$/.test(location.hostname) ? '' : ', ' + esc(location.hostname)}).</p></div>`; return; }
-    if (!st.storage) { box.innerHTML = '<div><h3>Family accounts</h3><p>Not switched on yet: the site needs its account storage on Cloudflare (aOS/RELEASING.md).</p></div>'; return; }
+    if (!st.storage) { box.innerHTML = '<div><h3>Family accounts</h3><p>Not switched on yet.</p></div>'; return; }
     if (!st.user && ACC.token()) ACC.signOut();   // removed from the family, or a stale session
     if (st.user) return paintSignedIn(box, st.user);
     if (invite) {
-      box.innerHTML = `<div><h3>Join the family</h3><p>You've been invited to AllisonOS. Your account is a passkey: Face ID signs you in to every app.</p>
+      box.innerHTML = `<div><h3>Join the family</h3><p>Make your account with Face ID.</p>
         <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create my account</button><div class="err" id="aErr"></div></div>`;
       $('aGo').onclick = async () => {
         busy($('aGo'), true);
@@ -528,7 +514,7 @@
       return;
     }
     if (!st.setup) {
-      box.innerHTML = `<div><h3>Set up your family account</h3><p>Once, by the owner: enter your owner code and your name, then Face ID.</p>
+      box.innerHTML = `<div><h3>Set up your family account</h3><p>Enter the owner code and your name.</p>
         <input id="aCode" placeholder="Owner code" autocapitalize="characters" autocomplete="off" spellcheck="false">
         <input id="aName" placeholder="Your name" autocomplete="given-name" maxlength="40"><button type="button" class="go" id="aGo">Create the owner account</button><div class="err" id="aErr"></div></div>`;
       $('aGo').onclick = async () => {
@@ -538,7 +524,7 @@
       };
       return;
     }
-    box.innerHTML = `<div><h3>Sign in</h3><p>With the passkey you made when you joined.</p><button type="button" class="go" id="aGo">Continue with Face ID</button><div class="err" id="aErr"></div>
+    box.innerHTML = `<div><h3>Sign in</h3><button type="button" class="go" id="aGo">Continue with Face ID</button><div class="err" id="aErr"></div>
       <p class="note">New here? Ask the owner for an invite link.</p></div>`;
     $('aGo').onclick = async () => {
       busy($('aGo'), true);
@@ -547,14 +533,14 @@
   }
 
   async function paintSignedIn(box, u) {
-    box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small><br><small class="muted">Face ID signs you in to every app</small></span>
+    box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small></span>
       <button type="button" class="soft" id="aOut">Sign out</button></div>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
-    box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3><p>Sign out everywhere else: every other device, and the other apps on this phone, ask for Face ID again. Nothing is deleted.</p>
+    box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3>
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
       <button type="button" class="soft" data-lost>Erase aOS from a lost phone: step by step</button></div>`);
     $('aOthers').onclick = async () => {
-      if (!confirm('Sign out everywhere else? Every other device, and the other apps on this phone, will ask for Face ID again.')) return;
+      if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
       try { await ACC.signOutOthers(); m.style.color = 'var(--muted)'; m.textContent = 'Done: everywhere else is signed out.'; }
       catch (e) { m.textContent = why(e); }
@@ -563,14 +549,14 @@
     box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
     paintNotify();
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3><p>To everyone in the family who has turned notifications on. Keep it short: the phone shows a title and a few lines.</p>
+    box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
       <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
-      <div><h3>Home Assistant address</h3><p>Fills in the Home app for everyone in the family, so each person only makes their own token. Your Nabu Casa address, from Home Assistant: Settings → Home Assistant Cloud.</p>
+      <div><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div><h3>Invite someone</h3><p>A link for one person, good once, for 24 hours. They open it in Safari on an iPhone, or Chrome on Android.</p>
+      <div><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
-      <div><h3>Google Sheets</h3><p>Each app's Sheet is the family's record: one Sheet an app, each row marked with whose it is, and each phone shown only its own (shared lists, places and trips stay shared). Phones don't keep the links or phrases: aOS does. Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
+      <div><h3>Google Sheets</h3><p>Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
       <div class="fam sheets" id="shList"><p class="note">Checking…</p></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
     $('iGo').onclick = async () => {
@@ -585,7 +571,7 @@
     ACC.call('home').then(r => { if (r.address && !$('hAddr').value) $('hAddr').value = r.address; }).catch(() => {});
     $('hSave').onclick = async () => {
       busy($('hSave'), true); const m = $('hErr'); m.textContent = ''; m.style.color = '';
-      try { const r = await ACC.call('home', { address: $('hAddr').value.trim() }); $('hAddr').value = r.address || ''; m.style.color = 'var(--muted)'; m.textContent = r.address ? 'Saved: Home fills this in for the family.' : 'Cleared.'; }
+      try { const r = await ACC.call('home', { address: $('hAddr').value.trim() }); $('hAddr').value = r.address || ''; m.style.color = 'var(--muted)'; m.textContent = r.address ? 'Saved.' : 'Cleared.'; }
       catch (e) { m.textContent = e.message === 'address' ? 'Use the https address, like https://xxxxxxxx.ui.nabu.casa.' : why(e); }
       busy($('hSave'), false);
     };
@@ -604,9 +590,9 @@
     if (!$('nBox')) return;
     const head = '<h3>Notifications</h3>';
     let html;
-    if (!pushOK()) html = `<p>${iphone && !standalone ? 'On iPhone, notifications work from the Home Screen: add aOS to it (Share → Add to Home Screen), open it from there, and turn them on here.' : 'This browser can\'t show notifications from aOS.'}</p>`;
-    else if (Notification.permission === 'denied') html = `<p>Notifications are blocked for aOS. ${iphone ? 'Turn them on in Settings → Notifications → aOS' : 'Allow them in this browser\'s site settings'}, then come back.</p>`;
-    else if (on) html = '<p>On for this phone: you\'ll be told when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
+    if (!pushOK()) html = `<p>${iphone && !standalone ? 'Add aOS to your Home Screen to turn these on.' : 'This browser can\'t show notifications from aOS.'}</p>`;
+    else if (Notification.permission === 'denied') html = `<p>Blocked: allow them in ${iphone ? 'Settings → Notifications → aOS' : 'this browser\'s site settings'}.</p>`;
+    else if (on) html = '<p>On: you hear when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
     else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
     box.innerHTML = `<div>${head}${html}<div class="err" id="nMsg"></div></div>`;
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
@@ -648,7 +634,7 @@
     try { audience = (await ACC.call('push/audience')).people; } catch { audience = []; }
     if (!$('nWho')) return;
     const phones = audience.reduce((a, p) => a + p.devices, 0);
-    $('nWho').textContent = audience.length ? `Goes to ${audience.map(p => p.name.split(/\s+/)[0]).join(', ')} (${phones} ${phones === 1 ? 'phone' : 'phones'}).` : 'No one has turned notifications on yet. Each person does it under their account, from the Home Screen app.';
+    $('nWho').textContent = audience.length ? `Goes to ${audience.map(p => p.name.split(/\s+/)[0]).join(', ')} (${phones} ${phones === 1 ? 'phone' : 'phones'}).` : 'No one has turned notifications on yet.';
     $('nFill').onclick = () => {
       $('nTitle').value = `aOS updated to ${live[0].v}`; $('nBody').value = 'Click for update details.';
       announce = true;   // a tap on it opens the Updates screen
@@ -711,7 +697,7 @@
         busy(b, true); m.textContent = ''; m.style.color = '';
         try {
           await sheetCall(id + '/config', { url: box.querySelector(`[data-shurl="${id}"]`).value.trim(), secret: box.querySelector(`[data-shkey="${id}"]`).value });
-          m.style.color = 'var(--muted)'; m.textContent = 'Connected. Each phone syncs with it through aOS now.';
+          m.style.color = 'var(--muted)'; m.textContent = 'Connected.';
           setTimeout(paintSheets, 1500);
         } catch (x) { m.textContent = SHEET_WHY[x.message] || 'Couldn\'t connect (' + x.message + ').'; }
         busy(b, false);
@@ -733,7 +719,7 @@
       }
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(`Remove ${name}? They're signed out of every app straight away. Nothing of theirs is deleted: Invite back brings them back with their Drinks log.`)) return;
+      if (!confirm(`Remove ${name} and sign them out of every app?`)) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };

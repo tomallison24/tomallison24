@@ -390,24 +390,21 @@
     if (!stories.length) {
       if (topic === SPORT && quickOn()) {
         feedEl.innerHTML = notice(`Nothing on ${esc(quickTeam().label)} right now`,
-          'None of the latest sport stories mention them. They’ll show here as soon as one does.',
+          '',
           `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all sport'}</button>`) + status();
         return;
       }
       if (topic === SPORT && pickList.length) {
-        const names = pickList.map(p => p.label);
-        const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
-        feedEl.innerHTML = notice('Nothing on your filters right now',
-          `None of the latest sport stories mention ${esc(list)}. They’ll show here as soon as one does.`,
+        feedEl.innerHTML = notice('Nothing on your filters right now', '',
           '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + status();
         return;
       }
       if (hasFilters(topic) && filtersOn(topic)) {
-        feedEl.innerHTML = notice('Nothing matches your filters', 'No stories from the chosen sources in this time range.',
+        feedEl.innerHTML = notice('Nothing matches your filters', '',
           '<button data-action="reset-list-filters">Show everything</button>') + status();
         return;
       }
-      feedEl.innerHTML = notice('Nothing here right now', `No ${esc(topicLabel(topic))} stories came through on the last update.`, '<button data-action="retry">Try again</button>') + status();
+      feedEl.innerHTML = notice('Nothing here right now', '', '<button data-action="retry">Try again</button>') + status();
       return;
     }
 
@@ -443,7 +440,7 @@
   }
 
   function notice(title, body, actions) {
-    return `<div class="notice"><h2>${esc(title)}</h2><p>${body}</p>${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
+    return `<div class="notice"><h2>${esc(title)}</h2>${body ? `<p>${body}</p>` : ''}${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
   }
 
   function skeleton() {
@@ -534,7 +531,7 @@
   let setOpen = false, setReturn = null;
   if (window.aosDesign) {
     setBody.innerHTML = '<div class="sect"><h3>Design</h3><div class="card" id="set-design">' + aosDesign.picker() + '</div>'
-      + '<p class="sheet-note">Just on this phone, and at once.</p></div>';
+      + '<p class="sheet-note">Changes how News looks on this phone.</p></div>';
     aosDesign.bind(setBody);
   } else setBtn.hidden = true;
 
@@ -651,8 +648,8 @@
       const x = ai.sum;
       h += `<div class="ai-card"><h4>Summary</h4><p>${esc(x.summary)}</p></div>
         <div class="ai-card"><h4>Key takeaways</h4><ul>${x.takeaways.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
-      if (x.basis === 'snippet') h += '<p class="ai-note">The publisher’s page wouldn’t load for Claude (a paywall, perhaps), so this is from the headline and short description only.</p>';
-      else if (x.truncated) h += '<p class="ai-note">A very long article: Claude read the first part.</p>';
+      if (x.basis === 'snippet') h += '<p class="ai-note">From the headline and description only.</p>';
+      else if (x.truncated) h += '<p class="ai-note">From the first part of a long article.</p>';
       if (safeUrl(ai.url)) h += `<a class="ai-open" href="${esc(safeUrl(ai.url))}" target="_blank" rel="noopener">Read the full article</a>`;
       if (!ai.qa.length) h += `<div class="ai-chips">${QUESTIONS.map(q => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
       h += ai.qa.map(t => `<div class="ai-q">${esc(t.q)}</div><div class="ai-a${t.wait ? ' wait' : ''}${t.error ? ' err' : ''}">${t.wait ? 'Thinking…' : esc(t.error ? aiSay(t.error) : t.a)}</div>`).join('');
@@ -785,10 +782,10 @@
         + section('Teams', teams.map(e => optRow(e, e.group)))
         + section('Players & keywords', kws.map(e => optRow(e)));
       if (!sports.length && !comps.length && !teams.length && !kws.length) {
-        html += '<p class="sheet-note">Not in the list. Follow it to see any headline that mentions it.</p>';
+        html += '<p class="sheet-note">Not in the list.</p>';
       }
     } else if (!catalog) {
-      html = `<p class="sheet-note">${catalogFailed ? 'Couldn’t load the list of sports and teams. You can still search for anything and follow it.' : 'Loading…'}</p>`;
+      html = `<p class="sheet-note">${catalogFailed ? 'Couldn’t load the list of sports and teams.' : 'Loading…'}</p>`;
     } else if (sheetSeg === 'sports') {
       html = section('', catalog.sports.map(e => optRow(e)));
     } else if (sheetSeg === 'competitions') {
@@ -1134,7 +1131,7 @@
   function renderTable() {
     if (!leagues) return skeleton();
     const list = relevantLeagues(), l = tableLeagueNow();
-    if (!l) return notice('No leagues here', 'None of the leagues has a table for your filters. Try resetting them.', '<button data-action="reset-picks">Reset filters</button>');
+    if (!l) return notice('No leagues here', '', '<button data-action="reset-picks">Reset filters</button>');
     const t = tables[l.id];
     const pin = x => x.l.pin;
     const row = x => `<button type="button" role="menuitem" data-league="${esc(x.l.id)}" data-for="table" aria-selected="${x.l.id === l.id}"><span class="k">${esc(x.l.label)}</span>${ICON.tick}</button>`;
@@ -1149,7 +1146,7 @@
       return `<section class="sect">${head}<div class="card tbl" aria-busy="true">${Array.from({ length: 8 }, () => '<div class="trow"><span class="sk" style="width:90%;height:14px;grid-column:1/-1"></span></div>').join('')}</div></section>`;
     }
     if (!t.groups.length) {
-      return `<section class="sect">${head}${notice(`No table for ${esc(l.label)}`, 'ESPN doesn’t publish a standings table for this competition. Pick another league above.', '')}</section>`;
+      return `<section class="sect">${head}${notice(`No table for ${esc(l.label)}`, 'Pick another league above.', '')}</section>`;
     }
     const live = new Set((t.live || []).map(n => n.toLowerCase()));
     const zones = new Map();
@@ -1587,8 +1584,8 @@
       if (quickOn()) return notice(`No games for ${esc(quickTeam().label)}`, 'Nothing on now or in the next two weeks.',
         `<button data-quick="${esc(quick)}">${savedPickList.length ? 'Back to my filters' : 'Show all leagues'}</button>`) + foot;
       return pickList.length
-        ? notice('No games for your filters', 'None of the games on now or coming up involve your filters.', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
-        : notice('No games right now', 'There are no games or fixtures listed in these leagues at the moment.', '') + foot;
+        ? notice('No games for your filters', '', '<button data-action="reset-picks">Reset filters</button><button class="secondary" data-action="edit-picks">Edit filters</button>') + foot
+        : notice('No games right now', '', '') + foot;
     }
 
     // One block per question: what's on (Scores) and what's next (Coming up),

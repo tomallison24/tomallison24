@@ -335,6 +335,6 @@ window.TravelIpsy = function (app) {
     intro: 'Hi, I’m Ipsy! I can tell you about your trips, fix or add a booking, check any flight live (delays, gates, where it is), find a flight number, look through your Gmail, or look something up on the web.',
     placeholder: 'Ask Ipsy about your trips',
     suggestions: ['When’s my next flight? Is it on time?', 'What’s on my next trip?', 'Is anything on my trips not confirmed?', 'Check Gmail for bookings I’m missing'],
-    consent: 'Ipsy runs on Claude, by Anthropic. Your question, and whatever Ipsy looks at to answer it (your bookings, with any names, seats and notes in them, and any email it opens in your Gmail), go to Claude through the family server, which keeps only a count of questions. Bookings and trips you mark Private, and their emails, are hidden from Ipsy, and you can turn off its Gmail in Settings. Flight look-ups send AeroDataBox only the flight number and the day. Each change Ipsy makes shows here with Undo, and it asks before deleting a whole trip.',
+    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the bookings and emails it reads, go there through the family server (flight look-ups go to AeroDataBox). Each change shows here with Undo, and it asks before deleting a whole trip.',
   };
 };

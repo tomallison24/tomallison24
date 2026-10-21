@@ -25,10 +25,10 @@
 // picked here is kept for Standard.
 'use strict';
 const BG_IDEAS = [
-  { id: 'bubbles', name: 'Bubbles', note: 'Small, very faint glass bubbles drift slowly and bounce off the edges of the screen.' },
-  { id: 'stars', name: 'Constellation', note: 'Faint points drift, joined by hairlines when they come near each other.' },
-  { id: 'ripples', name: 'Ripples', note: 'Rings open slowly from random points and fade, like rain on still water.' },
-  { id: 'aurora', name: 'Aurora', note: 'Two soft ribbons of light sway slowly across the top of the screen.' },
+  { id: 'bubbles', name: 'Bubbles', note: 'Faint glass bubbles drifting.' },
+  { id: 'stars', name: 'Constellation', note: 'Drifting points joined by hairlines.' },
+  { id: 'ripples', name: 'Ripples', note: 'Rings spreading like rain on water.' },
+  { id: 'aurora', name: 'Aurora', note: 'Soft ribbons of light swaying.' },
   { id: 'beach', name: 'Beach', note: 'The blurred dusk beach, dimmed.' },
   { id: 'none', name: 'None', note: 'Just the color, nothing moving.' },
 ];
@@ -225,9 +225,7 @@ const BG_FAM = family({
         ['tone', lbl('COLOR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">
             <i></i><span>${t.name}</span></button>`).join('')}</div>`],
         ['move', lbl('MOVEMENT') + `<div class="bglist">${BG_IDEAS.map(i => `<button class="bgopt${i.id === on ? ' on' : ''}" data-a="bg" data-v="${i.id}" aria-pressed="${i.id === on}">
-            <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],
-        ['note', '<p class="tnote">Kept on this phone. Movement stops while the app is in the background, and stays still with Reduce Motion.</p>'],
-      ],
+            <span class="k"><b>${i.name}</b><small>${i.note}</small></span><span class="bg-tick">${svg(i.id === on ? 'check' : 'play', 18)}</span></button>`).join('')}</div>`],      ],
     };
   },
   act(id, a, b) {
