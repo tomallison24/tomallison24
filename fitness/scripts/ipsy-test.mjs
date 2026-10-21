@@ -358,7 +358,7 @@ await step('off by default: no Ipsy button; Settings > Ipsy turns it on (and the
   await page.waitForSelector('#stIpsy');
   assert.equal(await page.getAttribute('#stIpsy', 'aria-checked'), 'false');
   const t = await page.textContent('#stIpsy');
-  assert.match(t, /Ask Ipsy about your patterns/); assert.match(t, /Only the days and stats a question needs go to Claude through aOS; Anthropic doesn’t train on them\./);
+  assert.match(t, /Ask Ipsy about your patterns/); assert.equal(await page.textContent('#stIpsy .sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'one short sentence on what it does');
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-off.png') });
   await page.click('#stIpsy');
   assert.equal(await page.getAttribute('#stIpsy', 'aria-checked'), 'true');
@@ -384,7 +384,7 @@ await step('signed out: no Ipsy button, even turned on', async () => {
   const { ctx, page, problems } = await phone({ session: null, ipsy: true });
   assert.equal(await btnShown(page), false);
   await page.click('#setBtn'); await page.waitForSelector('#stIpsy');
-  assert.match(await page.textContent('#stIpsy'), /Signed in only\./);
+  assert.equal(await page.textContent('#stIpsy .sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'the same one sentence, signed out');
   assert.deepEqual(problems, []);
   await ctx.close();
 });
@@ -435,8 +435,8 @@ for (const width of [320, 375, 390, 430]) for (const design of ['glass', 'vintag
     await page.click('.ipsy-btn');
     await page.waitForSelector('.ipsy-bubble');
     const c = await page.textContent('.ipsy-consent');
-    assert.match(c, /only the days and stats Ipsy looks at to answer it .* go to Claude through aOS, which keeps only a count of questions/);
-    assert.match(c, /Anthropic doesn’t train on it/); assert.match(c, /no web search/); assert.match(c, /never changes your log/); assert.match(c, /isn’t a doctor/);
+    assert.match(c, /only the days Ipsy needs go to Claude, by Anthropic, through aOS/);
+    assert.match(c, /Anthropic doesn’t train on it/); assert.match(c, /no web search/); assert.match(c, /only reads your log/); assert.match(c, /isn’t a doctor/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'consent.png') });
     await page.click('#ipsyOk');

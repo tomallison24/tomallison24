@@ -459,7 +459,7 @@
   let refreshing = false;
   async function refreshAll(manual){
     if (refreshing) return;
-    if (!S.follows.length) { if (manual) toast('Follow a show and its new episodes show up here.'); return; }
+    if (!S.follows.length) { if (manual) toast('Follow a show first.'); return; }
     refreshing = true;
     $('refreshBtn').classList.add('busy');
     syncPill('run', 'Checking for new episodes');
@@ -616,7 +616,7 @@
     + '<span class="uptx"><span class="upm">' + esc(e.st) + '</span><span class="upt">' + esc(e.t) + '</span></span></button>'
     + '<div class="upbar">' + pill(e) + '<span class="upd">' + esc(day(e.d)) + '</span></div></article>';
   const chip = (act, label, on, n) => '<button class="chip glass" type="button" data-act="' + act + '" aria-pressed="' + !!on + '">' + label + (n != null ? ' <span class="n">' + n + '</span>' : '') + '</button>';
-  const emptyCard = (title, text, btn) => '<div class="empty glass">' + I.headph + '<strong>' + title + '</strong><span>' + text + '</span>' + (btn || '') + '</div>';
+  const emptyCard = (title, text, btn) => '<div class="empty glass">' + I.headph + '<strong>' + title + '</strong>' + (text ? '<span>' + text + '</span>' : '') + (btn || '') + '</div>';
   // A row of filter chips where one is chosen: its thumb (a new show's jumps).
   const slideChips = (el, key, opt) => { const c = el.querySelector('.chips'); if (c) slide(c, c.querySelector('.chip[aria-pressed="true"]:not([data-act="sort"])'), key, opt); };
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
@@ -628,7 +628,7 @@
     let h = '';
     if (up.length) h += '<section><p class="sechead">Up Next</p><div class="shelf">' + up.map(upCard).join('') + '</div></section>';
     if (!S.follows.length) {
-      h += emptyCard('Find something to listen to', 'Follow shows and their new episodes show up here. Video podcasts play right in the player.',
+      h += emptyCard('Find something to listen to', 'Follow a show to see its new episodes.',
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
     } else {
       const all = newEpisodes(), hasVideo = all.some(e => e.v);
@@ -657,15 +657,15 @@
     if (st.lib === 'saved') {
       const eps = S.saved.map(x => getEp(x.k) || x);
       h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div>'
-        : emptyCard('No saved episodes', 'Tap the bookmark on any episode to keep it here.');
+        : emptyCard('No saved episodes', 'Tap an episode’s bookmark to save it.');
     } else if (st.lib === 'hist') {
       const eps = S.hist.map(x => getEp(x.k) || x);
       // older than the 90 days this phone keeps: from the family's Google Sheet, a year at a time
       const more = synced && signedIn() && !olderEnd ? '<button class="morebtn" type="button" data-act="hist-older"' + (olderBusy ? ' disabled' : '') + '>' + (olderBusy ? 'Loading…' : 'Show older') + '</button>' : '';
       h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div>' + more + '<button class="morebtn" type="button" data-act="hist-clear">Clear history</button>'
-        : emptyCard('Nothing played yet', 'Episodes you play show up here.') + more;
+        : emptyCard('Nothing played yet', '') + more;
     } else if (!S.follows.length) {
-      h = emptyCard('No shows yet', 'Search for a show and tap Follow, or import your shows from another app in Settings.',
+      h = emptyCard('No shows yet', '',
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
     } else {
       const list = [...S.follows].sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
@@ -700,10 +700,10 @@
       else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
       else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
       else h += '<div class="rgroup glass">' + st.top.map((r, i) => srow(r, i, i + 1)).join('') + '</div>';
-      h += '</section><p class="hint">Can’t find a show? Paste its RSS feed link in the search box. Private and premium feeds work too.</p>';
+      h += '</section>';
     } else if (looksLikeFeed(q)) {
       st.list = [{title: 'Open this feed', author: feedFromInput(q), feed: feedFromInput(q), art: '', genre: ''}];
-      h = '<div class="rgroup glass">' + srow(st.list[0], 0) + '</div><p class="hint">Opens the show so you can see its episodes and follow it.</p>';
+      h = '<div class="rgroup glass">' + srow(st.list[0], 0) + '</div>';
     } else if (st.searchErr) {
       h = '<div class="notice glass"><span>' + esc(st.searchErr) + '</span><button class="linkbtn" type="button" data-act="search-retry">Try again</button></div>';
     } else if (!st.results || st.searching) {
@@ -711,7 +711,7 @@
     } else {
       st.list = st.results;
       h = st.results.length ? '<div class="rgroup glass">' + st.results.map((r, i) => srow(r, i)).join('') + '</div>'
-        : '<div class="empty glass"><strong>No shows found</strong><span>Try other words, or paste the show’s feed link.</span></div>';
+        : '<div class="empty glass"><strong>No shows found</strong><span>Try other words, or paste a feed link.</span></div>';
     }
     $('searchBody').innerHTML = h;
   }
@@ -970,7 +970,7 @@
       save(); render();
       toast('Marked ' + sh.eps.length + ' episodes as played', () => { Object.entries(before).forEach(([k, p]) => { if (p) S.prog[k] = p; else delete S.prog[k]; }); save(); render(); });
     }});
-    if (feed) rows.push({label:'Share Show', sub:'A link that opens it in this app', icon:I.share, run:() => share(sh ? sh.title : '', 'Podcast', showLink(feed))});
+    if (feed) rows.push({label:'Share Show', icon:I.share, run:() => share(sh ? sh.title : '', 'Podcast', showLink(feed))});
     if (feed) rows.push({label:'Copy Feed Link', icon:I.link, run:async () => { try { await navigator.clipboard.writeText(feed); toast('Feed link copied'); } catch(e) { toast(feed); } }});
     if (feed) rows.push({label:'Check for New Episodes', icon:I.refresh, run:async () => {
       st.showErr = '';
@@ -1369,7 +1369,7 @@
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
   // Design, the first section: Vintage or Standard, at once and just on this phone (../home/design.js); not part of the other settings
   if (window.aosDesign) {
-    $('setBack').parentElement.insertAdjacentHTML('afterbegin', '<p class="label">Design</p><div class="rgroup glass" id="setDesign">' + aosDesign.picker() + '</div><p class="hint">Just on this phone, and at once.</p>');
+    $('setBack').parentElement.insertAdjacentHTML('afterbegin', '<p class="label">Design</p><div class="rgroup glass" id="setDesign">' + aosDesign.picker() + '</div>');
     aosDesign.bind($('setDesign'));
   }
   $('setExport').onclick = () => {
@@ -1430,7 +1430,7 @@
   // The one-way backup's own: its time and this phone's id (it told phones apart; the Sheet now goes by person).
   lsDel(KEY + '-sheet-at'); lsDel(KEY + '-device');
   const SYNC_ERRORS = {
-    signin: 'Sign in to sync with the family’s Google Sheet. Until then, Podcasts keeps everything on this phone.',
+    signin: 'Sign in to sync your shows.',
     'no-sheet': 'The family’s Podcasts Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.',
     'wrong-secret': 'aOS’s phrase for the Podcasts Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.',
     'old-script': 'The Podcasts Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).',

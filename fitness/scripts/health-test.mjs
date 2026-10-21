@@ -133,6 +133,7 @@ await test('your readings in Activity, Heart, Sleep and Vitals cards; empty ones
   // the 7 days before, as a line and an average
   assert.ok(await page.$('.hrow[data-k="hr_rest"] .spark polyline'));
   assert.match(await page.textContent('.hrow[data-k="hr_rest"] .ht small'), /7-day avg 54 · ↓8%/);
+  assert.equal(await page.$('#main .hint'), null, 'nothing under the stats');
   assert.match(await page.getAttribute('.hrow[data-k="hr_rest"]', 'aria-label'), /Resting heart rate: 50 bpm, 7-day average 54 bpm/);
   assert.match(await text(page), /Today ·/);
   assert.ok(await page.isDisabled('[data-hday="1"]'), 'no days ahead');
@@ -179,18 +180,18 @@ await test('your readings in Activity, Heart, Sleep and Vitals cards; empty ones
   await ctx.close();
 });
 
-await test('nothing yet: how to turn on Apple Health in the Home Assistant app, and to link your iPhone', async () => {
+await test('nothing yet: one short line on what to do (link your iPhone, or turn on its Health sensors)', async () => {
   const { ctx, page } = await phone({ health: null });
   await open(page); await page.waitForTimeout(1600);
-  assert.match(await text(page), /Settings › Companion App › Sensors/);
-  assert.match(await text(page), /Then link your iPhone here, in Fitness: Settings › Steps/);
+  assert.equal(await page.textContent('#hEmpty'), 'Your Apple Health, hereLink your iPhone to start.Link your iPhone');
+  assert.equal(await page.$('#main .hint'), null, 'no explanation under it');
   await page.click('[data-hset]');
   await page.waitForSelector('#setSheet:not([hidden])');
   await ctx.close();
   // linked, with no Health sensors on yet
   const p2 = await phone({ health: { entities: {}, units: {}, days: {} } });
   await open(p2.page); await p2.page.waitForTimeout(1600);
-  assert.match(await text(p2.page), /Your iPhone is linked in Fitness/);
+  assert.match(await text(p2.page), /Turn on Health sensors in the Home Assistant app\./);
   await p2.ctx.close();
 });
 

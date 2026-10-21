@@ -326,9 +326,9 @@ window.FitnessIpsy = function (app) {
       let s = ''; try { s = app.screen(); } catch {}
       return s ? 'On screen: ' + s + '.' : '';
     },
-    intro: 'Hi, I’m Ipsy! Ask me about patterns in your own workouts, steps, meds and health stats. I look at your days, then say what I found and how many days it rests on. I only read: I never change your log. And I’m not a doctor, so ask yours about anything medical.',
+    intro: 'Hi, I’m Ipsy! Ask me about patterns in your workouts, steps, meds and health.',
     placeholder: 'Ask Ipsy about your patterns',
     suggestions: ['How did I sleep after leg days?', 'Is my resting heart rate trending down?', 'Did I miss meds more on low-sleep days?', 'Do I walk more on days I train?'],
-    consent: 'Ipsy runs on Claude, by Anthropic. When you ask something, your question and only the days and stats Ipsy looks at to answer it (workouts, steps, meds and health stats) go to Claude through aOS, which keeps only a count of questions. Anthropic doesn’t train on it. Ipsy has no web search here, and it only reads: it never changes your log. It isn’t a doctor: ask yours about anything medical.',
+    consent: 'Your question and only the days Ipsy needs go to Claude, by Anthropic, through aOS; Anthropic doesn’t train on it. Ipsy only reads your log, has no web search, and isn’t a doctor.',
   };
 };

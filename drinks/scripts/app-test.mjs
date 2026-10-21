@@ -202,7 +202,7 @@ await test('Something else…: the kind fills in size and strength; oz and ml; t
   assert.equal(await page.inputValue('#fVol'), '1.5'); assert.equal(await page.inputValue('#fAbv'), '40');
   assert.match(await page.textContent('#fCalc'), /^1 standard drink$/);
   await page.click('.opt[data-cat="cocktail"]');
-  assert.match(await page.textContent('#dayBody'), /log the spirit in it/);
+  assert.equal(await page.$('#dayBody .hint'), null, 'no explanation for a cocktail');
   await page.click('.opt[data-cat="wine"]');
   await page.click('[data-unit="ml"]');
   assert.equal(await page.inputValue('#fVol'), '150', '5 oz is about 150 ml');
@@ -392,7 +392,7 @@ await test('signed out: works on the phone, says so, and offers Face ID; nothing
   await p.page.click('#fab'); await p.page.click('.utile[data-usual="4"]'); await p.page.click('#daySheet .okbtn');
   assert.equal((await local(p.page)).entries.length, 1);
   await p.page.click('#moreBtn');
-  assert.match(await p.page.textContent('#acct'), /On this phone only.*Sign in with your family account/);
+  assert.match(await p.page.textContent('#acct'), /On this phone only.*Sign in to sync your log\./);
   assert.ok(await p.page.isVisible('#signIn'));
   for (const gone of ['#sheetBtn', '#sheetSub', '#syncSheet', '#syStatus', '#syNow', '#syUrl']) assert.equal(await p.page.$(gone), null, gone + ' is gone: aOS sets the Sheet up');
   assert.doesNotMatch(await p.page.textContent('#moreBody'), /Sync now/);
@@ -427,7 +427,7 @@ await test('delete all data: tap twice; gone here and from the Sheet, the older 
   await page.click('#daySheet .okbtn').catch(() => {});
   assert.ok(mine().entries.length >= 3, 'Tom has drinks in the Sheet, older ones too');
   await page.click('#moreBtn');
-  assert.match(await page.textContent('#wipeBtn'), /From this phone and the family’s Google Sheet/);
+  assert.match(await page.textContent('#wipeBtn'), /From this phone and the Sheet/);
   await page.click('#wipeBtn');
   assert.match(await page.textContent('#wipeBtn'), /Tap again/);
   await page.click('#wipeBtn');
