@@ -1,5 +1,6 @@
 // Home's Automations view (house/automations.js): every Home Assistant
-// automation, what it does, when it runs, its devices and whether it is on.
+// automation's name, by group; tapping one shows whether it is on, the devices
+// it works with their state, what it does and when it runs.
 // In the preview, the list is Home's copy of ha-config (automations-data.js).
 // Live, Home Assistant is a stand-in (Playwright's WebSocket routing, no
 // network) with a few automations: their status is its own; what each does
@@ -92,50 +93,56 @@ async function phone({ scheme = 'dark', design = 'glass', ha = null } = {}) {
   await page.waitForTimeout(400);
   return { ctx, page, errors, asked };
 }
-const card = (page, ent) => page.locator(`#g-autos [data-dv="autos:${ent}"]`);
-const groupOf = (page, ent) => card(page, ent).evaluate(c => c.closest('.au-group').querySelector('.vsec-h span').textContent);
+const row = (page, ent) => page.locator(`#g-autos [data-dv="autos:${ent}"]`);
+const groupOf = (page, ent) => row(page, ent).evaluate(c => c.closest('.au-group').querySelector('.vsec-h span').textContent);
+// Opens one's popup: its title, its pill and everything in it.
+async function popup(page, ent) {
+  await row(page, ent).click();
+  await page.waitForSelector('#devWrap.open', { state: 'attached' });
+  const out = { title: await page.textContent('#dTitle'), pill: await page.textContent('#devWrap [data-s="pill"]'), body: await page.textContent('#devWrap [data-s="body"]') };
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('#devWrap.open'));
+  return out;
+}
 
 for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
   const label = `preview, ${design === 'glass' ? 'Standard' : 'Vintage'} ${scheme}`;
   const { ctx, page, errors } = await phone({ scheme, design });
-  await test(`${label}: Automations is in the drop-down, with every automation in Home's copy, in groups`, async () => {
+  await test(`${label}: Automations lists every automation in Home's copy by name, in groups, and nothing else`, async () => {
     assert.equal(await page.textContent('#viewName'), 'Automations');
-    assert.equal(await page.locator('#g-autos article.au').count(), COPY_N);
+    assert.equal(await page.locator('#g-autos .au-row').count(), COPY_N);
     const groups = await page.$$eval('#g-autos .au-group .vsec-h', hs => hs.map(h => [h.querySelector('span').textContent, Number(h.querySelector('.au-n').textContent)]));
     assert.equal(groups.reduce((n, [, c]) => n + c, 0), COPY_N, 'each group counts its own');
-    assert.equal(groups[0][0], 'Routines');
-    assert.equal(await groupOf(page, 'automation.1785000000001'), 'Routines', 'Goodnight works lights, the alarm and speakers');
+    assert.deepEqual(groups.map(g => g[0]), ['Routines', 'Climate', 'Lights', 'Blinds', 'Security', 'Media', 'Nursery', 'Behind the scenes']);
+    assert.equal(groups[0][1], 6, 'Goodnight, Mom\'s Awake and its reminder, Away, Home, Babysitter');
+    for (const id of ['1785000000001', 'home_first_one_back', 'babysitter_mode_expire_unused', 'moms_awake_weekday_reminder']) assert.equal(await groupOf(page, 'automation.' + id), 'Routines', id);
     assert.equal(await groupOf(page, 'automation.1785890100001'), 'Blinds');
+    // Only the name on a row: no status, devices or description.
+    assert.equal(await row(page, 'automation.1785890100001').textContent(), 'Blinds - Open Office Blinds at 08:30');
+    assert.equal(await page.locator('#g-autos .alert, #g-autos [data-a]').count(), 0);
   });
-  await test(`${label}: a card says what it does, when it runs and the devices it works, with theirs`, async () => {
-    const c = card(page, 'automation.1785890100001');
-    assert.match(await c.locator('.au-h').textContent(), /Open Office Blinds at 08:30\s*On/);
-    assert.match(await c.locator('.au-what').textContent(), /^Opens both VELUX office blinds fully each morning\.$/);
-    assert.equal(await c.locator('.au-when').textContent(), 'At 8:30 AM');
-    assert.match(await c.locator('.au-devs').textContent(), /Office blinds\s*Open 50%/);
-    // Many devices: one chip per kind.
-    assert.match(await card(page, 'automation.1785000000001').locator('.au-devs').textContent(), /\d+ lights/);
+  await test(`${label}: tapping a name shows its status and devices first, then what it does, when it runs and only if`, async () => {
+    const p = await popup(page, 'automation.1785890100001');
+    assert.equal(p.title, 'Blinds - Open Office Blinds at 08:30');
+    assert.equal(p.pill, 'On');
+    assert.match(p.body, /^\s*Status\s*On\s*Last ran\s*—\s*CONTROLS\s*Office blinds\s*Open 50%/);
+    assert.match(p.body, /WHAT IT DOES\s*Opens both VELUX office blinds fully each morning\./);
+    assert.match(p.body, /RUNS\s*At 8:30 AM/);
+    assert.match(p.body, /ONLY IF\s*Guest mode is off/);
+    assert.match(p.body, /Home's copy of ha-config's automations\.yaml/);
   });
-  await test(`${label}: tapping a card opens what it does in full: runs, only if, controls`, async () => {
-    await card(page, 'automation.1785890100001').click();
-    await page.waitForSelector('#devWrap.open', { state: 'attached' });
-    assert.equal(await page.textContent('#dTitle'), 'Blinds - Open Office Blinds at 08:30');
-    const body = await page.textContent('#devWrap [data-s="body"]');
-    assert.match(body, /RUNS\s*At 8:30 AM/);
-    assert.match(body, /ONLY IF\s*Guest mode is off/);
-    assert.match(body, /CONTROLS\s*Office blinds/);
-    assert.match(body, /Home's copy of ha-config's automations\.yaml/);
-    assert.equal(await page.locator('#devWrap button[data-a]').count(), 0, 'nothing to change: it is to see');
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => !document.querySelector('#devWrap.open'));
-  });
-  await test(`${label}: Off shows none (in the preview every one is on); All brings them back`, async () => {
-    await page.click('#g-autos [data-a="filter"][data-v="off"]');
-    assert.equal(await page.locator('#g-autos article.au').count(), 0);
-    assert.match(await page.textContent('#g-autos'), /Every automation is on/);
-    await page.click('#g-autos [data-a="filter"][data-v="all"]');
-    assert.equal(await page.locator('#g-autos article.au').count(), COPY_N);
-    assert.equal(await page.locator('#g-autos [data-a="filter"][data-v="today"]').count(), 0, 'no Ran today in the preview');
+  await test(`${label}: what Home Assistant's own list says: the mirror only reads the thermostats, seconds kept, devices made by a template found, Goodnight sends nothing itself`, async () => {
+    const mirror = await popup(page, 'automation.signal_lr_setpoint_mirror');
+    assert.doesNotMatch(mirror.body, /CONTROLS/);
+    assert.match(mirror.body, /WATCHES\s*Living room living room/);
+    assert.match((await popup(page, 'automation.thermostat_hold_release_0400')).body, /RUNS\s*At 4:00:30 AM/);
+    assert.match((await popup(page, 'automation.1785890100004')).body, /CONTROLS\s*Office blinds.*Office left blind.*Office right blind/s);
+    assert.match((await popup(page, 'automation.signal_dyson_restore_night')).body, /CONTROLS\s*Sofias dyson night mode/);
+    assert.match((await popup(page, 'automation.blink_snapshot_on_motion')).body, /CONTROLS\s*Garage/);
+    const home = await popup(page, 'automation.home_first_one_back');
+    assert.match(home.body, /CONTROLS\s*Garage camera motion detection/);
+    assert.doesNotMatch(home.body.split('WATCHES')[0], /Yard/, 'the Yard is only named in the push');
+    assert.doesNotMatch((await popup(page, 'automation.1785000000001')).body, /NOTIFIES/);
   });
   await test(`${label}: no script errors`, async () => assert.deepEqual(errors, []));
   await ctx.close();
@@ -143,29 +150,26 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
 
 {
   const { ctx, page, errors, asked } = await phone({ ha: { admin: false } });
-  await test('live, not an admin: each automation\'s status is Home Assistant\'s', async () => {
+  await test('live, not an admin: each automation\'s status is Home Assistant\'s, in its popup', async () => {
     await page.waitForSelector('#g-autos [data-dv="autos:automation.goodnight"]');
-    assert.match(await card(page, 'automation.goodnight').locator('.au-h small').textContent(), /^On · ran just now$/);
-    assert.match(await card(page, 'automation.blinds_open_office_blinds_at_08_30').locator('.au-h small').textContent(), /^Off · never run$/);
-    assert.equal(await card(page, 'automation.mom_s_awake').locator('.au-h small').textContent(), 'Running now');
-    assert.match(await card(page, 'automation.blinds_open_office_blinds_at_08_30').locator('.au-devs').textContent(), /Office Blinds\s*Open 40%/, 'the device\'s own name and state');
+    const gn = await popup(page, 'automation.goodnight');
+    assert.equal(gn.pill, 'On');
+    assert.match(gn.body, /Last ran\s*Just now/);
+    const bl = await popup(page, 'automation.blinds_open_office_blinds_at_08_30');
+    assert.equal(bl.pill, 'Off');
+    assert.match(bl.body, /Last ran\s*Never/);
+    assert.match(bl.body, /CONTROLS\s*Office Blinds\s*Open 40%/, 'the device\'s own name and state');
+    assert.equal((await popup(page, 'automation.mom_s_awake')).pill, 'Running now');
     assert.match(await page.textContent('#secSum'), /1 running · 2 ran today · 1 off/);
   });
   await test('live, not an admin: what each does comes from the copy (Home Assistant turned the config down, asked once)', async () => {
-    assert.match(await card(page, 'automation.goodnight').locator('.au-what').textContent(), /^Shuts the house down for the night\.$/);
-    assert.match(await card(page, 'automation.porch_at_dusk').locator('.au-what').textContent(), /Not in Home's copy/);
+    assert.match((await popup(page, 'automation.goodnight')).body, /WHAT IT DOES\s*Shuts the house down for the night\./);
+    assert.match((await popup(page, 'automation.porch_at_dusk')).body, /Not in Home's copy/);
     assert.equal(asked.length, 1, 'asked: ' + asked.join());
   });
   await test('live: the copy\'s automations Home Assistant doesn\'t have are listed apart', async () => {
     assert.equal(await groupOf(page, 'x.1754320000000'), 'Not in Home Assistant');
-    assert.equal(await page.locator('#g-autos .au-missing').count(), COPY_N - 3);
-  });
-  await test('live: Ran today and Off', async () => {
-    await page.click('#g-autos [data-a="filter"][data-v="today"]');
-    assert.deepEqual(await page.$$eval('#g-autos article.au', a => a.map(x => x.dataset.dv).sort()), ['autos:automation.goodnight', 'autos:automation.mom_s_awake']);
-    await page.click('#g-autos [data-a="filter"][data-v="off"]');
-    assert.deepEqual(await page.$$eval('#g-autos article.au', a => a.map(x => x.dataset.dv)), ['autos:automation.blinds_open_office_blinds_at_08_30']);
-    await page.click('#g-autos [data-a="filter"][data-v="all"]');
+    assert.equal(await page.locator('#g-autos .au-group:last-child .au-row').count(), COPY_N - 3);
   });
   await test('live, not an admin: no script errors', async () => assert.deepEqual(errors, []));
   await ctx.close();
@@ -174,15 +178,14 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
 {
   const { ctx, page, errors, asked } = await phone({ ha: { admin: true } });
   await test('live, an admin: what each does is read from Home Assistant itself, the editor\'s own included', async () => {
-    const c = card(page, 'automation.porch_at_dusk');
-    await page.waitForFunction(() => /porch light on at dusk/.test((document.querySelector('#g-autos [data-dv="autos:automation.porch_at_dusk"] .au-what') || {}).textContent || ''));
-    assert.equal(await c.locator('.au-when').textContent(), '15 min before sunset');
-    assert.match(await c.locator('.au-devs').textContent(), /Porch Light\s*Off/);
-    assert.equal(await groupOf(page, 'automation.porch_at_dusk'), 'Lights');
+    await page.waitForFunction(() => document.querySelector('#g-autos [data-dv="autos:automation.porch_at_dusk"]')
+      && document.querySelector('#g-autos [data-dv="autos:automation.porch_at_dusk"]').closest('.au-group').querySelector('.vsec-h span').textContent === 'Lights');
+    const p = await popup(page, 'automation.porch_at_dusk');
+    assert.match(p.body, /CONTROLS\s*Porch Light\s*Off/);
+    assert.match(p.body, /WHAT IT DOES\s*Turns the porch light on at dusk\./);
+    assert.match(p.body, /RUNS\s*15 min before sunset/);
+    assert.match(p.body, /Read from Home Assistant\./);
     assert.equal(asked.length, 4, 'each automation asked for once');
-    await c.click();
-    await page.waitForSelector('#devWrap.open', { state: 'attached' });
-    assert.match(await page.textContent('#devWrap [data-s="body"]'), /Read from Home Assistant\./);
   });
   await test('live, an admin: no script errors', async () => assert.deepEqual(errors, []));
   await ctx.close();

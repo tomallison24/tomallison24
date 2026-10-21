@@ -394,21 +394,20 @@ thermostat in its `entities`.
 
 ## Automations
 
-Every automation in Home Assistant, to see at a glance (`automations.js`):
-nothing here turns one on or off or runs it - that stays in Home Assistant.
+Every automation in Home Assistant, to see (`automations.js`): nothing here
+turns one on or off or runs it - that stays in Home Assistant.
 
-- **The list** is Home Assistant's own `automation.*` entities, live: each
-  one's status ("On · ran 2h ago", "Off · never run", "Running now") is its
-  own. The drop-down line says how many are running, ran today and are off.
-  **All / Ran today / Off** at the top filter them (Ran today only when
-  connected).
-- **What each does** comes from its config: the first sentence of its
-  description, when it runs (its triggers in words: "At 8:30 AM", "1 h before
-  sunset", "When Elena arrives home"), and the devices it works, each with its
-  state now ("Office Blinds · Open 40%"; more than three, one chip per kind:
-  "14 lights · 3 on"). Tap a card for the rest: Runs, Only if, Controls,
-  Watches, Notifies, the scripts it starts, the helpers it uses, and the whole
+- **The view is only the names**, by group, so it stays uncluttered. The
+  drop-down line says how many are running, ran today and are off.
+- **Tap a name** for its popup: its **status** (On, Off, Running now) and when
+  it last ran, then the devices it **controls** and **watches**, each with its
+  state now ("Office Blinds · Open 40%"), then what it does (its description's
+  first sentence), when it **runs** (its triggers in words: "At 8:30 AM",
+  "1 h before sunset", "When Elena arrives home"), **only if**, who it
+  notifies, the scripts it starts, the helpers it uses and the whole
   description.
+- **The list and status** are Home Assistant's own `automation.*` entities,
+  live.
 - **Where the configs come from**: Home Assistant gives an automation's config
   only to an admin's token (`automation/config` is `require_admin`). So the
   view asks once when it is opened, and with any other token reads Home's copy,
@@ -416,19 +415,25 @@ nothing here turns one on or off or runs it - that stays in Home Assistant.
   start, from `scripts.yaml`, matched on the automation's id. **Re-run
   `python3 house/tools/automations.py ../ha-config` after the automations
   change** (it writes the copy; an automation made in Home Assistant's editor
-  and not in the copy says so on its card). One in the copy that Home Assistant
-  doesn't have is listed under **Not in Home Assistant**: removed there, or
-  turned down by Home Assistant for a mistake in it.
+  and not in the copy says so in its popup). One in the copy that Home
+  Assistant doesn't have is listed under **Not in Home Assistant**: removed
+  there, or turned down by Home Assistant for a mistake in it.
 - **Devices** are read out of the config: every `entity_id`, every entity a
-  template names, and those of a kind worked through a template (`target:
-  "{{ trigger.entity_id }}"` on a `fan.*` call: the fans it names elsewhere).
-  The actions' (and their scripts') are what it controls; the triggers' and
-  conditions', what it watches. Sensors and people are only ever watched.
-- **Groups**: Routines (three kinds of device or more, or two and run on
-  request or by people coming and going), then by its name ("Blinds - ...",
-  "Hatch - ...") or the kind it works most: Climate, Lights, Blinds,
-  Security, Media, Nursery; Notifications (sends one and works no device);
-  Behind the scenes (only the dashboard's helpers).
+  template or variable names, and those worked through a template: the
+  entities of that kind handed to the script it starts (Home's three cameras,
+  not the Yard only named in its push), else those it names anywhere, else
+  those its template makes from others (`replace('input_number.', 'cover.') |
+  replace('_target', '')`: the blinds; `'camera.' ~ r` over a list). The
+  actions' (and their scripts') are what it controls; the triggers' and
+  conditions', what it watches. Sensors and people are only ever watched; a
+  script a template only checks is read, not started; a script's own
+  notification isn't the automation's.
+- **Groups**, as Home Assistant's own list of them: Routines (Goodnight, Mom's
+  Awake and its reminder, Away, Home, Babysitter, or anything working three
+  kinds of device), then by its name ("Blinds - ...", "Hatch - ...") or the
+  kind it works most: Climate, Lights, Blinds, Security, Media, Nursery;
+  Notifications (sends one and works no device); Behind the scenes (only the
+  dashboard's helpers).
 - **Preview**: the copy's automations, all on, with the sample devices.
 
 The Signal dashboard has no such view; this one is Home's only.

@@ -16,7 +16,8 @@
 // are what it controls; those in the triggers and conditions, what it
 // watches. Input helpers, timers and the like are listed apart, as Helpers.
 // Each automation goes in a group by what it controls (Lights, Climate...);
-// one that works three kinds of device or more is a Routine.
+// one that works three kinds of device or more is a Routine. The view itself
+// is only the names, by group: tap one for its status, devices and the rest.
 'use strict';
 
 const AU_DEVICE = new Set(['light', 'switch', 'climate', 'cover', 'fan', 'humidifier', 'media_player', 'camera', 'alarm_control_panel', 'lock', 'vacuum',
@@ -62,23 +63,20 @@ function auKindOf(id) {
   if (['switch', 'select', 'number', 'button', 'sensor', 'binary_sensor'].includes(d)) { const m = AU_NAMED.find(([re]) => re.test(id)); return m ? m[1] : null; }
   return null;
 }
-// An automation that works no device of its own, by its name ("Blinds - Push Slider Targets").
-const AU_ALIAS = [[/hatch|nursery/, 'nursery'], [/blink|camera|motion|alarm/, 'security'], [/dyson|heater|thermostat|dehumid|hvac|windmill/, 'climate'],
+// By its name: the routines (Goodnight, Mom's Awake, Away, Home, Babysitter, and what goes
+// with them), and one that works no device of its own ("Blinds - Push Slider Targets").
+const AU_ALIAS = [[/goodnight|mom's awake|babysitter|^away\b|^home\b/, 'routine'], [/hatch|nursery/, 'nursery'], [/blink|camera|motion|alarm/, 'security'], [/dyson|heater|thermostat|dehumid|hvac|windmill/, 'climate'],
   [/blind/, 'blinds'], [/light|lamp|strip/, 'lights'], [/sonos|speaker|\btv\b/, 'media'], [/vacuum|shark/, 'around']];
-const AU_PLURAL = { light: 'lights', switch: 'switches', climate: 'climate units', fan: 'fans', cover: 'blinds', media_player: 'media players', camera: 'cameras',
-  sensor: 'sensors', binary_sensor: 'sensors', person: 'people', device_tracker: 'people', humidifier: 'dehumidifiers', alarm_control_panel: 'alarms', vacuum: 'vacuums' };
-const AU_ONOFF = new Set(['light', 'switch', 'fan', 'climate', 'media_player', 'humidifier']);
-const AU_FILTERS = [['all', 'All'], ['today', 'Ran today'], ['off', 'Off']];
 
 const auCap = s => String(s || '').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
 const auList = v => v == null ? [] : Array.isArray(v) ? v : [v];
 const auDomain = id => id.split('.')[0];
 const auName = id => { const s = st(id); return (s && s.attributes.friendly_name) || auCap(id.split('.')[1] || id); };
-// "08:30:00" -> "8:30 AM"
+// "08:30:00" -> "8:30 AM"; "04:00:30" -> "4:00:30 AM"
 function auClock(t) {
-  const m = /^(\d{1,2}):(\d{2})/.exec(String(t)); if (!m) return String(t);
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(t)); if (!m) return String(t);
   const h = Number(m[1]), ap = h < 12 ? 'AM' : 'PM';
-  return `${h % 12 || 12}:${m[2]} ${ap}`;
+  return `${h % 12 || 12}:${m[2]}${m[3] && m[3] !== '00' ? ':' + m[3] : ''} ${ap}`;
 }
 // "-01:30:00", "00:45:00", 3600 -> "1 h 30 min" (and whether it is before)
 function auSpan(v) {
@@ -173,14 +171,15 @@ function auCondition(c) {
 // Into `out`: ctl, the entities a step works (a service call's target or
 // *entity_id); see, every other one named (a condition, a template, a
 // variable); scripts, those started (script.turn_on, or script.goodnight as
-// the action itself); tells, the notifications sent (notify.*); dyn, the
+// the action itself; a script a template only checks is read, not started);
+// tells, the notifications sent (notify.*); dyn, the
 // kinds of device worked through a template ("{{ trigger.entity_id }}",
 // "{{ c.climate }}"), which read() fills in from the entities named elsewhere.
 const auNew = () => ({ ctl: new Set(), see: new Set(), scripts: new Set(), tells: new Set(), dyn: new Set() });
 const AU_WHOLE = new RegExp(`^(${[...AU_DEVICE, ...AU_PEOPLE, ...AU_HELPER].join('|')})\\.[a-z0-9_]*[a-z0-9]$`);
 function auAdd(out, id, ctl) {
   const d = auDomain(id);
-  if (d === 'script' && !AU_SERVICES.test(id.split('.')[1])) out.scripts.add(id);
+  if (d === 'script' && !AU_SERVICES.test(id.split('.')[1])) (ctl ? out.scripts : out.see).add(id);   // named in a check: only read
   else if (d === 'notify') out.tells.add(id);
   else (ctl && !AU_READONLY.has(d) ? out.ctl : out.see).add(id);
 }
@@ -211,6 +210,22 @@ function auWalk(node, out, key = '', ctl = false, dom = '') {
   for (const x of node.split(',')) if (AU_WHOLE.test(x.trim()) && !AU_SERVICES.test(x.trim().split('.')[1])) auAdd(out, x.trim(), ctl);
   return out;
 }
+// Entities a template makes from others: its replace() steps on each entity named
+// ("input_number.office_blinds_target" | replace('input_number.', 'cover.') |
+// replace('_target', '') -> cover.office_blinds), and 'camera.' ~ r over a list.
+function auDerive(cfg, named) {
+  const out = new Set(), tpls = [];
+  (function walk(n) { if (Array.isArray(n)) n.forEach(walk); else if (n && typeof n === 'object') Object.values(n).forEach(walk); else if (typeof n === 'string' && /[{%]/.test(n)) tpls.push(n); })(cfg);
+  for (const t of tpls) {
+    const steps = [...t.matchAll(/replace\(\s*'([^']*)'\s*,\s*'([^']*)'\s*\)/g)];
+    if (steps.length) for (const id of named) { let x = id; for (const [, a, b] of steps) x = x.split(a).join(b); if (x !== id && AU_WHOLE.test(x)) out.add(x); }
+    for (const [, v, list] of t.matchAll(/for (\w+) in \[([^\]]*)\]/g)) {
+      const items = [...list.matchAll(/'([a-z0-9_]+)'/g)].map(m => m[1]);
+      for (const [, d, suf] of t.matchAll(new RegExp(`'([a-z_]+)\\.'\\s*~\\s*${v}\\b(?:\\s*~\\s*'([a-z0-9_]*)')?`, 'g'))) for (const it of items) { const x = `${d}.${it}${suf || ''}`; if (AU_WHOLE.test(x)) out.add(x); }
+    }
+  }
+  return out;
+}
 // The service's own kind of device, where it isn't an entity's (blink.trigger_camera).
 const AU_SVC_DOM = { blink: 'camera' };
 // The config of a script the automation starts: Home Assistant's, else the copy's.
@@ -218,7 +233,6 @@ const auScript = id => (AUTOS.scriptCfg[id] || (typeof HA_SCRIPTS !== 'undefined
 
 const AUTOS = family({
   id: 'autos', name: 'Automations', icon: 'sync', group: 'Automations', order: 1,
-  filter: store.get('autoFilter') || 'all',
   liveCfg: {}, scriptCfg: {}, cfgAsked: false, cfgDenied: false, cache: new WeakMap(), cfgVer: 0,
 
   // What Home Assistant has (live) or the copy (preview), each with its config: [{ ent, cid, cfg, src }]
@@ -262,18 +276,34 @@ const AUTOS = family({
     const hit = this.cache.get(c);
     if (hit && hit.ver === this.cfgVer && hit.missing === !!a.missing) return hit;
     // The devices: what the actions work (and the scripts they start), then what it reads.
-    const did = auWalk(acts, auNew()), saw = auWalk([trig, cond], auNew());
-    const via = [...did.scripts], named = new Set([...saw.ctl, ...saw.see, ...did.see]);
+    // A script's notification (blink_set_enrolment's, when a camera didn't change) is the
+    // script's own, only now and then: not the automation's.
+    const did = auWalk(acts, auNew()), saw = auWalk([trig, cond, c.variables || {}], auNew());
+    const via = [...did.scripts], named = new Set([...saw.ctl, ...saw.see, ...did.see]), cfgs = [c];
     for (let i = 0; i < via.length; i++) {
       const sc = auScript(via[i]); if (!sc) continue;
-      const o = auWalk(sc.sequence || [], auNew());
-      for (const k of ['ctl', 'tells', 'dyn']) for (const x of o[k]) did[k].add(x);
+      cfgs.push(sc);
+      const o = auWalk([sc.variables || {}, sc.sequence || []], auNew());
+      for (const k of ['ctl', 'dyn']) for (const x of o[k]) did[k].add(x);
       for (const x of o.see) named.add(x);
       for (const x of o.scripts) if (!via.includes(x)) via.push(x);
     }
     const isDev = id => AU_DEVICE.has(auDomain(id)), isWho = id => AU_PEOPLE.has(auDomain(id));
-    // Worked through a template: the devices of that kind it names anywhere else.
-    for (const x of named) if (did.dyn.has(auDomain(x))) did.ctl.add(x);
+    // Worked through a template: the devices of that kind it names anywhere else, or makes from those it names.
+    if (did.dyn.size) for (const x of auDerive(cfgs, named)) named.add(x);
+    // The entities handed to a script it starts (script.turn_on's variables) come first: the
+    // Yard camera only named in the push message isn't one of those it stands down.
+    const passed = new Set();
+    (function walk(n) {
+      if (Array.isArray(n)) return n.forEach(walk);
+      if (!n || typeof n !== 'object') return;
+      if (/^script\./.test(n.action || n.service || '') && n.data) for (const x of auWalk(n.data, auNew()).see) passed.add(x);
+      Object.values(n).forEach(walk);
+    })(acts);
+    for (const d of did.dyn) {
+      const mine = [...passed].filter(x => auDomain(x) === d);
+      for (const x of mine.length ? mine : [...named].filter(x => auDomain(x) === d)) did.ctl.add(x);
+    }
     const controls = [...did.ctl].filter(isDev);
     const watches = [...new Set([...saw.ctl, ...saw.see, ...did.see])].filter(id => (isDev(id) || isWho(id)) && !controls.includes(id));
     const tells = [...did.tells];
@@ -339,10 +369,11 @@ const AUTOS = family({
   },
 
   mount(el) {
-    el.innerHTML = `<div class="au-filter" data-dv="autos:list" data-r="filter"></div><div data-r="note"></div><div class="au-groups" data-r="groups"></div>`;
+    el.innerHTML = `<div data-r="note"></div><div class="au-groups" data-r="groups"></div>`;
     window.addEventListener('viewchange', e => { if (e.detail.to === 'autos') { this.askConfigs(); this.render(); } });
   },
 
+  // The view: only the names, by group. Status, devices and the rest are in each one's popup.
   render() {
     if (HA.status !== 'live') this.cfgAsked = false;   // ask again on the next connection
     if (curView === 'autos') this.askConfigs();
@@ -351,62 +382,14 @@ const AUTOS = family({
     const nToday = real.filter(r => r.today).length, nOff = real.filter(r => r.state === 'off' || r.state === 'unavailable').length;
     const nRun = real.filter(r => r.state === 'running').length;
     this.sum = !real.length ? '' : [nRun ? `${nRun} running` : '', mode === 'live' && nToday ? `${nToday} ran today` : '', nOff ? `${nOff} off` : ''].filter(Boolean).join(' · ') || `${real.length} on`;
-    if (curView !== 'autos') return;   // the cards are drawn when the view is shown (viewchange, in mount)
+    if (curView !== 'autos') return;   // drawn when the view is shown (viewchange, in mount)
     const R = k => this.el.querySelector(`[data-r="${k}"]`);
-    const counts = { all: real.length, today: nToday, off: nOff };
-    put(R('filter'), chipsHTML('filter', AU_FILTERS.filter(([v]) => v !== 'today' || mode === 'live').map(([v, l]) => [v, `${l} <b>${counts[v]}</b>`]), this.filter, { cls: 'au-chips' }));
-    const waiting = mode === 'live' && !real.length;
-    put(R('note'), waiting ? `<p class="tnote">${HA.status === 'live' ? 'No automations in Home Assistant.' : 'Connecting to Home Assistant…'}</p>`
-      : mode !== 'live' ? '<p class="tnote">A preview: the automations in Home\'s copy of ha-config. Connected, it shows Home Assistant\'s own, whether each is on, and when it last ran.</p>' : '');
-    const filter = this.filter === 'today' && mode !== 'live' ? 'all' : this.filter;
-    const shown = all.filter(r => filter === 'today' ? r.today : filter === 'off' ? r.state === 'off' || r.state === 'unavailable' : true);
-    // The groups and their cards are laid out when the list changes; each card is then drawn on its own,
-    // so a light dimming redraws only the cards that show it.
-    const groups = AU_GROUPS.map(g => [g, shown.filter(r => r.group === g.id)]).filter(([, rs]) => rs.length);
-    const box = R('groups'), layout = groups.map(([g, rs]) => g.id + ':' + rs.map(r => this.key(r)).join(',')).join('|');
-    if (box.dataset.layout !== layout) {
-      box.dataset.layout = layout;
-      box.innerHTML = groups.map(([g, rs]) => `<div class="au-group"><div class="vsec-h"><span>${g.name}</span><em class="au-n">${rs.length}</em></div>${rs.map(r =>
-        `<article class="dg dvc au" data-dv="${esc(this.key(r))}"><div class="dg-fx" data-r="fx"></div><div class="dg-in" data-r="in"></div></article>`).join('')}</div>`).join('')
-        || (real.length ? `<p class="tnote">${filter === 'today' ? 'None has run today.' : 'Every automation is on.'}</p>` : '');
-    }
-    for (const [g, rs] of groups) for (const r of rs) {
-      const card = box.querySelector(`[data-dv="${CSS.escape(this.key(r))}"]`); if (!card) continue;
-      const acc = AU_ACC[g.id];
-      card.className = `dg dvc au au-${r.state}`;
-      put(card.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), acc, r.state === 'running' ? { pool: 'breathe', poolA: 0.16 } : {}));
-      put(card.querySelector('[data-r="in"]'), this.cardHTML(r, g));
-      shadow(card, acc);
-    }
+    put(R('note'), mode === 'live' && !real.length ? `<p class="tnote">${HA.status === 'live' ? 'No automations in Home Assistant.' : 'Connecting to Home Assistant…'}</p>` : '');
+    const groups = AU_GROUPS.map(g => [g, all.filter(r => r.group === g.id)]).filter(([, rs]) => rs.length);
+    put(R('groups'), groups.map(([g, rs]) => `<div class="au-group"><div class="vsec-h"><span>${g.name}</span><em class="au-n">${rs.length}</em></div>
+      <div class="group">${rs.map(r => `<button type="button" class="rowi dvc au-row" data-dv="${esc(this.key(r))}" aria-label="${esc(r.name)}: status and devices"><span class="k">${esc(r.name)}</span>${svg('chevR', 18)}</button>`).join('')}</div></div>`).join(''));
   },
   key: r => 'autos:' + (r.a.ent || 'x.' + r.a.cid),
-
-  // A card's devices: each one with its state; more than three, one chip per kind ("14 lights · 3 on").
-  devChips(devs) {
-    const one = id => { const w = this.devState(id); return `<span class="alert au-dev">${svg(AU_ICON[auDomain(id)] || 'home', 13)}<span>${esc(auName(id))}</span>${w ? `<em>${esc(w)}</em>` : ''}</span>`; };
-    let chips;
-    if (devs.length <= 3) chips = devs.map(one);
-    else {
-      const by = new Map(); for (const id of devs) { const d = auDomain(id); by.set(d, [...(by.get(d) || []), id]); }
-      chips = [...by].map(([d, ids]) => {
-        if (ids.length === 1) return one(ids[0]);
-        const on = ids.filter(id => { const s = st(id); return s && !['off', 'unavailable', 'unknown', 'idle', 'standby', 'closed', 'not_home'].includes(s.state); }).length;
-        const known = ids.some(id => st(id));
-        return `<span class="alert au-dev">${svg(AU_ICON[d] || 'home', 13)}<span>${ids.length} ${AU_PLURAL[d] || 'devices'}</span>${known && AU_ONOFF.has(d) ? `<em>${on ? on + ' on' : 'all off'}</em>` : ''}</span>`;
-      });
-    }
-    return chips.slice(0, 4).join('') + (chips.length > 4 ? `<span class="alert au-dev more">+${chips.length - 4}</span>` : '');
-  },
-  // A card's inside: its name and status, what it does, when it runs, and its devices with theirs.
-  cardHTML(r, g) {
-    const devs = r.controls.length ? r.controls : r.watches;
-    const chips = devs.length ? this.devChips(devs) : r.tells.length ? `<span class="alert au-dev">${svg('bell', 13)}<span>Sends a notification</span></span>` : '';
-    return `<div class="au-top"><span class="shield" style="--a:${AU_ACC[g.id]}">${svg(g.icon, 20)}</span>
-        <div class="au-h"><b>${esc(r.name)}</b><small><i class="au-dot"></i>${esc(this.status(r))}</small></div></div>
-      ${r.what ? `<p class="au-what">${esc(r.what)}</p>` : !r.a.cfg ? '<p class="au-what dim">Not in Home\'s copy of the automations yet.</p>' : ''}
-      ${r.when.length ? `<div class="au-when">${svg('clock', 14)}<span>${esc(r.when.slice(0, 2).join(' · ') + (r.when.length > 2 ? ` +${r.when.length - 2}` : ''))}</span></div>` : ''}
-      ${chips ? `<div class="alerts au-devs">${chips}</div>` : ''}`;
-  },
 
   find(id) { return this.list().find(a => (a.ent || 'x.' + a.cid) === id); },
   sheet(id) {
@@ -422,12 +405,13 @@ const AUTOS = family({
       title: r.name, accent: acc, pill: pillHTML2(esc(this.status(r).split(' · ')[0])),
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), acc, {}, 150),
       parts: [
-        ['what', `<div class="au-desc"><p>${esc(r.what || 'No description.')}</p></div>`],
-        ['stats', statsHTML([['Status', esc(this.status(r).split(' · ')[0])], ['Last ran', mode === 'live' ? esc(r.last ? ago(r.last) : 'Never') : '—'], ['Group', g.name]])],
-        r.when.length ? ['when', lbl('RUNS') + grp(r.when.map(w => row('clock', esc(w))).join(''), true)] : null,
-        r.cond.length ? ['if', lbl('ONLY IF') + grp(r.cond.map(c => row('check', esc(auCondition(c)))).join(''), true)] : null,
+        ['stats', statsHTML([['Status', esc(this.status(r).split(' · ')[0])], ['Last ran', mode === 'live' ? esc(r.last ? ago(r.last) : 'Never') : '—']])],
         r.controls.length ? ['does', lbl('CONTROLS') + devRows(r.controls)] : null,
         r.watches.length ? ['watch', lbl('WATCHES') + devRows(r.watches)] : null,
+        !r.controls.length && !r.watches.length ? ['none', `<p class="tnote">${r.tells.length ? 'Works no device: it sends a notification.' : 'Works no device: only the dashboard\'s helpers.'}</p>`] : null,
+        ['what', lbl('WHAT IT DOES') + `<div class="au-desc"><p>${esc(r.what || (r.a.cfg ? 'No description.' : 'Not in Home\'s copy of the automations yet.'))}</p></div>`],
+        r.when.length ? ['when', lbl('RUNS') + grp(r.when.map(w => row('clock', esc(w))).join(''), true)] : null,
+        r.cond.length ? ['if', lbl('ONLY IF') + grp(r.cond.map(c => row('check', esc(auCondition(c)))).join(''), true)] : null,
         r.tells.length ? ['tell', lbl('NOTIFIES') + grp(r.tells.map(id => row('bell', esc(tellName(id)))).join(''), true)] : null,
         r.scripts.length ? ['scripts', lbl('STARTS SCRIPTS') + grp(r.scripts.map(id => row('play', esc((auScript(id) || {}).alias || auName(id)))).join(''), true)] : null,
         r.helpers.length ? ['helpers', lbl('HELPERS') + `<p class="tnote au-helpers">${esc(r.helpers.map(auName).join(' · '))}</p>`] : null,
@@ -438,9 +422,7 @@ const AUTOS = family({
       ],
     };
   },
-  act(id, a, b) {
-    if (a === 'filter') { this.filter = b.dataset.v; store.set('autoFilter', this.filter); render(); }
-  },
+  act() {},
   // The preview: each automation in the copy, on, as Home Assistant would list it.
   samples(e) {
     const out = {};
