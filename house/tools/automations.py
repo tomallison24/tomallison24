@@ -10,8 +10,8 @@ after the automations change in ha-config:
 
     python3 house/tools/automations.py ../ha-config
 
-Only what the view reads is kept: the name, the description, the triggers, the
-conditions, the actions and the mode. Comments are gone; templates stay, as the
+Only what the view reads is kept: the name, the description, the variables, the
+triggers, the conditions, the actions and the mode. Comments are gone; templates stay, as the
 devices they name are read out of them.
 """
 import json
@@ -29,7 +29,7 @@ class Loader(yaml.SafeLoader):
 # Home Assistant's own tags (!secret, !include, !input...): kept as a plain string.
 Loader.add_multi_constructor('!', lambda loader, suffix, node: f'!{suffix} {getattr(node, "value", "")}')
 
-KEEP = ('alias', 'description', 'triggers', 'trigger', 'conditions', 'condition', 'actions', 'action', 'mode')
+KEEP = ('alias', 'description', 'variables', 'triggers', 'trigger', 'conditions', 'condition', 'actions', 'action', 'mode')
 
 
 def load(path):
@@ -58,7 +58,7 @@ def main():
     scripts = {}
     for sid, s in load(ha / 'scripts.yaml').items():
         if isinstance(s, dict):
-            scripts[sid] = plain({k: s[k] for k in ('alias', 'description', 'sequence', 'mode') if k in s})
+            scripts[sid] = plain({k: s[k] for k in ('alias', 'description', 'variables', 'sequence', 'mode') if k in s})
     # Only the scripts the automations start (and those they start in turn): the view reads them for their devices.
     used, todo = set(), [json.dumps(autos)]
     while todo:

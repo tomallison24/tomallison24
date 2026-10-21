@@ -521,40 +521,17 @@
 @keyframes away-breathe { from { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.38), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 10px -4px rgba(var(--c),0.3), 0 10px 24px -12px rgba(0,0,0,0.7); }
   to { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.7), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 30px -2px rgba(var(--c),0.75), 0 10px 24px -12px rgba(0,0,0,0.7); } }
 @keyframes away-ring { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(3); opacity: 0; } }
-/* Automations (automations.js): a card for each, in groups, with what it does, when it runs and its devices */
-.au-filter .chips { margin-top: 0; }
-.au-chips .chip2 b { font-weight: 500; opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
+/* Automations (automations.js): only the names, by group; each one's popup has its status and devices */
 .au-groups { display: flex; flex-direction: column; gap: 22px; }
 .au-group { display: flex; flex-direction: column; gap: 10px; }
-.au .dg-in { gap: 10px; }
-.au-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.au .shield { width: 40px; height: 40px; border-radius: 13px; }
-.au-h { min-width: 0; flex: 1; }
-.au-h b { display: block; font-size: 16px; font-weight: 600; line-height: 1.25; }
-.au-h small { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; opacity: .72; margin-top: 2px; }
-.au-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: rgb(48,209,88); }
-.au-off .au-dot, .au-unavailable .au-dot, .au-gone .au-dot { background: rgba(255,255,255,0.35); }
-.au-missing .au-dot { background: rgb(255,140,130); }
-.au-running .au-dot { box-shadow: 0 0 0 3px rgba(48,209,88,0.3); animation: au-ping 2.4s ease-out infinite; }
-@keyframes au-ping { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.5); } 100% { box-shadow: 0 0 0 8px rgba(48,209,88,0); } }
-.au-off .au-h b, .au-off .au-what { opacity: .6; }
-.au-what { margin: 0; font-size: 14px; line-height: 1.35; opacity: .88; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.au-what.dim { opacity: .55; }
-.au-when { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; opacity: .8; min-width: 0; }
-.au-when svg { flex: none; opacity: .8; }
-.au-when span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.au-devs { margin-top: 0; }
-.alert.au-dev { max-width: 100%; min-width: 0; background: rgba(255,255,255,0.12); }
-.au-dev svg { flex: none; opacity: .8; }
-.au-dev span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.au-dev em { font-style: normal; font-weight: 500; opacity: .7; margin-left: 2px; white-space: nowrap; }
-.au-dev.more { padding-left: 9px; }
+.au-group .group { margin: 0; }
+.au-row { padding-top: 12px; padding-bottom: 12px; }
+.au-row .k { font-weight: 500; line-height: 1.3; }
+.vsec-h .au-n { font-style: normal; font-size: 13px; color: var(--muted); }
 .au-desc p { margin: 0 4px 10px; font-size: 15px; line-height: 1.45; }
 .au-desc p:first-child { font-size: 17px; font-weight: 500; }
 .au-full p, .au-full p:first-child { font-size: 14px; font-weight: 400; opacity: .85; }
-.vsec-h .au-n { font-style: normal; font-size: 13px; color: var(--muted); }
 .au-helpers { margin-top: 0; }
-@media (prefers-reduced-motion: reduce) { .au-running .au-dot { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) { .awaypill { animation: none; } .away-dot::after { display: none; } }
 /* The leaf chip on a Nest card while the house is in Eco. */
@@ -774,9 +751,4 @@
     .chips .chip2.full { color: #A8650A; background: rgba(245,166,35,0.11); box-shadow: inset 0 0 0 0.5px rgba(200,130,20,0.24); }
     .chips .chip2.full[aria-pressed="true"] { color: #5A3A00; background: linear-gradient(145deg, #FFE29A, #F5A623); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.8), 0 0 12px rgba(230,160,40,0.45); }
     .lp:not(.on) .lp-chips .chip2.full { color: rgba(168,101,10,0.8); }
-  }
-  /* The automations' cards in light mode (by hand, as above): the off dot and the device chips in ink */
-  @media (prefers-color-scheme: light) {
-    .au-off .au-dot, .au-unavailable .au-dot, .au-gone .au-dot { background: rgba(28,32,40,0.26); }
-    .alert.au-dev { background: rgba(28,32,40,0.09); }
   }
