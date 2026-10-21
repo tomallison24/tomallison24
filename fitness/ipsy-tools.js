@@ -22,7 +22,10 @@
 //
 // Health stats (sleep, resting heart rate...) are named and given units by window.FitnessHealth
 // (fitness/health.js: METRICS [{ key, name, cat, unit, kind }], label(key)) when it is there;
-// without it a stat goes by its key.
+// without it a stat goes by its key. With health.js's statuses and Sleep score there too, days
+// adds each day's health_status (the readings that were judged: good / watch / bad) and
+// sleep_score, and summary each week's sleep_score_avg and health_off_days (days at watch or bad);
+// app.goals() gives the step and Move goals they're judged against.
 window.FitnessIpsy = function (app) {
   const MAX_DAYS = 120, MAX_WEEKS = 53;
   const pad = n => String(n).padStart(2, '0');
@@ -45,6 +48,21 @@ window.FitnessIpsy = function (app) {
     let name = m && m.name;
     if (!name && H && typeof H.label === 'function') { try { name = H.label(key); } catch {} }
     return { name: String(name || key), ...(m && m.unit ? { unit: String(m.unit) } : {}) };
+  }
+
+  // A day's judgments, from health.js (when it has them): { health_status, sleep_score }.
+  const MEANS = 'health_status: good = in the healthy range (CDC, AHA, FDA) or the person\u2019s usual; watch = a little outside; bad = well outside. A flag, not a diagnosis. sleep_score: Fitness\u2019s own 0-100 (duration, deep, REM, efficiency), not Apple\u2019s.';
+  function judge(d) {
+    const H = window.FitnessHealth;
+    if (!H || typeof H.statuses !== 'function' || typeof H.sleepScore !== 'function') return null;
+    const rows = Array.isArray((app.data || {}).health) ? app.data.health : [], o = {};
+    let all = {}; try { all = H.statuses(d, rows, app.goals ? app.goals() : {}) || {}; } catch {}
+    const rated = Object.fromEntries(Object.entries(all).filter(([, s]) => s && s !== 'none'));
+    if (Object.keys(rated).length) o.health_status = rated;
+    const row = rows.find(x => x && x.date === d);
+    let sc = null; try { sc = row ? H.sleepScore(row.m) : null; } catch {}
+    if (sc) o.sleep_score = sc.score;
+    return Object.keys(o).length ? o : null;
   }
 
   // ---- everything the tools read, by day (built once a call: the data is small) ----
@@ -187,6 +205,7 @@ window.FitnessIpsy = function (app) {
       if (R.none) return { content: out({ from: R.from, to: R.to, days: [] }, R.notes) };
       const inc = new Set(Array.isArray(i.include) && i.include.length ? i.include : ['workouts', 'steps', 'meds', 'health']);
       const L = look(), days = [], used = new Set();
+      let judged = false;
       for (const d of each(R.from, R.to)) {
         const o = { date: d, dow: WEEKDAYS[new Date(d + 'T12:00').getDay()] };
         const logs = L.logs.get(d) || [];
@@ -205,20 +224,21 @@ window.FitnessIpsy = function (app) {
           if (m.later.length) o.meds_not_yet = m.later;
           if (Object.keys(m.prn).length) o.as_needed = m.prn;
         }
-        if (inc.has('health') && L.health.has(d)) { o.health = L.health.get(d); Object.keys(o.health).forEach(k => used.add(k)); }
+        if (inc.has('health') && L.health.has(d)) { o.health = L.health.get(d); Object.keys(o.health).forEach(k => used.add(k)); const j = judge(d); if (j) { Object.assign(o, j); judged = true; } }
         if (Object.keys(o).length > 2) days.push(o);
       }
       const legend = {}; used.forEach(k => { legend[k] = statInfo(k); });
-      return { content: out({ from: R.from, to: R.to, days_with_something: days.length, of_days: span(R.from, R.to), days, ...(used.size ? { health_stats: legend } : {}) }, R.notes) };
+      return { content: out({ from: R.from, to: R.to, days_with_something: days.length, of_days: span(R.from, R.to), days, ...(used.size ? { health_stats: legend } : {}), ...(judged ? { health_status_means: MEANS } : {}) }, R.notes) };
     },
 
     async summary(i) {
       const R = await range(i.from, i.to, MAX_WEEKS * 7, 'weeks');
       if (R.none) return { content: out({ from: R.from, to: R.to, weeks: [] }, R.notes) };
       const L = look(), weeks = new Map(), used = new Set();
+      let judged = false;
       for (const d of each(R.from, R.to)) {
         const k = app.weekStartOf(d);
-        if (!weeks.has(k)) weeks.set(k, { week_of: k, days: 0, trained: 0, sets: 0, volume: 0, cardio_min: 0, groups: {}, steps: [], due: 0, taken: 0, health: {} });
+        if (!weeks.has(k)) weeks.set(k, { week_of: k, days: 0, trained: 0, sets: 0, volume: 0, cardio_min: 0, groups: {}, steps: [], due: 0, taken: 0, health: {}, scores: [], off: {} });
         const w = weeks.get(k), logs = L.logs.get(d) || [], x = work(logs);
         w.days++;
         if (logs.length) w.trained++;
@@ -228,6 +248,12 @@ window.FitnessIpsy = function (app) {
         const m = medsOn(L, d); if (m.counts) { w.due += m.due; w.taken += m.nTaken; }
         const h = L.health.get(d) || {};
         for (const [k2, v] of Object.entries(h)) { (w.health[k2] = w.health[k2] || []).push(v); used.add(k2); }
+        const j = L.health.has(d) ? judge(d) : null;
+        if (j) {
+          judged = true;
+          if (j.sleep_score != null) w.scores.push(j.sleep_score);
+          for (const [k2, s] of Object.entries(j.health_status || {})) if (s === 'watch' || s === 'bad') w.off[k2] = (w.off[k2] || 0) + 1;
+        }
       }
       const list = [...weeks.values()].map(w => {
         const o = { week_of: w.week_of, days: w.days, trained: w.trained };
@@ -239,10 +265,12 @@ window.FitnessIpsy = function (app) {
         if (w.due) { o.meds_taken_pct = Math.round(w.taken / w.due * 100); o.doses = w.taken + ' of ' + w.due; }
         const h = {}; for (const [k2, vs] of Object.entries(w.health)) h[k2] = { avg: r2(vs.reduce((s, v) => s + v, 0) / vs.length), days: vs.length };
         if (Object.keys(h).length) o.health = h;
+        if (w.scores.length) o.sleep_score_avg = Math.round(w.scores.reduce((s, v) => s + v, 0) / w.scores.length);
+        if (Object.keys(w.off).length) o.health_off_days = w.off;
         return o;
       });
       const legend = {}; used.forEach(k => { legend[k] = statInfo(k); });
-      return { content: out({ from: R.from, to: R.to, weeks_start: 'the week starts on ' + (new Date(app.weekStartOf(app.today()) + 'T12:00').getDay() ? 'Monday' : 'Sunday'), weeks: list, ...(used.size ? { health_stats: legend } : {}) }, R.notes) };
+      return { content: out({ from: R.from, to: R.to, weeks_start: 'the week starts on ' + (new Date(app.weekStartOf(app.today()) + 'T12:00').getDay() ? 'Monday' : 'Sunday'), weeks: list, ...(used.size ? { health_stats: legend } : {}), ...(judged ? { health_status_means: MEANS } : {}) }, R.notes) };
     },
 
     async compare(i) {

@@ -38,7 +38,8 @@
 //   which keeps the Home Assistant token off the phone and gives each person
 //   only their own phone's steps. A daily goal, set in Settings.
 // - Health, a page of its own (the fourth view): your own Apple Health readings, a day at
-//   a time (Activity, Heart, Sleep, Vitals; health.js lists them), read from your
+//   a time: a tile each for Activity, Heart, Sleep and Vitals with a status dot (health.js
+//   judges each reading), and a sheet of charts behind each; read from your
 //   iPhone's Health sensors in Home Assistant through ../fitness/api, as steps are.
 //   Signed in only, as Meds. Health Steps (with an Apple Watch's) is then the day's steps.
 // - Once synced, dated items older than 90 days are kept in the Sheet only,
@@ -66,7 +67,8 @@ if (window.top !== window.self) {
   const KEY = 'allison-fitness-v1';
   const K = { version: KEY + '-version', graves: KEY + '-graves', sync: KEY + '-sync', syncAt: KEY + '-sync-at', view: KEY + '-view', period: KEY + '-period',
     goal: KEY + '-step-goal', stepsLink: KEY + '-steps-link', health: KEY + '-sheet-health',
-    healthLink: KEY + '-health-link', healthUnits: KEY + '-health-units', sheetKeepsHealth: KEY + '-sheet-keeps-health' };
+    healthLink: KEY + '-health-link', healthUnits: KEY + '-health-units', sheetKeepsHealth: KEY + '-sheet-keeps-health',
+    move: KEY + '-move-goal', hrange: KEY + '-health-range' };
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
@@ -948,20 +950,57 @@ if (window.top !== window.self) {
   }
   // The unit Home Assistant gave, where a phone may differ (°C, mmol/L, km); else health.js's.
   const hunit = k => { const u = (ls.json(K.healthUnits, {}) || {})[k]; return ['temp', 'temp_basal', 'glucose', 'dist_mi'].includes(k) && typeof u === 'string' && u && u.length <= 8 ? u : HL.get(k).unit; };
-  // The last 7 days, a small line; today's dot at its end.
-  function spark(day, k) {
-    const vals = []; for (let i = -6; i <= 0; i++) vals.push(hval(addDays(day, i), k));
-    const got = vals.map((v, i) => [i, v]).filter(p => p[1] != null);
-    if (got.length < 2) return '<span class="spark" aria-hidden="true"></span>';
-    const lo = Math.min(...got.map(p => p[1])), hi = Math.max(...got.map(p => p[1])), W = 52, Hh = 22;
-    const xy = ([i, v]) => [(2 + i * (W - 4) / 6).toFixed(1), (hi === lo ? Hh / 2 : Hh - 3 - (v - lo) / (hi - lo) * (Hh - 6)).toFixed(1)];
-    const last = got[got.length - 1];
-    return '<span class="spark" aria-hidden="true"><svg viewBox="0 0 ' + W + ' ' + Hh + '"><polyline points="' + got.map(p => xy(p).join(',')).join(' ') + '"/>'
-      + (last[0] === 6 ? '<circle cx="' + xy(last)[0] + '" cy="' + xy(last)[1] + '" r="2.4"/>' : '') + '</svg></span>';
+  // At a glance: a tile for each of Activity, Heart, Sleep and Vitals, with a status dot (health.js
+  // judges each reading against the healthy ranges and your own usual) and one headline; tapping one
+  // opens its sheet (hSheet): each reading's chart over 7, 30 or 90 days, with its range shaded.
+  const hopts = day => ({ day, today: today(), stepGoal: goal(), moveGoal: moveGoal() });
+  const STAT = { good: 'Good', watch: 'Check', bad: 'Off' };
+  const statWord = (s, has) => STAT[s] || (has ? 'Not rated' : 'No data');
+  const statPill = (s, has, word) => '<span class="hstat" data-s="' + s + '"><i class="hdot" aria-hidden="true"></i>' + (word || statWord(s, has)) + '</span>';
+  const hnum = (k, v) => { const p = HL.parts(k, v, hunit(k)); return esc(p.u === '%' ? p.v + '%' : p.v) + (p.u && p.u !== '%' ? '<small>' + esc(p.u) + '</small>' : ''); };
+  const dayWord = d => d === today() ? 'Today' : d === addDays(today(), -1) ? 'Yesterday' : fmt(d, { weekday: 'short', day: 'numeric', month: 'short', year: sameYear(d) ? undefined : 'numeric' });
+  // Move (active energy against the Move goal) and Exercise (minutes against 30), as two rings.
+  function rings(move, ex) {
+    const arc = (r, f, cls) => '<circle class="trk ' + cls + '" cx="22" cy="22" r="' + r + '"/>'
+      + (f > 0 ? '<circle class="arc ' + cls + '" cx="22" cy="22" r="' + r + '" pathLength="100" stroke-dasharray="' + Math.min(100, f * 100).toFixed(1) + ' 100"/>' : '');
+    return '<svg class="hrings" viewBox="0 0 44 44" aria-hidden="true"><g transform="rotate(-90 22 22)">' + arc(18.5, move, 'mv') + arc(11.5, ex, 'ex') + '</g></svg>';
+  }
+  // Blood pressure counts once (the worse of its two numbers).
+  function vitalsOff(all) {
+    const s = {}; for (const m of HL.METRICS) if (m.cat === 'vitals' && all[m.key]) { const k = /^bp_/.test(m.key) ? 'bp' : m.key; s[k] = HL.worse(s[k] || 'none', all[m.key]); }
+    const v = Object.values(s);
+    return { n: v.length, rated: v.filter(x => x !== 'none').length, off: v.filter(x => x === 'watch' || x === 'bad').length };
+  }
+  function tilesHtml(day) {
+    const o = hopts(day), all = HL.statuses(day, data.health, o), v = k => hval(day, k);
+    const cat = c => HL.METRICS.filter(m => m.cat === c && all[m.key]).reduce((s, m) => HL.worse(s, all[m.key]), 'none');
+    const has = c => HL.METRICS.some(m => m.cat === c && all[m.key]);
+    const tile = (c, i, main, sub, said) => {
+      const s = cat(c), name = HL.CATS.find(x => x.id === c).name;
+      const word = c === 'activity' && s === 'none' && has(c) && day === today() ? 'So far' : statWord(s, has(c));   // today's goals aren't judged till the day's over
+      return '<button class="htile" type="button" data-hcat="' + c + '" data-s="' + s + '" style="--i:' + i + '" aria-label="' + esc(name + ', ' + word + (said ? '. ' + said : '')) + '">'
+        + '<span class="htop"><span class="hname">' + esc(name) + '</span>' + statPill(s, has(c), word) + '</span>'
+        + '<span class="hmain">' + main + '</span>' + (sub ? '<span class="hsub">' + esc(sub) + '</span>' : '') + '</button>';
+    };
+    // Activity: the steps, beside the Move and Exercise rings
+    const steps = v('steps'), kcal = v('active_kcal'), ex = v('exercise_min'), mg = moveGoal();
+    const actBig = steps != null ? ['steps', steps] : kcal != null ? ['active_kcal', kcal] : ex != null ? ['exercise_min', ex] : null;
+    const act = (kcal != null || ex != null ? rings((kcal || 0) / mg, (ex || 0) / 30) : '') + '<span class="hbig">' + (actBig ? hnum(actBig[0], actBig[1]) : '—') + '</span>';
+    const actSaid = [steps != null ? HL.fmt('steps', steps) : '', kcal != null ? 'Move ' + HL.round('active_kcal', kcal) + ' of ' + mg + ' kcal' : '', ex != null ? 'Exercise ' + HL.round('exercise_min', ex) + ' of 30 min' : ''].filter(Boolean).join(', ');
+    // Heart: resting heart rate (else the day's average, else HRV)
+    const hk = ['hr_rest', 'hr', 'hrv'].find(k => v(k) != null), HSUB = { hr_rest: 'Resting', hr: 'Average', hrv: 'HRV' };
+    // Sleep: our Sleep score (not Apple's) and the time asleep
+    const row = healthOn(day), sc = HL.sleepScore(row && row.m), asleep = sc ? sc.parts.duration.v : null;
+    // Vitals: how many are off your usual or the healthy range
+    const vo = vitalsOff(all), vBig = !vo.n ? '—' : vo.off ? vo.off + ' off' : vo.rated ? 'All usual' : vo.n + (vo.n === 1 ? ' reading' : ' readings');
+    return tile('activity', 1, act, '', actSaid)
+      + tile('heart', 1, '<span class="hbig">' + (hk ? hnum(hk, v(hk)) : '—') + '</span>', hk ? HSUB[hk] : '', hk ? HSUB[hk] + ' ' + HL.fmt(hk, v(hk), hunit(hk)) : '')
+      + tile('sleep', 2, '<span class="hbig">' + (sc ? sc.score + '<small>· ' + esc(HL.hmShort(asleep)) + '</small>' : '—') + '</span>', sc ? 'Sleep score' : '', sc ? 'Sleep score ' + sc.score + ', ' + sc.level + ', ' + HL.fmt('sleep', asleep) + ' asleep' : '')
+      + tile('vitals', 2, '<span class="hbig hword">' + esc(vBig) + '</span>', '', vo.n ? vBig : '');
   }
   function renderHealth() {
     const tod = today(), day = st.healthDay;
-    st.healthOnToday = day === tod; loadOlder(addDays(day, -13), day);
+    st.healthOnToday = day === tod; loadOlder(addDays(day, -41), day);
     $('todayBtn').hidden = day === tod;
     if (!signedIn()) {
       main.innerHTML = '<div class="empty medgate" style="--i:0"><strong>Sign in to see your Health</strong>'
@@ -977,31 +1016,152 @@ if (window.top !== window.self) {
       main.innerHTML = nav + '<div class="empty" id="hEmpty" style="--i:1"><strong>Your Apple Health, here</strong>'
         + (link.linked === false ? 'Link your iPhone to start.' : 'Turn on Health sensors in the Home Assistant app.')
         + '<button class="btn" type="button" data-hset>' + (link.linked === false ? 'Link your iPhone' : 'Open Settings') + '</button></div>';
+      if (st.hcat) closeWrap($('hSheet'));
       return;
     }
-    const v = k => hval(day, k);
-    let list = '';
-    for (const c of HL.CATS) {
-      const rows = HL.METRICS.filter(m => m.cat === c.id && v(m.key) != null).map(m => {
-        const val = v(m.key), p = HL.parts(m.key, val, hunit(m.key)), avg = havg(m.key, addDays(day, -7), addDays(day, -1));
-        let trend = '';
-        if (avg != null) {
-          const d = HL.round(m.key, val - avg), pct = avg ? Math.round(Math.abs(val - avg) / avg * 100) : 0;
-          trend = '7-day avg ' + HL.parts(m.key, avg, hunit(m.key)).v + (d && pct ? ' · ' + (d > 0 ? '↑' : '↓') + pct + '%' : '');
-        }
-        const said = m.label + ': ' + HL.fmt(m.key, val, hunit(m.key)) + (avg != null ? ', 7-day average ' + HL.fmt(m.key, avg, hunit(m.key)) : '');
-        return '<div class="hrow" data-k="' + m.key + '" role="group" aria-label="' + esc(said) + '"><span class="ht">' + esc(m.label) + (trend ? '<small>' + esc(trend) + '</small>' : '') + '</span>'
-          + spark(day, m.key) + '<span class="hv">' + esc(p.u === '%' ? p.v + '%' : p.v) + (p.u && p.u !== '%' ? '<small>' + esc(p.u) + '</small>' : '') + '</span></div>';
-      });
-      if (rows.length) list += '<p class="sechead">' + esc(c.name) + '</p><div class="rgroup hcard" data-cat="' + c.id + '">' + rows.join('') + '</div>';
-    }
-    main.innerHTML = nav + '<div class="hlist" style="--i:1">' + (list || '<div class="dempty rgroup">Nothing from Apple Health ' + (day === tod ? 'yet today' : 'on this day') + '.</div>') + '</div>';
+    const x = healthOn(day), has = x && x.m && Object.keys(x.m).some(k => HL.get(k) && num(x.m[k]) != null);
+    main.innerHTML = nav + '<div class="hlist" style="--i:1">' + (has ? '<div class="hgrid">' + tilesHtml(day) + '</div>' : '<div class="dempty rgroup">Nothing from Apple Health ' + (day === tod ? 'yet today' : 'on this day') + '.</div>') + '</div>';
+    if (st.hcat && !$('hSheet').hidden) renderHPop();
   }
+
+  // ---- a category's sheet: the range (7, 30 or 90 days, ending on the day shown), each reading's
+  // chart (tap a bar, or use the arrow keys, to pick a day), Sleep's stages and score, and trends.
+  const HRANGES = [7, 30, 90];
+  st.hcat = null; st.hsel = null; st.hrange = HRANGES.includes(+ls.get(K.hrange, 7)) ? +ls.get(K.hrange, 7) : 7;
+  const STAGES = [['deep', 'Deep'], ['core', 'Core'], ['rem', 'REM'], ['awake', 'Awake']];
+  const SLEEPS = new Set(['sleep', 'core', 'deep', 'rem', 'awake']);
+  function openHealthCat(c) {
+    if (!HL.CATS.some(x => x.id === c)) return;
+    st.hcat = c; st.hsel = st.healthDay;
+    renderHPop();
+    if ($('hSheet').hidden) openSheet('hSheet');
+    slideHRange(true);
+    loadOlder(addDays(st.healthDay, -(st.hrange + 28)), st.healthDay);
+  }
+  const hdays = () => { const out = []; for (let i = st.hrange - 1; i >= 0; i--) out.push(addDays(st.healthDay, -i)); return out; };
+  const HW = 300, CH = 84;   // a chart's drawing size (it stretches to the sheet)
+  // The chart's frame: an invisible column per day for the chosen one, the dates under it.
+  function frame(k, days, sel, inner, said) {
+    const i = days.indexOf(sel), slot = HW / days.length;
+    return '<div class="hchart" tabindex="0" role="group" data-k="' + k + '" aria-label="' + esc(said) + '">'
+      + '<svg viewBox="0 0 ' + HW + ' ' + CH + '" preserveAspectRatio="none" aria-hidden="true">'
+      + (i >= 0 ? '<rect class="selcol" x="' + (i * slot).toFixed(2) + '" y="0" width="' + slot.toFixed(2) + '" height="' + CH + '"/>' : '') + inner + '</svg>'
+      + '<div class="hax" aria-hidden="true"><span>' + esc(short(days[0])) + '</span><span>' + esc(short(days[days.length - 1])) + '</span></div></div>';
+  }
+  function chart(k, days, sel) {
+    const m = HL.get(k), vals = days.map(d => hval(d, k)), got = vals.filter(v => v != null), bars = m.kind !== 'latest';
+    const b = HL.band(k, hopts(sel)), T = b ? null : HL.typical(k, data.health, sel);
+    const shade = b ? b : T ? { lo: T.lo, hi: T.hi } : null;
+    let lo, hi;
+    if (bars) { lo = 0; hi = Math.max(1, ...got, shade ? shade.lo : 0) * 1.1; }   // totals: bars from 0, the goal (or the usual's floor) in view
+    else {
+      const ext = got.concat(shade ? [shade.lo, shade.hi].filter(x => x != null) : []);
+      lo = Math.min(...ext); hi = Math.max(...ext);
+      const pad = (hi - lo) * 0.15 || Math.max(1, Math.abs(hi) * 0.05); lo -= pad; hi += pad;
+    }
+    const y = v => CH - 3 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * (CH - 8);
+    const slot = HW / days.length, cx = i => (i + 0.5) * slot;
+    let g = '';
+    if (shade && shade.hi != null) g += '<rect class="band" x="0" width="' + HW + '" y="' + y(shade.hi).toFixed(1) + '" height="' + Math.max(1, y(shade.lo) - y(shade.hi)).toFixed(1) + '"/>';
+    if (bars) {
+      const bw = Math.max(1, slot * 0.62);
+      vals.forEach((v, i) => { if (v == null) return; const top = y(v); g += '<rect class="bar' + (days[i] === sel ? ' on' : '') + '" x="' + (cx(i) - bw / 2).toFixed(2) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(2) + '" height="' + Math.max(0.5, CH - 3 - top).toFixed(1) + '"/>'; });
+    } else {
+      const pts = vals.map((v, i) => v == null ? null : [cx(i), y(v), days[i]]).filter(Boolean);
+      if (pts.length > 1) g += '<polyline points="' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + '"/>';
+      for (const p of pts) if (days.length <= 30 || p[2] === sel) g += '<line class="dot' + (p[2] === sel ? ' on' : '') + '" x1="' + p[0].toFixed(1) + '" x2="' + p[0].toFixed(1) + '" y1="' + p[1].toFixed(1) + '" y2="' + p[1].toFixed(1) + '"/>';
+    }
+    if (shade && shade.hi == null) g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(shade.lo).toFixed(1) + '" y2="' + y(shade.lo).toFixed(1) + '"/>';   // a goal: a line over the bars
+    const range = shade ? (shade.hi == null ? (k === 'active_kcal' ? 'Move goal ' : k === 'steps' ? 'goal ' : 'at least ') + HL.fmt(k, shade.lo, hunit(k)) : (b ? 'healthy range ' : 'your usual ') + HL.parts(k, shade.lo, hunit(k)).v + ' to ' + HL.fmt(k, shade.hi, hunit(k))) : '';
+    return frame(k, days, sel, g, m.label + ', the last ' + days.length + ' days' + (range ? ', ' + range : '') + '. Arrow keys pick a day.');
+  }
+  function metricBlock(k, days, sel) {
+    const m = HL.get(k), v = hval(sel, k), s = v == null ? 'none' : HL.status(k, v, data.health, hopts(sel));
+    return '<section class="rgroup hm" data-k="' + k + '"><div class="hmh"><span class="hmn">' + esc(m.label) + '</span>'
+      + (s !== 'none' ? statPill(s, true) : '') + '<span class="hmv">' + (v == null ? '—' : hnum(k, v)) + '</span></div>' + chart(k, days, sel) + '</section>';
+  }
+  // Sleep: each night's stages stacked (or the time asleep, without them), with a line at 7 h.
+  function sleepBlock(days, sel) {
+    const night = d => { const o = {}; for (const k of SLEEPS) o[k] = hval(d, k); o.staged = STAGES.slice(0, 3).some(([k]) => o[k] != null); return o; };
+    const nights = days.map(night), tot = n => n.staged ? STAGES.reduce((s, [k]) => s + (n[k] || 0), 0) : (n.sleep || 0) + (n.awake || 0);
+    const hi = Math.max(540, ...nights.map(tot)) * 1.08, y = v => CH - 3 - v / hi * (CH - 8), slot = HW / days.length, bw = Math.max(1, slot * 0.62);
+    let g = '';
+    nights.forEach((n, i) => {
+      const x = ((i + 0.5) * slot - bw / 2).toFixed(2), on = days[i] === sel ? ' on' : '';
+      let base = 0;
+      const seg = (cls, v) => { if (!v) return; g += '<rect class="stg ' + cls + on + '" x="' + x + '" y="' + y(base + v).toFixed(1) + '" width="' + bw.toFixed(2) + '" height="' + Math.max(0.5, y(base) - y(base + v)).toFixed(1) + '"/>'; base += v; };
+      if (n.staged) for (const [k] of STAGES) seg(k, n[k]); else { seg('asl', n.sleep); seg('awake', n.awake); }
+    });
+    g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(420).toFixed(1) + '" y2="' + y(420).toFixed(1) + '"/>';
+    const n = night(sel), v = n.sleep != null ? n.sleep : n.staged ? (n.deep || 0) + (n.core || 0) + (n.rem || 0) : null;
+    const s = n.sleep != null ? HL.status('sleep', n.sleep, data.health, hopts(sel)) : 'none';
+    const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + name + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
+    return '<section class="rgroup hm" data-k="sleep"><div class="hmh"><span class="hmn">Asleep</span>' + (s !== 'none' ? statPill(s, true) : '')
+      + '<span class="hmv">' + (v == null ? '—' : esc(HL.hm(v))) + '</span></div>'
+      + frame('sleep', days, sel, g, 'Sleep stages, the last ' + days.length + ' nights, a line at 7 hours. Arrow keys pick a night.') + legend + '</section>';
+  }
+  function scoreBlock(sel) {
+    const x = healthOn(sel), sc = HL.sleepScore(x && x.m);
+    if (!sc) return '';
+    const pct = v => Math.round(v * 100) + '%';
+    const rows = [['duration', 'Duration', v => HL.hmShort(v)], ['deep', 'Deep', pct], ['rem', 'REM', pct], ['efficiency', 'Efficiency', pct]].filter(([k]) => sc.parts[k]).map(([k, name, f]) => {
+      const p = sc.parts[k];
+      return '<div class="hsr" data-part="' + k + '"><span class="hsn">' + name + '</span><span class="hsv">' + esc(f(p.v)) + '</span><span class="hsb" aria-hidden="true"><i style="width:' + (p.of ? p.pts / p.of * 100 : 0).toFixed(0) + '%"></i></span><span class="hsp">' + p.pts + '/' + p.of + '</span></div>';
+    }).join('');
+    return '<section class="rgroup hscore" aria-label="' + esc('Sleep score ' + sc.score + ', ' + sc.level) + '"><div class="hsh"><b>' + sc.score + '</b><span>Sleep score<small>' + esc(sc.level) + '</small></span></div>' + rows + '</section>';
+  }
+  function trendsBlock(keys) {
+    const rows = keys.map(k => {
+      const t = HL.trend(k, data.health, st.healthDay); if (!t) return '';
+      const d = HL.round(k, Math.abs(t.diff)); if (!d) return '';
+      return '<div class="htr" data-k="' + k + '"><span class="har" aria-hidden="true">' + (t.diff > 0 ? '↑' : '↓') + '</span><span>' + esc(HL.label(k) + ' ' + (t.diff > 0 ? 'up ' : 'down ') + HL.fmt(k, d, hunit(k))) + '<small>vs your ' + t.over + '-day average</small></span></div>';
+    }).filter(Boolean);
+    return rows.length ? '<p class="sechead">Trends</p><div class="rgroup htrends">' + rows.join('') + '</div>' : '';
+  }
+  function renderHPop() {
+    const c = HL.CATS.find(x => x.id === st.hcat); if (!c) return;
+    const body = $('hBody'), top = body.scrollTop, days = hdays();
+    if (!days.includes(st.hsel)) st.hsel = st.healthDay;
+    const first = ['steps', 'active_kcal', 'exercise_min', 'hr_rest'], rank = k => first.includes(k) ? first.indexOf(k) : 9;   // the judged and the rings' first
+    const sel = st.hsel, seen = HL.METRICS.filter(m => m.cat === c.id && days.some(d => hval(d, m.key) != null)).map(m => m.key).sort((a, b) => rank(a) - rank(b));
+    $('hLbl').textContent = c.name; $('hSheet').dataset.cat = c.id;
+    let html = '<div class="seg three small" role="radiogroup" aria-label="Days shown">' + HRANGES.map(n => '<button type="button" data-hrange="' + n + '" aria-pressed="' + (n === st.hrange) + '">' + n + ' days</button>').join('') + '</div>'
+      + '<p class="hwhen" aria-live="polite">' + esc(dayWord(sel)) + '</p>';
+    if (!seen.length) html += '<div class="dempty rgroup">Nothing in these days.</div>';
+    else if (c.id === 'sleep') {
+      if (seen.some(k => SLEEPS.has(k))) html += sleepBlock(days, sel) + scoreBlock(sel);
+      html += seen.filter(k => !SLEEPS.has(k)).map(k => metricBlock(k, days, sel)).join('');
+    } else html += seen.map(k => metricBlock(k, days, sel)).join('');
+    html += trendsBlock(seen) + '<p class="hfoot">Ranges: CDC, AHA, FDA. Not medical advice.</p>';
+    body.innerHTML = html;
+    body.scrollTop = top;
+    slideHRange(true);
+  }
+  const slideHRange = jump => { const box = $('hBody').querySelector('.seg'); if (box && window.AllisonOS && AllisonOS.slide) AllisonOS.slide(box, box.querySelector('[aria-pressed="true"]'), 'seg:hrange', { jump }); };
+  function pickHDay(d, focusK) {
+    if (!d || d === st.hsel) return;
+    st.hsel = d; renderHPop();
+    if (focusK) { const el = $('hBody').querySelector('.hchart[data-k="' + focusK + '"]'); if (el) el.focus({ preventScroll: true }); }
+  }
+  $('hBody').addEventListener('click', e => {
+    const r = e.target.closest('[data-hrange]');
+    if (r) { st.hrange = +r.dataset.hrange; ls.set(K.hrange, String(st.hrange)); renderHPop(); slideHRange(false); loadOlder(addDays(st.healthDay, -(st.hrange + 28)), st.healthDay); return; }
+    const ch = e.target.closest('.hchart');
+    if (ch) { const box = ch.querySelector('svg').getBoundingClientRect(), days = hdays(); const i = Math.floor((e.clientX - box.left) / Math.max(1, box.width) * days.length); pickHDay(days[Math.max(0, Math.min(days.length - 1, i))]); }
+  });
+  $('hBody').addEventListener('keydown', e => {
+    const ch = e.target.closest && e.target.closest('.hchart'); if (!ch || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    const days = hdays(), i = days.indexOf(st.hsel) + (e.key === 'ArrowRight' ? 1 : -1);
+    if (i >= 0 && i < days.length) pickHDay(days[i], ch.dataset.k);
+  });
   main.addEventListener('click', async e => {
     if (st.view !== 'health') return;
     if (e.target.closest('#hSignin')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to see your Apple Health.')) { render(); loadHealth(true); } return; }
     const nd = e.target.closest('[data-hday]');
     if (nd) { const d = addDays(st.healthDay, +nd.dataset.hday); if (d <= today()) { st.healthDay = d; render(); } return; }
+    const t = e.target.closest('[data-hcat]');
+    if (t) { openHealthCat(t.dataset.hcat); return; }
     if (e.target.closest('[data-hset]')) $('setBtn').click();
   });
   // A sideways swipe moves a day, as on Meds.
@@ -1060,6 +1220,9 @@ if (window.top !== window.self) {
   // ---------------------------------------------------------------------
   const STEP_GOALS = []; for (let g = 2000; g <= 30000; g += 1000) STEP_GOALS.push(g);
   const goal = () => { const g = +ls.get(K.goal, 10000); return STEP_GOALS.includes(g) ? g : 10000; };
+  // The Move goal (Health's Move ring): active energy a day, 500 kcal unless set in Settings > Steps.
+  const MOVE_GOALS = []; for (let g = 100; g <= 2000; g += 50) MOVE_GOALS.push(g);
+  const moveGoal = () => { const g = +ls.get(K.move, 500); return MOVE_GOALS.includes(g) ? g : 500; };
   const stepsOn = day => data.steps.find(x => x.date === day);
   const token = () => window.AllisonOS && AllisonOS.account && AllisonOS.account.token();
   async function fapi(path, body) {
@@ -1294,13 +1457,17 @@ if (window.top !== window.self) {
     }
     if (phones.err && phones.state === 'ok') link += row('', phones.err);
     const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
-    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>' + link + '</div>' + links + '</div>'
+    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>'
+      + '<div class="frow"><label for="stMove">Move goal</label><select id="stMove">' + opts(MOVE_GOALS, moveGoal(), g => g.toLocaleString('en-US') + ' kcal') + '</select></div>' + link + '</div>' + links + '</div>'
       + ipsySetting()
       + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
       + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase</span></button>'
       + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?</span></a></div></div>';
   }
-  $('setBody').addEventListener('change', e => { if (e.target.id === 'stGoal') { ls.set(K.goal, e.target.value); render(); } });
+  $('setBody').addEventListener('change', e => {
+    if (e.target.id === 'stGoal') { ls.set(K.goal, e.target.value); render(); }
+    if (e.target.id === 'stMove') { ls.set(K.move, e.target.value); render(); }
+  });
   $('setBody').addEventListener('click', async e => {
     let b;
     if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
@@ -1345,7 +1512,7 @@ if (window.top !== window.self) {
   const lockPage = () => document.documentElement.classList.toggle('locked', [...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden));
   function openSheet(id) { focusStack.push(document.activeElement); $(id).hidden = false; lockPage(); }
   function closeSheet(id) { $(id).hidden = true; lockPage(); const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
-  const closers = { daySheet: () => { closeSheet('daySheet'); st.day = null; st.form = null; } };
+  const closers = { daySheet: () => { closeSheet('daySheet'); st.day = null; st.form = null; }, hSheet: () => { closeSheet('hSheet'); st.hcat = null; } };
   const closeWrap = w => (closers[w.id] || (() => closeSheet(w.id)))();
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeWrap(w); }));
   if (window.visualViewport) {
@@ -1471,10 +1638,11 @@ if (window.top !== window.self) {
       app: 'fitness', name: 'Fitness', endpoint: '../fitness/api/ipsy', headers: { 'X-Fitness': '1' }, slot,
       ...window.FitnessIpsy({
         data, today, addDays, weekStartOf, groupName, pruneFrom, groups: GROUPS.map(g => ({ id: g.id, name: g.name })),
+        goals: () => ({ today: today(), stepGoal: goal(), moveGoal: moveGoal() }),   // for Health's statuses (health.js)
         // older days from the Sheet (as the week and Analysis fetch them): true once they're all here
         older: async (from, to) => { const floor = pruneFrom(); if (!floor || from >= floor) return true; await loadOlder(from, to); for (let d = from; d <= to && d < floor; d = addDays(d, 1)) if (!older.has(d)) return false; return true; },
         screen: () => st.day ? 'the day ' + st.day + ', open' : (VIEWS.find(v => v.id === st.view) || { name: st.view }).name
-          + (st.view === 'week' ? ', the week of ' + st.week : st.view === 'analysis' ? ', ' + PERIODS[st.period].words + ' against ' + PERIODS[st.period].before : st.view === 'meds' ? ', ' + st.medDay : ''),
+          + (st.view === 'week' ? ', the week of ' + st.week : st.view === 'analysis' ? ', ' + PERIODS[st.period].words + ' against ' + PERIODS[st.period].before : st.view === 'meds' ? ', ' + st.medDay : st.view === 'health' ? ', ' + st.healthDay + (st.hcat ? ', ' + st.hcat + ' open, the last ' + st.hrange + ' days' : '') : ''),
       }),
     });
   }
@@ -1483,5 +1651,5 @@ if (window.top !== window.self) {
 
   // For the tests (fitness/scripts/app-test.mjs) only.
   window.__fitness = { st, data, render, openDay, GROUPS, lastOf, weekStartOf, sync, graves: () => graves, TIMED, setView, analysisNow, searchExercises, loadSteps, takeSteps, pruneFrom, openMed,
-    loadHealth, takeHealth, healthDays: (from, to) => data.health.filter(x => x.date >= from && x.date <= to).sort((a, b) => a.date.localeCompare(b.date)) };
+    loadHealth, takeHealth, openHealthCat, moveGoal, healthDays: (from, to) => data.health.filter(x => x.date >= from && x.date <= to).sort((a, b) => a.date.localeCompare(b.date)) };
 })();

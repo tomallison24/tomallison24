@@ -794,19 +794,85 @@ button.xrow:active{background:var(--fill)}
 .frow .l .sub{display:block;font-size:12px;color:var(--faint);font-weight:400;overflow-wrap:anywhere}
 #setMore{display:flex;flex-direction:column;gap:18px;margin-top:18px}
 #setMore a.rowbtn{color:var(--text);text-decoration:none}
-/* Health: a day of Apple Health, in Activity, Heart, Sleep and Vitals; each reading with its last 7 days */
-.hlist > .sechead{margin-top:6px}
-.hrow{display:flex;align-items:center;gap:10px;min-height:54px;padding:9px 14px 9px 16px;border-top:1px solid var(--hair-2);min-width:0}
-.hrow:first-child{border-top:0}
-.hrow .ht{flex:1;min-width:0;font-size:15px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
-.hrow .ht small{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;font-variant-numeric:tabular-nums}
-.hrow .spark{flex:none;width:52px;height:22px;color:var(--hc,var(--accent))}
-.hrow .spark svg{display:block;width:52px;height:22px;overflow:visible}
-.hrow .spark polyline{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
-.hrow .spark circle{fill:currentColor}
-.hrow .hv{flex:none;display:flex;flex-direction:column;align-items:flex-end;max-width:42%;text-align:right;font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
-.hrow .hv small{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0;overflow-wrap:anywhere}
+/* Health: a day of Apple Health at a glance, a tile for each of Activity, Heart, Sleep and Vitals with
+   a status dot (and its word, so it isn't colour alone); each opens a sheet of charts */
+:root{--h-good:#1A7F45;--h-watch:#B26A00;--h-bad:#C0261B;--h-none:rgba(60,60,67,.32);--h-move:#B0706C;--h-ex:#3B7366;
+  --h-act:#3B7366;--h-heart:#B0706C;--h-sleep:#5D72A6;--h-vitals:#8E7140;
+  --st-deep:#4A5F92;--st-core:#8193BC;--st-rem:#6FA597;--st-awake:#C9A46A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--h-good:#30D158;--h-watch:#FFB340;--h-bad:#FF6961;--h-none:rgba(235,235,245,.30);--h-move:#E3B5B2;--h-ex:#A9D3C7;
+  --h-act:#A9D3C7;--h-heart:#E3B5B2;--h-sleep:#B9C6E0;--h-vitals:#E9D6B4;--st-deep:#7D93C9;--st-core:#B9C6E0;--st-rem:#A9D3C7;--st-awake:#E9D6B4}}
+:root[data-theme="dark"]{--h-good:#30D158;--h-watch:#FFB340;--h-bad:#FF6961;--h-none:rgba(235,235,245,.30);--h-move:#E3B5B2;--h-ex:#A9D3C7;
+  --h-act:#A9D3C7;--h-heart:#E3B5B2;--h-sleep:#B9C6E0;--h-vitals:#E9D6B4;--st-deep:#7D93C9;--st-core:#B9C6E0;--st-rem:#A9D3C7;--st-awake:#E9D6B4}
 .hlist .dempty{border-radius:22px}
+.hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.htile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;min-height:124px;padding:13px 13px 12px 14px;border-radius:22px;text-align:left;color:var(--text);
+  background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge);transition:transform .18s var(--ease)}
+.htile:active{transform:scale(.97)}
+.enter .htile{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)}
+.htop{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2px 6px;min-width:0}
+.hname{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.hstat{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.hdot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--h-none)}
+[data-s="good"] > .hdot{background:var(--h-good)} [data-s="watch"] > .hdot{background:var(--h-watch)} [data-s="bad"] > .hdot{background:var(--h-bad)}
+[data-s="none"] > .hdot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--h-none)}
+.hmain{display:flex;align-items:center;gap:9px;margin-top:auto;min-width:0}
+.hbig{min-width:0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.hbig small{font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:4px}
+.hbig.hword{font-size:20px}
+.hmain .hrings + .hbig small{display:block;margin-left:0}
+.hsub{font-size:12px;color:var(--faint);margin-top:-4px}
+.hrings{width:44px;height:44px;flex:none;overflow:visible}
+.hrings circle{fill:none;stroke-width:5.5;stroke-linecap:round}
+.hrings .trk{opacity:.22}
+.hrings .mv{stroke:var(--h-move)} .hrings .ex{stroke:var(--h-ex)}
+/* the sheet */
+.seg.three{grid-template-columns:repeat(3,1fr)}
+#hBody{gap:12px}
+.hwhen{margin:0;text-align:center;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.hm{padding:12px 14px 10px}
+#hSheet{--hc:var(--h-act)}
+#hSheet[data-cat="heart"]{--hc:var(--h-heart)} #hSheet[data-cat="sleep"]{--hc:var(--h-sleep)} #hSheet[data-cat="vitals"]{--hc:var(--h-vitals)}
+.hmh{display:flex;align-items:center;gap:8px;min-width:0}
+.hmn{flex:1;min-width:0;font-size:15px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.hmv{flex:none;font-size:17px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hmv small{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px;letter-spacing:0}
+.hchart{margin-top:8px;border-radius:10px;cursor:pointer;color:var(--hc,var(--accent));-webkit-tap-highlight-color:transparent}
+.hchart svg{display:block;width:100%;height:84px;overflow:visible;fill:none;stroke:none}
+.hchart .selcol{fill:var(--fill)}
+.hchart .band{fill:currentColor;opacity:.14}
+.hchart .goal{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 4;vector-effect:non-scaling-stroke;opacity:.7}
+.hchart .bar{fill:currentColor;opacity:.45}
+.hchart .bar.on{opacity:1}
+.hchart polyline{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.85}
+.hchart .dot{stroke:currentColor;stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.hchart .dot.on{stroke-width:9}
+.hchart .stg{opacity:.5} .hchart .stg.on{opacity:1}
+.hchart .stg.deep{fill:var(--st-deep)} .hchart .stg.core{fill:var(--st-core)} .hchart .stg.rem{fill:var(--st-rem)} .hchart .stg.awake{fill:var(--st-awake)} .hchart .stg.asl{fill:var(--h-sleep)}
+.hax{display:flex;justify-content:space-between;margin-top:3px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.hleg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.hleg span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.hleg b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.hleg i{width:9px;height:9px;border-radius:3px}
+.hleg [data-st="deep"] i{background:var(--st-deep)} .hleg [data-st="core"] i{background:var(--st-core)} .hleg [data-st="rem"] i{background:var(--st-rem)} .hleg [data-st="awake"] i{background:var(--st-awake)}
+.hscore{padding:12px 14px 8px}
+.hsh{display:flex;align-items:center;gap:12px;padding-bottom:6px}
+.hsh b{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.hsh span{font-size:15px;font-weight:600}
+.hsh small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.hsr{display:grid;grid-template-columns:minmax(0,1fr) auto 64px 42px;align-items:center;gap:10px;min-height:32px;border-top:1px solid var(--hair-2);font-size:14px}
+.hsn{font-weight:500;min-width:0}
+.hsv,.hsp{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.hsp{font-size:12px;color:var(--muted)}
+.hsb{height:5px;border-radius:3px;background:var(--fill);overflow:hidden}
+.hsb i{display:block;height:100%;border-radius:3px;background:var(--h-sleep)}
+.htrends{padding:2px 0}
+.htr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--hair-2);font-size:14px;font-weight:600}
+.htr:first-child{border-top:0}
+.htr small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.har{flex:none;width:18px;text-align:center;color:var(--hc,var(--accent-text))}
+.hfoot{margin:2px 8px 0;text-align:center;font-size:11px;color:var(--faint)}
+@media (max-width:359px){.hsr{grid-template-columns:minmax(0,1fr) auto 40px 38px;gap:8px}.hbig{font-size:21px}}
+@media (prefers-reduced-motion:reduce){.htile,.enter .htile{transition:none;animation:none}}
 
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
@@ -1023,12 +1089,24 @@ a.xrow .xt{color:var(--accent-text)}
 .updpill svg{color:var(--mc-mustard)}
 .syncpill svg{color:var(--icon)}
 
-/* Health: each kind of reading in one of the Retro colours, as a stripe on its card and its 7 days */
-.hcard{position:relative;overflow:hidden}
-.hcard::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 3px 3px 0;background:var(--hc)}
-.hcard[data-cat="activity"]{--hc:var(--mc-orange)} .hcard[data-cat="heart"]{--hc:var(--c-legs)}
-.hcard[data-cat="sleep"]{--hc:var(--c-core)} .hcard[data-cat="vitals"]{--hc:var(--mc-teal)}
-.hrow .hv{font-weight:600;letter-spacing:-.03em}
+/* Health: each category in one of the Retro colours, as a tab on its tile and its charts; the dots in
+   olive (good), mustard (check) and red (off) */
+:root{--h-good:#54701A;--h-watch:#B8761A;--h-bad:#B02E1F;--h-none:rgba(43,37,34,.35);--h-move:var(--mc-orange);--h-ex:var(--mc-teal);
+  --h-act:var(--mc-orange);--h-heart:var(--c-legs);--h-sleep:var(--c-core);--h-vitals:var(--mc-teal);
+  --st-deep:#2B4C6B;--st-core:#4A9BB5;--st-rem:#E3A72F;--st-awake:#D8572A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--h-good:#A3B04A;--h-watch:#E3A72F;--h-bad:#E8684A;--h-none:rgba(244,236,221,.35);
+  --h-move:var(--mc-orange);--h-ex:var(--mc-teal);--h-act:var(--mc-orange);--h-heart:var(--c-legs);--h-sleep:var(--c-core);--h-vitals:var(--mc-teal);
+  --st-deep:#6F9CC4;--st-core:#6BBFD6;--st-rem:#E3A72F;--st-awake:#E8693F}}
+:root[data-theme="dark"]{--h-good:#A3B04A;--h-watch:#E3A72F;--h-bad:#E8684A;--h-none:rgba(244,236,221,.35);
+  --h-move:var(--mc-orange);--h-ex:var(--mc-teal);--h-act:var(--mc-orange);--h-heart:var(--c-legs);--h-sleep:var(--c-core);--h-vitals:var(--mc-teal);
+  --st-deep:#6F9CC4;--st-core:#6BBFD6;--st-rem:#E3A72F;--st-awake:#E8693F}
+.htile{background:var(--mc-card);box-shadow:none;border-radius:20px;padding-top:16px;overflow:hidden}
+.htile::before{content:'';position:absolute;top:0;left:14px;width:26px;height:5px;border-radius:0 0 4px 4px;background:var(--tc)}
+.htile[data-hcat="activity"]{--tc:var(--h-act)} .htile[data-hcat="heart"]{--tc:var(--h-heart)} .htile[data-hcat="sleep"]{--tc:var(--h-sleep)} .htile[data-hcat="vitals"]{--tc:var(--h-vitals)}
+.hname{font-weight:600;letter-spacing:.01em}
+.hbig,.hmv,.hsh b{font-weight:600;letter-spacing:-.03em}
+.hchart .selcol{fill:color-mix(in srgb,var(--mc-mustard) 20%,transparent)}
+.hsb{background:var(--mc-card-2)}
 </style>
 <script src="../home/design.js" data-app="fitness" data-was="fitnessvintage" data-keys="allison-fitnessv-=allison-fitness-" data-dbs="allison-fitnessv=allison-fitness"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
@@ -1084,6 +1162,16 @@ a.xrow .xt{color:var(--accent-text)}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
       <div class="sheetbody" id="setBody"></div>
+    </div>
+  </div>
+
+  <!-- Health: a category's readings, charted over 7, 30 or 90 days -->
+  <div class="sheetwrap lg" id="hSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet glass-strong full" role="dialog" aria-modal="true" aria-labelledby="hLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="hLbl">Health</h2><div class="acts"><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div></div>
+      <div class="sheetbody" id="hBody"></div>
     </div>
   </div>
 
