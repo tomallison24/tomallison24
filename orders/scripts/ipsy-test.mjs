@@ -274,8 +274,9 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await ctx.close();
 }
 
-// ---- Ipsy checks To check by itself: offered once, then each order's email read again (verified on the
-// server), fixes with Undo in the chat, never the same email twice, and never a Face ID prompt ----
+// ---- Ipsy keeps orders up to date by itself: offered once, then the email of each order in To check and
+// each order on its way read again (verified on the server), fixes with Undo in the chat, never the same
+// email twice, and never a Face ID prompt ----
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
   await ctx.addInitScript(() => {
@@ -297,37 +298,46 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await ctx.route('**/sheet/api/**', route => route.fulfill({ status: 409, json: { ok: false, error: 'no-sheet' } }));
   const reads = [];
   await ctx.route('**/orders/api/read', route => {
-    reads.push({ auth: route.request().headers().authorization, b: JSON.parse(route.request().postData()) });
-    return route.fulfill({ json: { fact: { store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD', items: [{ name: 'Mini Fridge 4L Cooler' }] } } });
+    const b = JSON.parse(route.request().postData());
+    reads.push({ auth: route.request().headers().authorization, b });
+    if (/2000000-00000001/.test(b.text)) return route.fulfill({ json: { fact: { store: 'Walmart', kind: 'package', status: 'ordered', orderNo: '2000000-00000001', total: 49.99, cur: 'USD', items: [{ name: 'Mini Fridge 4L Cooler' }] } } });
+    // Skin Tech's order is on its way, not in To check: Ipsy reads it too, and finds it delivered
+    if (/US-0000000001/.test(b.text)) return route.fulfill({ json: { fact: { kind: 'package', status: 'delivered' } } });
+    return route.fulfill({ json: { fact: null } });
   });
   const page = await ctx.newPage();
   const problems = [];
   page.on('pageerror', e => problems.push(String(e)));
   page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
   await page.goto(BASE + '/orders/');
+  const skin = () => page.evaluate(() => { const o = window.__orders.orders.find(x => /skin/i.test(x.store)); return o && { status: o.status, check: window.__orders.needsCheck(o) }; });
   const walmart = () => page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Walmart'); return o && { guess: o.guess, issue: o.issue, items: o.items, total: o.total, check: window.__orders.needsCheck(o) }; });
 
-  await step('To check: Ipsy offers once, from its corner, before checking anything by itself', async () => {
+  await step('Up to date: Ipsy offers once, from its corner, before checking anything by itself', async () => {
     await page.waitForSelector('.ipsy-hint', { timeout: 12000 });
-    assert.match(await page.textContent('.ipsy-hint'), /to check\. Want me to try fixing/);
+    assert.match(await page.textContent('.ipsy-hint'), /keep your orders up to date by myself/);
     assert.equal(reads.length, 0, 'nothing is sent before a yes');
     assert.equal((await walmart()).check, true);
+    assert.deepEqual(await skin(), { status: 'shipped', check: false }, 'on its way, not in To check');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-offer.png') });
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
-    assert.match(await page.textContent('.ipsy-ask'), /check the orders in To check by myself/);
+    assert.match(await page.textContent('.ipsy-ask'), /keep your orders up to date by myself\? Whenever Gmail brings news about an order on its way/);
     await page.click('.ipsy-ask [data-ans="yes"]');
   });
 
-  await step('To check: each order\'s email is read again, signed in quietly, and the fix lands with Undo in the chat', async () => {
-    await page.waitForFunction(() => /Checked \d+ orders? in To check/.test(JSON.parse(localStorage.getItem('ipsy.orders.chat') || '{"view":[]}').view.map(v => v.text).join('|')), null, { timeout: 15000 });
+  await step('Up to date: each order\'s email is read again, signed in quietly, and the fix lands with Undo in the chat', async () => {
+    await page.waitForFunction(() => /Checked \d+ orders?: updated/.test(JSON.parse(localStorage.getItem('ipsy.orders.chat') || '{"view":[]}').view.map(v => v.text).join('|')), null, { timeout: 15000 });
     assert.ok(reads.length >= 1);
     assert.equal(reads[0].auth, 'Bearer sess-1', 'the family session, never a Face ID prompt');
     assert.ok(reads.some(r => /2000000-00000001/.test(r.b.text)), 'Walmart\'s email');
+    assert.ok(reads.some(r => /US-0000000001/.test(r.b.text)), 'and Skin Tech\'s, an order on its way that isn\'t in To check');
+    assert.equal((await skin()).status, 'delivered', 'what Ipsy read moves it on');
+    assert.ok(reads.findIndex(r => /2000000-00000001/.test(r.b.text)) === 0, 'To check goes first');
     assert.ok(reads.every(r => !/https?:/.test(r.b.text)), 'no links are sent');
     const w = await walmart();
     assert.equal(w.check, false, 'fixed: out of To check'); assert.equal(w.items[0].name, 'Mini Fridge 4L Cooler'); assert.equal(w.total, 49.99);
-    await page.waitForFunction(() => /I fixed/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
+    await page.waitForFunction(() => /I updated 2 orders/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-fixed.png') });
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-change');
@@ -337,7 +347,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await page.keyboard.press('Escape');
   });
 
-  await step('To check: the same email is never checked twice, and Settings turns it off', async () => {
+  await step('Up to date: the same email is never checked twice, and Settings turns it off', async () => {
     const n = reads.length;
     await page.reload();
     await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
@@ -351,7 +361,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-ipsy-auto')), '0');
   });
 
-  await step('To check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
+  await step('Up to date: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
 
