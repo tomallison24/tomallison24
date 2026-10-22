@@ -181,6 +181,46 @@ await test('imports a Travel trip: one file per event, named after the UID, same
   assert.ok(files.get('t9@allison-notes.ics').ics.includes('BEGIN:VTIMEZONE\r\nTZID:America/Denver'));
   assert.equal((await call('POST', 'import', { body: 'BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:no uid\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n' })).status, 400);
 });
+await test('names with % never reach iCloud; a range of more than 400 days is refused', async () => {
+  const n0 = calls.length;
+  assert.equal((await call('PUT', 'event?name=' + encodeURIComponent('..%2F..%2Fx.ics'), { body: ICS('Z', 'z') })).status, 400);
+  assert.equal((await call('DELETE', 'event?name=a%252Fb.ics')).status, 400);
+  assert.equal((await call('GET', 'events?start=20200101T000000Z&end=20261231T000000Z')).status, 400);
+  assert.equal(calls.length, n0, 'nothing reached iCloud');
+  assert.equal((await call('GET', 'events?start=20260101T000000Z&end=20261231T000000Z')).status, 200, 'a year is fine');
+});
+await test('invitations, organizers and attachments are stripped from what is written, with their folded lines', async () => {
+  const extra = 'ORGANIZER;CN=Tom:mailto:tom@example.com\r\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Someone\r\n  Else:mailto:someone@example.com\r\nATTACH;FMTTYPE=text/plain:https://evil.example/x\r\nLOCATION:Home\r\n  (the kitchen)\r\n';
+  const r = await call('PUT', 'event?name=S1.ics', { body: ICS('S1', 'Dinner', extra) });
+  assert.equal(r.status, 200);
+  const f = files.get('S1.ics').ics;
+  assert.ok(!/ATTENDEE|ORGANIZER|ATTACH|someone@example.com|evil\.example/.test(f), f);
+  assert.ok(f.includes('SUMMARY:Dinner\r\nLOCATION:Home\r\n  (the kitchen)\r\nEND:VEVENT'), 'the rest, folded lines included, is as it came');
+  const trip = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:s2@allison-travel\r\nDTSTAMP:20260929T120000Z\r\nDTSTART:20261016T130500Z\r\nDTEND:20261016T175000Z\r\nATTENDEE:mailto:x@example.com\r\nSUMMARY:Flight\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n';
+  await call('POST', 'import', { body: trip });
+  assert.ok(!files.get('s2@allison-travel.ics').ics.includes('ATTENDEE'), 'an import too');
+});
+await test('with accounts on: the calendar names and the diagnosis are the owner\'s only, and each person\'s writes are counted', async () => {
+  const dbw = fakeKV(); await dbw.put('owner', 'u1');
+  await putJSON(dbw, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] }); await putJSON(dbw, 'user:u2', { id: 'u2', name: 'Kim', role: 'member', creds: [] });
+  const t1 = await issue(dbw, 'u1'), t2 = await issue(dbw, 'u2');
+  const as = (tok, extra = {}) => ({ headers: { Authorization: 'Bearer ' + tok }, env: { ACCOUNTS: dbw, ICLOUD_APPLE_ID: 'tom@example.com', ICLOUD_APP_PASSWORD: 'abcd-efgh-ijkl-mnop', ICLOUD_CALENDAR: 'Nope' }, ...extra });
+  let r = await call('GET', 'ping', as(t2)); assert.equal(r.body.error, 'no-calendar'); assert.equal(r.body.calendars, undefined, 'a member is not shown the account\'s calendars');
+  r = await call('GET', 'ping', as(t1)); assert.deepEqual(r.body.calendars, ['Home', 'Family'], 'the owner is');
+  assert.equal((await call('GET', 'diagnose', as(t2))).status, 403); assert.equal((await call('POST', 'forget', as(t2))).status, 403);
+  assert.equal((await call('GET', 'diagnose', as(t1))).status, 200);
+  const ok = (tok, extra) => ({ ...as(tok, extra), env: { ACCOUNTS: dbw, ICLOUD_APPLE_ID: 'tom@example.com', ICLOUD_APP_PASSWORD: 'abcd-efgh-ijkl-mnop' } });
+  r = await call('PUT', 'event?name=W1.ics', { ...ok(t2), body: ICS('W1', 'w') }); assert.equal(r.status, 200);
+  const key = [...dbw.m.keys()].find(k => k.startsWith('calendar:writes:u2:'));
+  assert.equal(dbw.m.get(key), '1');
+  dbw.m.set(key, '200');
+  const n0 = calls.length;
+  r = await call('PUT', 'event?name=W2.ics', { ...ok(t2), body: ICS('W2', 'w') }); assert.equal(r.status, 429); assert.equal(r.body.error, 'limit');
+  assert.equal((await call('DELETE', 'event?name=W1.ics', ok(t2))).status, 429);
+  assert.equal(calls.length, n0, 'nothing reached iCloud');
+  assert.equal((await call('GET', 'events?start=20261001T000000Z&end=20261101T000000Z', ok(t2))).status, 200, 'reading is not counted');
+  r = await call('PUT', 'event?name=W2.ics', { ...ok(t1), body: ICS('W2', 'w') }); assert.equal(r.status, 200, 'each person has their own count');
+});
 await test('a calendar that vanished is looked up afresh next time', async () => {
   const r = await call('POST', 'forget');
   assert.equal(r.body.ok, true); assert.equal(store.size, 0);

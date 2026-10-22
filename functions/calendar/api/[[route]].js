@@ -50,7 +50,9 @@ import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, perso
 
 const ROOT = 'https://caldav.icloud.com/';
 const HOST_OK = /^([a-z0-9-]+\.)*icloud\.com$/i;
-const NAME_OK = /^[A-Za-z0-9._%@+~-]{1,255}$/;
+const NAME_OK = /^[A-Za-z0-9._@-]{1,255}$/;   // no %: an encoded / or . must never reach the address
+const RANGE_MAX_DAYS = 400;
+const WRITES_DAILY = 200;   // event writes and deletes a person a day (calendar:writes:<user id>:<day>)
 const TIME_OK = /^\d{8}T\d{6}Z$/;
 const TIMEOUT_MS = 20000;
 const MAX_BODY = 512 * 1024;
@@ -67,13 +69,17 @@ export async function onRequest(ctx, f = fetch) {
   const acct = { id: String(env.ICLOUD_APPLE_ID || '').trim(), pw: String(env.ICLOUD_APP_PASSWORD || '').trim(), name: String(env.ICLOUD_CALENDAR || '').trim() || 'Family' };
   const configured = !!(acct.id && acct.pw);
 
+  // Who is asking (the lock in front, _middleware.js, has already let only family through): the
+  // owner's tools, and the count of each person's writes. Without storage (a test) there is no one.
+  const db = kv(env), me = db ? await sessionUser(db, request) : null, owner = !db || (!!me && me.role === 'owner');
   if (route === 'ping' && method === 'GET') {
     if (!configured) return reply({ ok: true, configured: false });
     try { const cal = await discover(acct); return reply({ ok: true, configured: true, calendar: { name: cal.name, color: cal.color } }); }
-    catch (e) { return reply({ ok: true, configured: true, error: code(e), calendars: e.calendars || undefined }); }
+    catch (e) { return reply({ ok: true, configured: true, error: code(e), calendars: owner ? e.calendars || undefined : undefined }); }   // the account's calendar names: the owner only
   }
   if (!configured) return reply({ error: 'no-account' }, 503);
   try {
+    if ((route === 'forget' || route === 'diagnose') && me && !owner) return reply({ error: 'owner-only' }, 403);
     if (route === 'forget' && method === 'POST') { await caches.default.delete(discoveryKey(acct)); return reply({ ok: true }); }
     if (route === 'diagnose' && method === 'GET') {
       const trace = [];
@@ -83,11 +89,11 @@ export async function onRequest(ctx, f = fetch) {
     }
     const cal = await discover(acct);
     if (route === 'events' && method === 'GET') return reply(await listEvents(cal, acct, q.get('start'), q.get('end')));
-    if (route === 'event' && method === 'PUT') return reply(await putEvent(cal, acct, q.get('name'), await readBody(request), request.headers.get('If-Match'), q.get('overwrite') === '1'));
-    if (route === 'event' && method === 'DELETE') return reply(await deleteEvent(cal, acct, q.get('name'), request.headers.get('If-Match')));
-    if (route === 'import' && method === 'POST') return reply(await importEvents(cal, acct, await readBody(request)));
+    if (route === 'event' && method === 'PUT') { await countWrite(db, me); return reply(await putEvent(cal, acct, q.get('name'), await readBody(request), request.headers.get('If-Match'), q.get('overwrite') === '1')); }
+    if (route === 'event' && method === 'DELETE') { await countWrite(db, me); return reply(await deleteEvent(cal, acct, q.get('name'), request.headers.get('If-Match'))); }
+    if (route === 'import' && method === 'POST') { await countWrite(db, me); return reply(await importEvents(cal, acct, await readBody(request))); }
   } catch (e) {
-    return reply({ error: code(e), calendars: e.calendars || undefined }, e.status || 502);
+    return reply({ error: code(e), calendars: owner ? e.calendars || undefined : undefined }, e.status || 502);
   }
   return reply({ error: 'not-found' }, 404);
 }
@@ -192,6 +198,8 @@ async function findCalendar(acct, trace) {
 // ---- events ----
 async function listEvents(cal, acct, start, end) {
   if (!TIME_OK.test(start || '') || !TIME_OK.test(end || '') || start >= end) throw err('bad-request', 400);
+  const ms = t => Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8), +t.slice(9, 11), +t.slice(11, 13), +t.slice(13, 15));
+  if (ms(end) - ms(start) > RANGE_MAX_DAYS * 864e5) throw err('bad-request', 400);   // the whole calendar at once is never asked for
   const body = XML + '<c:calendar-query ' + NS + '><d:prop><d:getetag/><c:calendar-data/></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:time-range start="' + start + '" end="' + end + '"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>';
   const { res } = await dav(cal.url, acct, { method: 'REPORT', headers: { Depth: '1', 'Content-Type': 'application/xml; charset=utf-8' }, body });
   if (res.status === 404) { await caches.default.delete(discoveryKey(acct)); throw err('no-calendar'); }
@@ -216,9 +224,34 @@ async function readBody(request) {
 }
 const looksLikeCalendar = ics => /^\s*BEGIN:VCALENDAR/i.test(ics) && /BEGIN:VEVENT/i.test(ics) && /END:VCALENDAR\s*$/i.test(ics);
 
+// Every write goes to iCloud as the owner: at most WRITES_DAILY a person a day (an import of many
+// events is one), so a phone can't fill the family's calendar. Counted before the write.
+async function countWrite(db, me) {
+  if (!db || !me) return;
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  const key = 'calendar:writes:' + me.id + ':' + day, n = (+(await db.get(key)) || 0) + 1;
+  if (n > WRITES_DAILY) throw err('limit', 429);
+  await db.put(key, String(n), { expirationTtl: 2 * 86400 });
+}
+// What an event may not carry into iCloud: people to invite (iCloud would send the invitations,
+// in the owner's name), who it's from, and attachments. Dropped with their folded continuation
+// lines, so the rest of the event is written as it came.
+const KEEP_OUT = /^(ATTENDEE|ORGANIZER|ATTACH)[;:]/i;
+export function stripScheduling(ics) {
+  const lines = String(ics).split(/\r?\n/), out = [];
+  let dropping = false;
+  for (const l of lines) {
+    if (/^[ \t]/.test(l)) { if (!dropping) out.push(l); continue; }   // a folded continuation of the line before
+    dropping = KEEP_OUT.test(l);
+    if (!dropping) out.push(l);
+  }
+  return out.join('\r\n');
+}
+
 async function putEvent(cal, acct, name, ics, ifMatch, overwrite) {
   if (!name || !NAME_OK.test(name) || !/\.ics$/i.test(name)) throw err('bad-request', 400);
   if (!looksLikeCalendar(ics)) throw err('bad-request', 400);
+  ics = stripScheduling(ics);
   const headers = { 'Content-Type': 'text/calendar; charset=utf-8' };
   if (ifMatch) headers['If-Match'] = ifMatch;
   else if (!overwrite) headers['If-None-Match'] = '*';
