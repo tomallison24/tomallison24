@@ -19,7 +19,7 @@ record:
 
 ## How a sync gets to a Sheet
 
-No phone holds a Sheet's link or secret phrase. The owner gives them to aOS once (**aOS → Account →
+No phone holds a Sheet's link or secret phrase. The phrase is the script's only lock, on a link that is in this (public) repository, so make it long and random (at least 16 characters; aOS refuses a shorter one): with it, anyone can read and rewrite every member's rows as the owner. The owner gives them to aOS once (**aOS → Account →
 Google Sheets**), and aOS keeps them in the accounts' Workers KV (`config:sheet:<sheet>`).
 
 Every sync is a POST to `../sheet/api/<app>` (`functions/sheet/api`), sent with the phone's family

@@ -50,6 +50,7 @@ const RETIRED = new Set([
 ]);
 const current = (cfg, sheetApp) => cfg && (RETIRED.has(cfg.url) && USUAL[sheetApp] ? { ...cfg, url: USUAL[sheetApp] } : cfg);
 const MAX_BODY = 8 * 1024 * 1024;
+export const MIN_SECRET = 16;   // a Sheet's phrase: the script's only lock, on a link anyone can find
 const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' && /^script\.google(usercontent)?\.com$/.test(x.hostname) && !x.username ? x.origin + x.pathname : null; } catch { return null; } };
 const first = n => String(n || '').trim().split(/\s+/)[0].slice(0, 40);
 
@@ -116,6 +117,7 @@ export async function onRequest({ request, params, env }) {
     const url = okUrl((RETIRED.has(b.url) ? '' : b.url) || (cfg && cfg.url) || USUAL[sheetApp] || ''), secret = String(b.secret || '').trim();
     if (!url) return reply({ error: 'url' }, 400);
     if (!secret) return reply({ error: 'secret' }, 400);
+    if (secret.length < MIN_SECRET) return reply({ error: 'short-secret' }, 400);   // the phrase alone opens everyone's rows: make it a long one
     const bad = await check(url, secret, sheetApp, me);
     if (bad) return reply({ error: bad }, 400);
     await putJSON(db, key, { url, secret, at: Date.now() });

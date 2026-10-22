@@ -64,7 +64,8 @@ await test('until the owner sets it up, a sync says so (and the owner sees the u
 await test('only the owner gives aOS a Sheet; it is checked with the script first', async () => {
   assert.equal((await call('fitness/config', { url: LINK, secret: PHRASE }, ELLA)).status, 403);
   assert.equal((await call('fitness/config', { url: 'https://evil.example/x', secret: PHRASE }, TOM)).body.error, 'url');
-  assert.equal((await call('fitness/config', { url: LINK, secret: 'wrong' }, TOM)).body.error, 'wrong-secret');
+  assert.equal((await call('fitness/config', { url: LINK, secret: 'wrong' }, TOM)).body.error, 'short-secret', 'a short phrase is never even tried');
+  assert.equal((await call('fitness/config', { url: LINK, secret: 'wrong-but-long-enough' }, TOM)).body.error, 'wrong-secret');
   assert.equal((await call('fitness/config', { url: OLD, secret: PHRASE }, TOM)).body.error, 'old-script', 'a script from before aOS: paste the new one');
   const r = await call('fitness/config', { url: LINK, secret: PHRASE }, TOM);
   assert.deepEqual(r.body, { configured: true, url: LINK });

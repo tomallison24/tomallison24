@@ -774,7 +774,7 @@
   // ---- the family's Google Sheets (functions/sheet/api; aOS/SHEETS.md) ----
   // Each app's Apps Script link and secret phrase, kept by aOS, so the phones don't hold them.
   const SHEET_APPS = [['fitness', 'Fitness'], ['drinks', 'Drinks'], ['notes', 'Notes and Places'], ['travel', 'Travel'], ['orders', 'Orders'], ['meals', 'Meals'], ['podcasts', 'Podcasts']];
-  const SHEET_WHY = { 'wrong-secret': 'That phrase doesn\'t match the script\'s SECRET.', 'old-script': 'That Sheet is still on the old script: paste the new one in and deploy a new version.',
+  const SHEET_WHY = { 'wrong-secret': 'That phrase doesn\'t match the script\'s SECRET.', 'short-secret': 'Use a phrase of at least 16 characters (the script\'s SECRET: a long random one is best).', 'old-script': 'That Sheet is still on the old script: paste the new one in and deploy a new version.',
     'wrong-app': 'That link is another app\'s Sheet.', url: 'Use the web app link: https://script.google.com/…/exec.', secret: 'Enter the secret phrase.', 'not-json': 'That link didn\'t answer like a Sheet script.', 'sheet-unreachable': 'Couldn\'t reach the Sheet.' };
   const sheetCall = async (path, body) => {
     const r = await fetch('../sheet/api/' + path, { method: body ? 'POST' : 'GET', cache: 'no-store', headers: { 'X-Sheet': '1', 'Content-Type': 'application/json', Authorization: 'Bearer ' + (ACC.token() || '') }, body: body ? JSON.stringify(body) : undefined });

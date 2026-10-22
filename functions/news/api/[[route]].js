@@ -100,12 +100,28 @@ export async function findStory(request, env, url, f = fetch) {
 
 // What the model reads: the page's words, or (when the page won't load) the headline and
 // the feed's short description, which is then said plainly.
+// The page's first MAX_HTML bytes, and no more: a page sent without a length (chunked) is cut
+// off there rather than read whole.
+async function readUpTo(r, max) {
+  if (!r.body || !r.body.getReader) return (await r.text()).slice(0, max);
+  const reader = r.body.getReader(), parts = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value); size += value.byteLength;
+    if (size >= max) { try { await reader.cancel(); } catch {} break; }
+  }
+  const all = new Uint8Array(size); let at = 0;
+  for (const p of parts) { all.set(p, at); at += p.byteLength; }
+  return new TextDecoder('utf-8').decode(all.subarray(0, max));
+}
 export async function readStory(story, f = fetch) {
   let page = { text: '', truncated: false };
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), PAGE_TIMEOUT_MS);
   try {
     const r = await f(story.url, { redirect: 'follow', signal: ac.signal, headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': 'Mozilla/5.0 (compatible; AllisonOS-News/1.0)' } });
-    if (r.ok && /html/i.test(r.headers.get('content-type') || '') && !(+r.headers.get('content-length') > MAX_HTML)) page = articleText(await r.text());
+    if (r.ok && /html/i.test(r.headers.get('content-type') || '') && !(+r.headers.get('content-length') > MAX_HTML)) page = articleText(await readUpTo(r, MAX_HTML));
   } catch { /* an unreachable page is the snippet case */ } finally { clearTimeout(timer); }
   if (page.text.length >= MIN_TEXT) return { basis: 'article', text: page.text, truncated: page.truncated };
   return { basis: 'snippet', text: [story.title, story.snippet].filter(Boolean).join('\n\n'), truncated: false };
