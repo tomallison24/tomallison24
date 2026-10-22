@@ -144,7 +144,7 @@
   .row img { position: relative; width: 58px; height: 58px; border-radius: 17px; flex: 0 0 58px; }
   .row .t { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
   .row .t span { flex: 1; min-width: 0; } .row b { display: block; font-size: 17px; font-weight: 650; } .row i { display: block; font-style: normal; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .get { position: relative; flex: 0 0 auto; min-width: 70px; height: 32px; padding: 0 16px; border-radius: 11px; background: var(--pastel); color: #10181A; font-size: 15px; font-weight: 700;
+  .get { position: relative; flex: 0 0 auto; min-width: 70px; height: 32px; padding: 0 18px; border-radius: 11px; background: var(--pastel); color: #10181A; font-size: 14px; font-weight: 700;
     box-shadow: 0 4px 14px rgba(111,165,151,.3), inset 0 1px 0 rgba(255,255,255,.5); }
   a.get { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
   .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px currentColor; font-weight: 650; }
@@ -164,6 +164,21 @@
   .tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 20px; font-size: 14px; font-weight: 650; color: var(--muted); transition: color .3s; }
   .tabs button svg { width: 20px; height: 20px; }
   .tabs button[aria-selected="true"] { color: #10181A; }
+  /* aOS 2: no dock. Your three most used apps float at the bottom (and Home, off Home); Today and
+     Search sit by your account at the top of Home (aOS/home-tab.js) */
+  .bar.quickbar { left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; }
+  .bar.quickbar .tabs { display: none; }
+  .quick { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 26px; background: var(--glass); -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 14px 34px rgba(0,0,0,.18); }
+  .quick button { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; transition: transform .15s; }
+  .quick button:active { transform: scale(.92); }
+  .quick img { width: 52px; height: 52px; border-radius: 15px; }
+  .quick .qhome { color: var(--text); background: var(--dot); }
+  .quick .qhome[hidden] { display: none; }
+  .quick .qhome svg { width: 24px; height: 24px; }
+  .hacts { display: flex; align-items: center; gap: 8px; }
+  .hbtn { width: 42px; height: 42px; border-radius: 15px; display: grid; place-items: center; color: var(--text); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .hbtn svg { width: 21px; height: 21px; }
   .find { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); color: var(--muted); margin-bottom: 14px; }
   .find input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
 
@@ -225,7 +240,7 @@
   .me .avatar { width: 58px; height: 58px; flex-basis: 58px; border-radius: 20px; font-size: 23px; margin: 0; }
   .chev { color: var(--muted); }
   .seg { position: relative; display: flex; padding: 4px; border-radius: 15px; background: var(--dot); }
-  .seg button { flex: 1; height: 36px; border-radius: 11px; font-size: 15px; font-weight: 650; color: var(--muted); }
+  .seg button { flex: 1; height: 36px; padding: 0 10px; border-radius: 11px; font-size: 14px; font-weight: 650; color: var(--muted); }
   .seg button[aria-pressed="true"] { background: var(--pastel); color: #10181A; box-shadow: 0 4px 12px rgba(111,165,151,.3); }
   .rel h4 { margin: 0; font-size: 17px; } .rel small { color: var(--muted); font-size: 14px; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
   .group .rel { display: block; }
@@ -253,6 +268,11 @@
   .perr { color: #D9534F; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
   .acct > div { display: block; }
+  .acct > [hidden] { display: none; }
+  .acct > .tools { display: flex; align-items: center; gap: 12px; font: inherit; color: inherit; cursor: pointer; }
+  .acct > .tools span { flex: 1; } .acct > .tools small { display: block; margin-top: 2px; color: var(--muted); font-size: 14px; font-weight: 400; }
+  .acct > .tools b { font-size: 17px; } .acct > .tools i { font-style: normal; color: var(--accent); font-size: 20px; transition: transform .25s; }
+  .acct > .tools[aria-expanded="true"] i { transform: rotate(90deg); }
   .acct > .me { display: flex; }
   .acct h3 { margin: 0 0 4px; font-size: 17px; }
   .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
@@ -263,7 +283,7 @@
   .acct .go { background: var(--pastel); color: #10181A; }
   .acct .soft { background: var(--dot); color: var(--text); }
   .acct .me .soft { width: auto; height: 36px; margin: 0; padding: 0 14px; font-size: 14px; }
-  .acct .row2 { display: flex; gap: 10px; } .acct .row2 > * { flex: 1; }
+  .acct .row2 { display: flex; gap: 10px; } .acct .row2 > * { flex: 1; } .acct .row2 > .soft { flex: 1.5; }
   .acct .err { min-height: 18px; margin-top: 8px; font-size: 14px; color: #D9534F; }
   .acct .link { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--dot); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all; -webkit-user-select: all; }
   .acct .fam div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -327,17 +347,13 @@
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
   /* aOS 2's Home (aOS/home-tab.js): Ipsy, Open now, Favorites, then every app in a few groups */
   .askipsy { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border-radius: 26px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); cursor: pointer; overflow: hidden; }
-  .askipsy::before { content: ''; position: absolute; left: -40px; top: 50%; width: 170px; height: 170px; margin-top: -85px; border-radius: 50%; background: radial-gradient(rgba(129,147,188,.35), transparent 65%); pointer-events: none; }
+  .askipsy::before { content: ''; position: absolute; left: -15px; top: 50%; width: 120px; height: 120px; margin-top: -60px; border-radius: 50%; background: radial-gradient(rgba(129,147,188,.35), transparent 65%); pointer-events: none; }
   .askipsy .ipsy-slot { position: relative; flex: 0 0 78px; height: 78px; }
   .askipsy > span:nth-child(2) { position: relative; flex: 1; min-width: 0; }
   .askipsy b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
   .askipsy i { display: block; font-style: normal; font-size: 14px; color: var(--muted); line-height: 1.3; }
   .askipsy .go { position: relative; color: var(--accent); font-size: 26px; line-height: 1; }
-  .onowl { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
-  .onowl::-webkit-scrollbar { display: none; }
-  .onow { flex: none; display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 16px 0 7px; border-radius: 17px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); font-size: 15px; font-weight: 650; }
-  .onow img { width: 36px; height: 36px; border-radius: 10px; }
-  .onow:active, .fav:active, .hrow:active, .askipsy:active { transform: scale(.98); }
+  .fav:active, .hrow:active, .askipsy:active { transform: scale(.98); }
   .favs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .fav { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 136px; padding: 14px; border-radius: 24px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
   .fav::before { content: ''; position: absolute; left: -36px; top: -36px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .3), transparent 65%); pointer-events: none; }
@@ -464,7 +480,7 @@
   .s1 .art svg { color: rgba(43,37,34,.14); }
   .story .txt h2 { font-weight: 600; letter-spacing: -.02em; max-width: 62%; }
   .story.half .txt h2, .story.wide .txt h2 { max-width: none; }
-  .chip { height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: .04em; background: #FFF8EC; color: #2B2522; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .chip { height: 28px; padding: 0 14px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .04em; background: #FFF8EC; color: #2B2522; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .chip::before { border-radius: 50%; background: var(--mc-orange); }
   .story .foot { border-radius: 999px; background: var(--mc-card); color: var(--text); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
   .story .foot i { opacity: 1; color: var(--muted); }
@@ -477,10 +493,10 @@
   .ipsy-forms figure { border-radius: 20px; box-shadow: inset 0 0 0 1.5px var(--edge); }
 
   /* Home: solid cream cards, flat, Ipsy on a teal disc */
-  .askipsy, .fav, .hgroup, .onow { box-shadow: inset 0 0 0 1.5px var(--edge); }
-  .askipsy::before { left: -26px; width: 128px; height: 128px; margin-top: -64px; background: var(--mc-teal); opacity: .16; }
+  .askipsy, .fav, .hgroup { box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .askipsy::before { left: 3px; width: 84px; height: 84px; margin-top: -42px; background: var(--mc-teal); opacity: .16; }
   .fav::before { left: auto; right: -34px; top: -34px; width: 92px; height: 92px; background: rgb(var(--c)); opacity: .22; }
-  .askipsy b, .fav b, .hrow b, .onow { font-weight: 600; }
+  .askipsy b, .fav b, .hrow b { font-weight: 600; }
   .askipsy b { letter-spacing: -.01em; }
   #appback { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(43,37,34,.12); font-weight: 600; }
 
@@ -488,7 +504,7 @@
   .row { border-radius: 22px; box-shadow: inset 0 0 0 1.5px var(--edge); }
   .row::before { display: none; }
   .row b { font-weight: 600; }
-  .get { height: 34px; border-radius: 999px; background: var(--cta); color: var(--cta-ink); box-shadow: none; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .get { height: 34px; padding: 0 18px; border-radius: 999px; background: var(--cta); color: var(--cta-ink); box-shadow: none; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
   .get.done { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
   .story .get.done { color: var(--accent); }
   .get.big, .apphead .get { text-transform: none; letter-spacing: .01em; font-size: 16px; border-radius: 999px; }
@@ -502,6 +518,10 @@
   .tabs .ind { top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: var(--mc-mustard); opacity: 1; box-shadow: none; }
   .tabs button { border-radius: 999px; color: #F4ECDD; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
   .tabs button[aria-selected="true"] { color: #2B2522; }
+  .quick { padding: 7px; border-radius: 999px; background: var(--mc-walnut); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(244,236,221,.12), 0 12px 24px -10px rgba(0,0,0,.6); }
+  .quick .qhome { border-radius: 50%; }
+  .quick .qhome { color: #2B2522; background: var(--mc-mustard); }
+  .hbtn { border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--text); }
   .find { border-radius: 999px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
   .find:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
 
@@ -547,11 +567,11 @@
   .ptitle { margin-bottom: 26px; font-size: 38px; font-weight: 600; letter-spacing: -.035em; }
   .ptitle::after { content: ''; display: block; width: 62px; height: 6px; margin-top: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat; }
   .seg { border-radius: 999px; background: var(--mc-card-2); }
-  .seg button { border-radius: 999px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .seg button { padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
   .seg button[aria-pressed="true"] { background: var(--mc-mustard); color: var(--mc-on-mustard); box-shadow: none; }
   .acct input, .acct textarea { border-radius: 16px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
   .acct input:focus, .acct textarea:focus { box-shadow: inset 0 0 0 2px var(--accent); }
-  .acct .go, .acct .soft, .plans .pick button { border-radius: 999px; font-weight: 600; letter-spacing: .02em; }
+  .acct .go, .acct .soft, .plans .pick button { padding: 0 20px; border-radius: 999px; font-size: 15px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acct .go, .plans .pick .go { background: var(--cta); color: var(--cta-ink); box-shadow: none; }
   .acct .soft, .plans .pick button { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
   .plans .pick .go.stop { background: transparent; color: var(--danger-text); box-shadow: inset 0 0 0 2px var(--danger-text); }
@@ -600,7 +620,6 @@
 <section class="tab" id="home" hidden>
   <div class="head"><div><span class="mark ink">aOS</span><h1>Home<small id="hdate"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
   <div class="askipsy" id="askIpsy" role="button" tabindex="0"><span class="ipsy-slot" id="ipsySlot"></span><span><b>Ask Ipsy</b><i id="ipsySub">Across your apps</i></span><span class="go" aria-hidden="true">›</span></div>
-  <div id="opennow" hidden><div class="sec"><h2>Open now</h2></div><div class="onowl" id="opennowList"></div></div>
   <div class="sec"><h2>Favorites</h2><button type="button" id="favEdit">Edit</button></div>
   <p class="hint" id="favHint" hidden>Tap a star to pin an app, up to four. The rest fill in with the apps you use most.</p>
   <div class="favs" id="favs"></div>

@@ -5,6 +5,7 @@
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
+//   - no dock: the three most used apps float at the bottom; Today and Search beside the account
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
 //   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
 //     aOS takes it whichever opens first, and it wins over aOS's own copy
@@ -72,6 +73,13 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
   m.set('handoff:taken:O1:notes', '1');   // taken by the first aOS 2, which dropped it
   check(!(await call('handoff', { app: 'notes', data: { k: 'v' } })).j.taken && m.has('handoff:O1:notes'), 'taken by the first aOS 2 (which kept its own copy): it moves again');
   check((await call('handoff/take', { app: 'weather' })).j.data === null && !m.has('handoff:taken2:O1:weather'), 'nothing waiting yet: aOS can ask again');
+  // moving to a new aOS icon: everything, left by the old icon, taken once by the new one
+  check((await call('move/take', {})).j.data === null, 'a new icon with nothing left for it: nothing to take');
+  const big = 'x'.repeat(600 * 1024);
+  check((await call('move', { data: { ls: { a: '1', big } } })).j.ok && m.has('move:O1'), 'the old icon leaves everything, more than one app\'s worth too');
+  const mv = await call('move/take', {});
+  check(mv.j.data && mv.j.data.ls.a === '1' && mv.j.data.ls.big.length === big.length && !m.has('move:O1'), 'the new icon takes it, and then it\'s deleted');
+  check((await call('move', { data: { ls: { a: 'x'.repeat(5.2 * 1024 * 1024) } } })).status === 413, 'but not without end');
 }
 
 // ---- the page ----
@@ -90,10 +98,27 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const state = () => pg.evaluate(() => ({ inApp: document.body.classList.contains('in-app'), shown: [...document.querySelectorAll('.frame')].filter(f => !f.hidden).map(f => f.dataset.id), hash: location.hash }));
 
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
-  const dock = await pg.evaluate(() => [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab).join(','));
-  check(dock === 'home,today,search' && await pg.isVisible('#home'), `Home first in the dock, in place of Apps, and showing ${tag}`);
+  check(await pg.isVisible('#home') && await pg.locator('.bar .tabs').isHidden() && await pg.locator('#opennow').count() === 0, `Home opens first, with no dock and no Open now ${tag}`);
+  const quick = () => pg.evaluate(() => [...document.querySelectorAll('.quick [data-open]')].map(b => b.dataset.open).join());
+  check(await quick() === 'calendar,meals,notes' && await pg.locator('.quick .qhome').isHidden(), `three apps float at the bottom: the starting ones, before any are used ${tag}`);
+  await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(400);
+  check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home joins the apps at the bottom there ${tag}`);
+  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
+  await pg.locator('#home .hbtn[data-tab="search"]').click(); await pg.waitForTimeout(400);
+  check(await pg.isVisible('#search'), `and Search ${tag}`);
+  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
   check(await pg.locator('#ipsySlot .ipsy-btn').count() === 1 && /Calendar, Notes, Meals, Orders, Travel and News/.test(await pg.textContent('#ipsySub')), `Ipsy at the top, across six apps ${tag}`);
   check(await pg.locator('#favs .fav').count() === 4 && await pg.locator('#spaces .hrow').count() === 14, `four favorites and every app ${tag}`);
+  await pg.locator('#askIpsy b').click(); await pg.waitForTimeout(700);
+  const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
+  check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below Ask Ipsy, on screen, without the extra words ${tag}`);
+  await pg.keyboard.press('Escape'); await pg.waitForTimeout(400);
+  if (look === 'vintage') {   // under an iPhone's solid status bar, the sky fades in from the ground at the top
+    await pg.evaluate(() => { localStorage.setItem('aos.bar', 'solid'); }); await pg.reload(); await pg.waitForTimeout(900);
+    const capTop = await pg.evaluate(() => { const c = document.querySelector('#home .atoms .aos-sky-cap, .atoms .aos-sky-cap'); return c && getComputedStyle(c).display !== 'none' ? Math.round(c.getBoundingClientRect().top) : null; });
+    check(capTop === 0, `under a solid status bar, the sky fades in at the top of the page (${capTop}) ${tag}`);
+    await pg.evaluate(() => localStorage.removeItem('aos.bar')); await pg.reload(); await pg.waitForTimeout(900);
+  }
 
   await pg.locator('.hrow[data-open="notes"]').click(); await pg.waitForTimeout(2200);
   let s = await state();
@@ -107,11 +132,11 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
 
   await pg.locator('#appback').click(); await pg.waitForTimeout(600);
   s = await state();
-  check(!s.inApp && s.hash === '' && await pg.locator('#opennowList [data-open="notes"]').count() === 1, `"‹ aOS" goes back, and Notes is under Open now ${tag}`);
+  check(!s.inApp && s.hash === '' && await pg.isVisible('#home'), `"‹ aOS" goes back ${tag}`);
   await pg.locator('.hrow[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
-  await pg.locator('#opennowList [data-open="notes"]').click(); await pg.waitForTimeout(700);
+  await pg.locator('.quick [data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
   check(/Weather/.test(await pg.textContent('#appmenu')) && await pg.isVisible('#appmenu'), `holding "‹ aOS" lists the other open apps ${tag}`);
@@ -124,6 +149,8 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#favEdit').click();
   const favs = await pg.evaluate(() => aosHomeTab.favorites().map(f => f.id + ':' + f.why));
   check(favs[0] === 'house:pin' && favs.some(f => /:used$/.test(f)) && favs.length === 4, `Favorites, mixed: the pin, then the most used, then the starters (${favs.join(' ')}) ${tag}`);
+  const q = (await quick()).split(',');
+  check(q.length === 3 && q.includes('notes') && q.includes('weather'), `the apps at the bottom are the ones you use most (${q.join(' ')}) ${tag}`);
 
   const r = await pg.evaluate(async () => { const m = AllisonOS.ipsy.mounted; const res = await m.tools['notes__get_lists']({}, { confirm: async () => true }); return { app: m.app, lists: JSON.parse(typeof res.content === 'string' ? res.content : JSON.stringify(res.content)).lists }; });
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);
@@ -169,6 +196,51 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
+// ---- moving to another aOS icon (aOS/app.js, "moving to another aOS icon") ----
+{
+  let left = null;
+  const icon = async (fresh, tab = false) => {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
+    await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+    await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+    const user = { id: 'O1', name: 'Tom', role: 'member', apps: {} };
+    await ctx.route('**/aOS/api/state', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ storage: true, setup: true, user, plan: null }) }));
+    await ctx.route('**/aOS/api/move', r => { left = JSON.parse(r.request().postData()).data; r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+    let took = 0;
+    // (it keeps handing it over, as a stale read of the account could just after: the icon takes it once)
+    await ctx.route('**/aOS/api/move/take', r => { took++; const d = fresh ? left : null; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: d }) }); });
+    await ctx.addInitScript(([apps, fresh, tab]) => { if (!tab) Object.defineProperty(navigator, 'standalone', { get: () => true }); if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+      const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+      localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
+      localStorage.setItem('aos.session', JSON.stringify({ token: fresh ? 'new' : 'old', user: { id: 'O1', name: 'Tom', role: 'member' }, at: Date.now() }));
+      if (fresh) localStorage.setItem('allison-clock-v1', '{"alarms":[]}');   // the other icon had its own (older) copy
+    if (!fresh) { localStorage.setItem('allison-clock-v1', '{"alarms":[{"at":"07:00"}]}'); localStorage.setItem('mail.token', 'secret');
+        const r = indexedDB.open('allison-notes', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: 'https://sheet' }, 'sheet'); }; } }, [APPS, fresh, tab]);
+    const pg = await ctx.newPage(), errs = []; pg.on('pageerror', e => errs.push(e.message));
+    await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(1200);
+    return { ctx, pg, errs, took: () => took };
+  };
+  const old = await icon(false);
+  check(old.took() === 1, 'an aOS icon on the Home Screen asks whether something was left for it as it opens');
+  await old.pg.locator('.tab:not([hidden]) [data-acct]').click(); await old.pg.waitForSelector('#mGo', { timeout: 8000 });
+  await old.pg.click('#mGo'); await old.pg.waitForFunction(() => /Remove App/.test(document.getElementById('mErr').textContent), null, { timeout: 8000 }).catch(() => {});
+  const notes = left && (left.idb || []).find(d => d.name === 'allison-notes');
+  check(left && left.ls['allison-clock-v1'] && !('mail.token' in left.ls) && !('aos.session' in left.ls) && notes && notes.stores[0].rows[0][1].url === 'https://sheet',
+    'Get ready to move leaves every app\'s data and databases, but not the sign-ins');
+  await old.pg.reload(); await old.pg.waitForTimeout(1200);
+  check(old.took() === 1, 'the icon that left it doesn\'t take its own back');
+  check(!old.errs.length, 'no script errors (the old icon)' + (old.errs.length ? ': ' + old.errs.join(' | ') : ''));
+  await old.ctx.close();
+  const tab = await icon(true, true);
+  check(tab.took() === 0, 'aOS in Safari, signed in, where the new icon is added from: it doesn\'t take what was left');
+  await tab.ctx.close();
+  const neu = await icon(true); await neu.pg.waitForTimeout(1500);
+  const got = await neu.pg.evaluate(() => new Promise(ok => { const r = indexedDB.open('allison-notes'); r.onsuccess = () => { try { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => ok({ clock: localStorage.getItem('allison-clock-v1'), sheet: q.result && q.result.url, toast: document.getElementById('htoast').textContent }); } catch { ok({}); } }; r.onerror = () => ok({}); }));
+  check(neu.took() >= 1 && /07:00/.test(got.clock || '') && got.sheet === 'https://sheet' && /moved in/.test(got.toast || ''), `the other icon, signed in, takes it all (it wins over what that icon had) and opens again with it (${JSON.stringify(got).slice(0, 120)})`);
+  check(!neu.errs.length, 'no script errors (the new icon)' + (neu.errs.length ? ': ' + neu.errs.join(' | ') : ''));
+  await neu.ctx.close();
+}
+
 // ---- moving in, from an app's own Home Screen icon (../home/welcome.js, "moving into aOS 2") ----
 for (const signedIn of [false, true]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });

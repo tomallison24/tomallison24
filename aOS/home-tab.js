@@ -2,12 +2,15 @@
 // stays where you left it while you go back and forth (aOS1 sent you off to each app's own Home
 // Screen icon; those still work, and Get on an app's page still adds one).
 //
-//   - Ipsy at the top, across the apps that have it (below, "Ipsy in aOS").
-//   - Open now: the apps open inside aOS, the latest first (up to MAX_OPEN; the one used longest
-//     ago is put away to open another).
+//   - Ipsy at the top, across the apps that have it (below, "Ipsy in aOS"); Today and Search by
+//     your account.
 //   - Favorites, mixed: the ones you pin (Edit, up to four), then the apps you open most (the last
 //     14 days, kept on this phone: aos.home.used), then a starting four.
 //   - Every app, in a few groups. A row opens the app; its ⓘ opens its page (Get, What's New).
+//   - No dock: your three most used apps float at the bottom, for a quick open (and Home, when
+//     you're on Today or Search).
+// Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
+// away to open another.
 //
 // An app inside aOS: it slides in from the right and fills the screen, its own background running
 // up under the status bar, with "‹ aOS" floating over its top left corner. Tap that, or swipe in
@@ -26,12 +29,26 @@
   const get = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-  // Home takes the Apps tab's place, first in the dock, and opens first
+  // Home takes the Apps tab's place and opens first. The dock gives way to your most used apps
+  // (paintQuick, below); Today and Search move up by your account, on Home.
+  const HOME_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>';
   const appsTab = document.querySelector('[data-tab="apps"]');
   appsTab.dataset.tab = 'home';
-  appsTab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>Home';
+  appsTab.innerHTML = HOME_SVG + 'Home';
   appsTab.parentNode.insertBefore(appsTab, appsTab.parentNode.querySelector('[data-tab]'));
-  window.aosTabs.show('home');
+  const bar = document.querySelector('nav.bar'), quick = document.createElement('div');
+  quick.className = 'quick'; quick.setAttribute('aria-label', 'Your most used apps');
+  bar.classList.add('quickbar'); bar.append(quick);
+  const head = $('home').querySelector('.head'), acct = head.querySelector('[data-acct]'), acts = document.createElement('div');
+  acts.className = 'hacts';
+  acts.innerHTML = `<button type="button" class="hbtn" data-tab="today" aria-label="Today">${document.querySelector('.tabs [data-tab="today"] svg').outerHTML}</button>`
+    + `<button type="button" class="hbtn" data-tab="search" aria-label="Search">${document.querySelector('.tabs [data-tab="search"] svg').outerHTML}</button>`;
+  head.append(acts); acts.append(acct);
+  let tab = 'home';
+  const showTab = window.aosTabs.show;
+  window.aosTabs.show = t => { showTab(t); tab = t; paintQuick(); };
+  acts.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) window.aosTabs.show(b.dataset.tab); });
+  showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
   const SPACES = [
     ['Family', ['calendar', 'meals', 'notes', 'house', 'orders']],
@@ -79,11 +96,16 @@
   const frames = {};                                            // id -> its .frame, while it's open
   const editing = () => body.classList.contains('editing');
   const STAR = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+  // the three you open most (then the starting four), at the bottom of every aOS page; Home with them, off Home
+  const quickApps = () => [...new Set([...mostUsed(), ...STARTERS.filter(known)])].slice(0, 3);
+  function paintQuick() {
+    quick.innerHTML = `<button type="button" class="qhome" aria-label="Home"${tab === 'home' ? ' hidden' : ''}>${HOME_SVG}</button>`
+      + quickApps().map(id => `<button type="button" data-open="${id}" aria-label="${esc(name(id))}"><img src="${icon(id)}" alt=""></button>`).join('');
+    quick.querySelector('.qhome').onclick = () => window.aosTabs.show('home');
+  }
   function paintHome() {
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
-    const recent = [...used].reverse();
-    $('opennow').hidden = !recent.length;
-    $('opennowList').innerHTML = recent.map(id => `<button type="button" class="onow" data-open="${id}"><img src="${icon(id)}" alt=""><span>${esc(name(id))}</span></button>`).join('');
+    paintQuick();
     const WHY = { pin: 'Pinned', used: 'You use it a lot', start: tag };
     $('favs').innerHTML = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" style="--c:${appHue(f.id)}">
         <img src="${icon(f.id)}" alt=""><b>${esc(name(f.id))}</b><small>${esc(typeof WHY[f.why] === 'function' ? WHY[f.why](f.id) : WHY[f.why])}</small><i class="pin">${STAR(f.why === 'pin')}</i></button>`).join('');
@@ -319,10 +341,9 @@
     $('ipsySub').textContent = `Across ${list}`;
     AllisonOS.ipsy.mount({
       app: 'aos', name: 'aOS', endpoint: 'api/ipsy', headers: { 'X-Aos': '1' }, slot: $('ipsySlot'),
-      intro: `Hi, I’m Ipsy! In aOS I can work across ${list} at once.`,
-      placeholder: 'Ask Ipsy about anything in your apps',
-      suggestions: ['What’s on the calendar this week?', 'Do any orders arrive while we’re away?', 'Add this week’s dinners to the grocery list', 'Catch me up on the news'],
-      consent: `Your question, and what Ipsy reads in ${list} (and Gmail, where it’s connected in those apps), go to Claude, by Anthropic, through the family server. Private items stay hidden, every change shows with Undo, and it asks before deleting. Fitness stays out of aOS: ask Ipsy inside Fitness.`,
+      intro: '', subtitle: '', placeholder: 'Ask Ipsy',
+      suggestions: ['This week’s calendar', 'Orders on the way', 'Catch me up on the news'],
+      consent: 'Your question, and what Ipsy reads in your apps, go to Claude, by Anthropic. Every change shows with Undo.',
       context: () => current ? `On screen: ${name(current)}, open inside aOS. Open in aOS: ${open.map(name).join(', ')}.` : `On screen: aOS Home.${open.length ? ' Open in aOS: ' + open.map(name).join(', ') + '.' : ''}`,
       tools: new Proxy({}, { get: (t, key) => typeof key === 'string' && key.includes(SEP) ? runIn(key) : undefined }),
       label: (n, input) => {

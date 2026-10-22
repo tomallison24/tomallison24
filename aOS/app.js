@@ -541,7 +541,7 @@
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
     box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3>
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
-      <button type="button" class="soft" data-lost>Erase aOS from a lost phone: step by step</button></div>`);
+      <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button></div>`);
     $('aOthers').onclick = async () => {
       if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
@@ -549,19 +549,35 @@
       catch (e) { m.textContent = why(e); }
       busy($('aOthers'), false);
     };
+    box.insertAdjacentHTML('beforeend', `<div><h3>Moving to a new aOS icon?</h3>
+      <p>To switch to another aOS icon, rename aOS, or for a new phone: get ready here, then open the other aOS icon and sign in. Everything comes with it.</p>
+      <button type="button" class="soft" id="mGo">Get ready to move</button><div class="err" id="mErr"></div></div>`);
+    $('mGo').onclick = async () => {
+      busy($('mGo'), true); const m = $('mErr'); m.textContent = ''; m.style.color = '';
+      try { await moveOut(); m.style.color = 'var(--muted)'; m.innerHTML = 'Ready for two days. Now open your other <b>aOS</b> icon and sign in (or add one: <b>tomallison24-news.pages.dev/aOS</b> in Safari, Share, <b>Add to Home Screen</b>). Once everything is there, press and hold this icon, <b>Remove App</b>.'; }
+      catch (e) { m.textContent = e.message === 'too-big' ? 'Too much to move in one go.' : why(e); }
+      busy($('mGo'), false);
+    };
     box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
     paintNotify();
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3>
+    // the owner's tools, folded away until wanted
+    box.insertAdjacentHTML('beforeend', `<button type="button" class="tools" id="tToggle" aria-expanded="false" aria-controls="tSend tHome tInvite"><span><b>Owner tools</b><small>Notifications, Home Assistant, invites</small></span><i aria-hidden="true">›</i></button>
+      <div id="tSend" hidden><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
-      <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
-      <div><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
+      <div class="row2"><button type="button" class="soft" id="nFill">Announce update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
+      <div id="tHome" hidden><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
+      <div id="tInvite" hidden><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
       <div><h3>Google Sheets</h3><p>Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
       <div class="fam sheets" id="shList"><p class="note">Checking…</p></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
+    $('tToggle').onclick = () => {
+      const on = $('tToggle').getAttribute('aria-expanded') !== 'true';
+      $('tToggle').setAttribute('aria-expanded', String(on));
+      for (const id of ['tSend', 'tHome', 'tInvite']) $(id).hidden = !on;
+    };
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
       try { showInvite(await ACC.call('invite', { name: $('iName').value.trim() })); $('iName').value = ''; }
@@ -579,6 +595,88 @@
       busy($('hSave'), false);
     };
   }
+
+  // ---- moving to another aOS icon (functions/aOS/api, move) ----
+  // Each aOS icon on the Home Screen keeps its own storage, and it goes when the icon is removed. So
+  // to switch to another aOS icon (one added earlier, a new one to rename aOS, or a new phone), Get
+  // ready to move leaves everything aOS keeps here (every app's, since they all share aOS's storage)
+  // in your family account for two days, and the next aOS icon of yours to open, signed in, takes it
+  // and opens again with it; what it brings wins over what that icon had. Left behind: this icon's
+  // sign-in (the other signs in itself), Gmail's (an hour long) and what comes back anyway (caches).
+  // aos.move: when this icon left it; it doesn't take its own back while that's waiting. Only an
+  // icon on the Home Screen takes it, never Safari (where a new icon is added from).
+  const MOVE = 'aos.move', MOVE_MAX = 4.5 * 1024 * 1024, MOVE_WAIT = 2 * 864e5;
+  const MOVE_SKIP = ['aos.session', MOVE, MOVE + '.in', 'mail.token', 'mail.state', 'mail.lastAuth', 'mail.pending', 'news.data', 'news.table.cache', 'news.sport.catalog', 'wx.cache', 'wx.pt'];
+  const idbReq = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+  async function idbOut(room) {   // every database's rows that are plain data (not files), up to `room`
+    const out = [];
+    if (!window.indexedDB || !indexedDB.databases) return out;
+    for (const { name, version } of await indexedDB.databases().catch(() => [])) {
+      if (!name) continue;
+      let d; try { d = await idbReq(indexedDB.open(name)); } catch { continue; }
+      const stores = [];
+      for (const sn of d.objectStoreNames) {
+        try {
+          const t = d.transaction(sn, 'readonly'), st = t.objectStore(sn);
+          const [keys, vals] = await Promise.all([idbReq(st.getAllKeys()), idbReq(st.getAll())]);
+          const rows = [];
+          keys.forEach((k, i) => {
+            const v = vals[i]; if (v instanceof Blob || v instanceof ArrayBuffer || ArrayBuffer.isView(v)) return;
+            let j; try { j = JSON.stringify([k, v]); } catch { return; }
+            if (!j || j.length > room) return; room -= j.length; rows.push([k, v]);
+          });
+          stores.push({ name: sn, keyPath: st.keyPath, auto: st.autoIncrement, rows });
+        } catch {}
+      }
+      d.close(); out.push({ name, version: version || d.version, stores });
+    }
+    return out;
+  }
+  async function idbIn(list) {
+    for (const db of list || []) {
+      try {
+        const r = indexedDB.open(db.name, db.version);
+        r.onupgradeneeded = () => { for (const s of db.stores) if (!r.result.objectStoreNames.contains(s.name)) r.result.createObjectStore(s.name, s.keyPath ? { keyPath: s.keyPath, autoIncrement: s.auto } : { autoIncrement: s.auto }); };
+        const d = await idbReq(r);
+        for (const s of db.stores) {
+          if (!d.objectStoreNames.contains(s.name) || !s.rows.length) continue;
+          const t = d.transaction(s.name, 'readwrite'), st = t.objectStore(s.name);
+          for (const [k, v] of s.rows) st.put(v, s.keyPath ? undefined : k);
+          await new Promise(ok => { t.oncomplete = t.onerror = t.onabort = () => ok(); });
+        }
+        d.close();
+      } catch {}
+    }
+  }
+  async function moveOut() {
+    const ls = {}; let size = 0;
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MOVE_SKIP.includes(k)) continue; const v = localStorage.getItem(k); ls[k] = v; size += k.length + v.length + 6; }
+    if (size > MOVE_MAX) throw new Error('too-big');
+    await ACC.call('move', { data: { ls, idb: await idbOut(MOVE_MAX - size) } });
+    try { localStorage.setItem(MOVE, String(Date.now())); } catch {}
+  }
+  let moving = false;
+  async function moveIn() {
+    if (moving || !ACC || !ACC.token()) return;
+    if (!(navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)) return;   // only the icon on the Home Screen: Safari, where you add it from, would keep it to itself
+    try {
+      if (Date.now() - (+localStorage.getItem(MOVE) || 0) < MOVE_WAIT) return;   // this icon left it
+      if (Date.now() - (+localStorage.getItem(MOVE + '.in') || 0) < 5 * 60e3) return;   // it just came in (the account may still show it for a moment)
+    } catch { return; }
+    moving = true;
+    try {
+      const { data } = await ACC.call('move/take', {});
+      if (!data) return;
+      await idbIn(data.idb);
+      for (const [k, v] of Object.entries(data.ls || {})) if (!MOVE_SKIP.includes(k) && typeof v === 'string') try { localStorage.setItem(k, v); } catch {}
+      try { localStorage.setItem(MOVE + '.in', String(Date.now())); sessionStorage.setItem('aos.moved.in', '1'); } catch {}
+      location.reload();
+    } catch {} finally { moving = false; }
+  }
+  addEventListener('aos:account', e => { if (e.detail) moveIn(); });
+  moveIn();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) moveIn(); });   // left from the other icon a moment ago
+  try { if (sessionStorage.getItem('aos.moved.in')) { sessionStorage.removeItem('aos.moved.in'); setTimeout(() => { const t = $('htoast'); if (t) { t.textContent = 'Everything moved in from your other aOS icon'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 3500); } }, 600); } } catch {}
 
   // ---- notifications: Web Push from the owner (server/push.js; aOS/sw.js shows them) ----
   // On iPhone they only work for an app opened from the Home Screen (iOS 16.4 or later),
