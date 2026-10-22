@@ -196,7 +196,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
-// ---- moving to a new aOS icon (aOS/app.js, "moving to a new aOS icon") ----
+// ---- moving to another aOS icon (aOS/app.js, "moving to another aOS icon") ----
 {
   let left = null;
   const icon = async (fresh, tab = false) => {
@@ -207,24 +207,28 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await ctx.route('**/aOS/api/state', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ storage: true, setup: true, user, plan: null }) }));
     await ctx.route('**/aOS/api/move', r => { left = JSON.parse(r.request().postData()).data; r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
     let took = 0;
+    // (it keeps handing it over, as a stale read of the account could just after: the icon takes it once)
     await ctx.route('**/aOS/api/move/take', r => { took++; const d = fresh ? left : null; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: d }) }); });
     await ctx.addInitScript(([apps, fresh, tab]) => { if (!tab) Object.defineProperty(navigator, 'standalone', { get: () => true }); if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
       const s = { aos: '999' }; for (const a of apps) s[a] = '999';
       localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
       localStorage.setItem('aos.session', JSON.stringify({ token: fresh ? 'new' : 'old', user: { id: 'O1', name: 'Tom', role: 'member' }, at: Date.now() }));
-      if (!fresh) { localStorage.setItem('allison-clock-v1', '{"alarms":[{"at":"07:00"}]}'); localStorage.setItem('mail.token', 'secret');
+      if (fresh) localStorage.setItem('allison-clock-v1', '{"alarms":[]}');   // the other icon had its own (older) copy
+    if (!fresh) { localStorage.setItem('allison-clock-v1', '{"alarms":[{"at":"07:00"}]}'); localStorage.setItem('mail.token', 'secret');
         const r = indexedDB.open('allison-notes', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: 'https://sheet' }, 'sheet'); }; } }, [APPS, fresh, tab]);
     const pg = await ctx.newPage(), errs = []; pg.on('pageerror', e => errs.push(e.message));
     await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(1200);
     return { ctx, pg, errs, took: () => took };
   };
   const old = await icon(false);
-  check(old.took() === 1 && await old.pg.evaluate(() => localStorage.getItem('aos.move')) === 'checked', 'an icon asks once whether something was left for it (nothing: it never asks again)');
+  check(old.took() === 1, 'an aOS icon on the Home Screen asks whether something was left for it as it opens');
   await old.pg.locator('.tab:not([hidden]) [data-acct]').click(); await old.pg.waitForSelector('#mGo', { timeout: 8000 });
   await old.pg.click('#mGo'); await old.pg.waitForFunction(() => /Remove App/.test(document.getElementById('mErr').textContent), null, { timeout: 8000 }).catch(() => {});
   const notes = left && (left.idb || []).find(d => d.name === 'allison-notes');
   check(left && left.ls['allison-clock-v1'] && !('mail.token' in left.ls) && !('aos.session' in left.ls) && notes && notes.stores[0].rows[0][1].url === 'https://sheet',
     'Get ready to move leaves every app\'s data and databases, but not the sign-ins');
+  await old.pg.reload(); await old.pg.waitForTimeout(1200);
+  check(old.took() === 1, 'the icon that left it doesn\'t take its own back');
   check(!old.errs.length, 'no script errors (the old icon)' + (old.errs.length ? ': ' + old.errs.join(' | ') : ''));
   await old.ctx.close();
   const tab = await icon(true, true);
@@ -232,7 +236,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await tab.ctx.close();
   const neu = await icon(true); await neu.pg.waitForTimeout(1500);
   const got = await neu.pg.evaluate(() => new Promise(ok => { const r = indexedDB.open('allison-notes'); r.onsuccess = () => { try { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => ok({ clock: localStorage.getItem('allison-clock-v1'), sheet: q.result && q.result.url, toast: document.getElementById('htoast').textContent }); } catch { ok({}); } }; r.onerror = () => ok({}); }));
-  check(neu.took() >= 1 && /07:00/.test(got.clock || '') && got.sheet === 'https://sheet' && /moved in/.test(got.toast || ''), `the new icon, signed in, takes it all and opens again with it (${JSON.stringify(got).slice(0, 120)})`);
+  check(neu.took() >= 1 && /07:00/.test(got.clock || '') && got.sheet === 'https://sheet' && /moved in/.test(got.toast || ''), `the other icon, signed in, takes it all (it wins over what that icon had) and opens again with it (${JSON.stringify(got).slice(0, 120)})`);
   check(!neu.errs.length, 'no script errors (the new icon)' + (neu.errs.length ? ': ' + neu.errs.join(' | ') : ''));
   await neu.ctx.close();
 }

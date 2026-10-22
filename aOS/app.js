@@ -550,11 +550,11 @@
       busy($('aOthers'), false);
     };
     box.insertAdjacentHTML('beforeend', `<div><h3>Moving to a new aOS icon?</h3>
-      <p>To rename aOS, or for a new phone: get ready here, then remove this icon and add aOS again from Safari. Sign in there and everything comes with it.</p>
+      <p>To switch to another aOS icon, rename aOS, or for a new phone: get ready here, then open the other aOS icon and sign in. Everything comes with it.</p>
       <button type="button" class="soft" id="mGo">Get ready to move</button><div class="err" id="mErr"></div></div>`);
     $('mGo').onclick = async () => {
       busy($('mGo'), true); const m = $('mErr'); m.textContent = ''; m.style.color = '';
-      try { await moveOut(); m.style.color = 'var(--muted)'; m.innerHTML = 'Ready for two days. Now press and hold this icon, <b>Remove App</b>. Then open <b>tomallison24-news.pages.dev/aOS</b> in Safari, Share, <b>Add to Home Screen</b>, name it <b>aOS</b>, open it and sign in.'; }
+      try { await moveOut(); m.style.color = 'var(--muted)'; m.innerHTML = 'Ready for two days. Now open your other <b>aOS</b> icon and sign in (or add one: <b>tomallison24-news.pages.dev/aOS</b> in Safari, Share, <b>Add to Home Screen</b>). Once everything is there, press and hold this icon, <b>Remove App</b>.'; }
       catch (e) { m.textContent = e.message === 'too-big' ? 'Too much to move in one go.' : why(e); }
       busy($('mGo'), false);
     };
@@ -596,17 +596,17 @@
     };
   }
 
-  // ---- moving to a new aOS icon (functions/aOS/api, move) ----
-  // A Home Screen icon's storage goes when it's removed. So before you remove this one (to rename
-  // aOS, or for a new phone), Get ready to move leaves everything aOS keeps here (every app's, since
-  // they all share aOS's storage) in your family account for two days, and a new aOS icon takes it
-  // the first time it's signed in, then opens again with it. Left behind: this icon's sign-in (the
-  // new one signs in itself), Gmail's (an hour long) and what comes back anyway (caches).
-  // aos.move: 'sent' here once it's left, 'checked' once a new icon has asked; either way it never
-  // asks again, so an icon never takes back what it left. Only an icon on the Home Screen takes it,
-  // never Safari (where the new icon is added from, with storage of its own).
-  const MOVE = 'aos.move', MOVE_MAX = 4.5 * 1024 * 1024;
-  const MOVE_SKIP = ['aos.session', MOVE, 'mail.token', 'mail.state', 'mail.lastAuth', 'mail.pending', 'news.data', 'news.table.cache', 'news.sport.catalog', 'wx.cache', 'wx.pt'];
+  // ---- moving to another aOS icon (functions/aOS/api, move) ----
+  // Each aOS icon on the Home Screen keeps its own storage, and it goes when the icon is removed. So
+  // to switch to another aOS icon (one added earlier, a new one to rename aOS, or a new phone), Get
+  // ready to move leaves everything aOS keeps here (every app's, since they all share aOS's storage)
+  // in your family account for two days, and the next aOS icon of yours to open, signed in, takes it
+  // and opens again with it; what it brings wins over what that icon had. Left behind: this icon's
+  // sign-in (the other signs in itself), Gmail's (an hour long) and what comes back anyway (caches).
+  // aos.move: when this icon left it; it doesn't take its own back while that's waiting. Only an
+  // icon on the Home Screen takes it, never Safari (where a new icon is added from).
+  const MOVE = 'aos.move', MOVE_MAX = 4.5 * 1024 * 1024, MOVE_WAIT = 2 * 864e5;
+  const MOVE_SKIP = ['aos.session', MOVE, MOVE + '.in', 'mail.token', 'mail.state', 'mail.lastAuth', 'mail.pending', 'news.data', 'news.table.cache', 'news.sport.catalog', 'wx.cache', 'wx.pt'];
   const idbReq = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
   async function idbOut(room) {   // every database's rows that are plain data (not files), up to `room`
     const out = [];
@@ -653,27 +653,30 @@
     for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MOVE_SKIP.includes(k)) continue; const v = localStorage.getItem(k); ls[k] = v; size += k.length + v.length + 6; }
     if (size > MOVE_MAX) throw new Error('too-big');
     await ACC.call('move', { data: { ls, idb: await idbOut(MOVE_MAX - size) } });
-    try { localStorage.setItem(MOVE, 'sent'); } catch {}
+    try { localStorage.setItem(MOVE, String(Date.now())); } catch {}
   }
   let moving = false;
   async function moveIn() {
     if (moving || !ACC || !ACC.token()) return;
     if (!(navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)) return;   // only the icon on the Home Screen: Safari, where you add it from, would keep it to itself
-    try { if (localStorage.getItem(MOVE)) return; } catch { return; }
+    try {
+      if (Date.now() - (+localStorage.getItem(MOVE) || 0) < MOVE_WAIT) return;   // this icon left it
+      if (Date.now() - (+localStorage.getItem(MOVE + '.in') || 0) < 5 * 60e3) return;   // it just came in (the account may still show it for a moment)
+    } catch { return; }
     moving = true;
     try {
       const { data } = await ACC.call('move/take', {});
-      localStorage.setItem(MOVE, 'checked');
       if (!data) return;
       await idbIn(data.idb);
       for (const [k, v] of Object.entries(data.ls || {})) if (!MOVE_SKIP.includes(k) && typeof v === 'string') try { localStorage.setItem(k, v); } catch {}
-      try { sessionStorage.setItem('aos.moved.in', '1'); } catch {}
+      try { localStorage.setItem(MOVE + '.in', String(Date.now())); sessionStorage.setItem('aos.moved.in', '1'); } catch {}
       location.reload();
     } catch {} finally { moving = false; }
   }
   addEventListener('aos:account', e => { if (e.detail) moveIn(); });
   moveIn();
-  try { if (sessionStorage.getItem('aos.moved.in')) { sessionStorage.removeItem('aos.moved.in'); setTimeout(() => { const t = $('htoast'); if (t) { t.textContent = 'Everything moved in from your old aOS icon'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 3500); } }, 600); } } catch {}
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) moveIn(); });   // left from the other icon a moment ago
+  try { if (sessionStorage.getItem('aos.moved.in')) { sessionStorage.removeItem('aos.moved.in'); setTimeout(() => { const t = $('htoast'); if (t) { t.textContent = 'Everything moved in from your other aOS icon'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 3500); } }, 600); } } catch {}
 
   // ---- notifications: Web Push from the owner (server/push.js; aOS/sw.js shows them) ----
   // On iPhone they only work for an app opened from the Home Screen (iOS 16.4 or later),
