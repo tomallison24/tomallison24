@@ -248,11 +248,16 @@
     const f = current && frames[current] && frames[current].firstChild;
     if (f) try {
       const d = f.contentDocument, w = f.contentWindow, see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
-      c = see(d.body) || see(d.documentElement);
+      c = (w.AllisonOS && w.AllisonOS.topColor && w.AllisonOS.topColor()) || see(d.body) || see(d.documentElement);   // the app's own say (its top fades into it), else its page
       const m = [...d.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || w.matchMedia(m.media).matches);
       bar = (m && m.content) || c;
     } catch {}
     $('appwin').style.setProperty('--tint', c || 'var(--bg)');
+    // the status bar, when it's solid (an iPhone's, aOS's: ../home/sky.js): iOS colours it from the fixed
+    // element at the top of the screen, and keeps that colour once nothing's there. #barcap is always
+    // there, in the colour of what's showing: the app's own background (its top fades into it, in
+    // ../home/welcome.js), else aOS's
+    document.documentElement.style.setProperty('--barcap', (f && c) || 'var(--bg)');
     for (const m of metas) {
       if (!m.dataset.home) m.dataset.home = m.content;
       const want = bar || m.dataset.home;
