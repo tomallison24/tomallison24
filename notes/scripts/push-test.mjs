@@ -82,8 +82,11 @@ function world() {
     throw new Error('unexpected fetch ' + url);
   };
   w.env = { PUSH: makeKV(), ALLOWED_ORIGIN: 'https://tomallison24-news.pages.dev', VAPID_SUBJECT: 'https://tomallison24-news.pages.dev/notes/' };
+  // the owner's Worker secrets: the Sheet's link and phrase
+  w.sheet = (url = SHEET, secret = 'maple-otter') => { w.env.NOTES_SHEET_URL = url; w.env.NOTES_SHEET_SECRET = secret; };
   return w;
 }
+const TOM = 'tok-tom-0123456789', ELLA = 'tok-ella-0123456789';
 const req = (path, body, origin = 'https://tomallison24-news.pages.dev', method = 'POST') =>
   new Request('https://notes-push.example.workers.dev' + path, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
 const call = async (w, path, body, origin) => { const r = await handle(req(path, body, origin, body ? 'POST' : 'GET'), w.env, w.fetch); return { status: r.status, body: await r.json(), headers: r.headers }; };
@@ -147,25 +150,28 @@ const A = phone('a'), B = phone('b');
 
   const sub = ph => ({ endpoint: ph.endpoint, keys: ph.keys });
   let r = await call(w, '/subscribe', { subscription: sub(A), prefs: NY });
-  ok('3. no Sheet link: refused', r.status === 403 && r.body.error === 'no-sheet');
-  r = await call(w, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'guess' }, prefs: NY });
-  ok('3. wrong secret: refused, as the Sheet says', r.status === 403 && r.body.error === 'wrong-secret');
-  r = await call(w, '/subscribe', { subscription: { endpoint: 'https://evil.example/x', keys: A.keys }, sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  ok('3. no session: refused without asking aOS or the Sheet', r.status === 403 && r.body.error === 'signin' && w.stateCalls.length === 0 && w.sheetCalls === 0);
+  r = await call(w, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  ok('3. a Sheet link and phrase of the phone\'s own (as before aOS), no session: refused, and the Sheet is never asked', r.status === 403 && r.body.error === 'signin' && w.sheetCalls === 0);
+  r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
+  ok('3. signed in, but the server has no Sheet yet: refused, and says so', r.status === 403 && r.body.error === 'no-sheet');
+  w.sheet(SHEET, 'guess');
+  r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
+  ok('3. the server\'s phrase is wrong: refused, as the Sheet says', r.status === 403 && r.body.error === 'wrong-secret');
+  w.sheet();
+  r = await call(w, '/subscribe', { subscription: { endpoint: 'https://evil.example/x', keys: A.keys }, session: TOM, prefs: NY });
   ok('3. a push address that isn\'t a real push service: refused', r.status === 400);
-  r = await call(w, '/subscribe', { subscription: sub(A), sheet: { url: 'https://example.com/exec', secret: 'x' }, prefs: NY });
-  ok('3. a "Sheet" that isn\'t an Apps Script link: refused without fetching it', r.status === 403 && r.body.error === 'no-sheet');
-  r = await call(w, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: { ...NY, skip: ['l3'] } });
-  ok('3. the right link and secret: subscribed', r.status === 200 && r.body.ok);
-  const calls = w.sheetCalls;
-  r = await call(w, '/subscribe', { subscription: sub(B), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: { ...NY, nudges: false } });
-  ok('3. the second phone, same link and secret: subscribed without asking the Sheet again', r.status === 200 && w.sheetCalls === calls);
+  w.sheet('https://example.com/exec');
+  r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
+  ok('3. a "Sheet" that isn\'t an Apps Script link: refused without fetching it', r.status === 403 && r.body.error === 'no-sheet' && !w.sheetLinks.some(l => l.startsWith('https://example.com')));
+  w.sheet();
+  r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: { ...NY, skip: ['l3'] } });
+  ok('3. signed in, the right link and phrase: subscribed', r.status === 200 && r.body.ok);
+  r = await call(w, '/subscribe', { subscription: sub(B), session: ELLA, prefs: { ...NY, nudges: false } });
+  ok('3. the second phone, signed in: subscribed', r.status === 200 && r.body.ok);
   const subs = await w.env.PUSH.get('subs', 'json');
   ok('3. each phone keeps its own choices', Object.values(subs).map(s => s.skip.join('') + '/' + s.nudges).sort().join() === '/false,l3/true');
-  r = await call(w, '/subscribe', { subscription: sub(phone('x')), sheet: { url: OTHER, secret: 'someone-else' }, prefs: NY });
-  ok('3. someone else\'s Sheet can\'t take over the server', r.status === 403 && r.body.error === 'other-sheet');
-  w.secrets[SHEET] = 'new-secret';
-  r = await call(w, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'new-secret' }, prefs: NY });
-  ok('3. after the secret is changed in the script, the new one takes over', r.status === 200 && (await w.env.PUSH.get('sheet', 'json')).secret === 'new-secret');
+  ok('3. nothing a phone sends can change which Sheet the server reads', (await w.env.PUSH.get('sheet')) === null && w.env.NOTES_SHEET_URL === SHEET);
   r = await call(w, '/refresh', { endpoint: 'https://web.push.apple.com/nobody' });
   ok('3. /refresh from a phone that isn\'t subscribed: refused', r.status === 403);
   r = await call(w, '/refresh', { endpoint: A.endpoint });
@@ -192,8 +198,9 @@ const A = phone('a'), B = phone('b');
   ];
   w.notes = [{ id: 'n1', title: 'Book the dentist', body: 'x', reminder: new Date(due).toISOString() }];
   const sub = ph => ({ endpoint: ph.endpoint, keys: ph.keys });
-  await call(w, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: { ...NY, skip: ['l3'] } });
-  await call(w, '/subscribe', { subscription: sub(B), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: { ...NY, nudges: false } });
+  w.sheet();
+  await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: { ...NY, skip: ['l3'] } });
+  await call(w, '/subscribe', { subscription: sub(B), session: ELLA, prefs: { ...NY, nudges: false } });
 
   let r = await tick(w.env, w.fetch, due - 2 * MIN);
   ok('4. nothing due yet: nothing sent', r.sent === 0 && w.pushed.length === 0, JSON.stringify(r));
@@ -219,7 +226,8 @@ const A = phone('a'), B = phone('b');
   // More than three at once: one notification listing them.
   const w2 = world();
   w2.todos = ['A', 'B', 'C', 'D'].map((x, i) => ({ id: 'm' + i, title: 'Thing ' + x, list: 'l1', date: '2026-10-02', time: '17:30', done: false }));
-  await call(w2, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  w2.sheet();
+  await call(w2, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   await tick(w2.env, w2.fetch, due + 5e3);
   const many = w2.pushed.map(p => decrypt(p.body, A));
   ok('4. four due together: one notification that lists them', many.length === 1 && many[0].title === '4 reminders' && many[0].body === 'Thing A, Thing B, Thing C, Thing D' && many[0].open === 'rem');
@@ -227,7 +235,8 @@ const A = phone('a'), B = phone('b');
   // Too late (the server was down): not sent.
   const w3 = world();
   w3.todos = [{ id: 'z', title: 'Long gone', list: 'l1', date: '2026-10-02', time: '17:30', done: false }];
-  await call(w3, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  w3.sheet();
+  await call(w3, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   await tick(w3.env, w3.fetch, due + 11 * MIN);
   ok('4. more than 10 minutes late: not sent', w3.pushed.length === 0);
   await tick(w3.env, w3.fetch, due + 9 * MIN);
@@ -237,7 +246,8 @@ const A = phone('a'), B = phone('b');
   const w4 = world();
   w4.todos = [{ id: 'y', title: 'Later', list: 'l1', date: '2026-10-05', time: '09:00', done: false }];
   await call(w4, '/key');                                     // as the phone does first
-  await call(w4, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  w4.sheet();
+  await call(w4, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   const base = Math.floor(due / (15 * MIN)) * 15 * MIN;       // a quarter hour
   const c0 = w4.sheetCalls, kv0 = w4.env.PUSH.writes;
   for (let i = 1; i < 15; i++) await tick(w4.env, w4.fetch, base + i * MIN);
@@ -252,7 +262,8 @@ const A = phone('a'), B = phone('b');
   // The phone turned notifications off (Apple says 410): forgotten.
   const w5 = world();
   w5.todos = [{ id: 'q', title: 'Gone phone', list: 'l1', date: '2026-10-02', time: '17:30', done: false }];
-  await call(w5, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  w5.sheet();
+  await call(w5, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   w5.pushStatus = 410;
   await tick(w5.env, w5.fetch, due + 5e3);
   ok('4. a phone Apple says is gone is forgotten', Object.keys(await w5.env.PUSH.get('subs', 'json')).length === 0);
@@ -269,10 +280,9 @@ const A = phone('a'), B = phone('b');
   ok('4. a phone in Los Angeles gets it at 5:30 PM there', la.length === 1);
 }
 
-// ---- 5. since aOS keeps the Sheet: phones sign in, the server keeps its own link and phrase ----
+// ---- 5. aOS keeps the Sheet: phones sign in, the server keeps its own link and phrase ----
 {
   const sub = ph => ({ endpoint: ph.endpoint, keys: ph.keys });
-  const TOM = 'tok-tom-0123456789', ELLA = 'tok-ella-0123456789';
   const w = world();
   w.newScript = true;
   let r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
@@ -306,12 +316,14 @@ const A = phone('a'), B = phone('b');
   w.env.NOTES_SHEET_SECRET = 'new-phrase';
   r = await call(w, '/subscribe', { subscription: sub(A), session: ELLA, prefs: NY });
   ok('5. given the new phrase (a Worker secret): works again', r.status === 200);
-  // without Worker secrets: the pair the first phone brought, before aOS
+  // without Worker secrets: the pair kept in its storage from before aOS (nothing writes it now)
   const w2 = world();
-  await call(w2, '/subscribe', { subscription: sub(A), sheet: { url: SHEET, secret: 'maple-otter' }, prefs: NY });
+  await w2.env.PUSH.put('sheet', JSON.stringify({ url: SHEET, secret: 'maple-otter' }));
   w2.newScript = true;
   r = await call(w2, '/subscribe', { subscription: sub(B), session: TOM, prefs: NY });
   ok('5. no Worker secrets: the kept pair still reads the new script', r.status === 200, JSON.stringify(r.body));
+  r = await call(w2, '/subscribe', { subscription: sub(A), sheet: { url: OTHER, secret: 'someone-else' }, prefs: NY });
+  ok('5. a phone bringing another Sheet, no session: refused, the kept pair untouched', r.status === 403 && r.body.error === 'signin' && (await w2.env.PUSH.get('sheet', 'json')).url === SHEET);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

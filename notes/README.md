@@ -262,10 +262,11 @@ sends the phone's family session; the server checks it with aOS once
 Just-me reminder or nudge alerts only its own person's phones; a shared one
 alerts every phone that has its list on.
 
-**Its copy of the Sheet's link and phrase**: the pair the first phone brought
-(before aOS kept the Sheet), kept in its storage; or, once you give it them,
-the Worker secrets `NOTES_SHEET_SECRET` (and `NOTES_SHEET_URL`, if it has no
-pair yet), which win. When you change the Notes Sheet's `SECRET`
+**Its copy of the Sheet's link and phrase**: the Worker secrets
+`NOTES_SHEET_SECRET` and `NOTES_SHEET_URL`; or, from before aOS kept the Sheet,
+the pair a phone brought then, still in its storage (the secrets win, and no
+phone can bring a pair any more: that let anyone try phrases against the Sheet
+through the server). When you change the Notes Sheet's `SECRET`
 (aOS/SHEETS.md, "Setting it up"), give the server the new phrase too, or
 notifications stop: in Cloudflare, **Workers & Pages → notes-push → Settings →
 Variables and Secrets → Add**, type *Secret*, name `NOTES_SHEET_SECRET`, the
