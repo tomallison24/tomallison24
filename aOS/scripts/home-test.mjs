@@ -152,6 +152,10 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#appback').click(); await pg.waitForTimeout(600);
   s = await state();
   check(!s.inApp && s.hash === '' && await pg.isVisible('#home'), `"‹ aOS" goes back ${tag}`);
+  await pg.evaluate(() => { window.__same = 1; aosHomeTab.show('notes'); }); await pg.waitForTimeout(500);
+  await pg.goBack(); await pg.waitForTimeout(500);
+  s = await state();
+  check(!s.inApp && s.hash === '' && await pg.evaluate(() => window.__same === 1), `the phone's own back (an iPhone's edge swipe) goes to Home, staying in aOS ${tag}`);
   await pg.locator('.hrow[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
@@ -207,6 +211,8 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + Date.now()));
     await pg.goto(BASE + '/mail/'); await pg.waitForURL(/\/aOS\/#app=mail|\/aOS\/$/, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(1500);
     check(/\/aOS\//.test(pg.url()) && await pg.evaluate(() => document.body.classList.contains('in-app') && !!document.querySelector('.frame[data-id="mail"]:not([hidden])')), `back from Google's sign-in, Mail goes back into aOS, open ${tag}`);
+    await pg.evaluate(() => { window.__same = 1; }); await pg.goBack(); await pg.waitForTimeout(800);
+    check(/\/aOS\/$/.test(pg.url()) && await pg.evaluate(() => window.__same === 1 && !document.body.classList.contains('in-app')), `and the phone's back from there goes to aOS Home, not to the page before ${tag}`);
     await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + (Date.now() - 3600e3)));
     await pg.goto(BASE + '/mail/'); await pg.waitForTimeout(1500);
     check(/\/mail\//.test(pg.url()), `a sign-in given up on long ago doesn't pull Mail into aOS ${tag}`);
