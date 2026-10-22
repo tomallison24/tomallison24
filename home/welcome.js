@@ -85,6 +85,30 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '2', date: '2026-10-22', title: 'Every app, one home', look: 'vintage',
+      highlights: ['Every app now opens inside aOS', 'Ask Ipsy across all your apps', 'aOS in your design, Vintage or Sea glass'],
+      notes: ['aOS: Home is the first tab (in place of Apps): Ipsy at the top, Open now, your Favorites, then every app in four groups (Family, Every day, Out and about, You). A row\'s i opens the app\'s page, with What\'s New, Open and Get',
+        'Every app opens inside aOS: it slides in over Home and fills the screen, its own design and background up to the top, with ‹ aOS in its corner. Tap ‹ aOS, or swipe in from the left edge, to go back; hold it to jump to another open app. Up to four stay open, each where you left it',
+        'Favorites, mixed: pin up to four (Edit, then the stars); the rest fill in with the apps you open most, over the last two weeks, on this phone',
+        'Ipsy on aOS\'s Home works across Calendar, Notes, Meals, Orders, Travel and News at once, with each app\'s own tools, rules and Undo, on Claude Sonnet 5.5. Fitness stays out: aOS\'s Ipsy can search the web, and your health data never goes near a web search (ask Ipsy in Fitness)',
+        'Inside aOS every app shares one sign-in: Face ID once, for all of them. One Gmail sign-in in Mail covers Travel and Orders too; Google\'s sign-in page opens over aOS and brings you back',
+        'Moving in: open each app from its old icon once more, signed in, and what it kept only on your phone (Clock\'s alarms, Weather\'s cities, Home\'s Home Assistant sign-in, settings) moves into aOS the first time you open it there. It waits in your family account two weeks at most, and is deleted once aOS has it',
+        'The old app icons still work, and say the app lives in aOS now; remove them when you\'re ready (press and hold, Remove App). Get on an app\'s page in aOS still adds one',
+        'aOS\'s update screens and welcome are mid-century now: cream, mustard, teal and orange',
+        'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
+        'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'],
+      cards: [
+        { i: 'house', t: 'The new aOS', d: 'Every app now opens inside aOS. Tap one on Home; ‹ aOS, or a swipe from the left edge, brings you back, and it stays where you left it.' },
+        { i: 'sparkle', t: 'Ask Ipsy, across your apps', d: 'Ipsy sits at the top of Home and works across Calendar, Notes, Meals, Orders, Travel and News at once.' },
+        { i: 'star', t: 'Favorites that learn', d: 'Pin up to four. The rest fill in with the apps you use most.' },
+        { i: 'swipe', t: 'Moving in', d: 'Open each app from its old icon once more: what it kept on your phone moves into aOS. Then you can remove the old icons.' },
+        { i: 'sliders', t: 'Your design', d: 'Vintage or Sea glass, for aOS in Account, and for each app in its own Settings.' },
+        { x: 'theme', i: 'moon', t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark.' },
+      ],
+      apps: {
+        orders: { notes: ['Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too', 'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'] },
+        mail: { notes: ['Inside aOS, Connect Gmail opens Google\'s sign-in over aOS and comes straight back; Travel and Orders use the same sign-in'] },
+      } },
     { v: '1.8', date: '2026-10-21', title: 'Health, with Ipsy',
       highlights: ['Fitness: your Apple Health stats, every day',
         'Activity, heart, sleep and vitals, from your own iPhone',
@@ -96,9 +120,7 @@
         'Every app: the explanations under settings are gone, and each switch says what it does in one short line',
         'Fitness: Health fetches fresh readings each time you open it',
         'Fitness: Health at a glance: a tile each for Activity (Move and Exercise rings), Heart, Sleep (a Sleep score of Fitness\'s own, not Apple\'s) and Vitals, with a dot for Good, Check or Off against healthy ranges (CDC, AHA, FDA) or your own usual. Tap a tile for its charts over 7, 30 or 90 days, sleep stages and trends. A Move goal in Settings > Steps',
-        'Fitness: vitals alerts: if even one of your vitals is off (outside the healthy range or your usual, as the Vitals tile counts them), aOS notifies you, once a day at most; tap it to open Health on that day. The notification says only "A vital is off your usual". Turn it off in Fitness Settings > Health; it needs aOS notifications on',
-        'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
-        'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'],
+        'Fitness: vitals alerts: if even one of your vitals is off (outside the healthy range or your usual, as the Vitals tile counts them), aOS notifies you, once a day at most; tap it to open Health on that day. The notification says only "A vital is off your usual". Turn it off in Fitness Settings > Health; it needs aOS notifications on'],
       apps: {
         fitness: { highlights: ['Health: activity, heart, sleep and vitals from your iPhone', 'Steps from Apple Health, Apple Watch included', 'Turn on Ipsy in Settings to find patterns'],
           tour: [
@@ -1426,7 +1448,24 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   #aos-welcome *, #aos-welcome *::before, #aos-welcome *::after { animation: none !important; transition-duration: .2s !important; transition-delay: 0s !important; }
   #aos-welcome .c-art path, #aos-welcome .c-art rect, #aos-welcome .c-art circle { stroke-dashoffset: 0; }
   #aos-welcome .v-new i { opacity: 1; transform: none; filter: none; }
-}`;
+}
+/* Mid-century (a release with look: 'vintage', aOS2): the update screens and the welcome in the
+   apps' Vintage colours - cream (walnut in the dark), mustard, teal, burnt orange - in Futura, the
+   ink solid, with the atomic shapes in the corners. Doubled class: wins over the Sea glass above. */
+:root #aos-welcome.mc.mc { --w-bg: #F4ECDD; --w-text: #2B2522; --w-muted: #5B4A3F; --w-glass: #FBF5E9; --w-edge: rgba(43,37,34,.14); --w-dot: rgba(43,37,34,.2);
+  --w-pastel: linear-gradient(100deg, #D8572A, #D8572A); --w-glow: rgba(227,167,47,.45);
+  --w-hot: linear-gradient(120deg, #1F6F6B 0%, #1F6F6B 45%, #D8572A 100%); --w-hot-glow: rgba(227,167,47,.7); --w-hot-glow2: rgba(216,87,42,.55);
+  font-family: "Futura", "Futura-Medium", "Avenir Next", "Jost", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD; --w-muted: #CFC1AC; --w-glass: #322A25; --w-edge: rgba(244,236,221,.14); --w-dot: rgba(244,236,221,.24);
+  --w-pastel: linear-gradient(100deg, #F0C766, #F0C766); --w-hot: linear-gradient(120deg, #4FB3AB 0%, #4FB3AB 45%, #F0C766 100%); } }
+html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD; --w-muted: #CFC1AC; --w-glass: #322A25; --w-edge: rgba(244,236,221,.14); --w-dot: rgba(244,236,221,.24);
+  --w-pastel: linear-gradient(100deg, #F0C766, #F0C766); --w-hot: linear-gradient(120deg, #4FB3AB 0%, #4FB3AB 45%, #F0C766 100%); }
+#aos-welcome.mc::before, #aos-welcome.mc::after { content: ''; position: absolute; pointer-events: none; z-index: -1; }   /* under everything on the screen */
+#aos-welcome.mc::before { right: -70px; top: -70px; width: 200px; height: 200px; border-radius: 50%; background: #E3A72F; opacity: .9; }
+#aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
+#aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
+#aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
+`;
 
   // ---- the overlay ----
   let open = null;
@@ -1436,6 +1475,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     }
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
+    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage') el.classList.add('mc');   // aOS2's screens: mid-century
     el.innerHTML = `<button class="w-skip" type="button">Skip</button>${inner}
       <div class="c-fly"></div>
       <div class="c-panel"><div class="c-body"></div><div class="w-dots"></div>
@@ -2213,6 +2253,34 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   }
   AOS.erase = remote => eraseHere(!!remote);   // remote: the server asked (aOS's own GET state, aOS/app.js)
   // After the reload: once, a card saying so.
+  // aOS2: every app lives inside aOS. Opened from its own Home Screen icon (after its aOS2 screen, and
+  // with nothing else on screen), an app says so, once a day: aOS is where it opens now, what it kept
+  // on this phone moves there (carryOut, above), and how to take this icon off. No link to aOS: from
+  // here it would open aOS in this icon's own storage, not the aOS on the Home Screen.
+  function movedNote() {
+    if (!APP || !APPS.includes(APP) || inHome || !standalone() || major(latest()) < 2) return;
+    if (document.getElementById('aos-welcome') || document.getElementById('aos-moved')) return;
+    const KEY = 'aos.moved.' + APP; let last = ''; try { last = localStorage.getItem(KEY) || ''; } catch {}
+    const day = new Date().toISOString().slice(0, 10); if (last === day) return;
+    try { localStorage.setItem(KEY, day); } catch {}
+    const name = esc(NAMES[APP] || APP), el = document.createElement('div');
+    el.id = 'aos-moved'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', NAMES[APP] + ' lives in aOS now');
+    el.innerHTML = `<style>#aos-moved{position:fixed;inset:0;z-index:2147482000;display:grid;place-items:center;padding:24px;background:rgba(36,30,26,.55);font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+      #aos-moved .m-card{position:relative;overflow:hidden;width:100%;max-width:380px;padding:26px 22px 20px;border-radius:28px;background:#F4ECDD;color:#2B2522;text-align:left}
+      #aos-moved .m-card::before{content:'';position:absolute;right:-50px;top:-50px;width:140px;height:140px;border-radius:50%;background:#E3A72F}
+      #aos-moved img{position:relative;width:64px;height:64px;border-radius:16px}
+      #aos-moved h2{position:relative;margin:14px 0 4px;font-size:25px;font-weight:600;letter-spacing:-.02em}
+      #aos-moved .m-bars{display:flex;gap:5px;margin:0 0 14px}#aos-moved .m-bars i{height:6px;border-radius:3px;background:#1F6F6B;width:28px}#aos-moved .m-bars i+i{width:14px;background:#E3A72F}#aos-moved .m-bars i+i+i{width:6px;background:#D8572A}
+      #aos-moved p{margin:0 0 10px;font-size:16px;line-height:1.4;color:#5B4A3F}#aos-moved p b{color:#2B2522}
+      #aos-moved button{width:100%;height:50px;margin-top:8px;border:0;border-radius:999px;background:#D8572A;color:#FFF8EC;font:inherit;font-size:17px;font-weight:600}</style>
+      <div class="m-card"><img src="${icon(APP)}" alt=""><h2>${name} lives in aOS now</h2><div class="m-bars"><i></i><i></i><i></i></div>
+        <p>Open <b>aOS</b> from your Home Screen: ${name} opens inside it, beside every other app, with Ipsy on Home.</p>
+        <p>Signed in, what ${name} keeps on this phone moves into aOS the next time you open it there.</p>
+        <p>Then you can take this icon off: press and hold it, then <b>Remove App</b>.</p>
+        <button type="button">OK</button></div>`;
+    el.querySelector('button').onclick = () => el.remove();
+    document.body.appendChild(el);
+  }
   function erasedNote() {
     let how = null; try { how = sessionStorage.getItem(ERASED); sessionStorage.removeItem(ERASED); } catch {}
     if (!how) return false;
@@ -2280,7 +2348,7 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     return true;
   }
   if (me && me.hasAttribute('data-auto')) {
-    const go = () => { if (erasedNote() || backToAOS()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
+    const go = () => { if (erasedNote() || backToAOS()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}).then(movedNote).catch(() => {}); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkPlan(); });   // back from aOS, or a day later
     addEventListener('online', () => checkPlan());   // a phone kept offline hears of an erase as soon as it's back
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();

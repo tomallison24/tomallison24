@@ -64,8 +64,8 @@ async function tab(app, { ua = ANDROID, answer = [], signed = true, store } = {}
   await ctx.route('**/aOS/api/**', async route => { const rq = route.request(), u = new URL(rq.url());
     const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.split('/aOS/api/')[1].split('/') }, env: { ACCOUNTS: db } });
     route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
-  const p = await ctx.newPage(); await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]'); await p.waitForSelector('#list .row'); await p.waitForTimeout(800);
-  const label = id => p.locator(`#list .row[data-app="${id}"] [data-get]`).first().innerText().catch(() => '(no button)');
+  const p = await ctx.newPage(); await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="search"]'); await p.click('[data-tab="search"]'); await p.waitForSelector('#found .row'); await p.waitForTimeout(800);
+  const label = id => p.locator(`#found .row[data-app="${id}"] [data-get]`).first().innerText().catch(() => '(no button)');
   if (!/Get/i.test(await label('house'))) pr.push('aOS still says Home is ' + await label('house'));
   if (!/Installed/i.test(await label('mail'))) pr.push('aOS says Mail is ' + await label('mail'));
   await ctx.close();

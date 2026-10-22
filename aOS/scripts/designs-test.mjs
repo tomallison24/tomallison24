@@ -35,7 +35,7 @@ async function open(apps = {}, scheme = 'light', look = 'glass') {   // the Sea 
     return J({});
   });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="apps"]'); await p.click('[data-tab="apps"]'); await p.waitForSelector('#list .row');
+  await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="search"]'); await p.click('[data-tab="search"]'); await p.waitForSelector('#found .row');   // aOS2: Search lists every app (Apps is Home now)
   return { ctx, p, errs };
 }
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
@@ -63,7 +63,7 @@ for (const look of ['vintage', 'glass']) {
   for (const id of APPS) if (!gets.includes(id + '=/' + id + '/')) pr.push(id + ' does not link to /' + id + '/: ' + gets.filter(x => x.startsWith(id)).join(' '));
   const story = await p.locator('#stories [data-get]').evaluateAll(bs => bs.map(b => b.dataset.get));
   if (story.some(id => /vintage$/.test(id))) pr.push('a Today story links to an old Vintage app: ' + story.join());
-  await p.click('#list .row[data-app="weather"]'); await p.waitForSelector('.apphead [data-get]');
+  await p.click('#found .row[data-app="weather"]'); await p.waitForSelector('.apphead [data-get]');
   if (await p.locator('.dbtn').count()) pr.push('the app page still has a Design menu');
   if (await attr(p, '.apphead [data-get]', 'data-get') !== 'weather') pr.push('Get on Weather adds ' + await attr(p, '.apphead [data-get]', 'data-get'));
   await p.click('.apphead [data-get]'); await p.waitForTimeout(500);

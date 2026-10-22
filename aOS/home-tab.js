@@ -17,7 +17,7 @@
 // share one phone storage: one Face ID sign-in, one Light or dark.
 //
 // Tried first as a test page (labs/home/, "Swipe"), where the other ways of getting around were
-// tried too.
+// tried too, then in preview on the owner's phone; aOS2 made it aOS's own.
 'use strict';
 (() => {
   window.aosHome = window.aosHome || {};   // before any app opens: welcome.js in it looks for this
@@ -26,11 +26,6 @@
   const get = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-  // In preview until aOS 2 is released: on for this phone with aOS/#preview=aos2 (#preview=off: off
-  // again). Off, aOS is as it was, the Apps tab and all.
-  const PREVIEW = 'aos.preview';
-  { const m = /[#&]preview=(aos2|off)/.exec(location.hash); if (m) { put(PREVIEW, m[1] === 'aos2'); try { history.replaceState(null, '', location.pathname); } catch {} } }
-  if (!get(PREVIEW, false)) return;
   // Home takes the Apps tab's place, first in the dock, and opens first
   const appsTab = document.querySelector('[data-tab="apps"]');
   appsTab.dataset.tab = 'home';

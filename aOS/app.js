@@ -118,7 +118,7 @@
   const IPSY_SAYS = [
     ['stem', 'Hi! I’m Ipsy, a little stem cell.'], ['wbc', 'I track down orders and trips.'],
     ['neuron', 'I check flights, Gmail and the web.'], ['rbc', 'I plan dinners and tidy your lists.'],
-    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me in six apps, bottom left!'],
+    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me on aOS Home, and in six apps!'],
   ];
   const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt through your things'],
     ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
@@ -127,7 +127,7 @@
       <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
       <h3>It does the work</h3><p>Ipsy finds, fixes, adds and tidies in the app you’re in. Every change has Undo.</p>
       <h3>A cell of many shapes</h3><div class="ipsy-forms">${IPSY_FORMS.map(([f, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-form="${f}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
-      <h3>Where to find it</h3><p>Tap the little cell in the bottom left corner.</p>` };
+      <h3>Where to find it</h3><p>At the top of aOS Home, where I work across your apps, and in the bottom left corner of each app.</p>` };
   const ipsyStage = (cls, line) => `<div class="${cls}" data-ipsy-stage></div><p class="ipsy-say" aria-hidden="true"><span>${esc(line)}</span></p>`;
   // Brings every Ipsy on the page to life: the card's and the page's tell what it can do, one shape at a time.
   let ipsyTimer = 0;
@@ -159,15 +159,15 @@
   const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
   const intro = fresh && now.intro === 'ipsy';
   const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
-  const aotd = pool.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';
   const STORIES = [...(intro ? [IPSY] : []), ...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
   for (const s of pool) if (STORIES.length < SHAPE.length && !STORIES.some(o => o.id && o.id === s.id)) STORIES.push(s);
+  const aotd = STORIES.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';   // the first app shown (one from the pool can be left out: Meet Ipsy is Orders')
   const w = STORIES.indexOf(NEWS); if (SHAPE[w] === 'wide') [STORIES[w], STORIES[w + 1]] = [STORIES[w + 1], STORIES[w]];   // the mark needs height
   let tint = 0; for (const s of STORIES) s.cls = s.plain ? 's2' : s.ipsy ? (tint++, 's0') : ['s0', 's1', 's3', 's4'][tint++ % 4];   // the Vintage postcard colors (Ipsy: mustard on teal)
   $('stories').innerHTML = STORIES.map((s, i) => s.ipsy
     ? `<div class="story ipsy ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:129,147,188"><div class="art">${ipsyStage('ipsy-stage', IPSY_SAYS[0][1])}</div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
-       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy is in ${IPSY_APPS.length} apps</b><i>Tap the little cell, bottom left</i></span>${getBtn(appOf(s.id))}</div></div>`
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy is in ${IPSY_APPS.length} apps</b><i>On aOS Home, and in each app</i></span>${getBtn(appOf(s.id))}</div></div>`
     : s.plain
     ? `<div class="story plain ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
     : `<div class="story ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
@@ -552,12 +552,6 @@
     box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
     paintNotify();
     if (u.role !== 'owner') return;
-    // aOS 2, in preview until it's released (aOS/home-tab.js): on or off for this phone, from here, since
-    // a link opens in Safari, whose storage isn't the Home Screen aOS's
-    let pre = false; try { pre = JSON.parse(localStorage.getItem('aos.preview') || 'false') === true; } catch {}
-    box.insertAdjacentHTML('beforeend', `<div><h3>aOS 2 preview</h3><p>Every app inside aOS, with Ipsy on Home. Just this phone; the family sees nothing.</p>
-      <button type="button" class="${pre ? 'soft' : 'go'}" id="aPreview">${pre ? 'Turn off the preview' : 'Try aOS 2'}</button></div>`);
-    $('aPreview').onclick = () => { try { localStorage.setItem('aos.preview', JSON.stringify(!pre)); } catch {} location.replace(location.pathname); };
     box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
       <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
