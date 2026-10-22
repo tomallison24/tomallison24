@@ -73,6 +73,13 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
   m.set('handoff:taken:O1:notes', '1');   // taken by the first aOS 2, which dropped it
   check(!(await call('handoff', { app: 'notes', data: { k: 'v' } })).j.taken && m.has('handoff:O1:notes'), 'taken by the first aOS 2 (which kept its own copy): it moves again');
   check((await call('handoff/take', { app: 'weather' })).j.data === null && !m.has('handoff:taken2:O1:weather'), 'nothing waiting yet: aOS can ask again');
+  // moving to a new aOS icon: everything, left by the old icon, taken once by the new one
+  check((await call('move/take', {})).j.data === null, 'a new icon with nothing left for it: nothing to take');
+  const big = 'x'.repeat(600 * 1024);
+  check((await call('move', { data: { ls: { a: '1', big } } })).j.ok && m.has('move:O1'), 'the old icon leaves everything, more than one app\'s worth too');
+  const mv = await call('move/take', {});
+  check(mv.j.data && mv.j.data.ls.a === '1' && mv.j.data.ls.big.length === big.length && !m.has('move:O1'), 'the new icon takes it, and then it\'s deleted');
+  check((await call('move', { data: { ls: { a: 'x'.repeat(5.2 * 1024 * 1024) } } })).status === 413, 'but not without end');
 }
 
 // ---- the page ----
@@ -189,6 +196,47 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
+// ---- moving to a new aOS icon (aOS/app.js, "moving to a new aOS icon") ----
+{
+  let left = null;
+  const icon = async (fresh, tab = false) => {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
+    await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+    await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+    const user = { id: 'O1', name: 'Tom', role: 'member', apps: {} };
+    await ctx.route('**/aOS/api/state', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ storage: true, setup: true, user, plan: null }) }));
+    await ctx.route('**/aOS/api/move', r => { left = JSON.parse(r.request().postData()).data; r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+    let took = 0;
+    await ctx.route('**/aOS/api/move/take', r => { took++; const d = fresh ? left : null; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: d }) }); });
+    await ctx.addInitScript(([apps, fresh, tab]) => { if (!tab) Object.defineProperty(navigator, 'standalone', { get: () => true }); if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+      const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+      localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
+      localStorage.setItem('aos.session', JSON.stringify({ token: fresh ? 'new' : 'old', user: { id: 'O1', name: 'Tom', role: 'member' }, at: Date.now() }));
+      if (!fresh) { localStorage.setItem('allison-clock-v1', '{"alarms":[{"at":"07:00"}]}'); localStorage.setItem('mail.token', 'secret');
+        const r = indexedDB.open('allison-notes', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { const t = r.result.transaction('kv', 'readwrite'); t.objectStore('kv').put({ url: 'https://sheet' }, 'sheet'); }; } }, [APPS, fresh, tab]);
+    const pg = await ctx.newPage(), errs = []; pg.on('pageerror', e => errs.push(e.message));
+    await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(1200);
+    return { ctx, pg, errs, took: () => took };
+  };
+  const old = await icon(false);
+  check(old.took() === 1 && await old.pg.evaluate(() => localStorage.getItem('aos.move')) === 'checked', 'an icon asks once whether something was left for it (nothing: it never asks again)');
+  await old.pg.locator('.tab:not([hidden]) [data-acct]').click(); await old.pg.waitForSelector('#mGo', { timeout: 8000 });
+  await old.pg.click('#mGo'); await old.pg.waitForFunction(() => /Remove App/.test(document.getElementById('mErr').textContent), null, { timeout: 8000 }).catch(() => {});
+  const notes = left && (left.idb || []).find(d => d.name === 'allison-notes');
+  check(left && left.ls['allison-clock-v1'] && !('mail.token' in left.ls) && !('aos.session' in left.ls) && notes && notes.stores[0].rows[0][1].url === 'https://sheet',
+    'Get ready to move leaves every app\'s data and databases, but not the sign-ins');
+  check(!old.errs.length, 'no script errors (the old icon)' + (old.errs.length ? ': ' + old.errs.join(' | ') : ''));
+  await old.ctx.close();
+  const tab = await icon(true, true);
+  check(tab.took() === 0, 'aOS in Safari, signed in, where the new icon is added from: it doesn\'t take what was left');
+  await tab.ctx.close();
+  const neu = await icon(true); await neu.pg.waitForTimeout(1500);
+  const got = await neu.pg.evaluate(() => new Promise(ok => { const r = indexedDB.open('allison-notes'); r.onsuccess = () => { try { const q = r.result.transaction('kv').objectStore('kv').get('sheet'); q.onsuccess = () => ok({ clock: localStorage.getItem('allison-clock-v1'), sheet: q.result && q.result.url, toast: document.getElementById('htoast').textContent }); } catch { ok({}); } }; r.onerror = () => ok({}); }));
+  check(neu.took() >= 1 && /07:00/.test(got.clock || '') && got.sheet === 'https://sheet' && /moved in/.test(got.toast || ''), `the new icon, signed in, takes it all and opens again with it (${JSON.stringify(got).slice(0, 120)})`);
+  check(!neu.errs.length, 'no script errors (the new icon)' + (neu.errs.length ? ': ' + neu.errs.join(' | ') : ''));
+  await neu.ctx.close();
+}
+
 // ---- moving in, from an app's own Home Screen icon (../home/welcome.js, "moving into aOS 2") ----
 for (const signedIn of [false, true]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });

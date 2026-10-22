@@ -20,6 +20,8 @@
 //   POST handoff          (family) { app, data } -> what that app keeps only on this phone, waiting for aOS 2 (14 days);
 //                                                  { taken: true } once aOS has taken it: no more to send
 //   POST handoff/take     (family) { app }       -> { data } (or null), once: then it's deleted
+//   POST move             (family) { data }      -> everything aOS keeps on this phone, for a new aOS icon (2 days)
+//   POST move/take        (family)               -> { data } (or null), once: then it's deleted
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
 //   POST push/unsubscribe (family) { endpoint }     -> it doesn't
@@ -43,6 +45,7 @@ import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, ver
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer or a handoff can be this big; everything else is tiny
 const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving into aOS 2, and how long it waits
+const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving to a new aOS icon
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
@@ -113,9 +116,9 @@ export async function planView(db, now = Date.now()) {
   return { id: p.id, since: p.since, ends: p.ends || null, cancelled: !!p.ends, renews: p.ends ? null : nextRenewal(p.since, now), trialUsed };
 }
 
-async function body(request) {
+async function body(request, max = MAX_BODY) {
   const t = await request.text();
-  if (t.length > MAX_BODY) throw Object.assign(new Error('too-big'), { status: 413 });
+  if (t.length > max) throw Object.assign(new Error('too-big'), { status: 413 });
   try { return JSON.parse(t || '{}'); } catch { throw Object.assign(new Error('bad-json'), { status: 400 }); }
 }
 
@@ -254,6 +257,22 @@ export async function onRequest({ request, params, env }) {
     // gone after HANDOFF_DAYS. Only you can send or take your own.
     // aOS 2 opened, signed in: from now on (for HANDOFF_DAYS after the last time), GET state tells your
     // apps to hand over what they keep on the phone. Written at most once a week.
+    // Moving to a new aOS icon (renaming aOS, or a new phone): a Home Screen icon's storage goes
+    // with it when it's removed, so the old icon leaves everything here first, and the new one,
+    // signed in, takes it, once. Only you can leave or take your own; never taken, it's gone
+    // after MOVE_DAYS.
+    if (route === 'move' && method === 'POST') {
+      const b = await body(request, MOVE_MAX);
+      if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data)) return reply({ error: 'data' }, 400);
+      await db.put('move:' + me.id, JSON.stringify(b.data), { expirationTtl: MOVE_DAYS * 86400 });
+      return reply({ ok: true });
+    }
+    if (route === 'move/take' && method === 'POST') {
+      const key = 'move:' + me.id, json = await db.get(key);
+      if (!json) return reply({ data: null });
+      await db.delete(key);
+      return reply({ data: JSON.parse(json) });
+    }
     if (route === 'handoff/want' && method === 'POST') {
       const key = 'handoff:want:' + me.id, at = +(await db.get(key)) || 0;
       if (Date.now() - at > 7 * 86400e3) await db.put(key, String(Date.now()), { expirationTtl: HANDOFF_DAYS * 86400 });
