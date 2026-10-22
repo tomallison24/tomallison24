@@ -3,12 +3,13 @@
 // (Sea glass), kept on this phone (../home/design.js, as in Clock).
 "use strict";
 
-// Refuse to run inside another page's frame. A hostile site could otherwise
+// Refuse to run inside another site's frame. A hostile site could otherwise
 // lay the app, invisible, under its own buttons and steer your taps onto Trash
-// or Block (clickjacking). The proper guard is a frame-ancestors header, which
-// GitHub Pages can't send; this does the same job from inside the page. The
-// home-screen app is never framed, so it never sees this.
-if (window.top !== window.self) {
+// or Block (clickjacking). Cloudflare's frame-ancestors header (_headers) stops
+// that too; this does the same job from inside the page. This same site may
+// frame it (aOS's all-in-one test, labs/home); the home-screen app is never
+// framed, so it never sees this.
+if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
   document.body.textContent = 'Mail can’t be opened inside another page.';
   throw new Error('Mail refuses to run inside a frame');
 }

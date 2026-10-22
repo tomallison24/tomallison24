@@ -49,8 +49,8 @@
 // - Ipsy, if you turn it on in Settings: ask it about patterns in your own days
 //   (ipsy-tools.js, read-only; Claude through ../fitness/api, no web search).
 
-// Refuse to run inside another page's frame (see Mail's app.js for why).
-if (window.top !== window.self) {
+// Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
+if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
   document.body.textContent = 'Fitness can’t be opened inside another page.';
   throw new Error('Fitness refuses to run inside a frame');
 }
