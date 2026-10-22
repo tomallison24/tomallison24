@@ -89,7 +89,7 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
       const el = document.createElement('div');
       el.id = 'aos-signin'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Sign in to AllisonOS');
       el.innerHTML = `<div class="s-sheet"><div class="s-mark"><span>aOS</span></div><h2>Sign in to AllisonOS</h2>
-        <p>${why || 'Your family account keeps this private.'}</p>
+        <p>${String(why || 'Your family account keeps this private.').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])}</p>
         <button type="button" class="s-go">Continue with Face ID</button><div class="s-err" role="status"></div>
         <p class="s-new">No account yet? Set one up in aOS, or ask for an invite.</p>
         <button type="button" class="s-not">Not now</button></div>`;

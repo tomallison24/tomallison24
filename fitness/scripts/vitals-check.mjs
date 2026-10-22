@@ -32,7 +32,8 @@ export async function checkVitals(base, key, { fetchImpl = fetch, extra = {} } =
     try { const r = await post('check', { to: id }); if (r.alerted) alerted++; if (r.error) errors++; }
     catch { errors++; }
   }
-  return `Checked ${people.length} ${people.length === 1 ? 'person' : 'people'}: ${alerted} alerted${errors ? `, ${errors} couldn't be checked` : ''}`;
+  // Only whether it ran: the workflow's log is public, so no counts of who was alerted.
+  return errors ? `Done, but ${errors} couldn't be checked` : 'Done';
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

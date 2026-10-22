@@ -4139,7 +4139,8 @@ document.addEventListener('click', async e => {
       return;
     case 'push-url-save': {
       const v = ($('#push-url')?.value || '').trim();
-      if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(v)) return toast('That doesn’t look like the server’s https:// address', { bad: true });
+      // only the Worker's own address: the app sends it your Gmail sign-in
+      if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev(\/[^\s]*)?$/i.test(v)) return toast('That doesn’t look like the server’s address: it starts with https:// and ends in workers.dev', { bad: true });
       ls.set(K.pushUrl, v);
       toast('Saved. Choose what to be notified about.');
       return render();
