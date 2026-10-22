@@ -235,11 +235,15 @@ window.OrdersIpsy = function (app) {
       return { content: { order: brief(o), ...(bad.length ? { skipped: bad } : {}) }, change: { text: 'Added ' + who(o), undo: undoTo(snap) } };
     },
 
-    async delete_orders(q) {
+    // Asked first, in the chat: a deleted order doesn't come back from its email.
+    async delete_orders(q, { confirm }) {
       const ids = [...new Set(Array.isArray(q.ids) ? q.ids : [])];
       const found = ids.filter(byId), missing = ids.filter(id => !byId(id));
       if (!found.length) fail('None of those orders are here.');
       const snap = snapshot(found), names = found.map(id => who(byId(id)));
+      const ok = await confirm((found.length === 1 ? 'Delete ' + names[0] : 'Delete these ' + found.length + ' orders: ' + names.slice(0, 5).join(', ') + (found.length > 5 ? ' and ' + (found.length - 5) + ' more' : ''))
+        + '? It won’t come back when its email is read again.', { yes: found.length === 1 ? 'Delete it' : 'Delete them', no: 'Keep' });
+      if (!ok) return { content: { deleted: [], declined: true, note: 'The person said no, so nothing was deleted.' } };
       app.orders = app.orders.filter(o => !found.includes(o.id));
       found.forEach(app.closeOrder);
       done();
@@ -247,10 +251,14 @@ window.OrdersIpsy = function (app) {
         change: { text: found.length === 1 ? 'Deleted ' + names[0] : 'Deleted ' + found.length + ' orders (' + [...new Set(names)].slice(0, 3).join(', ') + (new Set(names).size > 3 ? '…' : '') + ')', undo: undoTo(snap) } };
     },
 
-    async merge_orders(q) {
+    // Asked first, in the chat: the merged-away orders are gone for good.
+    async merge_orders(q, { confirm }) {
       const keep = byId(q.keep_id); if (!keep) fail('No order with id ' + q.keep_id + '.');
       const others = [...new Set(Array.isArray(q.merge_ids) ? q.merge_ids : [])].filter(id => id !== keep.id).map(byId).filter(Boolean);
       if (!others.length) fail('Nothing to merge: none of merge_ids are other orders here.');
+      const ok = await confirm('Merge ' + (others.length === 1 ? who(others[0]) : others.length + ' orders (' + others.slice(0, 3).map(who).join(', ') + (others.length > 3 ? '…' : '') + ')')
+        + ' into ' + who(keep) + '? The merged-away ' + (others.length === 1 ? 'order' : 'orders') + ' won’t come back.', { yes: 'Merge', no: 'Keep them apart' });
+      if (!ok) return { content: { merged: [], declined: true, note: 'The person said no, so nothing was merged.' } };
       const snap = snapshot([keep.id, ...others.map(o => o.id)]);
       const L = keep.locks || {};
       for (const m of others) {
@@ -311,7 +319,9 @@ window.OrdersIpsy = function (app) {
       const { html, text } = app.bodies(msg.payload);
       const fromHtml = html ? P.htmlToText(html) : '';
       const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
-        .replace(/https?:\/\/([^\s/?#]+)\S*/g, (u, host) => '[link to ' + host.replace(/^www\./, '') + ']').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+        .replace(/https?:\/\/([^\s/?#]+)\S*/g, (u, host) => '[link to ' + host.replace(/^www\./, '') + ']')
+        // a link written without its https:// (www.site.com/path, site.com/path) is a link too; a plain name (amazon.com) stays
+        .replace(/(?<![\w@.\/-])((?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?:\/[^\s<>"']*)+/gi, (u, host) => '[link to ' + host.replace(/^www\./i, '') + ']').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
       if (guard().hides(msg, body)) fail('That email is about an order the person marked Private, so Ipsy can’t read it.');
       return { content: { message_id: id, from: head(msg, 'From'), to: head(msg, 'To'), subject: head(msg, 'Subject'), date: day(msg.internalDate),
         ...(orderOfMsg(id) ? { order_id: orderOfMsg(id) } : {}), text: body.slice(0, 20000) + (body.length > 20000 ? '\n[the rest of the email is cut off]' : '') } };

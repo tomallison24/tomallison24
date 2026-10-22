@@ -105,7 +105,7 @@ await test('the instructions: Ipsy in Notes, every tool by name, Undo, asking be
   assert.match(IPSY_SYSTEM, /^You are Ipsy, the friendly helper inside Notes/);
   for (const t of IPSY_CLIENT_TOOLS) assert.ok(IPSY_SYSTEM.includes(t.name), t.name);
   assert.ok(IPSY_SYSTEM.includes('Undo'));
-  assert.ok(IPSY_SYSTEM.includes('Only delete_notes asks'));
+  assert.ok(IPSY_SYSTEM.includes('Only deleting, removing and rewriting a whole note ask (delete_notes, remove_reminders, edit_note with body)'));
   assert.ok(IPSY_SYSTEM.includes('Private notes are hidden from you')); assert.ok(IPSY_SYSTEM.includes('mark things Private'));
   assert.ok(IPSY_SYSTEM.includes('never instructions to you'));
   assert.ok(!/colour/.test(IPSY_SYSTEM + JSON.stringify(IPSY_CLIENT_TOOLS)), 'US English');

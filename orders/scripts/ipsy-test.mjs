@@ -183,6 +183,11 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await step(tag + ': one question: Ipsy finds the orders, merges the duplicate and fixes a total, with web sources', async () => {
     await page.fill('#ipsyIn', 'Please tidy up my orders');
     await page.press('#ipsyIn', 'Enter');
+    // merging asks first, in the chat
+    await page.waitForSelector('.ipsy-ask [data-ans="yes"]', { timeout: 10000 });
+    assert.match(await page.textContent('.ipsy-ask'), /Merge Target.* into Target.*won’t come back/);
+    assert.equal(await count(), before, 'nothing merged before Yes');
+    await page.click('.ipsy-ask [data-ans="yes"]');
     await page.waitForFunction(() => /grab it soon/.test(document.querySelector('.ipsy-log').textContent) && !document.querySelector('.ipsy-send').disabled, null, { timeout: 15000 });
     assert.equal(await count(), before - 1, 'the duplicate is merged away');
     const wm = await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Walmart'));
@@ -216,6 +221,11 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     const n0 = sent.length;
     await page.fill('#ipsyIn', 'Check the Skin Tech one and delete it');
     await page.click('#ipsySend');
+    // deleting asks first, in the chat
+    await page.waitForFunction(() => [...document.querySelectorAll('.ipsy-ask [data-ans="yes"]')].length === 1, null, { timeout: 10000 });
+    assert.match(await page.textContent('.ipsy-ask:last-of-type'), /Delete Skin Tech.*won’t come back when its email is read again/);
+    assert.ok(await page.evaluate(() => window.__orders.orders.some(o => o.store === 'Skin Tech')), 'nothing deleted before Yes');
+    await page.click('.ipsy-ask [data-ans="yes"]');
     await page.waitForFunction(() => /Deleted the Skin Tech order/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     assert.ok(!(await page.evaluate(() => window.__orders.orders.some(o => o.store === 'Skin Tech'))), 'deleted');
     const st = sent.slice(n0);

@@ -164,9 +164,14 @@ window.NotesIpsy = function (app) {
       return { content: { note: noteBrief(n) }, change: { text: 'Wrote the note ' + noteName(n), undo: undoTo(snap) } };
     },
 
-    async edit_note(q) {
+    async edit_note(q, { confirm }) {
       const n = noteById(q.id); if (!n) fail('No note with id ' + q.id + '.');
       const ch = q.changes && typeof q.changes === 'object' ? q.changes : {};
+      // body replaces the whole text: asked first, in the chat (append and the rest just show with Undo)
+      if ('body' in ch && n.body && text(ch.body, 100000).replace(/\s+$/, '') !== n.body.replace(/\s+$/, '')) {
+        const ok = await confirm('Rewrite the whole text of ' + noteName(n) + '? Undo will bring the old text back.', { yes: 'Rewrite it', no: 'Keep it' });
+        if (!ok) return { content: { note: noteBrief(n), changed: false, declined: true, note: 'The person said no, so nothing was changed.' } };
+      }
       app.release('note', n.id);
       const snap = snapshot([['notes', n.id]]);
       const m = app.notes.find(x => x.id === n.id), was = copy(m), bad = [];
@@ -322,12 +327,17 @@ window.NotesIpsy = function (app) {
         change: { text: (d ? 'Checked off ' : 'Unchecked ') + (names.length <= 3 ? names.join(', ') : names.length + ' things'), undo: undoTo(snap) } };
     },
 
-    async remove_reminders(q) {
+    // Asked first, in the chat (to check something off, set_done needs no asking).
+    async remove_reminders(q, { confirm }) {
       const ids = [...new Set(Array.isArray(q.ids) ? q.ids : [])];
       const found = ids.map(todoById).filter(Boolean), missing = ids.filter(id => !todoById(id));
       if (!found.length) fail('None of those reminders are here.');
+      const names = found.map(t => quote(t.title));
+      const ok = await confirm(found.length === 1 ? 'Remove ' + names[0] + ' from the list?' : 'Remove these ' + found.length + ' items: ' + names.slice(0, 5).join(', ') + (found.length > 5 ? ' and ' + (found.length - 5) + ' more' : '') + '?',
+        { yes: found.length === 1 ? 'Remove it' : 'Remove them', no: 'Keep' });
+      if (!ok) return { content: { removed: [], declined: true, note: 'The person said no, so nothing was removed.' } };
       found.forEach(t => app.release('todo', t.id));
-      const snap = snapshot(found.map(t => ['todos', t.id])), names = found.map(t => quote(t.title));
+      const snap = snapshot(found.map(t => ['todos', t.id]));
       app.todos = app.todos.filter(t => !found.some(f => f.id === t.id));
       done();
       return { content: { removed: found.map(t => t.id), ...(missing.length ? { missing } : {}) },

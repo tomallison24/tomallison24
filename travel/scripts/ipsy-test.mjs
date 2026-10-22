@@ -5,7 +5,7 @@
 // Claude asks for on the app's own bookings: live flight status for a booking and for a flight that
 // is in neither the app nor an email, the departure board, every kind of change (a field, a day that
 // keeps its time, a seat, a delete, moving a booking to another trip, a new name, a new booking, a
-// cancel), each with an Undo that puts back exactly what was there; deleting a whole trip only after
+// cancel), each with an Undo that puts back exactly what was there; deleting only after
 // Yes in the chat; Gmail search and an email read with its links as their site only; a trip shown on
 // screen; the conversation only ever added to; a failed question taken back out; the chat kept when
 // the app is opened again; Ipsy changing with the design at once; and nothing tripping the page's
@@ -244,7 +244,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     await page.click('.ipsy-btn');
     await page.waitForSelector('.ipsy-bubble');
     await page.waitForFunction(() => document.querySelector('.ipsy-bubble').getAnimations().every(a => a.playState === 'finished'));
-    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*AeroDataBox.*Undo.*whole trip/);
+    assert.match(await page.textContent('.ipsy-consent'), /Anthropic.*AeroDataBox.*Undo.*asks before deleting/);
     assert.equal(await page.$eval('#ipsyIn', e => e.disabled), true, 'nothing is sent before OK');
     assert.equal(await page.getAttribute('#ipsyIn', 'placeholder'), 'Ask Ipsy about your trips');
     if (SHOTS && full) await page.screenshot({ path: path.join(SHOTS, design + '-' + scheme + '-consent.png') });
@@ -304,7 +304,13 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
   });
 
   await step(tag + ': one question, every kind of change, each through the app\'s own checks and each with an Undo that works', async () => {
-    const mine = await ask('Please tidy up my trips', 'Done: I moved');
+    const pending = ask('Please tidy up my trips', 'Done: I moved');
+    // deleting a booking asks first, in the chat
+    await page.waitForSelector('.ipsy-ask [data-ans="yes"]', { timeout: 10000 });
+    assert.match(await page.textContent('.ipsy-ask'), /^Delete Hilton San Diego Bayfront\? It won’t come back from the emails\./);
+    assert.equal(await T(() => !!window.__travel.bookings.find(b => b.id === 'h-hilton')), true, 'nothing deleted before Yes');
+    await page.click('.ipsy-ask [data-ans="yes"]');
+    const mine = await pending;
     const res = mine.at(-1).at(-1).content;
     const by = name => res.find((r, i) => mine.at(-1).at(-2).content.filter(b => b.type === 'tool_use')[i].name === name);
     assert.equal(res.length, 7, 'every result in one message');
@@ -336,20 +342,20 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
   await step(tag + ': deleting every booking of a trip asks first, and No deletes nothing', async () => {
     const pending = ask('Delete the Portland flight', 'OK, I kept it');
     await page.waitForSelector('.ipsy-ask [data-ans="no"]', { timeout: 10000 });
-    assert.match(await page.textContent('.ipsy-ask'), /Delete the whole trip .*1 booking.*won’t come back from the emails/);
+    assert.match(await page.locator('.ipsy-ask').last().textContent(), /Delete the whole trip .*1 booking.*won’t come back from the emails/);
     assert.equal(await T(() => !!window.__travel.bookings.find(b => b.id === 'f-as120')), true, 'nothing yet');
     if (SHOTS && full) await page.screenshot({ path: path.join(SHOTS, design + '-' + scheme + '-ask-first.png') });
     await page.click('.ipsy-ask [data-ans="no"]');
     const mine = await pending;
     assert.match(mine.at(-1).at(-1).content[0].content, /said no, so nothing was deleted/);
-    assert.match(await page.textContent('.ipsy-ask'), /You said no, so nothing changed/);
+    assert.match(await page.locator('.ipsy-ask').last().textContent(), /You said no, so nothing changed/);
     assert.deepEqual(await snapshot(), before);
   });
 
   await step(tag + ': deleting a whole trip: after Yes, it goes, and Undo brings it back', async () => {
     const pending = ask('Delete the Denver trip', 'Deleted the Denver trip');
     await page.waitForSelector('.ipsy-ask [data-ans="yes"]', { timeout: 10000 });
-    assert.equal(await page.textContent('.ipsy-ask [data-ans="yes"]'), 'Delete the trip');
+    assert.equal(await page.locator('.ipsy-ask').last().locator('[data-ans="yes"]').textContent(), 'Delete the trip');
     await page.click('.ipsy-ask [data-ans="yes"]');
     await pending;
     assert.equal(await T(() => !!window.__travel.bookings.find(b => b.id === 'f-as900')), false, 'deleted');

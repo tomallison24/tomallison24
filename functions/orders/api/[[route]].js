@@ -206,10 +206,10 @@ export const IPSY_CLIENT_TOOLS = [
   T('create_order', 'Add an order the app doesn\'t have. Needs a store or an item.', {
     order: { type: 'object', additionalProperties: false, properties: FIELDS },
   }, ['order']),
-  T('delete_orders', 'Delete orders. A deleted order doesn\'t come back when its email is read again.', {
+  T('delete_orders', 'Delete orders. A deleted order doesn\'t come back when its email is read again. The app asks the person to confirm first, in the chat; the result says if they said no.', {
     ids: { type: 'array', items: { type: 'string' } },
   }, ['ids']),
-  T('merge_orders', 'Merge orders that are the same purchase into one: keep_id stays, the others are folded into it (missing details filled in, items and steps combined) and removed. changes, if given, are then applied to the merged order.', {
+  T('merge_orders', 'Merge orders that are the same purchase into one: keep_id stays, the others are folded into it (missing details filled in, items and steps combined) and removed. changes, if given, are then applied to the merged order. The app asks the person to confirm first, in the chat; the result says if they said no.', {
     keep_id: { type: 'string' },
     merge_ids: { type: 'array', items: { type: 'string' } },
     changes: { type: 'object', additionalProperties: false, properties: FIELDS },
@@ -234,7 +234,7 @@ What you can do, with tools that run on the person's phone:
 
 How to work:
 - Check before you answer. Look at the orders, and at the emails or the web when the question needs it, rather than answering from memory; dates, statuses, amounts and order numbers come from the app or the emails, quoted as they are.
-- When the person asks for a change, make it: everything you change shows in the chat with an Undo, so you don't need to ask first. Ask first only when it's unclear which orders they mean, or before deleting or merging more than five orders at once.
+- When the person asks for a change, make it: everything you change shows in the chat with an Undo, so you don't need to ask first. Deleting and merging ask by themselves: the app asks with Yes and No buttons, so don't ask in words too. Ask yourself only when it's unclear which orders they mean.
 - Merge when one purchase shows up as two or more orders (the same order number, or the same store, items and dates). Keep the most complete one.
 - What you change is kept like the person's own edits: a later email won't overwrite it.
 - The person can mark things Private (a note, an order, a booking, an event). The app hides them from you, with their emails, and tells you only how many there are. If asked about one, say it's private, so you can't see it, and don't look for it another way (Gmail, the web). If Gmail is turned off for you in the app's Settings, say so; they can turn it back on there.
