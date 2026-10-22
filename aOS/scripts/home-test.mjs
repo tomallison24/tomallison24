@@ -188,7 +188,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     // aOS first: nothing waiting yet, and News opens here with its own copy
     await pg.evaluate(() => localStorage.setItem('news.test', 'aos'));
     await pg.evaluate(() => aosHomeTab.show('news')); await pg.waitForTimeout(1500);
-    check(took === 1 && await pg.evaluate(() => !!document.querySelector('.frame[data-id="news"] iframe').getAttribute('src') && localStorage.getItem('aos.carry2.in.news') !== 'done'),
+    check(took === 1 && await pg.evaluate(() => document.querySelector('.frame[data-id="news"] iframe').contentWindow.location.href !== 'about:blank' && localStorage.getItem('aos.carry2.in.news') !== 'done'),
       `aOS asks first, nothing's waiting: News opens anyway, and aOS will ask again ${tag}`);
     await pg.evaluate(() => { aosHomeTab.show(null); const w = document.querySelector('.frame[data-id="news"] iframe').contentWindow; w.__old = 1; w.addEventListener('pagehide', () => w.localStorage.setItem('news.test', 'stale')); });   // an app that saves as it closes
     // then News is opened from its own icon (it hands over), and you come back to News in aOS
@@ -202,10 +202,18 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     // an app not open yet waits for what's coming (a few seconds at most) before it starts
     give = { 'mail.test': 'icon' }; wait = 1500;
     await pg.evaluate(() => aosHomeTab.show('mail')); await pg.waitForTimeout(600);
-    const early = await pg.evaluate(() => document.querySelector('.frame[data-id="mail"] iframe').getAttribute('src'));
+    const early = await pg.evaluate(() => document.querySelector('.frame[data-id="mail"] iframe').contentWindow.location.href !== 'about:blank');
     await pg.waitForTimeout(2500); wait = 0;
     const mf = pg.frames().find(f => f.url().includes('/mail/'));
     check(!early && mf && await mf.evaluate(() => window.__saw) === 'icon', `Mail starts only once what it kept is in place, and starts with it ${tag}`);
+    // Safari can count a frame's first page as a step of its own: the phone's back swipe then took Mail's
+    // frame back to the blank page it started on. Opening an app adds no step, and a frame back on that
+    // blank page opens the app again.
+    const len = await pg.evaluate(() => history.length);
+    await pg.evaluate(() => { aosHomeTab.show(null); aosHomeTab.show('mail'); }); await pg.waitForTimeout(300);
+    await pg.evaluate(() => document.querySelector('.frame[data-id="mail"] iframe').contentWindow.location.replace('about:blank')); await pg.waitForTimeout(2000);
+    check(await pg.evaluate(() => /\/mail\/$/.test(document.querySelector('.frame[data-id="mail"] iframe').contentWindow.location.href)) && await pg.evaluate(() => history.length) <= len + 1,
+      `a frame back on its blank page opens its app again ${tag}`);
     await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
     // back from Google: Mail, opened at the top of aOS's window with aos.away set, goes back into aOS
     await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + Date.now()));

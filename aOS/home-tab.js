@@ -145,16 +145,26 @@
     box.className = 'frame'; box.dataset.id = id; box.hidden = true;
     f.title = name(id);
     f.allow = 'geolocation; screen-wake-lock; fullscreen; publickey-credentials-get';
-    f.addEventListener('load', () => { pushInsets(); if (current === id) tint(); });
+    let started = false;
+    f.addEventListener('load', () => {
+      // back on the blank page it started on (the phone's back swipe, a step inside the frame): the app again
+      if (started && !f.moving && blank(f)) return point(f, `../${id}/`);
+      pushInsets(); if (current === id) tint();
+    });
     box.append(f); frames[id] = box; $('stage').append(box);
     put(OPEN, open);
     // what it kept on the phone comes first (a few seconds at most); later than that, it opens again with it
-    let started = false;
-    const go = () => { if (started || frames[id] !== box) return; started = true; f.src = `../${id}/`; };
+    const go = () => { if (started || frames[id] !== box) return; started = true; point(f, `../${id}/`); };
     const moving = carryIn(id).then(data => { if (data) movedIn(id, started ? f : null, data); }, () => {});
     Promise.race([moving, new Promise(r => setTimeout(r, 4000))]).then(go, go);
     return box;
   }
+
+  // A frame is pointed at a page by replacing what it shows, never by its src: Safari can count a frame's
+  // src change as a step in the window's history, and the phone's back swipe then went back inside the
+  // app, to the blank page its frame started on.
+  const point = (f, url) => { try { f.contentWindow.location.replace(url); } catch { f.src = url; } };
+  const blank = f => { try { return f.contentWindow.location.href === 'about:blank'; } catch { return false; } };
 
   // ---- moving into aOS 2 (../home/welcome.js, "moving into aOS 2") ----
   // An app opened from its own Home Screen icon, signed in, hands what it keeps only on the phone to
@@ -186,8 +196,9 @@
   // already running here: it may save what it has as it closes, so it closes first, then it's put back
   function movedIn(id, f, data) {
     if (f) {
-      f.addEventListener('load', () => { putIn(data); if (frames[id] && frames[id].firstChild === f) f.src = `../${id}/`; }, { once: true });
-      f.src = 'about:blank';
+      f.moving = true;
+      f.addEventListener('load', () => { f.moving = false; putIn(data); if (frames[id] && frames[id].firstChild === f) point(f, `../${id}/`); }, { once: true });
+      point(f, 'about:blank');
     }
     toast(`${name(id)}'s data moved in`);
   }
