@@ -907,7 +907,10 @@
   applyTheme(readTheme());   // every app, every time
 
   // ---- installing ----
-  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  // Opened inside aOS's all-in-one test (labs/home: the apps framed in one window, on this
+  // same site), an app counts as on the Home Screen, but isn't reported as added on its own.
+  const inHome = (() => { try { return window.top !== window && window.top.aosHome === true; } catch { return false; } })();
+  const standalone = () => inHome || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   // An app tapped in aOS opens as ?via=aos, in the in-app Safari view an installed aOS
   // opens links in - which may report itself as standalone. Remember it for this view
   // (a Home Screen app keeps its own storage, so its own launches never carry it) and
@@ -2012,7 +2015,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
   });
   async function onPhone() {
     if (!standalone()) return androidCheck();   // a Chrome tab: is the app still on the tablet?
-    if (!APP || !APPS.includes(APP) || viaAOS()) return;
+    if (!APP || !APPS.includes(APP) || viaAOS() || inHome) return;
     addEventListener('aos:account', e => { if (e.detail) report(); });   // signed in some other way (a locked route asked)
     if (await report()) return;
     try { if (localStorage.getItem(ASKED)) return; } catch { return; }

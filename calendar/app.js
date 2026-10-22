@@ -18,8 +18,8 @@
 // - Two designs, picked in Settings > Design: Vintage (the default) and Standard
 //   (Sea glass), kept on this phone (../home/design.js, as in Clock).
 
-// Refuse to run inside another page's frame (see Mail's app.js for why).
-if (window.top !== window.self) {
+// Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
+if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
   document.body.textContent = 'Calendar can’t be opened inside another page.';
   throw new Error('Calendar refuses to run inside a frame');
 }
