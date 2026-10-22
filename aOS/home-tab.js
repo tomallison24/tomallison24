@@ -220,9 +220,30 @@
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
     if (!current) paintHome();   // an app's design may have changed its icon
-    try { history.replaceState(history.state, '', location.pathname + location.search + (current ? '#app=' + current : '')); } catch {}
+    remember();
     tint();
   }
+
+  // The phone's own back (an iPhone's swipe in from the left edge, which iOS takes for itself
+  // whenever there's a page behind, as there is after a sign-in at Google) goes to Home: an open app
+  // is a step of its own in the window's history, over Home's. "‹ aOS" takes that step back too,
+  // unless the app has added steps of its own since (Mail's message page), when it's just replaced.
+  let pushedAt = 0, leaving = false;
+  const appStep = () => !!(history.state && history.state.aosApp);
+  function remember() {
+    const url = location.pathname + location.search + (current ? '#app=' + current : '');
+    const { aosApp, ...rest } = history.state || {};
+    try {
+      if (current && !appStep()) { history.pushState({ ...rest, aosApp: current }, '', url); pushedAt = history.length; }
+      else if (!current && appStep() && history.length === pushedAt) { leaving = true; history.back(); }
+      else history.replaceState(current ? { ...rest, aosApp: current } : rest, '', url);
+    } catch {}
+  }
+  addEventListener('popstate', () => {
+    if (leaving) { leaving = false; if (current) remember(); return; }   // an app opened while going back
+    const id = appStep() ? history.state.aosApp : null;
+    if (id !== current) show(known(id) ? id : null);
+  });
 
   // how much of the window aOS's own controls cover: the status bar and "‹ aOS" on top, the home
   // indicator below. Each app takes it as its safe-area spacing (../home/welcome.js).
@@ -363,5 +384,9 @@
 
   paintHome();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
-  if (known(start)) show(start);
+  if (known(start)) {
+    // opened straight into an app (back from Google, or a link): Home goes in under it first
+    if (!appStep()) try { history.replaceState(history.state, '', location.pathname + location.search); } catch {}
+    show(start);
+  }
 })();

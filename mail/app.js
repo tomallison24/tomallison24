@@ -138,14 +138,15 @@ const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic
 // names the account, so having several signed in doesn't bring up a chooser.
 // Inside aOS 2 (aOS/home-tab.js) Google's sign-in page can't open in this app's frame: the whole aOS
 // window goes to Google instead and comes back to this page, which ../home/welcome.js then takes
-// back into aOS (aos.away). A quiet renewal waits while the app is out of sight there.
+// back into aOS (aos.away). A quiet renewal waits while the app is out of sight there. Google takes
+// this page's place in the history (replace), not a step of its own for the back swipe to land on.
 function toGoogle(u, silent) {
   let inAOS = false; try { inAOS = window.top !== window && !!window.top.aosHome; } catch {}
-  if (!inAOS) { location.href = u; return; }
+  if (!inAOS) { location.replace(u); return; }
   const box = window.frameElement && window.frameElement.parentElement;
   if (silent && box && box.hidden) return;
   try { localStorage.setItem('aos.away', 'mail|' + Date.now()); } catch {}
-  window.top.location.href = u;
+  window.top.location.replace(u);
 }
 function signIn(opts = {}) {
   const id = clientId();

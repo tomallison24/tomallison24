@@ -51,7 +51,7 @@ import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, perso
 const ROOT = 'https://caldav.icloud.com/';
 const HOST_OK = /^([a-z0-9-]+\.)*icloud\.com$/i;
 const NAME_OK = /^[A-Za-z0-9._@-]{1,255}$/;   // no %: an encoded / or . must never reach the address
-const RANGE_MAX_DAYS = 400;
+const RANGE_MAX_DAYS = 800;   // the widest asked for: Places, two years; Calendar, 16 months; Travel, 401 days
 const WRITES_DAILY = 200;   // event writes and deletes a person a day (calendar:writes:<user id>:<day>)
 const TIME_OK = /^\d{8}T\d{6}Z$/;
 const TIMEOUT_MS = 20000;

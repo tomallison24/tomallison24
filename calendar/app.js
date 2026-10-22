@@ -184,6 +184,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     unreachable: 'Couldn’t reach iCloud just now.',
     'bad-host': 'iCloud sent the request somewhere unexpected, so it was stopped.',
     changed: 'That event was changed elsewhere in the meantime; it has been reloaded.',
+    'bad-request': 'The iCloud connection turned down what the app asked for.',
+    limit: 'That’s the most calendar changes for one person today. Try again tomorrow.',
     offline: 'You’re offline. Showing the events last seen.',
     unavailable: 'The iCloud connection isn’t answering on this copy of the site.',
   };

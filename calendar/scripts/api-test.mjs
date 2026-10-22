@@ -181,13 +181,16 @@ await test('imports a Travel trip: one file per event, named after the UID, same
   assert.ok(files.get('t9@allison-notes.ics').ics.includes('BEGIN:VTIMEZONE\r\nTZID:America/Denver'));
   assert.equal((await call('POST', 'import', { body: 'BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:no uid\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n' })).status, 400);
 });
-await test('names with % never reach iCloud; a range of more than 400 days is refused', async () => {
+await test('names with % never reach iCloud; a range of more than 800 days is refused', async () => {
   const n0 = calls.length;
   assert.equal((await call('PUT', 'event?name=' + encodeURIComponent('..%2F..%2Fx.ics'), { body: ICS('Z', 'z') })).status, 400);
   assert.equal((await call('DELETE', 'event?name=a%252Fb.ics')).status, 400);
   assert.equal((await call('GET', 'events?start=20200101T000000Z&end=20261231T000000Z')).status, 400);
   assert.equal(calls.length, n0, 'nothing reached iCloud');
-  assert.equal((await call('GET', 'events?start=20260101T000000Z&end=20261231T000000Z')).status, 200, 'a year is fine');
+  // What each caller asks for: Calendar, three months back to 13 on (the longest 16 months);
+  // Travel, yesterday to 400 days on; Places, a year back and a year ahead.
+  for (const [q, who] of [['20260901T000000Z&end=20280101T000000Z', 'Calendar'], ['20261021T000000Z&end=20271126T000000Z', 'Travel'], ['20251022T000000Z&end=20271022T000000Z', 'Places']])
+    assert.equal((await call('GET', 'events?start=' + q)).status, 200, who);
 });
 await test('invitations, organizers and attachments are stripped from what is written, with their folded lines', async () => {
   const extra = 'ORGANIZER;CN=Tom:mailto:tom@example.com\r\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Someone\r\n  Else:mailto:someone@example.com\r\nATTACH;FMTTYPE=text/plain:https://evil.example/x\r\nLOCATION:Home\r\n  (the kitchen)\r\n';
