@@ -6,8 +6,8 @@
 // the app's instructions and tools, asks Claude, and passes the answer back untouched. The phone
 // runs the app's own tools (the data lives there) and asks again with their results. Web search and
 // web pages run at Anthropic (not in Fitness, which has none: requestHead({ web: false })). Nothing about the conversation is kept here: only how many questions
-// each person asked today (<app>:ipsy:<user id>:<day>, gone after two days), and only a new
-// question counts, not the steps it takes.
+// each person asked today (<app>:ipsy:<user id>:<day>, gone after two days) and how many steps those
+// took (<app>:ipsy:steps:<user id>:<day>): IPSY_DAILY questions, and IPSY_STEPS steps for each.
 //
 // The model: Claude Sonnet 5.5 (the owner's choice: quick, good at work that takes several tools),
 // medium effort, adaptive thinking (its default), prompt caching on the instructions and on the
@@ -18,6 +18,7 @@ import { reply } from './auth.js';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 export const IPSY_MODEL = 'claude-sonnet-5-5';
 export const IPSY_DAILY = 80;                    // questions a person a day, per app
+export const IPSY_STEPS = 12;                    // steps (tool results, turns carried on) a question may take, on average, a day
 export const IPSY_MAX_BODY = 1024 * 1024;        // a conversation, as the phone sends it
 export const IPSY_MAX_MESSAGES = 240;
 const TIMEOUT_MS = 110e3;
@@ -106,10 +107,20 @@ export async function ipsyStep({ env, request, db, me, app, head, daily = IPSY_D
     // encoding of what can be a long conversation, on a plan with 10 ms of CPU).
     let b; try { b = JSON.parse(t); } catch { throw fail('bad-json', 400); }
     if (!b || typeof b !== 'object' || Object.keys(b).join() !== 'messages' || !t.startsWith('{"messages":') || !t.endsWith('}')) throw fail('bad-turn', 400);
+    // A new question counts toward the day. The steps a question takes (tool results, a paused turn
+    // carried on) count too, against their own, larger allowance, and only once a question has been
+    // counted today: the kind of step is the phone's word, so a conversation ending in a made-up
+    // tool result could otherwise ask the model as often as it liked, uncounted.
+    const used = app + ':ipsy:' + me.id + ':' + today(), steps = app + ':ipsy:steps:' + me.id + ':' + today();
     if (turnKind(b.messages) === 'question') {
-      const used = app + ':ipsy:' + me.id + ':' + today(), n = (+(await db.get(used)) || 0) + 1;
+      const n = (+(await db.get(used)) || 0) + 1;
       if (n > daily) return reply({ error: 'limit' }, 429);
       await db.put(used, String(n), { expirationTtl: 2 * 86400 });
+    } else {
+      if (!(+(await db.get(used)) || 0)) return reply({ error: 'limit' }, 429);   // no question today: nothing to carry on
+      const n = (+(await db.get(steps)) || 0) + 1;
+      if (n > daily * IPSY_STEPS) return reply({ error: 'limit' }, 429);
+      await db.put(steps, String(n), { expirationTtl: 2 * 86400 });
     }
     const json = JSON.stringify(head), body = json.slice(0, -1) + ',"messages":' + t.slice('{"messages":'.length, -1) + '}';
     const ac = new AbortController(), timer = setTimeout(() => ac.abort(), TIMEOUT_MS);

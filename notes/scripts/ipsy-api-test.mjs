@@ -1,13 +1,13 @@
 // Tests Notes' server route, functions/notes/api (POST ipsy): its guards (the X-Notes header,
 // accounts on, a signed-in family member, the Anthropic key), Ipsy's step going to Sonnet 5.5 with
 // Notes' instructions, tools and caching, the phone's conversation passed on exactly as sent, the
-// answer passed back untouched, what counts as a question, the daily limit, turns that aren't a
+// answer passed back untouched, what counts as a question, the daily limits (questions, and the steps they take), turns that aren't a
 // conversation, Anthropic's errors, and NOTES_IPSY_MODEL. Plain Node, no network.
 //   node notes/scripts/ipsy-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest, IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, IPSY_SYSTEM, IPSY_CLIENT_TOOLS } from '../../functions/notes/api/[[route]].js';
 import { onRequest as middleware } from '../../functions/notes/api/_middleware.js';
-import { ANTHROPIC_URL } from '../../server/ipsy.js';
+import { ANTHROPIC_URL, IPSY_STEPS } from '../../server/ipsy.js';
 import { issue, putJSON } from '../../server/auth.js';
 
 function fakeKV() {
@@ -125,7 +125,18 @@ await test('only a new question counts toward the day; tool results and a paused
   const r = await call(body, { tok: t3, env });
   assert.equal(r.status, 429); assert.equal(err(r), 'limit');
   answers = [ANSWER]; assert.equal((await call(JSON.stringify({ messages: tools }), { tok: t3, env })).status, 200, 'a question already started can finish');
-  assert.deepEqual([...db3.m.keys()].filter(k => k.startsWith('notes:')), [key()], 'nothing else is kept');
+  const steps = () => [...db3.m.keys()].find(k => k.startsWith('notes:ipsy:steps:u1:'));
+  assert.equal(db3.m.get(steps()), '3', 'the steps a question takes are counted, apart from the questions');
+  assert.deepEqual([...db3.m.keys()].filter(k => k.startsWith('notes:')).sort(), [key(), steps()].sort(), 'nothing else is kept');
+  db3.m.set(steps(), String(IPSY_DAILY * IPSY_STEPS));
+  const over = await call(JSON.stringify({ messages: tools }), { tok: t3, env });
+  assert.equal(over.status, 429); assert.equal(err(over), 'limit');
+  db3.m.set(steps(), '0');
+  // no question counted today (a conversation made up on the phone, ending in a tool result): not a step of anything
+  db3.m.delete(key());
+  const n1 = asked.length, none = await call(JSON.stringify({ messages: tools }), { tok: t3, env });
+  assert.equal(none.status, 429); assert.equal(err(none), 'limit'); assert.equal(asked.length, n1, 'the model is not asked');
+  answers = [ANSWER]; assert.equal((await call(JSON.stringify({ messages: paused }), { tok: t3, env })).status, 429, 'nor a paused turn');
 });
 await test('anything but a conversation is turned away before the model is asked', async () => {
   const n0 = asked.length;

@@ -131,7 +131,7 @@ await test('only a new question counts toward the day; tool results and a paused
   const r = await call(body, { tok: t3, env });
   assert.equal(r.status, 429); assert.equal(err(r), 'limit');
   answers = [ANSWER]; assert.equal((await call(JSON.stringify({ messages: tools }), { tok: t3, env })).status, 200, 'a question already started can finish');
-  assert.deepEqual([...db3.m.keys()].filter(k => k.startsWith('fitness:')), [key()], 'nothing else is kept');
+  assert.deepEqual([...db3.m.keys()].filter(k => k.startsWith('fitness:')).sort(), [key(), [...db3.m.keys()].find(k => k.startsWith('fitness:ipsy:steps:u1:'))].sort(), 'nothing else is kept (the questions, and the steps they took)');
 });
 await test('anything but a conversation is turned away before the model is asked', async () => {
   const n0 = asked.length;
