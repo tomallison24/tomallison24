@@ -552,6 +552,12 @@
     box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
     paintNotify();
     if (u.role !== 'owner') return;
+    // aOS 2, in preview until it's released (aOS/home-tab.js): on or off for this phone, from here, since
+    // a link opens in Safari, whose storage isn't the Home Screen aOS's
+    let pre = false; try { pre = JSON.parse(localStorage.getItem('aos.preview') || 'false') === true; } catch {}
+    box.insertAdjacentHTML('beforeend', `<div><h3>aOS 2 preview</h3><p>Every app inside aOS, with Ipsy on Home. Just this phone; the family sees nothing.</p>
+      <button type="button" class="${pre ? 'soft' : 'go'}" id="aPreview">${pre ? 'Turn off the preview' : 'Try aOS 2'}</button></div>`);
+    $('aPreview').onclick = () => { try { localStorage.setItem('aos.preview', JSON.stringify(!pre)); } catch {} location.replace(location.pathname); };
     box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
       <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>

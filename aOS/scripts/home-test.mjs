@@ -88,6 +88,17 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
 
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(700);
   check(await pg.evaluate(() => !!document.querySelector('[data-tab="apps"]') && document.getElementById('home').hidden && !window.aosHomeTab), `off: aOS as it was, with its Apps tab ${tag}`);
+  if (look === 'vintage') {   // the owner turns it on from Account (a link would open in Safari, with its own storage)
+    await pg.route('**/aOS/api/state', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ storage: true, setup: true, plan: null, user: { id: 'O1', name: 'Tom', role: 'owner', apps: {} } }) }));
+    await pg.evaluate(() => localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() })));
+    await pg.reload(); await pg.waitForTimeout(700);
+    await pg.locator('#today [data-acct]').click(); await pg.waitForSelector('#aPreview', { timeout: 8000 }).catch(() => {});
+    check(/Try aOS 2/.test(await pg.textContent('#aPreview').catch(() => '')), `the owner's Account page offers the aOS 2 preview ${tag}`);
+    await pg.locator('#aPreview').click(); await pg.waitForTimeout(1200);
+    check(await pg.evaluate(() => [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab).join(',')) === 'home,today,search', `Try aOS 2 turns it on in the app itself ${tag}`);
+    await pg.unroute('**/aOS/api/state');
+    await pg.evaluate(() => { localStorage.removeItem('aos.session'); localStorage.removeItem('aos.preview'); });
+  }
   await pg.goto(BASE + '/aOS/#preview=aos2'); await pg.reload(); await pg.waitForTimeout(900);
   const dock = await pg.evaluate(() => [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab).join(','));
   check(dock === 'home,today,search' && await pg.isVisible('#home'), `on: Home first in the dock, and showing ${tag}`);
