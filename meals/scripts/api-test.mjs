@@ -10,7 +10,7 @@
 // each with the same allergy check.
 //   node meals/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, week, avoidHits, ask, json, cleanPlan, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS } from '../../functions/meals/api/[[route]].js';
+import { onRequest, week, avoidHits, ask, json, cleanPlan, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
 function fakeKV() {
@@ -419,5 +419,32 @@ await test('unaccept (Undo of Accept): the plan goes back to waiting, and the pl
   assert.equal(r3.body.plan, null); assert.deepEqual(r3.body.log, []);
   assert.equal(db3.m.get('meals:plan'), undefined); assert.equal(JSON.parse(db3.m.get('meals:draft')).meals.length, 4);
   assert.deepEqual(JSON.parse(db3.m.get('meals:history')), []);
+});
+await test('settings: only the owner changes what the family avoids; a member\'s stores and cards still save', async () => {
+  const db4 = fakeKV(); await db4.put('owner', 'u1'); await putJSON(db4, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
+  await putJSON(db4, 'user:u2', { id: 'u2', name: 'Kim', role: 'member', creds: [] });
+  const t1 = await issue(db4, 'u1'), t2 = await issue(db4, 'u2'), E4 = { ACCOUNTS: db4, ...A };
+  await call('settings', { token: t1, env: E4, body: { stores: ['publix'], cards: ['vic'], avoid: ['tree nuts', 'shellfish'] } });
+  let r = await call('settings', { token: t2, env: E4, body: { stores: ['aldi'], cards: [], avoid: ['shellfish'] } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'owner-only');
+  assert.deepEqual((await call('state', { token: t2, env: E4 })).body.settings, { stores: ['publix'], cards: ['vic'], avoid: ['tree nuts', 'shellfish'] }, 'nothing changed');
+  r = await call('settings', { token: t2, env: E4, body: { stores: ['aldi'], cards: [] } });
+  assert.equal(r.status, 200); assert.deepEqual(r.body.settings, { stores: ['aldi'], cards: [], avoid: ['tree nuts', 'shellfish'] });
+  r = await call('settings', { token: t2, env: E4, body: { stores: ['lidl'], cards: ['prime'], avoid: ['tree nuts', 'shellfish'] } });
+  assert.equal(r.status, 200, 'the avoid list as it is, sent back unchanged, is fine');
+});
+await test('plans and pasted deals count toward the day (meals:ai:<user>:<day>); past AI_DAILY the person is told so', async () => {
+  const db5 = fakeKV(); await db5.put('owner', 'u1'); await putJSON(db5, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
+  const t5 = await issue(db5, 'u1'), E5 = { ACCOUNTS: db5, ...A }, key = () => [...db5.m.keys()].find(k => k.startsWith('meals:ai:u1:'));
+  answers = [planJSON(four())]; assert.equal((await call('plan', { token: t5, env: E5, body: { meat: 'chicken' } })).status, 200);
+  assert.equal(db5.m.get(key()), '1');
+  answers = [JSON.stringify({ items: [] })]; await call('deals', { token: t5, env: E5, body: { store: 'publix', text: 'Chicken thighs $1.99/lb this week at Publix, through Tuesday.' } });
+  assert.equal(db5.m.get(key()), '2', 'a pasted flyer counts too');
+  db5.m.set(key(), String(AI_DAILY));
+  const n0 = asked.length, r = await call('plan', { token: t5, env: E5, body: { meat: 'chicken' } });
+  assert.equal(r.status, 429); assert.equal(r.body.error, 'limit'); assert.equal(asked.length, n0, 'the model is not asked');
+  const d = await call('deals', { token: t5, env: E5, body: { store: 'publix', text: 'Chicken thighs $1.99/lb this week at Publix, through Tuesday.' } });
+  assert.equal(d.status, 429);
+  assert.equal(db5.m.get('meals:draft') !== undefined, true, 'the first plan was kept');
 });
 console.log(`\n${n} passed`);

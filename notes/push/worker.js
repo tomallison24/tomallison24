@@ -14,21 +14,21 @@
 // reminder's title, list, date, time and alert, and each nudge's title and
 // time, and whose a Just-me one is. Never note bodies.
 //
-// The Sheet's link and phrase: the phones don't have them any more (aOS keeps
-// them), so the Worker keeps its own: NOTES_SHEET_URL and NOTES_SHEET_SECRET
-// if the owner gives them to it as Worker secrets (Cloudflare: Workers &
-// Pages > notes-push > Settings > Variables and Secrets), else the pair the
-// first phone brought before aOS kept the Sheet. It asks the script with the
-// phrase in the link (?key=), as aOS does, and in the request too, for a
-// script from before aOS.
+// The Sheet's link and phrase: the phones don't have them (aOS keeps them),
+// so the Worker keeps its own: NOTES_SHEET_URL and NOTES_SHEET_SECRET, given
+// by the owner as Worker secrets (Cloudflare: Workers & Pages > notes-push >
+// Settings > Variables and Secrets), else the pair kept in its storage from
+// before aOS kept the Sheet (nothing writes that pair any more). It asks the
+// script with the phrase in the link (?key=), as aOS does, and in the request
+// too, for a script from before aOS.
 //
-// Who may subscribe: someone signed in to the family. The phone sends its
-// family session; the Worker checks it once with aOS (GET /aOS/api/state on
-// the site) and keeps only whose phone it is, never the session, so a Just-me
-// reminder alerts only its own person's phones. (A phone from before aOS that
-// brings the Sheet's link and phrase is still let in as before: the first
-// pair is kept and later phones must bring the same one, so nobody can point
-// this server at a Sheet of their own.)
+// Who may subscribe: someone signed in to the family, and no one else. The
+// phone sends its family session; the Worker checks it once with aOS (GET
+// /aOS/api/state on the site) and keeps only whose phone it is, never the
+// session, so a Just-me reminder alerts only its own person's phones. A phone
+// can't bring a Sheet link and phrase of its own (it used to, before aOS): that
+// let anyone try phrases against the Sheet through this server, and point the
+// server at a Sheet of their own while the phrase was being changed.
 //
 // Setup: notes/README.md, "Notifications". Deployed by
 // .github/workflows/notes-push.yml. It makes its own push keys (VAPID) the
@@ -148,7 +148,7 @@ async function keepItems(env, items) {
   return true;
 }
 
-// The Sheet this server reads: the owner's Worker secrets, else the pair kept from the first phone.
+// The Sheet this server reads: the owner's Worker secrets, else the pair kept from before aOS.
 async function sheetOf(env) {
   const kept = await env.PUSH.get('sheet', 'json');
   if (env.NOTES_SHEET_SECRET) {
@@ -164,36 +164,6 @@ async function refresh(env, fetchImpl, now = Date.now()) {
   const items = await pull(sheet, fetchImpl, now);
   const changed = await keepItems(env, items);
   return { items, changed };
-}
-
-// Two strings compared without giving away how much of them matched.
-async function same(a, b) {
-  const h = async s => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s))));
-  const [x, y] = await Promise.all([h(a), h(b)]);
-  let d = 0;
-  for (let i = 0; i < x.length; i++) d |= x[i] ^ y[i];
-  return d === 0;
-}
-
-// Whether a phone may subscribe with this Sheet link and secret (null if so).
-async function authorise(env, sheet, fetchImpl) {
-  if (!sheet || !SHEET_URL.test(sheet.url || '') || typeof sheet.secret !== 'string' || !sheet.secret) return 'no-sheet';
-  const cur = await sheetOf(env);
-  if (cur && cur.url === sheet.url && await same(cur.secret, sheet.secret)) return null;
-  let items;
-  try { items = await pull(sheet, fetchImpl); }                // the Sheet itself must accept it
-  catch (e) { return e.message === 'wrong-secret' ? 'wrong-secret' : 'sheet-' + e.message; }
-  if (cur) {
-    // A different Sheet replaces the one on file only when that one says its secret
-    // has changed (wrong-secret). Any other trouble with it - offline, Google having a
-    // bad moment, an odd answer - refuses, so no one can slip their own Sheet in then.
-    // (To move to a new Sheet: change the old script's secret first.)
-    try { await pull(cur, fetchImpl); return 'other-sheet'; }
-    catch (e) { if (e.message !== 'wrong-secret') return 'other-sheet'; }
-  }
-  await env.PUSH.put('sheet', JSON.stringify({ url: sheet.url, secret: sheet.secret }));
-  await keepItems(env, items);
-  return null;
 }
 
 // Whose phone it is: the family session it sent, checked with aOS (the site's /aOS/api/state answers
@@ -283,19 +253,13 @@ export async function handle(req, env, fetchImpl = fetch) {
     const s = body.subscription;
     if (!s || !PUSH_HOSTS.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth || !(await validKeys(s.keys))) return json({ error: 'bad-subscription' }, 400, h);
     const id = await idOf(s.endpoint);
-    let who = subs[id] && subs[id].who;
-    if (body.session != null) {
-      // signed in to the family: whose phone, and can this server read the Sheet?
-      const me = await familyMember(env, body.session, fetchImpl);
-      if (typeof me === 'string') return json({ error: me }, 403, h);
-      try { await refresh(env, fetchImpl); }
-      catch (e) { return json({ error: e.message === 'no-sheet' || e.message === 'wrong-secret' ? e.message : 'sheet-' + e.message }, 403, h); }
-      who = me.id;
-    } else {
-      const no = await authorise(env, body.sheet, fetchImpl);
-      if (no) return json({ error: no }, 403, h);
-    }
-    subs[id] = { subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...prefsOf(body.prefs, subs[id]), ...(who ? { who } : {}), at: Date.now() };
+    // signed in to the family (a session, never a Sheet link and phrase of the phone's own): whose
+    // phone, and can this server read the Sheet?
+    const me = await familyMember(env, body.session, fetchImpl);
+    if (typeof me === 'string') return json({ error: me }, 403, h);
+    try { await refresh(env, fetchImpl); }
+    catch (e) { return json({ error: e.message === 'no-sheet' || e.message === 'wrong-secret' ? e.message : 'sheet-' + e.message }, 403, h); }
+    subs[id] = { subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...prefsOf(body.prefs, subs[id]), who: me.id, at: Date.now() };
     await env.PUSH.put('subs', JSON.stringify(subs));
     return json({ ok: true }, 200, h);
   }

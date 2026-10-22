@@ -15,7 +15,7 @@
 // field belongs to its kind, the value has the right shape) and made by applyEdits, as the booking
 // sheet makes them: what is changed is the person's own (a later email won't overwrite it), a
 // deleted booking stays deleted, and everything goes through save(), so the Sheet and the Family
-// calendar follow. Deleting a whole trip asks first, in the chat.
+// calendar follow. Deleting asks first, in the chat.
 //
 // Private bookings (the Private pill on a booking, or on a whole trip) are hidden from Ipsy: they
 // are left out of everything it reads and it can't change them; a trip with some private bookings
@@ -177,17 +177,20 @@ window.TravelIpsy = function (app) {
       return { content: { booking: nb ? line(nb) : null }, change };
     },
 
+    // Asked first, in the chat: a deleted booking doesn't come back from its email.
     async delete_bookings(q, { confirm }) {
       const ids = [...new Set(Array.isArray(q.ids) ? q.ids : [])];
       const found = ids.filter(byId), missing = ids.filter(id => !byId(id));
       if (!found.length) fail('None of those bookings are here.');
-      // every booking of a trip is the whole trip: the person says so first
-      const whole = trips().filter(g => !g.hidden && g.items.every(b => found.includes(b.id)));
-      if (whole.length && !(await confirm('Delete ' + (whole.length === 1 ? 'the whole trip ' + tripWords(whole[0]) : whole.length + ' whole trips: ' + whole.map(tripWords).join(', '))
-        + (found.length > whole.reduce((n, g) => n + g.items.length, 0) ? ', and other bookings' : '') + '? It won’t come back from the emails.', { yes: 'Delete', no: 'Keep it' })))
-        return { content: { deleted: [], note: 'The person said no, so nothing was deleted.' } };
-      const ops = found.map(id => ({ op: 'delete', id }));
       const names = found.map(id => app.titleOf(byId(id)));
+      // every booking of a trip is the whole trip: said as the trip
+      const whole = trips().filter(g => !g.hidden && g.items.every(b => found.includes(b.id)));
+      const what = whole.length ? 'Delete ' + (whole.length === 1 ? 'the whole trip ' + tripWords(whole[0]) : whole.length + ' whole trips: ' + whole.map(tripWords).join(', '))
+        + (found.length > whole.reduce((n, g) => n + g.items.length, 0) ? ', and other bookings' : '')
+        : 'Delete ' + (found.length === 1 ? names[0] : found.length + ' bookings: ' + names.slice(0, 5).join(', ') + (found.length > 5 ? ' and ' + (found.length - 5) + ' more' : ''));
+      if (!(await confirm(what + '? It won’t come back from the emails.', { yes: 'Delete', no: 'Keep it' })))
+        return { content: { deleted: [], declined: true, note: 'The person said no, so nothing was deleted.' } };
+      const ops = found.map(id => ({ op: 'delete', id }));
       const { change } = made(ops, found.length === 1 ? app.editText(ops[0]) : 'Deleted ' + found.length + ' bookings (' + names.slice(0, 3).join(', ') + (names.length > 3 ? '…' : '') + ')');
       return { content: { deleted: found, ...(missing.length ? { missing } : {}) }, change };
     },
@@ -335,6 +338,6 @@ window.TravelIpsy = function (app) {
     intro: 'Hi, I’m Ipsy! I can tell you about your trips, fix or add a booking, check any flight live (delays, gates, where it is), find a flight number, look through your Gmail, or look something up on the web.',
     placeholder: 'Ask Ipsy about your trips',
     suggestions: ['When’s my next flight? Is it on time?', 'What’s on my next trip?', 'Is anything on my trips not confirmed?', 'Check Gmail for bookings I’m missing'],
-    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the bookings and emails it reads, go there through the family server (flight look-ups go to AeroDataBox). Each change shows here with Undo, and it asks before deleting a whole trip.',
+    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the bookings and emails it reads, go there through the family server (flight look-ups go to AeroDataBox). Each change shows here with Undo, and it asks before deleting.',
   };
 };

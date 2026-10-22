@@ -344,7 +344,9 @@
   async function api(path){
     if (apiGone) throw new Error('noapi');
     let r;
-    try { r = await fetch('../podcasts/api/' + path, {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'}); }
+    // signed in to the family where accounts are on (the route only answers family): the session goes with it
+    const get = window.AllisonOS && AllisonOS.account && AllisonOS.account.fetch ? AllisonOS.account.fetch : fetch;
+    try { r = await get('../podcasts/api/' + path, {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'}); }
     catch(e) { throw new Error('offline'); }
     const ct = r.headers.get('Content-Type') || '';
     if (r.status === 404 || r.status === 405 || /html/i.test(ct)) { apiGone = true; throw new Error('noapi'); }

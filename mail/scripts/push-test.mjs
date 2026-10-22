@@ -48,7 +48,7 @@ function decrypt(body, ph) {
 }
 
 // ---- 2. VAPID ----
-const vapid = { ...(await makeKeys()), subject: 'mailto:tomallison24@gmail.com' };
+const vapid = { ...(await makeKeys()), subject: 'mailto:me@example.com' };
 {
   const h = await vapidHeader('https://web.push.apple.com/QGuQyavXutnMH8', vapid);
   const [, t, k] = /^vapid t=([^,]+), k=(.+)$/.exec(h) || [];
@@ -69,7 +69,7 @@ function makeKV() {
   kv.delete = async k => { m.delete(k); };
   return kv;
 }
-const ME = 'tomallison24@gmail.com';
+const ME = 'me@example.com';
 function world() {
   const w = {
     historyId: 1000, history: [], messages: {}, unread: 7, tokens: 0, profileFor: { 'good-token': ME, 'other-token': 'someone@else.com' },
@@ -145,7 +145,7 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
   const writes = kv.writes;
   r = await check(env, w.fetch);
   ok('4. nothing new: no notification and no storage write', r.new === 0 && w.pushed.length === n0 && kv.writes === writes, JSON.stringify(r));
-  w.mail('m1', '"Mum" <janeallison@gmail.com>', 'Dinner Sunday?');
+  w.mail('m1', '"Mum" <mum@example.com>', 'Dinner Sunday?');
   r = await check(env, w.fetch);
   let d = lastPush(w, ph);
   ok('4. new mail: one notification, sender as title, subject as text', w.pushed.length === n0 + 1 && d.title === 'Mum' && d.body === 'Dinner Sunday?', JSON.stringify(d));
@@ -154,7 +154,7 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
   ok('4. the same mail is never notified twice', w.pushed.length === n0 + 1);
   w.mail('m2', 'ASOS <news@e.asos.com>', '20% off', ['INBOX', 'UNREAD', 'Label_23']);
   w.mail('m3', 'Shop <deals@shop.example>', 'Big sale', ['INBOX', 'UNREAD', 'CATEGORY_PROMOTIONS']);
-  w.mail('m4', 'Me <tomallison24@gmail.com>', 'Re: Dinner', ['SENT']);
+  w.mail('m4', 'Me <me@example.com>', 'Re: Dinner', ['SENT']);
   r = await check(env, w.fetch);
   ok('4. Marketing, Promotions and your own sent mail stay quiet', w.pushed.length === n0 + 1, JSON.stringify(r));
   w.mail('m5', 'TMSA <office@tmsa.org>', 'Harvest Festival', ['INBOX', 'UNREAD', 'CATEGORY_UPDATES', 'Label_24']);

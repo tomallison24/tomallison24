@@ -53,7 +53,7 @@ export const IPSY_CLIENT_TOOLS = [
     tags: TAGS, color: { type: 'string', enum: COLORS }, pinned: { type: 'boolean' },
     nudge: { ...WHEN, description: 'A time to be reminded of the note (local, YYYY-MM-DDTHH:MM)' },
   }),
-  T('edit_note', 'Change one note. Only what is given changes. body replaces the whole text; append adds lines at the end and keeps the rest. restore_from_trash brings a note back from Trash.', {
+  T('edit_note', 'Change one note. Only what is given changes. body replaces the whole text (the app asks the person to confirm that first, in the chat; the result says if they said no); append adds lines at the end and keeps the rest. restore_from_trash brings a note back from Trash.', {
     id: S,
     changes: { type: 'object', additionalProperties: false, properties: {
       title: S, body: S, append: S, tags: { ...TAGS, description: 'Replaces all its tags' }, add_tags: TAGS, remove_tags: TAGS,
@@ -88,7 +88,7 @@ export const IPSY_CLIENT_TOOLS = [
   T('set_done', 'Check items off (done: true, the default) or uncheck them (done: false).', {
     ids: { type: 'array', items: S }, done: { type: 'boolean' },
   }, ['ids']),
-  T('remove_reminders', 'Remove items from their lists altogether (to mark them done, use set_done).', {
+  T('remove_reminders', 'Remove items from their lists altogether (to mark them done, use set_done). The app asks the person to confirm first, in the chat; the result says if they said no.', {
     ids: { type: 'array', items: S },
   }, ['ids']),
   T('sort_into_aisles', 'Sort a shopping list into store sections in supermarket order (Produce, Bakery, ... Other), with the app\'s own grocery sections. For a list: turns its store sections on and returns its items by section. For a note that is a shopping list (one thing a line): rewrites it with a heading for each section.', {
@@ -109,7 +109,7 @@ export const IPSY_SYSTEM = persona({
     'Sort a shopping list or a shopping-list note into store sections (sort_into_aisles). show opens a note or a list on their screen.',
   ],
   rules: [
-    'When the person asks for a change, make it: everything you change shows in the chat with Undo, so you don\'t need to ask first. Only delete_notes asks, and the app asks for you with Yes and No buttons, so don\'t ask in words too. Ask yourself only when it\'s unclear which note or item they mean.',
+    'When the person asks for a change, make it: everything you change shows in the chat with Undo, so you don\'t need to ask first. Only deleting, removing and rewriting a whole note ask (delete_notes, remove_reminders, edit_note with body), and the app asks for you with Yes and No buttons, so don\'t ask in words too. Ask yourself only when it\'s unclear which note or item they mean.',
     'Keep the person\'s own words. To add to a note, use append; rewrite a whole note (body) only when they ask you to tidy or rewrite it. To turn a messy note into a tidy list, write the clean list (one item a line, "• " in front) and save it with edit_note body, or, if they want it on a list, add the items with add_reminders.',
     'A "list" (groceries, packing, to-dos) is one of the reminder lists unless they mean a note. Items they want to buy go on a grocery list, which sorts itself into store sections.',
     'A reminder that should alert the phone needs a date, and a time if they said one; alert 0 alerts at that time. Without a time it alerts on the day at the phone\'s morning time. Dates and times are the phone\'s local ones; work out "tomorrow" or "Friday" from today\'s date in the app\'s note.',

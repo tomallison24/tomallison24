@@ -1,14 +1,23 @@
 # Security headers for every page and file Cloudflare Pages serves (not the
 # /…/api/ functions, which set their own). Copied into the published site by
 # .github/workflows/news.yml. GitHub Pages ignores this file.
-#   frame-ancestors / X-Frame-Options: no other site can show these pages in a frame
+#   Content-Security-Policy, for every page, with or without a <meta> policy of its own
+#   (home/, labs/ and the Welcome Lab have none): script-src: only this site's own
+#   script files run, never an inline script or one from elsewhere (Google's sign-in
+#   script for Calendar's Gmail page is the one exception), so text that gets into a page
+#   as HTML can never run as code; object-src 'none': no plugins; base-uri 'none': no
+#   <base> tag can send relative addresses elsewhere; frame-ancestors / X-Frame-Options:
+#   no other site can show these pages in a frame. Only those directives are set here: a
+#   header is combined with a page's <meta> policy (both must allow a thing), so anything
+#   stricter than an app's own policy would break that app. The apps' pages keep their
+#   own, fuller policies (connect-src, img-src and the rest) in their <meta> tags.
 #   nosniff: files are only ever read as the type they're served as
 #   Referrer-Policy: other sites see only this site's address, never a page's
 #   HSTS: always https
 #   Permissions-Policy: location for Weather, Places and Calendar; nothing else
 #   powerful (no camera, microphone, payments or USB), and only for this site
 /*
-  Content-Security-Policy: frame-ancestors 'self'
+  Content-Security-Policy: script-src 'self' https://accounts.google.com/gsi/client; object-src 'none'; base-uri 'none'; frame-ancestors 'self'
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

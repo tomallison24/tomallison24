@@ -202,7 +202,7 @@ await test('health.js judges the same with the usual sent as with the days it ca
   assert.equal(cleanVitals({ on: true, usual }).usual.temp.mean, usual.temp.mean);
 });
 
-await test('vitals-check.mjs: begin, then each person on their own; only counts in the log', async () => {
+await test('vitals-check.mjs: begin, then each person on their own; nothing about anyone in the log (it is public)', async () => {
   await putJSON(db, 'vitals-sent:tom', { on: '2000-01-01', day: '2000-01-01' });
   HIST['sensor.tom_iphone_blood_oxygen'] = [[iso(FRESH_T), '91']];
   const fetchImpl = async (url, opts) => {
@@ -211,8 +211,8 @@ await test('vitals-check.mjs: begin, then each person on their own; only counts 
     return res;
   };
   const said = await checkVitals('https://site.example', KEY, { fetchImpl });
-  assert.equal(said, 'Checked 2 people: 1 alerted');
-  assert.ok(!/91|tom/i.test(said));
+  assert.equal(said, 'Done');
+  assert.ok(!/91|tom|alert|\d/i.test(said), 'no reading, name or count');
   assert.equal(pushed.at(-1).id, 'tom');
   await assert.rejects(checkVitals('https://site.example', 'wrong', { fetchImpl }), /begin: 403 key/);
 });

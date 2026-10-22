@@ -99,6 +99,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'ai-unreachable': 'Couldn’t reach the AI service. Try again in a minute.',
     'ai-format': 'That didn’t come back right. Try again.',
     'avoid': 'Every plan it made used something the family avoids, so none was kept. Try again, or pick another meat.',
+    'owner-only': 'Only the owner can change what the family avoids. Your stores and cards were kept.',
   };
   const say = code => SAY[code] || 'Something went wrong. Try again in a minute.';
 
@@ -422,11 +423,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<p class="label">Member cards</p><div class="opts" id="sCards" role="group" aria-label="Member cards">'
       + CARDS.map(([k, n]) => '<button class="opt" type="button" role="checkbox" data-card="' + k + '" aria-checked="' + draft.cards.includes(k) + '">' + esc(n) + '</button>').join('') + '</div>'
       + '<p class="hint">With a card, deals show its member prices.</p>'
-      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>').join('') + '</div>'
-      + '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
+      // what the family avoids is a safety list: only the owner changes it (the server refuses anyone else)
+      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>'
+        : '<span class="opt" aria-checked="true">' + esc(cap(a)) + '</span>').join('') + '</div>'
+      + (canAvoid() ? '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
+        : '<p class="hint">Only the owner can change what the family avoids.</p>')
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
   let draftAvoid = null, draft = { stores: [], cards: [] };
+  // the owner, or no one signed in yet (the server decides then)
+  const canAvoid = () => { const u = A() && A().user(); return !u || u.role === 'owner'; };
   if (window.aosDesign) aosDesign.bind($('setBody'));   // Design: Vintage or Standard, at once (../home/design.js)
   $('setBtn').onclick = () => { draftAvoid = [...(data.settings.avoid || [])]; draft = { stores: [...(data.settings.stores || [])], cards: [...(data.settings.cards || [])] }; renderSettings(); openSheet('setSheet'); };
   $('setBody').addEventListener('click', async e => {
@@ -447,9 +453,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   });
   // Done (the tick) saves what was changed, then closes; with nothing changed it only closes
   $('sSave').addEventListener('click', async () => {
-    const body = { stores: draft.stores, cards: draft.cards, avoid: draftAvoid }, was = data.settings;
+    const body = { stores: draft.stores, cards: draft.cards, ...(canAvoid() ? { avoid: draftAvoid } : {}) }, was = data.settings;
     const same = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
-    if (same(body.stores, was.stores) && same(body.cards, was.cards) && same(body.avoid, was.avoid)) return closeSheet('setSheet');
+    if (same(body.stores, was.stores) && same(body.cards, was.cards) && (!('avoid' in body) || same(body.avoid, was.avoid))) return closeSheet('setSheet');
     try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
     catch (err) { toast(say(err.code), null, 6000); }
   });

@@ -72,7 +72,7 @@ function mediaFamily(cfg) {
     words(p, r) {
       const A = r.A;
       if (r.offline) return { title: offWord(p.ent), sub: p.id === 'mv' ? 'Asleep or out of range' : 'Not reachable' };
-      if (p.kind === 'tv') return { title: r.on ? (A.media_title || A.source || 'On') : 'Off', sub: r.on ? [A.source, r.playing ? 'Playing' : ''].filter(Boolean).map(esc).join(' · ') : 'Standby' };
+      if (p.kind === 'tv') return { title: r.on ? esc(A.media_title || A.source || 'On') : 'Off', sub: r.on ? [A.source, r.playing ? 'Playing' : ''].filter(Boolean).map(esc).join(' · ') : 'Standby' };
       if (r.tv) return { title: 'TV', sub: 'Sound from the TV' + (val('sensor.' + p.pre + '_audio_input_format') ? ' · ' + esc(val('sensor.' + p.pre + '_audio_input_format')) : '') };
       if (r.playing || r.mood === 'paused') return { title: esc(A.media_title || A.media_channel || 'Playing'), sub: [A.media_artist, A.app_name && p.kind !== 'sonos' ? A.app_name : A.source].filter(Boolean).map(esc).join(' · ') || (r.playing ? 'Playing' : 'Paused') };
       return { title: r.state === 'off' ? 'Off' : 'Not playing', sub: [A.source, A.app_name].filter(Boolean).map(esc).join(' · ') || 'Idle' };

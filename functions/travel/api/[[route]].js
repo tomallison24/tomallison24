@@ -68,6 +68,20 @@ function aiRequest(key, model, system, content, effort, schema) {
   };
 }
 const AI_TIMEOUT_MS = 28000;
+// Each live-flight lookup and each email read costs (AeroDataBox's monthly allowance, a Claude call):
+// at most FLIGHTS_DAILY lookups that reach AeroDataBox and AI_DAILY email reads a person a day, counted
+// in the accounts' KV (travel:flights:<user id>:<day>, travel:ai:<user id>:<day>; gone after two days),
+// written before the call. The lock in front (_middleware.js) means there is always a person to count.
+export const FLIGHTS_DAILY = 60, AI_DAILY = 40;
+async function countFor(env, request, what, daily) {
+  const db = kv(env); if (!db) return true;   // accounts off: the lock has already refused strangers, or this is a test
+  const me = await sessionUser(db, request); if (!me) return true;
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  const key = 'travel:' + what + ':' + me.id + ':' + day, n = (+(await db.get(key)) || 0) + 1;
+  if (n > daily) return false;
+  await db.put(key, String(n), { expirationTtl: 2 * 86400 });
+  return true;
+}
 const MAX_BODY = 24 * 1024;
 const MAX_TEXT = 9000;
 
@@ -79,7 +93,7 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
 
   if (route === 'ping') return reply({ ok: true, status: !!key, find: !!key, ai: !!String(env.ANTHROPIC_API_KEY || '').trim(),
     models: { check: String(env.TRAVEL_AI_MODEL || '').trim() || CHECK_MODEL, ipsy: ipsyModelOf(env) } });
-  if (route === 'find') return find(q, key, waitUntil);
+  if (route === 'find') return find(q, key, waitUntil, env, request);
   if (route !== 'flight') return reply({ error: 'not-found' }, 404);
   if (!key) return reply({ error: 'no-key' }, 503);
 
@@ -91,6 +105,7 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
   const cacheKey = new Request('https://travel-status.cache/' + no + '/' + date);
   const hit = await cache.match(cacheKey);
   if (hit) return reply(await hit.json());
+  if (!(await countFor(env, request, 'flights', FLIGHTS_DAILY))) return reply({ error: 'limit' }, 429);
 
   const url = 'https://' + HOST + '/flights/number/' + encodeURIComponent(no) + '/' + date + '?withAircraftImage=false&withLocation=false&dateLocalRole=Departure';
   let res;
@@ -123,7 +138,7 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
 // departure board for a window around that time lists the airline's flights to
 // that airport. Only a single match is an answer; two matches stay unknown.
 const IATA = /^[A-Z0-9]{2}$/, AIRPORT = /^[A-Z]{3}$/, DAY = /^20\d\d-\d\d-\d\d$/, HM = /^([01]\d|2[0-3]):[0-5]\d$/;
-async function find(q, key, waitUntil) {
+async function find(q, key, waitUntil, env, request) {
   if (!key) return reply({ error: 'no-key' }, 503);
   const airline = String(q.get('airline') || '').toUpperCase(), from = String(q.get('from') || '').toUpperCase(), to = String(q.get('to') || '').toUpperCase();
   const date = String(q.get('date') || ''), time = String(q.get('time') || '');
@@ -135,6 +150,7 @@ async function find(q, key, waitUntil) {
   const cache = caches.default, cacheKey = new Request('https://travel-find.cache/' + [airline, from, to, date, time].join('/'));
   const hit = await cache.match(cacheKey);
   if (hit) return reply(await hit.json());
+  if (!(await countFor(env, request, 'flights', FLIGHTS_DAILY))) return reply({ error: 'limit' }, 429);
   let res;
   try { res = await fetch(url, { headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': HOST, Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) }); }
   catch { return reply({ error: 'unreachable' }, 502); }
@@ -254,7 +270,7 @@ export const IPSY_CLIENT_TOOLS = [
     kind: { type: 'string', enum: KINDS },
     fields: VALUES,
   }, ['kind', 'fields']),
-  T('delete_bookings', 'Delete bookings. A deleted booking doesn\'t come back from its email, and comes out of the Family calendar if Travel put it there. To mark one canceled, use update_booking with status cancelled instead. If these are every booking of a trip, the person is asked first, in the chat.', {
+  T('delete_bookings', 'Delete bookings. A deleted booking doesn\'t come back from its email, and comes out of the Family calendar if Travel put it there. To mark one canceled, use update_booking with status cancelled instead. The app asks the person to confirm first, in the chat; the result says if they said no.', {
     ids: { type: 'array', items: { type: 'string' } },
   }, ['ids']),
   T('delete_trip', 'Delete a whole trip: every booking in it. The person is asked first, in the chat, and nothing is deleted unless they say yes.', {
@@ -307,7 +323,7 @@ export const IPSY_SYSTEM = persona({
     'For a flight\'s live status, delays, gates, or whether it has left or landed, use flight_status (the booking\'s id, or the flight number and day), not the emails: emails go out of date. You can look up any flight the person names this way, independently of their emails and bookings.',
     'When you don\'t know a flight\'s number, use find_flight with the airline, the airport, the day and the time. If that doesn\'t settle it (or you don\'t know those), search the web for the number (the airline, the route, the day and the time), then confirm it with flight_status before you rely on it.',
     'Each phone has a monthly allowance of live flight look-ups: look up only what the question needs, and not the same flight twice in a question.',
-    'When the person asks for a change, make it: everything you change shows in the chat with an Undo, so you don\'t need to ask first. Ask first only when it\'s unclear which booking they mean. Deleting a whole trip asks them in the chat by itself.',
+    'When the person asks for a change, make it: everything you change shows in the chat with an Undo, so you don\'t need to ask first. Deleting asks by itself: the app asks with Yes and No buttons, so don\'t ask in words too. Ask yourself only when it\'s unclear which booking they mean.',
     'What you change is kept like the person\'s own edits: a later email won\'t overwrite it. A canceled booking is marked canceled (update_booking, status cancelled), not deleted, unless they ask to delete it.',
     'Dates and times are local to the place, written YYYY-MM-DDTHH:MM. A booking marked check (read from an email\'s words, filled in, made from a calendar event, or with no date yet) may be off: say so when your answer rests on one.',
   ],
@@ -343,6 +359,7 @@ export async function onRequestPost({ request, params, env }) {
   const wanted = fields && Array.isArray(body.missing) ? [...new Set(body.missing.map(String))].filter(f => fields.includes(f)) : [];
   const text = scrub(body && body.text);
   if (!fields || !wanted.length || text.length < 40) return reply({ error: 'bad-request' }, 400);
+  if (!(await countFor(env, request, 'ai', AI_DAILY))) return reply({ error: 'limit' }, 429);
   const known = {};
   if (body.known && typeof body.known === 'object') for (const f of fields) if (typeof body.known[f] === 'string' && body.known[f]) known[f] = body.known[f].slice(0, 120);
   const emailDate = /^20\d\d-\d\d-\d\d/.test(String(body.emailDate || '')) ? String(body.emailDate).slice(0, 10) : '';

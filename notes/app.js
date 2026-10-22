@@ -1630,7 +1630,8 @@
   // once, never kept), which also tells it whose Just-me reminders are this
   // phone's. This phone tells it its time zone, which lists to alert for,
   // whether to include nudges, and when "no time" is.
-  const okServer = u => /^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?(\/[\w.\/-]*)?$/.test(u);
+  // only the Worker's own address (or a local one while testing): the phone sends it your family session
+  const okServer = u => /^(https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)(\/[\w.\/-]*)?$/i.test(u);
   const pushable = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const zone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(e) { return ''; } };
   const serverUrl = p => new URL(p, push.server.replace(/\/*$/, '/')).href;

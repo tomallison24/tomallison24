@@ -25,7 +25,7 @@
 //                      with (so its shopping list stays as it was), and added
 //                      to the log, as Fitness keeps each workout
 //   POST discard    { at? } -> {} the draft goes (with at: only if it is still that draft)
-//   POST settings   { stores, cards, avoid } -> { settings }
+//   POST settings   { stores, cards, avoid } -> { settings }   (avoid: the owner only; { error: 'owner-only' } for anyone else)
 //
 // For Ipsy, the helper you chat with (its changes, and their Undo, go through these and the
 // ones above, so the allergy check and every other rule here applies to them too):
@@ -103,6 +103,15 @@ export const MEATS = ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'salmon', 'wh
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 const int = (v, lo, hi, d) => { const n = Math.round(+v); return isFinite(n) && n >= lo && n <= hi ? n : d; };
 const fail = (message, status) => Object.assign(new Error(message), { status });
+// Plans and pasted deals cost money (a Claude call each): at most AI_DAILY a person a day, counted in
+// the accounts' KV as meals:ai:<user id>:<day> (gone after two days), written before the call.
+export const AI_DAILY = 20;
+async function countAi(db, me) {
+  const key = 'meals:ai:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
+  if (n > AI_DAILY) return false;
+  await db.put(key, String(n), { expirationTtl: 2 * 86400 });
+  return true;
+}
 
 // ---- the week: sales run Wednesday to Tuesday, in Cary's time ----
 export function week(now = Date.now()) {
@@ -368,7 +377,11 @@ export async function onRequest({ request, params, env }, f = fetch) {
       return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, week: wk, stores: STORES, settings, deals, draft, plan, log });
     }
     if (route === 'settings' && method === 'POST') {
-      const s = settingsOf(await body(request));
+      const b = await body(request), s = settingsOf(b);
+      // What the family avoids is a safety rule: only the owner changes it. Everyone else's
+      // stores and cards are kept, with the avoid list as it was; an avoid list of their own is refused.
+      if (me.role !== 'owner' && 'avoid' in b && JSON.stringify(s.avoid) !== JSON.stringify(settings.avoid)) return reply({ error: 'owner-only' }, 403);
+      if (me.role !== 'owner') s.avoid = settings.avoid;
       await putJSON(db, 'meals:settings', { ...s, at: Date.now() });
       return reply({ settings: s });
     }
@@ -379,6 +392,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
       // This week's search already done: hand it back (searches cost money).
       if (!text && old && old.week === wk && old.items.length && (!b.refresh || Date.now() - old.at < REFRESH_MS)) return reply({ deals: old });
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
+      if (!(await countAi(db, me))) return reply({ error: 'limit' }, 429);
       const d = cleanDeals(json(await ask(env, dealsAsk(store, wk, text, settings.cards.includes(store.card)), f)));
       const deals = { week: wk, at: Date.now(), how: text ? 'paste' : 'search', store: store.id, ...d };
       if (d.items.length) await putJSON(db, dealsKey(store.id), deals);
@@ -386,6 +400,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
     }
     if (route === 'plan' && method === 'POST') {
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
+      if (!(await countAi(db, me))) return reply({ error: 'limit' }, 429);
       const b = await body(request);
       const shop = b.shop === 'all' || storeOf(b.shop) ? b.shop : 'all';
       const o = { meat: MEATS.includes(b.meat) ? b.meat : 'chicken', days: int(b.days, 1, 7, 4), people: int(b.people, 1, 10, 4), useDeals: !!b.useDeals, shop, note: str(b.note, 200) };
@@ -452,7 +467,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
       const hits = avoidHits(planText(p.meals), settings.avoid);
       if (hits.length) return reply({ error: 'avoid', hits }, 422);
       const at = +d.at > 0 && +d.at <= Date.now() ? Math.round(+d.at) : Date.now();
-      const draft = { at, by: str(d.by, 60) || me.name, week: ISO.test(d.week) ? d.week : wk, meat: MEATS.includes(d.meat) ? d.meat : 'chicken', days: p.meals.length,
+      const draft = { at, by: me.name, week: ISO.test(d.week) ? d.week : wk, meat: MEATS.includes(d.meat) ? d.meat : 'chicken', days: p.meals.length,
         people: int(d.people, 1, 10, 4), useDeals: !!d.useDeals, shop: d.shop === 'all' || storeOf(d.shop) ? d.shop : 'all', note: str(d.note, 200), ...p, sales: cleanSales(d.sales) };
       await putJSON(db, 'meals:draft', draft);
       return reply({ draft });
