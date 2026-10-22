@@ -956,6 +956,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // past 12 hours, so a Google that wants a tap never causes a redirect on every open.
   const mayRenew = () => !!ls.get(K.token + '.ever', '') && Date.now() - +ls.get(K.lastAuth, 0) > 60e3 && Date.now() - +ls.get(K.silentFail, 0) > 12 * H;
   const hasGmail = () => !!getToken() || !!ls.get(K.token + '.ever', '') || !!ls.get('mail.token.ever', '');
+  // Inside aOS 2 (aOS/home-tab.js) Google's sign-in page can't open in this app's frame: the whole aOS
+  // window goes to Google instead and comes back to this page, which ../home/welcome.js then takes
+  // back into aOS (aos.away). A quiet renewal waits while the app is out of sight there.
+  function toGoogle(u, silent) {
+    let inAOS = false; try { inAOS = window.top !== window && !!window.top.aosHome; } catch {}
+    if (!inAOS) { location.href = u; return; }
+    const box = window.frameElement && window.frameElement.parentElement;
+    if (silent && box && box.hidden) return;
+    try { localStorage.setItem('aos.away', 'travel|' + Date.now()); } catch {}
+    window.top.location.href = u;
+  }
   function signIn(opts = {}) {
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
     ls.set(K.state, nonce); ls.set(K.lastAuth, String(Date.now()));
@@ -966,7 +977,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ...(hint && !opts.choose ? { login_hint: hint } : {}), ...(opts.choose ? { prompt: 'select_account' } : {}), ...(opts.silent ? { prompt: 'none' } : {}),
     });
     if (opts.silent) ls.set(K.silent, '1'); else ls.del(K.silent);
-    location.href = u.toString();
+    toGoogle(u.toString(), !!opts.silent);
   }
   function signOut() {
     const tok = ownToken();

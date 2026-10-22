@@ -187,8 +187,11 @@
 
   // ---- tabs ----
   const tabs = document.querySelectorAll('[data-tab]');
-  const show = t => { for (const s of ['today', 'apps', 'search']) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', ['today', 'apps', 'search'].indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
+  // the tabs in the order the dock shows them (aOS 2's Home takes the Apps tab's place: aOS/home-tab.js)
+  const show = t => { const names = [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab); for (const s of ['today', 'apps', 'search', 'home']) if ($(s)) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', names.indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
   tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
+  window.aosTabs = { show };
+  window.aosAppHue = id => HUE[id];
 
   // ---- pages that slide over ----
   function page(html, { up = false, c = '', cls = '' } = {}) {
@@ -214,7 +217,7 @@
     const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
     const e = r ? D.entry(r.apps[id]) : null;
     const ap = appOf(id);
-    const el = page(`<div class="apphead"><img src="${icon(ap)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${hasDesigns(id) ? dsel(id) : ''}<span class="gets">${getBtn(ap)}${goneBtn(ap)}</span></div></div>
+    const el = page(`<div class="apphead"><img src="${icon(ap)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${hasDesigns(id) ? dsel(id) : ''}<span class="gets">${window.aosHomeTab ? `<button type="button" class="get open" data-open="${id}">Open</button>` : ''}${getBtn(ap)}${goneBtn(ap)}</span></div></div>
       <div class="strip">
         <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
         <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>

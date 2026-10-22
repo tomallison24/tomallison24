@@ -2028,6 +2028,61 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
     } catch {}
     return true;
   }
+  // ---- moving into aOS 2: what an app keeps only on this phone, carried into aOS ----
+  // Inside aOS (aOS/home-tab.js) every app keeps its data in aOS's storage, not its Home Screen
+  // copy's, so it would open there without what it never syncs: Clock's alarms, Weather's cities,
+  // Home's Home Assistant sign-in, each app's settings. Once you use aOS 2 (it tells the family
+  // account, handoff/want), GET state says carry: true, and an app opened from its own icon hands
+  // its keys (CARRY) to your account, at most once a day, until aOS has them (functions/aOS/api,
+  // handoff). aOS takes them for the app, once (handoff/take: then they're deleted
+  // there) and puts them in place before the app first opens (aOS/home-tab.js). Never carried:
+  // Gmail's sign-in (an hour long; sign in once inside aOS) and Ipsy's chats.
+  const CARRY = {   // app: [the key prefixes it keeps, the ones never carried]
+    mail: [['mail.', 'design.mail'], ['mail.token', 'mail.state', 'mail.lastAuth', 'mail.pending', 'mail.openThread', 'mail.pushSynced']],
+    calendar: [['allison-calendar-v1', 'calendar.private', 'design.calendar'], []],
+    clock: [['allison-clock-v1'], []],
+    news: [['news.', 'design.news'], ['news.data', 'news.table.cache', 'news.sport.catalog', 'news.scores.next']],
+    weather: [['wx.', 'design.weather'], ['wx.cache', 'wx.pt']],
+    notes: [['allison-notes-v1', 'design.notes'], []],
+    podcasts: [['allison-podcasts-v1', 'design.podcasts'], []],
+    travel: [['allison-travel-v1', 'design.travel'], []],
+    places: [['allison-places-v1', 'design.places'], []],
+    fitness: [['allison-fitness-v1', 'design.fitness'], []],
+    drinks: [['allison-drinks-v1', 'design.drinks'], []],
+    meals: [['allison-meals-v2', 'design.meals'], []],
+    orders: [['allison-orders-v1', 'design.orders'], []],
+    house: [['house.', 'design.house'], []],
+  };
+  const CARRY_MAX = 230 * 1024;          // what the account takes for one app (HANDOFF_MAX), with room to spare
+  const CARRIED = 'aos.carry.';          // + app: 'done' (aOS has it), else the day it was last sent
+  const dayKey = () => new Date().toISOString().slice(0, 10);
+  function carryKeys() {
+    const [take, never] = CARRY[APP] || [[], []], out = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (take.some(p => k.startsWith(p)) && !never.some(p => k.startsWith(p))) out[k] = localStorage.getItem(k);
+      }
+    } catch {}
+    // too much for one app: leave out the biggest (synced data and caches, which come back anyway)
+    let size = JSON.stringify(out).length;
+    for (const k of Object.keys(out).sort((a, b) => out[b].length - out[a].length)) { if (size <= CARRY_MAX) break; size -= out[k].length + k.length + 6; delete out[k]; }
+    return out;
+  }
+  async function carryOut() {   // from the app's own Home Screen icon
+    const t = token(); if (!t || inHome || !CARRY[APP]) return;
+    let st = ''; try { st = localStorage.getItem(CARRIED + APP) || ''; } catch {}
+    if (st === 'done' || st === dayKey()) return;
+    const data = carryKeys(); if (!Object.keys(data).length) return;
+    try {
+      const r = await fetch(api('handoff'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app: APP, data }) });
+      if (!r.ok) return;
+      const j = await r.json();
+      localStorage.setItem(CARRIED + APP, j.taken ? 'done' : dayKey());
+    } catch {}
+  }
+  AOS.carry = { keys: carryKeys, out: carryOut };   // for the tests
+
   // Android Chrome can tell a page whether its own app is installed (getInstalledRelatedApps,
   // from the manifest's related_applications). Tapping an app in aOS that was removed from the
   // tablet opens it in a Chrome tab; there it says so, and aOS shows Get again. Opened in a tab
@@ -2128,6 +2183,7 @@ html[data-theme="dark"] #aos-welcome { --s-dim: rgba(5,9,10,.7); --s-card: rgba(
       p = j.plan || null;
       try { p ? localStorage.setItem(PLAN, JSON.stringify(p)) : localStorage.removeItem(PLAN); } catch {}
       showPlan(p);
+      if (j.carry) carryOut();   // you use aOS 2: hand over what this app keeps only on the phone
     } catch {}   // offline: the last plan seen stands
   }
 
@@ -2211,8 +2267,20 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     if (!s) return playApp(APP);
     if (cmp(v, s) > 0) return playUpdate(APP, s, v);
   }
+  // Back from Google's sign-in, which took the whole aOS window (each app's toGoogle: Google's page
+  // can't open in a frame): the app has its token by now (its own script read it), so back into aOS,
+  // where it opens again. Only within ten minutes of leaving, so a sign-in given up on doesn't pull
+  // the app's own Home Screen copy into aOS later.
+  function backToAOS() {
+    if (window.top !== window || !APP) return false;
+    let away = ''; try { away = localStorage.getItem('aos.away') || ''; localStorage.removeItem('aos.away'); } catch {}
+    const [app, at] = away.split('|');
+    if (app !== APP || !(Date.now() - +at < 600e3)) return false;
+    location.replace('../aOS/#app=' + APP);
+    return true;
+  }
   if (me && me.hasAttribute('data-auto')) {
-    const go = () => { if (erasedNote()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
+    const go = () => { if (erasedNote() || backToAOS()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkPlan(); });   // back from aOS, or a day later
     addEventListener('online', () => checkPlan());   // a phone kept offline hears of an erase as soon as it's back
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
