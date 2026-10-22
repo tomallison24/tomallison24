@@ -29,9 +29,11 @@
   Not an app; see ../index.html.
 
   welcome.js knows it's in here (window.aosHome): an app inside counts as on the Home Screen
-  (no "add me" steps) but isn't reported to aOS as added on its own.
+  (no "add me" steps) but isn't reported to aOS as added on its own. Each app fills the window, with
+  aOS's controls floating over it: aosHome.insets() (and AllisonOS.inset() in the app, on a change)
+  says how much of the top and bottom they cover, which the app takes as its safe-area spacing.
 -->
-<script>window.aosHome = true;</script>
+<script>window.aosHome = {};   // insets() is filled in below</script>
 <style>
   :root { --bg: #EEF2F0; --card: rgba(255,255,255,.78); --solid: #FAFBFA; --text: #10181A; --muted: rgba(16,24,26,.64); --line: rgba(16,24,26,.08); --dot: rgba(16,24,26,.06);
     --bar: rgba(238,242,240,.86); --accent: #3E8A79; --ink: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%);
@@ -96,20 +98,21 @@
   .notes b { color: var(--text); }
   .notes ol { margin: 8px 0 0; padding-left: 18px; } .notes li + li { margin-top: 6px; }
 
-  /* ---- an app: the bar on top (in the app's own colour), the app, the strip by the home indicator ---- */
+  /* ---- an app: it fills the window, its own background under the status bar and aOS's controls.
+     aOS tells it how much they cover (insets(), below), so its content starts clear of them ---- */
   #app { position: fixed; inset: 0; z-index: 2; visibility: hidden; background: var(--tint, var(--bg)); }
   body.in-app #app { visibility: visible; }
-  #nav { position: absolute; left: 0; right: 0; top: 0; height: calc(env(safe-area-inset-top) + var(--navh)); padding: env(safe-area-inset-top) 8px 0;
-    display: flex; align-items: center; background: var(--tint, var(--bg)); border-bottom: 1px solid var(--line); transition: background-color .25s; }
-  #nav h3 { position: absolute; left: 90px; right: 90px; bottom: 0; height: var(--navh); margin: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-  #nav .nb { position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px 0 4px; border-radius: 10px; color: var(--accent);
-    font-size: 17px; font-weight: 600; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-  #nav .nb:active { opacity: .5; }
+  #nav { position: absolute; left: 0; right: 0; top: 0; z-index: 3; height: calc(env(safe-area-inset-top) + var(--navh)); padding: env(safe-area-inset-top) 10px 0;
+    display: flex; align-items: center; pointer-events: none; }
+  /* "‹ aOS" (and Cards' aOS): a small frosted pill floating over the app, not a bar */
+  #nav .nb { position: relative; pointer-events: auto; display: flex; align-items: center; gap: 2px; height: 34px; padding: 0 13px 0 6px; border-radius: 999px; color: var(--accent);
+    background: var(--bar); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 2px 12px rgba(0,0,0,.12), inset 0 0 0 1px var(--line);
+    font-size: 16px; font-weight: 600; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #nav .nb:active { opacity: .6; }
   #nav .nb svg { width: 22px; height: 22px; }
   #cardsBtn { padding: 0 12px !important; gap: 8px !important; }
   #cardsBtn .count { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 7px; box-shadow: inset 0 0 0 2px currentColor; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
-  #stage { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + var(--navh)); bottom: env(safe-area-inset-bottom); }
+  #stage { position: absolute; inset: 0; z-index: 1; }
   .frame { position: absolute; inset: 0; transform-origin: 0 0; transition: transform .38s var(--ease), border-radius .38s var(--ease); background: var(--bg); }
   .frame iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
   #edge { position: absolute; left: 0; top: calc(env(safe-area-inset-top) + var(--navh)); bottom: 0; width: 18px; z-index: 3; touch-action: none; display: none; }
@@ -157,9 +160,7 @@
 
   /* floating: the app has the whole screen; a round aOS button floats over it (as the iPhone's
      AssistiveTouch). Drag it anywhere: it settles on the nearest side, and fades when left alone */
-  body.mode-float #nav { height: env(safe-area-inset-top); border-bottom: 0; }
   body.mode-float #nav > * { display: none; }
-  body.mode-float #stage { top: env(safe-area-inset-top); }
   #fab { position: fixed; left: 0; top: 0; z-index: 5; width: 56px; height: 56px; border-radius: 50%; display: none; place-items: center;
     background: var(--bar); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 6px 20px rgba(0,0,0,.22), inset 0 0 0 1px var(--line);
     font-size: 17px; font-weight: 700; letter-spacing: -.3px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -171,9 +172,7 @@
 
   /* bar: the first try, a bar along the bottom with aOS and the open apps */
   body.mode-bar #home { bottom: var(--barh); padding-bottom: 28px; }
-  body.mode-bar #nav { height: env(safe-area-inset-top); border-bottom: 0; }
   body.mode-bar #nav > * { display: none; }
-  body.mode-bar #stage { top: env(safe-area-inset-top); bottom: var(--barh); }
   body.mode-bar.in-app #home { visibility: hidden; }
   #bar { position: fixed; left: 0; right: 0; bottom: 0; height: var(--barh); padding: 7px 14px env(safe-area-inset-bottom); z-index: 4;
     display: none; align-items: flex-start; gap: 10px; background: var(--bar); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-top: 1px solid var(--line);
@@ -251,7 +250,6 @@
   <div id="nav">
     <button type="button" class="nb" id="back" aria-label="Back to aOS (hold for open apps)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>aOS</button>
     <button type="button" class="nb" id="cardsBtn" aria-label="Open apps"><span>aOS</span><span class="count" id="count">1</span></button>
-    <h3 id="title"></h3>
   </div>
   <div id="stage"></div>
   <div id="edge" aria-hidden="true"></div>
@@ -335,7 +333,23 @@
     function setMode(m) {
       mode = m; put(MODE, m);
       for (const x of Object.keys(MODES)) body.classList.toggle('mode-' + x, x === m);
-      paintHome(); paintBar();
+      paintHome(); paintBar(); pushInsets();
+    }
+
+    // how much of the window aOS's own controls cover: the status bar and "‹ aOS" (or Cards' aOS)
+    // on top, the home indicator (and the bottom bar) below. Every app inside takes it as its
+    // safe-area spacing (welcome.js), so its content clears them and its background runs under them.
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+    body.append(probe);
+    function insets() {
+      const cs = getComputedStyle(probe), top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
+      return { top: top + (mode === 'back' || mode === 'cards' ? 44 : 0), bottom: bottom + (mode === 'bar' ? 58 : 0) };
+    }
+    window.aosHome.insets = insets;
+    function pushInsets() {
+      const v = insets();
+      for (const box of Object.values(frames)) try { box.firstChild.contentWindow.AllisonOS.inset(v.top, v.bottom); } catch {}
     }
 
     // ---- the apps ----
@@ -349,7 +363,7 @@
       f.src = `../../${id}/`;
       f.title = name(id);
       f.allow = 'geolocation; screen-wake-lock; fullscreen; publickey-credentials-get';
-      f.addEventListener('load', () => { if (current === id) tint(); });
+      f.addEventListener('load', () => { pushInsets(); if (current === id) tint(); });
       box.addEventListener('click', () => { if (body.classList.contains('overview')) show(id); });
       box.append(f); frames[id] = box; $('#stage').append(box);
     }
@@ -368,15 +382,14 @@
       const prev = current, fromCards = body.classList.contains('overview');
       if (id && !frames[id]) load(id);
       current = id;
-      if (current) { used = used.filter(x => x !== current); used.push(current); $('#title').textContent = name(current); }
+      if (current) { used = used.filter(x => x !== current); used.push(current); }
       clearTimeout(hideT);
       if (fromCards) {
         body.classList.remove('overview');
+        // every card back to the whole screen: the one picked grows, the others go once it has
+        for (const [k, f] of Object.entries(frames)) { f.style.zIndex = k === current ? 2 : 1; f.style.transform = ''; f.style.borderRadius = ''; }
         if (!current) reveal(null);
-        else {   // the card grows back to the whole screen; the others go once it has
-          for (const [k, f] of Object.entries(frames)) { f.style.zIndex = k === current ? 2 : 1; f.style.transform = ''; f.style.borderRadius = ''; }
-          hideT = setTimeout(() => reveal(current), 400);
-        }
+        else hideT = setTimeout(() => reveal(current), 400);
       } else if (mode === 'back' && !current && prev) hideT = setTimeout(() => { if (!current) reveal(null); }, 400);   // it slides out first
       else reveal(current);
       body.classList.toggle('in-app', !!current);
@@ -386,14 +399,24 @@
       put(OPEN, open); tint(); paintBar();
     }
     // the bar on top, the strip by the home indicator and the status bar take the app's own colour
+    // behind the app while it loads, its own background; the status bar, its own bar colour
+    // (its theme-color), as on the Home Screen, and aOS's again on Home
+    const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
     function tint() {
-      let c = '';
+      let c = '', bar = '';
       const f = current && frames[current] && frames[current].firstChild;
       if (f) try {
-        const d = f.contentDocument, see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
+        const d = f.contentDocument, w = f.contentWindow, see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
         c = see(d.body) || see(d.documentElement);
+        const m = [...d.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || w.matchMedia(m.media).matches);
+        bar = (m && m.content) || c;
       } catch {}
       $('#app').style.setProperty('--tint', c || 'var(--bg)');
+      for (const m of metas) {
+        if (!m.dataset.home) m.dataset.home = m.content;
+        const want = bar || m.dataset.home;
+        if (m.content !== want) m.content = want;
+      }
     }
     setInterval(() => { if (current && document.visibilityState === 'visible') tint(); }, 1500);   // an app switched to light or dark
 

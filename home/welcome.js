@@ -911,8 +911,41 @@
   // ---- installing ----
   // Opened inside aOS's all-in-one test (labs/home: the apps framed in one window, on this
   // same site), an app counts as on the Home Screen, but isn't reported as added on its own.
-  const inHome = (() => { try { return window.top !== window && window.top.aosHome === true; } catch { return false; } })();
+  const inHome = (() => { try { return window.top !== window && !!window.top.aosHome; } catch { return false; } })();
   const standalone = () => inHome || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  // In there the app fills aOS's window, under aOS's own controls (the status bar, "‹ aOS"): aOS
+  // says how much of the top and bottom they cover (AllisonOS.inset(top, bottom), or
+  // aosHome.insets() at the start), and the app's safe-area spacing (env(safe-area-inset-top /
+  // -bottom), 0 in a frame) is set to that, in its styles and in any style="" that uses it. Its
+  // content clears aOS's controls and its own background runs under them, as on the Home Screen.
+  const INSET = /env\(\s*safe-area-inset-(top|bottom)\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g, insetOrig = new WeakMap();
+  let insetNow = null;
+  function setInset(top, bottom) {
+    insetNow = { top, bottom };
+    const put = (key, o, apply) => { if (!insetOrig.has(key)) insetOrig.set(key, o); const t = insetOrig.get(key); if (t.includes('safe-area-inset')) apply(t.replace(INSET, (m, side) => `${side === 'top' ? top : bottom}px`)); };
+    const walk = rules => { for (const r of rules) {
+      if (r.style) put(r, r.style.cssText, t => { r.style.cssText = t; });
+      if (r.cssRules) walk(r.cssRules);
+    } };
+    for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch {} }
+    // a style="" is set once (an app may change the rest of it later; a later inset doesn't undo that)
+    for (const el of document.querySelectorAll('[style*="safe-area-inset"]')) el.setAttribute('style', el.getAttribute('style').replace(INSET, (m, side) => `${side === 'top' ? top : bottom}px`));
+  }
+  if (inHome) {
+    AOS.inset = setInset;
+    try { const v = window.top.aosHome.insets(); setInset(v.top, v.bottom); } catch {}
+    // styles an app (or this script) adds later, and elements placed with the inset
+    new MutationObserver(ms => {
+      if (!insetNow) return;
+      let again = false;
+      for (const m of ms) for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'LINK') n.addEventListener('load', () => setInset(insetNow.top, insetNow.bottom), { once: true });
+        if (n.tagName === 'STYLE' || (n.getAttribute('style') || '').includes('safe-area-inset') || (n.querySelector && n.querySelector('[style*="safe-area-inset"]'))) again = true;
+      }
+      if (again) setInset(insetNow.top, insetNow.bottom);
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
   // An app tapped in aOS opens as ?via=aos, in the in-app Safari view an installed aOS
   // opens links in - which may report itself as standalone. Remember it for this view
   // (a Home Screen app keeps its own storage, so its own launches never carry it) and
