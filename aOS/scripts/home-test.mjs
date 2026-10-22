@@ -6,6 +6,8 @@
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
+//   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
+//     aOS takes it whichever opens first, and it wins over aOS's own copy
 // and the route behind it (functions/aOS/api/ipsy.js): signed-in family only, every Ipsy app's tools
 // but Fitness's, each named with its app, Claude Sonnet 5.5.
 //   node aOS/scripts/home-test.mjs [repo root]
@@ -67,7 +69,9 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
   check(t1.j.data && t1.j.data['allison-clock-v1'] === '{"alarms":[1]}', 'aOS takes it');
   check((await call('handoff/take', { app: 'clock' })).j.data === null && !m.has('handoff:O1:clock'), 'once: then it\'s deleted');
   check((await call('handoff', { app: 'clock', data: { k: 'v' } })).j.taken === true, 'taken: the Home Screen copy is told to stop sending');
-  check((await call('handoff/take', { app: 'weather' })).j.data === null && !m.has('handoff:taken:O1:weather'), 'nothing waiting yet: aOS can ask again');
+  m.set('handoff:taken:O1:notes', '1');   // taken by the first aOS 2, which dropped it
+  check(!(await call('handoff', { app: 'notes', data: { k: 'v' } })).j.taken && m.has('handoff:O1:notes'), 'taken by the first aOS 2 (which kept its own copy): it moves again');
+  check((await call('handoff/take', { app: 'weather' })).j.data === null && !m.has('handoff:taken2:O1:weather'), 'nothing waiting yet: aOS can ask again');
 }
 
 // ---- the page ----
@@ -125,16 +129,33 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);
   check(await pg.evaluate(async () => { const res = await AllisonOS.ipsy.mounted.tools['fitness__days']({}, {}); return !!res.error; }), `and has no Fitness tool ${tag}`);
 
-  // moving in: what Clock kept on the phone is in place before Clock first opens inside aOS
+  // moving in: what an app kept on its own icon's storage moves into aOS, whichever opens first
   if (look === 'vintage') {
-    let took = 0;
+    let took = 0, give = null, wait = 0;
     await pg.evaluate(() => localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() })));
-    await pg.route('**/aOS/api/handoff/take', r => { took++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { 'wx.places': '[{"name":"Lisbon"}]' } }) }); });
-    await pg.locator('.hrow[data-open="weather"]').count();
-    await pg.evaluate(() => { localStorage.removeItem('wx.places'); });
-    await pg.evaluate(() => aosHomeTab.show('places')); await pg.waitForTimeout(1500);
-    check(took === 1 && await pg.evaluate(() => localStorage.getItem('wx.places')) === '[{"name":"Lisbon"}]' && await pg.evaluate(() => localStorage.getItem('aos.carry.in.places')) === 'done',
-      `before an app first opens inside aOS, aOS takes what it kept on the phone, once ${tag}`);
+    await ctx.addInitScript(() => { if (window.top !== window) window.__saw = localStorage.getItem('mail.test'); });
+    await pg.route('**/aOS/api/handoff/take', async r => { took++; const d = give; give = null; if (wait) await new Promise(ok => setTimeout(ok, wait)); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: d }) }); });
+    // aOS first: nothing waiting yet, and News opens here with its own copy
+    await pg.evaluate(() => localStorage.setItem('news.test', 'aos'));
+    await pg.evaluate(() => aosHomeTab.show('news')); await pg.waitForTimeout(1500);
+    check(took === 1 && await pg.evaluate(() => !!document.querySelector('.frame[data-id="news"] iframe').getAttribute('src') && localStorage.getItem('aos.carry2.in.news') !== 'done'),
+      `aOS asks first, nothing's waiting: News opens anyway, and aOS will ask again ${tag}`);
+    await pg.evaluate(() => { aosHomeTab.show(null); const w = document.querySelector('.frame[data-id="news"] iframe').contentWindow; w.__old = 1; w.addEventListener('pagehide', () => w.localStorage.setItem('news.test', 'stale')); });   // an app that saves as it closes
+    // then News is opened from its own icon (it hands over), and you come back to News in aOS
+    give = { 'news.test': 'icon' }; await pg.evaluate(() => aosHomeTab.carried());
+    await pg.evaluate(() => aosHomeTab.show('news')); await pg.waitForTimeout(2500);
+    check(took === 2 && await pg.evaluate(() => localStorage.getItem('news.test') === 'icon' && JSON.parse(localStorage.getItem('aos.carry2.was.news') || '{}')['news.test'] === 'aos' && localStorage.getItem('aos.carry2.in.news') === 'done'),
+      `back in News: what came from its icon wins over aOS's copy, which is kept aside ${tag}`);
+    check(await pg.evaluate(() => !document.querySelector('.frame[data-id="news"] iframe').contentWindow.__old && /News.s data moved in/.test(document.getElementById('htoast').textContent)),
+      `and News opens again with it, saying so ${tag}`);
+    await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(400);
+    // an app not open yet waits for what's coming (a few seconds at most) before it starts
+    give = { 'mail.test': 'icon' }; wait = 1500;
+    await pg.evaluate(() => aosHomeTab.show('mail')); await pg.waitForTimeout(600);
+    const early = await pg.evaluate(() => document.querySelector('.frame[data-id="mail"] iframe').getAttribute('src'));
+    await pg.waitForTimeout(2500); wait = 0;
+    const mf = pg.frames().find(f => f.url().includes('/mail/'));
+    check(!early && mf && await mf.evaluate(() => window.__saw) === 'icon', `Mail starts only once what it kept is in place, and starts with it ${tag}`);
     await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
     // back from Google: Mail, opened at the top of aOS's window with aos.away set, goes back into aOS
     await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + Date.now()));
@@ -148,6 +169,33 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
+// ---- moving in, from an app's own Home Screen icon (../home/welcome.js, "moving into aOS 2") ----
+for (const signedIn of [false, true]) {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
+  await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+  await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+  await ctx.route('**/aOS/api/state', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"storage":true,"setup":true}' }));
+  await ctx.route('**/aOS/api/installed', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+  const sent = [];
+  await ctx.route('**/aOS/api/handoff', r => { sent.push(JSON.parse(r.request().postData() || '{}')); r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  await ctx.addInitScript(([apps, signedIn]) => {
+    Object.defineProperty(navigator, 'standalone', { get: () => true });
+    if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+    const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('news.test', 'icon');
+    if (signedIn) localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
+  }, [APPS, signedIn]);
+  const pg = await ctx.newPage(), errs = [];
+  pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto(BASE + '/news/'); await pg.waitForSelector('#aos-moved', { timeout: 8000 }).catch(() => {});
+  const note = await pg.evaluate(() => { const el = document.getElementById('aos-moved'); return el ? { text: el.innerText, faceId: !!el.querySelector('.m-go') } : null; });
+  if (!signedIn) check(note && note.faceId && /Sign in, and what News keeps on this phone moves into aOS/.test(note.text) && !sent.length, 'from its own icon, not signed in: "lives in aOS now" offers to move its data with Face ID');
+  else check(note && !note.faceId && /on its way/.test(note.text) && sent.length === 1 && sent[0].app === 'news' && sent[0].data['news.test'] === 'icon',
+    `signed in: it hands what it keeps on the phone to the family account, once, and says so (${sent.length} sent)`);
+  check(!errs.length, `no script errors (from its icon, ${signedIn ? 'signed in' : 'signed out'})` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  await ctx.close();
+}
+
 await b.close();
 server.close();
 console.log(fails ? `\n${fails} failed` : '\nall passed');

@@ -262,7 +262,7 @@ export async function onRequest({ request, params, env }) {
     if (route === 'handoff' && method === 'POST') {
       const b = await body(request), app = String(b.app || '');
       if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
-      if (await db.get('handoff:taken:' + me.id + ':' + app)) return reply({ ok: true, taken: true });
+      if (await db.get('handoff:taken2:' + me.id + ':' + app)) return reply({ ok: true, taken: true });
       if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data) || !Object.values(b.data).every(v => typeof v === 'string')) return reply({ error: 'data' }, 400);
       const json = JSON.stringify(b.data);
       if (json.length > HANDOFF_MAX) return reply({ error: 'too-big' }, 413);
@@ -276,7 +276,7 @@ export async function onRequest({ request, params, env }) {
       if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
       const key = 'handoff:' + me.id + ':' + app, json = await db.get(key);
       if (!json) return reply({ data: null });   // nothing yet: aOS asks again next time
-      await db.put('handoff:taken:' + me.id + ':' + app, String(Date.now()), { expirationTtl: 400 * 86400 });
+      await db.put('handoff:taken2:' + me.id + ':' + app, String(Date.now()), { expirationTtl: 400 * 86400 });
       await db.delete(key);
       return reply({ data: JSON.parse(json) });
     }
