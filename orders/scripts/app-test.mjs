@@ -418,12 +418,43 @@ for (const scheme of ['light', 'dark']) {
     }
   });
 
+  await step(scheme + ': a hidden order (a gift) leaves every list, search and count; Settings shows it again, and it hides again when Orders goes to the background', async () => {
+    await page.click('#whenChips [data-when="way"]');
+    const before = await texts(page, '#whenChips .chip');
+    const store = (await texts(page, '#list .ocard .ostore'))[0], re = new RegExp(store);
+    await page.click('#list .ocard');
+    await page.waitForSelector('#opage:not([hidden]) #opHide');
+    await page.click('#opHide');
+    await page.waitForSelector('#opage[hidden]', { state: 'attached' });
+    assert.match(await page.textContent('#toast'), /Hidden/);
+    assert.ok(!(await texts(page, '#list .ocard')).some(c => re.test(c)), 'off On the way');
+    const n = t => +((t.find(c => c.startsWith('On the way')) || '').match(/\d+$/) || [0])[0];
+    assert.equal(n(await texts(page, '#whenChips .chip')), n(before) - 1, 'and out of the count');
+    await page.click('#searchBtn'); await page.fill('#q', store.toLowerCase());
+    assert.match(await page.textContent('#list'), /No match/, 'search doesn’t find it');
+    await page.click('#qClear'); await page.click('#searchBtn');
+    await page.click('#setBtn');
+    await page.click('#stHidden');
+    await page.waitForSelector('#whenChips [data-when="hidden"][aria-pressed="true"]');
+    assert.match((await texts(page, '#list .ocard'))[0], re);
+    await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); delete document.visibilityState; });
+    assert.ok(!(await page.$('#whenChips [data-when="hidden"]')), 'locked again in the background');
+    assert.ok(!(await texts(page, '#list .ocard')).some(c => re.test(c)));
+    await page.click('#setBtn'); await page.click('#stHidden');
+    await page.click('#list .ocard');
+    await page.waitForSelector('#opage:not([hidden]) #opHide[aria-checked="true"]');
+    await page.click('#opHide');
+    await page.click('#opBack');
+    await page.click('#whenChips [data-when="way"]');
+    assert.ok((await texts(page, '#list .ocard')).some(c => re.test(c)), 'back in the lists');
+  });
+
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'list2-' + scheme + '.png') });
   await step(scheme + ': settings open and show Gmail', async () => {
     await page.click('#setBtn');
     assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
-    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
+    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Hidden orders', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });

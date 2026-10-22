@@ -32,7 +32,7 @@ window.OrdersIpsy = function (app) {
   const RET_STATUSES = ['started', 'sent', 'received', 'refunded'];
   const RET_TEXT = { where: 120, reason: 80, rma: 40, tracking: 40, carrier: 30, refundTo: 60 };
   const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-  const seen = o => !o.private;                       // private orders stay out of Ipsy's sight
+  const seen = o => !o.private && !o.hide;            // private and hidden orders stay out of Ipsy's sight
   const anyById = id => app.orders.find(o => o.id === id);
   const byId = id => app.orders.find(o => o.id === id && seen(o));
   const privCount = () => app.orders.filter(o => !seen(o)).length;

@@ -84,6 +84,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     spark: '<svg viewBox="0 0 24 24"><path d="M11 3.6l1.9 5.1 5.1 1.9-5.1 1.9L11 17.6l-1.9-5.1L4 10.6l5.1-1.9z"/><path d="M18.4 15.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     box: '<svg viewBox="0 0 24 24"><path d="M3.8 8.2L12 4l8.2 4.2v7.6L12 20l-8.2-4.2z"/><path d="M3.8 8.2L12 12.4l8.2-4.2M12 12.4V20"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
+    eyeOff: '<svg viewBox="0 0 24 24"><path d="M3.4 12s3.2-6 8.6-6 8.6 6 8.6 6-3.2 6-8.6 6-8.6-6-8.6-6z"/><circle cx="12" cy="12" r="2.6"/><path d="M4.4 4.4l15.2 15.2"/></svg>',
     ret: '<svg viewBox="0 0 24 24"><path d="M8.6 5.4L4.4 9.6l4.2 4.2"/><path d="M4.6 9.6h10.2a4.8 4.8 0 0 1 0 9.6H11"/></svg>',
   };
   const KIND_ROWS = [
@@ -124,7 +125,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let startSync = null;   // the first sync of this session (Gmail is read after it)
   const shadow = new Map();
   let ipsy = null;   // Ipsy's handle (home/ipsy.js), once it's in its corner (the end of this script)
-  const st = { tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
+  const st = { unlocked: false, tab: ls.get(K.tab, 'way'), q: '', search: false, order: null, edit: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
 
   // IndexedDB copy of the Sheet link and code, as in Notes: survives a full
   // or cleared localStorage (every AllisonOS app shares its space). Opened only
@@ -243,6 +244,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const isOpen = o => OPEN.includes(o.status);
   const kindOn = o => kinds[o.kind || 'package'] !== false;
+  // Hidden (a gift, say): out of every list, search, count and Ipsy, on every phone it syncs to;
+  // only Settings > Hidden orders shows them, after Face ID, until Orders goes to the background.
+  const shown = o => !o.hide;
   const last = o => P.lastDay(o);
   const stale = o => isOpen(o) && !(o.eta && o.eta >= todayStr()) && daysFrom(last(o) || todayStr(), todayStr()) > STALE_DAYS;
   const needsCheck = o => !o.checked && (!!o.guess || stale(o));
@@ -487,14 +491,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return q.split(/\s+/).every(w => hay.includes(w));
   }
   function render() {
-    const vis = orders.filter(kindOn);
+    const vis = orders.filter(o => kindOn(o) && shown(o)), hid = st.unlocked ? orders.filter(o => o.hide) : [];
     const way = vis.filter(isOpen), done = vis.filter(o => !isOpen(o)), check = vis.filter(o => !hasRet(o) && needsCheck(o)), rets = vis.filter(retShows);
     const q = st.q.trim().toLowerCase();
     const chips = [['way', 'On the way', way.length]];
     if (rets.length) chips.push(['ret', 'Returns', rets.length]);
     chips.push(['done', 'Delivered', done.length]);
     if (check.length) chips.push(['check', 'To check', check.length]);
-    if ((st.tab === 'check' && !check.length) || (st.tab === 'ret' && !rets.length)) st.tab = 'way';
+    if (st.unlocked) chips.push(['hidden', 'Hidden', hid.length]);
+    if ((st.tab === 'check' && !check.length) || (st.tab === 'ret' && !rets.length) || (st.tab === 'hidden' && !st.unlocked)) st.tab = 'way';
     $('whenChips').innerHTML = chips.map(([k, t, n]) => '<button class="chip glass" type="button" data-when="' + k + '" aria-pressed="' + (!q && st.tab === k) + '">' + esc(t) + ' <span class="n">' + n + '</span></button>').join('');
     slideWhen();
     renderSub(way.length);
@@ -510,6 +515,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       h = (list.length ? '<p class="resulthead">' + plural(list.length, 'result') + '</p>' + list.map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>No match</strong>Try a store, an item or an order number.</div>') + olderRow();
     } else if (st.tab === 'check') {
       h = check.sort(byRecent).map(o => card(o, i++)).join('');
+    } else if (st.tab === 'hidden') {
+      h = hid.length ? '<p class="hint">Only you, after Face ID. They hide again when you leave Orders.</p>' + hid.sort(byRecent).map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>Nothing hidden</strong>Hide an order (a gift, say) from its page.</div>';
     } else if (st.tab === 'ret') {
       h = retSections(rets).map(([t, l]) => group(t, l)).join('');
     } else if (st.tab === 'done') {
@@ -530,9 +537,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // The line under the title: what's on the way, Gmail, and the Sheet.
   function renderSub(onWay) {
     const sub = [];
-    if (onWay == null) onWay = orders.filter(o => kindOn(o) && isOpen(o)).length;
+    if (onWay == null) onWay = orders.filter(o => kindOn(o) && shown(o) && isOpen(o)).length;
     if (onWay) sub.push(onWay + ' on the way');
-    const rets = orders.filter(o => kindOn(o) && retOpen(o)).length;
+    const rets = orders.filter(o => kindOn(o) && shown(o) && retOpen(o)).length;
     if (rets) sub.push(plural(rets, 'return'));
     if (st.scanning) sub.push('Reading Gmail…');
     else if (+ls.get(K.lastScan, 0)) sub.push('Gmail checked ' + ago(+ls.get(K.lastScan, 0)));
@@ -547,7 +554,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('whenChips').addEventListener('click', e => {
     const b = e.target.closest('[data-when]'); if (!b) return;
-    st.tab = b.dataset.when; st.q = ''; $('q').value = ''; ls.set(K.tab, st.tab); render(); animateIn($('list'));
+    st.tab = b.dataset.when; st.q = ''; $('q').value = ''; if (st.tab !== 'hidden') ls.set(K.tab, st.tab); render(); animateIn($('list'));
   });
   $('list').addEventListener('click', e => {
     const c = e.target.closest('[data-o]'); if (c) openOrder(c.dataset.o);
@@ -670,7 +677,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
     // Private: hidden from Ipsy (ipsy-tools.js), with its emails; it still syncs and shows here as usual.
     h += '<div class="rgroup glass"><button class="swrow" type="button" role="switch" id="opPrivate" aria-checked="' + !!o.private + '">' + I.lock
-      + '<span class="grow">Private<span class="sub">Hides this order and its emails from Ipsy.</span></span><span class="switch" aria-hidden="true"></span></button></div>';
+      + '<span class="grow">Private<span class="sub">Hides this order and its emails from Ipsy.</span></span><span class="switch" aria-hidden="true"></span></button>'
+      + '<button class="swrow" type="button" role="switch" id="opHide" aria-checked="' + !!o.hide + '">' + I.eyeOff
+      + '<span class="grow">Hidden<span class="sub">For gifts: off every list, search and Ipsy. Settings shows it, with Face ID.</span></span><span class="switch" aria-hidden="true"></span></button></div>';
     if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed by Ipsy.' : '') + (o.auto ? ' Marked as received in a clean-up.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;
@@ -690,6 +699,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (o.private) delete o.private; else o.private = true;
       save(); renderOrder(); render();
       toast(o.private ? 'Private: hidden from Ipsy' : 'Ipsy can see this order again');
+      return;
+    }
+    if (e.target.closest('#opHide')) {
+      const before = !!o.hide;
+      if (before) delete o.hide; else o.hide = true;
+      save();
+      const undo = () => { if (before) o.hide = true; else delete o.hide; save(); if (st.order === o) renderOrder(); render(); };
+      if (o.hide && !st.unlocked) { finishPage(); toast('Hidden. Settings > Hidden orders shows it again.', undo); }
+      else { renderOrder(); render(); toast(o.hide ? 'Hidden' : 'Back in your lists', undo); }
       return;
     }
     if (e.target.closest('#opEdit2')) return openEdit(o.id);
@@ -807,7 +825,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // "Have Ipsy check this order", on its page.
   async function aiFix(o) {
-    if (st.aiBusy || st.sorting || !o.source || !o.source.msgId || o.private) return;
+    if (st.aiBusy || st.sorting || !o.source || !o.source.msgId || o.private || o.hide) return;
     if (!getToken()) { toast('Connect Gmail in Settings first, so Orders can open the email.'); return; }
     if (!(await ipsyAsked())) return;
     if (ipsy) ipsy.close();
@@ -831,7 +849,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   async function autoCheck() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
     const tried = new Set(ls.json(K.ipsyTried, []));
-    const todo = orders.filter(o => !o.private && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
+    const todo = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
       .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a)).slice(0, 10);
     if (!todo.length) return;
     const mode = ls.get(K.ipsyAuto, '');
@@ -1231,6 +1249,24 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('stGmailHint').hidden = !viaMail;
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
+  // Hidden orders, behind Face ID (the family account's passkey) when this phone has signed in to aOS.
+  function lockHidden() {
+    if (!st.unlocked) return;
+    st.unlocked = false;
+    if (st.order && st.order.hide) { st.order = null; closeSheet('opage'); }
+    if (st.tab === 'hidden') st.tab = ls.get(K.tab, 'way');
+    render();
+  }
+  $('stHidden').onclick = async () => {
+    const A = window.AllisonOS && AllisonOS.account;
+    if (A && A.user()) {
+      try { await A.signIn(); }
+      catch { toast('Face ID didn’t go through, so hidden orders stay hidden.'); return; }
+    }
+    st.unlocked = true; st.tab = 'hidden'; st.q = ''; $('q').value = '';
+    closeSheet('setSheet'); render(); animateIn($('list'));
+    if (!(A && A.user())) toast('Sign in to aOS to keep these behind Face ID.');
+  };
   // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
   if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }
   else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = true;
@@ -1468,7 +1504,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   };
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms == null ? 2000 : ms); }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible') { lockHidden(); return; }
     if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
     render();
@@ -1521,7 +1557,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         gmail, bodies, header, getToken, AuthError, openOrder, lookBack, current: () => (!$('opage').hidden && st.order) || null,
         closeOrder: id => { if (st.order && st.order.id === id) { st.order = null; closeSheet('opage'); } },
         refreshOrder: () => { if (st.order && !orders.includes(st.order)) { const o = orders.find(x => x.id === st.order.id); if (o) { st.order = o; renderOrder(); } else { st.order = null; closeSheet('opage'); } } },
-        screen: () => st.q ? 'search results' + (orders.some(o => o.private) ? '' : ' for "' + st.q + '"') : TAB_NAMES[st.tab] || 'the order list',   // a search could name a private order
+        screen: () => st.q ? 'search results' + (orders.some(o => o.private || o.hide) ? '' : ' for "' + st.q + '"') : TAB_NAMES[st.tab] || 'the order list',   // a search could name a private order
       }),
     });
     setTimeout(autoCheck, 2500);   // To check and orders on their way with an email Ipsy hasn't read (a read of Gmail checks again when it's done)

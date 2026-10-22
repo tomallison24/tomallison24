@@ -244,6 +244,26 @@ and **Refunded**, each with its date.
   return emails, or a *your return is on its way* email. **Have Ipsy check this
   order** still reads the order's own email, not the return's.
 
+## Hidden (gifts)
+
+**Hidden** (the switch under Private on an order's page) is for gifts and
+anything else someone picking up your phone shouldn't see: the order leaves
+every list (On the way, Returns, Delivered, To check), search, the counts and
+the line under the title, and Ipsy (it counts as Private there too, emails
+included, and Ipsy's own checks skip it). It stays hidden when its emails are
+read again, and the flag goes with the order to the family's Sheet, so it's
+hidden on your other phones too.
+
+- **Seeing them again**: Settings > **Show hidden orders** asks for Face ID
+  (the aOS family passkey, `AllisonOS.account.signIn`) and adds a **Hidden** tab;
+  a phone that has never signed in to aOS opens it without asking (and says
+  so). They hide again as soon as Orders goes to the background. Turn Hidden
+  off on the order's page to put it back.
+- **Where it can still be seen**, outside Orders: its emails in Gmail and in
+  Mail; and the family's Google Sheet (the Orders tab and the Log), which the
+  owner can open. An email the app can't match to the hidden order (a carrier's
+  notice with no order number, say) arrives as an order of its own, not hidden.
+
 ## One-off clean-up
 
 Many stores never send a "delivered" email, so orders pile up under *On the way*.
