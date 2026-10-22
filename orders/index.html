@@ -625,6 +625,8 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .osteps{display:grid;gap:4px}
 .osteps i{height:5px;border-radius:3px;background:var(--track)}
 .osteps i.on{background:var(--accent)}
+/* a return: its own bar and timeline, in the warm colour */
+.osteps.ret i.on,.otl.ret li.on::before,.otl.ret li.on.link::after{background:var(--warn)}
 .ocarrier{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:0}
 .ocarrier .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .cpill{flex:none;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
@@ -791,6 +793,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .otl li.on::before,.osteps i.on{background:var(--mc-teal)}
 .otl li:not(:last-child)::after{background:var(--track)}
 .otl li.on.link::after{background:var(--mc-teal)}
+.osteps.ret i.on,.otl.ret li.on::before,.otl.ret li.on.link::after{background:var(--mc-orange)}
 .ohero h3{font-weight:600;letter-spacing:-.03em}
 .okv .total{font-weight:600}
 .copy{color:var(--accent-text)}
@@ -903,6 +906,13 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
         <div class="rgroup glass" id="stIpsy"></div>
         <p class="label">What counts as an order</p>
         <div class="rgroup glass" id="stKinds"></div>
+        <p class="label">Hidden orders</p>
+        <div class="rgroup glass">
+          <button class="rowbtn" type="button" id="stHidden">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M3.4 12s3.2-6 8.6-6 8.6 6 8.6 6-3.2 6-8.6 6-8.6-6-8.6-6z"/><circle cx="12" cy="12" r="2.6"/><path d="M4.4 4.4l15.2 15.2"/></svg></span>
+            <span>Show hidden orders<span class="sub">Gifts and anything you hid, after Face ID</span></span>
+          </button>
+        </div>
         <p class="label">Backup</p>
         <div class="rgroup glass">
           <button class="rowbtn" type="button" id="stExport">

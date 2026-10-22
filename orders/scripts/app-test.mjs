@@ -361,12 +361,107 @@ for (const scheme of ['light', 'dark']) {
     assert.ok(!(await page.evaluate(() => window.__orders.orders.some(o => o.store === 'Walmart'))));
   });
 
+  await step(scheme + ': a return email: Returns, a return due soon leads On the way, the return on the order page, sent back, refunded, edited', async () => {
+    const by = day(5).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    EMAILS.push({ id: 'r1', threadId: 'rt1', ago: 0, from: 'Amazon.com <return@amazon.com>', subject: 'Return request confirmed for Striped Wool Winter Hat...', html:
+      `<html><body><p>Your return request is confirmed.</p><table><tr><td>Drop off by</td></tr><tr><td>${by}</td></tr><tr><td>Dropoff location</td></tr><tr><td>THE UPS STORE, 1 EXAMPLE PKWY, APEX, NC, 27500</td></tr></table>
+       <p>Striped Wool Winter Hat Fleece Lined...</p><p>Quantity: 1</p><p>Order # 111-0000001-0000001</p><p>Reason for return: Too Large</p>
+       <table><tr><td>Total estimated refund*</td><td>$21.50</td></tr></table><p>$21.50 to your Visa ending in 0000</p></body></html>` });
+    try {
+      await page.evaluate(() => window.__orders.scan());
+      await settled(page);
+      await page.click('#whenChips [data-when="way"]');
+      assert.ok((await texts(page, '#whenChips .chip')).includes('Returns 1'));
+      assert.equal((await texts(page, '#list .sechead'))[0], 'Returns to send back');
+      assert.match(await page.textContent('#sub'), /1 return\b/);
+      await page.click('#whenChips [data-when="ret"]');
+      assert.deepEqual(await texts(page, '#list .sechead'), ['To send back']);
+      const c = (await texts(page, '#list .ocard'))[0];
+      assert.match(c, /Amazon.*Striped Wool Winter Hat.*Return started.*Drop off by/); assert.match(c, /THE UPS STORE/);
+      assert.equal(await page.$eval('#list .ocard .osteps.ret', e => e.querySelectorAll('i.on').length), 1);
+      await page.click('#list .ocard');
+      await page.waitForSelector('#opage:not([hidden]) .ohero');
+      assert.match(await page.textContent('#opBody .ohero h3'), /^Drop off by/);
+      assert.deepEqual(await texts(page, '#opBody .otl.ret li span'), ['Return started', 'Sent back', 'Store has it', 'Refunded']);
+      const kv = (await texts(page, '#opBody .okv')).join(' ');
+      assert.match(kv, /Drop off at\s*THE UPS STORE/); assert.match(kv, /Reason\s*Too Large/); assert.match(kv, /Refund \(estimated\)\s*\$21\.50/); assert.match(kv, /Refund to\s*Your Visa ending in 0000/);
+      assert.doesNotMatch(kv, /Carrier/, 'no empty courier rows on an order known only from its return');
+      assert.ok(await page.$('#opBody a[href="../mail/?thread=rt1"]'), 'the return email in Mail');
+      if (SHOTS) { await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOTS, 'return-' + scheme + '.png'), fullPage: true }); }
+      await page.click('#opRetSent');
+      assert.match(await page.textContent('#opBody .ohero h3'), /^Sent back/);
+      await page.click('#opRetPaid');
+      assert.match(await page.textContent('#opBody .ohero h3'), /^Refunded \$21\.50/);
+      const r = await page.evaluate(() => window.__orders.orders.find(o => o.orderNo === '111-0000001-0000001').ret);
+      assert.equal(r.status, 'refunded'); assert.ok(r.steps.started && r.steps.sent && r.steps.refunded);
+      await page.click('#opEdit2');
+      await page.waitForSelector('#edSheet:not([hidden]) #ef_ret_refund');
+      await page.fill('#ef_ret_refund', '20');
+      await page.click('#edDone');
+      const r2 = await page.evaluate(() => window.__orders.orders.find(o => o.orderNo === '111-0000001-0000001').ret);
+      assert.equal(r2.refund, 20); assert.equal(r2.locks.refund, true); assert.equal(r2.status, 'refunded');
+      await page.click('#opBack');
+      assert.ok((await texts(page, '#whenChips .chip')).includes('Returns 1'), 'refunded, still shown under Returns for a while');
+      assert.doesNotMatch(await page.textContent('#sub'), /return/, 'no return left to finish');
+      // Start a return by hand on a delivered order
+      await page.click('#whenChips [data-when="done"]');
+      await page.click('#list .ocard:has(.ostore:text("Skin Tech"))');
+      await page.waitForSelector('#opage:not([hidden]) #opRetStart');
+      await page.click('#opRetStart');
+      assert.match(await page.textContent('#opBody .ohero h3'), /^Return started/);
+      await page.click('#toastAct');
+      assert.ok(!(await page.evaluate(() => window.__orders.orders.find(o => o.store === 'Skin Tech').ret)), 'undone');
+      await page.click('#opBack');
+    } finally {
+      EMAILS.pop();
+      await page.evaluate(() => { const o = window.__orders.orders; o.splice(0, o.length, ...o.filter(x => x.orderNo !== '111-0000001-0000001')); window.__orders.save(); }).catch(() => {});
+    }
+  });
+
+  await step(scheme + ': a hidden order (a gift) leaves every list, search and count; Settings shows it again, and it hides again when Orders goes to the background', async () => {
+    await page.click('#whenChips [data-when="way"]');
+    const before = await texts(page, '#whenChips .chip');
+    const store = (await texts(page, '#list .ocard .ostore'))[0], re = new RegExp(store);
+    await page.click('#list .ocard');
+    await page.waitForSelector('#opage:not([hidden]) #opHide');
+    await page.click('#opHide');
+    await page.waitForSelector('#opage[hidden]', { state: 'attached' });
+    assert.match(await page.textContent('#toast'), /Hidden/);
+    assert.ok(!(await texts(page, '#list .ocard')).some(c => re.test(c)), 'off On the way');
+    const n = t => +((t.find(c => c.startsWith('On the way')) || '').match(/\d+$/) || [0])[0];
+    assert.equal(n(await texts(page, '#whenChips .chip')), n(before) - 1, 'and out of the count');
+    await page.click('#searchBtn'); await page.fill('#q', store.toLowerCase());
+    assert.match(await page.textContent('#list'), /No match/, 'search doesn’t find it');
+    await page.click('#qClear'); await page.click('#searchBtn');
+    // Face ID is always asked: a failed one leaves them hidden
+    await page.evaluate(() => { window.AllisonOS.account.signIn = async () => { throw new Error('NotAllowedError'); }; });
+    await page.click('#setBtn');
+    await page.click('#stHidden');
+    await page.waitForFunction(() => /stay hidden/.test(document.getElementById('toastMsg').textContent));
+    assert.ok(!(await page.$('#whenChips [data-when="hidden"]')));
+    await page.evaluate(() => { window.__faceId = 0; window.AllisonOS.account.signIn = async () => { window.__faceId++; return {}; }; });
+    await page.click('#stHidden');
+    await page.waitForSelector('#whenChips [data-when="hidden"][aria-pressed="true"]');
+    assert.equal(await page.evaluate(() => window.__faceId), 1);
+    assert.match((await texts(page, '#list .ocard'))[0], re);
+    await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); delete document.visibilityState; });
+    assert.ok(!(await page.$('#whenChips [data-when="hidden"]')), 'locked again in the background');
+    assert.ok(!(await texts(page, '#list .ocard')).some(c => re.test(c)));
+    await page.click('#setBtn'); await page.click('#stHidden');
+    await page.click('#list .ocard');
+    await page.waitForSelector('#opage:not([hidden]) #opHide[aria-checked="true"]');
+    await page.click('#opHide');
+    await page.click('#opBack');
+    await page.click('#whenChips [data-when="way"]');
+    assert.ok((await texts(page, '#list .ocard')).some(c => re.test(c)), 'back in the lists');
+  });
+
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'list2-' + scheme + '.png') });
   await step(scheme + ': settings open and show Gmail', async () => {
     await page.click('#setBtn');
     assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
-    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
+    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Hidden orders', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });

@@ -27,9 +27,12 @@ window.OrdersIpsy = function (app) {
   const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, n);
   const STATUSES = ['ordered', 'shipped', 'out', 'pickup', 'delivered', 'pickedup', 'cancelled'];
   const KINDS = ['package', 'pickup', 'food', 'digital', 'other'];
-  const EDITABLE = ['store', 'items', 'total', 'orderNo', 'orderDate', 'eta', 'etaEnd', 'carrier', 'tracking', 'status', 'kind', 'pickupBy', 'notes'];
+  const EDITABLE = ['store', 'items', 'total', 'orderNo', 'orderDate', 'eta', 'etaEnd', 'carrier', 'tracking', 'status', 'kind', 'pickupBy', 'notes', 'ret'];
+  // A return (o.ret): its step, the day to send it back by, where, why, the refund.
+  const RET_STATUSES = ['started', 'sent', 'received', 'refunded'];
+  const RET_TEXT = { where: 120, reason: 80, rma: 40, tracking: 40, carrier: 30, refundTo: 60 };
   const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-  const seen = o => !o.private;                       // private orders stay out of Ipsy's sight
+  const seen = o => !o.private && !o.hide;            // private and hidden orders stay out of Ipsy's sight
   const anyById = id => app.orders.find(o => o.id === id);
   const byId = id => app.orders.find(o => o.id === id && seen(o));
   const privCount = () => app.orders.filter(o => !seen(o)).length;
@@ -61,6 +64,10 @@ window.OrdersIpsy = function (app) {
     if (s.ordered || o.orderDate) b.ordered = s.ordered || o.orderDate;
     if (s.delivered || s.pickedup) b.arrived = s.delivered || s.pickedup;
     b.lastNews = lastNews(o);
+    if (o.ret && o.ret.status) {
+      const r = o.ret;
+      b.return = { status: r.status, ...(r.by ? { dropOffBy: r.by } : {}), ...(r.refund != null ? { refund: r.refund } : {}), ...(r.steps && r.steps[r.status] ? { since: r.steps[r.status] } : {}) };
+    }
     if (app.needsCheck(o)) b.check = app.checkReason(o);
     if (!app.kindOn(o)) b.hiddenBySettings = true;
     return b;
@@ -91,6 +98,15 @@ window.OrdersIpsy = function (app) {
         else { const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.]/g, '')); if (isFinite(n) && n >= 0 && n < 1e7) out.total = Math.round(n * 100) / 100; else bad.push(k); }
       } else if (['orderDate', 'eta', 'etaEnd', 'pickupBy'].includes(k)) {
         if (v === '' || v == null) out[k] = ''; else if (ymd(v)) out[k] = v; else bad.push(k);
+      } else if (k === 'ret') {
+        if (v === null) { out.ret = null; continue; }
+        if (!v || typeof v !== 'object' || (v.status != null && !RET_STATUSES.includes(v.status))) { bad.push(k); continue; }
+        const r = {};
+        if (v.status) r.status = v.status;
+        if ('by' in v) { if (v.by === '' || v.by == null) r.by = ''; else if (ymd(v.by)) r.by = v.by; else { bad.push('ret.by'); } }
+        if ('refund' in v) { const n = v.refund == null || v.refund === '' ? null : +v.refund; if (n === null || (isFinite(n) && n >= 0 && n < 1e7)) r.refund = n == null ? null : Math.round(n * 100) / 100; else bad.push('ret.refund'); }
+        for (const [rk, n] of Object.entries(RET_TEXT)) if (rk in v) r[rk] = clip(v[rk], n);
+        out.ret = r;
       } else if (k === 'status') { if (STATUSES.includes(v)) out.status = v; else bad.push(k); }
       else if (k === 'kind') { if (KINDS.includes(v)) out.kind = v; else bad.push(k); }
       else out[k] = clip(v, k === 'notes' ? 2000 : k === 'store' ? 80 : 60);
@@ -103,6 +119,7 @@ window.OrdersIpsy = function (app) {
     const prevStatus = o.status, prevCarrier = o.carrier, prevTracking = o.tracking;
     for (const k of EDITABLE) {
       if (!(k in ch)) continue;
+      if (k === 'ret') { if (applyRet(o, ch.ret, today)) changed.push('ret'); continue; }
       const v = ch[k];
       if (JSON.stringify(o[k] == null ? '' : o[k]) === JSON.stringify(v == null ? '' : v)) continue;
       o[k] = v; locks[k] = true; changed.push(k);
@@ -120,7 +137,24 @@ window.OrdersIpsy = function (app) {
     if (ch.checked === false && o.checked) { o.checked = false; changed.push('checked'); }
     return changed;
   }
-  const NAMES = { store: 'store', items: 'items', total: 'total', orderNo: 'order number', orderDate: 'order date', eta: 'expected date', etaEnd: 'expected date',
+  // A return's changes are kept like the person's own (locked), except its step, which emails only move forward.
+  function applyRet(o, ch, today) {
+    if (ch === null) { if (!o.ret) return false; delete o.ret; return true; }
+    const was = JSON.stringify(o.ret || null);
+    const r = o.ret ? { ...o.ret, steps: { ...(o.ret.steps || {}) }, locks: { ...(o.ret.locks || {}) } } : { status: 'started', steps: {}, locks: {} };
+    for (const [k, v] of Object.entries(ch)) {
+      if (k === 'status') continue;
+      if (v === null || v === '') delete r[k]; else r[k] = v;
+      r.locks[k] = true;
+    }
+    if (ch.status) r.status = ch.status;
+    r.steps[r.status] = r.steps[r.status] || today;
+    if ('tracking' in ch || 'carrier' in ch) r.trackUrl = r.carrier && r.tracking ? (P.trackUrl(r.carrier, r.tracking) || '') : '';
+    if (JSON.stringify(r) === was) return false;
+    o.ret = r;
+    return true;
+  }
+  const NAMES = { ret: 'return', store: 'store', items: 'items', total: 'total', orderNo: 'order number', orderDate: 'order date', eta: 'expected date', etaEnd: 'expected date',
     carrier: 'carrier', tracking: 'tracking number', status: 'status', kind: 'kind', pickupBy: 'pickup date', notes: 'notes', checked: 'checked' };
   const said = keys => [...new Set(keys.map(k => NAMES[k] || k))].join(', ');
   const who = o => o.store || (o.items && o.items[0] && o.items[0].name) || 'an order';
@@ -154,6 +188,7 @@ window.OrdersIpsy = function (app) {
         if (q.status === 'open' && !app.isOpen(o)) return false;
         if (q.status === 'done' && app.isOpen(o)) return false;
         if (q.status === 'check' && !app.needsCheck(o)) return false;
+        if (q.status === 'returns' && !(o.ret && o.ret.status)) return false;
         if (STATUSES.includes(q.status) && o.status !== q.status) return false;
         if (q.kind && (o.kind || 'package') !== q.kind) return false;
         const last = lastNews(o), first = (o.steps && o.steps.ordered) || o.orderDate || last;
@@ -231,6 +266,7 @@ window.OrdersIpsy = function (app) {
         if (!keep.source && m.source) keep.source = m.source;
         keep.locks = { ...(m.locks || {}), ...(keep.locks || {}) };
         if (m.created && (!keep.created || m.created < keep.created)) keep.created = m.created;
+        if (m.ret && (!keep.ret || P.retRank(m.ret.status) > P.retRank(keep.ret.status))) keep.ret = { ...(keep.ret || {}), ...m.ret, steps: { ...((keep.ret || {}).steps || {}), ...(m.ret.steps || {}) } };
       }
       if (keep.status === 'delivered' || keep.status === 'pickedup') keep.issue = '';
       keep.storeKey = P.keyOf(keep.store);
@@ -294,11 +330,12 @@ window.OrdersIpsy = function (app) {
     label: (name, input) => (LABELS[name] || (() => ''))(input || {}),
     context() {
       const all = app.orders.filter(seen), open = all.filter(app.isOpen).length, check = all.filter(app.needsCheck).length, o = app.current(), priv = privCount();
-      return 'Orders has ' + all.length + ' orders' + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + open + ' on the way' + (check ? ', ' + check + ' marked Check details' : '') + '. '
+      const rets = all.filter(o => o.ret && o.ret.status && o.ret.status !== 'refunded').length;
+      return 'Orders has ' + all.length + ' orders' + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + open + ' on the way' + (rets ? ', ' + rets + ' return' + (rets === 1 ? '' : 's') + ' not yet refunded' : '') + (check ? ', ' + check + ' marked Check details' : '') + '. '
         + (o && !seen(o) ? 'On screen: a private order.' : o ? 'On screen: the order ' + o.id + ' from ' + (o.store || 'an unnamed store') + '.' : 'On screen: ' + app.screen() + '.')
         + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, Ipsy).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
     },
-    intro: 'Hi, I’m Ipsy! I can find an order, fix its details, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
+    intro: 'Hi, I’m Ipsy! I can find an order, fix its details, keep track of a return, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
     placeholder: 'Ask Ipsy about your orders',
     suggestions: ['What’s arriving this week?', 'Find duplicate orders and merge them', 'Is anything late?', 'Check Gmail for orders I’m missing'],
     consent: 'Ipsy runs on Claude, by Anthropic: your questions, orders and the emails it opens go there through the family server. It can change orders, each with Undo; Private ones stay hidden.',
