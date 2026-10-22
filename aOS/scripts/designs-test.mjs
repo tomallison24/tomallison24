@@ -50,7 +50,7 @@ const OLD = APPS.filter(a => a !== 'clock').map(a => a + 'vintage');
   for (const id of OLD) if (await p.locator(`#list .row[data-app="${id}"]`).count()) pr.push(`${id} has a row of its own`);
   for (const id of APPS) if (await p.locator(`#list .row[data-app="${id}"]`).count() !== 1) pr.push(`${id} has no row`);
   if (await p.locator('#list .row .dtag').count()) pr.push('a row still has a designs tag: ' + await text(p, '#list .row .dtag'));
-  await p.click('[data-tab="search"]'); await p.fill('#q', 'vintage');
+  await p.evaluate(() => aosTabs.show('search')); await p.fill('#q', 'vintage');
   const found = await p.locator('#found .row').evaluateAll(rs => rs.map(r => r.dataset.app));
   if ([...found].sort().join() !== [...APPS].sort().join()) pr.push('searching "vintage" found ' + found.join() + ', not every app');
   report('One row per app, no Vintage rows or Design tags; searching "vintage" finds every app', pr); await ctx.close();

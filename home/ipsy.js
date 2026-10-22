@@ -232,16 +232,20 @@
 .ipsy-bubble{position:fixed;left:var(--bx,12px);bottom:calc(var(--by,96px) + var(--ipsy-kb,0px));width:var(--bw,360px);max-height:var(--bh,520px);display:flex;flex-direction:column;
   color:var(--text,#10181A);border-radius:26px;padding:10px 12px 12px;transform-origin:var(--tail,40px) calc(100% + 16px);animation:ipsyPop .46s cubic-bezier(.2,1.3,.35,1) both}
 .ipsy-closing .ipsy-bubble{animation:ipsyShrink .22s ease-in both}
+.ipsy-below .ipsy-bubble{bottom:auto;top:var(--bt,120px);transform-origin:var(--tail,40px) -16px}
+.ipsy-below .ipsy-bubble::after{bottom:auto;top:-8px;border-radius:5px 0 0 0}
 .ipsy-bubble::after{content:"";position:absolute;bottom:-8px;left:calc(var(--tail,40px) - 9px);width:18px;height:18px;transform:rotate(45deg);border-radius:0 0 5px 0}
 .ipsy-glass .ipsy-bubble{background:var(--sheet,rgba(248,250,249,.94));-webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 18px 50px rgba(0,0,0,.24),inset 0 0 0 1px rgba(255,255,255,.45)}
 .ipsy-glass .ipsy-bubble::after{background:var(--sheet,rgba(248,250,249,.94))}
 .ipsy-vintage .ipsy-bubble{background:var(--mc-card,#FBF5E9);box-shadow:0 0 0 3px var(--mc-mustard,#E3A72F),0 16px 34px rgba(43,37,34,.26)}
 .ipsy-vintage .ipsy-bubble::after{background:var(--mc-card,#FBF5E9);box-shadow:3px 3px 0 0 var(--mc-mustard,#E3A72F)}
+.ipsy-vintage.ipsy-below .ipsy-bubble::after{box-shadow:-3px -3px 0 0 var(--mc-mustard,#E3A72F)}
 @keyframes ipsyPop{from{opacity:0;transform:scale(.12)}60%{opacity:1}}
 @keyframes ipsyShrink{to{opacity:0;transform:scale(.12)}}
 @keyframes ipsyFadeOut{to{opacity:0}}
 .ipsy-head{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 0 0 4px}
 .ipsy-head h2{flex:1;margin:0;font-size:17px;font-weight:700}
+.ipsy-head h2 small:empty{display:none}
 .ipsy-head h2 small{display:block;font-size:12px;font-weight:500;color:var(--muted,rgba(16,24,26,.64))}
 .ipsy-x,.ipsy-new{height:34px;border:0;border-radius:999px;padding:0 12px;font:inherit;font-size:14px;font-weight:600;color:var(--accent-text,var(--accent,#3B7366));background:var(--glass,rgba(127,127,127,.12));cursor:pointer}
 .ipsy-vintage .ipsy-x,.ipsy-vintage .ipsy-new{background:transparent;box-shadow:inset 0 0 0 2px var(--mc-edge,rgba(43,37,34,.14));color:var(--mc-teal,#1F6F6B)}
@@ -351,12 +355,13 @@
     const btnCell = addCell(btn.firstChild);
 
     // The chat: a bubble that pops out of Ipsy
+    const sub = o.subtitle != null ? o.subtitle : 'Your ' + (o.name || 'aOS') + ' helper';   // '' for none
     const wrap = document.createElement('div');
     wrap.className = 'ipsy-wrap'; follow(wrap); wrap.hidden = true;
     wrap.innerHTML = '<div class="ipsy-scrim" data-close></div>'
       + '<button class="ipsy-speaker ipsy-host" type="button" aria-label="Put Ipsy away" data-close></button>'
       + '<section class="ipsy-bubble" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
-      + '<div class="ipsy-head"><h2 id="ipsyTitle">Ipsy<small id="ipsyStatus">Your ' + esc(o.name || 'aOS') + ' helper</small></h2>'
+      + '<div class="ipsy-head"><h2 id="ipsyTitle">Ipsy<small id="ipsyStatus">' + esc(sub) + '</small></h2>'
       + '<button class="ipsy-new" type="button" id="ipsyNew">New chat</button><button class="ipsy-x" type="button" aria-label="Close" data-close>×</button></div>'
       + '<div class="ipsy-log" id="ipsyLog" aria-live="polite"></div>'
       + '<form class="ipsy-form" id="ipsyForm"><label class="ipsy-sr" for="ipsyIn">Message Ipsy</label>'
@@ -367,7 +372,7 @@
     const log = $('ipsyLog'), input = $('ipsyIn'), sendBtn = $('ipsySend'), status = $('ipsyStatus');
     const speaker = wrap.querySelector('.ipsy-speaker'), peek = addCell(speaker);
     const mood = m => { setMood(peek, m); setMood(btnCell, m === 'listen' ? 'idle' : m); };
-    const say = s => { status.textContent = s || 'Your ' + (o.name || 'aOS') + ' helper'; };
+    const say = s => { status.textContent = s || sub; };
 
     // Where the bubble goes: Ipsy stands in for its button (the same cell, in the same place, over the
     // dark), and the bubble rises from just above its head, its tail pointing down at it.
@@ -379,9 +384,12 @@
       Object.assign(speaker.style, { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' });
       const w = Math.min(380, W - 24), cx = box.left + box.width / 2;
       const left = Math.max(12, Math.min(cx - 44, W - w - 12)), by = H - box.top + 2;
+      // a button high on the page (aOS Home's): the bubble hangs below it instead, its tail pointing up
+      const below = box.top + box.height / 2 < H * 0.45, bt = box.top + box.height + 14;
+      wrap.classList.toggle('ipsy-below', below);
       wrap.style.setProperty('--ipsy-kb', kb + 'px');
-      wrap.style.setProperty('--bx', left + 'px'); wrap.style.setProperty('--by', by + 'px'); wrap.style.setProperty('--bw', w + 'px');
-      wrap.style.setProperty('--bh', Math.max(220, Math.min(560, (H - kb) * 0.68, H - by - kb - 64)) + 'px');   // it grows with the chat, up to about two thirds of the screen
+      wrap.style.setProperty('--bx', left + 'px'); wrap.style.setProperty('--by', by + 'px'); wrap.style.setProperty('--bw', w + 'px'); wrap.style.setProperty('--bt', bt + 'px');
+      wrap.style.setProperty('--bh', (below ? Math.max(200, Math.min(560, H - bt - kb - 16)) : Math.max(220, Math.min(560, (H - kb) * 0.68, H - by - kb - 64))) + 'px');   // it grows with the chat, up to about two thirds of the screen
       wrap.style.setProperty('--tail', Math.max(22, Math.min(w - 22, cx - left)) + 'px');
     }
     let lastFocus = null, shut = 0;
@@ -423,7 +431,7 @@
       const ok = !!ls.get(K.ok, '');
       let h = '';
       if (!view.length) {
-        h = '<div class="ipsy-empty"><p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>'
+        h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>')
           + (ok ? '<div class="ipsy-chips">' + (o.suggestions || []).map(s => '<button class="ipsy-chip" type="button" data-ask="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div>'
             : '<div class="ipsy-consent"><p>' + esc(o.consent || '') + '</p><button class="ipsy-chip" type="button" id="ipsyOk">OK, let’s go</button></div>') + '</div>';
       }

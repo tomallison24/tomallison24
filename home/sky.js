@@ -20,7 +20,9 @@
 //     app's own atomic shapes use);
 //   - gives the app's first atomic shape (the disc in .ambient, .aurora or .atoms) the sun's
 //     rays by day, and adds twinkling stars to that same box by night;
-//   - sets the theme-color metas to the ground.
+//   - sets the theme-color metas to the ground;
+//   - under an iPhone's solid status bar, fades the shapes in from the ground at the top of the
+//     page (below, "The status bar").
 // Nothing here draws the shapes themselves: the apps keep their own sizes and places for the
 // disc, the teal dot and the orange pill, tuned to each app's header.
 // Motion: the rays and stars hold still with prefers-reduced-motion.
@@ -48,6 +50,8 @@ html[data-sky="day"] :is(.ambient, .aurora, .atoms) > :nth-child(1)::before {
   -webkit-mask-image: radial-gradient(circle, transparent 20%, #000 22%, transparent 68%);
   mask-image: radial-gradient(circle, transparent 20%, #000 22%, transparent 68%);
   animation: aos-sky-spin 80s linear infinite; }
+.aos-sky-cap { position: absolute; left: -50%; right: -50%; height: 44px; z-index: 9; display: none; pointer-events: none; background: linear-gradient(var(--sky-ground), transparent); }
+html[data-sky][data-bar="solid"] .aos-sky-cap { display: block; }
 .aos-star { position: absolute; display: none; border-radius: 50%; background: var(--sky-star, #F4ECDD); pointer-events: none; animation: aos-sky-twinkle ease-in-out infinite alternate; }
 html[data-sky="night"] .aos-star { display: block; }
 @keyframes aos-sky-spin { to { transform: rotate(360deg); } }
@@ -177,4 +181,34 @@ html[data-sky="night"] .aos-star { display: block; }
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', stars); else stars();
+
+  // ---- The status bar ----
+  // An app added to an iPhone's Home Screen with the opaque status bar (aOS: "default", which iOS reads
+  // once, when the app is added) has a solid strip above the page, in the page's own ground colour
+  // (iOS 26: the body's background, or a full-width fixed element's at the top, such as aOS's frame
+  // around an app). The shapes and the sun's rays would stop flat under it, a band across the top of
+  // every page; here they fade in from the ground instead. Inside aOS, an app goes by aOS's bar.
+  // localStorage aos.bar = 'solid' shows it anywhere (the tests).
+  function solidBar() {
+    try { if (localStorage.getItem('aos.bar') === 'solid') return true; } catch {}
+    try {
+      const w = window.top, d = w.document;
+      if (!(w.navigator.standalone === true || w.matchMedia('(display-mode: standalone)').matches)) return false;
+      const p = d.createElement('div');
+      p.style.cssText = 'position:fixed;top:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top)';
+      d.documentElement.appendChild(p); const top = parseFloat(w.getComputedStyle(p).paddingTop) || 0; p.remove();
+      return top === 0;
+    } catch { return false; }
+  }
+  function cap() {
+    if (!solidBar()) return root.removeAttribute('data-bar');
+    root.setAttribute('data-bar', 'solid');
+    for (const host of document.querySelectorAll('.ambient, .aurora, .atoms')) {
+      let c = host.querySelector(':scope > .aos-sky-cap');
+      if (!c) { c = document.createElement('i'); c.className = 'aos-sky-cap'; host.appendChild(c); }
+      c.style.top = -(host.getBoundingClientRect().top + scrollY - host.clientTop) + 'px';   // at the top of the page, wherever the box starts
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cap); else cap();
+  addEventListener('load', cap); addEventListener('resize', cap);
 })();

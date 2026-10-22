@@ -87,7 +87,10 @@
   const RELEASES = [
     { v: '2', date: '2026-10-22', title: 'Every app, one home', look: 'vintage',
       highlights: ['Every app now opens inside aOS', 'Ask Ipsy across all your apps', 'aOS in your design, Vintage or Sea glass'],
-      notes: ['aOS: Home is the first tab (in place of Apps): Ipsy at the top, Open now, your Favorites, then every app in four groups (Family, Every day, Out and about, You). A row\'s i opens the app\'s page, with What\'s New, Open and Get',
+      notes: ['aOS: Home is where it opens (in place of Apps): Ipsy at the top, your Favorites, then every app in four groups (Family, Every day, Out and about, You). A row\'s i opens the app\'s page, with What\'s New, Open and Get',
+        'No dock: your three most used apps float at the bottom of aOS for a quick open (with Home, on Today and Search); Today and Search sit beside your account on Home',
+        'Ipsy\'s chat on Home opens below Ask Ipsy, with fewer words in it. Under your account, Owner tools (notifications, the Home Assistant address, invites) fold away until tapped',
+        'The top of every Vintage page fades into the status bar, rather than stopping in a band under it',
         'Every app opens inside aOS: it slides in over Home and fills the screen, its own design and background up to the top, with ‹ aOS in its corner. Tap ‹ aOS, or swipe in from the left edge, to go back; hold it to jump to another open app. Up to four stay open, each where you left it',
         'Favorites, mixed: pin up to four (Edit, then the stars); the rest fill in with the apps you open most, over the last two weeks, on this phone',
         'Ipsy on aOS\'s Home works across Calendar, Notes, Meals, Orders, Travel and News at once, with each app\'s own tools, rules and Undo, on Claude Sonnet 5.5. Fitness stays out: aOS\'s Ipsy can search the web, and your health data never goes near a web search (ask Ipsy in Fitness)',

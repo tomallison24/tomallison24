@@ -93,6 +93,9 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 // 3. the owner's composer
 {
   const { ctx, p, calls, errs } = await open('owner'); const pr = [...errs];
+  await p.waitForSelector('#tToggle');
+  if (!(await p.locator('#nGo').isHidden())) pr.push('the owner tools are open before Owner tools is tapped');
+  await p.click('#tToggle');
   await p.waitForSelector('#nGo'); await p.waitForFunction(() => /Goes to/.test(document.getElementById('nWho').textContent), null, { timeout: 5000 }).catch(() => pr.push('no audience: ' + '?'));
   const who = await text(p, '#nWho');
   if (!/Sarah, Mia \(3 phones\)/.test(who)) pr.push('audience says: ' + who);

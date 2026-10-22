@@ -5,6 +5,7 @@
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
+//   - no dock: the three most used apps float at the bottom; Today and Search beside the account
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
 //   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
 //     aOS takes it whichever opens first, and it wins over aOS's own copy
@@ -90,10 +91,27 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const state = () => pg.evaluate(() => ({ inApp: document.body.classList.contains('in-app'), shown: [...document.querySelectorAll('.frame')].filter(f => !f.hidden).map(f => f.dataset.id), hash: location.hash }));
 
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
-  const dock = await pg.evaluate(() => [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab).join(','));
-  check(dock === 'home,today,search' && await pg.isVisible('#home'), `Home first in the dock, in place of Apps, and showing ${tag}`);
+  check(await pg.isVisible('#home') && await pg.locator('.bar .tabs').isHidden() && await pg.locator('#opennow').count() === 0, `Home opens first, with no dock and no Open now ${tag}`);
+  const quick = () => pg.evaluate(() => [...document.querySelectorAll('.quick [data-open]')].map(b => b.dataset.open).join());
+  check(await quick() === 'calendar,meals,notes' && await pg.locator('.quick .qhome').isHidden(), `three apps float at the bottom: the starting ones, before any are used ${tag}`);
+  await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(400);
+  check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home joins the apps at the bottom there ${tag}`);
+  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
+  await pg.locator('#home .hbtn[data-tab="search"]').click(); await pg.waitForTimeout(400);
+  check(await pg.isVisible('#search'), `and Search ${tag}`);
+  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
   check(await pg.locator('#ipsySlot .ipsy-btn').count() === 1 && /Calendar, Notes, Meals, Orders, Travel and News/.test(await pg.textContent('#ipsySub')), `Ipsy at the top, across six apps ${tag}`);
   check(await pg.locator('#favs .fav').count() === 4 && await pg.locator('#spaces .hrow').count() === 14, `four favorites and every app ${tag}`);
+  await pg.locator('#askIpsy b').click(); await pg.waitForTimeout(700);
+  const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
+  check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below Ask Ipsy, on screen, without the extra words ${tag}`);
+  await pg.keyboard.press('Escape'); await pg.waitForTimeout(400);
+  if (look === 'vintage') {   // under an iPhone's solid status bar, the sky fades in from the ground at the top
+    await pg.evaluate(() => { localStorage.setItem('aos.bar', 'solid'); }); await pg.reload(); await pg.waitForTimeout(900);
+    const capTop = await pg.evaluate(() => { const c = document.querySelector('#home .atoms .aos-sky-cap, .atoms .aos-sky-cap'); return c && getComputedStyle(c).display !== 'none' ? Math.round(c.getBoundingClientRect().top) : null; });
+    check(capTop === 0, `under a solid status bar, the sky fades in at the top of the page (${capTop}) ${tag}`);
+    await pg.evaluate(() => localStorage.removeItem('aos.bar')); await pg.reload(); await pg.waitForTimeout(900);
+  }
 
   await pg.locator('.hrow[data-open="notes"]').click(); await pg.waitForTimeout(2200);
   let s = await state();
@@ -107,11 +125,11 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
 
   await pg.locator('#appback').click(); await pg.waitForTimeout(600);
   s = await state();
-  check(!s.inApp && s.hash === '' && await pg.locator('#opennowList [data-open="notes"]').count() === 1, `"‹ aOS" goes back, and Notes is under Open now ${tag}`);
+  check(!s.inApp && s.hash === '' && await pg.isVisible('#home'), `"‹ aOS" goes back ${tag}`);
   await pg.locator('.hrow[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
-  await pg.locator('#opennowList [data-open="notes"]').click(); await pg.waitForTimeout(700);
+  await pg.locator('.quick [data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
   check(/Weather/.test(await pg.textContent('#appmenu')) && await pg.isVisible('#appmenu'), `holding "‹ aOS" lists the other open apps ${tag}`);
@@ -124,6 +142,8 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#favEdit').click();
   const favs = await pg.evaluate(() => aosHomeTab.favorites().map(f => f.id + ':' + f.why));
   check(favs[0] === 'house:pin' && favs.some(f => /:used$/.test(f)) && favs.length === 4, `Favorites, mixed: the pin, then the most used, then the starters (${favs.join(' ')}) ${tag}`);
+  const q = (await quick()).split(',');
+  check(q.length === 3 && q.includes('notes') && q.includes('weather'), `the apps at the bottom are the ones you use most (${q.join(' ')}) ${tag}`);
 
   const r = await pg.evaluate(async () => { const m = AllisonOS.ipsy.mounted; const res = await m.tools['notes__get_lists']({}, { confirm: async () => true }); return { app: m.app, lists: JSON.parse(typeof res.content === 'string' ? res.content : JSON.stringify(res.content)).lists }; });
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);

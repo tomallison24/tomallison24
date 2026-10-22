@@ -541,7 +541,7 @@
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
     box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3>
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
-      <button type="button" class="soft" data-lost>Erase aOS from a lost phone: step by step</button></div>`);
+      <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button></div>`);
     $('aOthers').onclick = async () => {
       if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
@@ -552,16 +552,23 @@
     box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
     paintNotify();
     if (u.role !== 'owner') return;
-    box.insertAdjacentHTML('beforeend', `<div><h3>Send a notification</h3>
+    // the owner's tools, folded away until wanted
+    box.insertAdjacentHTML('beforeend', `<button type="button" class="tools" id="tToggle" aria-expanded="false" aria-controls="tSend tHome tInvite"><span><b>Owner tools</b><small>Notifications, Home Assistant, invites</small></span><i aria-hidden="true">›</i></button>
+      <div id="tSend" hidden><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
-      <div class="row2"><button type="button" class="soft" id="nFill">Announce the update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
-      <div><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
+      <div class="row2"><button type="button" class="soft" id="nFill">Announce update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
+      <div id="tHome" hidden><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
+      <div id="tInvite" hidden><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
       <div><h3>Google Sheets</h3><p>Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
       <div class="fam sheets" id="shList"><p class="note">Checking…</p></div></div>
       <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
+    $('tToggle').onclick = () => {
+      const on = $('tToggle').getAttribute('aria-expanded') !== 'true';
+      $('tToggle').setAttribute('aria-expanded', String(on));
+      for (const id of ['tSend', 'tHome', 'tInvite']) $(id).hidden = !on;
+    };
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
       try { showInvite(await ACC.call('invite', { name: $('iName').value.trim() })); $('iName').value = ''; }
