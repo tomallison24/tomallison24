@@ -679,7 +679,7 @@ await step('the family’s Google Sheet: no Sheet controls in Settings (aOS link
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'sheet-signed-out.png') });
   await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
   await page.reload(); await page.waitForFunction(() => window.__orders);
-  await until(page, () => sheet.tab('Orders'), 'the Orders tab');
+  await until(page, () => (sheet.tab('Orders') || []).length >= 3, 'both orders in the Orders tab');   // the tab can be made before its rows are written
   assert.deepEqual(sheet.tab('Orders').slice(1).map(r => r[0] + ':' + r[2]).sort(), ['Tom:Corner Shop', 'Tom:Pharmacy'], 'each order says whose it is');
   assert.ok(posts.every(p => !('secret' in p)), 'the phone sends no phrase');
   assert.equal(posts.find(p => p.action === 'sync').window, 90, 'and keeps 90 days');

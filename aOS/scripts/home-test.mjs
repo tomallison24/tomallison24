@@ -112,11 +112,30 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#askIpsy b').click(); await pg.waitForTimeout(700);
   const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
   check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below Ask Ipsy, on screen, without the extra words ${tag}`);
+  // typing: the keyboard takes the bottom 336px and iOS scrolls the page 120px to the box (the visual viewport)
+  await pg.evaluate(() => { const v = visualViewport; Object.defineProperty(v, 'height', { get: () => 844 - 336 - 120, configurable: true }); Object.defineProperty(v, 'offsetTop', { get: () => 120, configurable: true }); v.dispatchEvent(new Event('resize')); });
+  await pg.waitForTimeout(500);
+  const kb = await pg.evaluate(() => { const r = e => e.getBoundingClientRect(); const sp = r(document.querySelector('.ipsy-speaker')), bb = r(document.querySelector('.ipsy-bubble')), inp = r(document.querySelector('.ipsy-in'));
+    return { ipsy: Math.round(sp.top), top: Math.round(bb.top), bottom: Math.round(bb.bottom), input: Math.round(inp.bottom) }; });
+  check(kb.ipsy >= 120 && kb.ipsy < 160 && kb.top > kb.ipsy && kb.bottom <= 508 && kb.input <= 508,
+    `typing, Ipsy and the chat stay in what's still in sight, above the keyboard (${JSON.stringify(kb)}) ${tag}`);
+  await pg.evaluate(() => { delete visualViewport.height; delete visualViewport.offsetTop; visualViewport.dispatchEvent(new Event('resize')); });
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(400);
   if (look === 'vintage') {   // under an iPhone's solid status bar, the sky fades in from the ground at the top
     await pg.evaluate(() => { localStorage.setItem('aos.bar', 'solid'); }); await pg.reload(); await pg.waitForTimeout(900);
     const capTop = await pg.evaluate(() => { const c = document.querySelector('#home .atoms .aos-sky-cap, .atoms .aos-sky-cap'); return c && getComputedStyle(c).display !== 'none' ? Math.round(c.getBoundingClientRect().top) : null; });
     check(capTop === 0, `under a solid status bar, the sky fades in at the top of the page (${capTop}) ${tag}`);
+    // the bar takes its colour from #barcap: the app's own while it's open (its top fades into it), aOS's again after
+    const bar = () => pg.evaluate(() => getComputedStyle(document.getElementById('barcap')).backgroundColor);
+    const homeBar = await bar();
+    await pg.evaluate(() => { localStorage.setItem('design.weather', 'glass'); aosHomeTab.show('weather'); }); await pg.waitForTimeout(2200);
+    const inApp = await pg.evaluate(() => { const f = document.querySelector('.frame[data-id="weather"] iframe'), d = f.contentDocument, fade = d.getElementById('aos-topfade');
+      return { bar: getComputedStyle(document.getElementById('barcap')).backgroundColor, top: f.contentWindow.AllisonOS.topColor(), fade: !!fade && !fade.hidden && getComputedStyle(fade).backgroundImage.includes(f.contentWindow.AllisonOS.topColor()) }; });
+    check(homeBar === await pg.evaluate(() => getComputedStyle(document.body).backgroundColor) && inApp.bar === inApp.top && inApp.bar !== homeBar && inApp.fade,
+      `under a solid status bar, the bar is the app's own colour while it's open, and its top fades into it (${homeBar} > ${inApp.bar}) ${tag}`);
+    await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(600);
+    check(await bar() === homeBar, `and aOS's again on the way back ${tag}`);
+    await pg.evaluate(() => localStorage.removeItem('design.weather'));
     await pg.evaluate(() => localStorage.removeItem('aos.bar')); await pg.reload(); await pg.waitForTimeout(900);
   }
 

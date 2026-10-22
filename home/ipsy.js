@@ -384,12 +384,16 @@
       Object.assign(speaker.style, { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' });
       const w = Math.min(380, W - 24), cx = box.left + box.width / 2;
       const left = Math.max(12, Math.min(cx - 44, W - w - 12)), by = H - box.top + 2;
-      // a button high on the page (aOS Home's): the bubble hangs below it instead, its tail pointing up
-      const below = box.top + box.height / 2 < H * 0.45, bt = box.top + box.height + 14;
+      // a button high on the page (aOS Home's): the bubble hangs below it instead, its tail pointing up.
+      // Typing (the keyboard up, and iOS scrolling the page to the box), Ipsy goes to the top of what's
+      // still in sight and the bubble fills the rest, down to the keyboard.
+      const below = box.top + box.height / 2 < H * 0.45;
+      const vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : H, typing = kb > 40 || vTop > 0;
+      const sTop = below && typing ? vTop + 10 : box.top, bt = sTop + box.height + 14;
       wrap.classList.toggle('ipsy-below', below);
-      wrap.style.setProperty('--ipsy-kb', kb + 'px');
+      wrap.style.setProperty('--ipsy-kb', (below ? box.top - sTop : kb) + 'px');   // how far Ipsy rises
       wrap.style.setProperty('--bx', left + 'px'); wrap.style.setProperty('--by', by + 'px'); wrap.style.setProperty('--bw', w + 'px'); wrap.style.setProperty('--bt', bt + 'px');
-      wrap.style.setProperty('--bh', (below ? Math.max(200, Math.min(560, H - bt - kb - 16)) : Math.max(220, Math.min(560, (H - kb) * 0.68, H - by - kb - 64))) + 'px');   // it grows with the chat, up to about two thirds of the screen
+      wrap.style.setProperty('--bh', (below ? Math.max(160, Math.min(560, vTop + vH - bt - 12)) : Math.max(220, Math.min(560, (H - kb) * 0.68, H - by - kb - 64))) + 'px');   // it grows with the chat, up to about two thirds of the screen
       wrap.style.setProperty('--tail', Math.max(22, Math.min(w - 22, cx - left)) + 'px');
     }
     let lastFocus = null, shut = 0;

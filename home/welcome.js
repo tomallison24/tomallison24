@@ -972,6 +972,30 @@
       if (again) setInset(insetNow.top, insetNow.bottom);
     }).observe(document.documentElement, { childList: true, subtree: true });
   }
+  // Under an iPhone's solid status bar (aOS's: data-bar="solid" on it, ../home/sky.js), aOS colours
+  // the bar with this app's own background (#barcap, aOS/home-tab.js). The top of the app, where
+  // "‹ aOS" floats over nothing of the app's own, fades into that same colour, so the bar and the
+  // app run together, whatever the app draws up there (a sky, Sea glass's blobs).
+  if (inHome) {
+    const see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
+    const topColor = () => see(document.body) || see(document.documentElement);
+    let fade = null;
+    const paintFade = () => {
+      let solid = false; try { solid = window.top.document.documentElement.dataset.bar === 'solid'; } catch {}
+      const c = solid && document.body ? topColor() : '';
+      if (!c) { if (fade) fade.hidden = true; return; }
+      if (!fade) {
+        fade = document.createElement('div'); fade.id = 'aos-topfade'; fade.setAttribute('aria-hidden', 'true');
+        fade.style.cssText = 'position:fixed;top:0;left:0;right:0;height:46px;z-index:2147480000;pointer-events:none';
+        document.body.appendChild(fade);
+      }
+      fade.hidden = false; fade.style.background = `linear-gradient(${c}, transparent)`;
+    };
+    AOS.topColor = () => { paintFade(); return topColor(); };   // aOS asks, for the bar
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintFade); else paintFade();
+    addEventListener('aos:sky', paintFade);
+    new MutationObserver(paintFade).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-look', 'data-sky', 'data-sky-tone'] });
+  }
   // An app tapped in aOS opens as ?via=aos, in the in-app Safari view an installed aOS
   // opens links in - which may report itself as standalone. Remember it for this view
   // (a Home Screen app keeps its own storage, so its own launches never carry it) and
