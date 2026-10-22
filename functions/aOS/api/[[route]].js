@@ -16,6 +16,10 @@
 //                                                  'travelv' and 'notesv' are the Vintage designs of Travel and Notes: GET layer
 //                                                  shows each as part of its app)
 //   GET  layer            (family)             -> your own layers, for Calendar
+//   POST handoff/want     (family)             -> you use aOS 2: GET state says carry: true to your apps for 14 days
+//   POST handoff          (family) { app, data } -> what that app keeps only on this phone, waiting for aOS 2 (14 days);
+//                                                  { taken: true } once aOS has taken it: no more to send
+//   POST handoff/take     (family) { app }       -> { data } (or null), once: then it's deleted
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
 //   POST push/unsubscribe (family) { endpoint }     -> it doesn't
@@ -37,7 +41,8 @@ import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo, 
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, eraseAsked, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
-const MAX_BODY = 256 * 1024;   // a layer can be this big; everything else is tiny
+const MAX_BODY = 256 * 1024;   // a layer or a handoff can be this big; everything else is tiny
+const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving into aOS 2, and how long it waits
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
@@ -139,7 +144,9 @@ export async function onRequest({ request, params, env }) {
     const apps = u ? Object.fromEntries(Object.entries({ ...(u.apps || {}), ...((await getJSON(db, 'apps:' + u.id)) || {}) }).filter(([, t]) => t > 0)) : null;
     // A session from before "Sign out and erase": the app erases aOS's data from this phone.
     const erase = !u && request.headers.has('Authorization') && await eraseAsked(db, request);
-    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps }, ...(erase ? { erase: true } : {}) });
+    // you use aOS 2: your apps opened from their own icons hand over what they keep only on the phone (handoff)
+    const carry = !!u && !!(await db.get('handoff:want:' + u.id));
+    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps }, ...(erase ? { erase: true } : {}), ...(carry ? { carry: true } : {}) });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -237,6 +244,41 @@ export async function onRequest({ request, params, env }) {
       else { if (apps[app] > 0 && Date.now() - apps[app] < 12 * 3600e3) return reply({ ok: true }); apps[app] = Date.now(); }
       await putJSON(db, 'apps:' + me.id, apps);
       return reply({ ok: true });
+    }
+
+    // Moving into aOS 2 (home/welcome.js, "Moving into aOS"): inside aOS every app keeps its data in
+    // aOS's own storage, not its Home Screen copy's. So an app opened from its own Home Screen icon
+    // hands what it keeps only on the phone (alarms, saved cities, settings, Home's Home Assistant
+    // sign-in) to you here, and the same app opened inside aOS takes it, once: taken, it's deleted,
+    // and a mark that it was taken stops the Home Screen copy sending it again. Never taken, it's
+    // gone after HANDOFF_DAYS. Only you can send or take your own.
+    // aOS 2 opened, signed in: from now on (for HANDOFF_DAYS after the last time), GET state tells your
+    // apps to hand over what they keep on the phone. Written at most once a week.
+    if (route === 'handoff/want' && method === 'POST') {
+      const key = 'handoff:want:' + me.id, at = +(await db.get(key)) || 0;
+      if (Date.now() - at > 7 * 86400e3) await db.put(key, String(Date.now()), { expirationTtl: HANDOFF_DAYS * 86400 });
+      return reply({ ok: true });
+    }
+    if (route === 'handoff' && method === 'POST') {
+      const b = await body(request), app = String(b.app || '');
+      if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
+      if (await db.get('handoff:taken:' + me.id + ':' + app)) return reply({ ok: true, taken: true });
+      if (!b.data || typeof b.data !== 'object' || Array.isArray(b.data) || !Object.values(b.data).every(v => typeof v === 'string')) return reply({ error: 'data' }, 400);
+      const json = JSON.stringify(b.data);
+      if (json.length > HANDOFF_MAX) return reply({ error: 'too-big' }, 413);
+      const key = 'handoff:' + me.id + ':' + app;
+      if ((await db.get(key)) === json) return reply({ ok: true, same: true });   // nothing new: no write
+      await db.put(key, json, { expirationTtl: HANDOFF_DAYS * 86400 });
+      return reply({ ok: true });
+    }
+    if (route === 'handoff/take' && method === 'POST') {
+      const b = await body(request), app = String(b.app || '');
+      if (!APPS.includes(app)) return reply({ error: 'app' }, 400);
+      const key = 'handoff:' + me.id + ':' + app, json = await db.get(key);
+      if (!json) return reply({ data: null });   // nothing yet: aOS asks again next time
+      await db.put('handoff:taken:' + me.id + ':' + app, String(Date.now()), { expirationTtl: 400 * 86400 });
+      await db.delete(key);
+      return reply({ data: JSON.parse(json) });
     }
 
     if (route === 'layer' && method === 'POST') {

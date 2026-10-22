@@ -136,6 +136,17 @@ const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic
 // Google - silently: prompt=none makes Google answer at once with a token, or
 // with interaction_required if it can't, and never shows a screen. login_hint
 // names the account, so having several signed in doesn't bring up a chooser.
+// Inside aOS 2 (aOS/home-tab.js) Google's sign-in page can't open in this app's frame: the whole aOS
+// window goes to Google instead and comes back to this page, which ../home/welcome.js then takes
+// back into aOS (aos.away). A quiet renewal waits while the app is out of sight there.
+function toGoogle(u, silent) {
+  let inAOS = false; try { inAOS = window.top !== window && !!window.top.aosHome; } catch {}
+  if (!inAOS) { location.href = u; return; }
+  const box = window.frameElement && window.frameElement.parentElement;
+  if (silent && box && box.hidden) return;
+  try { localStorage.setItem('aos.away', 'mail|' + Date.now()); } catch {}
+  window.top.location.href = u;
+}
 function signIn(opts = {}) {
   const id = clientId();
   if (!id) return;
@@ -157,7 +168,7 @@ function signIn(opts = {}) {
     ...(opts.silent && !opts.chooseAccount ? { prompt: 'none' } : {}),
   });
   if (opts.silent) ls.set(K.silent, '1'); else ls.del(K.silent);
-  location.href = u.toString();
+  toGoogle(u.toString(), !!opts.silent);
 }
 
 // Sign Out means signed out: Google cancels the token now rather than at the

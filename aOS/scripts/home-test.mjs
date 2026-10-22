@@ -49,6 +49,28 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
   check((await route.onRequest({ request: post({ 'X-Aos': '1' }), env: { ACCOUNTS: db, ANTHROPIC_API_KEY: 'k' } })).status === 401, 'signed out: asks to sign in');
 }
 
+// ---- moving into aOS 2: the family account's side (functions/aOS/api, handoff) ----
+{
+  const { onRequest } = await import(path.join(R, 'functions/aOS/api/[[route]].js'));
+  const { issue, putJSON } = await import(path.join(R, 'server/auth.js'));
+  const m = new Map();
+  const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); },
+    list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
+  await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
+  const tok = await issue(db, 'O1');
+  const call = async (route, body) => { const r = await onRequest({ request: new Request(BASE + '/aOS/api/' + route, { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), params: { route: route.split('/') }, env: { ACCOUNTS: db } }); return { status: r.status, j: await r.json() }; };
+  check(!(await call('state')).j.carry, 'before aOS 2 is opened, apps aren\'t asked to hand anything over');
+  await call('handoff/want', {});
+  check((await call('state')).j.carry === true, 'aOS 2 opened: GET state tells the apps to hand over (carry)');
+  check((await call('handoff', { app: 'clock', data: { 'allison-clock-v1': '{"alarms":[1]}' } })).j.ok, 'Clock hands over what it keeps on the phone');
+  check((await call('handoff', { app: 'nope', data: {} })).status === 400 && (await call('handoff', { app: 'clock', data: { a: 1 } })).status === 400, 'only a known app, and only strings');
+  const t1 = await call('handoff/take', { app: 'clock' });
+  check(t1.j.data && t1.j.data['allison-clock-v1'] === '{"alarms":[1]}', 'aOS takes it');
+  check((await call('handoff/take', { app: 'clock' })).j.data === null && !m.has('handoff:O1:clock'), 'once: then it\'s deleted');
+  check((await call('handoff', { app: 'clock', data: { k: 'v' } })).j.taken === true, 'taken: the Home Screen copy is told to stop sending');
+  check((await call('handoff/take', { app: 'weather' })).j.data === null && !m.has('handoff:taken:O1:weather'), 'nothing waiting yet: aOS can ask again');
+}
+
 // ---- the page ----
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
 const b = await chromium.launch();
@@ -105,6 +127,26 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const r = await pg.evaluate(async () => { const m = AllisonOS.ipsy.mounted; const res = await m.tools['notes__get_lists']({}, { confirm: async () => true }); return { app: m.app, lists: JSON.parse(typeof res.content === 'string' ? res.content : JSON.stringify(res.content)).lists }; });
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);
   check(await pg.evaluate(async () => { const res = await AllisonOS.ipsy.mounted.tools['fitness__days']({}, {}); return !!res.error; }), `and has no Fitness tool ${tag}`);
+
+  // moving in: what Clock kept on the phone is in place before Clock first opens inside aOS
+  if (look === 'vintage') {
+    let took = 0;
+    await pg.evaluate(() => localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() })));
+    await pg.route('**/aOS/api/handoff/take', r => { took++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { 'wx.places': '[{"name":"Lisbon"}]' } }) }); });
+    await pg.locator('.hrow[data-open="weather"]').count();
+    await pg.evaluate(() => { localStorage.removeItem('wx.places'); });
+    await pg.evaluate(() => aosHomeTab.show('places')); await pg.waitForTimeout(1500);
+    check(took === 1 && await pg.evaluate(() => localStorage.getItem('wx.places')) === '[{"name":"Lisbon"}]' && await pg.evaluate(() => localStorage.getItem('aos.carry.in.places')) === 'done',
+      `before an app first opens inside aOS, aOS takes what it kept on the phone, once ${tag}`);
+    await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
+    // back from Google: Mail, opened at the top of aOS's window with aos.away set, goes back into aOS
+    await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + Date.now()));
+    await pg.goto(BASE + '/mail/'); await pg.waitForURL(/\/aOS\/#app=mail|\/aOS\/$/, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(1500);
+    check(/\/aOS\//.test(pg.url()) && await pg.evaluate(() => document.body.classList.contains('in-app') && !!document.querySelector('.frame[data-id="mail"]:not([hidden])')), `back from Google's sign-in, Mail goes back into aOS, open ${tag}`);
+    await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + (Date.now() - 3600e3)));
+    await pg.goto(BASE + '/mail/'); await pg.waitForTimeout(1500);
+    check(/\/mail\//.test(pg.url()), `a sign-in given up on long ago doesn't pull Mail into aOS ${tag}`);
+  }
 
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();

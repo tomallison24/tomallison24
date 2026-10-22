@@ -132,8 +132,38 @@
     f.addEventListener('load', () => { pushInsets(); if (current === id) tint(); });
     box.append(f); frames[id] = box; $('stage').append(box);
     put(OPEN, open);
+    // the first time it opens here, what it kept on the phone comes first (a few seconds at most)
+    const go = () => { if (frames[id] === box && !f.getAttribute('src')) f.src = `../${id}/`; };
+    Promise.race([carryIn(id), new Promise(r => setTimeout(r, 4000))]).then(go, go);
     return box;
   }
+
+  // ---- moving into aOS 2 (../home/welcome.js, "moving into aOS 2") ----
+  // Signed in, aOS tells the family account you use aOS 2 (handoff/want, once a day here; the account
+  // writes it once a week), so your apps opened from their own icons hand over what they keep only on
+  // the phone. Before an app first opens here, aOS takes that (handoff/take, once) and puts it in
+  // place: all of it, if the app never opened here before; else only what isn't here yet (you may
+  // have set it up here since). Nothing waiting: aOS asks again the next day it opens.
+  const ACC = AllisonOS.account, CARRIED = 'aos.carry.in.', WANT = 'aos.carry.want';
+  const dayKey = () => new Date().toISOString().slice(0, 10);
+  const authed = path => { const t = ACC && ACC.token(); return t ? (b = {}) => fetch('api/' + path, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify(b) }) : null; };
+  async function carryIn(id) {
+    const take = authed('handoff/take'); if (!take) return;
+    let st = ''; try { st = localStorage.getItem(CARRIED + id) || ''; } catch {}
+    if (st === 'done' || st === dayKey()) return;
+    const fresh = !st && !(get(USED, {})[id] || []).length;   // never opened here: what came wins
+    try {
+      const r = await take({ app: id }); if (!r.ok) return;
+      const j = await r.json();
+      if (!j.data) { localStorage.setItem(CARRIED + id, dayKey()); return; }
+      for (const [k, v] of Object.entries(j.data)) if (typeof v === 'string' && (fresh || localStorage.getItem(k) == null)) localStorage.setItem(k, v);
+      localStorage.setItem(CARRIED + id, 'done');
+    } catch {}
+  }
+  (async () => {
+    const want = authed('handoff/want'); if (!want) return;
+    try { if (localStorage.getItem(WANT) === dayKey()) return; if ((await want()).ok) localStorage.setItem(WANT, dayKey()); } catch {}
+  })();
   function drop(id) {
     if (!id) return;
     if (frames[id]) { frames[id].remove(); delete frames[id]; }
