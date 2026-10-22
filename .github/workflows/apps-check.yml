@@ -149,25 +149,31 @@ jobs:
               notes/scripts/push-app-test.mjs
               notes/scripts/security-test.mjs
               travel/scripts/ipsy-test.mjs
-          # Notes, Places, Travel, Weather, News
-          - group: apps-more
+          # Notes, Places
+          - group: notes-places
             tests: |
               notes/scripts/app-test.mjs
               places/scripts/app-test.mjs
+          # Travel, Weather, News
+          - group: travel-weather-news
+            tests: |
               travel/scripts/app-test.mjs
               travel/scripts/smart-test.mjs travel
               travel/scripts/smart-test.mjs travelvintage
               weather/scripts/app-test.mjs
               news/scripts/app-test.mjs
-          # Orders and Mail (Mail: the security tests that run in a page, and both designs), and Ipsy in Orders
-          - group: orders-mail
+          # Orders, and Ipsy in Orders, News and Meals
+          - group: orders
             tests: |
               orders/scripts/app-test.mjs
               orders/scripts/ipsy-test.mjs
               news/scripts/ipsy-test.mjs
               meals/scripts/ipsy-test.mjs
-              notes/scripts/ipsy-test.mjs
+          # Mail (the security tests that run in a page, and both designs), and Ipsy in Calendar and Notes
+          - group: mail-ipsy
+            tests: |
               calendar/scripts/ipsy-test.mjs
+              notes/scripts/ipsy-test.mjs
               mail/scripts/security-test.mjs
               mail/scripts/design-test.mjs
     steps:
