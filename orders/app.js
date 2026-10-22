@@ -1257,15 +1257,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (st.tab === 'hidden') st.tab = ls.get(K.tab, 'way');
     render();
   }
+  // Always Face ID, signed in before or not: a passkey that isn't yours (or none) leaves them hidden.
   $('stHidden').onclick = async () => {
     const A = window.AllisonOS && AllisonOS.account;
-    if (A && A.user()) {
-      try { await A.signIn(); }
-      catch { toast('Face ID didn’t go through, so hidden orders stay hidden.'); return; }
-    }
+    try { if (!A) throw new Error('no-account'); await A.signIn(); }
+    catch { toast('Face ID didn’t go through, so hidden orders stay hidden.'); return; }
     st.unlocked = true; st.tab = 'hidden'; st.q = ''; $('q').value = '';
     closeSheet('setSheet'); render(); animateIn($('list'));
-    if (!(A && A.user())) toast('Sign in to aOS to keep these behind Face ID.');
   };
   // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
   if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }

@@ -254,10 +254,11 @@ included, and Ipsy's own checks skip it). It stays hidden when its emails are
 read again, and the flag goes with the order to the family's Sheet, so it's
 hidden on your other phones too.
 
-- **Seeing them again**: Settings > **Show hidden orders** asks for Face ID
-  (the aOS family passkey, `AllisonOS.account.signIn`) and adds a **Hidden** tab;
-  a phone that has never signed in to aOS opens it without asking (and says
-  so). They hide again as soon as Orders goes to the background. Turn Hidden
+- **Seeing them again**: Settings > **Show hidden orders** always asks for
+  Face ID (the aOS family passkey, `AllisonOS.account.signIn`), whether or not
+  Orders has signed in before, and adds a **Hidden** tab; with no passkey, or
+  offline, they stay hidden. They hide again as soon as Orders goes to the
+  background. Turn Hidden
   off on the order's page to put it back.
 - **Where it can still be seen**, outside Orders: its emails in Gmail and in
   Mail; and the family's Google Sheet (the Orders tab and the Log), which the

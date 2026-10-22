@@ -433,9 +433,16 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#searchBtn'); await page.fill('#q', store.toLowerCase());
     assert.match(await page.textContent('#list'), /No match/, 'search doesn’t find it');
     await page.click('#qClear'); await page.click('#searchBtn');
+    // Face ID is always asked: a failed one leaves them hidden
+    await page.evaluate(() => { window.AllisonOS.account.signIn = async () => { throw new Error('NotAllowedError'); }; });
     await page.click('#setBtn');
     await page.click('#stHidden');
+    await page.waitForFunction(() => /stay hidden/.test(document.getElementById('toastMsg').textContent));
+    assert.ok(!(await page.$('#whenChips [data-when="hidden"]')));
+    await page.evaluate(() => { window.__faceId = 0; window.AllisonOS.account.signIn = async () => { window.__faceId++; return {}; }; });
+    await page.click('#stHidden');
     await page.waitForSelector('#whenChips [data-when="hidden"][aria-pressed="true"]');
+    assert.equal(await page.evaluate(() => window.__faceId), 1);
     assert.match((await texts(page, '#list .ocard'))[0], re);
     await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); delete document.visibilityState; });
     assert.ok(!(await page.$('#whenChips [data-when="hidden"]')), 'locked again in the background');
