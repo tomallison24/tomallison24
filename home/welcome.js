@@ -92,7 +92,7 @@
         'Favorites, mixed: pin up to four (Edit, then the stars); the rest fill in with the apps you open most, over the last two weeks, on this phone',
         'Ipsy on aOS\'s Home works across Calendar, Notes, Meals, Orders, Travel and News at once, with each app\'s own tools, rules and Undo, on Claude Sonnet 5.5. Fitness stays out: aOS\'s Ipsy can search the web, and your health data never goes near a web search (ask Ipsy in Fitness)',
         'Inside aOS every app shares one sign-in: Face ID once, for all of them. One Gmail sign-in in Mail covers Travel and Orders too; Google\'s sign-in page opens over aOS and brings you back',
-        'Moving in: open each app from its old icon once more, signed in, and what it kept only on your phone (Clock\'s alarms, Weather\'s cities, Home\'s Home Assistant sign-in, settings) moves into aOS the first time you open it there. It waits in your family account two weeks at most, and is deleted once aOS has it',
+        'Moving in: open each app from its old icon once more, and what it kept only on your phone (Clock\'s alarms, Weather\'s cities, Home\'s Home Assistant sign-in, settings) moves into aOS, in whichever order you open them; not signed in there, Move my data with Face ID does it. What came from the old icon wins over what aOS had for the app. It waits in your family account two weeks at most, and is deleted once aOS has it',
         'The old app icons still work, and say the app lives in aOS now; remove them when you\'re ready (press and hold, Remove App). Get on an app\'s page in aOS still adds one',
         'aOS\'s update screens and welcome are mid-century now: cream, mustard, teal and orange',
         'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
@@ -2071,12 +2071,12 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
   // ---- moving into aOS 2: what an app keeps only on this phone, carried into aOS ----
   // Inside aOS (aOS/home-tab.js) every app keeps its data in aOS's storage, not its Home Screen
   // copy's, so it would open there without what it never syncs: Clock's alarms, Weather's cities,
-  // Home's Home Assistant sign-in, each app's settings. Once you use aOS 2 (it tells the family
-  // account, handoff/want), GET state says carry: true, and an app opened from its own icon hands
-  // its keys (CARRY) to your account, at most once a day, until aOS has them (functions/aOS/api,
-  // handoff). aOS takes them for the app, once (handoff/take: then they're deleted
-  // there) and puts them in place before the app first opens (aOS/home-tab.js). Never carried:
-  // Gmail's sign-in (an hour long; sign in once inside aOS) and Ipsy's chats.
+  // Home's Home Assistant sign-in, each app's settings. An app opened from its own icon, signed in,
+  // hands its keys (CARRY) to your account, at most once a day, until aOS has them (functions/aOS/api,
+  // handoff). Not signed in, "lives in aOS now" (movedNote) asks you to, with Face ID. aOS takes
+  // them for the app, once (handoff/take: then they're deleted there) and puts them in place
+  // (aOS/home-tab.js). Never carried: Gmail's sign-in (an hour long; sign in once inside aOS) and
+  // Ipsy's chats. (aos.carry2: the first aOS 2 dropped what came in, so every app sends again.)
   const CARRY = {   // app: [the key prefixes it keeps, the ones never carried]
     mail: [['mail.', 'design.mail'], ['mail.token', 'mail.state', 'mail.lastAuth', 'mail.pending', 'mail.openThread', 'mail.pushSynced']],
     calendar: [['allison-calendar-v1', 'calendar.private', 'design.calendar'], []],
@@ -2094,7 +2094,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
     house: [['house.', 'design.house'], []],
   };
   const CARRY_MAX = 230 * 1024;          // what the account takes for one app (HANDOFF_MAX), with room to spare
-  const CARRIED = 'aos.carry.';          // + app: 'done' (aOS has it), else the day it was last sent
+  const CARRIED = 'aos.carry2.';         // + app: 'done' (aOS has it), else the day it was last sent
   const dayKey = () => new Date().toISOString().slice(0, 10);
   function carryKeys() {
     const [take, never] = CARRY[APP] || [[], []], out = {};
@@ -2109,17 +2109,23 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
     for (const k of Object.keys(out).sort((a, b) => out[b].length - out[a].length)) { if (size <= CARRY_MAX) break; size -= out[k].length + k.length + 6; delete out[k]; }
     return out;
   }
-  async function carryOut() {   // from the app's own Home Screen icon
-    const t = token(); if (!t || inHome || !CARRY[APP]) return;
+  // -> 'sent' (or sent today), 'done' (aOS has it), 'none' (nothing to move), 'signin', 'failed'
+  let carrying = null;   // one at a time (GET state's and "lives in aOS now"'s)
+  const carryOut = () => carrying || (carrying = sendCarry().finally(() => { carrying = null; }));
+  async function sendCarry() {   // from the app's own Home Screen icon
+    if (inHome || !CARRY[APP] || major(latest()) < 2) return 'none';
+    const t = token(); if (!t) return 'signin';
     let st = ''; try { st = localStorage.getItem(CARRIED + APP) || ''; } catch {}
-    if (st === 'done' || st === dayKey()) return;
-    const data = carryKeys(); if (!Object.keys(data).length) return;
+    if (st === 'done') return 'done';
+    if (st === dayKey()) return 'sent';
+    const data = carryKeys(); if (!Object.keys(data).length) return 'none';
     try {
       const r = await fetch(api('handoff'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ app: APP, data }) });
-      if (!r.ok) return;
+      if (!r.ok) return 'failed';
       const j = await r.json();
       localStorage.setItem(CARRIED + APP, j.taken ? 'done' : dayKey());
-    } catch {}
+      return j.taken ? 'done' : 'sent';
+    } catch { return 'failed'; }
   }
   AOS.carry = { keys: carryKeys, out: carryOut };   // for the tests
 
@@ -2223,7 +2229,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
       p = j.plan || null;
       try { p ? localStorage.setItem(PLAN, JSON.stringify(p)) : localStorage.removeItem(PLAN); } catch {}
       showPlan(p);
-      if (j.carry) carryOut();   // you use aOS 2: hand over what this app keeps only on the phone
+      if (standalone() && !viaAOS()) carryOut();   // aOS 2: hand over what this app keeps only on the phone
     } catch {}   // offline: the last plan seen stands
   }
 
@@ -2257,13 +2263,19 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
   // with nothing else on screen), an app says so, once a day: aOS is where it opens now, what it kept
   // on this phone moves there (carryOut, above), and how to take this icon off. No link to aOS: from
   // here it would open aOS in this icon's own storage, not the aOS on the Home Screen.
-  function movedNote() {
+  async function movedNote() {
     if (!APP || !APPS.includes(APP) || inHome || !standalone() || major(latest()) < 2) return;
     if (document.getElementById('aos-welcome') || document.getElementById('aos-moved')) return;
-    const KEY = 'aos.moved.' + APP; let last = ''; try { last = localStorage.getItem(KEY) || ''; } catch {}
+    const KEY = 'aos.moved2.' + APP; let last = ''; try { last = localStorage.getItem(KEY) || ''; } catch {}
     const day = new Date().toISOString().slice(0, 10); if (last === day) return;
     try { localStorage.setItem(KEY, day); } catch {}
     const name = esc(NAMES[APP] || APP), el = document.createElement('div');
+    const said = st => st === 'done' ? `aOS has what ${name} kept on this phone: open ${name} there.`
+      : st === 'sent' ? `What ${name} keeps on this phone is on its way: open ${name} in aOS and it moves in.`
+      : st === 'failed' ? `Couldn't move what ${name} keeps on this phone just now. Open ${name} here again when you're online.`
+      : st === 'none' ? `${name} keeps nothing on this phone that needs moving.`
+      : `Sign in, and what ${name} keeps on this phone moves into aOS.`;
+    const st = await carryOut(), ask = st === 'signin', moving = said(st);
     el.id = 'aos-moved'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', NAMES[APP] + ' lives in aOS now');
     el.innerHTML = `<style>#aos-moved{position:fixed;inset:0;z-index:2147482000;display:grid;place-items:center;padding:24px;background:rgba(36,30,26,.55);font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
       #aos-moved .m-card{position:relative;overflow:hidden;width:100%;max-width:380px;padding:26px 22px 20px;border-radius:28px;background:#F4ECDD;color:#2B2522;text-align:left}
@@ -2272,13 +2284,25 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
       #aos-moved h2{position:relative;margin:14px 0 4px;font-size:25px;font-weight:600;letter-spacing:-.02em}
       #aos-moved .m-bars{display:flex;gap:5px;margin:0 0 14px}#aos-moved .m-bars i{height:6px;border-radius:3px;background:#1F6F6B;width:28px}#aos-moved .m-bars i+i{width:14px;background:#E3A72F}#aos-moved .m-bars i+i+i{width:6px;background:#D8572A}
       #aos-moved p{margin:0 0 10px;font-size:16px;line-height:1.4;color:#5B4A3F}#aos-moved p b{color:#2B2522}
-      #aos-moved button{width:100%;height:50px;margin-top:8px;border:0;border-radius:999px;background:#D8572A;color:#FFF8EC;font:inherit;font-size:17px;font-weight:600}</style>
+      #aos-moved button{width:100%;height:50px;margin-top:8px;border:0;border-radius:999px;background:#D8572A;color:#FFF8EC;font:inherit;font-size:17px;font-weight:600}
+      #aos-moved .m-go+.m-not{height:40px;margin-top:4px;background:none;color:#5B4A3F;font-size:15px}</style>
       <div class="m-card"><img src="${icon(APP)}" alt=""><h2>${name} lives in aOS now</h2><div class="m-bars"><i></i><i></i><i></i></div>
         <p>Open <b>aOS</b> from your Home Screen: ${name} opens inside it, beside every other app, with Ipsy on Home.</p>
-        <p>Signed in, what ${name} keeps on this phone moves into aOS the next time you open it there.</p>
+        <p class="m-move">${moving}</p>
         <p>Then you can take this icon off: press and hold it, then <b>Remove App</b>.</p>
-        <button type="button">OK</button></div>`;
-    el.querySelector('button').onclick = () => el.remove();
+        ${ask ? '<button type="button" class="m-go">Move my data with Face ID</button><button type="button" class="m-not">Not now</button>' : '<button type="button" class="m-not">OK</button>'}</div>`;
+    el.querySelector('.m-not').onclick = () => el.remove();
+    const go = el.querySelector('.m-go');
+    if (go) go.onclick = async () => {
+      const A = await loadAccount().catch(() => null);
+      el.style.display = 'none';
+      const ok = A && (token() || await A.prompt(`Sign in, and what ${name} keeps on this phone moves into aOS.`));
+      el.style.display = '';
+      if (!ok) return;
+      const st = await carryOut();
+      el.querySelector('.m-move').innerHTML = said(st);
+      go.remove(); el.querySelector('.m-not').textContent = 'OK';
+    };
     document.body.appendChild(el);
   }
   function erasedNote() {
