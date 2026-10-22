@@ -13,7 +13,8 @@
 // own Ipsy has no web search at all). Asked about it, Ipsy says so and points to Fitness's own Ipsy.
 //
 // Claude Sonnet 5.5, as in the apps (AOS_IPSY_MODEL, a Pages secret, names another). Signed-in family
-// only, IPSY_DAILY new questions a person a day (aos:ipsy:<user id>:<day>, gone after two days).
+// only, IPSY_DAILY new questions a person a day (aos:ipsy:<user id>:<day>, gone after two days) and the steps
+// they take (aos:ipsy:steps:<user id>:<day>, server/ipsy.js).
 // This is more specific than [[route]].js, so /aOS/api/ipsy comes here; the accounts API is unchanged.
 import { reply, kv, sessionUser } from '../../../server/auth.js';
 import { modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
