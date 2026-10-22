@@ -24,10 +24,7 @@
   (a link from here would stay inside this icon's window, where Safari's Add
   to Home Screen isn't offered) and how to remove the old icon.
 -->
-<script>
-  // a browser tab: straight on to aOS
-  if (!(matchMedia('(display-mode: standalone)').matches || navigator.standalone === true)) location.replace('../aOS/');
-</script>
+<script src="moved-head.js"></script>
 <style>
   :root { --bg: #EEF2F0; --text: #10181A; --muted: rgba(16,24,26,.64); --tile: rgba(255,255,255,.75); --edge: rgba(0,0,0,.07); 
     --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); color-scheme: light; }
@@ -64,12 +61,6 @@
     <button type="button" id="copy">Copy the address</button>
   </div>
 </main>
-<script>
-  const u = new URL('../aOS/', location.href).href;
-  document.getElementById('addr').textContent = u;
-  const b = document.getElementById('copy');
-  b.onclick = async () => { try { await navigator.clipboard.writeText(u); b.textContent = 'Copied'; } catch { b.textContent = 'Press and hold the address to copy it'; } setTimeout(() => { b.textContent = 'Copy the address'; }, 2500); };
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-</script>
+<script src="moved.js"></script>
 </body>
 </html>
