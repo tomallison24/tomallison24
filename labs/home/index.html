@@ -18,11 +18,13 @@
   sign-in, one Light or dark. Up to four apps stay open, each where you left it (the one used
   longest ago is put away). Home: four favourites you pick (Edit), then every app in groups.
 
-  Three ways of getting around, picked on Home (lab.home.mode), to try side by side:
+  Four ways of getting around, picked on Home (lab.home.mode), to try side by side:
     back   an app slides in from the right, under a bar with "‹ aOS"; that, or a swipe in
            from the left edge, slides back to Home. Hold "‹ aOS" for the other open apps.
     cards  the bar's aOS button shows every open app as a live card (as Safari's tabs);
            tap one to go to it, × to put it away.
+    float  the app has the whole screen; a round aOS button floats over it (as AssistiveTouch):
+           tap it for Home and the open apps, drag it anywhere (lab.home.fab keeps where).
     bar    the first try: a bar along the bottom with aOS and the open apps.
   Not an app; see ../index.html.
 
@@ -153,6 +155,20 @@
   #ovFoot button { flex: 1; height: 48px; border-radius: 14px; background: var(--dot); font-weight: 600; }
   #ovFoot #ovDone { background: var(--accent); color: var(--bg); }
 
+  /* floating: the app has the whole screen; a round aOS button floats over it (as the iPhone's
+     AssistiveTouch). Drag it anywhere: it settles on the nearest side, and fades when left alone */
+  body.mode-float #nav { height: env(safe-area-inset-top); border-bottom: 0; }
+  body.mode-float #nav > * { display: none; }
+  body.mode-float #stage { top: env(safe-area-inset-top); }
+  #fab { position: fixed; left: 0; top: 0; z-index: 5; width: 56px; height: 56px; border-radius: 50%; display: none; place-items: center;
+    background: var(--bar); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 6px 20px rgba(0,0,0,.22), inset 0 0 0 1px var(--line);
+    font-size: 17px; font-weight: 700; letter-spacing: -.3px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    transition: left .3s var(--ease), top .3s var(--ease), opacity .4s, transform .15s; }
+  body.mode-float.in-app:not(.overview) #fab { display: grid; }
+  #fab.moving { transition: opacity .4s, transform .15s; transform: scale(1.08); }
+  #fab.idle { opacity: .5; }
+  #fab:active { transform: scale(.94); }
+
   /* bar: the first try, a bar along the bottom with aOS and the open apps */
   body.mode-bar #home { bottom: var(--barh); padding-bottom: 28px; }
   body.mode-bar #nav { height: env(safe-area-inset-top); border-bottom: 0; }
@@ -197,9 +213,10 @@
   </div>
 
   <div class="modes" role="group" aria-label="Getting around">
-    <button type="button" data-mode="back">Back to aOS</button>
+    <button type="button" data-mode="back">Swipe</button>
     <button type="button" data-mode="cards">Cards</button>
-    <button type="button" data-mode="bar">Bottom bar</button>
+    <button type="button" data-mode="float">Floating</button>
+    <button type="button" data-mode="bar">Bar</button>
   </div>
   <p class="modes-note" id="modeNote"></p>
 
@@ -240,6 +257,7 @@
   <div id="edge" aria-hidden="true"></div>
 </div>
 <div id="menu" hidden></div>
+<button type="button" id="fab" aria-label="aOS: home and open apps"><span class="ink">aOS</span></button>
 
 <nav id="bar" aria-label="Open apps">
   <button type="button" id="toHome" aria-label="aOS home"><span class="ink">aOS</span></button>
@@ -263,6 +281,7 @@
     const ALL = SPACES.flatMap(s => s[1]);
     const MODES = { back: 'Apps slide in. Tap ‹ aOS or swipe in from the left edge to go back; hold ‹ aOS for your other open apps.',
       cards: 'Tap aOS at the top of an app to see every open app as a card. Tap one to go to it, × to put it away.',
+      float: 'Apps get the whole screen, with a round aOS button floating over them. Tap it for Home and your open apps; drag it out of the way.',
       bar: 'The first try: a bar along the bottom with aOS and your open apps. Swipe it to switch; hold an app to put it away.' };
     const MAX_OPEN = 4, MAX_FAVS = 4, FAVS = 'lab.home.favs', OPEN = 'lab.home.open', MODE = 'lab.home.mode';
     const get = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
@@ -361,6 +380,7 @@
       } else if (mode === 'back' && !current && prev) hideT = setTimeout(() => { if (!current) reveal(null); }, 400);   // it slides out first
       else reveal(current);
       body.classList.toggle('in-app', !!current);
+      if (current && mode === 'float') wake();
       if (!current) paintHome();   // an app's look may have changed its icon
       try { history.replaceState(null, '', location.pathname + location.search + (current ? '#' + current : '')); } catch {}
       put(OPEN, open); tint(); paintBar();
@@ -384,16 +404,54 @@
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => back.addEventListener(t, () => clearTimeout(holdT)));
     back.addEventListener('click', () => { if (held) { held = false; return; } show(null); });
     back.addEventListener('contextmenu', e => e.preventDefault());
-    function openMenu() {
+    // under "‹ aOS", or beside the floating button (at): above or below it, on its side
+    function openMenu(at) {
       if (navigator.vibrate) navigator.vibrate(10);
-      const others = [...used].reverse().filter(id => id !== current);
-      $('#menu').innerHTML = others.map(id => `<button type="button" data-id="${id}"><img src="${icon(id)}" alt="">${name(id)}</button>`).join('')
+      const m = $('#menu'), others = [...used].reverse().filter(id => id !== current);
+      m.innerHTML = others.map(id => `<button type="button" data-id="${id}"><img src="${icon(id)}" alt="">${name(id)}</button>`).join('')
         + '<button type="button" class="home" data-home><span>‹</span>aOS home</button>';
-      $('#menu').hidden = false;
+      m.style.left = m.style.top = '';
+      m.hidden = false;
+      if (at) {
+        const r = at.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+        m.style.left = (r.left < innerWidth / 2 ? r.left : r.right - w) + 'px';
+        m.style.top = Math.max(10, r.bottom + 8 + h < innerHeight - 10 ? r.bottom + 8 : r.top - 8 - h) + 'px';
+      }
     }
     function closeMenu() { $('#menu').hidden = true; }
     $('#menu').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; show(b.dataset.id || null); });
-    document.addEventListener('pointerdown', e => { if (!$('#menu').hidden && !e.target.closest('#menu, #back')) closeMenu(); });
+    document.addEventListener('pointerdown', e => { if (!$('#menu').hidden && !e.target.closest('#menu, #back, #fab')) closeMenu(); });
+
+    // ---- floating: the round aOS button; drag it, and it settles on the nearest side ----
+    const fab = $('#fab'), FAB = 'lab.home.fab';
+    let fp = get(FAB, { right: true, y: 0.62 }), fx0 = null, fy0 = null, flx = 0, fly = 0, fmoved = false, idleT = null;
+    function place() {
+      const s = 56, top = 54, bottom = innerHeight - s - 40;   // clear of the status bar and the home indicator
+      fab.style.left = (fp.right ? innerWidth - s - 10 : 10) + 'px';
+      fab.style.top = Math.min(bottom, Math.max(top, fp.y * innerHeight)) + 'px';
+    }
+    function wake() { fab.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => fab.classList.add('idle'), 3000); }
+    fab.addEventListener('pointerdown', e => { fx0 = flx = e.clientX; fy0 = fly = e.clientY; fmoved = false; wake(); try { fab.setPointerCapture(e.pointerId); } catch {} });
+    fab.addEventListener('pointermove', e => {
+      if (fx0 == null) return;
+      flx = e.clientX; fly = e.clientY;
+      if (!fmoved && Math.hypot(flx - fx0, fly - fy0) < 8) return;
+      if (!fmoved) { fmoved = true; closeMenu(); fab.classList.add('moving'); }
+      fab.style.left = (flx - 28) + 'px'; fab.style.top = (fly - 28) + 'px';
+    });
+    const fabUp = () => {
+      if (fx0 == null) return;
+      fx0 = null;
+      if (!fmoved) return;
+      fab.classList.remove('moving');
+      fp = { right: flx > innerWidth / 2, y: (fly - 28) / innerHeight }; put(FAB, fp); place(); wake();
+    };
+    fab.addEventListener('pointerup', fabUp);
+    fab.addEventListener('pointercancel', fabUp);
+    fab.addEventListener('click', () => { if (fmoved) { fmoved = false; return; } if ($('#menu').hidden) openMenu(fab); else closeMenu(); wake(); });
+    fab.addEventListener('contextmenu', e => e.preventDefault());
+    addEventListener('resize', place);
+    place();
 
     const edge = $('#edge');
     let ex = null, dx = 0;
