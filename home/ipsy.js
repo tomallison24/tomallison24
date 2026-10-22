@@ -335,6 +335,8 @@
   // ---------------------------------------------------------------------------
   function mount(o) {
     addStyle();
+    // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
+    AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok' };
     let messages = [], view = [], busy = false, undos = new Map();
     const asks = new Map();               // questions waiting on a Yes or No: id -> resolve

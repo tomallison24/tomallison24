@@ -97,9 +97,10 @@ jobs:
               fitness/scripts/meds-steps-test.mjs
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
-          # Home, News' table and match pages, Calendar
+          # Home, News' table and match pages, Calendar; aOS 2's Home (every app inside aOS, Ipsy across them)
           - group: home
             tests: |
+              aOS/scripts/home-test.mjs
               house/scripts/app-test.mjs
               house/scripts/connect-test.mjs
               news/scripts/table-test.mjs

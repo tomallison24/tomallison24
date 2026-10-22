@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -325,6 +325,75 @@
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
 :where(.get, button.avatar){position:relative}
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+  /* aOS 2's Home (aOS/home-tab.js): Ipsy, Open now, Favorites, then every app in a few groups */
+  .askipsy { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border-radius: 26px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); cursor: pointer; overflow: hidden; }
+  .askipsy::before { content: ''; position: absolute; left: -40px; top: 50%; width: 170px; height: 170px; margin-top: -85px; border-radius: 50%; background: radial-gradient(rgba(129,147,188,.35), transparent 65%); pointer-events: none; }
+  .askipsy .ipsy-slot { position: relative; flex: 0 0 78px; height: 78px; }
+  .askipsy > span:nth-child(2) { position: relative; flex: 1; min-width: 0; }
+  .askipsy b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
+  .askipsy i { display: block; font-style: normal; font-size: 14px; color: var(--muted); line-height: 1.3; }
+  .askipsy .go { position: relative; color: var(--accent); font-size: 26px; line-height: 1; }
+  .onowl { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
+  .onowl::-webkit-scrollbar { display: none; }
+  .onow { flex: none; display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 16px 0 7px; border-radius: 17px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); font-size: 15px; font-weight: 650; }
+  .onow img { width: 36px; height: 36px; border-radius: 10px; }
+  .onow:active, .fav:active, .hrow:active, .askipsy:active { transform: scale(.98); }
+  .favs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fav { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 136px; padding: 14px; border-radius: 24px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
+  .fav::before { content: ''; position: absolute; left: -36px; top: -36px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .3), transparent 65%); pointer-events: none; }
+  .fav img { position: relative; width: 52px; height: 52px; border-radius: 15px; margin-bottom: 4px; }
+  .fav b { position: relative; font-size: 17px; font-weight: 650; }
+  .fav small { position: relative; font-size: 13px; color: var(--muted); line-height: 1.3; }
+  .fav .pin, .hpin { display: none; color: var(--muted); }
+  .fav .pin { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; }
+  .fav.pinned .pin, .hpin.on { color: var(--accent); }
+  body.editing .fav .pin, body.editing .hpin { display: block; }
+  body.editing .fav { animation: jiggle .3s ease-in-out infinite alternate; }
+  @keyframes jiggle { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+  .fav .pin svg, .hpin svg { display: block; width: 100%; height: 100%; }
+  .hint { margin: -2px 2px 12px; font-size: 14px; color: var(--muted); }
+  .hgroup { border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
+  .hrow { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; cursor: pointer; transition: transform .2s; }
+  .hrow + .hrow { border-top: 1px solid var(--line); }
+  .hrow img { width: 46px; height: 46px; border-radius: 13px; flex: none; }
+  .hrow span { flex: 1; min-width: 0; }
+  .hrow b { display: block; font-size: 16px; font-weight: 650; }
+  .hrow i { display: block; font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hpin { flex: none; width: 36px; height: 36px; padding: 6px; }
+  .hinfo { flex: none; width: 30px; height: 30px; border-radius: 50%; font: italic 600 15px Georgia, "Times New Roman", serif; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .get.open { margin-right: 8px; }
+
+  /* an app inside aOS: it slides in over Home and fills the screen, "‹ aOS" floating over its corner */
+  #appshade { position: fixed; inset: 0; z-index: 39; background: rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .38s; }
+  body.in-app #appshade { opacity: 1; }
+  #appwin { position: fixed; inset: 0; z-index: 40; background: var(--tint, var(--bg)); transform: translateX(105%); transition: transform .38s cubic-bezier(.2,.8,.2,1), box-shadow .38s; }
+  body.in-app #appwin, body.dragging #appwin { transform: none; box-shadow: -10px 0 30px rgba(0,0,0,.16); }
+  body.dragging #appwin, body.dragging #appshade { transition: none; }
+  #stage { position: absolute; inset: 0; }
+  .frame { position: absolute; inset: 0; }
+  .frame[hidden] { display: none; }
+  .frame iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--tint, var(--bg)); }
+  #appnav { position: absolute; left: 0; top: 0; z-index: 2; height: calc(env(safe-area-inset-top) + 50px); padding: env(safe-area-inset-top) 10px 0; display: flex; align-items: center; pointer-events: none; }
+  #appback { pointer-events: auto; display: flex; align-items: center; gap: 2px; height: 34px; padding: 0 14px 0 6px; border-radius: 999px; color: var(--accent); font-size: 16px; font-weight: 650;
+    background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 2px 12px rgba(0,0,0,.12), inset 0 0 0 1px var(--edge);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #appback:active { opacity: .6; }
+  #appback svg { width: 22px; height: 22px; }
+  #appedge { position: absolute; left: 0; top: calc(env(safe-area-inset-top) + 50px); bottom: 0; width: 18px; z-index: 3; touch-action: none; }
+  #appmenu { position: fixed; left: 10px; top: calc(env(safe-area-inset-top) + 54px); z-index: 45; min-width: 214px; padding: 6px; border-radius: 18px; background: var(--solid);
+    box-shadow: 0 12px 40px rgba(0,0,0,.25), inset 0 0 0 1px var(--edge); transform-origin: 20px 0; animation: menuIn .18s cubic-bezier(.2,.8,.2,1); }
+  #appmenu[hidden] { display: none; }
+  #appmenu button { display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 10px; border-radius: 12px; font-size: 16px; font-weight: 650; text-align: left; }
+  #appmenu button:active { background: var(--dot); }
+  #appmenu img { width: 30px; height: 30px; border-radius: 8px; }
+  #appmenu .home { color: var(--accent); }
+  #appmenu .home span { width: 30px; text-align: center; }
+  @keyframes menuIn { from { opacity: 0; transform: scale(.9); } }
+  #htoast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 50; transform: translate(-50%, 8px); padding: 9px 15px; border-radius: 999px; background: var(--text); color: var(--bg);
+    font-size: 14px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  #htoast.on { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { #appwin, #appshade { transition: none; } body.editing .fav { animation: none; } }
+
 </style>
 <style id="vintage">
   /* ======================================================================
@@ -406,6 +475,14 @@
   .story.plain.half .mk { letter-spacing: -.03em; }
   .ipsy-say { border-radius: 22px 22px 6px 22px; background: #FFF8EC; color: #2B2522; font-weight: 600; box-shadow: none; }
   .ipsy-forms figure { border-radius: 20px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+
+  /* Home: solid cream cards, flat, Ipsy on a teal disc */
+  .askipsy, .fav, .hgroup, .onow { box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .askipsy::before { left: -26px; width: 128px; height: 128px; margin-top: -64px; background: var(--mc-teal); opacity: .16; }
+  .fav::before { left: auto; right: -34px; top: -34px; width: 92px; height: 92px; background: rgb(var(--c)); opacity: .22; }
+  .askipsy b, .fav b, .hrow b, .onow { font-weight: 600; }
+  .askipsy b { letter-spacing: -.01em; }
+  #appback { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(43,37,34,.12); font-weight: 600; }
 
   /* Apps: solid cream cards, a flat disc of the app's color behind the icon */
   .row { border-radius: 22px; box-shadow: inset 0 0 0 1.5px var(--edge); }
@@ -501,6 +578,17 @@
 <body>
 <div class="atoms" aria-hidden="true"><b></b><b></b><b></b></div>
 
+<!-- aOS 2's Home (aOS/home-tab.js): in preview until aOS 2 is released (aOS/#preview=aos2 on a phone) -->
+<section class="tab" id="home" hidden>
+  <div class="head"><div><span class="mark ink">aOS</span><h1>Home<small id="hdate"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
+  <div class="askipsy" id="askIpsy" role="button" tabindex="0"><span class="ipsy-slot" id="ipsySlot"></span><span><b>Ask Ipsy</b><i id="ipsySub">Across your apps</i></span><span class="go" aria-hidden="true">›</span></div>
+  <div id="opennow" hidden><div class="sec"><h2>Open now</h2></div><div class="onowl" id="opennowList"></div></div>
+  <div class="sec"><h2>Favorites</h2><button type="button" id="favEdit">Edit</button></div>
+  <p class="hint" id="favHint" hidden>Tap a star to pin an app, up to four. The rest fill in with the apps you use most.</p>
+  <div class="favs" id="favs"></div>
+  <div id="spaces"></div>
+</section>
+
 <section class="tab" id="today">
   <div class="head"><div><span class="mark ink">aOS</span><h1>Today<small id="date"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
   <div id="famhero"></div>
@@ -527,9 +615,19 @@
   </div>
 </nav>
 
+<div id="appshade" aria-hidden="true"></div>
+<div id="appwin" aria-hidden="true">
+  <div id="stage"></div>
+  <div id="appnav"><button type="button" id="appback" aria-label="Back to aOS (hold for your open apps)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>aOS</button></div>
+  <div id="appedge" aria-hidden="true"></div>
+</div>
+<div id="appmenu" hidden></div>
+<div id="htoast" role="status"></div>
+
 <script src="../home/account.js"></script>
 <script src="../home/welcome.js" data-app="aos" data-auto></script>
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, drawn on the Meet Ipsy card and page -->
 <script src="app.js"></script>
+<script src="home-tab.js"></script>   <!-- aOS 2's Home: every app inside aOS (in preview) -->
 </body>
 </html>
