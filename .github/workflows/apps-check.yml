@@ -4,8 +4,11 @@
 # nothing is built or published here.
 name: Apps check
 
-# A branch's checks run once, on its pull request; pushes only run here for the
-# default branch (the merge itself), so every commit isn't checked twice.
+# A branch's checks run once, on its pull request. The browser tests run only where the pull
+# request needs them (.github/scripts/ci-select.mjs): all of them when it changes shared code,
+# an app's own (and every test that opens that app) when it changes only some apps, none when
+# it changes only labs/ or documentation. The merge (a push to the default branch) runs only the
+# quick checks: its pull request already passed the rest.
 on:
   push:
     branches: [claude/custom-iphone-photos-app-0ubcek]
@@ -22,7 +25,7 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
-      - run: node aOS/scripts/check-apps.mjs
+      - run: node aOS/scripts/check-apps.mjs && node .github/scripts/ci-select-test.mjs
       # the family accounts' safety rules and the plan: plain Node, no network
       - run: node aOS/scripts/accounts-api-test.mjs && node aOS/scripts/sheet-api-test.mjs && node aOS/scripts/plan-api-test.mjs && node aOS/scripts/push-api-test.mjs && node drinks/scripts/api-test.mjs && node notes/scripts/push-test.mjs && node news/scripts/tick-test.mjs
       # Meals: the server (the allergy check above all) and its sums
@@ -34,10 +37,32 @@ jobs:
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
 
+  # What the pull request changes: each browser group keeps only the tests that need it.
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.diff.outputs.files }}
+      tours: ${{ steps.diff.outputs.tours }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(node .github/scripts/ci-select.mjs changed "$BASE")
+          { echo 'files<<EOF_FILES'; echo "$files"; echo 'EOF_FILES'; } >> "$GITHUB_OUTPUT"
+          echo "tours=$(CHANGED="$files" node .github/scripts/ci-select.mjs tours)" >> "$GITHUB_OUTPUT"
+          echo "Changed:"; echo "$files"
+
   # Each app's live tour finds its way round the app, and tidies up after itself
   # (aOS/scripts/tours-test.mjs). The slowest test, so it's in three shards that run
   # side by side with everything else: shard i plays every third app.
   tours:
+    needs: changes
+    if: needs.changes.outputs.tours == 'yes'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -49,7 +74,13 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
-      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
+      # the test browser, kept between runs (its system libraries still come from apt)
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        id: pw
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium-${{ runner.os }}
+      - run: npm install --global playwright@1.56.1 && if [ "${{ steps.pw.outputs.cache-hit }}" = true ]; then npx --yes playwright@1.56.1 install-deps chromium; else npx --yes playwright@1.56.1 install --with-deps chromium; fi
       - run: node aOS/scripts/tours-test.mjs
         env:
           TOURS_SHARD: ${{ matrix.shard }}/3
@@ -62,6 +93,7 @@ jobs:
   # names each failure. A test seeds aos.seen at '999' so no walkthrough or update screen covers the page.
   browser:
     name: ${{ matrix.group }}
+    needs: changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -140,13 +172,33 @@ jobs:
               mail/scripts/design-test.mjs
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
-        with:
-          node-version: 22
-      - run: npm install --global playwright@1.56.1 && npx --yes playwright@1.56.1 install --with-deps chromium
-      - name: Run the group's tests
+      # of this group's tests, the ones this pull request needs (none: the group stops here)
+      - id: pick
         env:
           TESTS: ${{ matrix.tests }}
+          CHANGED: ${{ needs.changes.outputs.files }}
+        run: |
+          picked=$(node .github/scripts/ci-select.mjs pick)
+          { echo 'tests<<EOF_TESTS'; echo "$picked"; echo 'EOF_TESTS'; } >> "$GITHUB_OUTPUT"
+          echo "any=$([ -n "$picked" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          echo "Tests this pull request needs here:"; echo "${picked:-none}"
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        if: steps.pick.outputs.any == 'yes'
+        with:
+          node-version: 22
+      # the test browser, kept between runs (its system libraries still come from apt)
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        id: pw
+        if: steps.pick.outputs.any == 'yes'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium-${{ runner.os }}
+      - run: npm install --global playwright@1.56.1 && if [ "${{ steps.pw.outputs.cache-hit }}" = true ]; then npx --yes playwright@1.56.1 install-deps chromium; else npx --yes playwright@1.56.1 install --with-deps chromium; fi
+        if: steps.pick.outputs.any == 'yes'
+      - name: Run the group's tests
+        if: steps.pick.outputs.any == 'yes'
+        env:
+          TESTS: ${{ steps.pick.outputs.tests }}
         run: |
           failed=''
           while read -r t; do
