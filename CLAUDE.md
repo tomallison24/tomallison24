@@ -31,7 +31,7 @@ releases it (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS1.8 now): each merge releases it again,
+- By default, add to the top entry (aOS2 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
@@ -87,8 +87,13 @@ from.
 
 ## Layout
 
-- `aOS/` (capital O and S, `/aOS/`) is the app store and home of every app;
-  its `data-app` id is `aos`. Each app is added to the Home Screen on its own.
+- `aOS/` (capital O and S, `/aOS/`) is the home of every app (aOS2): its Home tab
+  (`aOS/home-tab.js`) has Ipsy across the apps, Favorites and every app, and each app opens
+  inside aOS, in a frame on this site, sharing aOS's storage (`window.aosHome`: `welcome.js` in
+  the app takes aOS's insets and skips the install steps; data an app kept only on its own
+  Home Screen copy moves in through the family account, `handoff`). It is also the app store;
+  its `data-app` id is `aos`. Get on an app's page still adds that app's own Home Screen icon;
+  opened from there, the app hands its data to aOS and says it lives in aOS now.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
   steps, release log, theme), `slide.js`, `design.js` (Vintage or Sea glass), `sky.js` (the Vintage designs' day and night

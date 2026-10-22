@@ -42,7 +42,7 @@ async function open(when, look = 'vintage') {
   });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.clock.install({ time: when });
-  await p.goto(BASE + '/aOS/'); await p.waitForSelector('#stories .story');
+  await p.goto(BASE + '/aOS/'); await p.click('[data-tab="today"]'); await p.waitForSelector('#stories .story');   // aOS2 opens on Home
   return { ctx, p, errs };
 }
 // each postcard: its chip, its app (from Get), its shape, and whether it is What's new
@@ -78,7 +78,7 @@ const base = id => id.replace(/vintage$/, '');
       for (const id of added) if (!shown.includes(id)) pr.push(`day ${n}: ${id} is not shown as New in aOS`);
     } else if (!c[0].news) pr.push(`day ${n}: What's new does not lead: ${c[0].k}`);
     // the same day, the same mix
-    await p.reload(); await p.waitForSelector('#stories .story');
+    await p.reload(); await p.click('[data-tab="today"]'); await p.waitForSelector('#stories .story');
     if (JSON.stringify(await cards(p)) !== JSON.stringify(c)) pr.push(`day ${n}: a reload changed the mix`);
     await ctx.close();
   }

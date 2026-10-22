@@ -35,7 +35,7 @@ async function open(scheme = 'light', seed = {}, o = {}) {
   });
   if (o.cookie) await ctx.addCookies([{ name: 'aos_look', value: o.cookie, url: BASE + '/aOS/' }]);
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/aOS/' + (o.query || '')); await p.waitForSelector('#stories .story');
+  await p.goto(BASE + '/aOS/' + (o.query || '')); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');   // aOS2 opens on Home (in Safari, under its install steps)
   return { ctx, p, errs };
 }
 const css = (p, sel, prop) => p.locator(sel).first().evaluate((e, k) => getComputedStyle(e)[k], prop);
@@ -68,7 +68,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await p.evaluate(() => localStorage.getItem('aos.look')) !== 'glass') pr.push('the choice is not kept');
   // a reload: the look is in place before the page runs (look.js is in the head), and the family icon is the glass one
   await p.addInitScript(() => document.addEventListener('DOMContentLoaded', () => { window.__look = document.documentElement.dataset.look + '/' + document.getElementById('vintage').media; }));
-  await p.reload(); await p.waitForSelector('#stories .story');
+  await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   const early = await p.evaluate(() => window.__look);
   if (early !== 'glass/not all') pr.push('on a reload the look at DOMContentLoaded was ' + early);
   if (await css(p, '.tabs', 'backgroundColor') === WALNUT) pr.push('after a reload the tab pill is walnut');
