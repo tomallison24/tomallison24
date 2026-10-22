@@ -362,6 +362,68 @@ test('two different orders from one store stay two', () => {
   const b = { html: hardwareConfirm.replace(/WK00000001/g, 'WK00000002'), subject: 'We received your order!', from: HARDWARE_FROM, date: at(10, 8) };
   assert.equal(fold([], [a, b]).length, 2);
 });
+// ---- returns ----------------------------------------------------------------
+const AMZ_RET_FROM = 'Amazon.com <return@amazon.com>';
+const amazonReturn = by => `<html><body><p>Hello Sam,</p><p>Your return request is confirmed.</p><p><a href="#">View return request</a></p>
+<table><tr><td>Drop off by</td></tr><tr><td>${by}</td></tr><tr><td>Dropoff location</td></tr><tr><td>THE UPS STORE, 1 EXAMPLE PKWY, APEX, NC, 27500</td></tr></table>
+<h3>Item(s) in your return request</h3><p><a href="#">Striped Wool Winter Hat Fleece Lined...</a></p><p>Quantity: 1</p><p>Order # 111-0000001-0000001</p><p>Reason for return: Too Large</p>
+<p>Cancel return</p><p>Return code</p><h3>Return summary</h3><p>Your refund will be issued within 24 hours after dropoff.</p>
+<table><tr><td>Refund subtotal</td><td>$21.50</td></tr><tr><td>Return shipping</td><td>FREE $0.00</td></tr><tr><td>Total estimated refund*</td><td>$21.50</td></tr></table>
+<h3>Refund method</h3><p>$21.50 to your Visa ending in 0000</p><p>Keep the item in its original manufacturer packaging. Show QR code to the store associate.</p></body></html>`;
+test('a return request: the drop-off day and place, the reason, the refund; a later email moves the day', () => {
+  const list = fold([], [{ html: amazonReturn('Thu, Nov 19'), subject: 'Return request confirmed for Striped Wool Winter Hat...', from: AMZ_RET_FROM, date: at(10, 21), id: 'r1', threadId: 't1' }]);
+  assert.equal(list.length, 1, 'a return of an order the app never saw becomes an order of its own');
+  const o = list[0], r = o.ret;
+  assert.equal(o.store, 'Amazon'); assert.equal(o.orderNo, '111-0000001-0000001'); assert.equal(o.status, 'delivered', 'something being returned has arrived');
+  assert.equal(r.status, 'started'); assert.equal(r.steps.started, '2026-10-21'); assert.equal(r.by, '2026-11-19');
+  assert.equal(r.where, 'THE UPS STORE, 1 EXAMPLE PKWY, APEX, NC, 27500'); assert.equal(r.reason, 'Too Large');
+  assert.equal(r.refund, 21.5); assert.equal(r.refundTo, 'your Visa ending in 0000'); assert.deepEqual(r.items, ['Striped Wool Winter Hat Fleece Lined...']);
+  assert.equal(o.total, undefined, 'the refund is not what the order cost');
+  fold(list, [{ html: amazonReturn('Mon, Jan 18'), subject: 'Return request confirmed for Striped Wool Winter Hat...', from: AMZ_RET_FROM, date: at(10, 21, 13), id: 'r2', threadId: 't1' }]);
+  assert.equal(list.length, 1); assert.equal(list[0].ret.by, '2027-01-18', 'the newest email’s day wins, in the next year');
+  assert.equal(list[0].ret.items.length, 1);
+});
+test('a return joins its order, which keeps its own email; status only moves forward', () => {
+  const list = fold([], [{ text: 'Ordered: "Striped Wool Winter Hat"\nOrder # 111-0000001-0000001\nOrder Total: $23.10', subject: 'Ordered 1 item: "Striped Wool Winter Hat..."', from: 'Amazon.com <auto-confirm@amazon.com>', date: at(10, 10), id: 'o1', threadId: 'o1' },
+    { text: 'Delivered: your package was delivered.\nOrder # 111-0000001-0000001', subject: 'Delivered: "Striped Wool Winter Hat..."', from: 'Amazon.com <shipment-tracking@amazon.com>', date: at(10, 13), id: 'o2', threadId: 'o2' },
+    { html: amazonReturn('Thu, Nov 19'), subject: 'Return request confirmed for Striped Wool Winter Hat...', from: AMZ_RET_FROM, date: at(10, 21), id: 'r1', threadId: 't1' }]);
+  assert.equal(list.length, 1); const o = list[0];
+  assert.equal(o.status, 'delivered'); assert.equal(o.total, 23.1); assert.equal(o.ret.status, 'started'); assert.equal(o.source.msgId, 'o2', 'the order’s email stays its own');
+  assert.equal(o.ret.source.msgId, 'r1');
+  fold(list, [{ text: 'Hello Sam, We’ve issued your refund.\nTotal refund* $21.50\nOrder # 111-0000001-0000001', subject: 'Your refund confirmation', from: AMZ_RET_FROM, date: at(10, 24) }]);
+  assert.equal(o.ret.status, 'refunded'); assert.equal(o.ret.steps.started, '2026-10-21'); assert.equal(o.ret.steps.refunded, '2026-10-24');
+  fold(list, [{ html: amazonReturn('Thu, Nov 19'), subject: 'Return request confirmed for Striped Wool Winter Hat...', from: AMZ_RET_FROM, date: at(10, 21), id: 'r1', threadId: 't1' }]);
+  assert.equal(o.ret.status, 'refunded', 'an older return email read again doesn’t undo the refund');
+});
+test('a package the carrier sent back: refunded, the order canceled, its problem cleared', () => {
+  const list = fold([], [{ text: 'Shipped 1 item\nOrder # 111-0000002-0000002', subject: 'Shipped: "Magnesium Glycinate Capsules..."', from: 'Amazon.com <shipment-tracking@amazon.com>', date: at(10, 12) }]);
+  list[0].issue = 'The store says there’s an update'; list[0].guess = true;
+  fold(list, [{ text: 'Hello Sam, You ordered the item below, but the package is being returned to us by the carrier. We’ve issued your refund.\nView return & refund status (https://www.amazon.com/spr/returns)\n\nReturn summary\n\nRefund subtotal $30.00\nTotal refund* $30.00\n\nRefund will appear on your Visa in 3-5 business days.\n\nItem(s) in your return request\n\n[Magnesium Glycinate Capsules,...](https://www.amazon.com/gp/product/B000000000)\nQuantity: 1 Order # 111-0000002-0000002',
+    subject: 'Your refund confirmation', from: AMZ_RET_FROM, date: at(10, 13) }]);
+  const o = list[0];
+  assert.equal(list.length, 1); assert.equal(o.status, 'cancelled'); assert.equal(o.ret.status, 'refunded'); assert.equal(o.ret.undelivered, true);
+  assert.equal(o.ret.refund, 30); assert.equal(o.ret.refundTo, 'your Visa'); assert.equal(o.issue, ''); assert.deepEqual(o.ret.items, ['Magnesium Glycinate Capsules,...']);
+});
+test('a store that received the return and refunded it in one email; items under their size and colour', () => {
+  const { f } = one({ text: 'Hello Sam,\nWe Received Your Return.\n\nYour refund has been processed. Please allow up to 5 business days.\n\nReturn Date:\n 2026-01-24\n\nOrder Number:\n\nJW00000001\n\nReturned Items\n\nPolished Silver Bangle\n\n $120.00\n\n Item Number: 500000C00-1\n Size: 1700\n\n Color: No color\n\n Quantity: 1\n\nTwisted Gold Bangle\n\n $120.00\n\n Item Number: 500001C00-1\n Size: 1600\n\n Color: No color\n\n Quantity: 1\n\nOrder Subtotal$300.00\nShipping$0.00\n\n Total\n\n $240.00\n',
+    subject: 'We received your return order #JW00000001', from: 'Jewel Shop <orders@shop.jewel.example>', date: at(1, 24) });
+  assert.equal(f.ret.status, 'refunded'); assert.equal(f.ret.steps.received, '2026-01-24'); assert.equal(f.orderNo, 'JW00000001');
+  assert.deepEqual(f.ret.items, ['Polished Silver Bangle', 'Twisted Gold Bangle']); assert.equal(f.ret.refund, 240);
+});
+test('a return number and a return label’s tracking, with no order number', () => {
+  const list = fold([], [{ text: 'Hi Sam,\n\nYour return request (RMA #RTEST001) has been approved. Please follow the instructions below.\n\n1. Place your return in a parcel.\n2. Take your parcel to a Royal Mail location near you.\n\nTracking number: YR000000001GB\n\nDownload Return Label',
+    subject: 'RMA #RTEST001 Your return request has been received', from: 'Beauty Shop <order.update@beautyshop.example>', date: at(4, 17), threadId: 'rma' }]);
+  assert.equal(list.length, 1); const r = list[0].ret;
+  assert.equal(r.status, 'started', '"return request … received" is the start, not the store having it');
+  assert.equal(r.rma, 'RTEST001'); assert.equal(r.tracking, 'YR000000001GB'); assert.equal(r.carrier, 'Royal Mail');
+});
+test('not a return: tax and rental returns, and the "start a return" in every order email’s footer', () => {
+  assert.equal(one({ text: 'Great news! Your 2025 state return was accepted.', subject: 'TurboTax Update: State Return Accepted', from: 'TurboTax <TurboTax@intuit.example>' }).f, undefined);
+  assert.equal(one({ text: 'Please confirm the details for your upcoming rental return. Rental Agreement: 900000001', subject: 'Time to confirm or modify your rental return', from: 'Cars <no-reply@cars.example>' }).f, undefined);
+  const { f } = one({ html: hardwareConfirm.replace('</table>', '</table><p>Need to start a return? Print a return label from your account.</p>'), subject: 'We received your order!', from: HARDWARE_FROM });
+  assert.equal(f.ret, undefined); assert.equal(f.status, 'ordered');
+  assert.equal(P.returnOf('Your refund has been processed', ''), 'refunded'); assert.equal(P.returnOf('Your return is on its way', ''), 'sent');
+});
 test('helpers', () => {
   assert.equal(P.trackUrl('UPS', '1Z0000000000000001'), 'https://www.ups.com/track?tracknum=1Z0000000000000001');
   assert.equal(P.trackUrl('', 'x'), ''); assert.equal(P.trackUrl('Veho', 'x'), '');

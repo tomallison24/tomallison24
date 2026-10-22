@@ -405,6 +405,66 @@
   }
 
   // ---------------------------------------------------------------------
+  // Returns: started (a return request or label), sent (dropped off, on its
+  // way back), received (the store has it), refunded. A return email adds a
+  // return to its order; it never moves the order itself backwards.
+  // ---------------------------------------------------------------------
+  const RET_RANK = { started: 1, sent: 2, received: 3, refunded: 4 };
+  const RETURN_NAMES = { started: 'Return started', sent: 'Sent back', received: 'Return received', refunded: 'Refunded' };
+  const RR = {
+    refunded: /(?:we(?:'|’)ve|we have) (?:issued|processed|sent) (?:your|a|the) refund|refund (?:has been |was )?(?:issued|processed|completed)\b|refund confirmation|your refund (?:is on (?:its|the) way|has been sent)|(?:has|have) been refunded|we(?:'|’)ve refunded/i,
+    received: /(?:we(?:'|’)ve |we have )?received your return(?! request)|return (?:has been |was )?received|return (?:is )?(?:complete|processed)|your return (?:has )?arrived/i,
+    sent: /return (?:is |has been )?(?:on (?:its|the) way|in transit|dropped off|shipped)|(?:dropped off|shipped) your return|return package (?:was )?(?:scanned|accepted)/i,
+    started: /return (?:request|label|authori[sz]ation|started|initiated|created|approved|confirmed)|\bRMA\b|your return (?:is|has been) (?:confirmed|approved|requested|started)|being returned to us|returned to (?:the )?sender/i,
+    // In the body only plain news counts: footers offer "Start a return" or a "return label" in every order email.
+    startedHead: /your return (?:request )?(?:is|has been) (?:confirmed|approved|requested|started|created|received)|return request (?:is |has been )?(?:confirmed|approved)|being returned to us|returned to (?:the )?sender/i,
+    // Not a store return: taxes, rentals, travel, trade-ins.
+    not: /\b(?:tax|federal|state|irs|rental|car|vehicle|library|book) returns?\b|\breturn (?:flight|trip|journey)\b|trade-?in|reservation|boarding|itinerary|\bfare\b/i,
+    undelivered: /being returned to us by the carrier|returned to (?:the )?sender|undeliverable|couldn(?:'|’)?t be delivered|returned as undeliverable/i,
+  };
+  const retRank = s => RET_RANK[s] || 0;
+  function returnOf(subject, head) {
+    const test = (s, started) => RR.refunded.test(s) ? 'refunded' : RR.received.test(s) ? 'received' : RR.sent.test(s) ? 'sent' : started.test(s) ? 'started' : '';
+    const a = test(subject, RR.started), b = test(String(head || '').slice(0, 800), RR.startedHead);
+    if (!a && !b) return '';
+    if (RR.not.test(subject + ' ' + String(head || '').slice(0, 300))) return '';
+    // "Return request received" is the start; "Your refund has been processed" further down is the news.
+    return retRank(b) > retRank(a) ? b : a;
+  }
+  // What a return email says: the return's own details, the order it belongs to.
+  function returnFact({ subj, text, ref, status, store, orderNo, sender }) {
+    // Plain parts carry links beside the words: "Name... ( https://… )", "[Name](https://…)".
+    text = text.replace(/\[([^\]\n]+)\]\(\s*https?:[^)\s]*\s*\)/g, '$1').replace(/\(\s*https?:[^)\s]*\s*\)/g, ' ');
+    const ret = { status, steps: { [status]: localYmd(ref) } };
+    const by = /(?:drop(?:-|\s)?off|ship(?:\s+it)?|send(?:\s+it)?|mail(?:\s+it)?|return(?:\s+it|\s+items?)?|post(?:\s+it)?)\s+(?:by|before|no later than)\s*:?\s*([^\n]{3,40}(?:\n[^\n]{3,30})?)/i.exec(text);
+    if (by) { const d = dateIn(by[1], ref); if (d) ret.by = d; }
+    const where = /drop(?:-|\s)?off (?:location|at|point)\s*:?\s*\n?\s*([^\n]{5,120})/i.exec(text);
+    if (where) ret.where = where[1].replace(/\s+/g, ' ').trim();
+    const reason = /reason for (?:your )?return\s*:?\s*([^\n]{2,60})/i.exec(text);
+    if (reason) ret.reason = reason[1].replace(/\s{2,}.*/, '').trim();
+    const rma = /\b(?:RMA|return authori[sz]ation|return (?:number|id|#))\s*(?:number|no\.?|#)?\s*:?\s*#?\s*([A-Z0-9][A-Z0-9-]{3,24})\b/i.exec(subj + '\n' + text);
+    if (rma && /\d/.test(rma[1])) ret.rma = rma[1];
+    const rf = new RegExp('(?:total (?:estimated )?refund|refund (?:total|amount|subtotal)|estimated refund|amount refunded|refunded|refund of)\\**\\s*[:|]?\\s*(?:USD\\s*)?' + MONEY, 'i').exec(text);
+    const found = rf ? { total: num(rf[2]), cur: curOf(rf[1]) } : (status === 'received' || status === 'refunded') ? findTotal(text) : null;
+    if (found) { ret.refund = found.total; ret.cur = found.cur; }
+    const to = /\bto (your [A-Za-z ]{2,30}(?:ending in|ending|\*+)\s*\d{4})|[Rr]efund (?:will appear |will be credited |goes )?(?:on|to) (your (?:original payment method|[A-Z][A-Za-z]*(?: (?:card|account|balance))?))/.exec(text);
+    if (to) ret.refundTo = (to[1] || to[2]).replace(/\s+/g, ' ').trim();
+    // The steps the same email also tells of ("We received your return. Your refund has been processed.")
+    for (const s of ['sent', 'received']) if (retRank(s) < retRank(status) && RR[s].test(subj + '\n' + text.slice(0, 800))) ret.steps[s] = localYmd(ref);
+    const trk = trackingIn(text, '');
+    if (trk) { ret.tracking = trk.tracking; ret.carrier = trk.carrier || carrierIn(text, '') || (/royal mail/i.test(text) ? 'Royal Mail' : ''); }
+    if (RR.undelivered.test(subj + '\n' + text.slice(0, 800))) ret.undelivered = true;
+    let items = itemsFromText(text);
+    if (!items.length) { const m = /^(?:return (?:request )?(?:confirmed|started|approved|received)|refund(?:ed)?(?: issued)?|your return)\s*(?:for|:)\s*["“”]?(.+?)["“”]?$/i.exec(subj); const n = m && cleanItem(m[1]); if (n && !junkName(n)) items = [{ name: n }]; }
+    ret.items = items.map(i => i.name).slice(0, 12);
+    const f = {
+      store, storeKey: keyOf(store), orderNo, items, status: '', kind: 'package', steps: {}, ret, isReturn: true,
+      source: { msgId: '', threadId: '', subject: subj.slice(0, 200), from: String(sender || '').slice(0, 200), date: ref },
+    };
+    return f;
+  }
+
+  // ---------------------------------------------------------------------
   // Items
   // ---------------------------------------------------------------------
   const LABELISH = /^(?:est(?:imated)?|available|ready|all|by|item|items|qty|quantity|price|total|subtotal|order|tracking|ship|shipping|delivery|deliver|estimated|status|view|track|manage|your|you|thanks|thank|hi|hello|hey|dear|product|description|details|summary|payment|billing|sku|model|seller|sold|unit|click|see|get|download|need|questions|contact|copyright|©|special|basic|arriving|arrives|pickup|pick|store|internet|tax|discount|savings?|visit|learn|shop|sign|log|help|return|we|we’ll|we'll|will|is|are|please|note|check|review|paid|free|just|text|call|email|share|follow|app|add|if|this|that)\b/i;
@@ -415,6 +475,7 @@
   }
   const ANCHOR = /^(?:qty|quantity)\b|^x\s?\d+$|^\d+\s?[x×]$|^price:|^item id:|^sku\b|^store sku|^model\s?#|^item\s?#|^unit price|^\$[\d.,]+\s?\/\s?ea/i;
   const QTY = /^(?:qty|quantity)\s*:?\s*(\d+)|^x\s?(\d+)$|^(\d+)\s?[x×]$/i;
+  const ATTR = /^(?:colou?r|size|style|width|length|variant|fit|item (?:number|no\.?)|item id|article)\s*:/i;
   const PRICEISH = /^\$|^[\d\s$.,/-]+$|from savings|^(?:each|ea|free)$/i;
   function itemsFromText(text) {
     const lines = text.split('\n').map(l => l.replace(/\s{2,}/g, '  ').trim()).filter(Boolean);
@@ -439,13 +500,15 @@
     // The line above "Qty:", "Price:", "SKU #", "Model #:" and friends is the item
     for (let i = 1; i < lines.length; i++) {
       if (!ANCHOR.test(lines[i].split('  ')[0])) continue;
-      for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+      for (let j = i - 1, left = 4; j >= 0 && left > 0; j--) {
         const l = lines[j].split('  ')[0];
+        if (ATTR.test(l)) continue;                    // "Size: 1700", "Color: No color" between the name and its Qty
+        left--;
         if (ANCHOR.test(l) || PRICEISH.test(l)) continue;
         if (looksLikeName(l)) {
           // a short brand line over the name ("Home Decorators Collection" / "Wayne Canyon Oak ...")
           const above = j > 0 ? lines[j - 1].split('  ')[0] : '';
-          add(above && above.length <= 40 && !/[\d?!:.]/.test(above) && above.split(/\s+/).every(w => /^[A-Z&]/.test(w)) && looksLikeName(above) && !ANCHOR.test(above) && !l.startsWith(above) ? above + ' ' + l : l, qtyAt(i));
+          add(above && above.length <= 40 && !/[\d?!:.]/.test(above) && above.split(/\s+/).every(w => /^[A-Z&]/.test(w)) && looksLikeName(above) && !ANCHOR.test(above) && !/\bitems?$/i.test(above) && !l.startsWith(above) ? above + ' ' + l : l, qtyAt(i));
         }
         break;
       }
@@ -547,6 +610,23 @@
     const ld = [...jsonLdBlocks(html), ...(msg.doc ? microdata(msg.doc) : [])];
     const sc = ld.length ? fromSchema(ld) : { items: [] };
     const hay = subj + '\n' + text;
+
+    // A return or a refund belongs to an order the app may already have: it adds a return to it.
+    const retStatus = returnOf(subj, text);
+    if (retStatus) {
+      let store = storeOf(sender, subj, text, !!carrierSender);
+      if (store === 'Amazon' && /whole foods/i.test(subj + '\n' + text.slice(0, 300))) store = 'Whole Foods Market';
+      const orderNo = findOrderNo(hay);
+      const f = returnFact({ subj, text, ref, status: retStatus, store, orderNo, sender: msg.from });
+      if (!orderNo && !f.ret.rma && !(store && (f.ret.refund != null || f.items.length))) return { orders: [], skip: 'a return with no order number' };
+      f.source.msgId = msg.id || ''; f.source.threadId = msg.threadId || ''; f.source.subject = subject.slice(0, 200);
+      f.guess = !store;
+      // a food delivery's or an app's refund is that kind's, so Settings' switches still decide
+      const k = kindOf({ domain: sender.domain, from: msg.from, subject: subj, head: text.slice(0, 1500), status: '', tracking: '', storeName: store });
+      f.kind = k === 'food' || k === 'digital' ? k : 'package';
+      f.id = f.orderNo ? idFor(f) : 'r-' + hash(keyOf(store) + '|' + (f.ret.rma || f.source.threadId || f.source.msgId || f.items.map(i => i.name).join('|')));
+      return { orders: [f], skip: '' };
+    }
 
     let status = statusOf(subj, text) || sc.status || '';
     const orderNo = sc.orderNo || findOrderNo(hay);
@@ -654,12 +734,53 @@
     }
     return null;
   }
+  // A return email: onto its order's return (status only forward, each step keeps its first date,
+  // the newest email's details win unless you edited the return). The order's own email stays its
+  // source. A return of something the app never saw ordered becomes an order of its own, already
+  // delivered (or canceled, when the carrier sent it back).
+  const RET_INFO = ['by', 'where', 'reason', 'rma', 'refund', 'cur', 'refundTo', 'tracking', 'carrier'];
+  function foldReturn(orders, f) {
+    const fr = f.ret, got = fr.undelivered ? 'cancelled' : 'delivered';
+    let cur = findMatch(orders, f);
+    if (!cur) {
+      const o = { id: f.id, store: f.store, storeKey: f.storeKey, orderNo: f.orderNo, items: f.items, status: got, kind: f.kind || 'package', steps: {},
+        ret: { ...fr, source: f.source }, source: f.source, guess: !!f.guess, created: Date.now(), notes: '', locks: {} };
+      if (fr.carrier && fr.tracking) o.ret.trackUrl = trackUrl(fr.carrier, fr.tracking);
+      orders.push(o);
+      return 'new';
+    }
+    let changed = false;
+    const r = cur.ret || (cur.ret = { status: '', steps: {} }), locks = r.locks || {};
+    const newer = (f.source.date || 0) >= ((r.source && r.source.date) || 0);
+    if (retRank(fr.status) > retRank(r.status)) { r.status = fr.status; changed = true; }   // forward only, so what you marked stands until there's news
+    r.steps = r.steps || {};
+    for (const [s, d] of Object.entries(fr.steps)) if (d && (!r.steps[s] || d < r.steps[s])) { r.steps[s] = d; changed = true; }
+    for (const k of RET_INFO) {
+      if (locks[k] || fr[k] == null || fr[k] === '') continue;
+      if (r[k] == null || r[k] === '' || (newer && r[k] !== fr[k])) { r[k] = fr[k]; changed = true; }
+    }
+    if (fr.carrier && fr.tracking && (changed || !r.trackUrl)) r.trackUrl = trackUrl(r.carrier, r.tracking);
+    const names = new Set((r.items || []).map(n => n.toLowerCase()));
+    for (const n of fr.items || []) if (!names.has(n.toLowerCase()) && (r.items || []).length < 12) { (r.items = r.items || []).push(n); changed = true; }
+    if (fr.undelivered && !r.undelivered) { r.undelivered = true; changed = true; }
+    if (newer && (!r.source || r.source.msgId !== f.source.msgId)) { r.source = f.source; changed = true; }
+    // Something being returned has arrived; a package the carrier sent back never will.
+    const L = cur.locks || {};
+    if (!L.status && cur.status !== 'cancelled' && rank(cur.status) < rank('delivered') && (fr.undelivered || fr.status !== 'refunded')) {
+      cur.status = cur.kind === 'pickup' && !fr.undelivered ? 'pickedup' : got; changed = true;
+    }
+    if (fr.undelivered && cur.issue && !L.status) { cur.issue = ''; cur.guess = false; changed = true; }
+    if (!(cur.items || []).length && f.items.length && !L.items) { cur.items = f.items; changed = true; }
+    if (!cur.orderNo && f.orderNo) { cur.orderNo = f.orderNo; changed = true; }
+    return changed ? 'changed' : 'same';
+  }
   const FIRST_WINS = ['store', 'storeKey', 'orderNo', 'orderDate'];
   const INFO_KEYS = ['store', 'storeKey', 'orderNo', 'orderDate', 'total', 'cur', 'carrier', 'tracking', 'trackUrl', 'eta', 'etaEnd', 'pickupBy'];
   // ctx: {graves, revive:Set, byHand}. Returns 'new', 'changed', 'same' or 'gone'.
   function upsert(orders, f, ctx = {}) {
     const graves = ctx.graves || {}, when = o => (o.source && o.source.date) || 0;
     if (graves['orders:' + f.id] && !(ctx.revive && ctx.revive.has(f.id))) return 'gone';
+    if (f.isReturn) return foldReturn(orders, f);
     const cur = findMatch(orders, f);
     if (!cur) {
       const o = { ...f, created: Date.now(), notes: '', locks: {} };
@@ -712,7 +833,8 @@
   }
 
   const api = { parseEmail, parseText, upsert, findMatch, findTotal, findOrderNo, trackingIn, trackUrl, statusOf, itemsFromText, fromSchema, htmlToText, jsonLdBlocks, microdata,
-    findDates, dateIn, senderInfo, storeOf, kindOf, idFor, hash, keyOf, addDays, daysBetween, localYmd, rank, STATUS_NAMES, KINDS, carrierName, lastDay };
+    findDates, dateIn, senderInfo, storeOf, kindOf, idFor, hash, keyOf, addDays, daysBetween, localYmd, rank, STATUS_NAMES, KINDS, carrierName, lastDay,
+    returnOf, retRank, RETURN_NAMES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OrdersParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

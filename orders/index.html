@@ -625,6 +625,8 @@ a.rowbtn{color:var(--text);text-decoration:none}
 .osteps{display:grid;gap:4px}
 .osteps i{height:5px;border-radius:3px;background:var(--track)}
 .osteps i.on{background:var(--accent)}
+/* a return: its own bar and timeline, in the warm colour */
+.osteps.ret i.on,.otl.ret li.on::before,.otl.ret li.on.link::after{background:var(--warn)}
 .ocarrier{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:0}
 .ocarrier .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .cpill{flex:none;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
@@ -791,6 +793,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .otl li.on::before,.osteps i.on{background:var(--mc-teal)}
 .otl li:not(:last-child)::after{background:var(--track)}
 .otl li.on.link::after{background:var(--mc-teal)}
+.osteps.ret i.on,.otl.ret li.on::before,.otl.ret li.on.link::after{background:var(--mc-orange)}
 .ohero h3{font-weight:600;letter-spacing:-.03em}
 .okv .total{font-weight:600}
 .copy{color:var(--accent-text)}

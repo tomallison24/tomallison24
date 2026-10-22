@@ -11,6 +11,10 @@ tracking number, and opens the carrier's own tracking page with one tap.
   (no shipping email yet). Each order is a card with the store, the item, the
   total, where it is (a four-step bar, three for a pickup), the courier and the
   tracking number.
+- **Returns** appears once there's a return (below): **To send back** (with
+  the day to drop it off by), **Waiting for the refund** and **Refunded** (for
+  30 days). A return due within the week also leads **On the way**, under
+  **Returns to send back**.
 - **Delivered** keeps what has arrived or been picked up, newest first, by
   week and month.
 - **To check** appears when something needs a look (below).
@@ -187,6 +191,58 @@ email's thread, and any email that names its order or tracking number are left
 out of what Ipsy finds or reads in Gmail. It still syncs and shows as usual:
 Private only hides it from Ipsy. **Settings → Ipsy can search Gmail** turns
 Ipsy's Gmail off altogether, on this phone (`home/ipsy.js`, `privacy`).
+
+## Returns
+
+Return and refund emails are read like order emails, but onto the order's
+**return** (`o.ret`), never its own status: Amazon's *Return request
+confirmed*, *Your refund confirmation*, a store's *We received your return*, an
+*RMA* approval with a return label. A return has four steps: **Return started**
+(a request or a label), **Sent back** (dropped off, posted), **Store has it**
+and **Refunded**, each with its date.
+
+- **What's read**: the day to drop it off or send it by (*Drop off by Thu, Nov
+  19*), where (*Dropoff location*), the reason, the store's return number (RMA),
+  the return parcel's tracking number, the refund (estimated until it's
+  refunded) and where it goes (*your Visa ending in 1234*), and the items being
+  returned. The newest email wins (Amazon sometimes moves the drop-off day), and
+  a step never goes backwards.
+- **Which order**: matched on the order number (then the store), so it joins
+  the order the app already has, and the order keeps its own email. A return of
+  something the app never saw ordered (an order email sent to another inbox)
+  becomes an order of its own, already delivered. A return with no order number
+  but an RMA (or a store and a refund) is kept on its own too.
+- **What it does to the order**: something being returned has arrived, so an
+  order still *on its way* is marked delivered (picked up for a pickup). A
+  package the carrier sent back (*being returned to us by the carrier*) marks
+  the order canceled and clears its *Check details*.
+- **On the order's page**: the return's steps, then Drop off by, Drop off at,
+  Returning, Reason, Return number, Return tracking (with Copy, and **Track the
+  return** when the carrier is known), Refund to, and the refund. **Mark as sent
+  back** and **Mark as refunded** move it on; **Open the return email in Mail**.
+  **Start a return** on any delivered or picked-up order starts one by hand;
+  **Edit details** has a Return section (the step, drop-off day, refund, return
+  number, tracking, where, reason): what you change there is locked like any
+  edit, though a later email still moves the step forward.
+- **Not a return**: tax returns, car rentals, travel refunds and trade-ins. In
+  an email's body only plain news counts (*your return request has been
+  approved*): every order email's footer offers to *Start a return*.
+- **Which emails**: the Gmail search also looks for *return*, *returned*,
+  *refund*, *refunded* and *RMA* in the subject (`QUERY_V` 2). Return emails read
+  before returns existed (Amazon's came in as orders) are read once more, the
+  year's worth, even though they were already seen (`RETURNS_V`).
+- **Synced and logged**: the return is part of the order, so it goes to the
+  family's Sheet with it; the Log tab gets a **Return** row for each step
+  (*Return started → Refunded ($21.50)*).
+- **Ipsy** sees each order's return (`find_orders` with `status: returns`
+  lists them) and can start, move on or fix one (`update_order`'s `ret`).
+- Checked against real emails (the owner's; none in the repository, the tests
+  use made-up ones in the same layouts): Amazon's return request (and its
+  second email with a later drop-off day) and its refund for a package the
+  carrier sent back, a jewellery store's *We received your return*, and a beauty
+  store's RMA approval. Not seen: Walmart's, Target's or any other big store's
+  return emails, or a *your return is on its way* email. **Have Ipsy check this
+  order** still reads the order's own email, not the return's.
 
 ## One-off clean-up
 

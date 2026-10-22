@@ -173,11 +173,24 @@ const FIELDS = {
   kind: { type: 'string', enum: KINDS },
   pickupBy: { ...DAY, description: 'Last day a ready pickup is held (YYYY-MM-DD)' },
   notes: { type: 'string' },
+  ret: {
+    type: ['object', 'null'], additionalProperties: false,
+    description: 'A return of this order (null removes it). Only the parts given change. status: started (return requested or label made), sent (dropped off or posted), received (the store has it), refunded.',
+    properties: {
+      status: { type: 'string', enum: ['started', 'sent', 'received', 'refunded'] },
+      by: { ...DAY, description: 'Last day to drop it off or send it back (YYYY-MM-DD)' },
+      where: { type: 'string', description: 'Where to drop it off' },
+      reason: { type: 'string' }, rma: { type: 'string', description: 'The store\'s return number (RMA)' },
+      refund: { type: ['number', 'null'], description: 'Refund, in dollars (estimated until refunded)' },
+      refundTo: { type: 'string', description: 'Where the refund goes, e.g. "your Visa ending in 1234"' },
+      tracking: { type: 'string', description: 'The return parcel\'s tracking number' }, carrier: { type: 'string' },
+    },
+  },
 };
 export const IPSY_CLIENT_TOOLS = [
   T('find_orders', 'Find orders in the app. With no filters, the newest orders. Returns short summaries with each order\'s id.', {
     query: { type: 'string', description: 'Words to match in the store, items, order number, tracking number, carrier or notes' },
-    status: { type: 'string', enum: ['open', 'done', 'check', ...STATUSES], description: 'open: not arrived yet; done: delivered, picked up or canceled; check: marked "Check details"' },
+    status: { type: 'string', enum: ['open', 'done', 'check', 'returns', ...STATUSES], description: 'open: not arrived yet; done: delivered, picked up or canceled; check: marked "Check details"; returns: has a return (summaries show its step, drop-off day and refund)' },
     kind: { type: 'string', enum: KINDS },
     from: { ...DAY, description: 'Only orders with activity on or after this day' },
     to: { ...DAY, description: 'Only orders with activity on or before this day' },
@@ -215,6 +228,7 @@ export const IPSY_SYSTEM = `You are Ipsy, the friendly helper inside Orders, an 
 
 What you can do, with tools that run on the person's phone:
 - Look through their orders (find_orders, get_orders) and change them: edit details, mark one delivered or picked up, add one, delete, and merge duplicates (update_order, create_order, delete_orders, merge_orders). show_order opens one on their screen.
+- Keep track of returns: an order's ret is its return (started, sent back, received by the store, refunded), with the day to drop it off by, where, and the refund. The app reads return and refund emails into it; you can start one, move it on or fix it with update_order's ret.
 - Search and read their Gmail, read-only (search_gmail, read_email), to check an order against its emails or find one the app missed. You can't send, delete or change email.
 - Search the web and read pages (web_search, web_fetch): a store's return policy, a product's details, a carrier's tracking page, whether a store has a known delay.
 

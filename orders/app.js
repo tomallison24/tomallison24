@@ -50,7 +50,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const KEY = 'allison-orders-v1';
   const K = {
     token: 'orders.token', state: 'orders.state', silent: 'orders.silent', silentFail: 'orders.silentFail', lastAuth: 'orders.lastAuth', hint: 'orders.hint', me: 'orders.me',
-    seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', tab: KEY + '-tab',
+    seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', returnsV: KEY + '-returns-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
     family: KEY + '-family', notMine: KEY + '-not-mine',
     aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
@@ -65,9 +65,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // labelled: Gmail keeps that label up to date as mail arrives. Offers are skipped.
   const SENDERS = ['ups.com', 'fedex.com', 'usps.com', 'dhl.com', 'ontrac.com', 'lasership.com', 'narvar.com', 'amazon.com', 'ebay.com', 'walmart.com',
     'target.com', 'bestbuy.com', 'homedepot.com', 'lowes.com', 'costco.com', 'etsy.com', 'wayfair.com', 'chewy.com', 'shopifyemail.com'];
-  const SUBJECTS = ['order', '"your package"', 'shipped', 'shipping', 'shipment', 'delivered', 'delivery', 'tracking', 'pickup', '"pick up"', 'receipt', 'purchase', 'invoice', '"ready for"'];
+  const SUBJECTS = ['order', '"your package"', 'shipped', 'shipping', 'shipment', 'delivered', 'delivery', 'tracking', 'pickup', '"pick up"', 'receipt', 'purchase', 'invoice', '"ready for"',
+    'return', 'returns', 'returned', 'refund', 'refunded', 'RMA'];
   const QUERY = '-in:chats -in:spam -in:trash -label:Travel {label:Orders (-category:promotions {' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '})}';
-  const QUERY_V = '1';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
+  const QUERY_V = '2';               // when QUERY widens, the next scan looks back FIRST_SCAN once more
+  // Returns arrived with QUERY_V 2. Return emails read before then (Amazon's, say) were read as orders,
+  // so the year's return emails are read once more, even if already seen.
+  const RETURNS_Q = '-in:chats -in:spam -in:trash -label:Travel {subject:return subject:returns subject:returned subject:refund subject:refunded subject:RMA}';
+  const RETURNS_V = '1';
 
   const I = {
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
@@ -79,6 +84,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     spark: '<svg viewBox="0 0 24 24"><path d="M11 3.6l1.9 5.1 5.1 1.9-5.1 1.9L11 17.6l-1.9-5.1L4 10.6l5.1-1.9z"/><path d="M18.4 15.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     box: '<svg viewBox="0 0 24 24"><path d="M3.8 8.2L12 4l8.2 4.2v7.6L12 20l-8.2-4.2z"/><path d="M3.8 8.2L12 12.4l8.2-4.2M12 12.4V20"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
+    ret: '<svg viewBox="0 0 24 24"><path d="M8.6 5.4L4.4 9.6l4.2 4.2"/><path d="M4.6 9.6h10.2a4.8 4.8 0 0 1 0 9.6H11"/></svg>',
   };
   const KIND_ROWS = [
     ['package', 'Packages', 'Anything that ships to you'],
@@ -90,6 +96,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const CARRIERS = ['UPS', 'USPS', 'FedEx', 'DHL', 'OnTrac', 'LaserShip', 'Amazon Logistics', 'Veho'];
   const OPEN = ['ordered', 'shipped', 'out', 'pickup'];
   const PACKAGE_STEPS = ['ordered', 'shipped', 'out', 'delivered'], PICKUP_STEPS = ['ordered', 'pickup', 'pickedup'];
+  const RET_STEPS = ['started', 'sent', 'received', 'refunded'];
+  const RET_STEP_NAMES = { started: 'Return started', sent: 'Sent back', received: 'Store has it', refunded: 'Refunded' };
+  const RET_SHOW_DAYS = 30;          // a refunded return stays under Returns this long
 
   // ---------------------------------------------------------------------
   // Data: orders, kept like Notes keeps notes
@@ -170,6 +179,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let p; try { p = JSON.parse(prev); } catch { return; }
     const same = k => JSON.stringify(p[k] == null ? null : p[k]) === JSON.stringify(o[k] == null ? null : o[k]);
     const fields = Object.keys(LOG_WATCH).filter(k => !same(k)).map(k => LOG_WATCH[k]);
+    const pr = (p.ret && p.ret.status) || '', or = (o.ret && o.ret.status) || '';
+    if (pr !== or) {
+      const amt = or && o.ret.refund != null ? ' (' + money(o.ret.refund, o.ret.cur || o.cur) + ')' : '';
+      logEvent('Return', o, (pr ? RET_STEP_NAMES[pr] + ' → ' : '') + (or ? RET_STEP_NAMES[or] + amt : 'Return removed'), 'ret-' + o.id + '-' + (or || 'none'));
+    }
     if (p.status !== o.status) return logEvent('Status changed', o, (P.STATUS_NAMES[p.status] || p.status) + ' → ' + (P.STATUS_NAMES[o.status] || o.status) + (fields.length ? '; also ' + fields.join(', ') : ''), 'st-' + o.id + '-' + p.status + '-' + o.status + '-' + todayStr());
     if (fields.length) logEvent('Updated', o, 'Changed: ' + fields.join(', '));
   }
@@ -257,6 +271,28 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       case 'delivered': return { label: 'Delivered', cls: 's-done', when: s.delivered ? fmtDay(s.delivered) : '' };
       case 'pickedup': return { label: 'Picked up', cls: 's-done', when: s.pickedup ? fmtDay(s.pickedup) : '' };
       case 'cancelled': return { label: 'Canceled', cls: 's-bad', when: '' };
+      default: return { label: '', cls: '', when: '' };
+    }
+  }
+  // Returns: o.ret = { status: started|sent|received|refunded, steps, by (drop off or send by), where,
+  // reason, refund, cur, refundTo, rma, tracking, carrier, trackUrl, items, undelivered, source, locks }
+  const hasRet = o => !!(o.ret && o.ret.status);
+  const retOpen = o => hasRet(o) && o.ret.status !== 'refunded';
+  const retDay = o => { const r = o.ret || {}, st = r.steps || {}; return st.refunded || st.received || st.sent || st.started || last(o) || ''; };
+  const retShows = o => retOpen(o) || (hasRet(o) && daysFrom(retDay(o) || todayStr(), todayStr()) <= RET_SHOW_DAYS);
+  const retSoon = o => hasRet(o) && o.ret.status === 'started' && !!o.ret.by && daysFrom(todayStr(), o.ret.by) <= 7;
+  const refundWord = o => o.ret.refund != null ? money(o.ret.refund, o.ret.cur || o.cur) : '';
+  function retState(o) {
+    const r = o.ret, s = r.steps || {}, amt = refundWord(o);
+    switch (r.status) {
+      case 'started': {
+        if (r.undelivered) return { label: 'Coming back', cls: 's-now', when: 'Sent back by the carrier' };
+        const left = r.by ? daysFrom(todayStr(), r.by) : null;
+        return { label: 'Return started', cls: left != null && left <= 3 ? 's-warn' : 's-now', when: r.by ? (left < 0 ? 'Was due ' + fmtMD(r.by) : 'Drop off by ' + (left <= 1 ? dayWord(r.by) : fmtDay(r.by))) : s.started ? 'Since ' + fmtMD(s.started) : '' };
+      }
+      case 'sent': return { label: 'Sent back', cls: 's-now', when: [s.sent ? fmtMD(s.sent) : '', amt ? amt + ' refund to come' : ''].filter(Boolean).join(' · ') };
+      case 'received': return { label: 'Store has it', cls: 's-now', when: amt ? amt + ' refund to come' : 'Refund to come' };
+      case 'refunded': return { label: 'Refunded', cls: 's-done', when: [amt, s.refunded ? fmtMD(s.refunded) : ''].filter(Boolean).join(' · ') };
       default: return { label: '', cls: '', when: '' };
     }
   }
@@ -397,13 +433,24 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (o.status === 'ordered' && o.kind !== 'pickup') return '<div class="ocarrier"><span class="t">Waiting for a shipping email</span></div>';
     return '';
   }
+  function retBar(o) {
+    const r = P.retRank(o.ret.status);
+    return '<div class="osteps ret" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true">' + RET_STEPS.map(s => '<i' + (P.retRank(s) <= r ? ' class="on"' : '') + '></i>').join('') + '</div>';
+  }
+  function retRow(o) {
+    const r = o.ret;
+    if (r.status === 'started' && r.where) return '<div class="ocarrier"><span class="t">' + esc(r.where) + '</span></div>';
+    if (r.tracking) return '<div class="ocarrier">' + (r.carrier ? '<span class="cpill">' + esc(r.carrier) + '</span>' : '') + '<span class="t">' + esc(r.tracking) + '</span></div>';
+    if (r.reason) return '<div class="ocarrier"><span class="t">' + esc(r.reason) + '</span></div>';
+    return '';
+  }
   function card(o, i) {
-    const s = stateOf(o), warn = needsCheck(o);
+    const ret = hasRet(o), s = ret ? retState(o) : stateOf(o), warn = !ret && needsCheck(o);
     return '<button class="ocard' + (isOpen(o) ? '' : ' done') + '" type="button" data-o="' + esc(o.id) + '" style="--i:' + i + '">'
       + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore">' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="Private: hidden from Ipsy">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + esc(whatOf(o)) + '</div></div>'
       + (o.total != null ? '<span class="oprice">' + esc(money(o.total, o.cur)) + '</span>' : '') + '</div>'
       + '<div class="ostate"><b class="' + (warn ? 's-warn' : s.cls) + '">' + esc(warn ? 'Check details' : s.label) + '</b><span class="when">' + esc(s.when) + '</span></div>'
-      + stepBar(o) + carrierRow(o) + '</button>';
+      + (ret ? retBar(o) + retRow(o) : stepBar(o) + carrierRow(o)) + '</button>';
   }
   const byEta = (a, b) => (a.eta || '9999').localeCompare(b.eta || '9999') || last(b).localeCompare(last(a));
   const byRecent = (a, b) => last(b).localeCompare(last(a));
@@ -417,6 +464,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     });
     return [['Arriving today', g.today.sort(byEta)], ['Ready for pickup', g.pickup.sort(byEta)], ['On the way', g.way.sort(byEta)], ['Ordered', g.ordered.sort(byEta)]].filter(x => x[1].length);
   }
+  function retSections(list) {
+    const by = (a, b) => (a.ret.by || '9999').localeCompare(b.ret.by || '9999') || retDay(b).localeCompare(retDay(a));
+    const send = list.filter(o => o.ret.status === 'started').sort(by);
+    const back = list.filter(o => o.ret.status === 'sent' || o.ret.status === 'received').sort((a, b) => retDay(b).localeCompare(retDay(a)));
+    const paid = list.filter(o => o.ret.status === 'refunded').sort((a, b) => retDay(b).localeCompare(retDay(a)));
+    return [['To send back', send], ['Waiting for the refund', back], ['Refunded', paid]].filter(x => x[1].length);
+  }
   function doneSections(list) {
     const t = todayStr(), groups = new Map();
     list.filter(o => !isOpen(o)).sort((a, b) => doneDay(b).localeCompare(doneDay(a))).forEach(o => {
@@ -428,16 +482,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return [...groups.entries()];
   }
   function matches(o, q) {
-    const hay = [o.store, o.orderNo, o.tracking, o.carrier, o.notes, ...(o.items || []).map(i => i.name)].join(' ').toLowerCase();
+    const r = o.ret || {};
+    const hay = [o.store, o.orderNo, o.tracking, o.carrier, o.notes, ...(o.items || []).map(i => i.name), r.rma, r.tracking, r.status ? 'return ' + r.status : ''].join(' ').toLowerCase();
     return q.split(/\s+/).every(w => hay.includes(w));
   }
   function render() {
     const vis = orders.filter(kindOn);
-    const way = vis.filter(isOpen), done = vis.filter(o => !isOpen(o)), check = vis.filter(needsCheck);
+    const way = vis.filter(isOpen), done = vis.filter(o => !isOpen(o)), check = vis.filter(o => !hasRet(o) && needsCheck(o)), rets = vis.filter(retShows);
     const q = st.q.trim().toLowerCase();
-    const chips = [['way', 'On the way', way.length], ['done', 'Delivered', done.length]];
+    const chips = [['way', 'On the way', way.length]];
+    if (rets.length) chips.push(['ret', 'Returns', rets.length]);
+    chips.push(['done', 'Delivered', done.length]);
     if (check.length) chips.push(['check', 'To check', check.length]);
-    if (st.tab === 'check' && !check.length) st.tab = 'way';
+    if ((st.tab === 'check' && !check.length) || (st.tab === 'ret' && !rets.length)) st.tab = 'way';
     $('whenChips').innerHTML = chips.map(([k, t, n]) => '<button class="chip glass" type="button" data-when="' + k + '" aria-pressed="' + (!q && st.tab === k) + '">' + esc(t) + ' <span class="n">' + n + '</span></button>').join('');
     slideWhen();
     renderSub(way.length);
@@ -453,11 +510,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       h = (list.length ? '<p class="resulthead">' + plural(list.length, 'result') + '</p>' + list.map(o => card(o, i++)).join('') : '<div class="empty glass"><strong>No match</strong>Try a store, an item or an order number.</div>') + olderRow();
     } else if (st.tab === 'check') {
       h = check.sort(byRecent).map(o => card(o, i++)).join('');
+    } else if (st.tab === 'ret') {
+      h = retSections(rets).map(([t, l]) => group(t, l)).join('');
     } else if (st.tab === 'done') {
       const secs = doneSections(done);
       h = (secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing delivered yet</strong></div>') + olderRow();
     } else {
-      const secs = waySections(way);
+      // A return due within the week leads On the way: it's the one thing here with a deadline.
+      const soon = vis.filter(retSoon).sort((a, b) => a.ret.by.localeCompare(b.ret.by));
+      const secs = (soon.length ? [['Returns to send back', soon]] : []).concat(waySections(way));
       h = secs.length ? secs.map(([t, l]) => group(t, l)).join('') : '<div class="empty glass"><strong>Nothing on the way</strong></div>';
     }
     $('list').innerHTML = h;
@@ -471,6 +532,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const sub = [];
     if (onWay == null) onWay = orders.filter(o => kindOn(o) && isOpen(o)).length;
     if (onWay) sub.push(onWay + ' on the way');
+    const rets = orders.filter(o => kindOn(o) && retOpen(o)).length;
+    if (rets) sub.push(plural(rets, 'return'));
     if (st.scanning) sub.push('Reading Gmail…');
     else if (+ls.get(K.lastScan, 0)) sub.push('Gmail checked ' + ago(+ls.get(K.lastScan, 0)));
     if (signedIn()) { const s = { error: 'Not synced', syncing: 'Syncing…', offline: 'Offline' }[syncState] || (synced ? 'Synced' : ''); if (s) sub.push(s); }
@@ -504,7 +567,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.order = o; renderOrder(); openSheet('opage');
   }
   function finishPage() { st.order = null; closeSheet('opage'); render(); }
+  function retHeadline(o) {
+    const r = o.ret, s = r.steps || {}, amt = refundWord(o);
+    switch (r.status) {
+      case 'started':
+        if (r.undelivered) return { h: 'On its way back to ' + (o.store || 'the store'), p: 'The carrier is sending it back.' + (amt ? ' Refund: ' + amt + '.' : '') };
+        return { h: r.by ? (daysFrom(todayStr(), r.by) < 0 ? 'Return was due ' + fmtDay(r.by) : 'Drop off by ' + fmtDay(r.by)) : 'Return started', p: r.by && s.started ? 'Return started ' + fmtDay(s.started) + '.' : '' };
+      case 'sent': return { h: 'Sent back' + (s.sent ? ' ' + dayWord(s.sent) : ''), p: amt ? amt + ' refund to come once ' + (o.store || 'the store') + ' has it.' : 'Waiting for ' + (o.store || 'the store') + ' to get it.' };
+      case 'received': return { h: (o.store || 'The store') + ' has it', p: amt ? amt + ' refund to come.' : 'Refund to come.' };
+      case 'refunded': return { h: 'Refunded' + (amt ? ' ' + amt : ''), p: (s.refunded ? 'Refunded ' + fmtDay(s.refunded) : '') + (r.refundTo ? (s.refunded ? ' to ' : 'To ') + r.refundTo : '') + (s.refunded || r.refundTo ? '.' : '') + (r.undelivered ? ' The carrier sent it back.' : '') };
+      default: return null;
+    }
+  }
   function headline(o) {
+    if (hasRet(o)) return retHeadline(o);
     const s = o.steps || {}, t = todayStr();
     const via = o.carrier ? ' with ' + o.carrier : '';
     switch (o.status) {
@@ -520,19 +596,43 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       default: return { h: 'Order', p: '' };
     }
   }
+  // The return, under the order: its steps, then what to do and the refund.
+  function retBox(o) {
+    const r = o.ret, s = r.steps || {}, rk = P.retRank(r.status), amt = refundWord(o);
+    let h = '<p class="sechead"><span>Return</span></p><ul class="otl ret" aria-label="Return">' + RET_STEPS.map((k, n) => {
+      const on = P.retRank(k) <= rk, nextOn = RET_STEPS[n + 1] && P.retRank(RET_STEPS[n + 1]) <= rk;
+      return '<li class="' + (on ? 'on' : 'todo') + (on && nextOn ? ' link' : '') + '"><span>' + esc(RET_STEP_NAMES[k]) + '</span><time>' + esc(s[k] ? fmtMD(s[k]) : '—') + '</time></li>';
+    }).join('') + '</ul>';
+    const rows = [];
+    if (r.by && r.status === 'started') rows.push('<div><dt>Drop off by</dt><dd>' + esc(fmtDay(r.by)) + '</dd></div>');
+    if (r.where && r.status === 'started') rows.push('<div><dt>Drop off at</dt><dd>' + esc(r.where) + '</dd></div>');
+    if ((r.items || []).length) rows.push('<div><dt>Returning</dt><dd>' + r.items.map(esc).join('<br>') + '</dd></div>');
+    if (r.reason) rows.push('<div><dt>Reason</dt><dd>' + esc(r.reason) + '</dd></div>');
+    if (r.rma) rows.push('<div><dt>Return number</dt><dd>' + esc(r.rma) + '</dd></div>');
+    if (r.tracking) rows.push('<div><dt>Return tracking</dt><dd>' + esc(r.tracking) + ' <button class="copy" type="button" data-copy="' + esc(r.tracking) + '">Copy</button></dd></div>');
+    if (r.refundTo) rows.push('<div><dt>Refund to</dt><dd>' + esc(r.refundTo.replace(/^your /i, 'Your ')) + '</dd></div>');
+    if (amt) rows.push('<div class="total"><dt>' + (r.status === 'refunded' ? 'Refunded' : 'Refund (estimated)') + '</dt><dd>' + esc(amt) + '</dd></div>');
+    if (rows.length || (r.trackUrl && r.carrier)) {
+      h += '<div class="obox">' + (rows.length ? '<dl class="okv">' + rows.join('') + '</dl>' : '');
+      if (r.trackUrl && r.carrier && r.status !== 'refunded') h += '<a class="ctabtn" href="' + esc(r.trackUrl) + '" target="_blank" rel="noopener noreferrer">Track the return on ' + esc(r.carrier) + I.ext + '</a>';
+      h += '</div>';
+    }
+    return h;
+  }
   function renderOrder() {
     const o = st.order; if (!o) return;
     const hd = headline(o), steps = stepsOf(o), r = P.rank(o.status), s = o.steps || {};
     let h = '<div class="ohero"><div class="who">' + mono(o) + '<span>' + esc(o.store || 'Order') + '</span></div><h3>' + esc(hd.h) + '</h3>' + (hd.p ? '<p>' + esc(hd.p) + '</p>' : '') + '</div>';
     if (needsCheck(o)) h += '<div class="verify"><span>' + esc(checkReason(o)) + ' Check the details, then tap Looks right.</span><button class="textbtn" type="button" id="opOk">Looks right</button></div>';
-    if (o.status !== 'cancelled') {
+    // An order known only from its return has no steps of its own to show.
+    if (o.status !== 'cancelled' && !(hasRet(o) && !Object.keys(s).length)) {
       h += '<ul class="otl" aria-label="Progress">' + steps.map((k, n) => {
         const on = P.rank(k) <= r, nextOn = steps[n + 1] && P.rank(steps[n + 1]) <= r;
         return '<li class="' + (on ? 'on' : 'todo') + (on && nextOn ? ' link' : '') + '"><span>' + esc(stepName(o, k)) + '</span><time>' + esc(s[k] ? fmtMD(s[k]) : '—') + '</time></li>';
       }).join('') + '</ul>';
     }
     const rows = [];
-    if (o.carrier || o.tracking || o.status !== 'ordered') {
+    if (o.carrier || o.tracking || (o.status !== 'ordered' && !(hasRet(o) && !s.shipped && !s.delivered))) {
       rows.push('<div><dt>Carrier</dt><dd>' + esc(o.carrier || (o.kind === 'pickup' ? 'Store pickup' : '—')) + '</dd></div>');
       if (o.kind !== 'pickup') rows.push('<div><dt>Tracking number</dt><dd>' + (o.tracking ? esc(o.tracking) + ' <button class="copy" type="button" data-copy="' + esc(o.tracking) + '">Copy</button>' : '—') + '</dd></div>');
     }
@@ -550,8 +650,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (o.total != null) h += '<dl class="okv"><div class="total"><dt>Total</dt><dd>' + esc(money(o.total, o.cur)) + '</dd></div></dl>';
       h += '</div>';
     }
+    if (hasRet(o)) h += retBox(o);
     if (o.notes) h += '<div class="obox"><p style="margin:8px 0;white-space:pre-line;overflow-wrap:anywhere">' + esc(o.notes) + '</p></div>';
     const acts = [];
+    if (hasRet(o)) {
+      const r = o.ret;
+      if (r.status === 'started' && !r.undelivered) acts.push('<button class="rowbtn" type="button" id="opRetSent"><span class="ic">' + I.ret + '</span><span>Mark as sent back<span class="sub">Dropped off or posted</span></span></button>');
+      if (r.status !== 'refunded') acts.push('<button class="rowbtn" type="button" id="opRetPaid"><span class="ic">' + I.check + '</span><span>Mark as refunded</span></button>');
+      if (r.source && r.source.threadId) acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(r.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the return email in Mail<span class="sub">' + esc(r.source.subject || '') + '</span></span></a>');
+    }
     if (o.source && o.source.threadId) {
       acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
@@ -559,6 +666,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (o.source && o.source.msgId && !o.private) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Ipsy is reading it…' : 'Have Ipsy check this order') + '</span></button>');
     acts.push('<button class="rowbtn" type="button" id="opEdit2"><span class="ic">' + I.edit + '</span><span>Edit details</span></button>');
     if (isOpen(o)) acts.push('<button class="rowbtn" type="button" id="opDelivered"><span class="ic">' + I.check + '</span><span>' + (o.kind === 'pickup' ? 'Mark as picked up' : 'Mark as delivered') + '</span></button>');
+    if (!hasRet(o) && (o.status === 'delivered' || o.status === 'pickedup')) acts.push('<button class="rowbtn" type="button" id="opRetStart"><span class="ic">' + I.ret + '</span><span>Start a return<span class="sub">Keeps track of it until the refund</span></span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
     // Private: hidden from Ipsy (ipsy-tools.js), with its emails; it still syncs and shows here as usual.
     h += '<div class="rgroup glass"><button class="swrow" type="button" role="switch" id="opPrivate" aria-checked="' + !!o.private + '">' + I.lock
@@ -585,6 +693,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     if (e.target.closest('#opEdit2')) return openEdit(o.id);
+    const retTo = e.target.closest('#opRetStart') ? 'started' : e.target.closest('#opRetSent') ? 'sent' : e.target.closest('#opRetPaid') ? 'refunded' : '';
+    if (retTo) {
+      const before = JSON.parse(JSON.stringify(o)), r = o.ret = o.ret || { status: '', steps: {} };
+      r.status = retTo; r.steps = { ...(r.steps || {}), [retTo]: (r.steps || {})[retTo] || todayStr() };
+      save(); renderOrder(); render();
+      toast(retTo === 'started' ? 'Return started. Edit details adds the drop-off date.' : retTo === 'sent' ? 'Marked as sent back' : 'Marked as refunded',
+        () => { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); save(); if (st.order === o) renderOrder(); render(); });
+      return;
+    }
     if (e.target.closest('#opDelivered')) {
       const to = o.kind === 'pickup' ? 'pickedup' : 'delivered', before = JSON.parse(JSON.stringify(o));
       o.status = to; o.steps = { ...(o.steps || {}), [to]: (o.steps || {})[to] || todayStr() }; o.locks = { ...(o.locks || {}), status: true }; o.issue = ''; o.checked = true; o.guess = false;
@@ -788,6 +905,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ['status', 'Status', '', 'select'], ['kind', 'Kind', '', 'select'],
     ['pickupBy', 'Pick up by', '', 'date'],
   ];
+  const RET_FIELDS = [['by', 'Drop off by', 'date'], ['refund', 'Refund', 'number'], ['rma', 'Return number', 'text'], ['tracking', 'Return tracking', 'text', true], ['where', 'Drop off at', 'text', true], ['reason', 'Reason', 'text', true]];
   const itemsText = it => (it || []).map(i => (i.qty > 1 ? i.qty + ' x ' : '') + i.name).join('\n');
   function parseItems(text, old) {
     const prev = new Map((old || []).map(i => [i.name.toLowerCase(), i]));
@@ -817,6 +935,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       else ctl = '<input id="ef_' + k + '" data-k="' + k + '" type="' + (type === 'number' ? 'text' : type) + '"' + (type === 'number' ? ' inputmode="decimal"' : '') + ' value="' + esc(k === 'total' ? (o.total != null ? o.total : '') : o[k] || '') + '" placeholder="' + esc(ph) + '" autocomplete="off">';
       return '<div class="f' + (wide ? ' w' : '') + '"><label for="ef_' + k + '">' + esc(label) + '</label>' + ctl + '</div>';
     }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="Anything to remember">' + esc(o.notes || '') + '</textarea></div></div></div>';
+    if (o.ret && o.ret.status) {
+      const r = o.ret, val = k => k === 'refund' ? (r.refund != null ? r.refund : '') : r[k] || '';
+      h += '<p class="sechead"><span>Return</span></p><div class="box glass"><div class="kv">'
+        + '<div class="f"><label for="ef_ret_status">Return</label><select id="ef_ret_status" data-r="status">' + RET_STEPS.map(k => '<option value="' + k + '"' + (r.status === k ? ' selected' : '') + '>' + esc(RET_STEP_NAMES[k]) + '</option>').join('') + '</select></div>'
+        + RET_FIELDS.map(([k, label, type, wide]) => '<div class="f' + (wide ? ' w' : '') + '"><label for="ef_ret_' + k + '">' + esc(label) + '</label><input id="ef_ret_' + k + '" data-r="' + k + '" type="' + (type === 'number' ? 'text' : type) + '"' + (type === 'number' ? ' inputmode="decimal" placeholder="0.00"' : '') + ' value="' + esc(val(k)) + '" autocomplete="off"></div>').join('')
+        + '</div></div>';
+    }
     $('edBody').innerHTML = h;
   }
   $('edBody').addEventListener('change', e => { if (e.target.id === 'ef_kind') { readEdit(); renderEdit(); } });
@@ -827,6 +952,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (k === 'items') { o.items = parseItems(inp.value, (old && old.items) || o.items); return; }
       if (k === 'total') { const n = parseFloat(v.replace(/[^0-9.]/g, '')); o.total = isNaN(n) ? null : n; return; }
       o[k] = v;
+    });
+    $('edBody').querySelectorAll('[data-r]').forEach(inp => {
+      const k = inp.dataset.r, v = inp.value.trim();
+      if (k === 'refund') { const n = parseFloat(v.replace(/[^0-9.]/g, '')); o.ret.refund = isNaN(n) ? null : n; }
+      else o.ret[k] = v;
     });
     return old;
   }
@@ -850,6 +980,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           if (JSON.stringify(cur[k] == null ? '' : cur[k]) !== JSON.stringify(o[k] == null ? '' : o[k])) locks[k] = true;
         });
         const next = { ...cur, ...o, locks, steps: { ...(cur.steps || {}) } };
+        if (o.ret && cur.ret) {
+          // what you set on the return is yours: a later email doesn't change it
+          const was = cur.ret, rl = { ...(was.locks || {}) };
+          ['by', 'refund', 'where', 'reason', 'rma', 'tracking'].forEach(k => { if (String(was[k] == null ? '' : was[k]) !== String(o.ret[k] == null ? '' : o.ret[k])) rl[k] = true; });
+          next.ret = { ...o.ret, locks: rl, steps: { ...(was.steps || {}) } };
+          if (next.ret.status !== was.status) next.ret.steps[next.ret.status] = next.ret.steps[next.ret.status] || todayStr();
+          if (next.ret.tracking !== was.tracking) { next.ret.carrier = next.ret.tracking ? next.ret.carrier || '' : ''; next.ret.trackUrl = next.ret.carrier && next.ret.tracking ? P.trackUrl(next.ret.carrier, next.ret.tracking) : ''; }
+          if (next.ret.refund == null) delete next.ret.refund;
+        }
         next.storeKey = P.keyOf(next.store);
         if (next.status !== cur.status && next.status !== 'cancelled') next.steps[next.status] = next.steps[next.status] || todayStr();
         if (next.carrier !== cur.carrier || next.tracking !== cur.tracking) next.trackUrl = next.carrier && next.tracking ? P.trackUrl(next.carrier, next.tracking) : '';
@@ -1009,6 +1148,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         (r.messages || []).forEach(m => ids.push(m));
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < 4000);
+      // Once: the year's return emails again, even those already read (as orders, before returns).
+      const again = new Set(), retsDue = ls.get(K.returnsV, '') !== RETURNS_V;
+      if (retsDue) {
+        pageToken = undefined;
+        do {
+          const r = await gmail('/messages', { q: FIRST_SCAN + ' ' + RETURNS_Q, maxResults: 100, pageToken });
+          (r.messages || []).forEach(m => { again.add(m.id); if (!ids.some(x => x.id === m.id)) ids.push(m); });
+          pageToken = r.nextPageToken;
+        } while (pageToken && again.size < 1000);
+        // Taken off "read" once; a long first read goes on in batches without reading them again.
+        if (ls.get(K.returnsV, '') !== RETURNS_V + '-reading') { again.forEach(id => seen.delete(id)); saveSeen(); ls.set(K.returnsV, RETURNS_V + '-reading'); }
+      }
       const fresh = ids.filter(m => !seen.has(m.id));
       more = fresh.length > MAX_SCAN;
       const todo = fresh.slice(0, MAX_SCAN);                      // newest first
@@ -1022,7 +1173,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         if (html && /itemscope/i.test(html) && window.DOMParser) { try { doc = new DOMParser().parseFromString(html, 'text/html'); } catch {} }
         const r = P.parseEmail({ html, text, doc, subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now(), id: msg.id, threadId: msg.threadId });
         r.orders.forEach(f => {
-          if (kinds[f.kind] === false) { skipped[m.id] = f.kind; logEvent('Left out', f, 'The “' + f.kind + '” kind is switched off in Settings', 'skip-' + m.id + '-' + f.id); return; }   // switched off in Settings: remembered, so turning it on reads it; the Log tab still gets it
+          if (kinds[f.kind] === false && !(f.isReturn && P.findMatch(orders, f))) { skipped[m.id] = f.kind; logEvent('Left out', f, 'The “' + f.kind + '” kind is switched off in Settings', 'skip-' + m.id + '-' + f.id); return; }   // switched off in Settings: remembered, so turning it on reads it; the Log tab still gets it
           const x = P.upsert(orders, f, { graves, revive });
           if (x === 'new') added++; else if (x === 'changed') changed++;
         });
@@ -1030,7 +1181,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
       });
-      if (!more) { ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V); }
+      if (!more) { ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V); ls.set(K.returnsV, RETURNS_V); }
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
@@ -1052,7 +1203,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('scanBtn').onclick = () => scan({ loud: true });
   // Due every half hour, and straight away once the search has widened.
-  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
+  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || ls.get(K.returnsV, '') !== RETURNS_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Settings
