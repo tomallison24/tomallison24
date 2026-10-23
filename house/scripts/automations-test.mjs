@@ -1,6 +1,7 @@
 // Home's Automations view (house/automations.js): every Home Assistant
-// automation's name, by group; tapping one shows whether it is on, the devices
-// it works with their state, what it does and when it runs.
+// automation's name, by group, with its switch; tapping a name shows whether
+// it is on, the devices it works with their state, what it does and when it
+// runs; a switch turns it on or off.
 // In the preview, the list is Home's copy of ha-config (automations-data.js).
 // Live, Home Assistant is a stand-in (Playwright's WebSocket routing, no
 // network) with a few automations: their status is its own; what each does
@@ -55,7 +56,7 @@ async function phone({ scheme = 'dark', design = 'glass', ha = null } = {}) {
   }, [design, !!ha]);
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  const asked = [];
+  const asked = [], calls = [];
   if (ha) await page.routeWebSocket('wss://ha.example/api/websocket', ws => {
     ws.send(JSON.stringify({ type: 'auth_required', ha_version: '2026.10.0' }));
     ws.onMessage(m => {
@@ -75,6 +76,8 @@ async function phone({ scheme = 'dark', design = 'glass', ha = null } = {}) {
           'cover.office_blinds': s('open', { friendly_name: 'Office Blinds', current_position: 40 }),
         } } }));
       }
+      // A switch's call: taken, and (like a slow Home Assistant) not reported back.
+      if (d.type === 'call_service') { calls.push(d); ws.send(JSON.stringify({ id: d.id, type: 'result', success: true, result: {} })); }
       if (d.type === 'automation/config' || d.type === 'script/config') {
         asked.push(d.entity_id);
         if (!ha.admin) return ws.send(JSON.stringify({ id: d.id, type: 'result', success: false, error: { code: 'unauthorized', message: 'Unauthorized' } }));
@@ -91,13 +94,15 @@ async function phone({ scheme = 'dark', design = 'glass', ha = null } = {}) {
   await page.click('#viewBtn');
   await page.click('#viewMenu [data-view="autos"]');
   await page.waitForTimeout(400);
-  return { ctx, page, errors, asked };
+  return { ctx, page, errors, asked, calls };
 }
 const row = (page, ent) => page.locator(`#g-autos [data-dv="autos:${ent}"]`);
+const swOf = (page, ent) => row(page, ent).locator('[data-a="ausw"]');
 const groupOf = (page, ent) => row(page, ent).evaluate(c => c.closest('.au-group').querySelector('.vsec-h span').textContent);
-// Opens one's popup: its title, its pill and everything in it.
+// Opens one's popup (a tap on its name): its title, its pill and everything in it.
 async function popup(page, ent) {
-  await row(page, ent).click();
+  const name = row(page, ent).locator('[data-a="open"]');
+  await (await name.count() ? name : row(page, ent)).click();
   await page.waitForSelector('#devWrap.open', { state: 'attached' });
   const out = { title: await page.textContent('#dTitle'), pill: await page.textContent('#devWrap [data-s="pill"]'), body: await page.textContent('#devWrap [data-s="body"]') };
   await page.keyboard.press('Escape');
@@ -117,15 +122,34 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
     assert.equal(groups[0][1], 6, 'Goodnight, Mom\'s Awake and its reminder, Away, Home, Babysitter');
     for (const id of ['1785000000001', 'home_first_one_back', 'babysitter_mode_expire_unused', 'moms_awake_weekday_reminder']) assert.equal(await groupOf(page, 'automation.' + id), 'Routines', id);
     assert.equal(await groupOf(page, 'automation.1785890100001'), 'Blinds');
-    // Only the name on a row: no status, devices or description.
-    assert.equal(await row(page, 'automation.1785890100001').textContent(), 'Blinds - Open Office Blinds at 08:30');
-    assert.equal(await page.locator('#g-autos .alert, #g-autos [data-a]').count(), 0);
+    // The name and its switch on a row: no status while on, no devices or description.
+    assert.equal((await row(page, 'automation.1785890100001').textContent()).trim(), 'Blinds - Open Office Blinds at 08:30');
+    assert.equal(await page.locator('#g-autos [data-a="ausw"][aria-checked="true"]').count(), COPY_N, 'a switch on every row, all on');
+    assert.equal(await page.locator('#g-autos .alert, #g-autos [data-a]:not([data-a="open"]):not([data-a="ausw"])').count(), 0);
+  });
+  await test(`${label}: a row's switch turns it off ("Off" under its name), and the popup's turns it back on`, async () => {
+    const ent = 'automation.1785890100001';
+    await swOf(page, ent).click();
+    assert.equal(await swOf(page, ent).getAttribute('aria-checked'), 'false');
+    assert.match(await row(page, ent).textContent(), /Office Blinds at 08:30\s*Off/);
+    assert.equal(await page.textContent('#secSum'), '1 off');
+    assert.equal(await page.locator('#devWrap.open').count(), 0, 'the switch does not open the popup');
+    await row(page, ent).locator('[data-a="open"]').click();
+    await page.waitForSelector('#devWrap.open', { state: 'attached' });
+    assert.equal(await page.textContent('#devWrap [data-s="pill"]'), 'Off');
+    assert.match(await page.textContent('#devWrap [data-s="body"]'), /On\s*It won't run until it's back on/);
+    await page.click('#devWrap [data-s="body"] [data-a="ausw"]');
+    assert.equal(await page.textContent('#devWrap [data-s="pill"]'), 'On');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('#devWrap.open'));
+    assert.equal(await swOf(page, ent).getAttribute('aria-checked'), 'true');
+    assert.equal(await page.textContent('#secSum'), `${COPY_N} on`);
   });
   await test(`${label}: tapping a name shows its status and devices first, then what it does, when it runs and only if`, async () => {
     const p = await popup(page, 'automation.1785890100001');
     assert.equal(p.title, 'Blinds - Open Office Blinds at 08:30');
     assert.equal(p.pill, 'On');
-    assert.match(p.body, /^\s*Status\s*On\s*Last ran\s*—\s*CONTROLS\s*Office blinds\s*Now open 50%\s*Opens/, 'its state now, and what it does to it');
+    assert.match(p.body, /^\s*Status\s*On\s*Last ran\s*—\s*On\s*CONTROLS\s*Office blinds\s*Now open 50%\s*Opens/, 'its switch, its state now, and what it does to it');
     assert.match(p.body, /WHAT IT DOES\s*Opens both VELUX office blinds fully each morning\./);
     assert.match(p.body, /RUNS\s*At 8:30 AM/);
     assert.match(p.body, /ONLY IF\s*Guest mode is off/);
@@ -153,7 +177,7 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
 }
 
 {
-  const { ctx, page, errors, asked } = await phone({ ha: { admin: false } });
+  const { ctx, page, errors, asked, calls } = await phone({ ha: { admin: false } });
   await test('live, not an admin: each automation\'s status is Home Assistant\'s, in its popup', async () => {
     await page.waitForSelector('#g-autos [data-dv="autos:automation.goodnight"]');
     const gn = await popup(page, 'automation.goodnight');
@@ -174,6 +198,18 @@ for (const [scheme, design] of [['dark', 'glass'], ['light', 'vintage']]) {
   await test('live: the copy\'s automations Home Assistant doesn\'t have are listed apart', async () => {
     assert.equal(await groupOf(page, 'x.1754320000000'), 'Not in Home Assistant');
     assert.equal(await page.locator('#g-autos .au-group:last-child .au-row').count(), COPY_N - 3);
+  });
+  await test('live: a switch asks Home Assistant to turn it off, and shows Off until it reports back', async () => {
+    await swOf(page, 'automation.goodnight').click();
+    await page.waitForFunction(() => document.querySelector('#g-autos [data-dv="autos:automation.goodnight"] [data-a="ausw"]').getAttribute('aria-checked') === 'false');
+    await page.waitForTimeout(300);
+    const c = calls.find(x => x.domain === 'automation');
+    assert.ok(c, 'no call');
+    assert.deepEqual([c.service, c.service_data], ['turn_off', { entity_id: 'automation.goodnight' }]);
+    // The Blinds one is off, so its switch turns it on.
+    await swOf(page, 'automation.blinds_open_office_blinds_at_08_30').click();
+    await page.waitForTimeout(300);
+    assert.equal(calls.filter(x => x.domain === 'automation').at(-1).service, 'turn_on');
   });
   await test('live, not an admin: no script errors', async () => assert.deepEqual(errors, []));
   await ctx.close();
