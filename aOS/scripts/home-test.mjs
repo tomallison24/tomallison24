@@ -5,7 +5,8 @@
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
-//   - no dock: the three most used apps float at the bottom; Today and Search beside the account
+//   - no dock: four everyday apps float at the bottom, always the same ones (Mail with its unread
+//     count); Today and Search beside the account; Home scrolls in its own box, the page never moves
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
 //   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
 //     aOS takes it whichever opens first, and it wins over aOS's own copy
@@ -100,7 +101,14 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
   check(await pg.isVisible('#home') && await pg.locator('.bar .tabs').isHidden() && await pg.locator('#opennow').count() === 0, `Home opens first, with no dock and no Open now ${tag}`);
   const quick = () => pg.evaluate(() => [...document.querySelectorAll('.quick [data-open]')].map(b => b.dataset.open).join());
-  check(await quick() === 'calendar,meals,notes' && await pg.locator('.quick .qhome').isHidden(), `three apps float at the bottom: the starting ones, before any are used ${tag}`);
+  check(await quick() === 'mail,house,calendar,fitness' && await pg.locator('.quick .qhome').isHidden(), `four apps float at the bottom: Mail, Home, Calendar, Fitness ${tag}`);
+  await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 600; }); await pg.waitForTimeout(100);
+  check(await pg.evaluate(() => document.getElementById('scroller').scrollTop > 0 && scrollY === 0 && Math.abs(document.querySelector('.quick').getBoundingClientRect().bottom - (innerHeight - 12)) < 2),
+    `Home scrolls in its own box: the page itself stays put, the apps stay at the bottom ${tag}`);
+  await pg.evaluate(() => window.aosHome.unread('mail', 7));
+  check(await pg.textContent('.quick [data-open="mail"] .unread') === '7' && await pg.locator('.quick .unread').count() === 1, `Mail's unread count on its icon, and only there ${tag}`);
+  await pg.evaluate(() => window.aosHome.unread('mail', 0));
+  check(await pg.locator('.quick .unread').count() === 0, `none once it's all read ${tag}`);
   await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(400);
   check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home joins the apps at the bottom there ${tag}`);
   await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
@@ -159,7 +167,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('.hrow[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
-  await pg.locator('.quick [data-open="notes"]').click(); await pg.waitForTimeout(700);
+  await pg.locator('.hrow[data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
   check(/Weather/.test(await pg.textContent('#appmenu')) && await pg.isVisible('#appmenu'), `holding "‹ aOS" lists the other open apps ${tag}`);
@@ -172,8 +180,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#favEdit').click();
   const favs = await pg.evaluate(() => aosHomeTab.favorites().map(f => f.id + ':' + f.why));
   check(favs[0] === 'house:pin' && favs.some(f => /:used$/.test(f)) && favs.length === 4, `Favorites, mixed: the pin, then the most used, then the starters (${favs.join(' ')}) ${tag}`);
-  const q = (await quick()).split(',');
-  check(q.length === 3 && q.includes('notes') && q.includes('weather'), `the apps at the bottom are the ones you use most (${q.join(' ')}) ${tag}`);
+  check(await quick() === 'mail,house,calendar,fitness', `the apps at the bottom stay the same, whatever you use most ${tag}`);
 
   const r = await pg.evaluate(async () => { const m = AllisonOS.ipsy.mounted; const res = await m.tools['notes__get_lists']({}, { confirm: async () => true }); return { app: m.app, lists: JSON.parse(typeof res.content === 'string' ? res.content : JSON.stringify(res.content)).lists }; });
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);

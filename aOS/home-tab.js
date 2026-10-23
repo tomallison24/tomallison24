@@ -7,8 +7,8 @@
 //   - Favorites, mixed: the ones you pin (Edit, up to four), then the apps you open most (the last
 //     14 days, kept on this phone: aos.home.used), then a starting four.
 //   - Every app, in a few groups. A row opens the app; its ⓘ opens its page (Get, What's New).
-//   - No dock: your three most used apps float at the bottom, for a quick open (and Home, when
-//     you're on Today or Search).
+//   - No dock: four everyday apps float at the bottom, always the same ones, for a quick open (and
+//     Home, when you're on Today or Search); Mail's shows its unread count.
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
 //
@@ -96,11 +96,19 @@
   const frames = {};                                            // id -> its .frame, while it's open
   const editing = () => body.classList.contains('editing');
   const STAR = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-  // the three you open most (then the starting four), at the bottom of every aOS page; Home with them, off Home
-  const quickApps = () => [...new Set([...mostUsed(), ...STARTERS.filter(known)])].slice(0, 3);
+  // four everyday apps, always these, at the bottom of every aOS page; Home with them, off Home
+  const QUICK = ['mail', 'house', 'calendar', 'fitness'];
+  // Mail's unread count, on its icon here rather than on aOS's Home Screen icon: Mail inside aOS
+  // hands it over (window.aosHome.unread) and keeps it in the "unread" cache, which Mail's sw.js
+  // also writes when a push brings a new count
+  const unread = {};
+  window.aosHome.unread = (id, n) => { unread[id] = n > 0 ? n : 0; paintQuick(); };
+  const readUnread = () => { try { caches.open('unread').then(c => c.match('/unread/mail')).then(r => r ? r.text() : '0').then(n => window.aosHome.unread('mail', +n || 0)).catch(() => {}); } catch {} };
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') readUnread(); });
   function paintQuick() {
     quick.innerHTML = `<button type="button" class="qhome" aria-label="Home"${tab === 'home' ? ' hidden' : ''}>${HOME_SVG}</button>`
-      + quickApps().map(id => `<button type="button" data-open="${id}" aria-label="${esc(name(id))}"><img src="${icon(id)}" alt=""></button>`).join('');
+      + QUICK.filter(known).map(id => { const n = unread[id] || 0;
+        return `<button type="button" data-open="${id}" aria-label="${esc(name(id))}${n ? `, ${n} unread` : ''}"><img src="${icon(id)}" alt="">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</button>`; }).join('');
     quick.querySelector('.qhome').onclick = () => window.aosTabs.show('home');
   }
   function paintHome() {
@@ -393,7 +401,7 @@
 
   window.aosHomeTab = { show, open: () => open.slice(), favorites, insets, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
-  paintHome();
+  paintHome(); readUnread();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
   if (known(start)) {
     // opened straight into an app (back from Google, or a link): Home goes in under it first

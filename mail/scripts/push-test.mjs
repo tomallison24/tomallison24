@@ -207,7 +207,7 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
   const { readFileSync } = await import('node:fs');
   const vm = await import('node:vm');
   const src = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-  const make = clientsList => {
+  const make = (clientsList, store = new Map()) => {
     const L = {}, log = { shown: [], badge: [], opened: [], posted: [], focused: 0 };
     const self = {
       addEventListener: (t, f) => { L[t] = f; },
@@ -219,14 +219,22 @@ const sub = { endpoint: 'https://web.push.apple.com/QGuQyavXutnMH8abc', keys: ph
       },
       skipWaiting: () => {}, location: { origin: 'https://tomallison24-news.pages.dev' },
     };
-    vm.runInNewContext(src, { self, caches: { open: async () => ({}), keys: async () => [] }, URL, location: self.location, fetch: async () => ({}) });
+    // the "unread" cache Mail shares with aOS (app.js, showCount): just enough of one
+    const cache = { match: async k => store.has(k) ? { text: async () => store.get(k) } : undefined, put: async (k, r) => { store.set(k, await r.text()); }, delete: async k => store.delete(k) };
+    vm.runInNewContext(src, { self, caches: { open: async () => cache, keys: async () => [] }, Response, URL, location: self.location, fetch: async () => ({}) });
     const fire = async (type, ev) => { let p; L[type]({ ...ev, waitUntil: x => { p = x; } }); await p; };
-    return { fire, log };
+    return { fire, log, store };
   };
   const a = make([]);
   await a.fire('push', { data: { json: () => ({ title: 'Mum', body: 'Dinner Sunday?', tag: 'tm1', thread: 'tm1', badge: 3 }) } });
   ok('7. a push shows the notification: sender, subject, grouped by conversation', a.log.shown[0]?.t === 'Mum' && a.log.shown[0].o.body === 'Dinner Sunday?' && a.log.shown[0].o.tag === 'tm1' && a.log.shown[0].o.data.thread === 'tm1');
   ok('7. …and sets the icon count', a.log.badge[0] === 3);
+  const inAos = make([], new Map([['/unread/in-aos', 'on']]));
+  await inAos.fire('push', { data: { json: () => ({ title: 'Mum', body: 'Hi', badge: 4 }) } });
+  ok('7. used inside aOS: the count goes on Mail\'s icon in aOS, not on aOS\'s Home Screen icon', inAos.store.get('/unread/mail') === '4' && inAos.log.badge.length === 0);
+  const off = make([], new Map([['/unread/in-aos', 'off']]));
+  await off.fire('push', { data: { json: () => ({ title: 'Mum', body: 'Hi', badge: 4 }) } });
+  ok('7. …and none with the count switched off', !off.store.has('/unread/mail') && off.log.badge.length === 0);
   await a.fire('push', { data: { json: () => { throw new Error('garbled'); } } });
   ok('7. even a garbled push still shows something (iOS requires it)', a.log.shown[1]?.t === 'Mail');
   await a.fire('notificationclick', { notification: { close() {}, data: { thread: 'tm1' } } });

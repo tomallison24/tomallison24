@@ -188,7 +188,7 @@
   // ---- tabs ----
   const tabs = document.querySelectorAll('[data-tab]');
   // the tabs in the order the dock shows them (aOS 2's Home takes the Apps tab's place: aOS/home-tab.js)
-  const show = t => { const names = [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab); for (const s of ['today', 'apps', 'search', 'home']) if ($(s)) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', names.indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); scrollTo(0, 0); if (t === 'search') setTimeout(() => $('q').focus(), 50); };
+  const show = t => { const names = [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab); for (const s of ['today', 'apps', 'search', 'home']) if ($(s)) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', names.indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); $('scroller').scrollTop = 0; if (t === 'search') setTimeout(() => $('q').focus(), 50); };
   tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
   window.aosTabs = { show };
   window.aosAppHue = id => HUE[id];
