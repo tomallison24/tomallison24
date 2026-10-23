@@ -132,6 +132,12 @@ per person is deleted in `functions/aOS/api` `remove`.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
   labels; color never the only signal.
+- **The way out, within reach**: every sheet is `role="dialog"
+  aria-modal="true"` with its way out in its head, labelled `Back…`, `Close…`
+  or `Done` (`aria-label`). While a sheet is open, `welcome.js` floats a copy of
+  that button at the bottom left (Back first, then Close, then a Done on a sheet
+  with no Cancel) that presses the real one. A full-screen mode that isn't a
+  page you go into (Clock's Nightstand) takes `data-nofloat`.
 - **Words**: plain, second person, US English (`lang="en-US"`: color,
   favorite, canceled, center), short sentences. Dates the US way, with
   `'en-US'` passed to `toLocaleDateString` and friends ("Oct 9, 2026",

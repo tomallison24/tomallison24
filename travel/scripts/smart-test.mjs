@@ -640,6 +640,29 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#tpPriv');
     assert.ok(!!(await page.$('#tpAi')));
   });
+  // welcome.js: a popup's way out floats at the bottom left too (every app; tested here, on Travel's popups)
+  const floater = () => page.evaluate(() => { const f = document.querySelector('.aos-fback'); return f && !f.hidden ? { label: f.getAttribute('aria-label'), kind: f.dataset.kind, ...JSON.parse(JSON.stringify(f.getBoundingClientRect())) } : null; });
+  const floats = label => page.waitForFunction(l => { const f = document.querySelector('.aos-fback'); return l ? f && !f.hidden && f.getAttribute('aria-label') === l : !f || f.hidden; }, label, { timeout: 5000 });
+  await step('the way out floats at the bottom: Back on a trip, Done on a booking, nothing beside Cancel, and it presses the real one', async () => {
+    await floats('Back to trips');
+    const f = await floater();
+    assert.equal(f.kind, 'back'); assert.ok(f.left < 40 && f.bottom > 844 - 60, JSON.stringify(f));
+    await page.click('#tpBody [data-bk]');
+    await page.waitForSelector('#bkSheet:not([hidden])');
+    await floats('Done');
+    if (SHOTS) { await page.waitForTimeout(800); await page.screenshot({ path: path.join(SHOTS, APP + '-floatdone.png') }); }
+    await page.click('.aos-fback');
+    await page.waitForSelector('#bkSheet', { state: 'hidden' });
+    await floats('Back to trips');
+    await page.click('#tpAdd');
+    await page.waitForSelector('#addSheet:not([hidden])');
+    await floats(null);
+    await page.click('#addSheet .sheethead [aria-label="Cancel"]');
+    await floats('Back to trips');
+    await page.click('.aos-fback');
+    await page.waitForSelector('#tripPage', { state: 'hidden' });
+    await floats(null);
+  });
   await step('Have Ipsy check this trip: no script errors', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
