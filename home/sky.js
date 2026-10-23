@@ -206,8 +206,7 @@ html[data-sky="night"] .aos-star { display: block; }
     for (const host of document.querySelectorAll('.ambient, .aurora, .atoms')) {
       let c = host.querySelector(':scope > .aos-sky-cap');
       if (!c) { c = document.createElement('i'); c.className = 'aos-sky-cap'; host.appendChild(c); }
-      const box = host.closest('#scroller');   // aOS's tabs scroll in a box of their own (aOS/index.html)
-      c.style.top = -(host.getBoundingClientRect().top + (box ? box.scrollTop : scrollY) - host.clientTop) + 'px';   // at the top of the page, wherever the box starts
+      c.style.top = -(host.getBoundingClientRect().top + scrollY - host.clientTop) + 'px';   // at the top of the page, wherever the box starts
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cap); else cap();

@@ -3,7 +3,7 @@
 // up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v36';
+const CACHE = 'mail-v35';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=3', 'icon-glass-512.png?v=3', '../home/slide.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
 
 self.addEventListener('install', e => {
@@ -48,13 +48,8 @@ self.addEventListener('push', e => {
   const jobs = [self.registration.showNotification(d.title || 'Mail', {
     body: d.body || 'New mail', tag: d.tag || 'mail', icon: 'icon-180.png?v=3', data: { thread: d.thread || null },
   })];
-  // the unread count: on Mail's icon in aOS when Mail is used there (app.js, showCount), else on the Home Screen icon
   const nav = self.navigator;
-  if (typeof d.badge === 'number') jobs.push(caches.open('unread').then(async c => {
-    const aos = await c.match('/unread/in-aos');
-    if (aos) return (await aos.text()) === 'on' && d.badge ? c.put('/unread/mail', new Response(String(d.badge))) : c.delete('/unread/mail');
-    if (nav?.setAppBadge) return d.badge ? nav.setAppBadge(d.badge) : nav.clearAppBadge();
-  }));
+  if (typeof d.badge === 'number' && nav?.setAppBadge) jobs.push(d.badge ? nav.setAppBadge(d.badge) : nav.clearAppBadge());
   e.waitUntil(Promise.all(jobs).catch(() => {}));
 });
 
