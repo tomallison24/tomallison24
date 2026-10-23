@@ -101,7 +101,8 @@
         'aOS\'s update screens and welcome are mid-century now: cream, mustard, teal and orange',
         'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
         'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders',
-        'Home: Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'],
+        'Home: Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name',
+        'Travel: Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them'],
       cards: [
         { i: 'house', t: 'The new aOS', d: 'Every app now opens inside aOS. Tap one on Home; ‹ aOS, or a swipe from the left edge, brings you back, and it stays where you left it.' },
         { i: 'sparkle', t: 'Ask Ipsy, across your apps', d: 'Ipsy sits at the top of Home and works across Calendar, Notes, Meals, Orders, Travel and News at once.' },
@@ -113,6 +114,7 @@
       apps: {
         orders: { notes: ['Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too', 'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'] },
         mail: { notes: ['Inside aOS, Connect Gmail opens Google\'s sign-in over aOS and comes straight back; Travel and Orders use the same sign-in'] },
+        travel: { notes: ['Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them'] },
         house: { notes: ['Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'] },
       } },
     { v: '1.8', date: '2026-10-21', title: 'Health, with Ipsy',

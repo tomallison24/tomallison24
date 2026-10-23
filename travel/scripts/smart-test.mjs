@@ -10,7 +10,9 @@
 //    the calendar becomes a booking, our own events and other events are ignored;
 //  - confirmed bookings are written to the calendar once (never twice, never beside an event that
 //    is already there), and the guesses are not written;
-//  - Calendar's Travel layer leaves out what the calendar already has.
+//  - Calendar's Travel layer leaves out what the calendar already has;
+//  - Have Ipsy check this trip (a trip's page) reads each booking's newest email, a schedule change
+//    the reader didn't recognise included, and updates what changed, with Undo; an edited one stays.
 //
 // Every email and event here is made up.
 //
@@ -74,6 +76,12 @@ const EMAILS = [
   { id: 'e5', threadId: 'u5', age: 200, from: 'Frontier Airlines <flights@t.flyfrontier.com>', subject: '    Booking Confirmation: OLDUND – Your Upcoming Trip to Raleigh', text:
     `Confirmation Email - Confirmed\n\n Cleveland to Raleigh/Durham\n\n Confirmation Code\n OLDUND\n\n Your Itinerary\n\n Departing Flight:\n\n Flight\n #3074\n\n Departs CLE\n 6:30 PM Cleveland Arrives RDU\n 8:05 PM Raleigh/Durham\n\n Passenger Details\n\n Pat Example\n` },
 ];
+// Found only by searching for a confirmation code (Have Ipsy check this trip): a schedule change the reader doesn't
+// take for a booking, newer than United's confirmation.
+const SEARCH_ONLY = [
+  { id: 'e6', threadId: 'u2', age: 0.5, from: 'United Airlines <notifications@united.com>', subject: 'Important information about your trip', text:
+    `Confirmation number KQ7T2M\nWe had to change your schedule.\nUA 110 Denver (DEN) to Boston (BOS) on ${long(BACK)} now departs at 9:05 PM and arrives at 12:30 AM.\nNo action is needed.` },
+];
 const b64 = s => Buffer.from(s, 'utf8').toString('base64url');
 const gmailMessage = m => ({
   id: m.id, threadId: m.threadId, internalDate: String(Date.now() - (m.age || 1) * 86400e3),
@@ -103,7 +111,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });
   page.on('pageerror', e => problems.push(String(e)));
-  const seen = { extract: [], auth: [], find: [], imports: [], deletes: [], events: 0, sheet: [] };
+  const seen = { extract: [], auth: [], find: [], imports: [], deletes: [], events: 0, sheet: [], searches: [] };
   // The family's Google Sheet, through aOS (functions/sheet/api, stood in for here): the real script on an
   // in-memory Sheet, who's asking from the session the page sends. Only a signed-in phone syncs.
   const sheet = seen.sheetTab = fakeSheet(path.join(ROOT, 'travel', 'google-sheet-sync.gs'), 'test-secret-phrase');
@@ -118,9 +126,13 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
   await ctx.route('https://gmail.googleapis.com/**', route => {
     const u = new URL(route.request().url());
     if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'pat@example.com' } });
-    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: (empty ? [] : EMAILS).map(m => ({ id: m.id, threadId: m.threadId })) } });
+    if (u.pathname.endsWith('/messages')) {
+      const conf = /^"([A-Z0-9]+)"/.exec(u.searchParams.get('q') || '');      // a search for one confirmation code
+      if (conf) { seen.searches.push(u.searchParams.get('q')); return route.fulfill({ json: { messages: [...SEARCH_ONLY, ...EMAILS].filter(m => (m.text || m.html).includes(conf[1])).map(m => ({ id: m.id, threadId: m.threadId })) } }); }
+      return route.fulfill({ json: { messages: (empty ? [] : EMAILS).map(m => ({ id: m.id, threadId: m.threadId })) } });
+    }
     if (failGets) return route.fulfill({ status: 500, body: 'down' });
-    const m = EMAILS.find(x => x.id === u.pathname.split('/').pop());
+    const m = [...EMAILS, ...SEARCH_ONLY].find(x => x.id === u.pathname.split('/').pop());
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: {} });
   });
   await ctx.route(BASE + '/travel/api/**', route => {
@@ -130,7 +142,9 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
     if (u.pathname.endsWith('/extract')) {
       const body = JSON.parse(req.postData() || '{}');
       seen.extract.push(body); seen.auth.push(req.headers().authorization || '');
-      // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote
+      // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote; checking a booking,
+      // it reads the new time out of United's schedule change
+      if (body.check) return route.fulfill({ json: { ok: true, fields: /now departs at 9:05 PM/.test(body.text) ? { airlineCode: 'UA', flightNo: '110', from: 'DEN', to: 'BOS', date: iso(BACK), depTime: '21:05', arrTime: '00:30' } : {} } });
       return route.fulfill({ json: { ok: true, fields: body.missing.includes('from') ? { from: 'MCO', to: 'PHL' } : {} } });
     }
     if (u.pathname.endsWith('/find')) { seen.find.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, candidates: [{ number: '2154', to: 'PHL', local: '' }] } }); }
@@ -573,6 +587,60 @@ const pick = (page, f) => page.evaluate(f);
     assert.ok(await page.evaluate(() => window.__travel.bookings.filter(b => b.conf === 'TRZ4KD').every(b => b.by === 'u1' && !b.from)), 'the Undo kept, marked as hers');
   });
   await step('Ipsy\'s own check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
+  await ctx.close();
+}
+
+// =================== Have Ipsy check this trip ===================
+{
+  const { ctx, page, seen, problems } = await open({ calendar: false });
+  await page.waitForFunction(() => window.__travel.bookings.some(b => b.conf === 'KQ7T2M'), null, { timeout: 10000 });
+  const ua = () => pick(page, () => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); return JSON.parse(JSON.stringify(b)); });
+  const openTrip = async conf => {
+    const id = await page.evaluate(c => window.__travel.groupTrips().find(g => g.items.some(b => b.conf === c)).id, conf);
+    await page.click('[data-trip="' + id + '"]');
+    await page.waitForSelector('#tripPage:not([hidden]) #tpAi');
+  };
+  await step('Have Ipsy check this trip: on a trip\'s page, it reads the newest email (a schedule change) and updates the flight, marked Check', async () => {
+    const was = await ua();
+    assert.equal(was.dep, iso(BACK) + 'T20:15');
+    await openTrip('KQ7T2M');
+    assert.match(await page.textContent('#tpAi'), /Have Ipsy check this trip/);
+    if (SHOTS) { await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, APP + '-tripcheck.png') }); }
+    await page.click('#tpAi');
+    await page.waitForFunction(() => /Ipsy updated 1 booking/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    assert.ok(seen.searches.some(q => q.startsWith('"KQ7T2M" after:')), seen.searches.join(' | '));
+    const sent = seen.extract.filter(x => x.check);
+    assert.equal(sent.length, 1, JSON.stringify(sent.map(x => x.known)));
+    assert.deepEqual(sent[0].missing, ['airlineCode', 'flightNo', 'from', 'to', 'date', 'depTime', 'arrTime'], 'every detail is asked for, not only what is missing');
+    assert.equal(sent[0].known.depTime, '20:15'); assert.equal(sent[0].known.date, iso(BACK));
+    assert.match(sent[0].text, /now departs at 9:05 PM/, 'the newer email, not the confirmation');
+    const b = await ua();
+    assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.arr, iso(day(34)) + 'T00:30'); assert.equal(b.depIso, '');
+    assert.equal(b.filled.time, 'ai'); assert.equal(b.filled.date, undefined, 'the day didn\'t change'); assert.equal(b.guess, true);
+    assert.equal(b.source.msgId, 'e6', 'the booking follows the newer email');
+    assert.match(await page.textContent('#tpAi'), /Have Ipsy check this trip/, 'the button is back once Ipsy is done');
+  });
+  await step('Have Ipsy check this trip: Undo puts the flight back as it was', async () => {
+    await page.click('#toastAct');
+    await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
+    const b = await ua();
+    assert.equal(b.source.msgId, 'e2'); assert.equal(b.filled, undefined);
+  });
+  await step('Have Ipsy check this trip: a booking you edited stays as you typed it, and nothing about it is sent', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); b.edited = true; window.__travel.save(); });
+    const n = seen.extract.length;
+    await page.click('#tpAi');
+    await page.waitForFunction(() => /as you typed/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    assert.equal(seen.extract.length, n);
+    assert.equal((await ua()).dep, iso(BACK) + 'T20:15');
+  });
+  await step('Have Ipsy check this trip: a private trip has no button', async () => {
+    await page.click('#tpPriv');
+    assert.equal(!!(await page.$('#tpAi')), false);
+    await page.click('#tpPriv');
+    assert.ok(!!(await page.$('#tpAi')));
+  });
+  await step('Have Ipsy check this trip: no script errors', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
 

@@ -158,6 +158,24 @@ await test('extract: wrong shapes are dropped, null stays unknown', async () => 
   const r = await post({ type: 'flight', missing: ['date', 'from', 'to', 'depTime'], text: EMAIL });
   assert.deepEqual(r.body.fields, { from: 'RDU' });
 });
+await test('extract, check: every detail is read against the booking on file, and a cancellation needs its words', async () => {
+  let sent;
+  const CX = 'Your flight has been cancelled.\nConfirmation ZQ4RTE\nFlight 3073 Departs RDU 6:10 PM Arrives CLE 7:55 PM\nMonday, Nov 2, 2026';
+  globalThis.fetch = async (url, init) => { sent = JSON.parse(init.body); return claude({ depTime: '18:10', from: 'RDU', cancelled: 'yes' }, [{ field: 'depTime', quote: '6:10 PM' }, { field: 'from', quote: 'Departs RDU' }, { field: 'cancelled', quote: 'has been cancelled' }])(); };
+  const r = await post({ check: true, type: 'flight', missing: ['from', 'depTime'], known: { from: 'RDU', depTime: '16:04', date: '2026-11-02' }, text: CX });
+  assert.deepEqual(r.body.fields, { from: 'RDU', depTime: '18:10', cancelled: 'yes' });
+  assert.deepEqual(Object.keys(sent.output_config.format.schema.properties.found.properties), ['from', 'depTime', 'cancelled']);
+  assert.match(sent.system, /still up to date/);
+  assert.match(sent.messages[0].content, /Fields to read: from, depTime, cancelled\n/);
+  assert.match(sent.messages[0].content, /The booking on file \(may be out of date\): .*"depTime":"16:04"/);
+  // not a check: no cancelled field, and the plain instructions
+  globalThis.fetch = async (url, init) => { sent = JSON.parse(init.body); return claude({ from: 'RDU', cancelled: 'yes' }, [{ field: 'from', quote: 'Departs RDU' }, { field: 'cancelled', quote: 'has been cancelled' }])(); };
+  assert.deepEqual((await post({ type: 'flight', missing: ['from'], text: CX })).body.fields, { from: 'RDU' });
+  assert.doesNotMatch(sent.system, /still up to date/);
+  // a "yes" with no words behind it is dropped
+  globalThis.fetch = async () => claude({ cancelled: 'yes' }, [{ field: 'cancelled', quote: 'was canceled by the airline' }])();
+  assert.deepEqual((await post({ check: true, type: 'flight', missing: ['from'], text: CX })).body.fields, {});
+});
 await test('extract: limits, refusals and garbage come back as plain answers', async () => {
   globalThis.fetch = async () => new Response('', { status: 429 });
   assert.equal((await post({ type: 'flight', missing: ['date'], text: EMAIL })).body.error, 'limit');
