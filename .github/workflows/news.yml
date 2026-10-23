@@ -155,6 +155,10 @@ jobs:
           restore-keys: news-data-
       - name: Fetch headlines
         run: node news/scripts/fetch-news.mjs
+        env:
+          # the Stem cells topic, logged to the owner's Google Sheet (news/README.md, "Stem cell log");
+          # sent only when PUBLISH is true, never from a branch's check
+          STEMCELL_SHEET: ${{ secrets.STEMCELL_SHEET }}
       - name: Keep headlines for the next run
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:

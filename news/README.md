@@ -283,6 +283,32 @@ Stories are newest first. The bar at the top of Stem cells narrows them:
 Both are saved on each device. To give another tab the same bar, add
 `"filters": true` to its topic in `feeds.json`.
 
+## Stem cell log
+
+The app keeps Stem cells for 30 days; the owner's Google Sheet keeps every
+story for good. Each publishing run of `news.yml` (every 30 minutes) sends the
+topic's current stories to the Sheet's Apps Script (`stemcell-sheet.gs`, sent
+by `scripts/log-stemcells.mjs`), which adds the ones it doesn't have yet, by
+DOI or link, newest first: **Logged, Published, Title, Source, DOI, Link,
+Summary**. The DOI is there when the journal's feed gives one (Nature, Cell
+Press, Europe PMC); news sites such as ScienceDaily don't. A branch's check
+never sends anything, and a failure is a warning: the headlines still publish.
+
+Set up once:
+
+1. Open the Sheet, then **Extensions > Apps Script**. Paste all of
+   `news/stemcell-sheet.gs`, and change `SECRET` to a long random phrase (16
+   characters or more).
+2. **Deploy > New deployment > Web app**, Execute as: **Me**, Who has access:
+   **Anyone**. Allow it, and copy the Web app URL.
+3. In GitHub, **Settings > Secrets and variables > Actions > New repository
+   secret**. Name it `STEMCELL_SHEET`, and for the value use the URL followed
+   by `?key=` and the phrase (`https://script.google.com/macros/s/…/exec?key=…`).
+
+The next run fills in the last 30 days, then each new story as it comes. A
+changed script needs **Manage deployments > Edit > New version**, keeping the
+same URL. Test: `node news/scripts/stemcell-log-test.mjs`.
+
 ## Sport filters
 
 On the Sport tab, **Filter** opens a panel with a search box and three lists:
