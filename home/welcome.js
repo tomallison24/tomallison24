@@ -102,6 +102,7 @@
         'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
         'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders',
         'Home: Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name',
+        'Every app: a popup\'s way out (Back, Close, or Done) floats at the bottom left too, within reach of your thumb',
         'Travel: Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them'],
       cards: [
         { i: 'house', t: 'The new aOS', d: 'Every app now opens inside aOS. Tap one on Home; ‹ aOS, or a swipe from the left edge, brings you back, and it stays where you left it.' },
@@ -2368,6 +2369,94 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
 #aos-off .o-go { display: block; margin: 18px 0 12px; height: 50px; line-height: 50px; border-radius: 16px; background: var(--o-pastel); color: #10181A; font-size: 17px; font-weight: 700; text-decoration: none; }
 #aos-off small { font-size: 13px; color: var(--o-muted); }`;
 
+  // ---- the way out, within reach: a popup's Back, Close or Done, floating at the bottom ----
+  // An app's popups (role="dialog" aria-modal="true": a trip, an order, Settings) keep their way out at the
+  // top. While one is open, it floats at the bottom left too (where Ipsy sits on the front page; Ipsy is
+  // under the popup): a copy that presses the popup's own button, so the app does what it always does
+  // (saves, goes back a step). Back first, then Close, then Done, but only on a popup with no Cancel (a Done
+  // beside Cancel saves an edit; it isn't a way out). Hidden while typing (the keyboard is up), under aOS's
+  // own screens, Ipsy's chat and sign-in, and on a popup marked data-nofloat.
+  const FB_ICON = {
+    back: '<path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/>',
+    close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    done: '<path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/>',
+  };
+  const FB_CSS = `
+.aos-fback{position:fixed;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;
+  width:52px;height:52px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  color:#1d1d1f;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);
+  box-shadow:0 6px 20px rgba(0,0,0,.18),inset 0 0 0 .5px rgba(255,255,255,.7);transition:transform .2s,opacity .2s;animation:aos-fb-in .28s cubic-bezier(.3,1.3,.5,1)}
+.aos-fback[hidden]{display:none}
+.aos-fback:active{transform:scale(.92)}
+.aos-fback svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme="dark"] .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}
+@media (prefers-color-scheme: dark){html:not([data-theme="light"]) .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}}
+html[data-look="vintage"] .aos-fback{color:var(--text,#2B2522);background:var(--mc-card,#FBF3E2);-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 0 0 1.5px var(--mc-edge,rgba(43,37,34,.22)),0 4px 14px rgba(43,37,34,.18)}
+@keyframes aos-fb-in{from{transform:scale(.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){.aos-fback{animation:none;transition:none}}`;
+  function floatBack() {
+    const SHARED = '#aos-welcome, #aos-off, #aos-moved, #aos-signin, .ipsy-bubble';
+    const RANK = [['back', /^back\b/i], ['close', /^close\b/i], ['done', /^done$/i]];
+    let fb = null, src = null, queued = false;
+    const label = b => (b.getAttribute('aria-label') || b.textContent || '').trim();
+    // on screen: not hidden, and not slid away below or above it
+    const onScreen = el => {
+      if (!el.getClientRects().length || getComputedStyle(el).visibility === 'hidden') return false;
+      const r = el.getBoundingClientRect();
+      return r.top < innerHeight - 40 && r.bottom > 40 && r.width > 0;
+    };
+    const typing = () => { const a = document.activeElement; return !!a && (a.isContentEditable || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || (a.tagName === 'INPUT' && !/^(button|checkbox|radio|range|color|file|submit|reset)$/i.test(a.type))); };
+    // The popup's way out, among the buttons in its head (its top 140 points).
+    function wayOut(dlg) {
+      const top = dlg.getBoundingClientRect().top + 140;
+      const btns = [...dlg.querySelectorAll('button')].filter(b => !b.disabled && b.getClientRects().length && b.getBoundingClientRect().top < top);
+      const cancel = btns.some(b => /^cancel\b/i.test(label(b)));
+      for (const [kind, re] of RANK) {
+        if (kind === 'done' && cancel) continue;
+        const b = btns.find(x => re.test(label(x)));
+        if (b) return { b, kind };
+      }
+      return null;
+    }
+    // room at the bottom of the popup's scrolling part, so the button never sits on its last row
+    function makeRoom(dlg) {
+      let best = null;
+      for (const el of [dlg, ...dlg.querySelectorAll('*')]) {
+        if (!/(auto|scroll)/.test(getComputedStyle(el).overflowY) || !el.clientHeight) continue;
+        if (!best || el.clientHeight > best.clientHeight) best = el;
+      }
+      if (!best || best.dataset.aosRoom) return;
+      best.dataset.aosRoom = '1';
+      best.style.paddingBottom = 'calc(' + getComputedStyle(best).paddingBottom + ' + 64px)';
+    }
+    function update() {
+      queued = false;
+      const open = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].filter(onScreen);
+      const dlg = open[open.length - 1];
+      const way = dlg && !dlg.closest(SHARED) && !dlg.closest('[data-nofloat]') && !typing() ? wayOut(dlg) : null;
+      if (!way) { if (fb) fb.hidden = true; src = null; return; }
+      if (!fb) {
+        if (!document.getElementById('aos-fb-css')) { const st = document.createElement('style'); st.id = 'aos-fb-css'; st.textContent = FB_CSS; document.head.appendChild(st); }
+        fb = document.createElement('button');
+        fb.type = 'button'; fb.className = 'aos-fback';
+        fb.addEventListener('click', () => { if (src && document.contains(src)) src.click(); soon(); });
+        document.body.appendChild(fb);
+      }
+      if (fb.dataset.kind !== way.kind) { fb.dataset.kind = way.kind; fb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + FB_ICON[way.kind] + '</svg>'; }
+      fb.setAttribute('aria-label', label(way.b));
+      src = way.b;
+      if (fb.hidden) fb.hidden = false;
+      makeRoom(dlg);
+    }
+    const soon = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    new MutationObserver(muts => { if (muts.some(m => !(fb && fb.contains(m.target)))) soon(); })
+      .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'style', 'open', 'aria-hidden', 'disabled'] });
+    for (const ev of ['transitionend', 'animationend', 'focusin', 'focusout', 'resize']) addEventListener(ev, soon, true);
+    soon();
+    AOS.floatBack = update;   // for tests
+  }
+
   // ---- deciding what to show, once ----
   function auto() {
     const seen = seenAll(); if (!seen || !APP || APP === 'home') return;   // home: the retired launcher
@@ -2404,7 +2493,7 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
     return true;
   }
   if (me && me.hasAttribute('data-auto')) {
-    const go = () => { if (erasedNote() || backToAOS()) return; checkPlan(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}).then(movedNote).catch(() => {}); };
+    const go = () => { if (erasedNote() || backToAOS()) return; checkPlan(); if (APP && APP !== 'aos' && APP !== 'home') floatBack(); Promise.resolve(auto()).catch(() => {}).then(onPhone).catch(() => {}).then(movedNote).catch(() => {}); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkPlan(); });   // back from aOS, or a day later
     addEventListener('online', () => checkPlan());   // a phone kept offline hears of an erase as soon as it's back
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
