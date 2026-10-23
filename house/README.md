@@ -33,7 +33,7 @@ hand just after the block in `index.html`.
 - **Media**: Speakers (the Sonos, the Move, the Nest Mini) and TV
 - **Security**: the Blink system and cameras, the Nest doorbell
 - **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
-- **Automations**: every Home Assistant automation, what it does and whether it is on (see "Automations" below)
+- **Automations**: every Home Assistant automation, what it does and whether it is on, with a switch to turn each on or off (see "Automations" below)
 
 A view with several kinds of device has a small heading over each, with
 what that part is doing. Each view says in the drop-down what is running or needs you ("4 running",
@@ -394,11 +394,17 @@ thermostat in its `entities`.
 
 ## Automations
 
-Every automation in Home Assistant, to see (`automations.js`): nothing here
-turns one on or off or runs it - that stays in Home Assistant.
+Every automation in Home Assistant (`automations.js`), each with a switch
+to turn it on or off. Nothing here runs one - that stays in Home Assistant.
 
-- **The view is only the names**, by group, so it stays uncluttered. The
+- **The view is the names and their switches**, by group, so it stays
+  uncluttered: "Off" or "Running now" under a name only when it is. The
   drop-down line says how many are running, ran today and are off.
+- **The switch** (on the row, and **On** in the popup) calls
+  `automation.turn_on` / `turn_off`. It shows the tap at once and holds it
+  until Home Assistant reports it (or 20 s), as every device's switch does.
+  An automation that is off won't run until it is switched back on. One
+  that is unavailable, or only in the copy, has no switch to use.
 - **Tap a name** for its popup: its **status** (On, Off, Running now) and when
   it last ran, then the devices it **controls**, each with what it does to it
   on the right ("Turns off", "Sets to 25%", "Opens") and its state now under
@@ -437,7 +443,10 @@ turns one on or off or runs it - that stays in Home Assistant.
   dashboard's helpers).
 - **Preview**: the copy's automations, all on, with the sample devices.
 
-The Signal dashboard has no such view; this one is Home's only.
+The Signal dashboard has had its own Automations view since 2026-10-22
+(ha-config `views_signal/automations.yaml`): the same switches, grouped as
+ha-config's `AUTOMATIONS.md`, with what starts each and when it last ran on
+the row; its details are Home Assistant's own dialog, not a popup like this.
 
 ## Labs
 

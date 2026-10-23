@@ -521,12 +521,18 @@
 @keyframes away-breathe { from { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.38), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 10px -4px rgba(var(--c),0.3), 0 10px 24px -12px rgba(0,0,0,0.7); }
   to { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.7), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 30px -2px rgba(var(--c),0.75), 0 10px 24px -12px rgba(0,0,0,0.7); } }
 @keyframes away-ring { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(3); opacity: 0; } }
-/* Automations (automations.js): only the names, by group; each one's popup has its status and devices */
+/* Automations (automations.js): the names, by group, each with its switch; each one's popup has its status and devices */
 .au-groups { display: flex; flex-direction: column; gap: 22px; }
 .au-group { display: flex; flex-direction: column; gap: 10px; }
 .au-group .group { margin: 0; }
 .au-row { padding-top: 12px; padding-bottom: 12px; }
 .au-row .k { font-weight: 500; line-height: 1.3; }
+/* A row with its switch: the name is its own button (opens the popup), the switch another. */
+.au-swrow { padding: 0 10px 0 14px; gap: 6px; }
+.au-swrow .au-open { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; padding: 12px 0; text-align: left; }
+.au-swrow .au-sw { flex: none; display: flex; align-items: center; padding: 6px 4px; }
+.au-swrow .au-sw:disabled { opacity: .4; }
+.au-swrow.off .au-open .k { opacity: .62; }
 .vsec-h .au-n { font-style: normal; font-size: 13px; color: var(--muted); }
 .au-desc p { margin: 0 4px 10px; font-size: 15px; line-height: 1.45; }
 .au-desc p:first-child { font-size: 17px; font-weight: 500; }

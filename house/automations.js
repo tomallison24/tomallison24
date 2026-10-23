@@ -1,6 +1,7 @@
 // AUTOMATIONS: every Home Assistant automation, what it does, when it runs,
-// the devices it works and whether it is on - to see at a glance, not to
-// change (nothing here turns one on or off, or runs it).
+// the devices it works and whether it is on, with a switch to turn each one
+// on or off (on its row and in its popup, as the Signal dashboard's
+// Automations view has since 2026-10-22). Nothing here runs one.
 //
 // The list and each one's status (on or off, running, when it last ran) are
 // Home Assistant's own automation.* entities, live. What each one does comes
@@ -17,7 +18,9 @@
 // watches. Input helpers, timers and the like are listed apart, as Helpers.
 // Each automation goes in a group by what it controls (Lights, Climate...);
 // one that works three kinds of device or more is a Routine. The view itself
-// is only the names, by group: tap one for its status, devices and the rest.
+// is the names, by group, each with its switch: tap a name for its status,
+// devices and the rest. A switch shows the tap at once and holds it until Home
+// Assistant reports it (held()/tset()/tsend(), as every device's switches).
 'use strict';
 
 const AU_DEVICE = new Set(['light', 'switch', 'climate', 'cover', 'fan', 'humidifier', 'media_player', 'camera', 'alarm_control_panel', 'lock', 'vacuum',
@@ -310,10 +313,14 @@ const AUTOS = family({
     // The description's first sentence (two, when the first is a few words: "Safety net.")
     const sentences = first.match(/.+?[.!?](?=\s+[A-Z("']|$)|.+$/g) || [];
     const what = sentences[0] && sentences[0].length < 30 && sentences[1] ? sentences[0] + ' ' + sentences[1].trim() : (sentences[0] || '');
-    const state = a.missing ? 'missing' : !s ? 'gone' : s.state === 'unavailable' ? 'unavailable' : Number(A.current) > 0 ? 'running' : s.state === 'off' ? 'off' : 'on';
+    // A switch tapped and not yet reported shows what was tapped (over Running now).
+    const d = a.ent ? dv('autos', a.ent, name) : null, v = s && d ? held(d, 'on', s.state) : s && s.state;
+    const state = a.missing ? 'missing' : !s ? 'gone' : s.state === 'unavailable' ? 'unavailable' : v !== s.state ? v
+      : Number(A.current) > 0 ? 'running' : v === 'off' ? 'off' : 'on';
+    const wait = !!d && tWaiting(d, 'on'), can = !!s && ['on', 'off'].includes(s.state);
     const last = A.last_triggered || null, lastMs = last ? Date.parse(last) : 0;
     const today = lastMs && new Date(lastMs).toDateString() === new Date().toDateString();
-    return { a, name, desc, what, trig, cond, controls, watches, tells, scripts, helpers, group, does, state, last, lastMs, today, mode: c.mode || 'single',
+    return { a, name, desc, what, trig, cond, controls, watches, tells, scripts, helpers, group, does, state, wait, can, last, lastMs, today, mode: c.mode || 'single',
       when: [...new Set(trig.map(auTrigger))] };
   },
 
@@ -431,7 +438,19 @@ const AUTOS = family({
     window.addEventListener('viewchange', e => { if (e.detail.to === 'autos') { this.askConfigs(); this.render(); } });
   },
 
-  // The view: only the names, by group. Status, devices and the rest are in each one's popup.
+  // A row: the name (a tap opens its popup), "Off" or "Running now" under it, and its switch.
+  // One that isn't in Home Assistant has nothing to switch: the name and a chevron.
+  rowHTML(r) {
+    const key = esc(this.key(r)), label = esc(r.name);
+    if (r.state === 'missing') return `<button type="button" class="rowi dvc au-row" data-dv="${key}" aria-label="${label}: status and devices"><span class="k">${label}</span>${svg('chevR', 18)}</button>`;
+    const on = r.state === 'on' || r.state === 'running';
+    const sub = r.state === 'off' ? 'Off' : r.state === 'running' ? 'Running now' : r.can ? '' : this.status(r);
+    return `<div class="rowi dvc au-row au-swrow${on ? '' : ' off'}" data-dv="${key}">
+      <button type="button" class="au-open" data-a="open" aria-label="${label}: status and devices"><span class="k">${label}${sub ? `<small>${esc(sub)}</small>` : ''}</span></button>
+      <button type="button" class="au-sw${r.wait ? ' wait' : ''}" data-a="ausw" role="switch" aria-checked="${on}" aria-label="${label}"${r.can ? '' : ' disabled'}>${accentSw(on, AU_ACC[r.group])}</button></div>`;
+  },
+
+  // The view: the names, by group, each with its switch. Status, devices and the rest are in each one's popup.
   render() {
     if (HA.status !== 'live') this.cfgAsked = false;   // ask again on the next connection
     if (curView === 'autos') this.askConfigs();
@@ -445,7 +464,7 @@ const AUTOS = family({
     put(R('note'), mode === 'live' && !real.length ? `<p class="tnote">${HA.status === 'live' ? 'No automations in Home Assistant.' : 'Connecting to Home Assistant…'}</p>` : '');
     const groups = AU_GROUPS.map(g => [g, all.filter(r => r.group === g.id)]).filter(([, rs]) => rs.length);
     put(R('groups'), groups.map(([g, rs]) => `<div class="au-group"><div class="vsec-h"><span>${g.name}</span><em class="au-n">${rs.length}</em></div>
-      <div class="group">${rs.map(r => `<button type="button" class="rowi dvc au-row" data-dv="${esc(this.key(r))}" aria-label="${esc(r.name)}: status and devices"><span class="k">${esc(r.name)}</span>${svg('chevR', 18)}</button>`).join('')}</div></div>`).join(''));
+      <div class="group">${rs.map(r => this.rowHTML(r)).join('')}</div></div>`).join(''));
   },
   key: r => 'autos:' + (r.a.ent || 'x.' + r.a.cid),
 
@@ -467,6 +486,8 @@ const AUTOS = family({
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), acc, {}, 150),
       parts: [
         ['stats', statsHTML([['Status', esc(this.status(r).split(' · ')[0])], ['Last ran', mode === 'live' ? esc(r.last ? ago(r.last) : 'Never') : '—']])],
+        r.state !== 'missing' ? ['sw', grp(swRow('ausw', 'On', 'power', r.state === 'on' || r.state === 'running', acc,
+          { dis: !r.can, wait: r.wait, sub: r.state === 'off' ? 'It won\'t run until it\'s back on' : '' }), true)] : null,
         r.controls.length ? ['does', lbl('CONTROLS') + devRows(r.controls, r.does)] : null,
         r.watches.length ? ['watch', lbl('WATCHES') + devRows(r.watches)] : null,
         !r.controls.length && !r.watches.length ? ['none', `<p class="tnote">${r.tells.length ? 'Works no device: it sends a notification.' : 'Works no device: only the dashboard\'s helpers.'}</p>`] : null,
@@ -481,7 +502,14 @@ const AUTOS = family({
       ],
     };
   },
-  act() {},
+  // Its switch (the row's or the popup's): automation.turn_on / turn_off.
+  act(id, a) {
+    if (a !== 'ausw') return;
+    const s = st(id); if (!s || !['on', 'off'].includes(s.state)) return;
+    const d = dv('autos', id, auName(id)), on = held(d, 'on', s.state) === 'on';
+    tset(d, 'on', on ? 'off' : 'on'); render();
+    return tsend(d, 'automation', on ? 'turn_off' : 'turn_on', { entity_id: id }, ['on']);
+  },
   // The preview: each automation in the copy, on, as Home Assistant would list it.
   samples(e) {
     const out = {};
