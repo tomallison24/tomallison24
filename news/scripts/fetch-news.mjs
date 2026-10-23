@@ -422,6 +422,14 @@ console.log(`Wrote ${stories.length} stories (${results.length - failed}/${resul
 await mkdir(dirname(CACHE_COPY), { recursive: true });
 await writeFile(CACHE_COPY, await readFile(OUT));
 
+// Every stem cell story, kept for good in the owner's Google Sheet (log-stemcells.mjs).
+try {
+  const { logStemCells } = await import('./log-stemcells.mjs');
+  await logStemCells(stories);
+} catch (err) {
+  console.log(`Stem cell log skipped: ${err.message}`);
+}
+
 // Scores fallback copy (see fetch-scores.mjs). Run from here so the workflow
 // file, whose last editor owns the refresh schedule, doesn't need changing.
 try {
