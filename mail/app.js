@@ -130,6 +130,8 @@ function getToken() {
 }
 
 const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic');
+// opened inside aOS (aOS/home-tab.js), not from Mail's own Home Screen icon
+const inAOS = (() => { try { return window.top !== window && !!window.top.aosHome; } catch { return false; } })();
 
 // Google gives a browser-only app an access token for an hour and no way to
 // renew it in the background. So when it runs out the app goes back through
@@ -141,7 +143,6 @@ const canFilter = () => (getToken()?.scope || '').includes('gmail.settings.basic
 // back into aOS (aos.away). A quiet renewal waits while the app is out of sight there. Google takes
 // this page's place in the history (replace), not a step of its own for the back swipe to land on.
 function toGoogle(u, silent) {
-  let inAOS = false; try { inAOS = window.top !== window && !!window.top.aosHome; } catch {}
   if (!inAOS) { location.replace(u); return; }
   const box = window.frameElement && window.frameElement.parentElement;
   if (silent && box && box.hidden) return;
@@ -185,7 +186,7 @@ function signOut() {
   }).catch(() => {});
   for (const k of [K.token, K.token + '.ever', K.state, K.lastAuth, K.silent, K.hint, K.pending, K.unsubbed]) ls.del(k);
   rowCache.clear();
-  try { navigator.clearAppBadge?.().catch(() => {}); } catch {}
+  try { showCount(0).catch(() => {}); } catch {}
   state.me = null;
   render();
 }
@@ -3091,34 +3092,49 @@ async function settleReminder(item) {
 // ---------------------------------------------------------------------------
 // iOS 16.4+ lets a web app on the Home Screen show a badge (setAppBadge). The
 // count is Gmail's own: unread conversations in the inbox.
-const canBadge = () => 'setAppBadge' in navigator;
+// Inside aOS, Mail shares aOS's Home Screen icon, so the count goes on Mail's
+// own icon in aOS instead (the "unread" cache, which this app's sw.js writes
+// too when a push brings a new count; aOS/home-tab.js draws it) and aOS's icon
+// is left clear.
+const canBadge = () => inAOS ? 'caches' in window : 'setAppBadge' in navigator;
 const badgeOn = () => ls.get(K.badge, '') === '1';
+const UNREAD = '/unread/mail';
+async function showCount(n) {
+  if (!inAOS) return n ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+  const c = await caches.open('unread');
+  await (n ? c.put(UNREAD, new Response(String(n))) : c.delete(UNREAD));
+  try { window.top.aosHome.unread('mail', n); } catch {}
+}
+// tells sw.js that Mail lives in aOS, and whether its icon there wants the count
+function markAOS() {
+  try { caches.open('unread').then(c => c.put('/unread/in-aos', new Response(badgeOn() ? 'on' : 'off'))).catch(() => {}); } catch {}
+}
+if (inAOS) { try { navigator.clearAppBadge?.().catch(() => {}); } catch {} markAOS(); }
 let badgeTimer = null;
 function updateBadge() {
   if (!canBadge() || !badgeOn() || !getToken() || slowed()) return;
   clearTimeout(badgeTimer);
   badgeTimer = setTimeout(async () => {
-    try {
-      const n = (await api('/labels/INBOX')).threadsUnread || 0;
-      if (n) await navigator.setAppBadge(n); else await navigator.clearAppBadge();
-    } catch {}
+    try { await showCount((await api('/labels/INBOX')).threadsUnread || 0); } catch {}
   }, 400);
 }
 async function toggleBadge() {
   if (badgeOn()) {
     ls.del(K.badge);
-    try { await navigator.clearAppBadge?.(); } catch {}
+    if (inAOS) markAOS();
+    try { await showCount(0); } catch {}
     toast('Unread count taken off the icon');
     return render();
   }
   if (!canBadge()) return toast('Only the Home Screen app can show a count on its icon — open Mail from your Home Screen', { bad: true, ms: 7000 });
-  // iOS asks for notification permission before it shows a web app's badge.
-  if ('Notification' in window && Notification.permission !== 'granted') {
+  // iOS asks for notification permission before it shows a web app's badge (not for Mail's icon in aOS).
+  if (!inAOS && 'Notification' in window && Notification.permission !== 'granted') {
     let p = 'default';
     try { p = await Notification.requestPermission(); } catch {}
     if (p !== 'granted') return toast('Allow notifications for Mail and the icon can show your unread count', { bad: true, ms: 7000 });
   }
   ls.set(K.badge, '1');
+  if (inAOS) markAOS();
   updateBadge();
   toast('The icon now shows how many conversations are unread');
   render();
