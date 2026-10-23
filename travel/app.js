@@ -641,6 +641,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let h = '<div class="triphead"><input id="tpName" value="' + esc(g.name) + '" aria-label="Trip name" placeholder="' + esc(g.auto) + '" enterkeyhint="done"><div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div></div>';
     h += days.map((d, i) => '<div class="dayblock" style="--i:' + i + '"><p class="sechead"><span>' + esc(fmtDay(d.d, { weekday: 'long', month: 'long' })) + '</span></p><div class="tl glass">'
       + d.list.map(e => evRow(e.b, e.at, e.side)).join('') + '</div></div>').join('');
+    // Have Ipsy check this trip: every booking still to come, against its newest email (checkTrip)
+    if (aiOn() && aiAvail !== false && g.items.some(checkable)) h += '<div class="rgroup glass"><button class="rowbtn" type="button" id="tpAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>'
+      + (st.aiBusy ? 'Ipsy is reading the emails…' : 'Have Ipsy check this trip') + '<span class="sub">Reads the newest email for each booking and updates what changed</span></span></button></div>';
     h += '<button class="btn quiet" type="button" id="tpAdd">' + I.plus + 'Add a booking to this trip</button>';
     const priv = g.items.filter(b => b.private).length, all = priv === g.items.length;
     // Just me trip: every booking in it that is yours (someone else's stays shared: only they can change that)
@@ -666,6 +669,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '</div>';
     $('tpBody').innerHTML = h;
     $('tpAdd').onclick = () => openAdd(g.start.slice(0, 10));
+    if ($('tpAi')) $('tpAi').onclick = () => checkTrip(g.id);
     $('tpPriv').onclick = () => { setPrivate(g.items.map(b => b.id), !all); renderTrip(); toast(all ? 'Ipsy can see this trip again' : 'Private: hidden from Ipsy'); };
     if ($('tpOnly')) $('tpOnly').onclick = () => { setTripJustMe(g, !jm); renderTrip(); toast(jm ? 'Shared with the family again' : 'Just me: only you see it'); };
   }
@@ -1330,7 +1334,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // last, the AI, which only reads the email's own words and has to quote them. Anything found this way is marked
   // "To check" (with where it came from) until you tap "Looks right" or edit it.
   const FILLED = { calendar: 'from your calendar', ai: 'by AI from the email', board: 'from the airport’s flight board' };
-  const FILLED_WHAT = { date: 'the date', flightNo: 'the flight number', airlineCode: 'the airline', from: 'the departure airport', to: 'the arrival airport', time: 'the time', name: 'the hotel', checkIn: 'the check-in date', checkOut: 'the check-out date', company: 'the company', address: 'the address' };
+  const FILLED_WHAT = { date: 'the date', flightNo: 'the flight number', airlineCode: 'the airline', from: 'the departure airport', to: 'the arrival airport', time: 'the time', arr: 'the landing time', name: 'the hotel', checkIn: 'the check-in date', checkOut: 'the check-out date', company: 'the company', address: 'the address', pickupPlace: 'the pick-up place', dropoff: 'the return' };
   const fill = (b, field, source) => { (b.filled = b.filled || {})[field] = source; b.guess = true; };
   const fillText = b => {
     const bySrc = {};
@@ -1576,6 +1580,138 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch (e) {
       toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
     } finally { st.aiBusy = false; if (ipsy) ipsy.working(false); render(); }
+  }
+  // Have Ipsy check this trip, on a trip's page: keeps it up to date. Each booking still to come (not Private, not a ride,
+  // from an email in this phone's Gmail) is read again by Claude from its newest email: the newest one in Gmail that names
+  // its confirmation code, or the one it came from. Every detail is asked for (not only what is missing) and compared; what
+  // the email says differently goes onto the booking, marked Check, with Undo in Ipsy's chat, and an email that says it
+  // was cancelled marks it cancelled. A booking you edited stays as you typed it (as with any email).
+  const CHECK_ASK = {
+    flight: ['airlineCode', 'flightNo', 'from', 'to', 'date', 'depTime', 'arrTime'],
+    hotel: ['name', 'address', 'checkIn', 'checkOut'],
+    car: ['company', 'pickupPlace', 'pickupDate', 'pickupTime', 'returnDate', 'returnTime'],
+  };
+  const CHECK_SAY = { airlineCode: 'airline', flightNo: 'flight number', from: 'departure airport', to: 'arrival airport', date: 'date', time: 'time', arr: 'landing time',
+    name: 'hotel', address: 'address', checkIn: 'check-in date', checkOut: 'check-out date', company: 'company', pickupPlace: 'pick-up place', pickup: 'pick-up', dropoff: 'return', status: 'status' };
+  const checkable = b => !b.private && !b.ride && b.status !== 'cancelled' && !!CHECK_ASK[b.type] && !(startOf(b) && isPast(b)) && myMail(b);
+  // What is on file, as the function names the fields.
+  function onFile(b) {
+    const t = v => String(v || '').slice(11, 16), d = v => String(v || '').slice(0, 10);
+    const o = b.type === 'flight' ? { airlineCode: b.airlineCode, flightNo: b.flightNo, from: b.from, to: b.to, date: d(b.dep), depTime: t(b.dep) || b.depTime, arrTime: t(b.arr) || b.arrTime }
+      : b.type === 'hotel' ? { name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut }
+      : { company: b.company, pickupPlace: b.pickupPlace, pickupDate: d(b.pickup), pickupTime: t(b.pickup), returnDate: d(b.dropoff), returnTime: t(b.dropoff) };
+    return Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v === 'string' && v));
+  }
+  // The same words, give or take ("Courtyard Boston" and "Courtyard by Marriott Boston" aren't a change).
+  const squashed = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const sameWords = (a, b) => { a = squashed(a); b = squashed(b); return !!a && !!b && (a.includes(b) || b.includes(a)); };
+  // What the email says differently goes onto the booking: the names of what changed.
+  function applyCheck(b, f) {
+    const ch = [], mark = (field, label) => { fill(b, field, 'ai'); if (!ch.includes(label)) ch.push(label); };
+    const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/, YMD = /^20\d\d-\d\d-\d\d$/;
+    const ok = (re, v) => typeof v === 'string' && re.test(v);
+    if (b.type === 'flight') {
+      if (ok(/^[A-Z0-9]{2}$/, f.airlineCode) && f.airlineCode !== b.airlineCode) { b.airlineCode = f.airlineCode; b.airline = P.AIRLINES[f.airlineCode] || ''; mark('airlineCode', CHECK_SAY.airlineCode); }
+      if (ok(/^\d{1,4}[A-Z]?$/, f.flightNo) && num(f.flightNo) !== num(b.flightNo)) { b.flightNo = f.flightNo; mark('flightNo', CHECK_SAY.flightNo); }
+      if (ok(/^[A-Z]{3}$/, f.from) && f.from !== b.from) { b.from = f.from; b.fromName = P.AIRPORTS[f.from] || ''; mark('from', CHECK_SAY.from); }
+      if (ok(/^[A-Z]{3}$/, f.to) && f.to !== b.to) { b.to = f.to; b.toName = P.AIRPORTS[f.to] || ''; mark('to', CHECK_SAY.to); }
+      const day0 = String(b.dep || '').slice(0, 10), t0 = String(b.dep || '').slice(11, 16) || (day0 ? '' : b.depTime || '');
+      const nd = ok(YMD, f.date) ? f.date : day0, nt = ok(HHMM, f.depTime) ? f.depTime : t0;
+      if (nd && (nd !== day0 || nt !== t0)) {
+        b.dep = nd + (nt ? 'T' + nt : ''); b.depIso = ''; if (nt) b.depTime = nt;
+        if (nd !== day0) mark('date', CHECK_SAY.date);
+        if (nt !== t0) mark('time', CHECK_SAY.time);
+      }
+      const at = ok(HHMM, f.arrTime) ? f.arrTime : '';
+      if (nd && (at || nd !== day0)) {
+        const a0 = String(b.arr || '').slice(0, 16), t = at || a0.slice(11, 16) || b.arrTime || '';
+        const arr = t ? (nt && t < nt ? P.addDays(nd, 1) : nd) + 'T' + t : '';
+        if (arr && arr !== a0) { b.arr = arr; b.arrIso = ''; b.arrTime = t; if (at && at !== a0.slice(11, 16)) mark('arr', CHECK_SAY.arr); }
+      }
+      if (ch.length) delete live[b.id];
+    } else if (b.type === 'hotel') {
+      if (typeof f.name === 'string' && f.name.length >= 3 && !sameWords(f.name, b.name)) { b.name = f.name.slice(0, 90); mark('name', CHECK_SAY.name); }
+      if (typeof f.address === 'string' && f.address.length >= 6 && !sameWords(f.address, b.address)) { b.address = f.address.slice(0, 160); mark('address', CHECK_SAY.address); }
+      if (ok(YMD, f.checkIn) && f.checkIn !== b.checkIn) { b.checkIn = f.checkIn; mark('checkIn', CHECK_SAY.checkIn); }
+      if (ok(YMD, f.checkOut) && f.checkOut !== b.checkOut && f.checkOut > b.checkIn) { b.checkOut = f.checkOut; mark('checkOut', CHECK_SAY.checkOut); }
+      if (b.checkIn && (!b.checkOut || b.checkOut <= b.checkIn)) b.checkOut = P.addDays(b.checkIn, 1);
+    } else if (b.type === 'car') {
+      if (typeof f.company === 'string' && f.company.length >= 2 && !sameWords(f.company, b.company)) { b.company = f.company.slice(0, 40); mark('company', CHECK_SAY.company); }
+      if (typeof f.pickupPlace === 'string' && f.pickupPlace.length >= 3 && !sameWords(f.pickupPlace, b.pickupPlace)) { b.pickupPlace = f.pickupPlace.slice(0, 120); mark('pickupPlace', CHECK_SAY.pickupPlace); }
+      const when2 = (cur, d, t) => { const d0 = String(cur || '').slice(0, 10), t0 = String(cur || '').slice(11, 16), nd = ok(YMD, d) ? d : d0, nt = ok(HHMM, t) ? t : t0; return nd ? nd + (nt ? 'T' + nt : '') : ''; };
+      const pu = when2(b.pickup, f.pickupDate, f.pickupTime), dr = when2(b.dropoff, f.returnDate, f.returnTime);
+      if (pu && pu !== String(b.pickup || '').slice(0, 16)) { b.pickup = pu; b.pickupIso = ''; mark('date', CHECK_SAY.pickup); }
+      if (dr && dr !== String(b.dropoff || '').slice(0, 16) && dr > b.pickup) { b.dropoff = dr; b.dropoffIso = ''; mark('dropoff', CHECK_SAY.dropoff); }
+    }
+    if (f.cancelled === 'yes' && b.status !== 'cancelled') { b.status = 'cancelled'; ch.push('cancelled'); }
+    return ch;
+  }
+  // The newest email in this Gmail about a booking: the newest that names its confirmation code since the one it came
+  // from (a schedule change, new dates), or that one. Never an email of a Private booking.
+  async function newestMail(b) {
+    const src = b.source, hidden = new Set(bookings.filter(x => x.private && x.source).flatMap(x => [x.source.msgId, x.source.threadId]).filter(Boolean));
+    let id = src.msgId;
+    if (/^[A-Z0-9]{5,}$/i.test(b.conf || '')) {
+      try {
+        const r = await gmail('/messages', { q: '"' + b.conf + '"' + (src.date ? ' after:' + Math.floor(src.date / 1000) : ''), maxResults: 5 });
+        const m = (r && r.messages || []).find(x => !hidden.has(x.id) && !hidden.has(x.threadId));
+        if (m) id = m.id;
+      } catch (e) { if (e instanceof AuthError) throw e; }
+    }
+    const msg = await gmail('/messages/' + id, { format: 'full' });
+    const { html, text } = bodies(msg.payload);
+    return { id, threadId: msg.threadId || '', text: P.htmlToText(html) || text || '', subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now() };
+  }
+  async function checkTrip(id) {
+    if (st.aiBusy) return;
+    const g = tripById(id); if (!g) return;
+    if (!getToken()) { toast('Connect Gmail first, so Travel can read the emails.'); return; }
+    st.aiBusy = true; renderTrip();
+    if (ipsy) ipsy.working(true);
+    const list = g.items.filter(checkable).slice(0, 8), mine2 = list.filter(b => !b.edited);
+    const changes = [], said = [];
+    let read = 0, cancelled = 0, stop = '';
+    try {
+      if (aiAvail === null) await pingLive();
+      if (!aiAvail) { toast('AI isn’t set up on this copy of the site.'); return; }
+      for (const b of mine2) {
+        let m;
+        try { m = await newestMail(b); } catch (e) { if (e instanceof AuthError) throw e; continue; }
+        if (m.text.length < 40) continue;
+        const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
+          body: JSON.stringify({ check: true, type: b.type, missing: CHECK_ASK[b.type], known: onFile(b), text: m.text.slice(0, 12000), subject: m.subject, emailDate: new Date(m.date).toISOString() }) };
+        let d = null;
+        try { d = await (await aosFetch(API + 'extract', init)).json(); } catch { stop = 'offline'; break; }
+        if (d && d.error === 'no-key') { aiAvail = false; stop = 'no-key'; break; }
+        if (d && (d.error === 'limit' || d.error === 'signin')) { stop = d.error; break; }
+        if (!d || !d.ok) continue;
+        read++; noteModel('check', d.model);
+        const cur = bookings.find(x => x.id === b.id);
+        if (!cur || cur.edited) continue;                     // edited while Ipsy was reading: yours wins
+        const before = JSON.parse(JSON.stringify(cur));
+        const ch = applyCheck(cur, d.fields || {});
+        if (!ch.length) continue;
+        // read from a newer email: the booking follows it, so the older one, read again, doesn't put the old details back
+        if (m.id !== (cur.source && cur.source.msgId) && m.date >= when(cur)) cur.source = { msgId: m.id, threadId: m.threadId, subject: m.subject.slice(0, 200), from: m.from, date: m.date };
+        if (ch.includes('cancelled')) cancelled++;
+        changes.push({ id: cur.id, before, after: sameAs(cur) });
+        said.push(titleOf(cur) + ': ' + (ch.includes('cancelled') ? 'cancelled' : ch.slice(0, 4).join(', ')));
+      }
+      if (changes.length) { save(); smartSoon(); }
+      const undo = changes.length ? undoChanges(changes) : null;
+      if (undo && ipsy) ipsy.change('Updated ' + said.join('; ') + '. Marked Check.', undo);
+      const bits = [];
+      if (changes.length) bits.push('Ipsy updated ' + plural(changes.length, 'booking') + (cancelled ? ' (' + cancelled + ' cancelled)' : '') + '. Marked Check.');
+      else if (read) bits.push('Ipsy read ' + plural(read, 'email') + '. Everything matches.');
+      if (stop === 'limit') bits.push('That’s enough AI for today. Try again tomorrow.');
+      else if (stop === 'signin') bits.push('Sign in with Face ID in aOS to use Ipsy.');
+      else if (stop === 'offline') bits.push('Couldn’t reach Ipsy. Try again in a moment.');
+      else if (!read && !changes.length && mine2.length) bits.push('Ipsy couldn’t read the emails just now.');
+      if (list.length > mine2.length) bits.push(plural(list.length - mine2.length, 'booking') + ' you edited stay' + (list.length - mine2.length === 1 ? 's' : '') + ' as you typed.');
+      toast(bits.join(' ') || 'Nothing to check.', undo, undo ? 6000 : 0);
+    } catch (e) {
+      toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
+    } finally { st.aiBusy = false; if (ipsy) ipsy.working(false); render(); if (st.trip) renderTrip(); }
   }
   // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
   // flight board have had their go), every upcoming booking still missing something that came from an email is
@@ -2164,5 +2300,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, P };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P };
 })();

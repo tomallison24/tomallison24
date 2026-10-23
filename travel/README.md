@@ -18,7 +18,13 @@ with the details filled in.
   pick-up and return. **Add to calendar** (top) puts the whole trip in the
   iCloud Family calendar (through the Calendar app's function, where the site
   is on Cloudflare; elsewhere it saves a calendar file), so the calendar does
-  the reminding. At the bottom,
+  the reminding. **Have Ipsy check this trip** keeps it up to date: for
+  each booking still to come (not Private, from an email in your own Gmail),
+  Ipsy reads the newest email about it (the newest that names its
+  confirmation code, a schedule change too, or the one it came from) and
+  compares every detail; what changed goes onto the booking, marked Check,
+  with Undo, and an email that says it was cancelled marks it cancelled. A
+  booking you edited stays as you typed it. At the bottom,
   **Find more for this trip** opens Google Flights, Google Hotels, Marriott,
   Kayak rental cars and National with the trip's places and dates filled in.
 - **A booking**: every detail can be edited (an undated one has a Date field first). A flight shows **live status**
