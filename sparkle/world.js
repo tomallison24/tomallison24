@@ -164,8 +164,8 @@
       ${bush(330, 760, 0.9)}${flower(640, 740, C.lilac)}${flower(380, 700, C.gold)}${mushroom(670, 770, C.lilac)}${bush(690, 720, 0.8, '#A7E8A0')}
       ${g('math', bush(880, 500, 0.9) + flower(700, 470, C.pink) + mushroom(860, 460, C.gold))}
       ${g('wand', flower(700, 930, C.rose) + flower(800, 960, C.gold) + flower(840, 930, C.lilac) + flower(680, 965, C.sky) + bush(860, 975, 0.8))}
-      ${STARS.filter(s => !found.has(s.id)).map(s => `<g class="find star" data-star="${s.id}" role="button" aria-label="A hidden star">${star(s.x, s.y, 13, C.gold, `stroke="${INK}" stroke-width="3" stroke-linejoin="round"`)}</g>`).join('')}
-      ${CRITTERS.filter(c => !met.has(c.id)).map(c => critter(c.id, c.x, c.y).replace('<g class="critter"', `<g class="critter find" role="button" aria-label="${c.name}"`)).join('')}
+      ${STARS.filter(s => !found.has(s.id)).map(s => `<g class="find star" data-star="${s.id}" role="button" aria-label="A hidden star"><circle cx="${s.x}" cy="${s.y}" r="36" fill="transparent"/>${star(s.x, s.y, 13, C.gold, `stroke="${INK}" stroke-width="3" stroke-linejoin="round"`)}</g>`).join('')}
+      ${CRITTERS.filter(c => !met.has(c.id)).map(c => critter(c.id, c.x, c.y).replace(/<g class="critter"([^>]*)>/, `<g class="critter find" role="button" aria-label="${c.name}"$1><circle cx="${c.x}" cy="${c.y - 20}" r="40" fill="transparent"/>`)).join('')}
       ${g('read', towerHouse(282, 392))}${g('math', mineHill(800, 468))}${castle(500, 700)}${g('wand', meadowArch(580, 900))}
       ${g('read', `<g class="place signpost"><path d="M372 560V500" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M372 560V500" stroke="#E9B872" stroke-width="5"/><path d="M372 504H316l-12 12l12 12H372Z" fill="${C.cream}" ${THIN}/><path d="M372 518H426l12 12l-12 12H372Z" fill="${C.cream}" ${THIN}/>${star(334, 516, 5, C.lilac)}${heart(410, 530, 5, C.pink)}</g>`)}
       ${unfog.garden ? clouds('castle', 'garden') + g('garden', flowerArch(381, 941)) : ''}${unfog.workshop ? clouds('door', 'workshop') + g('spell', gemDoor(666, 1040)) : ''}
