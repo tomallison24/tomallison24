@@ -2,7 +2,10 @@
 // share one storage, and Home can read what each app keeps without opening it. Nothing is sent anywhere.
 //
 //   aosFind.weather()  -> { temp: '64°', text: 'Sunny', hilo: 'H 70° L 52°', place } or null
-//                        from Weather's own cache (wx.*), as fresh as the last time Weather was open
+//                        from Weather's own cache (wx.*)
+//   aosFind.refreshWeather() -> true once a new forecast is in: fetched with Weather's own code
+//                        (../weather/data.js) for Weather's place, when its last one is over 10 minutes
+//                        old (as Weather does), and kept in Weather's cache, so Weather opens with it too
 //   aosFind.next()     -> { when: '4:00 PM', title, then: '6:30 PM · Dinner', where } or null
 //                        the next thing on the Family calendar, today or tomorrow (Calendar's .ics,
 //                        turned into occurrences by ../calendar/ical.js, as Calendar does)
@@ -26,9 +29,27 @@
     fog: 'Fog', hail: 'Hail', lightning: 'Thunderstorms', 'lightning-rainy': 'Thunderstorms', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Severe weather' };   // weather/app.js, V.words
   const keyOf = p => p.lat.toFixed(3) + ',' + p.lon.toFixed(3);   // weather/app.js, keyOf
   const ok = b => b && b.cur && Array.isArray(b.daily) && Number.isFinite(b.cur.tF);
+  const okPlace = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon);
+  let fetching = null;
+  function refreshWeather() {
+    if (fetching) return fetching;
+    if (typeof WXD === 'undefined' || !navigator.onLine) return Promise.resolve(false);
+    const here = get('wx.here'), places = get('wx.places'), p = okPlace(here) ? here : Array.isArray(places) && okPlace(places[0]) ? places[0] : null;
+    if (!p) return Promise.resolve(false);   // Weather hasn't found a place yet: it asks for one, aOS doesn't
+    const k = keyOf(p), was = (get('wx.cache') || {})[k];
+    if (ok(was) && Date.now() - (was.fetchedAt || 0) < 10 * 60e3) return Promise.resolve(false);
+    return (fetching = WXD.fetchBase(p.lat, p.lon).then(base => {
+      if (!ok(base) || !Array.isArray(base.hourly)) return false;
+      const cache = get('wx.cache'), all = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {};
+      if (all[k] && all[k].fetchedAt > Date.now() - 60e3) return false;   // Weather got one meanwhile
+      all[k] = Object.assign(base, { fetchedAt: Date.now(), key: k });   // as weather/app.js keeps it
+      localStorage.setItem('wx.cache', JSON.stringify(all));
+      return true;
+    }).catch(() => false).finally(() => { fetching = null; }));
+  }
   function weather() {
     const cache = get('wx.cache'); if (!cache || typeof cache !== 'object') return null;
-    const here = get('wx.here'), places = get('wx.places'), at = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon) ? cache[keyOf(p)] : null;
+    const here = get('wx.here'), places = get('wx.places'), at = p => okPlace(p) ? cache[keyOf(p)] : null;
     const b = [at(here), at(Array.isArray(places) && places[0])].find(ok) || Object.values(cache).find(ok);
     if (!b) return null;
     const metric = get('wx.units') === 'metric', deg = f => Math.round(metric ? (f - 32) * 5 / 9 : f) + '°';
@@ -139,5 +160,5 @@
     return out.sort((a, b) => a.rank - b.rank).slice(0, max).map(({ app, title, sub, at }) => ({ app, title, sub, at: at || '' }));
   }
 
-  window.aosFind = { weather, next, search };
+  window.aosFind = { weather, refreshWeather, next, search };
 })();
