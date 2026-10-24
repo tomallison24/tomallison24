@@ -91,6 +91,7 @@
         'The Ipsy bar finds things as you type: the app first (Return opens it), then what\'s in your apps (events, notes and reminders, bookings, orders, dinners, places and shows), read on your phone and sent nowhere; Ask Ipsy is under them. Hidden orders stay hidden. An app found there has its i, for its page with What\'s New, Open and Get',
         'No dock, and nothing floats over Home; on Today, Home floats at the bottom to take you back. Today sits beside your account on Home',
         'Home\'s Weather widget is up to date when you open aOS: a forecast over 10 minutes old is fetched again (Weather opens with it too). A tap on a widget or an icon opens its app every time, even as Home updates',
+        'Ipsy, in every app: closed for a minute once it has answered, it opens with a new chat; the clock in its corner brings back any of your last five',
         'Mail\'s unread count shows on Mail\'s icon on Home, not on aOS\'s own Home Screen icon (Mail, Settings > Unread count on the app icon)',
         'Ipsy\'s chat on Home opens below the Ipsy bar, with fewer words in it. Under your account, Owner tools (notifications, the Home Assistant address, invites) fold away until tapped',
         'The top of every Vintage page fades into the status bar, rather than stopping in a band under it',

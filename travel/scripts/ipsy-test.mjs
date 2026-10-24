@@ -418,6 +418,33 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden && getComputedStyle(document.querySelector('.ipsy-btn')).visibility === 'visible');
   });
 
+  await step(tag + ': closed for a minute, a finished chat is put away and Ipsy opens with a new one (sooner, it is the same chat); the last five are in Recent chats', async () => {
+    const ago = () => T(() => localStorage.setItem('ipsy.travel.closed', String(Date.now() - 2 * 60 * 1000)));   // as if closed two minutes ago
+    const shut = async () => { await page.keyboard.press('Escape'); await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden); };
+    await T(() => localStorage.removeItem('ipsy.travel.history'));
+    await page.click('.ipsy-btn');
+    assert.equal(await page.isHidden('#ipsyHist'), true, 'no clock until there is a chat to go back to');
+    await ask('First question', 'Hello!');
+    await shut(); await page.click('.ipsy-btn');
+    assert.deepEqual(await texts(page, '.ipsy-me'), ['First question'], 'opened again within the minute: the same chat');
+    await shut(); await ago(); await page.click('.ipsy-btn');
+    assert.equal(await page.$$eval('.ipsy-msg', e => e.length), 0, 'a minute later: a new, empty chat');
+    assert.equal(await page.isVisible('#ipsyHist'), true);
+    for (const q of ['Second', 'Third', 'Fourth', 'Fifth', 'Sixth']) { await ask(q, 'Hello!'); await shut(); await ago(); await page.click('.ipsy-btn'); }
+    await page.click('#ipsyHist');
+    assert.deepEqual(await texts(page, '.ipsy-hrow b'), ['Sixth', 'Fifth', 'Fourth', 'Third', 'Second'], 'the last five, newest first');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, design + '-' + scheme + '-recent.png') });
+    await page.click('.ipsy-hrow[data-hist="2"]');
+    assert.deepEqual(await texts(page, '.ipsy-me'), ['Fourth']);
+    await ask('And another', 'Hello!');
+    assert.equal(sent.at(-1).filter(m => m.role === 'user' && JSON.stringify(m).includes('Fourth')).length, 1, 'it carries on from the chat brought back');
+    await page.click('#ipsyNew');
+    assert.equal(await page.$$eval('.ipsy-msg', e => e.length), 0);
+    await page.click('#ipsyHist');
+    assert.equal((await texts(page, '.ipsy-hrow b'))[0], 'Fourth', 'New chat puts the chat in Recent chats');
+    await shut();
+  });
+
   await step(tag + ': picking the other design in Settings changes Ipsy at once', async () => {
     const other = design === 'glass' ? 'vintage' : 'glass';
     await page.evaluate(d => window.aosDesign.set(d), other);
