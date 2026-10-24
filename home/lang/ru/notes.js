@@ -7,13 +7,14 @@
   const notes = n => P(n, 'заметка', 'заметки', 'заметок');
   const rems = n => P(n, 'напоминание', 'напоминания', 'напоминаний');
   const lc1 = s => s.charAt(0).toLowerCase() + s.slice(1);
-  const nm = s => s === 'Untitled' ? T(s) : s.replace(/^“Untitled”$/, '«' + T('Untitled') + '»');   // a name, or the app's Untitled
+  // names the family wrote, “quoted” by the app: «quoted» here, and the app's own Untitled in Russian
+  const nm = s => s === 'Untitled' ? T(s) : s.replace(/“([^”]*)”/g, (_, x) => '«' + (x === 'Untitled' ? T(x) : x) + '»');
   // the app's own collections (a tag's collection is the family's word, left as it is)
   const COLLS = ['No tag', 'All notes', 'Nudges', 'Private', 'Archive', 'Trash'];
   const coll = c => COLLS.includes(c) ? T(c) : c;
   const SYNC = { 'Syncing…': 'Синхронизация…', 'Synced': 'Синхронизировано', 'Not synced': 'Не синхронизировано', 'Offline': 'Нет сети' };
   // "N things" (Ipsy) or the family's names, as they are
-  const things = s => { const m = /^(\d+) (things|items)$/.exec(s); return m ? P(+m[1], 'пункт', 'пункта', 'пунктов') : s.replace(/ and (\d+) more$/, ' и ещё $1'); };
+  const things = s => { const m = /^(\d+) (things|items)$/.exec(s); return m ? P(+m[1], 'пункт', 'пункта', 'пунктов') : nm(s.replace(/ and (\d+) more$/, ' и ещё $1')); };
   // what Ipsy changed in a note (edit_note)
   const SAID = { 'restored it from Trash': 'восстановлена из корзины', 'title': 'заголовок', 'text': 'текст', 'tags': 'теги', 'color': 'цвет',
     'nudge': 'напоминание', 'took off the nudge': 'напоминание снято', 'archived it': 'в архиве', 'moved it out of Archive': 'возвращена из архива',
@@ -103,7 +104,7 @@
     'Copy text': 'Скопировать текст',
     'Design': 'Дизайн',
     'Backup and sync': 'Копия и синхронизация',
-    'Back up everything': 'Сохранить копию всего',
+    'Back up everything': 'Сохранить резервную копию',
     'Import a file': 'Загрузить из файла',
     'Add shared items?': 'Добавить полученное?',
     'Not now': 'Не сейчас',
@@ -361,6 +362,7 @@
     [/^(\d+) pairs of tags that look the same$/, m => 'Похожие теги: ' + P(+m[1], 'пара', 'пары', 'пар')],
     [/^(\d+) notes? untouched for 6 months$/, m => 'Без изменений полгода: ' + notes(+m[1])],
     [/^(\d+) notes? without a tag$/, m => 'Без тега: ' + notes(+m[1])],
+    [/^“[^”]*”(?:, “[^”]*”)*(?: and \d+ more)?$/, m => things(m[0])],
     [/^Done: (.+)$/, m => 'Готово: ' + lc1(T(m[1].charAt(0).toUpperCase() + m[1].slice(1)))],
     // a note's name, as the family wrote it
     [/^Pinned (“.*”)$/, m => 'Закреплено: ' + nm(m[1])],
@@ -394,8 +396,8 @@
     // a tag's notes and reminders: "2 notes · 1 reminder"
     [/^(\d+) (notes?|reminders?)(?: · (\d+) reminders?)?$/, m => (/^note/.test(m[2]) ? notes(+m[1]) : rems(+m[1])) + (m[3] ? ' · ' + rems(+m[3]) : '')],
     // sharing and receiving
-    [/^Note: (.*)$/, m => 'Заметка: ' + nm(m[1])],
-    [/^Reminder: (.*)$/, m => 'Напоминание: ' + nm(m[1])],
+    [/^Note: (.*)$/, m => 'Заметка: ' + (m[1] === 'Untitled' ? T(m[1]) : m[1])],
+    [/^Reminder: (.*)$/, m => 'Напоминание: ' + (m[1] === 'Untitled' ? T(m[1]) : m[1])],
     [/^Add (\d+) reminders\?$/, m => 'Добавить ' + rems(+m[1]) + '?'],
     [/^Add (\d+) items\?$/, m => 'Добавить ' + P(+m[1], 'запись', 'записи', 'записей') + '?'],
     [/^Into (.+)\.$/, m => 'В список «' + m[1] + '».'],
@@ -412,23 +414,23 @@
     [/^That didn’t work \((.+)\)\.$/, m => 'Не получилось (' + m[1] + ').'],
     [/^Last backup (\d+) days ago\.$/, m => 'Последняя копия — ' + P(+m[1], 'день', 'дня', 'дней') + ' назад.'],
     // Ipsy's changes and questions (ipsy-tools.js): the names in them are the family's, as they are
-    [/^Wrote the note (“.*”)$/, m => 'Создана заметка ' + m[1]],
-    [/^Rewrite the whole text of (“.*”)\? Undo will bring the old text back\.$/, m => 'Переписать весь текст заметки ' + m[1] + '? «Отменить» вернёт прежний текст.'],
-    [/^Updated (“.*”): (.+)$/, m => 'Изменено ' + m[1] + ': ' + m[2].split(', ').map(x => SAID[x] || x).join(', ')],
-    [/^Move the note (“.*”) to Trash\?$/, m => 'Переместить заметку ' + m[1] + ' в корзину?'],
+    [/^Wrote the note (“.*”)$/, m => 'Создана заметка ' + nm(m[1])],
+    [/^Rewrite the whole text of (“.*”)\? Undo will bring the old text back\.$/, m => 'Переписать весь текст заметки ' + nm(m[1]) + '? «Отменить» вернёт прежний текст.'],
+    [/^Updated (“.*”): (.+)$/, m => 'Изменено ' + nm(m[1]) + ': ' + m[2].split(', ').map(x => SAID[x] || x).join(', ')],
+    [/^Move the note (“.*”) to Trash\?$/, m => 'Переместить заметку ' + nm(m[1]) + ' в корзину?'],
     [/^Move these (\d+) notes to Trash: (.+)\?$/, m => 'Переместить в корзину ' + notes(+m[1]) + ': ' + things(m[2]) + '?'],
-    [/^Moved (“.*”) to Trash$/, m => m[1] + ' в корзине'],
+    [/^Moved (“.*”) to Trash$/, m => nm(m[1]) + ' в корзине'],
     [/^Moved (\d+) notes to Trash$/, m => 'В корзину перемещено: ' + notes(+m[1])],
-    [/^Tidied the recipe (“.*”): (\d+) ingredients, (\d+) steps$/, m => 'Рецепт ' + m[1] + ' оформлен: ' + P(+m[2], 'ингредиент', 'ингредиента', 'ингредиентов') + ', ' + P(+m[3], 'шаг', 'шага', 'шагов')],
+    [/^Tidied the recipe (“.*”): (\d+) ingredients, (\d+) steps$/, m => 'Рецепт ' + nm(m[1]) + ' оформлен: ' + P(+m[2], 'ингредиент', 'ингредиента', 'ингредиентов') + ', ' + P(+m[3], 'шаг', 'шага', 'шагов')],
     [/^Made the list (.+?) and added (.+) to \1$/, m => 'Создан список «' + m[1] + '», добавлено: ' + things(m[2])],
     [/^Added (“.*”|\d+ things) to (.+)$/, m => 'В «' + m[2] + '» добавлено: ' + things(m[1])],
-    [/^Changed (“.*”) in (.+)$/, m => 'Изменено ' + m[1] + ' в «' + m[2] + '»'],
+    [/^Changed (“.*”) in (.+)$/, m => 'Изменено ' + nm(m[1]) + ' в «' + m[2] + '»'],
     [/^Checked off (.+)$/, m => 'Отмечено: ' + things(m[1])],
     [/^Unchecked (.+)$/, m => 'Отметка снята: ' + things(m[1])],
-    [/^Remove (“.*”) from the list\?$/, m => 'Убрать ' + m[1] + ' из списка?'],
+    [/^Remove (“.*”) from the list\?$/, m => 'Убрать ' + nm(m[1]) + ' из списка?'],
     [/^Remove these (\d+) items: (.+)\?$/, m => 'Убрать ' + P(+m[1], 'пункт', 'пункта', 'пунктов') + ': ' + things(m[2]) + '?'],
     [/^Removed (.+)$/, m => 'Убрано: ' + things(m[1])],
-    [/^Sorted (.+) into store sections$/, m => m[1].startsWith('“') ? m[1] + ' разложено по отделам' : 'Список «' + m[1] + '» разложен по отделам'],
+    [/^Sorted (.+) into store sections$/, m => m[1].startsWith('“') ? nm(m[1]) + ' разложено по отделам' : 'Список «' + m[1] + '» разложен по отделам'],
     [/^Adding to (.+)$/, m => 'Добавляю в «' + m[1] + '»'],
   ]);
 }

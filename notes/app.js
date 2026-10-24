@@ -656,7 +656,7 @@
   function openTidy(){ renderTidy(); openSheet('tidySheet'); }
   function renderTidy(){
     const list = tidySuggestions();
-    $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns"' + (s.id === 'empty' ? '' : ' translate="no"') + '>' + esc(s.detail) + '</span></span>'
+    $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns">' + esc(s.detail) + '</span></span>'
       + '<button class="textbtn" type="button" data-tidy="' + s.id + '">' + esc(s.act) + '</button></div>').join('') + '</div>'
       : '<div class="empty glass"><strong>All tidy</strong></div>';
   }

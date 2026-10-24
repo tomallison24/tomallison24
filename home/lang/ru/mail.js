@@ -21,7 +21,7 @@
 
     // the header and the list
     'Select All': 'Выбрать все',
-    'Deselect All': 'Снять выбор',
+    'Deselect All': 'Снять все',
     'Select': 'Выбрать',
     'Back to the inbox': 'Назад во «Входящие»',
     'Search': 'Поиск',
@@ -45,7 +45,7 @@
     'Mark as Unread': 'Не прочитано',
     'Archive': 'Архив',
     'Trash': 'Корзина',
-    'Tap, or drag down the circles': 'Коснитесь или проведите по кружкам',
+    'Tap, or drag down the circles': 'Нажмите или проведите вниз',
     'Connecting…': 'Подключение…',
     'Not connected': 'Не подключено',
     'Tags': 'Теги',
@@ -96,8 +96,8 @@
     'empty': 'пусто',
     'no rules': 'нет правил',
     'New tag': 'Новый тег',
-    'From — a domain like tmsa.org, or an address': 'От кого — домен, например tmsa.org, или адрес',
-    'Tag — e.g. Sofia’s school': 'Тег — например, Школа Софии',
+    'From — a domain like tmsa.org, or an address': 'От кого — домен (tmsa.org) или адрес',
+    'Tag — e.g. Sofia’s school': 'Тег — напр., Школа Софии',
     'Add tag': 'Добавить тег',
     'Add rule': 'Добавить правило',
     'In menu': 'В меню',
@@ -139,7 +139,7 @@
     // Settings
     'Changes how Mail looks on this phone.': 'Меняет вид Почты на этом телефоне.',
     'Account': 'Профиль',
-    'Signed in': 'Вход',
+    'Signed in': 'Аккаунт',
     'Filter permission': 'Доступ к фильтрам',
     'granted': 'есть',
     'not granted': 'нет',
@@ -308,7 +308,7 @@
     'Pick a tag, or type a new one': 'Выберите тег или введите новый',
   }, [
     // counts and times
-    [/^(\d+) Selected$/, m => 'Выбрано: ' + m[1]],
+    [/^(\d+) Selected$/, m => 'Выбрано ' + m[1]],
     [/^(\d+) of (\d+)$/, m => m[1] + ' из ' + m[2]],
     [/^(now|\d+[mhd])$/, m => ago(m[1])],
     [/^in (\d+)d$/, m => 'через ' + m[1] + ' дн.'],
@@ -352,7 +352,7 @@
     [/^(.+) → (.+) · filing their older mail…$/, m => who(m[1]) + ' → ' + m[2] + ' · переношу старые письма…'],
     [/^(.+) → (.+?)(?: · (\d+) messages)?$/, m => who(m[1]) + ' → ' + m[2] + msgs(m[3])],
     [/^Not tagged: (.+)$/, m => 'Тег не назначен: ' + t(m[1])],
-    [/^(Or a new tag|New tag) — e\.g\. Sofia’s school$/, m => (m[1] === 'New tag' ? 'Новый тег' : 'Или новый тег') + ' — например, Школа Софии'],
+    [/^(Or a new tag|New tag) — e\.g\. Sofia’s school$/, m => (m[1] === 'New tag' ? 'Новый тег' : 'Или новый тег') + ' — напр., Школа Софии'],
     [/^Past and new mail from anyone at (.+), kept in your inbox\.$/, m => 'Прошлые и новые письма от всех с ' + m[1] + '; они остаются во «Входящих».'],
     [/^Tip: swipe an email right to tag it or send it to (.+)$/, m => 'Совет: смахните письмо вправо, чтобы назначить тег или отправить в ' + m[1]],
 

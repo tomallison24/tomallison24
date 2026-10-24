@@ -9,6 +9,7 @@
   const DOWS = { Sundays: 'По воскресеньям', Mondays: 'По понедельникам', Tuesdays: 'По вторникам', Wednesdays: 'По средам', Thursdays: 'По четвергам', Fridays: 'По пятницам', Saturdays: 'По субботам' };
   const t = s => aosLang.t(s);
   const nm = n => DR[n] || n;
+  const tl = s => { const r = t(s); return r !== s ? r : s.split(', ').map(t).join(', '); };
   const num = s => String(s).replace(/(\d) (?=\d)/g, '$1 ');
   // Russian plurals; a fraction takes the second form (2,5 напитка)
   const pl = (n, one, few, many) => /[.,]\d/.test(String(n)) ? few : aosLang.plural(String(n).replace(/\D/g, '') || '0', one, few, many);
@@ -108,7 +109,8 @@
     [/^(\d+) drinks?$/, m => P(m[1], 'напиток', 'напитка', 'напитков')],
     [/^(\d+) days?$/, m => DAYS(m[1])],
     [/^(\d+) weeks?$/, m => WEEKS(m[1])],
-    [/^(\d+) alcohol-free days?$/, m => P(m[1], 'день без алкоголя', 'дня без алкоголя', 'дней без алкоголя')],
+    [/^(\d+) alcohol-free days?( so far)?$/, m => P(m[1], 'день без алкоголя', 'дня без алкоголя', 'дней без алкоголя') + (m[2] ? ' пока' : '')],
+    [/^(\d+) of (\d+)$/, m => m[1] + ' из ' + m[2]],
     [/^(\d+) of (\d+) alcohol-free days$/, m => m[1] + ' из ' + gen(m[2], 'дня без алкоголя', 'дней без алкоголя')],
     [/^(\d+) in a row$/, m => m[1] + ' подряд'],
     // the week's number
@@ -117,7 +119,7 @@
     [/^standard drinks, over your limit$/, () => 'стандартных напитков, выше лимита'],
     // a day
     [/^Over your (\d+) a day$/, m => 'Выше лимита (' + m[1] + ' в день)'],
-    [/^Add (.+), ([^,]+), ([\d.,]+%)$/, m => 'Добавить: ' + nm(m[1]) + ', ' + t(m[2]) + ', ' + m[3]],
+    [/^Add (.+), (\d[\d .,]* (?:oz|ml)), ([\d.,]+%)$/, m => 'Добавить: ' + nm(m[1]) + ', ' + t(m[2]) + ', ' + m[3]],
     [/^(.+) \(or its name\)$/, m => nm(m[1]) + ' (или название)'],
     [/^Change (.+)$/, m => 'Изменить: ' + nm(m[1])],
     [/^Delete (.+)$/, m => 'Удалить: ' + nm(m[1])],
@@ -142,7 +144,6 @@
     [new RegExp('^(up|down) ' + N + ' on (the 7 days before|the 4 weeks before), (better|worse)$'), m => (m[1] === 'up' ? 'больше на ' : 'меньше на ') + m[2] + ', ' + BEFORE[m[3]] + ', ' + t(m[4])],
     [/^Your best: (\d+) days?$/, m => 'Ваш рекорд: ' + DAYS(m[1])],
     [new RegExp('^([^:]+): ' + N + ' standard drinks$'), m => t(m[1]) + ': ' + SD(m[2])],
-    [/^([^:]+): (\d[\d .,]*|—|not known), (.+)$/, m => t(m[1]) + ': ' + t(m[2]) + ', ' + t(m[3])],
     // the readouts and their VoiceOver labels (weekly, alcohol-free days, days over, strength, days of the week)
     [new RegExp('^(?:' + N + ' )?standard drinks( so far)?(,)?(?: ' + N + ' (over|under) your (\\d+))?$'), m => (m[1] ? SD(m[1]) : 'стандартных напитков') + (m[2] ? ' пока' : '') + (m[3] || m[4] ? ',' : '') + (m[4] ? ' на ' + m[4] + (m[5] === 'over' ? ' больше' : ' меньше') + ' лимита в ' + m[6] : '')],
     [new RegExp('^' + N + ' over$'), m => 'на ' + m[1] + ' больше'],
@@ -183,6 +184,7 @@
     [/^(\d+) other drinks?: (.+)$/, m => 'Другие напитки (' + m[1] + '): ' + t(m[2])],
     // days of the week
     [/^are your heaviest: (\S+) standard drinks on average, (\d+)% of all you drank in these (\d+) weeks\.$/, m => ' — больше всего: в среднем ' + SD(m[1]) + ', ' + m[2] + '% всего выпитого за эти ' + m[3] + ' недель.'],
-    [/^([^:]+): (.+)$/, m => t(m[1]) + ': ' + m[2].split(', ').map(t).join(', ')],
+    // a number's VoiceOver label: "Weeks over your limit: 5 of 12, limit 14 a week"
+    [/^([^:]+): (.+?)(?:, (.+))?$/, m => t(m[1]) + ': ' + t(m[2]) + (m[3] ? ', ' + tl(m[3]) : '')],
   ]);
 })();

@@ -304,6 +304,7 @@
     'Find appointment emails in Gmail': 'Найди письма о записях в Gmail',
     'What can you change here?': 'Что ты можешь здесь менять?',
     'Your question and the events Ipsy reads go to Claude, by Anthropic, through the family server. It asks before every change (each shows with Undo), and never sees Private events.': 'Ваш вопрос и события, которые читает Ипси, уходят в Claude от Anthropic через семейный сервер. Ипси спрашивает перед каждым изменением (у каждого есть «Отменить») и никогда не видит личные события.',
+    '(none)': '(нет)',
     'Add this event?': 'Добавить это событие?',
     'Change this event?': 'Изменить это событие?',
     'Delete this event?': 'Удалить это событие?',
@@ -390,6 +391,7 @@
     [/^Offline\. Showing the events last seen(?:, (.+))?\.$/, m => 'Нет сети. Показаны последние загруженные события' + (m[1] ? ', ' + ago(m[1]) : '') + '.'],
     // Ipsy's cards and changes
     [/^(Title|Day|Start|End|All day|Repeat|Calendar|Place|Notes): (.+)$/, m => CARD[m[1]] + ': ' + m[2].split(' → ').map(s => cardVal(m[1], s)).join(' → ')],
+    [/^(.+) \(iCloud, shared with the family\)$/, m => m[1] + ' (iCloud, общий с семьёй)'],   // after "Calendar: ", which shared.js reads first
     [/^Added “(.+)” on (.+)$/, m => 'Добавлено «' + m[1] + '»: ' + m[2]],
     [/^Changed (.+?) of “(.+)”$/, m => 'Изменено (' + m[1].split(', ').map(w => CHANGED[w] || w).join(', ') + '): «' + m[2] + '»'],
     [/^Deleted “(.+)” \((.+)\)$/, m => 'Удалено «' + m[1] + '» (' + m[2] + ')'],

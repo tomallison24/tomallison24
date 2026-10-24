@@ -723,8 +723,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const kpis = list => '<div class="kpis">' + list.join('') + '</div>';
   const legend = items => '<div class="legend">' + items.map(([c, t]) => '<span><i class="' + c + '"></i>' + esc(t) + '</span>').join('') + '</div>';
   // Every chart has its numbers as a table too, for anyone who'd rather read them.
-  const tview = (head, rows) => '<details class="tview"' + (tr.table ? ' open' : '') + '><summary>Show as a table</summary><table><thead><tr>' + head.map((h, i) => '<th' + (i ? ' class="n"' : '') + '>' + esc(h) + '</th>').join('')
-    + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map((c, i) => '<td' + (i ? ' class="n"' : '') + '>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></details>';
+  const tview = (head, rows, names) => '<details class="tview"' + (tr.table ? ' open' : '') + '><summary>Show as a table</summary><table><thead><tr>' + head.map((h, i) => '<th' + (i ? ' class="n"' : '') + '>' + esc(h) + '</th>').join('')
+    + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map((c, i) => '<td' + (i ? ' class="n"' : names && !KNOWN.has(c) ? ' translate="no"' : '') + '>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></details>';   // names: the first column is drinks' names
   const readout = html => '<p class="readout" aria-live="polite">' + html + '</p>';
   // A scale that starts at 0 with at most five clean steps; `whole` keeps steps whole numbers.
   function scale(max, whole) {
@@ -889,7 +889,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         return seg + callout
           + '<p class="label">Had most often</p>' + list(byQty, x => plural(Math.round(x.qty), 'drink'), x => x.qty)
           + '<p class="label">Adds up to the most</p>' + list(bySd, x => f1(x.sd) + ' · ' + pc(x) + '%', x => x.sd)
-          + tview(['Drink', 'Drinks', 'Std drinks'], byQty.map(x => [x.label, String(Math.round(x.qty)), f1(x.sd)]));
+          + tview(['Drink', 'Drinks', 'Std drinks'], byQty.map(x => [x.label, String(Math.round(x.qty)), f1(x.sd)]), true);
       } },
     { id: 'days', name: 'Days of the week',
       icon: '<svg viewBox="0 0 24 24"><rect x="4" y="5.4" width="16" height="14.6" rx="3"/><path d="M4 10h16M8.6 3.6v3.2M15.4 3.6v3.2M8.6 14h.01M12 14h.01M15.4 14h.01"/></svg>',
