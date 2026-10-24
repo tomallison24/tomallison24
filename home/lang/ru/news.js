@@ -56,10 +56,10 @@
     // Sport: the bar and the team pill
     'Sport filters': 'Фильтры спорта',
     'Sport view': 'Раздел спорта',
-    'Scores': 'Результаты',
+    'Scores': 'Матчи',
     'Table': 'Таблица',
     'Filters': 'Фильтры',
-    'My teams': 'Мои команды',
+    'My teams': 'Команды',
     'My filters': 'Мои фильтры',
     'All sport': 'Весь спорт',
     'Choose sports and teams…': 'Выбрать спорт и команды…',
@@ -291,7 +291,7 @@
 
     // Sport
     [/^(.+) filters$/, m => 'Фильтры: ' + t(m[1])],
-    [/^Scores, (\d+) live$/, m => 'Результаты, в игре: ' + m[1]],
+    [/^Scores, (\d+) live$/, m => 'Матчи, в игре: ' + m[1]],
     [/^(.+), (\d+) on$/, m => t(m[1]) + ', выбрано: ' + m[2]],
     [/^Nothing on (.+) right now$/, m => 'Сейчас нет новостей: ' + t(m[1])],
     [/^Follow “(.+)”$/, m => 'Следить за «' + m[1] + '»'],
@@ -313,7 +313,7 @@
     [/^(Possession|Shots|Shots on target|Corners|Fouls|Offsides|Yellow cards|Red cards|Saves|Passes|Pass accuracy|Tries|Conversions|Penalty goals|Drop goals): (.+)$/, m => t(m[1]) + ': ' + m[2]],
     [/^(\d+) shots?(?:, (\d+) goals?)?$/, m => pl(m[1], 'удар', 'удара', 'ударов') + (m[2] ? ', ' + pl(m[2], 'гол', 'гола', 'голов') : '')],
     [/^(Goal|On target|Off target|Blocked|Hit the woodwork) · (.+)$/, m => t(m[1]) + ' · ' + m[2]],
-    [/^(\d+) saves · (\d+) conceded$/, m => 'сейвы: ' + m[1] + ' · пропущено: ' + m[2]],
+    [/^(\d+) saves · (\d+) conceded$/, m => pl(m[1], 'сейв', 'сейва', 'сейвов') + ' · ' + m[2] + ' проп.'],
     [/^(\d[\d ]*) watching$/, m => 'Зрителей: ' + m[1]],
     [/^On (.+)$/, m => 'Трансляция: ' + m[1]],
 

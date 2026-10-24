@@ -25,7 +25,7 @@
     'Select': 'Выбрать',
     'Back to the inbox': 'Назад во «Входящие»',
     'Search': 'Поиск',
-    'Edit': 'Изменить',
+    'Edit': 'Выбрать',          // Mail's Edit only selects messages; «Изменить» crowds the title out of the header
     'Done': 'Готово',
     'Settings': 'Настройки',
     'Search mail': 'Поиск в почте',

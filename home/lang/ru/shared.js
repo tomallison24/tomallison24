@@ -142,10 +142,9 @@
     'Reply, Reply All or Forward with attachments. Every send waits 5 seconds so you can take it back.': 'Отвечайте, отвечайте всем или пересылайте с вложениями. Каждое письмо ждёт 5 секунд, чтобы его можно было вернуть.',
     'Connect Gmail': 'Подключить Gmail',
     'Connect your Gmail to start. Mail is a calmer view of your own inbox.': 'Для начала подключите Gmail. Почта — спокойный взгляд на ваши входящие.',
-    // Mail's sample email, drawn for the tour
+    // Mail's sample email, drawn for the tour ("9m" is Mail's own pattern)
     'Tag': 'Тег', 'Marketing': 'Реклама', 'Flag': 'Флажок', 'Archive': 'Архив', 'Trash': 'Корзина',
     'Lincoln Elementary': 'Школа им. Линкольна',
-    '9m': '9 мин',
     'Field trip forms due Friday': 'Бланки на экскурсию — до пятницы',
     'Please return the signed permission slip by Friday so…': 'Пожалуйста, верните подписанное разрешение до пятницы, чтобы…',
     'Reminder': 'Напоминание',
@@ -222,7 +221,6 @@
     'Every show you follow, with new episodes downloaded and ready.': 'Все подкасты, на которые вы подписаны, с загруженными новыми выпусками.',
     'Your favorite show': 'Ваш любимый подкаст',
     'The newest episode': 'Новый выпуск',
-    '18 min left': 'Осталось 18 мин',
     // Travel
     'Every trip, all in one place': 'Все поездки в одном месте',
     'Fills itself from Gmail': 'Заполняется из Gmail',
@@ -235,16 +233,11 @@
     'Explore opens Google Flights, Google Hotels, Marriott, Kayak or National with your places and dates filled in.': '«Обзор» открывает Google Flights, Google Hotels, Marriott, Kayak или National с уже заполненными местами и датами.',
     'Add by hand': 'Добавьте вручную',
     'Tap + to add a flight, hotel or car yourself, or paste a confirmation email from any inbox.': 'Нажмите +, чтобы добавить рейс, отель или машину самостоятельно, или вставьте письмо с подтверждением из любого ящика.',
-    // Travel's sample trip
-    'Next · in 6 days': 'Ближайшее · через 6 дней',
+    // Travel's sample trip (its counts, "in 6 days" and the like, are Travel's own patterns)
     'Raleigh-Durham': 'Роли-Дарем',
     'Boston': 'Бостон',
     'Terminal 2 · Gate C7 · Seat 14A': 'Терминал 2 · Выход C7 · Место 14A',
     'On time': 'По расписанию',
-    'in 6 days': 'через 6 дней',
-    '2 flights': '2 перелёта',
-    '1 hotel': '1 отель',
-    '1 car': '1 машина',
     // Orders
     'Everything you\'ve bought, and where it is': 'Всё, что вы купили, и где оно сейчас',
     'Connect Gmail and your order, shipping and pickup emails become orders on their own.': 'Подключите Gmail — и письма о заказах, доставке и самовывозе сами превратятся в заказы.',

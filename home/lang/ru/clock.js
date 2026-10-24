@@ -32,7 +32,7 @@
     'Clock can’t be opened inside another page.': 'Часы нельзя открыть внутри другой страницы.',
     'This phone couldn’t save Clock: its storage is full.': 'Не удалось сохранить Часы: память телефона заполнена.',
     // tabs and the header
-    'World Clock': 'Мировые часы',
+    'World Clock': 'Часы мира',   // «Мировые часы» doesn't fit its tab in Futura
     'Alarms': 'Будильник',
     'Stopwatch': 'Секундомер',
     'Timers': 'Таймеры',

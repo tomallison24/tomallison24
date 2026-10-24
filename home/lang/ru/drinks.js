@@ -33,7 +33,7 @@
     'Log a drink today': 'Записать напиток за сегодня',
     // the week
     'Alcohol-free': 'Без алкоголя', 'Not logged': 'Не отмечено', 'Nothing yet': 'Пока ничего', 'not yet': 'ещё нет',
-    'standard drinks': 'стандартных напитков', 'standard drink': 'стандартный напиток',
+    'standard drinks': 'станд. напитков', 'standard drink': 'станд. напиток',
     // a day
     'That day hasn’t come yet.': 'Этот день ещё не наступил.', 'Total': 'Всего', 'Alcohol-free day': 'День без алкоголя',
     'Add another': 'Добавить ещё', 'Had a drink?': 'Выпили что-нибудь?', 'Something else…': 'Другой напиток…',
@@ -101,7 +101,7 @@
     'Standard drinks in an average drink': 'Стандартных напитков в среднем напитке', 'Each dot is a week': 'Каждая точка — неделя', 'Std per drink': 'Ст. на напиток',
   }), [
     // "This week · 18 окт. – 24 окт.", "12 oz · 5%", the readouts: each part on its own
-    [/·/, m => m.input.split(/\s*·\s*/).map(x => x ? t(x) : x).join(' · ')],
+    [/·/, m => m.input.split(/\s*·\s*/).map(x => /^\d+\.\d+%$/.test(x) ? x.replace('.', ',') : x ? t(x) : x).join(' · ')],
     // the week's row, for VoiceOver: "суббота, 24 октября, 2,5 standard drinks"
     [/^([^A-Za-z]*[а-яё][^A-Za-z]*?), (.+)$/i, m => m[1] + ', ' + t(m[2])],
     [new RegExp('^' + N + ' standard drinks$'), m => SD(m[1])],
@@ -118,7 +118,7 @@
     [/^of (\d+) standard drinks(, over your limit)?$/, m => 'из ' + SDg(m[1]) + (m[2] ? ', выше лимита' : '')],
     [/^standard drinks, over your limit$/, () => 'стандартных напитков, выше лимита'],
     // a day
-    [/^Over your (\d+) a day$/, m => 'Выше лимита (' + m[1] + ' в день)'],
+    [/^Over your (\d+) a day$/, m => 'Больше ' + m[1] + ' в день'],
     [/^Add (.+), (\d[\d .,]* (?:oz|ml)), ([\d.,]+%)$/, m => 'Добавить: ' + nm(m[1]) + ', ' + t(m[2]) + ', ' + m[3]],
     [/^(.+) \(or its name\)$/, m => nm(m[1]) + ' (или название)'],
     [/^Change (.+)$/, m => 'Изменить: ' + nm(m[1])],
@@ -137,7 +137,7 @@
     [/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)s the heaviest$/, m => DOWS[m[1] + 's'] + ' — больше всего'],
     [/^Goal met in (\d+) of (\d+) weeks$/, m => 'Цель выполнена в ' + m[1] + ' из ' + gen(m[2], 'недели', 'недель')],
     [/^(\d+) days? over (\d+) a day$/, m => DAYS(m[1]) + ' больше ' + m[2] + ' в день'],
-    [/^([\d.,]+%) average strength$/, m => 'Средняя крепость ' + m[1]],
+    [/^([\d.,]+%) average strength$/, m => 'Средняя крепость ' + m[1].replace('.', ',')],
     [/^(.+) most often$/, m => nm(m[1]) + ' — чаще всего'],
     // compared with before
     [/^([^A-Za-z]+) against ([^A-Za-z]+)$/, m => m[1] + ' в сравнении с ' + m[2]],
@@ -158,7 +158,7 @@
     [/^over (\d+) standard drinks( so far)?$/, m => 'больше ' + SDg(m[1]) + (m[2] ? ' пока' : '')],
     [new RegExp('^' + N + ' standard drinks on average$'), m => SD(m[1]) + ' в среднем'],
     [/^(\d+)% of everything$/, m => m[1] + '% от всего'],
-    [/^([\d.,]+%) average strength$/, m => 'средняя крепость ' + m[1]],
+    [/^([\d.,]+%) average strength$/, m => 'средняя крепость ' + m[1].replace('.', ',')],
     [new RegExp('^' + N + ' standard drinks in an average drink$'), m => SD(m[1]) + ' в среднем напитке'],
     [new RegExp('^' + N + ' so far$'), m => m[1] + ' пока'],
     [/^Standard drinks each week for the last (\d+) weeks$/, m => 'Стандартные напитки по неделям за последние ' + m[1] + ' недель'],

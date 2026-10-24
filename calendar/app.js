@@ -1444,7 +1444,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const b = e.target.closest('[data-set]');
     if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; if (k === 'weekStart') settings.weekStartPicked = true; saveSettings(); render(); renderSettings(); }
   });
-  const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));
+  // measured a frame later, once ../home/lang.js has put the words in (Russian ones are a different width)
+  const slideSegs = () => requestAnimationFrame(() => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set)));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
   if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: Vintage or Standard, at once (../home/design.js)
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
