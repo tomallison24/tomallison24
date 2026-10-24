@@ -63,8 +63,8 @@ jobs:
           echo "Changed:"; echo "$files"
 
   # Each app's live tour finds its way round the app, and tidies up after itself
-  # (aOS/scripts/tours-test.mjs). The slowest test, so it's in three shards that run
-  # side by side with everything else: shard i plays every third app.
+  # (aOS/scripts/tours-test.mjs). The slowest test, so it's in nine shards: three jobs that run
+  # side by side with everything else, each playing three shards at once (.github/scripts/ci-run.mjs).
   tours:
     needs: changes
     if: needs.changes.outputs.tours == 'yes'
@@ -91,16 +91,19 @@ jobs:
           key: apt-playwright-1.56.1-${{ runner.os }}
           restore-keys: apt-playwright-1.56.1-${{ runner.os }}-
       - run: .github/scripts/ci-browser.sh ${{ steps.pw.outputs.cache-hit == 'true' && 'hit' || '' }}
-      - run: node aOS/scripts/tours-test.mjs
+      - name: Run the tours
         env:
-          TOURS_SHARD: ${{ matrix.shard }}/3
+          SHARD: ${{ matrix.shard }}
+        run: TESTS="$(for k in 0 3 6; do echo "TOURS_SHARD=$((SHARD + k))/9 aOS/scripts/tours-test.mjs"; done)" node .github/scripts/ci-run.mjs
 
   # The browser tests: each app at iPhone size in Chromium, driven through what a person does,
   # and aOS's own (every app opens, on its own, the sky, the release's update screens). They run in
-  # twelve groups side by side, each about three minutes of tests (the sky alone is one), so the
-  # whole check takes about as long as one group, not all of them in a row. A new browser test goes
-  # into the group that runs shortest (each test's time is on its run's page, under its name). A group runs all its tests even when one fails, and
-  # names each failure. A test seeds aos.seen at '999' so no walkthrough or update screen covers the page.
+  # twelve groups side by side, each about three minutes of tests (the sky, in three shards, is one),
+  # and a group runs three of its tests at once (.github/scripts/ci-run.mjs: the runner has four
+  # cores), so the whole check takes about as long as one group's longest tests, not all of them in a
+  # row. A new browser test goes into the group that runs shortest (each test's time is on its run's
+  # page, in its fold's title). A group runs all its tests even when one fails, and names each
+  # failure. A test seeds aos.seen at '999' so no walkthrough or update screen covers the page.
   browser:
     name: ${{ matrix.group }}
     needs: changes
@@ -109,10 +112,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # the Vintage sky in every app
+          # the Vintage sky in every app, in three shards (the last also the sun and Standard)
           - group: sky
             tests: |
-              aOS/scripts/sky-test.mjs
+              aOS/scripts/sky-test.mjs . 2/3
+              aOS/scripts/sky-test.mjs . 0/3
+              aOS/scripts/sky-test.mjs . 1/3
           # every app on its own (and its old Vintage address); aOS's Today
           - group: standalone
             tests: |
@@ -227,15 +232,7 @@ jobs:
         if: steps.pick.outputs.any == 'yes'
         env:
           TESTS: ${{ steps.pick.outputs.tests }}
-        run: |
-          failed=''
-          while read -r t; do
-            [ -n "$t" ] || continue
-            echo "::group::node $t"
-            if node $t < /dev/null; then echo "::endgroup::"; else echo "::endgroup::"; echo "::error::node $t failed"; failed="$failed
-            node $t"; fi
-          done <<< "$TESTS"
-          if [ -n "$failed" ]; then echo "Failed:$failed"; exit 1; fi
+        run: node .github/scripts/ci-run.mjs
 
   # The caches the browser jobs start from (.github/scripts/ci-browser.sh): the browser, and apt's
   # .deb files (a new set each month, so they stay close to current). A pull request's run can't
