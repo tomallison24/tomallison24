@@ -2494,7 +2494,7 @@ function htmlToText(html) {
   return doc.body?.textContent || '';
 }
 const plainOf = m => m.text ? tidy(m.text) : m.html ? tidy(htmlToText(m.html)) : m.snippet || '';
-const longDate = ms => new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const longDate = ms => new Date(ms).toLocaleString('en-US-x-keep', { dateStyle: 'medium', timeStyle: 'short' });   // in the email itself: English even when aOS is in Russian (../home/lang.js leaves -x-keep alone)
 
 // The whole message, as Gmail's upload endpoint takes it. Text is UTF-8 in
 // base64; files (when there are any) make it multipart/mixed.
@@ -3692,22 +3692,22 @@ function clearSearch(reload = true) {
 // The large title steps down a size or two when it wouldn't fit beside the
 // buttons (a long tag name, Marketing on a small phone), before it is cut off.
 function fitTitle() {
-  const h1 = $('header h1'), t = $('#title');
-  const was = h1.classList.contains('fit2') ? 'fit2' : h1.classList.contains('fit1') ? 'fit1' : '';
+  const h1 = $('header h1'), t = $('#title'), FITS = ['fit1', 'fit2', 'fit3'];   // fit3: a long title in Russian («Входящие» beside Select)
+  const was = FITS.find(c => h1.classList.contains(c)) || '';
   h1.style.transition = 'none';                    // measure the sizes themselves, not a step of the animation
-  h1.classList.remove('fit1', 'fit2');
+  h1.classList.remove(...FITS);
   let fit = '';
   if (!document.body.classList.contains('scrolled')) {
-    for (const c of ['fit1', 'fit2']) {
+    for (const c of FITS) {
       if (t.scrollWidth <= t.clientWidth + 1) break;
-      h1.classList.remove('fit1'); h1.classList.add(c); fit = c;
+      h1.classList.remove(...FITS); h1.classList.add(c); fit = c;
     }
   }
-  h1.classList.remove('fit1', 'fit2');
+  h1.classList.remove(...FITS);
   if (was) h1.classList.add(was);
   void h1.offsetWidth;
   h1.style.transition = '';
-  h1.classList.remove('fit1', 'fit2');
+  h1.classList.remove(...FITS);
   if (fit) h1.classList.add(fit);
 }
 

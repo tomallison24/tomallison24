@@ -29,7 +29,8 @@ aosLang.add({
   second is looked up as `items`. A text built from a number or a name (`'Updated ' + when`) needs a
   pattern.
 - **Patterns** are tried in order, after the whole texts, and only on a whole text node. Anchor them
-  (`^...$`) and keep them narrow: a loose pattern can catch what the family wrote.
+  (`^...$`) and keep them narrow: a loose pattern can catch what the family wrote. A pattern's function
+  that gives back `null` passes: the next pattern is tried (shared.js's run first, on every page).
 - **Left as is:** anything inside an element with `translate="no"`, or contenteditable, or a textarea.
   Put `translate="no"` on what the family wrote (notes, list items, events, mail, names) and on outside
   content (news stories, podcast titles, places from the map) so a note called "Done" isn't translated.

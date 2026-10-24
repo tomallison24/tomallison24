@@ -830,8 +830,8 @@
     [/^Everything in aOS([\d.]+)$/, m => 'Всё новое в aOS' + m[1]],
     // aOS's own lists: "aOS2 · Every app, one home", "Mail: Mail.Controlled."
     // (only a value from this file: anything else, maybe what the family wrote, is left whole)
-    [/^· (.+)$/, m => (m[1] in W ? '· ' + W[m[1]] : m[0])],
-    [new RegExp('^(' + APPS + '): (.+)$'), m => (m[2] in W && /[\s.]/.test(m[2]) ? T(m[1]) + ': ' + W[m[2]] : m[0])],   // an app's tagline, not one word
+    [/^· (.+)$/, m => (m[1] in W ? '· ' + W[m[1]] : null)],   // only its own words: null lets an app's pattern try
+    [new RegExp('^(' + APPS + '): (.+)$'), m => (m[2] in W && /[\s.]/.test(m[2]) ? T(m[1]) + ': ' + W[m[2]] : null)],   // an app's tagline, not one word (else an app's own pattern may try)
 
     // ---- the family's plan ended ----
     [new RegExp('^(' + APPS + '|aOS) is off$'), m => (m[1] === 'aOS' ? 'aOS' : 'Приложение «' + T(m[1]) + '»') + ' выключено'],

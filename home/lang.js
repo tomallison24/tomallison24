@@ -34,7 +34,11 @@
     const k = norm(String(s));
     if (!k || !/[A-Za-z]/.test(k)) return s;
     const w = WORDS.get(k); if (w != null) return w;
-    for (const [re, f] of PATTERNS) { const m = re.exec(k); if (m) return typeof f === 'function' ? f(m) : k.replace(re, f); }
+    for (const [re, f] of PATTERNS) {   // a pattern's function can give back nothing (null): not this one, the next is tried
+      const m = re.exec(k); if (!m) continue;
+      const r = typeof f === 'function' ? f(m) : k.replace(re, f);
+      if (r != null) return r;
+    }
     return s;
   }
   window.aosLang = {
@@ -62,7 +66,8 @@
   root.lang = 'ru';
 
   // ---- dates and numbers in Russian ----
-  const swap = l => { const f = Array.isArray(l) ? l[0] : l; return f == null || /^en\b/i.test(String(f)) ? 'ru-RU' : l; };
+  // a locale marked -x-keep ('en-US-x-keep') stays as asked: for text that leaves aOS (an email's quoted date)
+  const swap = l => { const f = Array.isArray(l) ? l[0] : l; return f != null && /-x-keep$/i.test(String(f)) ? l : f == null || /^en\b/i.test(String(f)) ? 'ru-RU' : l; };
   for (const [proto, names] of [[Date.prototype, ['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString']], [Number.prototype, ['toLocaleString']]]) {
     for (const n of names) { const f = proto[n]; proto[n] = function (l, o) { return f.call(this, swap(l), o); }; }
   }
