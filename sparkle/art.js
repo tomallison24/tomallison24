@@ -247,6 +247,13 @@
     'wand-moon': { kind: 'wand', name: 'Moon wand', c: C.lilac, price: 30, draw: () => `<path d="M152 200L172 152" stroke="${INK}" stroke-width="8" stroke-linecap="round"/><path d="M152 200L172 152" stroke="${C.gold}" stroke-width="4" stroke-linecap="round"/><path d="M182 132A16 16 0 1 0 182 162A12 12 0 1 1 182 132Z" fill="${C.lilac}" ${THIN}/>${twinkle(194, 128, 6, C.gold)}` },
     'cape-rose': { kind: 'cape', name: 'Rose cape', c: C.rose, price: 35, draw: () => `<path d="M76 146C58 190 52 240 48 276C80 288 120 288 152 276C148 240 142 190 124 146Z" fill="${C.berry}" ${OUT}/>` },
     'cape-stars': { kind: 'cape', name: 'Star cape', c: '#5C4CC2', price: 45, draw: () => `<path d="M76 146C58 190 52 240 48 276C80 288 120 288 152 276C148 240 142 190 124 146Z" fill="#5C4CC2" ${OUT}/>${star(56, 250, 5)}${star(146, 244, 5)}${star(60, 210, 4)}` },
+    // story gifts (chapters.js): never sold, never a surprise
+    'cape-wings': { kind: 'cape', name: 'Fairy wings', c: '#BFF3E6', price: 0, gift: true, draw: () => `<g opacity=".92"><path d="M96 158C70 112 28 104 22 132C18 156 52 172 92 166Z" fill="#CFF6EE" ${OUT}/><path d="M104 158C130 112 172 104 178 132C182 156 148 172 108 166Z" fill="#CFF6EE" ${OUT}/>
+      <path d="M94 170C64 176 40 204 52 222C66 236 90 206 98 176Z" fill="#F6D2F0" ${OUT}/><path d="M106 170C136 176 160 204 148 222C134 236 110 206 102 176Z" fill="#F6D2F0" ${OUT}/>
+      <path d="M90 162C70 142 48 132 34 134M110 162C130 142 152 132 166 134" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></g>${twinkle(30, 116, 6, C.gold)}${twinkle(172, 120, 6, '#fff')}${twinkle(54, 232, 5, '#fff')}` },
+    'tiara-rainbow': { kind: 'tiara', name: 'Rainbow tiara', c: '#FF7AA8', price: 0, gift: true, draw: () => `<path d="M68 54L74 26L88 42L100 10L112 42L126 26L132 54Z" fill="${C.gold}" ${OUT}/>
+      ${['#FF7AA8', '#FFB257', '#FFE066', '#7FE0A0', '#7FC8FF', '#B79BFF'].map((c, i) => `<circle cx="${75 + i * 10}" cy="${48 - Math.sin((i + 0.5) / 6 * Math.PI) * 6}" r="4.5" fill="${c}" ${THIN}/>`).join('')}
+      <path d="M100 18L106 28L100 38L94 28Z" fill="#FF7AA8" ${THIN}/>${twinkle(100, 2, 6, '#fff')}${twinkle(72, 20, 4, C.gold)}${twinkle(128, 20, 4, C.gold)}` },
     'necklace-gem': { kind: 'necklace', name: 'Gem necklace', c: C.pink, price: 20, draw: () => `<path d="M88 146Q100 160 112 146" fill="none" stroke="${C.gold}" stroke-width="3"/>${'<g transform="translate(92 148)">' + `<path d="M2 4L5 0H11L14 4L8 13Z" fill="${C.pink}" ${THIN}/></g>`}` },
     'mane-candy': { kind: 'mane', name: 'Candy mane', cols: ['#FF9BD0', '#B79BFF', '#8FD3FF'], c: '#FF9BD0', price: 0, draw: null },
     'mane-sunset': { kind: 'mane', name: 'Sunset mane', cols: ['#FFB257', '#FF7AA8', '#FFE066'], c: '#FFB257', price: 30, draw: null },

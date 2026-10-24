@@ -8,8 +8,8 @@ import path from 'path';
 import vm from 'vm';
 
 const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-for (const f of ['engine.js', 'content.js', 'pictures.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
-const E = globalThis.SparkleEngine, C = globalThis.SparkleContent;
+for (const f of ['engine.js', 'content.js', 'pictures.js', 'chapters.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
+const E = globalThis.SparkleEngine, C = globalThis.SparkleContent, Ch = globalThis.SparkleChapters;
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok -', name); };
@@ -205,5 +205,32 @@ test('every word that can be shown has a drawing, and each is well formed', () =
     }
     assert.equal(stack.length, 0, 'an unclosed tag in ' + w);
   }
+});
+test('the story: ten chapters in every land, opened by rounds played there', () => {
+  assert.deepEqual(Ch.LANDS, ['read', 'math', 'wand', 'garden', 'spell']);
+  for (const l of Ch.LANDS) {
+    const cs = Ch.CHAPTERS[l]; assert.equal(cs.length, 10, l);
+    cs.forEach((c, i) => { assert.equal(c.n, i + 1); assert.ok(c.title && c.lines.length >= 3, l + ' ' + c.n); for (const t of c.lines) assert.ok(t.length < 160 && !/\{(?!name\})/.test(t), 'a long or odd line in ' + l + ' ' + c.n); });
+    assert.deepEqual(cs.filter(c => c.gift).map(c => c.n), [5, 10], 'presents at chapters 5 and 10 in ' + l);
+    assert.equal(Ch.next(l, 0, 0), null, 'nothing before a round');
+    assert.equal(Ch.next(l, 1, 0).n, 1);
+    assert.equal(Ch.next(l, 1, 1), null, 'heard already');
+    assert.equal(Ch.next(l, 30, 3).n, 4, 'one at a time, in order');
+    assert.equal(Ch.reached(l, 1000), 10);
+  }
+  assert.equal(new Set(Ch.GIFTS).size, 10, 'ten different presents');
+  assert.equal(Ch.line('Hi, {name}!', 'Ava'), 'Hi, Ava!');
+});
+test("a land's colour comes back with its story", () => {
+  assert.equal(Ch.colour(0), 0.3); assert.equal(Ch.colour(undefined), 0.3); assert.equal(Ch.colour(10), 1);
+  for (let k = 1; k <= 10; k++) assert.ok(Ch.colour(k) > Ch.colour(k - 1));
+});
+test('rounds in a land are kept per phone, and a merge loses none; nor the lifted fog or her rank', () => {
+  const a = E.newPlayer('p', 'A'), b = JSON.parse(JSON.stringify(a));
+  E.finished(a, 'd1', 'read'); E.finished(a, 'd1', 'read'); E.finished(b, 'd2', 'read'); E.finished(b, 'd2', 'math');
+  a.world.open = { garden: 5 }; b.world.open = { workshop: 9 }; b.updated = a.updated + 1; a.rank = 2;
+  const m = E.mergePlayer(a, b);
+  assert.equal(E.roundsIn(m, 'read'), 3); assert.equal(E.roundsIn(m, 'math'), 1); assert.equal(E.roundsIn(m, 'wand'), 0);
+  assert.deepEqual(m.world.open, { garden: 5, workshop: 9 }); assert.equal(m.rank, 2);
 });
 console.log(`${n} passed; ${used.size} pictures used`);

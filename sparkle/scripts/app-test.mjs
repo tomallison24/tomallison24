@@ -341,5 +341,58 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   report('the fog lifts after four rounds; the gem door and spelling in the Tiara Workshop; the flower gate and the Fairy Garden\'s three memory games', pr); await ctx.close();
 }
 
+// 8. the story: a chapter after a round in a land, a page at a time; the land's colour on the map; a present at
+// chapter 5; her rank going up; the castle's Stories shelf to hear one again (Sea glass)
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.rounds = 8;
+  ava.landRounds = { read: { seed: 8 } }; ava.chapters = { read: 4 };
+  const sk = lv => ({ level: lv, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: lv });
+  Object.assign(ava.skills, { read: sk(8), math: sk(6), wand: sk(3) });   // 8 + 6 + 3 + 4 others at 1 = 21: a Princess
+  const { ctx, p, errs } = await phone({ look: 'glass', seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  const tint = await p.locator('.kingdom [data-tint="read"]').count(), mine = await p.locator('.kingdom [data-tint="math"]').count();
+  if (!tint || !mine) pr.push('Story Tower and the Gem Mine are not greyed by the fog on the map');
+  const sat = await sp(p, () => { const f = document.querySelector('.kingdom [data-tint="read"]'); const id = f && f.getAttribute('filter').slice(5, -1); const m = id && document.getElementById(id).querySelector('feColorMatrix'); return m ? +m.getAttribute('values') : null; });
+  if (!(sat > 0.55 && sat < 0.62)) pr.push('Story Tower after 4 chapters should be partly coloured: ' + sat);
+  await sp(p, () => { window.sparkle.startRound('read'); }); await playRound(p);
+  const txt = await p.locator('#rewardIn').innerText();
+  if (!txt.includes('New chapter')) pr.push('no new chapter at the end of her 9th round in Story Tower');
+  if (!txt.includes('You are a Princess now')) pr.push('her rank did not go up: ' + txt.replace(/\s+/g, ' '));
+  await p.click('#chapterBtn'); await p.waitForTimeout(200);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'chapter') pr.push('the book did not open the chapter');
+  if (!(await p.locator('#chapterIn .chtitle').innerText()).includes('Chapter 5')) pr.push('not chapter 5');
+  await shot(p, '15-chapter');
+  for (let k = 0; k < 6 && await p.locator('#chNext').count(); k++) { await p.click('#chNext'); await p.waitForTimeout(120); }
+  await shot(p, '16-chapter-gift');
+  const after = await sp(p, () => { const me = window.sparkle.save.players.p1; return { ch: me.chapters.read, owned: me.owned, rank: me.rank }; });
+  if (after.ch !== 5) pr.push('chapter 5 was not kept as heard: ' + after.ch);
+  if (!after.owned.includes('library-owl-lamp')) pr.push('the present of chapter 5 was not given');
+  if (after.rank !== 1) pr.push('her rank was not kept: ' + after.rank);
+  if (!(await p.locator('#chapterIn .reveal svg').count())) pr.push('the present is not shown');
+  await p.click('#mapBtn'); await p.waitForTimeout(300);
+  const sat2 = await sp(p, () => { const f = document.querySelector('.kingdom [data-tint="read"]'); const m = f && document.getElementById(f.getAttribute('filter').slice(5, -1)).querySelector('feColorMatrix'); return m ? +m.getAttribute('values') : 1; });
+  if (!(sat2 > sat)) pr.push('Story Tower did not get more colour after the chapter');
+  // no chapter twice: the next round in Story Tower brings none (chapter 6 is at 12 rounds)
+  await sp(p, () => { window.sparkle.startRound('read'); }); await playRound(p);
+  if ((await p.locator('#chapterBtn').count())) pr.push('a chapter came again before its rounds');
+  // the castle: her rank, the Stories shelf, a story present that can't be bought
+  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(200);
+  if (!(await p.locator('#castleRank').innerText()).includes('Princess')) pr.push('the castle does not show her rank');
+  await p.click('[data-tab="stories"]');
+  if (await p.locator('[data-chapter^="read:"]').count() !== 5) pr.push('the Stories shelf should have 5 Story Tower chapters to hear');
+  if (await p.locator('.chrow button[disabled]').count() !== 45) pr.push('the chapters not reached should be shut');
+  await shot(p, '17-stories');
+  await p.click('[data-chapter="read:2"]'); await p.waitForTimeout(150);
+  for (let k = 0; k < 6 && await p.locator('#chNext').count(); k++) { await p.click('#chNext'); await p.waitForTimeout(100); }
+  await p.click('#chBack'); await p.waitForTimeout(150);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'castle') pr.push('hearing a chapter again does not come back to the castle');
+  if ((await sp(p, () => window.sparkle.save.players.p1.chapters.read)) !== 5) pr.push('hearing chapter 2 again changed what she has heard');
+  await p.click('[data-tab="tiara"]'); const c0 = await coins(p);
+  await p.click('[data-item="tiara-rainbow"]'); await p.click('[data-item="tiara-rainbow"]');
+  if ((await coins(p)) !== c0 || (await sp(p, () => window.sparkle.save.players.p1.owned.includes('tiara-rainbow')))) pr.push('a story present could be bought');
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
+  report('the story: a chapter after rounds in a land, its colour on the map, a present at chapter 5, her rank, the Stories shelf (Sea glass)', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 process.exit(failed ? 1 : 0);

@@ -126,7 +126,7 @@
     return { id, name, look: look || {}, created: Date.now(), updated: Date.now(),
       skills: {}, review: {}, known: {}, wallet: {}, owned: [], wearing: {}, gifts: 0,
       world: { at: 'castle', stars: [], critters: [], fog: 0 }, chapters: {}, stickers: [],
-      quest: null, play: {}, lands: {}, log: {}, rounds: 0 };
+      quest: null, play: {}, lands: {}, log: {}, rounds: 0, landRounds: {}, rooms: {} };
   }
   // Coins are kept per phone (wallet[device] = { earned, spent }), so two phones' copies add up
   // when they're merged, and nothing earned or spent on either is lost or counted twice.
@@ -142,6 +142,9 @@
   const sumDevices = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
   const playedOn = (p, day) => sumDevices(p.play[day]);
   const playedIn = (p, land) => sumDevices(p.lands[land]);
+  // Rounds finished in each land, per phone: they open the story's chapters (chapters.js).
+  function finished(p, device, land) { p.landRounds = p.landRounds || {}; const l = p.landRounds[land] = p.landRounds[land] || {}; l[device] = (l[device] || 0) + 1; }
+  const roundsIn = (p, land) => sumDevices((p.landRounds || {})[land]);
 
   // Each day's answers per skill: log[day][skill][device] = [right, total], for the Parent corner.
   function logAnswer(p, device, day, skill, right) {
@@ -190,8 +193,11 @@
     out.owned = union(a.owned, b.owned);
     out.stickers = union(a.stickers, b.stickers);
     out.world = { ...newer.world, stars: union((a.world || {}).stars, (b.world || {}).stars), critters: union((a.world || {}).critters, (b.world || {}).critters), fog: Math.max((a.world || {}).fog || 0, (b.world || {}).fog || 0) };
+    out.world.open = maxMap((a.world || {}).open, (b.world || {}).open);
+    out.landRounds = {}; for (const l of union(Object.keys(a.landRounds || {}), Object.keys(b.landRounds || {}))) out.landRounds[l] = maxMap((a.landRounds || {})[l], (b.landRounds || {})[l]);
     out.chapters = maxMap(a.chapters, b.chapters);
     out.rounds = Math.max(a.rounds || 0, b.rounds || 0);
+    out.rank = Math.max(a.rank || 0, b.rank || 0);
     out.gifts = Math.max(a.gifts || 0, b.gifts || 0);
     out.play = {}; for (const d of union(Object.keys(a.play || {}), Object.keys(b.play || {}))) out.play[d] = maxMap((a.play || {})[d], (b.play || {})[d]);
     out.lands = {}; for (const l of union(Object.keys(a.lands || {}), Object.keys(b.lands || {}))) out.lands[l] = maxMap((a.lands || {})[l], (b.lands || {})[l]);
@@ -216,5 +222,5 @@
   }
 
   root.SparkleEngine = { TUNE, today, dayNum, addDays, rng, newSkill, record, warmStart, warmStep, remember, dueFor, plan,
-    newPlayer, coins, earn, spend, played, playedOn, playedIn, logAnswer, accuracy, trim, mergePlayer, merge };
+    newPlayer, coins, earn, spend, played, playedOn, playedIn, finished, roundsIn, logAnswer, accuracy, trim, mergePlayer, merge };
 })(typeof window !== 'undefined' ? window : globalThis);

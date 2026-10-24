@@ -197,8 +197,8 @@ svg{display:block}
 .big svg{width:30px;height:30px}
 
 /* a round */
-#round .bd{position:absolute;inset:0}
-#round .bd svg{width:100%;height:100%}
+#round .bd,#reward .bd,#chapter .bd{position:absolute;inset:0}
+#round .bd svg,#reward .bd svg,#chapter .bd svg{width:100%;height:100%}
 #round .stage{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 76px) 14px calc(env(safe-area-inset-bottom) + 16px);gap:12px}
 .dots{display:flex;gap:6px;justify-content:center}
 .dots i{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.8)}
@@ -362,6 +362,24 @@ svg{display:block}
 .cover{position:absolute;inset:0;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.75);animation:yay .5s}
 .cover svg{width:80%}
 .praise.note{display:flex;align-items:center;gap:10px;font-size:17px;text-align:left}
+/* a chapter of the story */
+.chbook{display:flex;align-items:center;gap:12px;padding:10px 20px 10px 12px;border-radius:24px;background:var(--k-gold);box-shadow:0 4px 0 #D9A21E,inset 0 0 0 3px var(--k-ink);font-weight:900;font-size:20px;color:var(--k-ink);animation:wiggle 1.4s ease-in-out infinite}
+.chbook svg{width:44px;height:44px}
+.chtitle{padding:6px 18px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink);font-weight:900;font-size:18px;color:var(--k-ink)}
+.chtitle small{display:block;font-size:13px;font-weight:800;opacity:.7}
+.charts{display:flex;align-items:flex-end;justify-content:center;height:34vh;gap:4px}
+.charts .pr{height:100%}.charts .hs{height:62%}
+.charts svg{height:100%;width:auto}
+.chpage{display:flex;gap:6px}.chpage i{width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px var(--k-ink)}.chpage i.on{background:var(--k-pink)}
+.rank{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);font-weight:900;font-size:15px;color:var(--k-ink)}
+.rank svg{width:26px;height:26px}
+#castleRank{display:flex;justify-content:center;min-width:0}
+#castleRank .rank{font-size:14px;line-height:1.1;text-align:left}
+.stories{grid-column:1/-1;display:flex;flex-direction:column;gap:12px}
+.stories .tt{font-weight:900;color:var(--k-ink)}
+.chrow{display:flex;gap:8px;flex-wrap:wrap}
+.chrow button{width:46px;height:56px;border-radius:8px 12px 12px 8px;box-shadow:inset 0 0 0 3px var(--k-ink),inset 6px 0 0 rgba(75,46,111,.25);font-weight:900;font-size:18px;color:var(--k-ink)}
+.chrow button.no{opacity:.35}
 .praise.note svg{flex:none}
 .qstop svg{width:30px;height:30px}
 @media (prefers-reduced-motion:reduce){
@@ -458,10 +476,16 @@ svg{display:block}
     <div class="center" id="rewardIn"></div>
   </section>
 
+  <!-- a chapter of the story -->
+  <section id="chapter" class="game" hidden aria-label="A new chapter">
+    <div class="bd" id="chapterBd"></div>
+    <div class="center" id="chapterIn"></div>
+  </section>
+
   <!-- the castle: dress up and the Royal Boutique -->
   <section id="castle" class="game" hidden aria-label="Your castle">
     <div class="room"></div>
-    <div class="hud"><button type="button" class="rbtn" id="castleBack" aria-label="Back to the kingdom"></button><span class="sp"></span><div class="pill" id="castleCoins"></div></div>
+    <div class="hud"><button type="button" class="rbtn" id="castleBack" aria-label="Back to the kingdom"></button><span class="sp" id="castleRank"></span><div class="pill" id="castleCoins"></div></div>
     <div class="dress" id="dress"></div>
     <div class="shelf"><div class="tabs" id="shelfTabs" role="toolbar" aria-label="What to show"></div><div class="items" id="items"></div></div>
   </section>
@@ -474,6 +498,7 @@ svg{display:block}
   <script src="content.js"></script>
   <script src="art.js"></script>
   <script src="pictures.js"></script>
+  <script src="chapters.js"></script>
   <script src="world.js"></script>
   <script src="voice.js"></script>
   <script src="../home/account.js"></script>

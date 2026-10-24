@@ -43,6 +43,16 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   dots) and the fairy swapping two cards; What's Missing from 4 things to 10, things that move and two
   gone; Story Recall from "who" to "what came first". Every word picture is drawn
   (`pictures.js`), and only words a 5-year-old would name that one way are used.
+- **The story** (`chapters.js`): ten chapters in each land (50 in all), told a page at a time by the
+  land's friend, over the land's own backdrop. A chapter opens after rounds played in that land (1, 2,
+  4, 6, 9, 12, 16, 20, 25 and 30), never for a score, so every child reaches the end; a book at the
+  end of the round says one is ready, and one waiting stays until it's heard. Each land starts grey
+  under the fog on the map and gets its colour back a chapter at a time, all of it at chapter 10.
+  Chapters 5 and 10 give a present that is never sold (a piece for a castle room, the fairy wings, the
+  Rainbow Tiara). The castle's **Stories** shelf plays any chapter heard again.
+- **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
+  every skill's highest level added up (7 to 55), never going back down. It shows in the castle, the
+  end of the round that earns it, and the Parent corner.
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
   tap says the price and a second buys. Surprise presents (about one round in four, and the quest),
@@ -50,7 +60,7 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **The Parent corner**: press and hold Grown-ups, then Face ID (the family account), or, where
   there's none, a grown-up's times-table question. Each child's levels and how they moved this
   week, accuracy, words known and learning, words to **practice together** (missed on 2 or more
-  days), play time (today, the week, 30 days, by land), starting levels; Favor reading, lands open,
+  days), play time (today, the week, 30 days, by land), her rank and chapters by land, starting levels; Favor reading, lands open,
   voice speed, sound effects, the play timer badge, the design, signing in.
 - **Letter sounds**: a phone's voice says letter names well and letter sounds poorly, so a grown-up
   records each sound once in the Parent corner (`voice.js`); the game plays those, and otherwise
@@ -64,7 +74,7 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 Everything is drawn in code as SVG (`art.js`, `world.js`): the princess in layers (hair, gown,
 tiara, shoes, cape, necklace, wand, each player's skin, hair colour and style), the unicorn in five
 growth stages with its mane, saddle and horn, the four friends, the kingdom, the backdrops, the
-Boutique's 28 things, and about 100 word pictures (`pictures.js`). Every word she reads is drawn in **school letters** (`letters.js`): ball and
+Boutique's 30 things, and about 100 word pictures (`pictures.js`). Every word she reads is drawn in **school letters** (`letters.js`): ball and
 stick print with the single-storey a and g taught in kindergarten, since the phone's font has the
 other kind and aOS loads no web fonts.
 
@@ -89,7 +99,7 @@ A child is never asked to sign in.
 ## Tests
 
 - `node sparkle/scripts/logic-test.mjs`: the ladder, the warm-up, review, a round's plan, coins,
-  merging, and thousands of questions from every level, each well formed.
+  merging, the story's chapters and colour, and thousands of questions from every level, each well formed.
 - `node sparkle/scripts/letters-test.mjs`: the school letters.
 - `node sparkle/scripts/api-test.mjs`: the server route on an in-memory KV.
 - `node sparkle/scripts/app-test.mjs [repo] [screenshots]`: the whole game in Chromium at iPhone

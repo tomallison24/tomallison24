@@ -145,25 +145,31 @@
       return miss ? '' : `<rect x="${x - 8}" y="${y - 13}" width="16" height="26" rx="3" transform="rotate(${-39} ${x} ${y})" fill="#E9B872" ${THIN}/>`; }).join('');
     const rainbow = ['#FF7AA8', '#FFB257', '#FFE066', '#7FE0A0', '#7FC8FF', '#B79BFF'].map((c, i) => `<path d="M${bA.x - 10} ${bA.y + 6 + i * 4}Q${(bA.x + bB.x) / 2} ${(bA.y + bB.y) / 2 - 60 + i * 4} ${bB.x + 10} ${bB.y + 6 + i * 4}" fill="none" stroke="${c}" stroke-width="4"/>`).join('');
     const found = new Set(st.stars || []), met = new Set(st.critters || []);
+    // each land's colour comes back with its story (chapters.js colour(): 0.3 grey to 1): a saturate filter per land
+    const tints = {}, colour = st.colour || {};
+    for (const [land, c] of Object.entries(colour)) if (c < 1) tints[land] = uid('tint');
+    const tintDefs = Object.keys(tints).length ? `<defs>${Object.entries(tints).map(([land, id]) => `<filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feColorMatrix type="saturate" values="${colour[land].toFixed(2)}"/></filter>`).join('')}</defs>` : '';
+    const g = (land, body) => tints[land] ? `<g data-tint="${land}" filter="url(#${tints[land]})">${body}</g>` : body;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="kingdom" role="img" aria-label="The kingdom">
       <defs><linearGradient id="${sky}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD9EE"/><stop offset=".45" stop-color="#E6DBFF"/><stop offset="1" stop-color="#CBEBFF"/></linearGradient></defs>
       <rect width="${W}" height="${H}" fill="url(#${sky})"/>
       ${[[120, 140, 1.2], [760, 200, 1], [880, 760, 0.8], [90, 860, 0.9], [520, 1380, 1.1], [420, 120, 0.7]].map(([x, y, s]) => `<g class="drift" opacity=".9"><path d="M${x - 70 * s} ${y + 20 * s}C${x - 90 * s} ${y - 6 * s} ${x - 54 * s} ${y - 26 * s} ${x - 30 * s} ${y - 14 * s}C${x - 20 * s} ${y - 44 * s} ${x + 30 * s} ${y - 44 * s} ${x + 36 * s} ${y - 14 * s}C${x + 64 * s} ${y - 24 * s} ${x + 84 * s} ${y + 6 * s} ${x + 66 * s} ${y + 20 * s}Z" fill="#fff"/></g>`).join('')}
       ${[[60, 330], [940, 290], [930, 640], [60, 1000], [930, 1380], [480, 260], [140, 1420]].map(([x, y], i) => `<g class="tw" style="animation-delay:${i * 0.4}s">${twinkle(x, y, 10, i % 2 ? C.gold : '#fff')}</g>`).join('')}
-      ${island(500, 720, 230, 70)}${island(282, 410, 150, 54, '#C8F2B8', '#D2BCF5', C.sky)}${island(790, 488, 150, 56, '#BFEFD4', '#B9A7E6', C.mint)}
-      ${island(752, 950, 130, 46, '#D8F7B8', '#C9B2F0', C.gold)}${island(262, 1150, 160, 56, '#C8F2B8', '#D2BCF5', C.rose)}${island(752, 1200, 150, 54, '#CDEFF7', '#C2B4F0', C.lilac)}
+      ${tintDefs}
+      ${island(500, 720, 230, 70)}${g('read', island(282, 410, 150, 54, '#C8F2B8', '#D2BCF5', C.sky))}${g('math', island(790, 488, 150, 56, '#BFEFD4', '#B9A7E6', C.mint))}
+      ${g('wand', island(752, 950, 130, 46, '#D8F7B8', '#C9B2F0', C.gold))}${g('garden', island(262, 1150, 160, 56, '#C8F2B8', '#D2BCF5', C.rose))}${g('spell', island(752, 1200, 150, 54, '#CDEFF7', '#C2B4F0', C.lilac))}
       ${path('castle', 'sign')}${path('sign', 'tower')}${path('castle', 'bridgeA')}${path('bridgeB', 'mine')}${path('castle', 'door')}${path('door', 'meadow')}
       <g class="bridge ${fixed ? 'fixed' : 'broken'}" data-gate="bridge">${rainbow}${planks}</g>
-      ${bush(170, 430, 1.1)}${bush(380, 460, 0.8, '#A7E8A0')}${flower(330, 440, C.rose)}${flower(220, 380, C.gold)}${mushroom(210, 450)}
+      ${g('read', bush(170, 430, 1.1) + bush(380, 460, 0.8, '#A7E8A0') + flower(330, 440, C.rose) + flower(220, 380, C.gold) + mushroom(210, 450))}
       ${bush(330, 760, 0.9)}${flower(640, 740, C.lilac)}${flower(380, 700, C.gold)}${mushroom(670, 770, C.lilac)}${bush(690, 720, 0.8, '#A7E8A0')}
-      ${bush(880, 500, 0.9)}${flower(700, 470, C.pink)}${mushroom(860, 460, C.gold)}
-      ${flower(700, 930, C.rose)}${flower(800, 960, C.gold)}${flower(840, 930, C.lilac)}${flower(680, 965, C.sky)}${bush(860, 975, 0.8)}
+      ${g('math', bush(880, 500, 0.9) + flower(700, 470, C.pink) + mushroom(860, 460, C.gold))}
+      ${g('wand', flower(700, 930, C.rose) + flower(800, 960, C.gold) + flower(840, 930, C.lilac) + flower(680, 965, C.sky) + bush(860, 975, 0.8))}
       ${STARS.filter(s => !found.has(s.id)).map(s => `<g class="find star" data-star="${s.id}" role="button" aria-label="A hidden star">${star(s.x, s.y, 13, C.gold, `stroke="${INK}" stroke-width="3" stroke-linejoin="round"`)}</g>`).join('')}
       ${CRITTERS.filter(c => !met.has(c.id)).map(c => critter(c.id, c.x, c.y).replace('<g class="critter"', `<g class="critter find" role="button" aria-label="${c.name}"`)).join('')}
-      ${towerHouse(282, 392)}${mineHill(800, 468)}${castle(500, 700)}${meadowArch(580, 900)}
-      <g class="place signpost"><path d="M372 560V500" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M372 560V500" stroke="#E9B872" stroke-width="5"/><path d="M372 504H316l-12 12l12 12H372Z" fill="${C.cream}" ${THIN}/><path d="M372 518H426l12 12l-12 12H372Z" fill="${C.cream}" ${THIN}/>${star(334, 516, 5, C.lilac)}${heart(410, 530, 5, C.pink)}</g>
-      ${unfog.garden ? clouds('castle', 'garden') + flowerArch(381, 941) : ''}${unfog.workshop ? clouds('door', 'workshop') + gemDoor(666, 1040) : ''}
-      ${garden(262, 1140)}${workshop(752, 1186)}
+      ${g('read', towerHouse(282, 392))}${g('math', mineHill(800, 468))}${castle(500, 700)}${g('wand', meadowArch(580, 900))}
+      ${g('read', `<g class="place signpost"><path d="M372 560V500" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M372 560V500" stroke="#E9B872" stroke-width="5"/><path d="M372 504H316l-12 12l12 12H372Z" fill="${C.cream}" ${THIN}/><path d="M372 518H426l12 12l-12 12H372Z" fill="${C.cream}" ${THIN}/>${star(334, 516, 5, C.lilac)}${heart(410, 530, 5, C.pink)}</g>`)}
+      ${unfog.garden ? clouds('castle', 'garden') + g('garden', flowerArch(381, 941)) : ''}${unfog.workshop ? clouds('door', 'workshop') + g('spell', gemDoor(666, 1040)) : ''}
+      ${g('garden', garden(262, 1140))}${g('spell', workshop(752, 1186))}
       ${unfog.garden ? '' : fogCloud(262, 1110, 1.15, 'garden')}${unfog.workshop ? '' : fogCloud(752, 1160, 1.05, 'workshop')}
       ${st.quest && NODES[st.quest] ? `<g class="glow"><circle cx="${NODES[st.quest].x}" cy="${NODES[st.quest].y}" r="54" fill="${C.gold}" opacity=".25"/><circle cx="${NODES[st.quest].x}" cy="${NODES[st.quest].y}" r="54" fill="none" stroke="${C.gold}" stroke-width="8" stroke-dasharray="4 14" stroke-linecap="round"/></g>` : ''}
     </svg>`;

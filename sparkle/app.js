@@ -11,7 +11,7 @@
 // in the Parent corner. The play timer counts only time she's actually playing (a tap in the last
 // minute); a session ends after 5 minutes with no taps.
 (() => {
-  const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters;
+  const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters, Ch = window.SparkleChapters;
   const $ = id => document.getElementById(id), esc = A.esc;
   const KEY = 'sparkle.v1', DEV = 'sparkle.device', API = new URL('../sparkle/api/', location.href).href;
   // the lands (a place in the kingdom -> its skill: the Fairy Garden picks one of its three memory games)
@@ -80,7 +80,7 @@
   addEventListener('pointerdown', () => { lastTap = Date.now(); V.unlock(); }, { capture: true });
 
   // ---- screens ----
-  const SCREENS = ['picker', 'world', 'round', 'reward', 'castle', 'intro'];
+  const SCREENS = ['picker', 'world', 'round', 'reward', 'castle', 'intro', 'chapter'];
   let screen = 'picker';
   function show(id) {
     screen = id;
@@ -96,6 +96,13 @@
   const stageOf = p => { const n = (p.stickers || []).length; return n >= 25 ? 4 : n >= 15 ? 3 : n >= 8 ? 2 : n >= 3 ? 1 : 0; };
   const owns = (p, id) => (p.owned || []).includes(id) || Object.values(A.STARTER).includes(id);
   const wearing = p => Object.assign({}, A.STARTER, p.wearing || {});
+  // her rank: every skill's highest level added up (7 to 55), and never lower than she's been
+  const RANKS = ['Little Princess', 'Princess', 'Royal Princess', 'Princess of Sparkle Kingdom'], RANK_AT = [0, 20, 32, 45];
+  const levelSum = p => Object.keys(C.LADDERS).reduce((a, k) => { const s = (p.skills || {})[k]; return a + (s ? Math.max(s.best || 0, s.level) : 1); }, 0);
+  const rankOf = p => Math.max(p.rank || 0, RANK_AT.filter(n => levelSum(p) >= n).length - 1);
+  const rankChip = p => `<span class="rank">${A.icon('tiara', 26)}<span>${RANKS[rankOf(p)]}</span></span>`;
+  const cap = t => t[0].toUpperCase() + t.slice(1);
+  const giftChapter = id => Ch.LANDS.flatMap(l => Ch.CHAPTERS[l]).find(c => c.gift === id);
   function paintPicker() {
     const ps = players();
     $('players').innerHTML = ps.map(p => `<button type="button" class="pcard" data-player="${esc(p.id)}" aria-label="Play as ${esc(p.name)}">
@@ -156,7 +163,8 @@
   }
   function paintMap() {
     const nx = nextStop();
-    $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx, unfog: me.world.open || {} })
+    $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx, unfog: me.world.open || {},
+        colour: Object.fromEntries(Ch.LANDS.map(l => [l, Ch.colour((me.chapters || {})[l])])) })
       + `<div id="rider" aria-hidden="true"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
     place(W.NODES[me.world.at] || W.NODES.castle);
   }
@@ -571,6 +579,9 @@
     const stageBefore = stageOf(me);
     E.earn(me, device, E.TUNE.coinRound); R.coins += E.TUNE.coinRound;
     me.rounds = (me.rounds || 0) + 1; session.recent.push(R.skill);
+    const land = landKey(R.skill); E.finished(me, device, land);
+    const chapter = Ch.next(land, E.roundsIn(me, land), (me.chapters || {})[land] || 0);
+    const rankWas = me.rank || 0; me.rank = rankOf(me); const promoted = me.rank > rankWas;
     // the Grey Fog lifts from a land after enough rounds in all
     me.world.open = me.world.open || {};
     const lifted = Object.keys(UNFOG).filter(l => !me.world.open[l] && me.rounds >= UNFOG[l]);
@@ -593,12 +604,15 @@
       ${R.moved.length ? `<div class="praise note">${A.icon('star', 26)}<span>New sticker! You're ready for harder ones.</span></div>` : ''}
       ${grew ? `<div class="praise note">${A.icon('unicorn', 26)}<span>Your unicorn grew!</span></div>` : ''}
       ${lifted.map(l => `<div class="praise note">${A.icon(l === 'garden' ? 'flower' : 'tiara', 26)}<span>The fog lifted! ${esc(LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1))} is open.</span></div>`).join('')}
+      ${promoted ? `<div class="praise note">${A.icon('tiara', 26)}<span>You are a ${esc(RANKS[me.rank])} now!</span></div>` : ''}
       ${gifts ? `<button type="button" class="giftbox" id="giftBtn" aria-label="Open your surprise">${A.gift()}</button>` : ''}
+      ${chapter ? `<button type="button" class="chbook" id="chapterBtn">${A.icon('book', 44)}<span>New chapter!</span></button>` : ''}
       <div style="display:flex;gap:12px"><button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button></div>`;
     V.sfx('fanfare');
-    V.say([msg, ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
+    V.say([msg, ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(promoted ? [`Hooray! You are a ${RANKS[me.rank]} now!`] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(chapter ? ['A new chapter of the story is ready. Tap the book!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
     $('againBtn').onclick = () => startRound(R.skill);
     $('mapBtn').onclick = () => enterWorld();
+    if ($('chapterBtn')) $('chapterBtn').onclick = () => { V.stop(); V.sfx('whoosh'); tell(chapter, R.skill); };
     if ($('giftBtn')) $('giftBtn').onclick = e => {
       const got = Array.from({ length: gifts }, () => surprise()), it = got.find(Boolean);
       burst(e.clientX, e.clientY, 16); V.sfx('sparkle');
@@ -606,6 +620,42 @@
       V.say([it ? `A ${A.ITEMS[it].name.toLowerCase()} for you! Find it in your castle.` : 'Ten shiny coins for you!', ...(got.length > 1 ? ['And another surprise is waiting in your castle!'] : [])]);
       persist(true); };
     sync();
+  }
+  // ---- a chapter of the story: a page a line, told by the land's friend; the end brings colour (and the 5th and 10th a present) ----
+  const giftName = id => (A.ITEMS[id] || (window.SparkleRooms && window.SparkleRooms.ITEMS[id]) || { name: 'present' }).name.toLowerCase();
+  const giftArt = id => A.ITEMS[id] ? A.itemCard(id, me.look) : window.SparkleRooms ? window.SparkleRooms.piece(id) : A.gift();
+  // skill: the round it came after (to play again), or none when it's read again from the castle's Stories
+  function tell(ch, skill) {
+    const replay = !skill, lines = ch.lines.map(t => Ch.line(t, me.name)), where = cap(Ch.LAND[ch.land]);
+    show('chapter'); $('chapterBd').innerHTML = W.backdrop(ch.land);
+    let i = 0;
+    const page = () => {
+      $('chapterIn').innerHTML = `<div class="chtitle"><small>${esc(where)} · Chapter ${ch.n}</small>${esc(ch.title)}</div>
+        <div class="charts"><span class="pr">${A.princess(me.look, wearing(me), { mood: 'happy' })}</span><span class="hs dance">${host(ch.land)}</span></div>
+        <div class="story" id="chLine">${esc(lines[i])}</div><div class="chpage" aria-hidden="true">${lines.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
+        <button type="button" class="big pink" id="chNext">${ICON.go}<span>${i < lines.length - 1 ? 'Next' : 'The end'}</span></button>`;
+      V.say([lines[i]], { who: Ch.WHO[ch.land] });
+      $('chNext').onclick = () => { V.stop(); V.sfx('pop'); i++; if (i < lines.length) page(); else end(); };
+    };
+    const end = () => {
+      const gift = !replay && ch.gift;
+      if (!replay) {
+        me.chapters = me.chapters || {}; me.chapters[ch.land] = Math.max(me.chapters[ch.land] || 0, ch.n);
+        if (gift && !me.owned.includes(gift)) me.owned.push(gift);
+        persist(true); sync();
+      }
+      const msg = replay ? 'The end!' : gift ? `A present for you: the ${giftName(gift)}! Find it in your castle.` : ch.n === 10 ? `${where} has all its colours back!` : `Look! ${where} has a little more colour now.`;
+      $('chapterIn').innerHTML = `<div class="chtitle"><small>${esc(where)} · Chapter ${ch.n}</small>The end</div>
+        ${gift ? `<div class="reveal">${giftArt(gift)}</div>` : `<div class="cheer"><div class="dance">${host(ch.land)}</div></div>`}
+        <div class="praise">${esc(msg)}</div>
+        <div style="display:flex;gap:12px">${replay ? `<button type="button" class="big pink" id="chBack">${ICON.back}<span>Castle</span></button>`
+          : `<button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button>`}</div>`;
+      V.sfx(gift || ch.n === 10 ? 'fanfare' : 'sparkle'); if (gift) burst(innerWidth / 2, innerHeight / 2.5, 18);
+      V.say([msg], { who: 'narrator' });
+      if (replay) $('chBack').onclick = () => { V.stop(); show('castle'); paintCastle(); };
+      else { $('againBtn').onclick = () => { V.stop(); startRound(skill); }; $('mapBtn').onclick = () => { V.stop(); enterWorld(); }; }
+    };
+    page();
   }
   // a surprise: something she doesn't have yet (the cheapest first), else 10 coins
   function surprise() {
@@ -617,7 +667,7 @@
   }
 
   // ---- her castle: dress up, the Royal Boutique, the treasure book ----
-  const TABS = [['gown', 'Gowns'], ['tiara', 'Tiaras'], ['sparkle', 'Sparkles'], ['unicorn', 'Unicorn'], ['treasures', 'Treasures']];
+  const TABS = [['gown', 'Gowns'], ['tiara', 'Tiaras'], ['sparkle', 'Sparkles'], ['unicorn', 'Unicorn'], ['stories', 'Stories'], ['treasures', 'Treasures']];
   const TAB_KINDS = { gown: ['gown'], tiara: ['tiara'], sparkle: ['wand', 'shoes', 'cape', 'necklace'], unicorn: ['mane', 'saddle', 'horn'] };
   let tab = 'gown', asking = null;
   function openCastle() {
@@ -628,8 +678,16 @@
   function paintCastle() {
     const w = wearing(me);
     $('castleCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
+    $('castleRank').innerHTML = rankChip(me);
     $('dress').innerHTML = `<span class="pr">${A.princess(me.look, w, { mood: 'happy' })}</span><span class="un">${A.unicorn(stageOf(me), w, { mood: 'calm' })}</span>`;
     $('shelfTabs').innerHTML = TABS.map(([id, name]) => `<button type="button" data-tab="${id}" aria-pressed="${id === tab}">${name}</button>`).join('');
+    if (tab === 'stories') {
+      const seen = me.chapters || {}, total = Ch.LANDS.reduce((a, l) => a + (seen[l] || 0), 0);
+      $('items').innerHTML = `<div class="stories"><span class="tt">Chapters heard: ${total} of ${Ch.LANDS.length * 10}</span>${Ch.LANDS.map(l => `<div><span class="tt">${esc(cap(Ch.LAND[l]))}: ${seen[l] || 0} of 10</span>
+        <div class="chrow">${Ch.CHAPTERS[l].map(c => { const on = c.n <= (seen[l] || 0);
+          return `<button type="button" class="${on ? '' : 'no'}" style="background:${STORY_COLOUR[l]}" ${on ? `data-chapter="${l}:${c.n}" aria-label="${esc(c.title)}"` : `disabled aria-label="Chapter ${c.n}, not yet"`}>${c.n}</button>`; }).join('')}</div></div>`).join('')}</div>`;
+      return;
+    }
     if (tab === 'treasures') {
       const found = new Set(me.world.stars || []), met = new Set(me.world.critters || []);
       $('items').innerHTML = `<div class="treasures" style="grid-column:1/-1">
@@ -638,15 +696,19 @@
         <div class="trow"><span class="tt">Stickers: ${(me.stickers || []).length}</span>${(me.stickers || []).slice(-24).map(s => `<span class="tk">${A.icon({ read: 'book', math: 'gem', wand: 'star', spell: 'tiara' }[s.split(':')[0]] || 'flower', 34)}</span>`).join('') || '<span class="tt" style="font-weight:600">Play rounds to earn stickers!</span>'}</div></div>`;
       return;
     }
-    const kinds = TAB_KINDS[tab], list = Object.entries(A.ITEMS).filter(([, it]) => kinds.includes(it.kind)).sort((a, b) => a[1].price - b[1].price);
+    const kinds = TAB_KINDS[tab], list = Object.entries(A.ITEMS).filter(([, it]) => kinds.includes(it.kind)).sort((a, b) => (a[1].gift ? 999 : a[1].price) - (b[1].gift ? 999 : b[1].price));
     $('items').innerHTML = list.map(([id, it]) => { const own = owns(me, id), on = w[it.kind] === id, u = A.SLOTS[it.kind] === 'unicorn';
-      return `<button type="button" class="item ${u ? 'u' : ''} ${on ? 'on' : ''} ${own ? '' : 'locked'} ${asking === id ? 'ask' : ''}" data-item="${id}" aria-label="${esc(it.name)}${own ? (on ? ', wearing' : '') : ', ' + it.price + ' coins'}">
-        <span class="pv">${A.itemCard(id, me.look)}</span><span class="price">${own ? (on ? '✓' : '') : A.coin(24) + it.price}</span></button>`; }).join('');
+      return `<button type="button" class="item ${u ? 'u' : ''} ${on ? 'on' : ''} ${own ? '' : 'locked'} ${asking === id ? 'ask' : ''}" data-item="${id}" aria-label="${esc(it.name)}${own ? (on ? ', wearing' : '') : it.gift ? ', a present from the story' : ', ' + it.price + ' coins'}">
+        <span class="pv">${A.itemCard(id, me.look)}</span><span class="price">${own ? (on ? '✓' : '') : it.gift ? A.icon('book', 24) : A.coin(24) + it.price}</span></button>`; }).join('');
   }
+  const STORY_COLOUR = { read: '#BFE3FF', math: '#C9F7DF', wand: '#FFE9A8', garden: '#FFD3E6', spell: '#E3D6FF' };
   $('shelfTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; asking = null; V.sfx('pop'); paintCastle(); });
   $('items').addEventListener('click', e => {
+    const c = e.target.closest('[data-chapter]');
+    if (c) { const [l, n] = c.dataset.chapter.split(':'); V.stop(); V.sfx('whoosh'); return tell(Ch.CHAPTERS[l][n - 1], null); }
     const b = e.target.closest('[data-item]'); if (!b) return;
     const id = b.dataset.item, it = A.ITEMS[id];
+    if (it.gift && !owns(me, id)) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${it.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
     if (owns(me, id)) {
       me.wearing = me.wearing || {};
       const optional = !['gown', 'tiara', 'shoes', 'mane', 'horn'].includes(it.kind);
@@ -811,6 +873,8 @@
         ${hard.length ? `<div class="row"><span class="grow">Practice together<small>Missed on 2 or more days: try these with her at bedtime</small></span></div><div class="chips">${hard.map(k => `<span class="warn">${esc(keyName(k))}</span>`).join('')}</div>` : ''}</div>
       <p class="label">Starting levels</p><div class="group">${skills.map(k => `<div class="row"><span class="grow">${SKILL_NAME[k]}<small>${p.skills[k] ? 'Now ' + p.skills[k].level + ': ' + esc(C.LEVEL_NAMES[k][p.skills[k].level - 1]) : 'Not started: the warm-up finds her level'}</small></span>
           <div class="seg"><button type="button" data-lv="${k}" data-d="-1" aria-label="One level easier">−</button><button type="button" data-lv="${k}" data-d="1" aria-label="One level harder">+</button></div></div>`).join('')}</div>
+      <p class="label">The story</p><div class="group"><div class="row"><span class="grow">${RANKS[rankOf(p)]}<small>Her rank: all her levels added up, ${levelSum(p)} of 55</small></span></div>
+        ${Ch.LANDS.map(l => `<div class="row"><span class="grow">${esc(cap(Ch.LAND[l]))}<small>${E.roundsIn(p, l)} ${E.roundsIn(p, l) === 1 ? 'round' : 'rounds'} played there</small></span><span class="val">${(p.chapters || {})[l] || 0} of 10</span></div>`).join('')}</div>
       <p class="note">Coins: ${E.coins(p)}. Rounds played: ${p.rounds || 0}. Stickers: ${(p.stickers || []).length}.</p>
       <button type="button" class="cta" id="rEdit">Edit name and look</button>`, { back: () => parent() });
     s.addEventListener('click', e => {
