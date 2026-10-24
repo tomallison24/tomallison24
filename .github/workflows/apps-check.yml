@@ -132,10 +132,11 @@ jobs:
               aOS/scripts/join-test.mjs
               aOS/scripts/notify-test.mjs
               aOS/scripts/designs-test.mjs
-          # Drinks; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
+          # Drinks (in two parts); Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
           - group: drinks
             tests: |
-              drinks/scripts/app-test.mjs
+              drinks/scripts/app-test.mjs . 0/2
+              drinks/scripts/app-test.mjs . 1/2
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
           # Orders, and Ipsy in Orders and News
