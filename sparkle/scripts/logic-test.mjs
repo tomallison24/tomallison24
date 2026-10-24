@@ -8,7 +8,7 @@ import path from 'path';
 import vm from 'vm';
 
 const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-for (const f of ['engine.js', 'content.js', 'pictures.js', 'chapters.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
+for (const f of ['engine.js', 'content.js', 'pictures.js', 'chapters.js', 'art.js', 'rooms.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
 const E = globalThis.SparkleEngine, C = globalThis.SparkleContent, Ch = globalThis.SparkleChapters;
 
 let n = 0;
@@ -219,6 +219,10 @@ test('the story: ten chapters in every land, opened by rounds played there', () 
     assert.equal(Ch.reached(l, 1000), 10);
   }
   assert.equal(new Set(Ch.GIFTS).size, 10, 'ten different presents');
+  const A = globalThis.SparkleArt, RM = globalThis.SparkleRooms;
+  for (const id of Ch.GIFTS) { const it = A.ITEMS[id] || RM.ITEMS[id]; assert.ok(it, 'no such present: ' + id); assert.ok(it.gift && it.price === 0, id + ' should be a present, never sold'); }
+  const gifts = [...Object.entries(A.ITEMS), ...Object.entries(RM.ITEMS)].filter(([, it]) => it.gift).map(([id]) => id).sort();
+  assert.deepEqual(gifts, [...Ch.GIFTS].sort(), 'every present in the shop comes from a chapter');
   assert.equal(Ch.line('Hi, {name}!', 'Ava'), 'Hi, Ava!');
 });
 test("a land's colour comes back with its story", () => {

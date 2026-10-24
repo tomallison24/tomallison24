@@ -50,6 +50,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   under the fog on the map and gets its colour back a chapter at a time, all of it at chapter 10.
   Chapters 5 and 10 give a present that is never sold (a piece for a castle room, the fairy wings, the
   Rainbow Tiara). The castle's **Stories** shelf plays any chapter heard again.
+- **Castle rooms** (`rooms.js`): a bedroom, a library and a ballroom to decorate, in the castle's
+  Rooms tab. Each has four places (the wallpaper, a big piece, a rug or dance floor, a small piece),
+  each with a free piece to start, two to buy (20 to 75 coins) and a present from the story. The
+  first tap says the price and a second buys, as in the Boutique; she can move any piece she has
+  back in. Pieces to buy can come as a surprise present too.
 - **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
   every skill's highest level added up (7 to 55), never going back down. It shows in the castle, the
   end of the round that earns it, and the Parent corner.
@@ -74,7 +79,7 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 Everything is drawn in code as SVG (`art.js`, `world.js`): the princess in layers (hair, gown,
 tiara, shoes, cape, necklace, wand, each player's skin, hair colour and style), the unicorn in five
 growth stages with its mane, saddle and horn, the four friends, the kingdom, the backdrops, the
-Boutique's 30 things, and about 100 word pictures (`pictures.js`). Every word she reads is drawn in **school letters** (`letters.js`): ball and
+Boutique's 30 things, three castle rooms and their 44 pieces (`rooms.js`), and about 100 word pictures (`pictures.js`). Every word she reads is drawn in **school letters** (`letters.js`): ball and
 stick print with the single-storey a and g taught in kindergarten, since the phone's font has the
 other kind and aOS loads no web fonts.
 

@@ -11,7 +11,7 @@
 // in the Parent corner. The play timer counts only time she's actually playing (a tap in the last
 // minute); a session ends after 5 minutes with no taps.
 (() => {
-  const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters, Ch = window.SparkleChapters;
+  const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters, Ch = window.SparkleChapters, RM = window.SparkleRooms;
   const $ = id => document.getElementById(id), esc = A.esc;
   const KEY = 'sparkle.v1', DEV = 'sparkle.device', API = new URL('../sparkle/api/', location.href).href;
   // the lands (a place in the kingdom -> its skill: the Fairy Garden picks one of its three memory games)
@@ -94,7 +94,7 @@
   const players = () => Object.values(save.players).sort((a, b) => a.created - b.created);
   const uidOf = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const stageOf = p => { const n = (p.stickers || []).length; return n >= 25 ? 4 : n >= 15 ? 3 : n >= 8 ? 2 : n >= 3 ? 1 : 0; };
-  const owns = (p, id) => (p.owned || []).includes(id) || Object.values(A.STARTER).includes(id);
+  const owns = (p, id) => (p.owned || []).includes(id) || Object.values(A.STARTER).includes(id) || (RM.ITEMS[id] && RM.STARTER[RM.ITEMS[id].room][RM.ITEMS[id].slot] === id);
   const wearing = p => Object.assign({}, A.STARTER, p.wearing || {});
   // her rank: every skill's highest level added up (7 to 55), and never lower than she's been
   const RANKS = ['Little Princess', 'Princess', 'Royal Princess', 'Princess of Sparkle Kingdom'], RANK_AT = [0, 20, 32, 45];
@@ -616,14 +616,14 @@
     if ($('giftBtn')) $('giftBtn').onclick = e => {
       const got = Array.from({ length: gifts }, () => surprise()), it = got.find(Boolean);
       burst(e.clientX, e.clientY, 16); V.sfx('sparkle');
-      $('giftBtn').outerHTML = `<div class="reveal">${it ? A.itemCard(it, me.look) : A.coin(150)}</div>`;
-      V.say([it ? `A ${A.ITEMS[it].name.toLowerCase()} for you! Find it in your castle.` : 'Ten shiny coins for you!', ...(got.length > 1 ? ['And another surprise is waiting in your castle!'] : [])]);
+      $('giftBtn').outerHTML = `<div class="reveal">${it ? giftArt(it) : A.coin(150)}</div>`;
+      V.say([it ? `A ${giftName(it)} for you! Find it in your castle.` : 'Ten shiny coins for you!', ...(got.length > 1 ? ['And another surprise is waiting in your castle!'] : [])]);
       persist(true); };
     sync();
   }
   // ---- a chapter of the story: a page a line, told by the land's friend; the end brings colour (and the 5th and 10th a present) ----
-  const giftName = id => (A.ITEMS[id] || (window.SparkleRooms && window.SparkleRooms.ITEMS[id]) || { name: 'present' }).name.toLowerCase();
-  const giftArt = id => A.ITEMS[id] ? A.itemCard(id, me.look) : window.SparkleRooms ? window.SparkleRooms.piece(id) : A.gift();
+  const giftName = id => (A.ITEMS[id] || RM.ITEMS[id] || { name: 'present' }).name.toLowerCase();
+  const giftArt = id => A.ITEMS[id] ? A.itemCard(id, me.look) : RM.ITEMS[id] ? RM.piece(id) : A.gift();
   // skill: the round it came after (to play again), or none when it's read again from the castle's Stories
   function tell(ch, skill) {
     const replay = !skill, lines = ch.lines.map(t => Ch.line(t, me.name)), where = cap(Ch.LAND[ch.land]);
@@ -659,7 +659,7 @@
   }
   // a surprise: something she doesn't have yet (the cheapest first), else 10 coins
   function surprise() {
-    const want = Object.entries(A.ITEMS).filter(([id, it]) => it.price > 0 && !owns(me, id)).sort((a, b) => a[1].price - b[1].price);
+    const want = [...Object.entries(A.ITEMS), ...Object.entries(RM.ITEMS)].filter(([id, it]) => it.price > 0 && !it.gift && !owns(me, id)).sort((a, b) => a[1].price - b[1].price);
     me.gifts = (me.gifts || 0) + 1;
     if (!want.length) { E.earn(me, device, 10); return null; }
     const pick = want[Math.floor(Math.random() * Math.min(4, want.length))][0];
@@ -667,9 +667,10 @@
   }
 
   // ---- her castle: dress up, the Royal Boutique, the treasure book ----
-  const TABS = [['gown', 'Gowns'], ['tiara', 'Tiaras'], ['sparkle', 'Sparkles'], ['unicorn', 'Unicorn'], ['stories', 'Stories'], ['treasures', 'Treasures']];
+  const TABS = [['gown', 'Gowns'], ['tiara', 'Tiaras'], ['sparkle', 'Sparkles'], ['unicorn', 'Unicorn'], ['rooms', 'Rooms'], ['stories', 'Stories'], ['treasures', 'Treasures']];
   const TAB_KINDS = { gown: ['gown'], tiara: ['tiara'], sparkle: ['wand', 'shoes', 'cape', 'necklace'], unicorn: ['mane', 'saddle', 'horn'] };
-  let tab = 'gown', asking = null;
+  let tab = 'gown', asking = null, room = 'bedroom';
+  const roomOf = (p, r) => Object.assign({}, RM.STARTER[r], ((p.rooms || {})[r]) || {});
   function openCastle() {
     show('castle'); $('castleBack').innerHTML = ICON.back;
     paintCastle();
@@ -679,8 +680,18 @@
     const w = wearing(me);
     $('castleCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
     $('castleRank').innerHTML = rankChip(me);
-    $('dress').innerHTML = `<span class="pr">${A.princess(me.look, w, { mood: 'happy' })}</span><span class="un">${A.unicorn(stageOf(me), w, { mood: 'calm' })}</span>`;
+    $('dress').classList.toggle('inroom', tab === 'rooms');
+    $('dress').innerHTML = tab === 'rooms' ? `<div class="roomview">${RM.draw(room, roomOf(me, room), { label: 'Your ' + RM.ROOMS[room].name.toLowerCase() })}<span class="pr">${A.princess(me.look, w, { mood: 'happy' })}</span></div>`
+      : `<span class="pr">${A.princess(me.look, w, { mood: 'happy' })}</span><span class="un">${A.unicorn(stageOf(me), w, { mood: 'calm' })}</span>`;
     $('shelfTabs').innerHTML = TABS.map(([id, name]) => `<button type="button" data-tab="${id}" aria-pressed="${id === tab}">${name}</button>`).join('');
+    if (tab === 'rooms') {
+      const on = roomOf(me, room);
+      $('items').innerHTML = `<div class="roompick" role="group" aria-label="Which room">${Object.entries(RM.ROOMS).map(([id, r]) => `<button type="button" data-room="${id}" aria-pressed="${id === room}">${esc(r.name)}</button>`).join('')}</div>`
+        + Object.entries(RM.ROOMS[room].slots).map(([, ids]) => ids.map(id => { const it = RM.ITEMS[id], own = owns(me, id), placed = on[it.slot] === id;
+          return `<button type="button" class="item r ${placed ? 'on' : ''} ${own ? '' : 'locked'} ${asking === id ? 'ask' : ''}" data-piece="${id}" aria-label="${esc(it.name)}${own ? (placed ? ', in your room' : '') : it.gift ? ', a present from the story' : ', ' + it.price + ' coins'}">
+            <span class="pv">${RM.piece(id)}</span><span class="price">${own ? (placed ? '✓' : '') : it.gift ? A.icon('book', 24) : A.coin(24) + it.price}</span></button>`; }).join('')).join('');
+      return;
+    }
     if (tab === 'stories') {
       const seen = me.chapters || {}, total = Ch.LANDS.reduce((a, l) => a + (seen[l] || 0), 0);
       $('items').innerHTML = `<div class="stories"><span class="tt">Chapters heard: ${total} of ${Ch.LANDS.length * 10}</span>${Ch.LANDS.map(l => `<div><span class="tt">${esc(cap(Ch.LAND[l]))}: ${seen[l] || 0} of 10</span>
@@ -704,6 +715,10 @@
   const STORY_COLOUR = { read: '#BFE3FF', math: '#C9F7DF', wand: '#FFE9A8', garden: '#FFD3E6', spell: '#E3D6FF' };
   $('shelfTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; asking = null; V.sfx('pop'); paintCastle(); });
   $('items').addEventListener('click', e => {
+    const rb = e.target.closest('[data-room]');
+    if (rb) { room = rb.dataset.room; asking = null; V.sfx('pop'); paintCastle(); return; }
+    const pc = e.target.closest('[data-piece]');
+    if (pc) return pickPiece(pc);
     const c = e.target.closest('[data-chapter]');
     if (c) { const [l, n] = c.dataset.chapter.split(':'); V.stop(); V.sfx('whoosh'); return tell(Ch.CHAPTERS[l][n - 1], null); }
     const b = e.target.closest('[data-item]'); if (!b) return;
@@ -721,6 +736,18 @@
     V.sfx('fanfare'); burst(...centerOf(b), 16); V.say([`You bought the ${it.name.toLowerCase()}! It looks wonderful.`]);
     persist(true); paintCastle();
   });
+  // a piece for a room: hers goes in the room; a story present says where to find it; else ask the price, then buy
+  function pickPiece(b) {
+    const id = b.dataset.piece, it = RM.ITEMS[id];
+    const put = () => { me.rooms = me.rooms || {}; const r = me.rooms[it.room] = me.rooms[it.room] || {}; r[it.slot] = id; };
+    if (owns(me, id)) { put(); V.sfx('sparkle'); persist(); asking = null; paintCastle(); return; }
+    if (it.gift) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${it.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
+    if (asking !== id) { asking = id; V.sfx('pop'); paintCastle(); V.say([`The ${it.name.toLowerCase()} costs ${it.price} coins. Tap it again to buy it!`]); return; }
+    if (!E.spend(me, device, it.price)) { V.sfx('again'); V.say([`You need ${it.price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+    me.owned.push(id); put(); asking = null;
+    V.sfx('fanfare'); burst(...centerOf(b), 16); V.say([`You bought the ${it.name.toLowerCase()}! Your ${RM.ROOMS[it.room].name.toLowerCase()} looks wonderful.`]);
+    persist(true); paintCastle();
+  }
   $('castleBack').addEventListener('click', () => { V.stop(); enterWorld(); });
 
   // ---- grown-ups: hold the button, then Face ID (or a grown-up question) ----

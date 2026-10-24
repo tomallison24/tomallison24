@@ -373,6 +373,16 @@ svg{display:block}
 .chpage{display:flex;gap:6px}.chpage i{width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px var(--k-ink)}.chpage i.on{background:var(--k-pink)}
 .rank{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);font-weight:900;font-size:15px;color:var(--k-ink)}
 .rank svg{width:26px;height:26px}
+.dress.inroom{align-items:center;padding:0 12px}
+.roomview{position:relative;width:min(100%,460px);aspect-ratio:4/3;max-height:100%}
+.roomview>svg{width:100%;height:100%;border-radius:22px;box-shadow:0 0 0 3px var(--k-ink)}
+.roomview .pr{position:absolute;left:6%;bottom:4%;height:66%}
+.roomview .pr svg{height:100%;width:auto}
+.roompick{grid-column:1/-1;display:flex;gap:6px}
+.roompick button{flex:1;min-height:44px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);font-weight:800;color:var(--k-ink);font-size:15px}
+.roompick button[aria-pressed="true"]{background:var(--k-mint)}
+.item.r .pv{align-items:center;padding:4px}
+.item.r .pv svg{height:100%;width:100%;margin:0}
 #castleRank{display:flex;justify-content:center;min-width:0}
 #castleRank .rank{font-size:14px;line-height:1.1;text-align:left}
 .stories{grid-column:1/-1;display:flex;flex-direction:column;gap:12px}
@@ -499,6 +509,7 @@ svg{display:block}
   <script src="art.js"></script>
   <script src="pictures.js"></script>
   <script src="chapters.js"></script>
+  <script src="rooms.js"></script>
   <script src="world.js"></script>
   <script src="voice.js"></script>
   <script src="../home/account.js"></script>

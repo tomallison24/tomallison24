@@ -369,6 +369,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (!after.owned.includes('library-owl-lamp')) pr.push('the present of chapter 5 was not given');
   if (after.rank !== 1) pr.push('her rank was not kept: ' + after.rank);
   if (!(await p.locator('#chapterIn .reveal svg').count())) pr.push('the present is not shown');
+  if (!(await p.locator('#chapterIn').innerText()).includes('owl lamp')) pr.push('the present is not named');
   await p.click('#chMap'); await p.waitForTimeout(300);
   const sat2 = await sp(p, () => { const f = document.querySelector('.kingdom [data-tint="read"]'); const m = f && document.getElementById(f.getAttribute('filter').slice(5, -1)).querySelector('feColorMatrix'); return m ? +m.getAttribute('values') : 1; });
   if (!(sat2 > sat)) pr.push('Story Tower did not get more colour after the chapter');
@@ -387,11 +388,25 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.click('#chBack'); await p.waitForTimeout(150);
   if ((await sp(p, () => window.sparkle.screen)) !== 'castle') pr.push('hearing a chapter again does not come back to the castle');
   if ((await sp(p, () => window.sparkle.save.players.p1.chapters.read)) !== 5) pr.push('hearing chapter 2 again changed what she has heard');
+  // the Rooms: a piece to buy (ask, then buy), the owl lamp from the story goes in the library, a story piece can't be bought
+  await p.click('[data-tab="rooms"]'); await p.waitForTimeout(100);
+  if (!(await p.locator('#dress .roomview svg').count())) pr.push('the Rooms tab does not show the room');
+  const r0 = await coins(p);
+  await p.click('[data-piece="bedroom-wall-hearts"]');
+  if ((await coins(p)) !== r0) pr.push('one tap bought a room piece');
+  await p.click('[data-piece="bedroom-wall-hearts"]');
+  const bed = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('bedroom-wall-hearts'), on: (me.rooms || {}).bedroom && me.rooms.bedroom.wall }; });
+  if (!bed.own || bed.on !== 'bedroom-wall-hearts' || (await coins(p)) !== r0 - 20) pr.push('buying the hearts wallpaper: ' + JSON.stringify(bed));
+  await p.click('[data-piece="bedroom-bed-stars"]');
+  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('bedroom-bed-stars'))) pr.push('a story bed was given by tapping it');
+  await p.click('[data-room="library"]'); await p.click('[data-piece="library-owl-lamp"]');
+  if ((await sp(p, () => (window.sparkle.save.players.p1.rooms.library || {}).small)) !== 'library-owl-lamp') pr.push('the owl lamp from the story did not go in the library');
+  await shot(p, '18-rooms');
   await p.click('[data-tab="tiara"]'); const c0 = await coins(p);
   await p.click('[data-item="tiara-rainbow"]'); await p.click('[data-item="tiara-rainbow"]');
   if ((await coins(p)) !== c0 || (await sp(p, () => window.sparkle.save.players.p1.owned.includes('tiara-rainbow')))) pr.push('a story present could be bought');
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
-  report('the story: a chapter after rounds in a land, its colour on the map, a present at chapter 5, her rank, the Stories shelf (Sea glass)', pr); await ctx.close();
+  report('the story: a chapter after rounds in a land, its colour on the map, a present at chapter 5, her rank, the Stories shelf, the rooms to decorate (Sea glass)', pr); await ctx.close();
 }
 
 await b.close(); server.close();
