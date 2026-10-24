@@ -461,7 +461,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function card(o, i) {
     const ret = hasRet(o), s = ret ? retState(o) : stateOf(o), warn = !ret && needsCheck(o);
     return '<button class="ocard' + (isOpen(o) ? '' : ' done') + '" type="button" data-o="' + esc(o.id) + '" style="--i:' + i + '">'
-      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore">' + (o.store ? raw(o.store) : 'Order') + (o.private ? '<span class="olock" title="Private: hidden from Ipsy">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + whatHtml(o) + '</div></div>'
+      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore"' + (o.store ? ' translate="no"' : '') + '>' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="' + esc(tr('Private: hidden from Ipsy')) + '">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + whatHtml(o) + '</div></div>'
       + (o.total != null ? '<span class="oprice">' + esc(money(o.total, o.cur)) + '</span>' : '') + '</div>'
       + '<div class="ostate"><b class="' + (warn ? 's-warn' : s.cls) + '">' + esc(warn ? 'Check details' : s.label) + '</b><span class="when">' + esc(s.when) + '</span></div>'
       + (ret ? retBar(o) + retRow(o) : stepBar(o) + carrierRow(o)) + '</button>';
