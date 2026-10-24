@@ -110,8 +110,29 @@
   // The forecast is fetched again when Weather's last one is over 10 minutes old (aOS/home-find.js).
   const onHome = () => !current && tab === 'home' && document.visibilityState === 'visible';
   const freshen = () => { if (window.aosFind && aosFind.refreshWeather) aosFind.refreshWeather().then(got => { if (got) paintHome(); }, () => {}); };
-  addEventListener('visibilitychange', () => { if (onHome()) { paintHome(); freshen(); } });
+  addEventListener('visibilitychange', () => { if (onHome()) { paintHome(); freshen(); } syncPrefs(); });
   setInterval(() => { if (onHome() && !editing()) { paintHome(); freshen(); } }, 60e3);
+  // Settings that follow you between your devices (aOS/prefs-sync.js): on opening aOS, coming back to it
+  // or leaving it, and back on Home from an app (where most of them change). What came from another
+  // device: aOS's own look, light or dark and Favorites at once; an app open out of sight starts again
+  // with its settings; the app on screen gets them once you leave it.
+  const syncPrefs = () => { if (window.aosPrefs && AllisonOS.account) aosPrefs.sync({ apps: D.APPS, account: AllisonOS.account, wait: id => id === current, ready: prefsReady, applied: prefsCame }).catch(() => {}); };
+  // an app open out of sight closes first (it may save what it has as it goes), then opens again with them
+  const prefsReady = apps => Promise.all(apps.filter(id => frames[id] && id !== current).map(id => new Promise(ok => {
+    const f = frames[id].firstChild; f.moving = true;
+    f.addEventListener('load', ok, { once: true }); setTimeout(ok, 3000); point(f, 'about:blank');
+  })));
+  function prefsCame(apps) {
+    for (const id of apps) {
+      if (id === 'aos') {
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && (l === 'glass' || l === 'vintage') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        if (W.theme) W.theme.set(W.theme.read());
+        pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
+      } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
+    }
+    paintHome(true);   // an app's design changes its icon
+  }
+  addEventListener('aos:account', e => { if (e.detail) syncPrefs(); });
   // Home is drawn again often (back on the phone, every minute, a new unread count, a new forecast).
   // Only what changed is replaced, and never under a finger: iOS drops a tap whose button is swapped
   // out between touching and lifting (the Weather widget, tapped as aOS came back, didn't open).
@@ -158,7 +179,7 @@
     if (pins.includes(id)) pins = pins.filter(x => x !== id);
     else if (pins.length >= MAX_PINS) return toast('Four at most: unpin one first');
     else pins = [...pins, id];
-    put(PINS, pins); paintHome(true);
+    put(PINS, pins); paintHome(true); syncPrefs();
   }
   $('favEdit').onclick = () => { const on = body.classList.toggle('editing'); $('favEdit').textContent = on ? 'Done' : 'Edit'; $('favHint').hidden = !on; };
   $('home').addEventListener('click', e => {
@@ -274,7 +295,7 @@
     else reveal(current);
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
-    if (!current) paintHome(true);   // an app's design may have changed its icon
+    if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you
     remember();
     tint();
   }
@@ -476,7 +497,7 @@
 
   window.aosHomeTab = { show, open: () => open.slice(), favorites, findApps, insets, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
-  paintHome(); readUnread(); freshen();
+  paintHome(); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
   if (known(start)) {
     // opened straight into an app (back from Google, or a link): Home goes in under it first

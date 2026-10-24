@@ -13,6 +13,8 @@
 //   - no dock, nothing floats over Home (Home floats at the bottom on Today); Mail's unread count on
 //     its icon; Today beside the account; Home scrolls in its own box, the page never moves
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
+//   - settings that follow you between devices (aOS/prefs-sync.js): a new iPad opens with the iPhone's,
+//     its empty ones replace nothing; never a location, a sign-in or Clock's running timers
 //   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
 //     aOS takes it whichever opens first, and it wins over aOS's own copy
 // and the route behind it (functions/aOS/api/ipsy.js): signed-in family only, every Ipsy app's tools
@@ -353,6 +355,81 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(neu.took() >= 1 && /07:00/.test(got.clock || '') && got.sheet === 'https://sheet' && /moved in/.test(got.toast || ''), `the other icon, signed in, takes it all (it wins over what that icon had) and opens again with it (${JSON.stringify(got).slice(0, 120)})`);
   check(!neu.errs.length, 'no script errors (the new icon)' + (neu.errs.length ? ': ' + neu.errs.join(' | ') : ''));
   await neu.ctx.close();
+}
+
+// ---- settings that follow you between your devices (aOS/prefs-sync.js), on the real accounts API ----
+{
+  const { onRequest } = await import(path.join(R, 'functions/aOS/api/[[route]].js'));
+  const { issue, putJSON } = await import(path.join(R, 'server/auth.js'));
+  const m = new Map();
+  const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); },
+    list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
+  await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
+  const device = async seed => {
+    const tok = await issue(db, 'O1');
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
+    await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+    await ctx.route('**/api/**', async r => {
+      const u = new URL(r.request().url());
+      if (!/^\/aOS\/api\/(prefs|state)$/.test(u.pathname)) return r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+      const rq = r.request(), res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.split('/aOS/api/')[1].split('/') }, env: { ACCOUNTS: db } });
+      r.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
+    });
+    await ctx.addInitScript(([apps, tok, seed]) => { if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+      const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+      localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
+      localStorage.setItem('aos.session', JSON.stringify({ token: tok, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
+      for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v); }, [APPS, tok, seed]);
+    const pg = await ctx.newPage(), errs = []; pg.on('pageerror', e => errs.push(e.message));
+    await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(1200);
+    return { ctx, pg, errs };
+  };
+  const synced = () => JSON.parse(m.get('prefs:O1') || '{}');
+  const back = pg => pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange', { bubbles: true })));
+  const ls = (pg, k) => pg.evaluate(k => localStorage.getItem(k), k);
+  const DENVER = JSON.stringify([{ lat: 39.74, lon: -104.99, name: 'Denver', sub: 'CO' }]);
+  // the iPad, new, opens aOS first: only what each app starts with (no places, Clock's own settings), so nothing goes up
+  const ipad = await device({ 'wx.places': '[]', 'wx.units': 'us', 'home.settings': '{"theme":"auto"}',
+    'allison-clock-v1': JSON.stringify({ timers: [], tab: 'world', cities: [], alarms: [], set: { h24: false, secs: false, analog: false, design: 'vintage', home: null }, tsound: 'twinbell', sleep: { set: false } }) });
+  check(Object.keys(synced()).length === 0, `a new device with nothing set up sends nothing up (${Object.keys(synced()).join()})`);
+  // the iPhone: set up already
+  const phone = await device({ 'wx.places': DENVER, 'wx.here': '{"lat":35.7,"lon":-78.8,"name":"Apex"}', 'design.weather': 'glass', 'home.settings': '{"theme":"dark"}', 'aos.home.picks': '["house"]',
+    'allison-clock-v1': JSON.stringify({ tab: 'timers', cities: [{ id: 'c1', name: 'London', where: 'UK', tz: 'Europe/London' }], alarms: [{ id: 'a1', h: 7, m: 0, days: [1, 2, 3, 4, 5], label: 'Up', on: true, next: Date.now() + 3600e3 }],
+      timers: [{ id: 't1', dur: 600, state: 'run', end: Date.now() + 600e3 }], set: { h24: true } }), 'mail.token': 'secret' });
+  const p = synced();
+  check(p['wx.places'] && JSON.parse(p['wx.places'].v)[0].name === 'Denver' && p['design.weather'].v === 'glass' && JSON.parse(p['home.settings#theme'].v) === 'dark' && p['allison-clock-v1#cities'],
+    'opening aOS, its settings go to your account: Weather\'s places, designs, light or dark, Clock\'s clocks');
+  check(!p['wx.here'] && !p['mail.token'] && !p['aos.session'] && !Object.keys(p).some(k => /timers|tab$/.test(k)) && !/next/.test(p['allison-clock-v1#alarms'].v),
+    'never where you are now, a sign-in, Clock\'s running timers or an alarm\'s next ring');
+  // back to aOS on the iPad: the iPhone's settings come (its empty ones wiped nothing)
+  await back(ipad.pg); await ipad.pg.waitForTimeout(1000);
+  const got = await ipad.pg.evaluate(() => ({ places: localStorage.getItem('wx.places'), design: localStorage.getItem('design.weather'), clock: JSON.parse(localStorage.getItem('allison-clock-v1')),
+    theme: document.documentElement.dataset.theme, picks: aosHomeTab.favorites()[0] }));
+  check(JSON.parse(got.places)[0].name === 'Denver' && got.design === 'glass' && got.theme === 'dark' && got.picks.id === 'house' && got.picks.why === 'pin',
+    `a new iPad, signed in, opens with them: Weather's places, the designs, dark, the Favorites pinned (${JSON.stringify(got).slice(0, 160)})`);
+  check(got.clock.cities[0].name === 'London' && got.clock.alarms[0].label === 'Up' && !('next' in got.clock.alarms[0]) && got.clock.set.h24 === true && got.clock.tab === 'world' && got.clock.timers.length === 0,
+    'Clock\'s world clocks, alarms and settings come too; its own timers and tab stay as they were');
+  check(JSON.parse(synced()['wx.places'].v)[0].name === 'Denver', 'and the iPad\'s empty places didn\'t replace the iPhone\'s');
+  // a city added on the iPad reaches the iPhone the next time it comes back to aOS
+  await ipad.pg.evaluate(() => { const p = JSON.parse(localStorage.getItem('wx.places')); p.push({ lat: 42.36, lon: -71.06, name: 'Boston', sub: 'MA' }); localStorage.setItem('wx.places', JSON.stringify(p)); });
+  await back(ipad.pg); await ipad.pg.waitForTimeout(600);
+  check(JSON.parse(synced()['wx.places'].v).length === 2, 'a place added on the iPad goes up as it leaves aOS');
+  await back(phone.pg); await phone.pg.waitForTimeout(800);
+  check(JSON.parse(await ls(phone.pg, 'wx.places')).map(x => x.name).join() === 'Denver,Boston' && (await ls(phone.pg, 'wx.here')).includes('Apex'), 'and comes to the iPhone, which keeps its own location');
+  // light on the iPhone: the iPad goes light too, at once
+  await phone.pg.evaluate(() => AllisonOS.welcome.theme.set('light')); await back(phone.pg); await phone.pg.waitForTimeout(600);
+  await back(ipad.pg); await ipad.pg.waitForTimeout(800);
+  check(await ipad.pg.evaluate(() => document.documentElement.dataset.theme) === 'light', 'light chosen on the iPhone: the iPad is light too');
+  // an app open out of sight on the iPad starts again with what came (Weather, on its new design)
+  await ipad.pg.evaluate(() => { aosHomeTab.show('weather'); }); await ipad.pg.waitForTimeout(1500);
+  await ipad.pg.evaluate(() => aosHomeTab.show(null)); await ipad.pg.waitForTimeout(500);
+  const w0 = await ipad.pg.evaluate(() => { const w = document.querySelector('.frame[data-id="weather"] iframe').contentWindow; w.__old = 1; return true; });
+  await phone.pg.evaluate(() => localStorage.setItem('design.weather', 'vintage')); await back(phone.pg); await phone.pg.waitForTimeout(600);
+  await back(ipad.pg); await ipad.pg.waitForTimeout(2500);
+  check(w0 && await ls(ipad.pg, 'design.weather') === 'vintage' && await ipad.pg.evaluate(() => { const w = document.querySelector('.frame[data-id="weather"] iframe').contentWindow; return !w.__old && /\/weather\/$/.test(w.location.href); }),
+    'Weather, open out of sight, starts again with the design chosen on the iPhone');
+  check(!phone.errs.length && !ipad.errs.length, 'no script errors (both devices)' + ([...phone.errs, ...ipad.errs].length ? ': ' + [...phone.errs, ...ipad.errs].join(' | ') : ''));
+  await phone.ctx.close(); await ipad.ctx.close();
 }
 
 // ---- moving in, from an app's own Home Screen icon (../home/welcome.js, "moving into aOS 2") ----

@@ -92,6 +92,7 @@
         'No dock, and nothing floats over Home; on Today, Home floats at the bottom to take you back. Today sits beside your account on Home',
         'Home\'s Weather widget is up to date when you open aOS: a forecast over 10 minutes old is fetched again (Weather opens with it too). A tap on a widget or an icon opens its app every time, even as Home updates',
         'Ipsy, in every app: closed for a minute once it has answered, it opens with a new chat; the clock in its corner brings back any of your last five',
+        'Your settings follow you between your devices, signed in to your family account: Weather\'s places and units, Clock\'s world clocks, alarms, Bedtime and settings, each app\'s design, and aOS\'s look, light or dark and Favorites. Set them up on your iPhone and your iPad has them the next time it opens aOS (a new device takes them, rather than sending its own empty ones). Sign-ins, Home Assistant, where you are now and Clock\'s running timers stay on each device',
         'Mail\'s unread count shows on Mail\'s icon on Home, not on aOS\'s own Home Screen icon (Mail, Settings > Unread count on the app icon)',
         'Ipsy\'s chat on Home opens below the Ipsy bar, with fewer words in it. Under your account, Owner tools (notifications, the Home Assistant address, invites) fold away until tapped',
         'The top of every Vintage page fades into the status bar, rather than stopping in a band under it',
