@@ -127,6 +127,14 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.ok(await page.locator('#g-fav .lp-chips').count() > 0, 'no lamp presets on Favorites');
   });
 
+  await test(`${label}: speakers playing music are in Running Now, each one (grouped ones too), with no big card of their own`, async () => {
+    const chips = await page.$$eval('#g-fav .runchip', bs => bs.map(b => b.querySelector('b').textContent + ':' + b.querySelector('span').textContent));
+    assert.ok(chips.includes('Kitchen:Playing') && chips.includes('Office:Playing'), 'Kitchen and Office, grouped and playing: ' + chips.join(', '));
+    assert.ok(!chips.some(c => /^(Lounge|Arc Sub):/.test(c)), 'not one paused, nor the Arc playing the TV: ' + chips.join(', '));
+    assert.equal(await page.locator('#g-fav .mcard').count(), 0, 'no speaker card on Favorites');
+    assert.match(await page.textContent('#g-fav .run-h span'), new RegExp('^' + chips.length + '$'));
+  });
+
   await test(`${label}: the 1% chip is the night moon and the 100% chip the sun`, async () => {
     const night = page.locator('#g-fav .chip2.night').first(), full = page.locator('#g-fav .chip2.full').first();
     assert.equal(await night.getAttribute('aria-label'), 'Night, 1%');
