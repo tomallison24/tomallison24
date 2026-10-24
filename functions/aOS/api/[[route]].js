@@ -48,7 +48,7 @@ const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving in
 const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving to a new aOS icon
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
 // Calendar's layers from the other apps. On an iPhone each Home Screen app keeps its
 // own storage, so Calendar can't read theirs: each app keeps a copy of just what
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and

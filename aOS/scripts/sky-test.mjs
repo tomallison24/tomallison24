@@ -30,7 +30,7 @@ const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
-const APPS = ['aOS', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock'];   // every app in its Vintage design (the default)
+const APPS = ['aOS', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock', 'sparkle'];   // every app in its Vintage design (the default)
 // the four skies: sky and tone -> the page colour, the disc, the hex the theme-color meta carries
 const SKY = {
   'day light': { ground: 'rgb(241, 223, 187)', disc: 'rgb(227, 167, 47)', meta: '#F1DFBB' },
@@ -57,7 +57,7 @@ async function open(app, { at = NOON, scheme = 'light', theme = null, reduce = f
   if (install) await ctx.clock.install({ time: new Date(at) }); else await ctx.clock.setFixedTime(new Date(at));
   await ctx.addInitScript(({ theme, look, seed, place, pin, at, PLACE }) => {
     try {
-      const s = {}; for (const a of ['aos', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock']) s[a] = '999';
+      const s = {}; for (const a of ['aos', 'mail', 'house', 'orders', 'drinks', 'fitness', 'news', 'travel', 'calendar', 'notes', 'podcasts', 'places', 'meals', 'clock', 'sparkle']) s[a] = '999';
       localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
       if (place) localStorage.setItem('aos.sky.loc', JSON.stringify({ ...PLACE, t: Date.parse(at) }));
       if (pin) localStorage.setItem('aos.sky', pin);

@@ -84,7 +84,7 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
 }
 
 // ---- the page ----
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
 const b = await chromium.launch();
 for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block', colorScheme: scheme });
@@ -116,7 +116,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.isVisible('#search'), `and Search ${tag}`);
   await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
   check(await pg.locator('#ipsySlot .ipsy-btn').count() === 1 && /Calendar, Notes, Meals, Orders, Travel and News/.test(await pg.textContent('#ipsySub')), `Ipsy at the top, across six apps ${tag}`);
-  check(await pg.locator('#favs .fav').count() === 4 && await pg.locator('#spaces .hrow').count() === 14, `four favorites and every app ${tag}`);
+  check(await pg.locator('#favs .fav').count() === 4 && await pg.locator('#spaces .hrow').count() === APPS.length, `four favorites and every app ${tag}`);
   await pg.locator('#askIpsy b').click(); await pg.waitForTimeout(700);
   const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
   check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below Ask Ipsy, on screen, without the extra words ${tag}`);

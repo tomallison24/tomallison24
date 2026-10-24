@@ -12,11 +12,11 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
-  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42' };   // each mid-century icon's colour
+  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104', sparkle: '184,140,192' };   // each icon's Sea glass tint
+  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127' };   // each mid-century icon's colour
   // the glow behind an app: its icon's tint, for aOS's look
   const HUE = new Proxy(GLASS_HUE, { get: (o, id) => (window.aosLook && aosLook.get() === 'glass' ? o[id] : VINTAGE_HUE[id] || o[id]) });
-  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
+  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
@@ -35,6 +35,7 @@
     drinks: [['ok', 'Your family account (Face ID)']],
     meals: [['ok', 'Your family account (Face ID)']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
+    sparkle: [['ok', 'Nothing for the children'], ['once', 'A grown-up signs in with Face ID, to keep progress on every phone (optional)']],
   };
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in
   // (home/welcome.js reports it); a tap still offers the install steps, in case it's gone.
@@ -158,7 +159,9 @@
   });
   const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
   const intro = fresh && now.intro === 'ipsy';
-  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
+  // apps still being tested: never on Today (as Meet or App of the day) until they're announced
+  const QUIET = ['sparkle'];
+  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id) && !QUIET.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
   const STORIES = [...(intro ? [IPSY] : []), ...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
   for (const s of pool) if (STORIES.length < SHAPE.length && !STORIES.some(o => o.id && o.id === s.id)) STORIES.push(s);
   const aotd = STORIES.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';   // the first app shown (one from the pool can be left out: Meet Ipsy is Orders')

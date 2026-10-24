@@ -36,6 +36,8 @@ jobs:
       - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
+      # Sparkle Kingdom: the learning engine and every question it makes, the school letters, its server
+      - run: node sparkle/scripts/logic-test.mjs && node sparkle/scripts/letters-test.mjs && node sparkle/scripts/api-test.mjs
 
   # What the pull request changes: each browser group keeps only the tests that need it.
   changes:
@@ -122,10 +124,11 @@ jobs:
               aOS/scripts/android-installed-test.mjs
               meals/scripts/app-test.mjs
               podcasts/scripts/app-test.mjs
-          # Drinks; Fitness's Meds and Steps, with Sign out and erase; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
+          # Drinks; Fitness's Meds and Steps, with Sign out and erase; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations; Sparkle Kingdom
           - group: drinks
             tests: |
               drinks/scripts/app-test.mjs
+              sparkle/scripts/app-test.mjs
               fitness/scripts/meds-steps-test.mjs
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
