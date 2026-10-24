@@ -95,6 +95,22 @@ const openAos = async p => { await p.goto(BASE + '/aOS/'); await p.evaluate(() =
   report('Ipsy puts English back: typing "English", or asking (the set_language tool)', pr);
 }
 
+// 2c. Clock in Russian is 24-hour until 24-Hour Time is picked; picked, it's kept
+{
+  const pr = [];
+  const { ctx, p, errs } = await phone({ 'aos.lang': 'ru', 'aos.seen': JSON.stringify({ clock: '999' }) }); pr.push(...errs);
+  await p.goto(BASE + '/clock/'); await p.waitForTimeout(600);
+  const ap = () => p.evaluate(() => [...document.querySelectorAll('.at span, .time span, [class*="hero"] span')].some(e => /^(AM|PM)$/.test(e.textContent.trim())) || /\b(AM|PM)\b/.test(document.body.innerText));
+  if (await ap()) pr.push('Clock in Russian still shows AM/PM');
+  await p.click('#setBtn'); await p.waitForSelector('#set24');
+  if (await p.getAttribute('#set24', 'aria-checked') !== 'true') pr.push('24-Hour Time is not shown on in Russian');
+  await p.click('#set24');
+  const st = await p.evaluate(() => (JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {});
+  if (st.h24 !== false || st.h24Picked !== true) pr.push('turning 24-Hour Time off is not kept as picked: ' + JSON.stringify(st));
+  await ctx.close();
+  report('Clock in Russian is 24-hour until 24-Hour Time is picked; a pick is kept', pr);
+}
+
 // 3. the engine
 {
   const { ctx, p, errs } = await phone({ 'aos.lang': 'ru' }); const pr = [...errs];

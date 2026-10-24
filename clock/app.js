@@ -66,7 +66,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   //   sleep: {set, on, bed: {h, m}, wake: {h, m}, days, alarm, sound, snooze, snoozeMin, remind, next, bedNext, skip, snoozeAt},
   //   sw: {run, t0, acc, laps, face}, timers: [{id, label, dur, sound, end, left, state, made}],
   //   recents: [{dur, label, sound}], pick: {h, m, s}, tsound,
-  //   set: {h24, secs, analog}, missed: [{kind, label, at}], tz }
+  //   set: {h24, h24Picked, secs, analog}, missed: [{kind, label, at}], tz }
   // next / bedNext / end / snoozeAt are moments (ms) the tick watches for.
   // ---------------------------------------------------------------------
   const SOUND_IDS = L.SOUNDS.map(s => s.id);
@@ -118,7 +118,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function save() {
     if (!ls.set(KEY, JSON.stringify(S)) && !warned) { warned = true; toast('This phone couldn’t save Clock: its storage is full.'); }
   }
-  const h24 = () => !!S.set.h24;
+  // 24-hour time: as picked in Settings; until it's picked (h24Picked), Russian is 24-hour (../home/lang.js), English 12
+  const russian = () => !!(window.aosLang && aosLang.get() === 'ru');
+  const h24 = () => S.set.h24Picked ? !!S.set.h24 : (!!S.set.h24 || russian());
   const hereZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } };
   const timeHTML = (h, m, secs) => { const c = L.clockText(h, m, h24(), secs); return esc(c.time) + (c.ap ? '<span>' + c.ap + '</span>' : ''); };
   const atLine = t => { const d = new Date(t); return L.clockLine(d.getHours(), d.getMinutes(), h24()); };
@@ -813,7 +815,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (S.set.home) $('setHomeName').setAttribute('translate', 'no'); else $('setHomeName').removeAttribute('translate');   // a place name stays as it is in Russian
     $('setHomeName').textContent = S.set.home ? S.set.home.name : phoneName() + ' (this phone)';
     document.querySelectorAll('#setDesign [data-design]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.design === S.set.design)));
-    $('set24').setAttribute('aria-checked', String(!!S.set.h24));
+    $('set24').setAttribute('aria-checked', String(h24()));
     $('setSecs').setAttribute('aria-checked', String(!!S.set.secs));
     $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
   }
@@ -828,7 +830,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // aOS's Appearance picked a look for every app (design.js has applied it): keep it, so a save here doesn't put the old one back
   addEventListener('clock:design', () => { if (window.clockDesign && clockDesign.get() !== S.set.design) { S.set.design = clockDesign.get(); paintSettings(); } });
   $('setHome').addEventListener('click', () => openCities('home'));
-  [['set24', 'h24'], ['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
+  $('set24').addEventListener('click', () => { S.set.h24 = !h24(); S.set.h24Picked = true; save(); paintSettings(); renderPane(S.tab); });   // picked: kept in either language
+  [['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
   $('setTest').addEventListener('click', () => {
     const a = S.alarms.find(x => x.on) || S.alarms[0];
     playSound(a ? a.sound : 'twinbell', 4000).then(ok => toast(ok ? 'Playing ' + L.soundName(a ? a.sound : 'twinbell') + '.' : 'Your phone didn’t play it. Check the volume and try again.'));
