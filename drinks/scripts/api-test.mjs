@@ -153,14 +153,13 @@ await test('the old account sync is gone, and nothing writes Drinks’ log to th
   assert.equal((await call('summary?from=2026-10-06&to=2026-10-08', { token: tom, method: 'POST', body: {} })).status, 404, 'POST summary');
 });
 
-await test('removing someone from the family signs them out (and a log they had in the account from before stays, for an invite back)', async () => {
+await test('removing someone from the family signs them out and deletes the log they had in the account from before', async () => {
   await putJSON(db, 'cred:c1', { user: 'KID1' });
   await putJSON(db, 'drinks:KID1', { v: 1, at: 1, entries: [], days: [], prefs: [], graves: {} });   // from before the Sheet
-  const log = db.m.get('drinks:KID1');
   const request = new Request('https://site.example/aOS/api/remove', { method: 'POST', headers: { Authorization: 'Bearer ' + tom, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'KID1' }) });
   const res = await accounts({ request, params: { route: ['remove'] }, env });
   assert.equal(res.status, 200);
-  assert.equal(db.m.get('drinks:KID1'), log, 'untouched');
+  assert.ok(!db.m.has('drinks:KID1'), 'their old log is deleted too');
   assert.ok(!db.m.has('cred:c1'), 'their passkey is forgotten');
   assert.equal((await call('summary?from=2026-10-06&to=2026-10-08', { token: sam })).status, 401, 'and they can’t read their days');
 });

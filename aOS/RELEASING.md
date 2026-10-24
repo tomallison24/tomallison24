@@ -94,10 +94,12 @@ owner's account; with it unset no owner can be made. Once the owner exists it
 can be deleted, and set again only if the owner account ever has to be made
 again.
 
-**Removing someone** (Your account → Your family → Remove) signs them out of
-every app and forgets their passkeys, but deletes nothing of theirs: their
-Drinks log and the rest stay. **Invite back** next to their name makes an invite
-link that brings them back as they were.
+**Removing someone** (Your account → Your family → Remove) takes them out
+completely: they're signed out of every app, and their account, passkeys and
+everything kept for them (apps, settings, Calendar layers, notifications, step
+sensor) are deleted. There's no inviting them back as they were: a new invite
+makes a new account. Anyone removed before this (signed out, data kept) shows
+as Signed out; Remove deletes them for good.
 
 **Lost a phone?** Anyone signed in can use Your account → **Sign out everywhere
 else**: every other sign-in of theirs ends at once (other devices, and the other

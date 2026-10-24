@@ -767,15 +767,13 @@
     };
   }
 
-  // An invite link, to share or copy: a new person, or someone removed coming back.
+  // An invite link, to share or copy, for someone new.
   function showInvite(r) {
     const link = new URL('./#invite=' + r.token, location.href).href;
     $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
     $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari on iPhone, or Chrome on Android.', url: link }).catch(() => {}) : $('iCopy').click();
     $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
   }
-  // Removing someone signs them out and forgets their passkeys; nothing of theirs is
-  // deleted, so Invite back brings them back with their Drinks log and everything else.
   // ---- the family's Google Sheets (functions/sheet/api; aOS/SHEETS.md) ----
   // Each app's Apps Script link and secret phrase, kept by aOS, so the phones don't hold them.
   const SHEET_APPS = [['fitness', 'Fitness'], ['drinks', 'Drinks'], ['notes', 'Notes and Places'], ['travel', 'Travel'], ['orders', 'Orders'], ['meals', 'Meals'], ['podcasts', 'Podcasts']];
@@ -814,18 +812,14 @@
   async function paintFamily() {
     let f; try { f = (await ACC.call('family')).family; } catch { return; }
     if (!$('fam')) return;
-    $('fam').innerHTML = f.map(m => `<div${m.removed ? ' class="gone"' : ''}><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : m.removed ? 'Removed' : 'Family'}</small></span>${m.role === 'owner' ? ''
-      : m.removed ? `<button type="button" class="again" data-back="${esc(m.id)}">Invite back</button>` : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
+    // Remove takes someone out completely (functions/aOS/api, forget): there's no inviting them back
+    // as they were. Anyone removed before that (signed out, their data kept) shows Signed out, to remove for good.
+    $('fam').innerHTML = f.map(m => `<div${m.removed ? ' class="gone"' : ''}><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : m.removed ? 'Signed out' : 'Family'}</small></span>${m.role === 'owner' ? ''
+      : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
     $('fam').onclick = async e => {
-      const k = e.target.closest('[data-back]');
-      if (k) {
-        busy(k, true);
-        try { showInvite(await ACC.call('invite', { id: k.dataset.back })); $('iOut').scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) { $('iErr').textContent = why(x); }
-        busy(k, false); return;
-      }
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(`Remove ${name} and sign them out of every app?`)) return;
+      if (!confirm(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`)) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };
