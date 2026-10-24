@@ -1,12 +1,15 @@
 // aOS 2's Home (aOS/home-tab.js): every app inside aOS. At iPhone size, Vintage and Sea glass, light
 // and dark:
-//   - Home first in the dock, in place of Apps, with Ipsy, Favorites and every app in groups
-//   - a row opens the app inside aOS: full screen, "‹ aOS" over it, the app's content starting
+//   - Home first, in place of Apps: the Ipsy bar, Favorites with the Weather and Calendar widgets,
+//     and every app as an icon in groups, so one tap opens any app
+//   - the Ipsy bar finds the app as you type (Return opens it) and what's in the apps, never a
+//     hidden order or a note in the Trash; a note found opens Notes at it
+//   - an icon opens the app inside aOS: full screen, "‹ aOS" over it, the app's content starting
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
-//   - no dock: four everyday apps float at the bottom, always the same ones (Mail with its unread
-//     count); Today and Search beside the account; Home scrolls in its own box, the page never moves
+//   - no dock, nothing floats over Home (Home floats at the bottom on Today); Mail's unread count on
+//     its icon; Today beside the account; Home scrolls in its own box, the page never moves
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
 //   - moving in: an app opened from its own icon hands its data over (or asks to sign in, to);
 //     aOS takes it whichever opens first, and it wins over aOS's own copy
@@ -100,26 +103,43 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
 
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
   check(await pg.isVisible('#home') && await pg.locator('.bar .tabs').isHidden() && await pg.locator('#opennow').count() === 0, `Home opens first, with no dock and no Open now ${tag}`);
-  const quick = () => pg.evaluate(() => [...document.querySelectorAll('.quick [data-open]')].map(b => b.dataset.open).join());
-  check(await quick() === 'mail,house,calendar,fitness' && await pg.locator('.quick .qhome').isHidden(), `four apps float at the bottom: Mail, Home, Calendar, Fitness ${tag}`);
+  check(await pg.locator('.quick').isHidden() && await pg.locator('#home .hbtn').count() === 1, `nothing floats over Home; only Today by the account ${tag}`);
   await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 600; }); await pg.waitForTimeout(100);
-  check(await pg.evaluate(() => document.getElementById('scroller').scrollTop > 0 && scrollY === 0 && Math.abs(document.querySelector('.quick').getBoundingClientRect().bottom - (innerHeight - 12)) < 2),
-    `Home scrolls in its own box: the page itself stays put, the apps stay at the bottom ${tag}`);
+  check(await pg.evaluate(() => document.getElementById('scroller').scrollTop > 0 && scrollY === 0), `Home scrolls in its own box: the page itself stays put ${tag}`);
+  // every app one tap away: all of them as icons, the first three groups on the first screen
+  const apps = await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(a => a.dataset.open));
+  check(apps.length === 14 && new Set(apps).size === 14, `every app, once each, as an icon (${apps.length}) ${tag}`);
+  await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 0; });
+  const below = await pg.evaluate(() => Math.round(document.querySelector('#spaces .hcat:nth-child(2)').getBoundingClientRect().top));
+  check(below < 844, `Every app starts on the first screen (${below}px) ${tag}`);
+  // Favorites: Weather and Calendar as widgets, four other apps beside them
+  const favIds = await pg.evaluate(() => [...document.querySelectorAll('#favs .fav')].map(f => f.dataset.open));
+  check(favIds.length === 4 && !favIds.some(id => id === 'weather' || id === 'calendar') && await pg.locator('#favs .wid.wx[data-open="weather"]').count() === 1 && await pg.locator('#favs .wid.cal[data-open="calendar"]').count() === 1,
+    `Favorites: the Weather and Calendar widgets and four other apps (${favIds.join()}) ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 7));
-  check(await pg.textContent('.quick [data-open="mail"] .unread') === '7' && await pg.locator('.quick .unread').count() === 1, `Mail's unread count on its icon, and only there ${tag}`);
+  check(await pg.textContent('#spaces [data-open="mail"] .unread') === '7', `Mail's unread count on its icon ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 0));
-  check(await pg.locator('.quick .unread').count() === 0, `none once it's all read ${tag}`);
+  check(await pg.locator('#home .unread').count() === 0, `none once it's all read ${tag}`);
   await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(400);
-  check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home joins the apps at the bottom there ${tag}`);
+  check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home floats at the bottom there ${tag}`);
   await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
-  await pg.locator('#home .hbtn[data-tab="search"]').click(); await pg.waitForTimeout(400);
-  check(await pg.isVisible('#search'), `and Search ${tag}`);
-  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
-  check(await pg.locator('#ipsySlot .ipsy-btn').count() === 1 && /Calendar, Notes, Meals, Orders, Travel and News/.test(await pg.textContent('#ipsySub')), `Ipsy at the top, across six apps ${tag}`);
-  check(await pg.locator('#favs .fav').count() === 4 && await pg.locator('#spaces .hrow').count() === 14, `four favorites and every app ${tag}`);
-  await pg.locator('#askIpsy b').click(); await pg.waitForTimeout(700);
+  check(await pg.isVisible('#home') && await pg.locator('.quick').isHidden(), `and takes you back ${tag}`);
+  // the Ipsy bar: type and the app is found; Return opens it
+  check(await pg.locator('#ipsySlot .ipsy-btn').count() === 1, `Ipsy at the top, in the bar ${tag}`);
+  await pg.locator('#hq').fill('wea'); await pg.waitForTimeout(150);
+  check(await pg.locator('#hmain').isHidden() && await pg.getAttribute('#hfound .htop', 'data-open') === 'weather' && /Ask Ipsy/.test(await pg.textContent('#hask')), `typing finds the app, Weather first, with Ask Ipsy under it ${tag}`);
+  check(JSON.stringify(await pg.evaluate(() => ['ca', 'po', 'trip', 'h'].map(t => aosHomeTab.findApps(t)[0]))) === '["calendar","podcasts","travel","house"]', `the start of a name first, then what an app does ${tag}`);
+  await pg.locator('#hq').press('Enter'); await pg.waitForTimeout(1200);
+  check((await state()).shown.join() === 'weather' && await pg.inputValue('#hq') === '', `Return opens the top hit, and the bar is empty again ${tag}`);
+  await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
+  check(await pg.isVisible('#hmain'), `back on Home, Favorites and every app again ${tag}`);
+  await pg.locator('#hq').fill('zzqx'); await pg.waitForTimeout(150);
+  check(await pg.locator('#hfound .htop').count() === 0 && /Nothing on this phone/.test(await pg.textContent('#hfound')), `nothing found says so, and offers Ipsy ${tag}`);
+  await pg.locator('#hq').press('Escape'); await pg.waitForTimeout(100);
+  check(await pg.inputValue('#hq') === '' && await pg.isVisible('#hmain'), `Escape clears it ${tag}`);
+  await pg.locator('#ipsySlot .ipsy-btn').click(); await pg.waitForTimeout(700);
   const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
-  check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below Ask Ipsy, on screen, without the extra words ${tag}`);
+  check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below the Ipsy bar, on screen, without the extra words ${tag}`);
   // typing: the keyboard takes the bottom 336px and iOS scrolls the page 120px to the box (the visual viewport)
   await pg.evaluate(() => { const v = visualViewport; Object.defineProperty(v, 'height', { get: () => 844 - 336 - 120, configurable: true }); Object.defineProperty(v, 'offsetTop', { get: () => 120, configurable: true }); v.dispatchEvent(new Event('resize')); });
   await pg.waitForTimeout(500);
@@ -147,9 +167,9 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.evaluate(() => localStorage.removeItem('aos.bar')); await pg.reload(); await pg.waitForTimeout(900);
   }
 
-  await pg.locator('.hrow[data-open="notes"]').click(); await pg.waitForTimeout(2200);
+  await pg.locator('.happ[data-open="notes"]').click(); await pg.waitForTimeout(2200);
   let s = await state();
-  check(s.inApp && s.shown.join() === 'notes' && s.hash === '#app=notes', `a row opens the app inside aOS ${tag}`);
+  check(s.inApp && s.shown.join() === 'notes' && s.hash === '#app=notes', `an icon opens the app inside aOS ${tag}`);
   const nf = pg.frames().find(f => f.url().includes('/notes/'));
   const top = await nf.evaluate(() => { const h = document.querySelector('h1'); return h ? Math.round(h.getBoundingClientRect().top) : -1; });
   check(top >= 50, `the app's content starts clear of "‹ aOS" (its title at ${top}px) ${tag}`);
@@ -164,10 +184,10 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.goBack(); await pg.waitForTimeout(500);
   s = await state();
   check(!s.inApp && s.hash === '' && await pg.evaluate(() => window.__same === 1), `the phone's own back (an iPhone's edge swipe) goes to Home, staying in aOS ${tag}`);
-  await pg.locator('.hrow[data-open="weather"]').click(); await pg.waitForTimeout(1200);
+  await pg.locator('.happ[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
-  await pg.locator('.hrow[data-open="notes"]').click(); await pg.waitForTimeout(700);
+  await pg.locator('.happ[data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
   check(/Weather/.test(await pg.textContent('#appmenu')) && await pg.isVisible('#appmenu'), `holding "‹ aOS" lists the other open apps ${tag}`);
@@ -176,11 +196,11 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('#appback').click(); await pg.waitForTimeout(500);
 
   await pg.locator('#favEdit').click();
-  await pg.locator('.hrow[data-open="house"] [data-pin]').click();
+  await pg.locator('.happ[data-open="house"] [data-pin]').click();
   await pg.locator('#favEdit').click();
   const favs = await pg.evaluate(() => aosHomeTab.favorites().map(f => f.id + ':' + f.why));
   check(favs[0] === 'house:pin' && favs.some(f => /:used$/.test(f)) && favs.length === 4, `Favorites, mixed: the pin, then the most used, then the starters (${favs.join(' ')}) ${tag}`);
-  check(await quick() === 'mail,house,calendar,fitness', `the apps at the bottom stay the same, whatever you use most ${tag}`);
+  check(await pg.locator('.happ[data-open="weather"] [data-pin], .happ[data-open="calendar"] [data-pin]').count() === 0, `Weather and Calendar, widgets already, have no pin ${tag}`);
 
   const r = await pg.evaluate(async () => { const m = AllisonOS.ipsy.mounted; const res = await m.tools['notes__get_lists']({}, { confirm: async () => true }); return { app: m.app, lists: JSON.parse(typeof res.content === 'string' ? res.content : JSON.stringify(res.content)).lists }; });
   check(r.app === 'aos' && Array.isArray(r.lists) && r.lists.length > 0, `Ipsy in aOS runs Notes' own tool inside Notes ${tag}`);
@@ -231,6 +251,35 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.evaluate(() => localStorage.setItem('aos.away', 'mail|' + (Date.now() - 3600e3)));
     await pg.goto(BASE + '/mail/'); await pg.waitForTimeout(1500);
     check(/\/mail\//.test(pg.url()), `a sign-in given up on long ago doesn't pull Mail into aOS ${tag}`);
+  }
+
+  // the widgets and "In your apps" (aOS/home-find.js), from what the apps keep on this phone
+  if (look === 'glass') {
+    await pg.evaluate(() => {
+      const now = Date.now(), z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+      const ev = (uid, from, t) => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nDTSTART:${z(from)}\r\nDTEND:${z(from + 3600e3)}\r\nSUMMARY:${t}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
+      localStorage.setItem('allison-calendar-v1-items', JSON.stringify({ win: { from: now - 90 * 864e5, to: now + 400 * 864e5 }, at: now,
+        items: [{ name: 'a.ics', ics: ev('a', now + 3600e3, 'Soccer practice') }, { name: 'b.ics', ics: ev('b', now - 86400e3 * 3, 'Old dentist visit') }] }));
+      localStorage.setItem('wx.here', JSON.stringify({ lat: 39.74, lon: -104.99, name: 'Denver' }));
+      localStorage.setItem('wx.cache', JSON.stringify({ '39.740,-104.990': { tz: 'America/Denver', place: 'Denver', fetchedAt: now, cur: { tF: 64, c: 'partlycloudy' }, hourly: [], daily: [{ t: Math.floor(now / 1000), hF: 70, lF: 52, c: 'sunny' }] } }));
+      localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: [{ id: 'n1', title: 'Soccer snacks', body: 'oranges', updated: now }, { id: 'n2', title: 'Soccer secret', body: '', deletedAt: now }], lists: [], todos: [] }));
+      localStorage.setItem('allison-orders-v1', JSON.stringify({ orders: [{ id: 'o1', store: 'Amazon', items: [{ name: 'Soccer ball' }], status: 'shipped' }, { id: 'o2', store: 'Etsy', items: [{ name: 'Soccer jersey gift' }], status: 'ordered', hide: true }] }));
+      localStorage.setItem('allison-orders-v1-log', JSON.stringify([{ store: 'Etsy', items: ['Soccer jersey gift'] }]));
+      aosHomeTab.show(null);
+    });
+    await pg.waitForTimeout(300);
+    check(await pg.textContent('#favs .wx .big') === '64°' && /Partly cloudy/.test(await pg.textContent('#favs .wx')) && /H 70° L 52°/.test(await pg.textContent('#favs .wx')), `the Weather widget: Weather's own last forecast ${tag}`);
+    check(await pg.textContent('#favs .cal b') === 'Soccer practice' && /Next/.test(await pg.textContent('#favs .cal em')), `the Calendar widget: what's next ${tag}`);
+    await pg.locator('#hq').fill('socc'); await pg.waitForTimeout(200);
+    const hits = await pg.evaluate(() => [...document.querySelectorAll('#hfound .hit')].map(h => h.dataset.open + ':' + h.querySelector('b').textContent));
+    check(hits.includes('calendar:Soccer practice') && hits.includes('notes:Soccer snacks') && hits.includes('orders:Soccer ball') && hits.includes('calendar:Old dentist visit') === false,
+      `In your apps: an event, a note, an order (${hits.join(', ')}) ${tag}`);
+    check(!hits.some(h => /secret|jersey/.test(h)), `but never a note in the Trash or a hidden order, nor anything from Orders' log ${tag}`);
+    const asked = [];
+    pg.on('request', r => { if (r.isNavigationRequest()) asked.push(r.url()); });
+    await pg.locator('#hfound .hit[data-open="notes"]').click(); await pg.waitForTimeout(1500);
+    check((await state()).shown.join() === 'notes' && asked.some(u => /\/notes\/\?open=note:n1$/.test(u)) && await pg.inputValue('#hq') === '', `a note found opens Notes at that note ${tag}`);
+    await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
   }
 
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));

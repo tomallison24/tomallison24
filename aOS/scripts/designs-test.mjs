@@ -35,7 +35,7 @@ async function open(apps = {}, scheme = 'light', look = 'glass') {   // the Sea 
     return J({});
   });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/aOS/'); await p.waitForSelector('[data-tab="search"]'); await p.click('[data-tab="search"]'); await p.waitForSelector('#found .row');   // aOS2: Search lists every app (Apps is Home now)
+  await p.goto(BASE + '/aOS/'); await p.waitForFunction(() => window.aosTabs); await p.evaluate(() => aosTabs.show('search')); await p.waitForSelector('#found .row');   // aOS2: Search lists every app (Apps is Home now; Home's Ipsy bar finds an app, its i opens this same page)
   return { ctx, p, errs };
 }
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
