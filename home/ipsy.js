@@ -20,6 +20,9 @@
 //
 // Tapped, Ipsy's chat pops out of it as a speech bubble (not a page): the bubble rises from
 // above its head, tail pointing at it, and shrinks back into it when put away.
+// A chat that's done (nothing still being answered or asked) is put away once it has been closed for a minute, so
+// Ipsy opens with a new one; opened again sooner (a look at what it showed you, an Undo), it's the same chat. The last
+// five put away are kept on the phone (ipsy.<app>.history), behind the clock in the chat's corner.
 // The chat lives on the phone (localStorage ipsy.<app>.chat). Each step sends the whole
 // conversation to the app's route; when Claude asks for one of the app's tools, it runs here (the
 // data lives here) and its result goes back with the next step. Web search and web pages run at
@@ -250,7 +253,19 @@
 .ipsy-x,.ipsy-new{height:34px;border:0;border-radius:999px;padding:0 12px;font:inherit;font-size:14px;font-weight:600;color:var(--accent-text,var(--accent,#3B7366));background:var(--glass,rgba(127,127,127,.12));cursor:pointer}
 .ipsy-vintage .ipsy-x,.ipsy-vintage .ipsy-new{background:transparent;box-shadow:inset 0 0 0 2px var(--mc-edge,rgba(43,37,34,.14));color:var(--mc-teal,#1F6F6B)}
 .ipsy-x{width:34px;padding:0;font-size:18px;line-height:1}
-.ipsy-x:focus-visible,.ipsy-new:focus-visible,.ipsy-send:focus-visible,.ipsy-chip:focus-visible,.ipsy-undo:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px}
+.ipsy-hist{width:34px;height:34px;border:0;border-radius:999px;padding:0;display:grid;place-items:center;color:var(--accent-text,var(--accent,#3B7366));background:var(--glass,rgba(127,127,127,.12));cursor:pointer}
+.ipsy-hist[hidden]{display:none}
+.ipsy-hist svg{width:17px;height:17px}
+.ipsy-hist[aria-expanded="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.ipsy-vintage .ipsy-hist{background:transparent;box-shadow:inset 0 0 0 2px var(--mc-edge,rgba(43,37,34,.14));color:var(--mc-teal,#1F6F6B)}
+.ipsy-vintage .ipsy-hist[aria-expanded="true"]{background:var(--mc-teal,#1F6F6B);color:#fff;box-shadow:none}
+.ipsy-hlist{display:grid;gap:8px;margin-bottom:auto}
+.ipsy-hlist>p{margin:2px 4px;font-size:13px;font-weight:600;color:var(--muted,rgba(16,24,26,.64))}
+.ipsy-hrow{display:grid;gap:2px;text-align:left;border:1px solid var(--hair,rgba(16,24,26,.1));background:var(--glass,rgba(255,255,255,.6));color:var(--text,#10181A);font:inherit;padding:10px 12px;border-radius:16px;cursor:pointer}
+.ipsy-hrow b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipsy-hrow small{font-size:12px;color:var(--muted,rgba(16,24,26,.64))}
+.ipsy-vintage .ipsy-hrow{background:transparent;border:2px solid var(--mc-edge,rgba(43,37,34,.14))}
+.ipsy-x:focus-visible,.ipsy-new:focus-visible,.ipsy-hist:focus-visible,.ipsy-hrow:focus-visible,.ipsy-send:focus-visible,.ipsy-chip:focus-visible,.ipsy-undo:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px}
 .ipsy-log{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:14px 2px 10px;overscroll-behavior:contain}
 .ipsy-msg{max-width:86%;padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.42;overflow-wrap:anywhere;white-space:pre-wrap}
 .ipsy-msg ul{margin:4px 0;padding-left:18px;white-space:normal}
@@ -341,8 +356,9 @@
     addStyle();
     // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
     AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
-    const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok' };
+    const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed' };
     let messages = [], view = [], busy = false, undos = new Map();
+    let showing = false;                  // the list of recent chats is on screen instead of the chat
     const asks = new Map();               // questions waiting on a Yes or No: id -> resolve
     try { const saved = JSON.parse(ls.get(K.chat, 'null')); if (saved && Array.isArray(saved.messages) && Array.isArray(saved.view)) { messages = saved.messages; view = saved.view; } } catch {}
 
@@ -362,6 +378,7 @@
       + '<button class="ipsy-speaker ipsy-host" type="button" aria-label="Put Ipsy away" data-close></button>'
       + '<section class="ipsy-bubble" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
       + '<div class="ipsy-head"><h2 id="ipsyTitle">Ipsy<small id="ipsyStatus">' + esc(sub) + '</small></h2>'
+      + '<button class="ipsy-hist" type="button" id="ipsyHist" aria-label="Recent chats" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></svg></button>'
       + '<button class="ipsy-new" type="button" id="ipsyNew">New chat</button><button class="ipsy-x" type="button" aria-label="Close" data-close>×</button></div>'
       + '<div class="ipsy-log" id="ipsyLog" aria-live="polite"></div>'
       + '<form class="ipsy-form" id="ipsyForm"><label class="ipsy-sr" for="ipsyIn">Message Ipsy</label>'
@@ -402,7 +419,8 @@
       lastFocus = document.activeElement;
       place(); btn.style.visibility = 'hidden';
       wrap.hidden = false; document.documentElement.classList.add('locked');
-      peek.live = true; mood(busy ? peek.mood : 'idle'); draw();
+      freshIfDone(); ls.del(K.closed);
+      peek.live = true; mood(busy ? peek.mood : 'idle'); showing = false; draw();
       setTimeout(() => { if (ls.get(K.ok, '')) input.focus(); }, 350);
     }
     function close() {
@@ -410,6 +428,7 @@
       input.blur(); wrap.classList.add('ipsy-closing');
       const done = () => {
         wrap.hidden = true; wrap.classList.remove('ipsy-closing'); btn.style.visibility = '';
+        if (!busy && !asks.size && view.length) ls.set(K.closed, String(Date.now()));   // done: put away in a minute (freshIfDone)
         peek.live = false; kick();
         if (![...document.querySelectorAll('.sheetwrap, .sheet-wrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');   // an app's own sheet still open keeps the page dimmed
         if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
@@ -424,7 +443,46 @@
     input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(120, input.scrollHeight) + 'px'; });
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
     $('ipsyForm').addEventListener('submit', e => { e.preventDefault(); submit(); });
-    $('ipsyNew').addEventListener('click', () => { if (busy || asks.size) return; messages = []; view = []; undos = new Map(); persist(); draw(); input.focus(); });
+    $('ipsyNew').addEventListener('click', () => { if (busy || asks.size) return; putAway(); showing = false; draw(); input.focus(); });
+    $('ipsyHist').addEventListener('click', () => { if (busy || asks.size) return; showing = !showing; draw(); });
+
+    // ---- Recent chats: the last five put away, newest first, on this phone ----
+    // A chat's Undo buttons last while the page is open (the undos are kept by id), as in the chat itself.
+    const HIST = 5, HIST_MAX = 600000;   // characters, for all five (the phone's storage is shared by every app)
+    function recent() { try { const h = JSON.parse(ls.get(K.hist, '[]')); return Array.isArray(h) ? h : []; } catch { return []; } }
+    function keepHistory(list) {
+      // Too much to keep: the oldest goes first; one chat too long on its own is kept to read, without what Claude needs to carry on.
+      list = list.slice(0, HIST);
+      while (list.length) {
+        const str = JSON.stringify(list);
+        if (str.length <= HIST_MAX && ls.set(K.hist, str)) return;
+        if (list.length > 1) list.pop(); else if (list[0].messages) delete list[0].messages; else break;
+      }
+      ls.del(K.hist);
+    }
+    const titleOf = v => { const m = v.find(x => x.t === 'me') || v.find(x => x.text); return m ? String(m.text).replace(/\s+/g, ' ').slice(0, 80) : 'Chat'; };
+    // Closed for a minute (or more, the app since closed), a finished chat is put away: Ipsy opens with a new one.
+    const GRACE = 60 * 1000;
+    function freshIfDone() { const at = +ls.get(K.closed, 0); if (at && Date.now() - at > GRACE && !busy && !asks.size) { putAway(); ls.del(K.closed); } }
+    function putAway() {
+      if (!view.length) return;
+      keepHistory([{ at: Date.now(), title: titleOf(view), messages, view }, ...recent()]);
+      messages = []; view = []; persist();
+    }
+    function bringBack(i) {
+      const h = recent(), c = h[i]; if (!c) return;
+      h.splice(i, 1);
+      if (view.length) h.unshift({ at: Date.now(), title: titleOf(view), messages, view });
+      keepHistory(h);
+      messages = Array.isArray(c.messages) ? c.messages : []; view = Array.isArray(c.view) ? c.view : [];
+      if (!c.messages) view = view.concat({ t: 'act', text: 'This chat was too long to keep whole: a new question starts afresh.' });
+      persist(); showing = false; draw();
+    }
+    const whenSaid = at => {
+      const d = new Date(at), now = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), n = Math.round((day(now) - day(d)) / 864e5);
+      return n === 0 ? 'Today, ' + t : n === 1 ? 'Yesterday, ' + t : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    };
     // The keyboard, a turned phone: Ipsy and its bubble move up above the keyboard, and fit the screen.
     const refit = () => { if (!wrap.hidden) place(); };
     if (vv) { vv.addEventListener('resize', refit); vv.addEventListener('scroll', refit); }
@@ -432,7 +490,14 @@
 
     // What's in the chat, drawn from `view` (what the person saw), not from the raw messages.
     function draw() {
-      const ok = !!ls.get(K.ok, '');
+      const ok = !!ls.get(K.ok, ''), past = recent(), hb = $('ipsyHist');
+      hb.hidden = !past.length && !showing; hb.setAttribute('aria-expanded', String(showing));
+      if (showing) {
+        log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b>' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
+          : '<p>No earlier chats yet.</p>') + '</div>';
+        input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
+        return;
+      }
       let h = '';
       if (!view.length) {
         h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>')
@@ -463,6 +528,7 @@
         if (!done || !v) return;
         asks.delete(id); v.state = ans.dataset.ans; persist(); draw(); done(v.state === 'yes'); return;
       }
+      const hr = e.target.closest('[data-hist]'); if (hr) { bringBack(+hr.dataset.hist); input.focus(); return; }
       const ask = e.target.closest('[data-ask]'); if (ask) { input.value = ask.dataset.ask; submit(); return; }
       if (e.target.closest('#ipsyOk')) { ls.set(K.ok, '1'); draw(); input.focus(); return; }
       const u = e.target.closest('[data-undo]');
@@ -477,7 +543,7 @@
           .then(() => { persist(); draw(); });
       }
     });
-    function add(v) { view.push(v); if (!wrap.hidden) { log.insertAdjacentHTML('beforeend', item(v)); log.scrollTop = log.scrollHeight; } }
+    function add(v) { view.push(v); if (!wrap.hidden) { if (showing) { showing = false; draw(); return; } log.insertAdjacentHTML('beforeend', item(v)); log.scrollTop = log.scrollHeight; } }
     function persist() {
       // A chat too big to keep is kept on screen only (the phone's storage is shared by every app).
       const s = JSON.stringify({ messages, view: view.map(v => v.t === 'change' ? { ...v } : v) });
@@ -631,8 +697,9 @@
       hint,
       ask: (text, opt) => confirm(text, opt).then(ok => { if (!busy) { mood(document.activeElement === input ? 'listen' : 'idle'); say(''); } return ok; }),
       // A line in the chat, or a change with its Undo, from work the app did with Ipsy outside a question.
-      note: text => { add({ t: 'act', text }); persist(); },
+      note: text => { if (wrap.hidden) freshIfDone(); add({ t: 'act', text }); persist(); },
       change: (text, undo) => {
+        if (wrap.hidden) freshIfDone();
         const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         if (typeof undo === 'function') undos.set(id, undo);
         add({ t: 'change', id, text }); persist();
