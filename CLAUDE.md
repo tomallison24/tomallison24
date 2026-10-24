@@ -23,7 +23,12 @@ The owner has asked that Claude's pull requests merge without asking, once
 they're ready: every check on the latest commit passed (the News build and the
 Apps check), no merge conflict, and no review left unanswered. Merge then (or
 turn on GitHub's auto-merge for the PR), with a merge commit. The merge
-releases it (above).
+releases it (above). Auto-merge works only while the default branch's protection
+rule requires checks (the owner sets it in Settings > Branches): every job's name
+is its own (`apps`, `changes`, the twelve groups, `tours-0` to `tours-2`,
+`calendar-gmail`, `ipsy-clearance`, `ipsy-presence`), and each reports on every
+pull request, so any can be required. A new job that might not run on some pull
+requests skips its steps rather than itself.
 
 ## The release log
 
@@ -67,7 +72,7 @@ end with 0 errors.
 ## Tests
 
 Every test runs in CI (`.github/workflows/apps-check.yml`): plain Node tests
-in the `check` job, browser tests in the `browser` groups that run side by side (twelve of them, about three minutes of tests each, three at a time within a group by `.github/scripts/ci-run.mjs`: put a new one in the group that runs shortest), and the tours in nine shards over three jobs, `tours`. On a pull request the browser groups and the tours run only what it needs (`.github/scripts/ci-select.mjs`): everything when it changes shared code (`home/`, `server/`, `aOS/`, `functions/` outside an app's folder, the workflows), an app's own tests and every test that opens that app when it changes only some apps, none when it changes only `labs/` or documentation. A test that opens an app should name its folder (`'/notes/'`), so it runs when that app changes. The merge (a push to the default branch) runs only the quick `check` job, and `warm`, which keeps the browser caches filled for pull requests. `check-apps.mjs` fails on any
+in the `check` job (named `apps`), browser tests in the `browser` groups that run side by side (twelve of them, about three minutes of tests each, three at a time within a group by `.github/scripts/ci-run.mjs`: put a new one in the group that runs shortest), and the tours in nine shards over three jobs, `tours`. On a pull request the browser groups and the tours run only what it needs (`.github/scripts/ci-select.mjs`): everything when it changes shared code (`home/`, `server/`, `aOS/`, `functions/` outside an app's folder, the workflows), an app's own tests and every test that opens that app when it changes only some apps, none when it changes only `labs/` or documentation. A test that opens an app should name its folder (`'/notes/'`), so it runs when that app changes. The merge (a push to the default branch) runs only the quick `check` job, and `warm`, which keeps the browser caches filled for pull requests. `check-apps.mjs` fails on any
 `<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
 the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
 with `'999'` for every app they open, so no walkthrough or update screen

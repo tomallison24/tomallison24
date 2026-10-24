@@ -22,8 +22,12 @@ concurrency:
   group: apps-check-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Every job reports under its own name on every pull request (a skipped one as skipped), so each can be a
+# required check for GitHub's auto-merge: apps, changes, the twelve groups, tours-0 to tours-2. A required
+# check that never reports would hold a pull request for good, so the tours skip their steps, not the job.
 jobs:
   check:
+    name: apps
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
@@ -67,7 +71,6 @@ jobs:
   # side by side with everything else, each playing three shards at once (.github/scripts/ci-run.mjs).
   tours:
     needs: changes
-    if: needs.changes.outputs.tours == 'yes'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -76,22 +79,28 @@ jobs:
     name: tours-${{ matrix.shard }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+        if: needs.changes.outputs.tours == 'yes'
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        if: needs.changes.outputs.tours == 'yes'
         with:
           node-version: 22
       # the test browser and its system packages, from the caches the default branch keeps (warm)
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         id: pw
+        if: needs.changes.outputs.tours == 'yes'
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-chromium-${{ runner.os }}
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        if: needs.changes.outputs.tours == 'yes'
         with:
           path: ~/apt-archives
           key: apt-playwright-1.56.1-${{ runner.os }}
           restore-keys: apt-playwright-1.56.1-${{ runner.os }}-
       - run: .github/scripts/ci-browser.sh ${{ steps.pw.outputs.cache-hit == 'true' && 'hit' || '' }}
+        if: needs.changes.outputs.tours == 'yes'
       - name: Run the tours
+        if: needs.changes.outputs.tours == 'yes'
         env:
           SHARD: ${{ matrix.shard }}
         run: TESTS="$(for k in 0 3 6; do echo "TOURS_SHARD=$((SHARD + k))/9 aOS/scripts/tours-test.mjs"; done)" node .github/scripts/ci-run.mjs
