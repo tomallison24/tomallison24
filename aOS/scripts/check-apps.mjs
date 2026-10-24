@@ -38,6 +38,8 @@
 //   - Ipsy: a page that loads ../home/ipsy.js lists it in sw.js SHELL and lets
 //     connect-src 'self'; with ipsy-tools.js (Ipsy to chat with) it lists that too,
 //     and its functions/<app>/api answers ipsy
+//   - English or Russian: loads ../home/lang.js in <head> and its Russian words (../home/lang/ru/shared.js,
+//     ../home/lang/ru/<id>.js), listed in sw.js SHELL
 // And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow; the Night Drive and Folk
 // blocks and icons are up to date with Vintage (make-looks.mjs --check).
 //   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
@@ -185,7 +187,14 @@ for (const id of ids) {
     rule(own || list.includes('../home/design.js'), 'sw.js SHELL should list ../home/design.js');
     rule(/<style id="vintage">/.test(html), 'has no <style id="vintage">: the Vintage design, switched off for Standard');
     for (const f of ['icon-glass-180.png', 'icon-glass-512.png']) rule(exists(dir + '/' + f), 'no ' + f + ': the Standard (Sea glass) design\'s icon');
+    for (const f of ['neon', 'folk']) rule(new RegExp('<style id="' + f + '"').test(html), 'has no <style id="' + f + '">: run node aOS/scripts/make-looks.mjs');
   }
+  // the language (../home/lang.js): English or Russian, in <head>, with the shared words and the app's own, offline too
+  const words = '../home/lang/ru/' + id + '.js';
+  rule(/<script\s+src="\.\.\/home\/lang\.js"/.test(html) && html.indexOf('../home/lang.js') < html.indexOf('<body'), 'loads ../home/lang.js in <head>: English or Russian, picked in aOS');
+  rule(html.includes('<script src="../home/lang/ru/shared.js">') && html.includes('<script src="' + words + '">'), 'loads ../home/lang/ru/shared.js and ' + words + ' (its Russian words) after ../home/lang.js');
+  rule(exists(words.slice(3)), 'has no ' + words.slice(3) + ': its Russian words (home/lang/README.md)');
+  for (const f of ['../home/lang.js', '../home/lang/ru/shared.js', words]) rule(!sw || list.includes(f), 'sw.js SHELL should list ' + f + ', so it works offline in Russian too');
   if (SKY.has(id)) {
     rule(/<script\s+src="\.\.\/home\/sky\.js"/.test(html), 'a Vintage design loads ../home/sky.js (in <head>): the day and night sky every Vintage app shares');
     rule(list.includes('../home/sky.js'), 'sw.js SHELL should list ../home/sky.js, so the sky works offline');
