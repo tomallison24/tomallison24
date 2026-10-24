@@ -4,6 +4,7 @@
 (() => {
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const tx = s => (window.aosLang ? aosLang.t(s) : s);   // a text the page doesn't show as text (a confirm), or one whose words move around its <b>, in Russian (../home/lang.js)
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
   // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-neon-512.png, icon-folk-512.png. aOS shows
@@ -420,7 +421,7 @@
     const el = page(`<h1 class="ptitle">Lost a phone?</h1>
       <div class="glbl">1. First: Find My</div>
       <div class="group acct lost"><div><ol>
-        <li>Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.</li>
+        <li>${tx('Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.')}</li>
         <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
         <li>If it's gone for good, choose <b>Erase This Device</b>.</li></ol></div></div>
       <div class="glbl">2. Erase aOS from your other devices</div>
@@ -428,7 +429,7 @@
         <li>Back up first: open each app, online, on a phone you still have.</li>
         <li>Here in aOS, tap <b>Sign out and erase my other devices</b>.</li>
         <li>Each of your aOS apps elsewhere erases itself when it next opens online.</li>
-        <li>On <b>this</b> phone, open each other aOS app and sign in again.</li></ol>
+        <li>${tx('On <b>this</b> phone, open each other aOS app and sign in again.')}</li></ol>
         ${u ? `<button type="button" class="soft danger" id="lEraseOthers">Sign out and erase my other devices</button><div class="err" id="lErr"></div>` : `<p>Sign in to aOS first.</p>`}</div></div>
       <div class="glbl">3. Lost your only phone?</div>
       <div class="group acct lost"><div><ol>
@@ -444,7 +445,7 @@
     const lErr = el.querySelector('#lErr');
     if (el.querySelector('#lEraseOthers')) el.querySelector('#lEraseOthers').onclick = async e => {
       const b = e.currentTarget;
-      if (!confirm('Sign out and erase every other device, and the other aOS apps on this phone?')) return;
+      if (!confirm(tx('Sign out and erase every other device, and the other aOS apps on this phone?'))) return;
       busy(b, true); lErr.textContent = ''; lErr.style.color = '';
       try { await ACC.signOutOthers(true);
         lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done: each erases itself when it next opens online.'; }
@@ -452,7 +453,7 @@
       busy(b, false);
     };
     el.querySelector('#lEraseHere').onclick = () => {
-      if (!confirm('Sign out and erase what aOS keeps on this phone?')) return;
+      if (!confirm(tx('Sign out and erase what aOS keeps on this phone?'))) return;
       AllisonOS.erase();
     };
     if (u && u.role === 'owner') paintLostFamily(el.querySelector('#lFam'));
@@ -460,11 +461,11 @@
   }
   async function paintLostFamily(box) {
     let f; try { f = (await ACC.call('family')).family.filter(m => m.role !== 'owner' && !m.removed); } catch { box.innerHTML = '<p>Couldn\'t load the family.</p>'; return; }
-    box.innerHTML = f.length ? f.map(m => `<div><span>${esc(m.name)}</span><button type="button" data-erase="${esc(m.id)}">Erase their devices</button></div>`).join('') : '<p>No one else in the family yet.</p>';
+    box.innerHTML = f.length ? f.map(m => `<div><span translate="no">${esc(m.name)}</span><button type="button" data-erase="${esc(m.id)}">Erase their devices</button></div>`).join('') : '<p>No one else in the family yet.</p>';
     box.onclick = async e => {
       const b = e.target.closest('[data-erase]'); if (!b) return;
       const name = b.parentElement.querySelector('span').textContent;
-      if (!confirm(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`)) return;
+      if (!confirm(tx(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`))) return;
       busy(b, true);
       try { await ACC.call('erase', { id: b.dataset.erase }); b.textContent = 'Erased'; } catch (x) { b.textContent = why(x); busy(b, false); }
     };
@@ -504,8 +505,9 @@
     const hello = u ? `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${esc(u.name.split(/\s+/)[0])}` : 'Welcome home';
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
-    $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>The <span class="ink">${FAMILY}</span> Family</h2></div>
-      ${members && members.length ? `<div class="fwho">${members.map(m => `<span><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
+    const famT = tx('The {family} Family').split('{family}');   // in Russian the words go round the name the other way
+    $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>${esc(famT[0])}<span class="ink">${FAMILY}</span>${esc(famT[1])}</h2></div>
+      ${members && members.length ? `<div class="fwho">${members.map(m => `<span translate="no"><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
 
   function paintSigninCard() {
@@ -560,14 +562,14 @@
   }
 
   async function paintSignedIn(box, u) {
-    box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small></span>
+    box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b translate="no">${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small></span>
       <button type="button" class="soft" id="aOut">Sign out</button></div>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
     box.insertAdjacentHTML('beforeend', fold('fLost', 'Lost a phone?', 'Sign out everywhere else, erase a lost phone', `
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
       <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button>`));
     $('aOthers').onclick = async () => {
-      if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
+      if (!confirm(tx('Sign out everywhere else, including the other apps on this phone?'))) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
       try { await ACC.signOutOthers(); m.style.color = 'var(--muted)'; m.textContent = 'Done: everywhere else is signed out.'; }
       catch (e) { m.textContent = why(e); }
@@ -767,7 +769,7 @@
       const title = $('nTitle').value.trim(), body = $('nBody').value.trim();
       if (!title) { m.textContent = 'Give it a title.'; return; }
       if (!audience.length) { m.textContent = 'No one has notifications on yet.'; return; }
-      if (!confirm(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`)) return;
+      if (!confirm(tx(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`))) return;
       busy($('nGo'), true);
       let sent = 0, failed = 0;
       try {
@@ -786,7 +788,7 @@
   // An invite link, to share or copy, for someone new.
   function showInvite(r) {
     const link = new URL('./#invite=' + r.token, location.href).href;
-    $('iOut').innerHTML = `<div class="link">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
+    $('iOut').innerHTML = `<div class="link" translate="no">${esc(link)}</div><div class="row2"><button type="button" class="go" id="iShare">Share</button><button type="button" class="soft" id="iCopy">Copy</button></div>`;
     $('iShare').onclick = () => navigator.share ? navigator.share({ title: 'Join AllisonOS', text: r.name + ', here is your AllisonOS invite. Open it in Safari on iPhone, or Chrome on Android.', url: link }).catch(() => {}) : $('iCopy').click();
     $('iCopy').onclick = async () => { try { await navigator.clipboard.writeText(link); $('iCopy').textContent = 'Copied'; } catch { $('iCopy').textContent = 'Press and hold the link'; } };
   }
@@ -830,12 +832,12 @@
     if (!$('fam')) return;
     // Remove takes someone out completely (functions/aOS/api, forget): there's no inviting them back
     // as they were. Anyone removed before that (signed out, their data kept) shows Signed out, to remove for good.
-    $('fam').innerHTML = f.map(m => `<div${m.removed ? ' class="gone"' : ''}><span>${esc(m.name)}<small>${m.role === 'owner' ? 'Owner' : m.removed ? 'Signed out' : 'Family'}</small></span>${m.role === 'owner' ? ''
+    $('fam').innerHTML = f.map(m => `<div${m.removed ? ' class="gone"' : ''}><span><span translate="no">${esc(m.name)}</span><small>${m.role === 'owner' ? 'Owner' : m.removed ? 'Signed out' : 'Family'}</small></span>${m.role === 'owner' ? ''
       : `<button type="button" data-rm="${esc(m.id)}">Remove</button>`}</div>`).join('');
     $('fam').onclick = async e => {
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`)) return;
+      if (!confirm(tx(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`))) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };

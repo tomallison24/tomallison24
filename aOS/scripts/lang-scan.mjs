@@ -35,7 +35,9 @@ export async function scan(appsList, { root = ROOT, onPage } = {}) {
     out[id] = await p.evaluate(KEEP_SRC => {
       const KEEP = new RegExp(KEEP_SRC);
       const kept = el => !!el.closest('[translate="no"],[contenteditable="true"],[contenteditable=""],script,style,textarea,noscript,code,pre');
-      const english = s => { s = s.replace(/\s+/g, ' ').trim(); if (!/[A-Za-z]{2}/.test(s) || KEEP.test(s)) return null; return s; };
+      // English: Latin letters left once the names that stay in Latin (KEEP) are taken out («Сила aOS» is Russian)
+      const NAMES = new RegExp('(^|[^A-Za-z])(?:' + KEEP_SRC.slice(2, -2) + ')(?![A-Za-z])', 'g');
+      const english = s => { s = s.replace(/\s+/g, ' ').trim(); if (!/[A-Za-z]{2}/.test(s) || KEEP.test(s) || !/[A-Za-z]{2}/.test(s.replace(NAMES, '$1'))) return null; return s; };
       const found = new Set();
       const w = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
       for (let n = w.nextNode(); n; n = w.nextNode()) { if (!n.parentElement || kept(n.parentElement)) continue; const s = english(n.data); if (s) found.add(s); }

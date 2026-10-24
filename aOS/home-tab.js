@@ -33,9 +33,14 @@
   // Home takes the Apps tab's place and opens first. The dock gives way to a Home button off Home
   // (paintQuick, below); Today moves up by your account, on Home, and the Ipsy bar does Search's job.
   const HOME_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>';
+  // the word for this tab (in Russian, not the same as the Home app's: ../home/lang/ru/aos.js)
+  const word = (k, en) => { const r = window.aosLang ? aosLang.t(k) : k; return r === k ? en : r; };
+  const HOME = word('Home (the aOS tab)', 'Home');
   const appsTab = document.querySelector('[data-tab="apps"]');
   appsTab.dataset.tab = 'home';
-  appsTab.innerHTML = HOME_SVG + 'Home';
+  appsTab.innerHTML = HOME_SVG + HOME;
+  if (HOME !== 'Home') $('home').querySelector('h1').firstChild.data = HOME;
+  $('hqx').setAttribute('aria-label', word('Clear (the search bar)', 'Clear'));   // not the weather's Clear
   appsTab.parentNode.insertBefore(appsTab, appsTab.parentNode.querySelector('[data-tab]'));
   const bar = document.querySelector('nav.bar'), quick = document.createElement('div');
   quick.className = 'quick'; quick.setAttribute('aria-label', 'Back to Home');
@@ -159,7 +164,7 @@
   // off Home (Today, Search), Home floats at the bottom; on Home, nothing does
   function paintQuick() {
     quick.hidden = tab === 'home';
-    if (!quick.firstChild) { quick.innerHTML = `<button type="button" class="qhome" aria-label="Home">${HOME_SVG}</button>`; quick.firstChild.onclick = () => window.aosTabs.show('home'); }
+    if (!quick.firstChild) { quick.innerHTML = `<button type="button" class="qhome" aria-label="${HOME}">${HOME_SVG}</button>`; quick.firstChild.onclick = () => window.aosTabs.show('home'); }
   }
   // an app's icon, with Mail's unread count on it
   const ic = id => { const n = unread[id] || 0;
@@ -177,7 +182,7 @@
       + tiles
       + (known('calendar') ? `<button type="button" class="wid cal" data-open="calendar" style="--c:${appHue('calendar')}" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">
         <img src="${icon('calendar')}" alt=""><span>${next
-          ? `<em>Next · ${esc(next.when)}</em><b>${esc(next.title)}</b><small>${next.then ? 'Then ' + esc(next.then) : esc(next.where || 'Nothing after it today')}</small>`
+          ? `<em>Next · ${esc(next.when)}</em><b translate="no">${esc(next.title)}</b><small>${next.then ? 'Then ' + esc(next.then) : next.where ? `<span translate="no">${esc(next.where)}</span>` : 'Nothing after it today'}</small>`
           : `<em>Calendar</em><b>Nothing else today</b><small>Open for the week ahead</small>`}</span></button>` : ''));
     setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
       `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
@@ -440,7 +445,7 @@
     const [top, ...rest] = found;
     $('hfound').innerHTML = (top ? `<h3>Top hit</h3><div class="htop" role="button" tabindex="0" data-open="${top}" aria-label="Open ${label(top)}">${ic(top)}<span><b>${esc(name(top))}</b><i>${esc(tag(top))}</i></span><span class="hgo" aria-hidden="true">Open</span><button type="button" class="hinfo" data-app="${top}" aria-label="About ${esc(name(top))}">i</button></div>` : '')
       + (rest.length ? `<h3>Apps</h3><div class="hgroup">${rest.map(id => `<div class="hrow" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}"><img src="${icon(id)}" alt=""><span><b>${esc(name(id))}</b><i>${esc(tag(id))}</i></span><button type="button" class="hinfo" data-app="${id}" aria-label="About ${esc(name(id))}">i</button></div>`).join('')}</div>` : '')
-      + (inside.length ? `<h3>In your apps</h3><div class="hgroup">${inside.map(r => `<div class="hrow hit" role="button" tabindex="0" data-open="${r.app}"${r.at ? ` data-at="${esc(r.at)}"` : ''}><img src="${icon(r.app)}" alt=""><span><b>${esc(r.title)}</b><i>${esc([name(r.app), r.sub].filter(Boolean).join(' · '))}</i></span></div>`).join('')}</div>` : '')
+      + (inside.length ? `<h3>In your apps</h3><div class="hgroup">${inside.map(r => `<div class="hrow hit" role="button" tabindex="0" data-open="${r.app}"${r.at ? ` data-at="${esc(r.at)}"` : ''}><img src="${icon(r.app)}" alt=""><span><b translate="no">${esc(r.title)}</b><i>${esc([name(r.app), r.sub].filter(Boolean).join(' · '))}</i></span></div>`).join('')}</div>` : '')
       + (!top && !inside.length ? `<p class="hnone">Nothing on this phone matches “${esc(t)}”.</p>` : '')
       + (ipsy ? `<button type="button" class="hask" id="hask"><span>Ask Ipsy: “${esc(t)}”</span>${ARROW}</button>` : '');
   }
