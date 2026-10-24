@@ -98,9 +98,13 @@
   }
   function sweep(node) {
     if (node.nodeType === 3) return text(node);
-    if (node.nodeType !== 1 || SKIP.test(node.nodeName)) return;
+    if (node.nodeType !== 1) return;
+    if (SKIP.test(node.nodeName)) { if (node.nodeName === 'TEXTAREA') attrs(node); return; }   // a text box's placeholder, never what's typed in it
     attrs(node);
-    const w = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, { acceptNode: x => (x.nodeType === 1 && SKIP.test(x.nodeName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    const w = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, { acceptNode: x => {
+      if (x.nodeType === 1 && SKIP.test(x.nodeName)) { if (x.nodeName === 'TEXTAREA') attrs(x); return NodeFilter.FILTER_REJECT; }
+      return NodeFilter.FILTER_ACCEPT;
+    } });
     for (let x = w.nextNode(); x; x = w.nextNode()) x.nodeType === 3 ? text(x) : attrs(x);
   }
   let started = false;
