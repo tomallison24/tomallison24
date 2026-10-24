@@ -1,6 +1,211 @@
 // Russian for Podcasts (podcasts/) (../../lang.js says how the words are used). Whole texts as the page shows them,
 // and patterns for the ones that carry a number or a name. Keep the English exactly as the app writes it.
 'use strict';
-aosLang.add({
-}, [
-]);
+{
+  const pl = (n, one, few, many) => n + ' ' + aosLang.plural(n, one, few, many);
+  const t = s => aosLang.t(s);
+  // len(): 30 sec, 45 min, 1 hr 5 min
+  const len = s => s.replace(/^(\d+) sec$/, '$1 с').replace(/^(\d+) hr(?: (\d+) min)?$/, (m, h, mm) => h + ' ч' + (mm ? ' ' + mm + ' мин' : '')).replace(/^(\d+) min$/, '$1 мин');
+  const RU_DAY = { 'среда': 'среду', 'пятница': 'пятницу', 'суббота': 'субботу' };
+  // ago(): just now, 5 min ago, 2 hr ago, Today, Yesterday, a weekday or a date (already Russian)
+  const ago = s => s === 'just now' ? 'только что' : s === 'Today' ? 'сегодня' : s === 'Yesterday' ? 'вчера'
+    : /^\d+ min ago$/.test(s) ? s.replace(' min ago', ' мин назад') : /^\d+ hr ago$/.test(s) ? s.replace(' hr ago', ' ч назад')
+    : /^[а-яё]+$/.test(s) ? (s === 'вторник' ? 'во ' : 'в ') + (RU_DAY[s] || s) : s;
+  // an episode's line: the day, its length, its number, Video, joined by " · " (and the show's name before it, kept apart)
+  const PART = '(?:Today|Yesterday|Trailer|Bonus|Video|Episode \\d+|S\\d+ E\\d+|\\d+ sec|\\d+ min|\\d+ hr(?: \\d+ min)?|[^A-Za-z·]+?)';
+  const LINE = new RegExp('^(·\\s)?(' + PART + '(?: · ' + PART + ')*)(\\s·)?$');
+
+  aosLang.add({
+    'Podcasts': 'Подкасты',
+    'Listen Now': 'Слушать',
+    'Library': 'Медиатека',
+    'Search': 'Поиск',
+    'Settings': 'Настройки',
+    'Done': 'Готово',
+    'Cancel': 'Отмена',
+    'Back': 'Назад',
+    'Undo': 'Отменить',
+    'Try again': 'Повторить',
+    'Loading…': 'Загрузка…',
+    'Clear search': 'Очистить поиск',
+    'Sections': 'Разделы',
+    'Updated': 'Обновлено',
+    'Check for new episodes': 'Проверить новые выпуски',
+    'Checking for new episodes': 'Проверяю новые выпуски',
+    'Up to date': 'Новых выпусков нет',
+    'Follow a show first.': 'Сначала подпишитесь на подкаст.',
+
+    // Listen Now
+    'Up Next': 'Далее',
+    'Find something to listen to': 'Найдите, что послушать',
+    'Follow a show to see its new episodes.': 'Подпишитесь на подкаст, чтобы видеть его новые выпуски.',
+    'Search podcasts': 'Поиск подкастов',
+    'New Episodes': 'Новые выпуски',
+    'All': 'Все',
+    'Unplayed': 'Непрослушанные',
+    'Video': 'Видео',
+    'Audio': 'Аудио',
+    'Nothing here.': 'Здесь пусто.',
+    'Show more': 'Показать ещё',
+
+    // episodes
+    'Play': 'Слушать',
+    'Pause': 'Пауза',
+    'Played': 'Прослушано',
+    'New': 'Новый',
+    'Today': 'Сегодня',
+    'Yesterday': 'Вчера',
+    'Trailer': 'Трейлер',
+    'Bonus': 'Бонус',
+    'Remove from Saved': 'Удалить из сохранённых',
+    'Save episode': 'Сохранить выпуск',
+    'More for this episode': 'Ещё для этого выпуска',
+    'Episode': 'Выпуск',
+    'Loading notes…': 'Загрузка описания…',
+    'No notes for this episode.': 'У этого выпуска нет описания.',
+
+    // Library
+    'Shows': 'Подкасты',
+    'Saved': 'Сохранено',
+    'History': 'История',
+    'No saved episodes': 'Нет сохранённых выпусков',
+    'Tap an episode’s bookmark to save it.': 'Нажмите на закладку выпуска, чтобы сохранить его.',
+    'Show older': 'Показать старые',
+    'Clear history': 'Очистить историю',
+    'Nothing played yet': 'Пока ничего не прослушано',
+    'No shows yet': 'Подкастов пока нет',
+    'Couldn’t load': 'Не загрузилось',
+
+    // Search
+    'Shows, or paste a feed link': 'Подкаст или ссылка на ленту',
+    'Only on Apple Podcasts': 'Только в Apple Podcasts',
+    'No chart right now.': 'Чарт сейчас недоступен.',
+    'Open this feed': 'Открыть эту ленту',
+    'No shows found': 'Ничего не найдено',
+    'Try other words, or paste a feed link.': 'Попробуйте другие слова или вставьте ссылку на ленту.',
+    'You’re offline.': 'Нет подключения.',
+    'The chart couldn’t be loaded.': 'Не удалось загрузить чарт.',
+    'Search isn’t available right now.': 'Поиск сейчас недоступен.',
+    'the US': 'США',
+    'the UK': 'Великобритании',
+    'US': 'США',
+    'UK': 'Брит.',
+    'Ireland': 'Ирландия',
+    'Canada': 'Канада',
+    'Australia': 'Австралия',
+    'New Zealand': 'Н. Зеландия',
+
+    // a show
+    'Show': 'Подкаст',
+    'More for this show': 'Ещё для этого подкаста',
+    'Follow': 'Подписаться',
+    'Following': 'Вы подписаны',
+    'No episodes yet.': 'Выпусков пока нет.',
+    'Newest first': 'Сначала новые',
+    'Oldest first': 'Сначала старые',
+    'The feed couldn’t be loaded.': 'Не удалось загрузить ленту.',
+    'This show’s feed can’t be read from here.': 'Ленту этого подкаста отсюда не прочитать.',
+    'This feed couldn’t be read.': 'Не удалось прочитать ленту.',
+    'That isn’t a podcast feed.': 'Это не лента подкаста.',
+    'Couldn’t update': 'Не удалось обновить',
+    'This show couldn’t be loaded.': 'Не удалось загрузить подкаст.',
+
+    // the choices
+    'Play Next': 'Воспроизвести следующим',
+    'Remove from Up Next': 'Удалить из «Далее»',
+    'Play Later': 'Воспроизвести позже',
+    'At the end of Up Next': 'В конце списка «Далее»',
+    'Save Episode': 'Сохранить выпуск',
+    'Mark as Unplayed': 'Отметить как непрослушанный',
+    'Mark as Played': 'Отметить как прослушанный',
+    'Share Episode': 'Поделиться выпуском',
+    'Go to Show': 'Перейти к подкасту',
+    'Mark All as Played': 'Отметить все как прослушанные',
+    'Share Show': 'Поделиться подкастом',
+    'Copy Feed Link': 'Скопировать ссылку на ленту',
+    'Check for New Episodes': 'Проверить новые выпуски',
+    'Unfollow': 'Отписаться',
+    'Link copied': 'Ссылка скопирована',
+    'Feed link copied': 'Ссылка на ленту скопирована',
+    'Removed from Saved': 'Удалено из сохранённых',
+    'Plays next': 'Будет следующим',
+    'Added to Up Next': 'Добавлено в «Далее»',
+    'History cleared': 'История очищена',
+    'Up Next cleared': 'Список «Далее» очищен',
+    'This phone’s storage is full, so some progress may not be kept.': 'Память телефона заполнена, часть прогресса может не сохраниться.',
+
+    // Now Playing
+    'Now Playing': 'Исполняется',
+    'Open Now Playing': 'Открыть «Исполняется»',
+    'Close Now Playing': 'Закрыть «Исполняется»',
+    'Skip forward': 'Перемотка вперёд',
+    'Skip back': 'Перемотка назад',
+    'Position in episode': 'Позиция в выпуске',
+    'Playback speed': 'Скорость воспроизведения',
+    'Normal': 'Обычная',
+    'Sleep timer': 'Таймер сна',
+    'Sleep timer on': 'Таймер сна включён',
+    'End of episode': 'Конец выпуска',
+    '1 hour': '1 час',
+    'Turn off': 'Выключить',
+    'Picture in Picture': 'Картинка в картинке',
+    'Full screen': 'Во весь экран',
+    'Clear': 'Очистить',
+    'Episode notes': 'Описание выпуска',
+    'This episode can’t be played right now.': 'Этот выпуск сейчас нельзя воспроизвести.',
+    'This episode couldn’t be loaded.': 'Не удалось загрузить выпуск.',
+    'Sleep timer: stopped at the end of the episode': 'Таймер сна: остановлено в конце выпуска',
+    'Sleep timer: paused': 'Таймер сна: пауза',
+    'Picture in Picture isn’t available here.': 'Картинка в картинке здесь недоступна.',
+
+    // Settings
+    'When an episode ends': 'Когда выпуск закончится',
+    'Play next in Up Next': 'Включать следующий из «Далее»',
+    'Stop': 'Остановить',
+    'Top shows from': 'Топ подкастов',
+    'Backup': 'Резервная копия',
+    'Export shows': 'Экспорт подкастов',
+    'As an OPML file': 'Файлом OPML',
+    'Import shows': 'Импорт подкастов',
+    'From an OPML file': 'Из файла OPML',
+    'You’re not following any shows yet.': 'Вы пока не подписаны ни на один подкаст.',
+    'That file couldn’t be read.': 'Не удалось прочитать файл.',
+    'No new shows in that file.': 'В файле нет новых подкастов.',
+
+    // the family's Google Sheet
+    'Sign in to sync your shows.': 'Войдите, чтобы синхронизировать подкасты.',
+    'The family’s Podcasts Sheet isn’t set up yet. The owner sets it up in aOS: Account → Google Sheets.': 'Таблица Подкастов семьи ещё не настроена. Владелец настраивает её в aOS: Профиль → Google Sheets.',
+    'aOS’s phrase for the Podcasts Sheet doesn’t match its script any more. The owner updates it in aOS: Account → Google Sheets.': 'Фраза aOS для таблицы Подкастов больше не совпадает с её скриптом. Владелец обновляет её в aOS: Профиль → Google Sheets.',
+    'The Podcasts Sheet is still on its old script. The owner pastes in the new one and deploys a new version (aOS/SHEETS.md).': 'Таблица Подкастов всё ещё на старом скрипте. Владелец вставляет новый и публикует новую версию (aOS/SHEETS.md).',
+    'The Podcasts Sheet’s script still says SECRET = ‘CHANGE-ME’. The owner changes it and deploys a new version.': 'В скрипте таблицы Подкастов всё ещё SECRET = ‘CHANGE-ME’. Владелец меняет его и публикует новую версию.',
+    'The Sheet was busy. Trying again shortly.': 'Таблица была занята. Скоро повторю.',
+    'Offline. Changes will sync when you’re back online.': 'Нет подключения. Изменения синхронизируются, когда связь вернётся.',
+    'Couldn’t reach the Sheet. Trying again later.': 'Не удалось связаться с таблицей. Повторю позже.',
+    'The Sheet didn’t answer as expected. Trying again later.': 'Таблица ответила не так, как ожидалось. Повторю позже.',
+    'Sync didn’t work. Trying again later.': 'Синхронизация не удалась. Повторю позже.',
+    'Nothing older in the family’s Google Sheet.': 'В Google-таблице семьи нет более старых записей.',
+    'Couldn’t reach the Sheet. Try again later.': 'Не удалось связаться с таблицей. Повторите позже.',
+  }, [
+    [/^Checked (.+)$/, m => 'Проверено ' + ago(m[1])],
+    [/^(\d+) sec$/, m => m[1] + ' с'],
+    [/^(\d+) min$/, m => m[1] + ' мин'],
+    [/^(\d+) hr(?: (\d+) min)?$/, m => len(m[0])],
+    [/^(.+) left$/, m => 'ещё ' + len(m[1])],
+    [/^(Play|Pause), (.+)$/, m => t(m[1]) + ', ' + t(m[2])],
+    [/^Episode (\d+)$/, m => 'Выпуск ' + m[1]],
+    [/^S(\d+) E(\d+)$/, m => 'Сезон ' + m[1] + ', вып. ' + m[2]],
+    [/^(?:(.+?) · )?(\d+)(\+?) episodes( · Video)?$/, m => (m[1] ? m[1] + ' · ' : '') + m[2] + m[3] + ' ' + aosLang.plural(m[2], 'выпуск', 'выпуска', 'выпусков') + (m[4] ? ' · Видео' : '')],
+    [/^Top shows in (.+)$/, m => 'Топ подкастов: ' + ({ 'the UK': 'Великобритания' }[m[1]] || t(m[1]))],
+    [/^Following (.+)$/, m => 'Вы подписаны: ' + m[1]],
+    [/^Follow (.+)$/, m => 'Подписаться: ' + m[1]],
+    [/^Unfollowed (.+)$/, m => 'Вы отписались: ' + m[1]],
+    [/^Marked (\d+) episodes as played$/, m => 'Отмечено как прослушанные: ' + m[1]],
+    [/^(\d+) new episodes?$/, m => pl(m[1], 'новый выпуск', 'новых выпуска', 'новых выпусков')],
+    [/^(\d+) shows? couldn’t be checked$/, m => 'Не удалось проверить подкастов: ' + m[1]],
+    [/^Added (\d+) shows?$/, m => 'Добавлено подкастов: ' + m[1]],
+    [/^Skip (forward|back) (\d+) seconds$/, m => (m[1] === 'forward' ? 'Вперёд на ' : 'Назад на ') + pl(m[2], 'секунду', 'секунды', 'секунд')],
+    [/^(\d+) minutes$/, m => pl(m[1], 'минута', 'минуты', 'минут')],
+    // last: an episode's line of several parts (one part alone is matched above)
+    [LINE, m => (m[1] ? '· ' : '') + m[2].split(' · ').map(t).join(' · ') + (m[3] ? ' ·' : '')],
+  ]);
+}

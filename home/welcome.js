@@ -2105,7 +2105,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     const T = TOURS[id]; if (!T) return Promise.resolve();
     const v = shown(), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
-      <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
+      <div class="c-word">${letters(window.aosLang ? aosLang.t(name) : name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
     // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
     // last: each app on the Home Screen keeps its own settings, so each one asks.
     const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
@@ -2433,7 +2433,7 @@ html[data-look]:not([data-look="glass"]) .aos-fback{color:var(--text,#2B2522);ba
 @media (prefers-reduced-motion: reduce){.aos-fback{animation:none;transition:none}}`;
   function floatBack() {
     const SHARED = '#aos-welcome, #aos-off, #aos-moved, #aos-signin, .ipsy-bubble';
-    const RANK = [['back', /^back\b/i], ['close', /^close\b/i], ['done', /^done$/i]];
+    const RANK = [['back', /^(back\b|назад)/i], ['close', /^(close\b|закрыть)/i], ['done', /^(done|готово)$/i]];   // in Russian too (../home/lang.js)
     let fb = null, src = null, queued = false;
     const label = b => (b.getAttribute('aria-label') || b.textContent || '').trim();
     // on screen: not hidden, and not slid away below or above it
@@ -2447,7 +2447,7 @@ html[data-look]:not([data-look="glass"]) .aos-fback{color:var(--text,#2B2522);ba
     function wayOut(dlg) {
       const top = dlg.getBoundingClientRect().top + 140;
       const btns = [...dlg.querySelectorAll('button')].filter(b => !b.disabled && b.getClientRects().length && b.getBoundingClientRect().top < top);
-      const cancel = btns.some(b => /^cancel\b/i.test(label(b)));
+      const cancel = btns.some(b => /^(cancel\b|отмена)/i.test(label(b)));
       for (const [kind, re] of RANK) {
         if (kind === 'done' && cancel) continue;
         const b = btns.find(x => re.test(label(x)));

@@ -630,7 +630,7 @@ function alertsHTML(u, r) {
 
 function infoHTML(u, r) {
   const w = says(u, r);
-  return `<button class="dg-name" data-a="open" aria-label="All of the ${u.name}'s controls">${u.name}${svg('chevR', 16)}</button>
+  return `<button class="dg-name" data-a="open" aria-label="All of the ${u.name}'s controls"><span translate="no">${u.name}</span>${svg('chevR', 16)}</button>
     <div class="dg-title">${w.title}</div><div class="dg-sub">${w.sub}</div><div class="alerts">${alertsHTML(u, r)}</div>`;
 }
 
@@ -1183,7 +1183,7 @@ function renderThermos() {
     for (const card of document.querySelectorAll(`.dg[data-th="${t.id}"]`)) {
     const R = n => card.querySelector(`[data-r="${n}"]`);
     put(R('fx'), tfxHTML(t, r, 60));
-    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls">${t.name}${svg('chevR', 16)}</button>
+    put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls"><span translate="no">${t.name}</span>${svg('chevR', 16)}</button>
       ${tInside(r)}
       ${(c => c ? `<div class="alerts">${c}</div>` : '')(tAwayChip(r) + tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
@@ -1797,8 +1797,8 @@ const ACCESS = {
   label(t) {
     const n = t.client_name || '';
     if (n.startsWith(SHARE.PREFIX)) return ['Share link', 'Made ' + this.when(t.created_at) + ' · lasts 5 minutes'];
-    if (n.startsWith('Home · ')) return [n.slice(7).replace(/ \(\d{4}-\d\d-\d\d \d\d:\d\d\)$/, ''), 'Joined ' + this.when(t.created_at) + ' · shared link'];
-    if (t.type === 'long_lived_access_token') return [n || 'Long-lived token', 'Made ' + this.when(t.created_at) + ' · long-lived token'];
+    if (n.startsWith('Home · ')) return [n.slice(7).replace(/ \(\d{4}-\d\d-\d\d \d\d:\d\d\)$/, ''), 'Joined ' + this.when(t.created_at) + ' · shared link', true];
+    if (t.type === 'long_lived_access_token') return [n || 'Long-lived token', 'Made ' + this.when(t.created_at) + ' · long-lived token', !!n];
     let host = ''; try { host = new URL(t.client_id).hostname; } catch {}
     return [this.APPS[t.client_id] || (host ? 'Browser · ' + host : 'Sign-in'), 'Signed in ' + this.when(t.created_at)];
   },
@@ -1815,7 +1815,7 @@ const ACCESS = {
       const list = (await HA.send({ type: 'auth/refresh_tokens' })).filter(t => t.type !== 'system')
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
       $('acStatus').textContent = '';
-      $('acList').innerHTML = list.map(t => { const [a, b] = this.label(t); return `<div class="rowi"><span class="k"><b>${esc(a)}</b><small>${esc(b)}</small></span>${
+      $('acList').innerHTML = list.map(t => { const [a, b, own] = this.label(t); return `<div class="rowi"><span class="k"><b${own ? ' translate="no"' : ''}>${esc(a)}</b><small>${esc(b)}</small></span>${
         t.is_current ? '<span class="me">This device</span>' : `<button type="button" class="rm" data-id="${esc(t.id)}">Remove</button>`}</div>`; }).join('');
     } catch (e) { $('acStatus').className = 'status bad'; $('acStatus').textContent = e.message || String(e); }
   },

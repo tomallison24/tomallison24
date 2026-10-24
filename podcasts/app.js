@@ -604,18 +604,18 @@
   }
   function epRow(e, withArt, i){
     const p = S.prog[e.k], played = !!(p && p.p), fresh = !p && e.d > Date.now() - 14 * DAY;
-    const meta = [withArt ? esc(e.st) : '', esc(day(e.d)), esc(epNum(e)), e.v ? I.video : ''].filter(Boolean).join(' · ');
+    const meta = [withArt ? '<span translate="no">' + esc(e.st) + '</span>' : '', esc(day(e.d)), esc(epNum(e)), e.v ? I.video : ''].filter(Boolean).join(' · ');
     const saved = isSaved(e.k);
     return '<article class="ep' + (played ? ' played' : '') + '" style="--i:' + (i || 0) + '">'
       + '<button class="epmain" type="button" data-ep="' + esc(e.k) + '">' + (withArt ? art(e.sa, 56) : '')
       + '<span class="eptx"><span class="epm">' + (fresh ? '<i class="dot" aria-label="New"></i>' : '') + meta + '</span>'
-      + '<span class="ept">' + esc(e.t) + '</span>' + (e.s ? '<span class="epd">' + esc(e.s) + '</span>' : '') + '</span></button>'
+      + '<span class="ept" translate="no">' + esc(e.t) + '</span>' + (e.s ? '<span class="epd" translate="no">' + esc(e.s) + '</span>' : '') + '</span></button>'
       + '<div class="epbar">' + pill(e) + '<span class="grow"></span>'
       + '<button class="icbtn" type="button" data-save="' + esc(e.k) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Remove from Saved' : 'Save episode') + '">' + (saved ? I.bmOn : I.bm) + '</button>'
       + '<button class="icbtn" type="button" data-more="' + esc(e.k) + '" aria-label="More for this episode">' + I.more + '</button></div></article>';
   }
   const upCard = (e, i) => '<article class="upcard glass" style="--i:' + i + '"><button class="uptop" type="button" data-ep="' + esc(e.k) + '">' + art(e.sa, 64)
-    + '<span class="uptx"><span class="upm">' + esc(e.st) + '</span><span class="upt">' + esc(e.t) + '</span></span></button>'
+    + '<span class="uptx" translate="no"><span class="upm">' + esc(e.st) + '</span><span class="upt">' + esc(e.t) + '</span></span></button>'
     + '<div class="upbar">' + pill(e) + '<span class="upd">' + esc(day(e.d)) + '</span></div></article>';
   const chip = (act, label, on, n) => '<button class="chip glass" type="button" data-act="' + act + '" aria-pressed="' + !!on + '">' + label + (n != null ? ' <span class="n">' + n + '</span>' : '') + '</button>';
   const emptyCard = (title, text, btn) => '<div class="empty glass">' + I.headph + '<strong>' + title + '</strong>' + (text ? '<span>' + text + '</span>' : '') + (btn || '') + '</div>';
@@ -674,7 +674,7 @@
       h = '<div class="sgrid">' + list.map((f, i) => {
         const sh = shows.get(f.id), title = f.title || (sh && sh.title) || 'Loading…';
         return '<button class="stile" type="button" data-show="' + esc(f.id) + '" style="--i:' + i + '">' + art(f.art || (sh && (sh.itArt || sh.art)), 0, 'fill')
-          + '<span class="sn">' + esc(title) + '</span>'
+          + '<span class="sn"' + (f.title || sh ? ' translate="no"' : '') + '>' + esc(title) + '</span>'
           + (f.err && !sh ? '<span class="sm err">Couldn’t load</span>' : '<span class="sm">' + esc(f.latest ? day(f.latest) : '') + '</span>') + '</button>';
       }).join('') + '</div>';
     }
@@ -687,7 +687,7 @@
     const id = r.feed ? showId(r.feed) : '', on = id && isFollowed(id);
     return '<div class="srow" style="--i:' + i + '"><button class="sopen" type="button" data-res="' + i + '"' + (r.feed ? '' : ' disabled') + '>'
       + (rank ? '<span class="rank">' + rank + '</span>' : '') + art(r.art, 56)
-      + '<span class="stx"><b>' + esc(r.title) + '</b><span>' + esc(r.feed ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
+      + '<span class="stx"><b' + (r.open ? '' : ' translate="no"') + '>' + esc(r.title) + '</b><span' + (r.feed ? ' translate="no"' : '') + '>' + esc(r.feed ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
       + '<button class="fbtn" type="button" data-fres="' + i + '" aria-pressed="' + !!on + '" aria-label="' + (on ? 'Following ' : 'Follow ') + esc(r.title) + '"' + (r.feed ? '' : ' disabled') + '>' + (on ? I.check : I.plus) + '</button></div>';
   }
   const CC = {us:'the US', gb:'the UK', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
@@ -704,7 +704,7 @@
       else h += '<div class="rgroup glass">' + st.top.map((r, i) => srow(r, i, i + 1)).join('') + '</div>';
       h += '</section>';
     } else if (looksLikeFeed(q)) {
-      st.list = [{title: 'Open this feed', author: feedFromInput(q), feed: feedFromInput(q), art: '', genre: ''}];
+      st.list = [{title: 'Open this feed', author: feedFromInput(q), feed: feedFromInput(q), art: '', genre: '', open: true}];
       h = '<div class="rgroup glass">' + srow(st.list[0], 0) + '</div>';
     } else if (st.searchErr) {
       h = '<div class="notice glass"><span>' + esc(st.searchErr) + '</span><button class="linkbtn" type="button" data-act="search-retry">Try again</button></div>';
@@ -753,10 +753,10 @@
     const nVideo = eps.filter(e => e.v).length, mixed = nVideo && nVideo < eps.length;
     const meta = [sh ? sh.genre : m.genre, eps.length ? eps.length + (eps.length === MAX_EPS ? '+' : '') + ' episodes' : '', nVideo && !mixed ? 'Video' : ''].filter(Boolean).join(' · ');
     let h = '<div class="hero">' + art(pic, Math.min(220, Math.round(innerWidth * .56)))
-      + '<h2>' + esc(title || 'Loading…') + '</h2>' + (author ? '<span class="by">' + esc(author) + '</span>' : '')
+      + '<h2' + (title ? ' translate="no"' : '') + '>' + esc(title || 'Loading…') + '</h2>' + (author ? '<span class="by" translate="no">' + esc(author) + '</span>' : '')
       + (meta ? '<span class="hm">' + esc(meta) + '</span>' : '')
       + '<button class="pillbtn follow' + (f ? '' : ' bluec') + '" type="button" data-act="follow-show"' + (sh || m.feed ? '' : ' disabled') + '>' + (f ? I.check + 'Following' : I.plus + 'Follow') + '</button></div>';
-    if (sh && sh.desc) h += '<p class="desc' + (st.descOpen ? ' open' : '') + '" data-act="desc">' + esc(plain(sh.desc)) + '</p>';
+    if (sh && sh.desc) h += '<p class="desc' + (st.descOpen ? ' open' : '') + '" data-act="desc" translate="no">' + esc(plain(sh.desc)) + '</p>';
     if (!sh) {
       h += st.showErr ? '<div class="notice glass"><span>' + esc(st.showErr) + '</span><button class="linkbtn" type="button" data-act="show-retry">Try again</button></div>'
         : '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
@@ -933,9 +933,10 @@
 
   // A list of choices in a small sheet: [{label, sub, icon, on, danger, run}].
   let choices = [];
-  function choose(title, rows){
+  function choose(title, rows, own){   // own: the title is an episode's or a show's name, kept as written
     choices = rows;
     $('actLbl').textContent = title;
+    $('actLbl').translate = !own;
     $('actRows').innerHTML = rows.map((r, i) => '<button class="rowbtn' + (r.danger ? ' danger' : '') + '" type="button" data-i="' + i + '">'
       + (r.icon ? '<span class="ic">' + r.icon + '</span>' : '') + '<span>' + esc(r.label) + (r.sub ? '<span class="sub">' + esc(r.sub) + '</span>' : '') + '</span>'
       + (r.on ? '<span class="tick">' + I.check + '</span>' : '') + '</button>').join('');
@@ -961,7 +962,7 @@
       {label:'Share Episode', icon:I.share, run:() => share(e.t, e.st, e.link || e.u)}
     ];
     if (st.show !== e.sid) rows.push({label:'Go to Show', icon:I.podcast, run:() => { closeSheet('epSheet'); closeSheet('np'); openShowById(e.sid); }});
-    choose(e.t, rows);
+    choose(e.t, rows, true);
   }
   $('showMore').onclick = () => {
     const id = st.show, sh = shows.get(id), f = followOf(id), feed = (sh && sh.feed) || (st.showMeta && st.showMeta.feed);
@@ -980,7 +981,7 @@
       if (st.show === id) renderShow();
     }});
     if (f) rows.push({label:'Unfollow', icon:I.unfollow, danger:true, run:() => unfollow(id)});
-    choose((sh && sh.title) || (f && f.title) || 'Show', rows);
+    choose((sh && sh.title) || (f && f.title) || 'Show', rows, !!((sh && sh.title) || (f && f.title)));
   };
 
   // ---------- an episode's page ----------
@@ -1029,6 +1030,7 @@
     box.replaceChildren();
     box.dataset.k = e.k;
     const h = e.h == null ? null : String(e.h).trim();
+    box.translate = !h;   // the notes stay as the show wrote them; "Loading notes…" is the app's
     if (h == null) { box.innerHTML = '<span class="quiet">Loading notes…</span>'; return; }
     if (!h) { box.innerHTML = '<span class="quiet">No notes for this episode.</span>'; return; }
     if (/<[a-z][\s\S]*>/i.test(h)) copyNodes(new DOMParser().parseFromString(h, 'text/html').body, box, false);
@@ -1045,9 +1047,10 @@
   }
   function renderEp(e){
     $('epLbl').textContent = e.st || 'Episode';
+    $('epLbl').translate = !e.st;
     const meta = [day(e.d), e.dur ? len(e.dur) : '', epNum(e), e.v ? 'Video' : ''].filter(Boolean).join(' · ');
-    $('epBody').innerHTML = '<div class="ephead">' + art(e.img || e.sa, 84) + '<span class="eptx"><button class="epshow" type="button" data-show="' + esc(e.sid) + '">' + esc(e.st) + '</button>'
-      + '<span class="epm">' + esc(meta) + '</span></span></div><h3 class="eph">' + esc(e.t) + '</h3>'
+    $('epBody').innerHTML = '<div class="ephead">' + art(e.img || e.sa, 84) + '<span class="eptx"><button class="epshow" type="button" data-show="' + esc(e.sid) + '" translate="no">' + esc(e.st) + '</button>'
+      + '<span class="epm">' + esc(meta) + '</span></span></div><h3 class="eph" translate="no">' + esc(e.t) + '</h3>'
       + '<div class="epacts" id="epActs"></div><div class="notes glass" id="epNotes"></div>';
     renderEpActs();
     notesInto($('epNotes'), e);
@@ -1288,7 +1291,7 @@
     const q = S.queue.map(x => getEp(x.k) || x);
     $('npQueueWrap').hidden = !q.length;
     $('npQueue').innerHTML = q.map((e, i) => '<div class="qrow"><button class="sopen" type="button" data-qplay="' + i + '">' + art(e.sa, 40)
-      + '<span class="stx"><b>' + esc(e.t) + '</b><span>' + esc([e.st, e.dur ? len(e.dur) : ''].filter(Boolean).join(' · ')) + '</span></span></button>'
+      + '<span class="stx"><b translate="no">' + esc(e.t) + '</b><span><span translate="no">' + esc(e.st) + '</span>' + esc((e.st && e.dur ? ' · ' : '') + (e.dur ? len(e.dur) : '')) + '</span></span></button>'
       + '<button class="icbtn" type="button" data-qdel="' + i + '" aria-label="Remove from Up Next">' + I.x + '</button></div>').join('');
   }
   $('npQueueClear').onclick = () => { const q = S.queue; S.queue = []; save(); render(); toast('Up Next cleared', () => { S.queue = q; save(); render(); }); };

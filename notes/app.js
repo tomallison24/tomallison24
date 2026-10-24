@@ -77,14 +77,18 @@
   const nextMonday = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return ymd(d); };
 
   // ---------- sample data ----------
+  // Written in the phone's language (aOS's Language, ../home/lang.js), as a first note and lists would be:
+  // once saved they are the family's, kept as they are. A Groceries list named in another language keeps
+  // its store sections (grocery: true).
+  const tr = s => window.aosLang ? aosLang.t(s) : s;
   const SAMPLE_NOTES = [
-    {id:'n1',title:'Welcome to Notes',body:'Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,created:now,updated:1}
+    {id:'n1',title:tr('Welcome to Notes'),body:tr('Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.'),tags:['start'],color:'blue',pinned:true,reminder:null,created:now,updated:1}
   ];
   const SAMPLE_LISTS = [
-    {id:'l1',updated:1,name:'Personal',color:'#3B82F6'},
-    {id:'l2',updated:1,name:'Home',color:'#F59E0B'},
-    {id:'l3',updated:1,name:'Groceries',color:'#10B981'},
-    {id:'l4',updated:1,name:'Family',color:'#8B5CF6'}
+    {id:'l1',updated:1,name:tr('Personal'),color:'#3B82F6'},
+    {id:'l2',updated:1,name:tr('Home'),color:'#F59E0B'},
+    {id:'l3',updated:1,name:tr('Groceries'),color:'#10B981',...(tr('Groceries') !== 'Groceries' ? {grocery:true} : {})},
+    {id:'l4',updated:1,name:tr('Family'),color:'#8B5CF6'}
   ];
   let _c = 0;
   const T = (list, title, o={}) => ({id:'t'+(++_c), list, title, notes:'', date:null, time:null, prio:0, flagged:false, done:false, doneAt:null, tags:[], created:now-_c*H, ...o});
@@ -178,7 +182,7 @@
   const tagN = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % HUES.length; };
   const hue = t => HUES[tagN(t)];
   const tcv = t => '--h:' + hue(t) + ';--tc:var(--tc' + tagN(t) + ')';
-  const tchip = (t, q) => '<span class="tchip" style="'+tcv(t)+'">'+hl(t, q)+'</span>';
+  const tchip = (t, q) => '<span class="tchip" translate="no" style="'+tcv(t)+'">'+hl(t, q)+'</span>';   // what the family wrote stays as it is (../home/lang.js)
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
@@ -325,7 +329,7 @@
         const s = document.createElement('span');
         s.className = 'tchip';
         s.style.setProperty('--h', hue(t)); s.style.setProperty('--tc', 'var(--tc' + tagN(t) + ')');
-        s.innerHTML = esc(t)+'<button type="button" aria-label="Remove tag '+esc(t)+'">'+I.x+'</button>';
+        s.innerHTML = '<span translate="no">'+esc(t)+'</span><button type="button" aria-label="Remove tag '+esc(t)+'">'+I.x+'</button>';
         s.querySelector('button').onclick = () => { const it = getItem(); it.tags = it.tags.filter(x => x !== t); render(); };
         input.before(s);
       });
@@ -418,8 +422,8 @@
       + n.tags.map(t => tchip(t, st.q)).join('');
     return '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
       + '<button class="card glass" type="button" style="--i:' + (i || 0) + '" data-id="' + esc(n.id) + '" data-color="' + esc(n.color) + '">'
-      + (n.title ? '<h3><span>' + hl(n.title, st.q) + '</span>' + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</h3>' : '')
-      + (n.body ? '<p>' + hl(n.body, st.q) + '</p>' : '')
+      + (n.title ? '<h3><span translate="no">' + hl(n.title, st.q) + '</span>' + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</h3>' : '')
+      + (n.body ? '<p translate="no">' + hl(n.body, st.q) + '</p>' : '')
       + (meta ? '<div class="meta">' + meta + '</div>' : '')
       + (opts.date ? '<span class="cdate">' + esc(fmtDay(n.created)) + '</span>' : '')
       + '</button></div>';
@@ -439,15 +443,17 @@
     list.forEach((n, i) => { const c = hgt.indexOf(Math.min(...hgt)); cols[c].push(card(n, i, opts)); hgt[c] += est(n) + (opts && opts.date ? 18 : 0); });
     return '<div class="grid">' + cols.map(c => '<div class="col">' + c.join('') + '</div>').join('') + '</div>';
   }
+  const own = s => s ? '<span translate="no">' + esc(s) + '</span>' : 'Untitled';   // the family's words, or the app's Untitled
   const snippet = n => (n.body || '').split('\n').map(l => l.trim().replace(/^[•*-]\s*/, '')).filter(l => l && !/^[A-Z][A-Z &]+:?$/.test(l))[0] || '';
   const nrow = (n, i) => '<div class="sw" data-id="' + esc(n.id) + '">' + swipeActs()
-    + '<button class="nrow" type="button" style="--i:' + i + '" data-id="' + esc(n.id) + '"><span class="nt">' + esc(n.title || snippet(n) || 'Untitled')
-    + (n.only ? I.me + '<span class="vh"> (Just me)</span>' : '') + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</span><span class="ns">' + esc(n.title ? snippet(n) : '') + '</span><span class="nd">' + esc(fmtDay(n.created)) + '</span></button></div>';
+    + '<button class="nrow" type="button" style="--i:' + i + '" data-id="' + esc(n.id) + '"><span class="nt">' + own(n.title || snippet(n))
+    + (n.only ? I.me + '<span class="vh"> (Just me)</span>' : '') + (n.private ? I.lock : '') + (n.pinned ? I.pinFill : '') + '</span><span class="ns" translate="no">' + esc(n.title ? snippet(n) : '') + '</span><span class="nd">' + esc(fmtDay(n.created)) + '</span></button></div>';
 
   function renderNotes(){
     const c = st.coll, searching = tokensOf(st.q).length > 0;
     const live = shelf();
     $('collBack').hidden = !c;
+    $('notesTitle').translate = !(c && c.startsWith('tag:'));   // a tag's collection: the family's word
     $('notesTitle').textContent = c ? collName(c) : 'Notes';
     let h = '';
     if (!c && !searching && needsBackup()) h += '<div class="notice glass"><span>' + esc(backupStatus()) + '</span><button class="linkbtn" type="button" data-open-backup>Back up</button></div>';
@@ -463,8 +469,8 @@
       const tags = countTags(live), untagged = live.filter(n => !n.tags.length);
       const latest = t => live.filter(n => t ? n.tags.includes(t) : !n.tags.length).sort(byCreated)[0];
       const tile = (coll, name, count, tag, last, i) => '<button class="ctile glass" type="button" style="' + (tag == null ? '--h:0;--tc:var(--tc0)' : tcv(tag)) + ';--i:' + i + '" data-coll="' + esc(coll) + '">'
-        + '<span class="ctop"><i></i><span class="cn">' + count + '</span></span><span class="cname">' + esc(name) + '</span>'
-        + '<span class="clast">' + esc(last ? (last.title || snippet(last) || 'Untitled') : '') + '</span></button>';
+        + '<span class="ctop"><i></i><span class="cn">' + count + '</span></span><span class="cname"' + (tag == null ? '' : ' translate="no"') + '>' + esc(name) + '</span>'
+        + '<span class="clast">' + (last ? own(last.title || snippet(last)) : '') + '</span></button>';
       const tiles = tags.map(([t, k], i) => tile('tag:' + t, collName('tag:' + t), k, t, latest(t), i));
       if (untagged.length) tiles.push(tile('untagged', 'No tag', untagged.length, null, latest(null), tiles.length).replace('class="ctile glass"', 'class="ctile glass plain"'));
       if (tiles.length) h += '<section><h2 class="sechead">Collections</h2><div class="ctiles">' + tiles.join('') + '</div></section>';
@@ -487,7 +493,7 @@
         h += '<button class="btn danger" type="button" id="emptyTrash">Empty Trash</button>';
         h += '<div class="rgroup glass nlist">' + list.map((n, i) => {
           const left = Math.max(0, TRASH_DAYS - Math.floor((Date.now() - n.deletedAt) / D));
-          return '<div class="trow" style="--i:' + i + '"><span class="tt"><span class="nt">' + esc(n.title || snippet(n) || 'Untitled') + '</span><span class="nd">' + plural(left, 'day') + ' left</span></span>'
+          return '<div class="trow" style="--i:' + i + '"><span class="tt"><span class="nt">' + own(n.title || snippet(n)) + '</span><span class="nd">' + plural(left, 'day') + ' left</span></span>'
             + '<button class="textbtn" type="button" data-restore="' + esc(n.id) + '">Restore</button>'
             + '<button class="iconbtn danger" type="button" data-purge="' + esc(n.id) + '" aria-label="Delete for good">' + I.trash + '</button></div>';
         }).join('') + '</div>';
@@ -599,7 +605,7 @@
   }
   function renderQuickTag(){
     qtTags.render();
-    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="' + (vintage() ? '--lc:var(--tc' + tagN(t) + ')' : '--lc:hsl(' + hue(t) + ' 90% 62%)') + '"><span class="sw"></span>' + esc(t) + '</button>').join('');
+    $('qtAll').innerHTML = countTags(alive()).map(([t]) => '<button class="opt" type="button" translate="no" data-qt="' + esc(t) + '" aria-pressed="' + qt.tags.includes(t) + '" style="' + (vintage() ? '--lc:var(--tc' + tagN(t) + ')' : '--lc:hsl(' + hue(t) + ' 90% 62%)') + '"><span class="sw"></span>' + esc(t) + '</button>').join('');
   }
   $('qtAll').addEventListener('click', e => { const b = e.target.closest('[data-qt]'); if (!b) return; const t = b.dataset.qt; qt.tags = qt.tags.includes(t) ? qt.tags.filter(x => x !== t) : [...qt.tags, t]; renderQuickTag(); });
   function finishQuickTag(){
@@ -650,7 +656,7 @@
   function openTidy(){ renderTidy(); openSheet('tidySheet'); }
   function renderTidy(){
     const list = tidySuggestions();
-    $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns">' + esc(s.detail) + '</span></span>'
+    $('tidyBody').innerHTML = list.length ? '<div class="rgroup glass">' + list.map(s => '<div class="tidyrow"><span class="tt"><span class="nt">' + esc(s.head) + '</span><span class="ns"' + (s.id === 'empty' ? '' : ' translate="no"') + '>' + esc(s.detail) + '</span></span>'
       + '<button class="textbtn" type="button" data-tidy="' + s.id + '">' + esc(s.act) + '</button></div>').join('') + '</div>'
       : '<div class="empty glass"><strong>All tidy</strong></div>';
   }
@@ -784,12 +790,12 @@
     const meta = [];
     if (t.date) meta.push('<span class="tchip bare'+(isOverdue(t) ? ' over' : '')+'">'+(alertsHere(t) ? I.bell : I.clock)+esc(fmtDue(t))+'</span>');
     if (t.only || (l.only && !st.rlist)) meta.push('<span class="tchip bare">'+I.me+'Just me</span>');
-    if (!st.rlist) meta.push('<span class="tchip lst">'+esc(l.name)+'</span>');
+    if (!st.rlist) meta.push('<span class="tchip lst" translate="no">'+esc(l.name)+'</span>');
     t.tags.forEach(x => meta.push(tchip(x, st.rq)));
     return '<div class="todo'+(t.done ? ' done' : '')+'" style="'+lcStyle(l.color)+';--i:'+(i||0)+'">'
       + '<button class="check" type="button" role="checkbox" aria-checked="'+!!t.done+'" data-check="'+esc(t.id)+'" aria-label="Complete '+esc(t.title)+'">'+I.check+'</button>'
-      + '<button class="tbody" type="button" data-todo="'+esc(t.id)+'"><span class="t">'+hl(t.title, st.rq)+'</span>'
-      + (t.notes ? '<span class="n">'+hl(t.notes.split('\n')[0], st.rq)+'</span>' : '')
+      + '<button class="tbody" type="button" data-todo="'+esc(t.id)+'"><span class="t" translate="no">'+hl(t.title, st.rq)+'</span>'
+      + (t.notes ? '<span class="n" translate="no">'+hl(t.notes.split('\n')[0], st.rq)+'</span>' : '')
       + (meta.length ? '<span class="tmeta">'+meta.join('')+'</span>' : '')+'</button>'
       + '<span class="tside">'
       + (prioOf(t) ? '<span class="prio p'+prioOf(t)+'" aria-label="'+['','Low','Medium','High'][prioOf(t)]+' priority"><i></i><i></i><i></i></span>' : '')
@@ -831,7 +837,7 @@
     let c = '<button class="chip glass" type="button" data-list="" aria-pressed="'+(!st.rlist)+'">All lists</button>';
     lists.forEach(l => {
       const n = todos.filter(t => !t.done && t.list === l.id).length;
-      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span>'+esc(l.name)
+      c += '<button class="chip glass" type="button" data-list="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+(st.rlist === l.id)+'"><span class="sw"></span><span translate="no">'+esc(l.name)+'</span>'
         + (l.only ? I.me + '<span class="vh"> (Just me)</span>' : '') + ' <span class="n">'+n+'</span></button>';
     });
     c += '<button class="chip ghost" type="button" id="addList">'+I.plus+'List</button>';
@@ -955,7 +961,7 @@
       $('tdAisle').innerHTML = '<button class="opt" type="button" role="radio" data-ai="" aria-checked="'+!cur+'">Auto · '+esc(AISLE.NAMES[auto])+'</button>'
         + AISLE.SECTIONS.map(x => '<button class="opt" type="button" role="radio" data-ai="'+x.id+'" aria-checked="'+(cur === x.id)+'">'+esc(x.name)+'</button>').join('');
     }
-    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-checked="'+(t.list === l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('tdList').innerHTML = lists.map(l => '<button class="opt" type="button" role="radio" data-l="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-checked="'+(t.list === l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('tdFlag').setAttribute('aria-checked', t.flagged);
     // Just me: in a Just-me list (yours, or you wouldn't have it) it is anyway.
     const inOnly = !!listById(t.list).only;
@@ -1383,6 +1389,7 @@
     if (!screens.some(s => s.type === 'step')) { toast('Couldn’t find the steps. Try Convert first.'); return; }
     screens.push({type:'done'});
     cook = {r, screens, i:0, ticked:new Set(), title:$('edTitle').value.trim() || 'Recipe', nSteps:screens.filter(s => s.type === 'step').length};
+    $('ckTitle').translate = !$('edTitle').value.trim();   // the recipe's own title, or the app's Recipe
     $('ckTitle').textContent = cook.title;
     $('cook').hidden = false; lockPage();
     renderCook(0);
@@ -1398,12 +1405,12 @@
     let h;
     if (sc.type === 'ing') {
       h = '<p class="k">Before you start</p><h2 class="big">Ingredients</h2><ul class="ingl">'
-        + c.r.groups.map((g, gi) => (g.name ? '<li class="gh">' + esc(g.name) + '</li>' : '')
+        + c.r.groups.map((g, gi) => (g.name ? '<li class="gh" translate="no">' + esc(g.name) + '</li>' : '')
           + g.items.map((x, xi) => { const k = gi + '-' + xi, on = c.ticked.has(k);
-              return '<li><button type="button" data-ing="' + k + '" aria-pressed="' + on + '"><span class="bx">' + I.check + '</span><span>' + esc(x) + '</span></button></li>'; }).join('')).join('')
+              return '<li><button type="button" data-ing="' + k + '" aria-pressed="' + on + '"><span class="bx">' + I.check + '</span><span translate="no">' + esc(x) + '</span></button></li>'; }).join('')).join('')
         + '</ul>';
     } else if (sc.type === 'step') {
-      h = '<p class="k">Step ' + stepNo + ' of ' + c.nSteps + '</p>' + (sc.head ? '<p class="sub">' + esc(sc.head) + '</p>' : '') + '<p class="big">' + esc(sc.text) + '</p>';
+      h = '<p class="k">Step ' + stepNo + ' of ' + c.nSteps + '</p>' + (sc.head ? '<p class="sub" translate="no">' + esc(sc.head) + '</p>' : '') + '<p class="big" translate="no">' + esc(sc.text) + '</p>';
     } else {
       h = '<p class="k">All done</p><p class="big">Enjoy your ' + esc(c.title) + '.</p><button class="btn" type="button" id="ckFinish">Back to the recipe</button>';
     }
@@ -1686,7 +1693,7 @@
       : !signedIn() ? PUSH_ERRORS.signin
       : on ? 'On in ' + place() + '.'
       : 'Alerts this phone when a reminder or nudge is due.';
-    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('puNudges').setAttribute('aria-checked', push.nudges);
     $('puMorning').value = push.morning;
   }
@@ -1825,7 +1832,7 @@
       const addN = saneAll(data.notes, saneNote).filter(n => Array.isArray(n.tags) && !haveN.has(n.id));
       const addT = saneAll(data.todos, saneTodo).filter(t => !haveT.has(t.id));
       if (!addL.length && !addN.length && !addT.length) { toast('Nothing new in that file.'); return; }
-      if (!confirm('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.')) return;
+      if (!confirm((window.aosLang ? aosLang.t : String)('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.'))) return;   // the browser's own box: its words looked up here
       lists.push(...addL); notes.push(...addN); todos.push(...addT); fixNotes();
       const known = new Set(lists.map(l => l.id)); todos.forEach(t => { if (!known.has(t.list)) t.list = lists[0].id; });
       save(); render();

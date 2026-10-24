@@ -888,7 +888,7 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   <section class="view" id="showView" aria-label="Show" hidden>
     <header class="pushhead" id="showHead">
       <button class="iconbtn" id="showBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" class="b"><path d="M15.2 4.8L8.6 11.3a1 1 0 0 0 0 1.4l6.6 6.5"/></svg></button>
-      <span class="ptitle" id="showBarTitle"></span>
+      <span class="ptitle" id="showBarTitle" translate="no"></span>
       <button class="iconbtn" id="showMore" type="button" aria-label="More for this show"><svg viewBox="0 0 24 24" class="f"><circle cx="5.4" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.6" cy="12" r="1.7"/></svg></button>
     </header>
     <main class="list" id="showBody"></main>
@@ -899,7 +899,7 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <div class="mbar">
       <button class="mopen" id="miniOpen" type="button" aria-label="Open Now Playing">
         <span class="art" id="miniArt" style="--s:44px"></span>
-        <span class="mtx"><span class="mt" id="miniTitle"></span><span class="ms" id="miniShow"></span></span>
+        <span class="mtx" translate="no"><span class="mt" id="miniTitle"></span><span class="ms" id="miniShow"></span></span>
       </button>
       <button class="mbtn" id="miniPlay" type="button" aria-label="Play"></button>
       <button class="mbtn" id="miniFwd" type="button" aria-label="Skip forward"></button>
@@ -953,8 +953,8 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
         </div>
         <div class="npinfo">
           <span class="npd" id="npDate"></span>
-          <p class="npt" id="npTitle"></p>
-          <button class="npshow" id="npShow" type="button"></button>
+          <p class="npt" id="npTitle" translate="no"></p>
+          <button class="npshow" id="npShow" type="button" translate="no"></button>
         </div>
         <input class="scrub" id="scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Position in episode">
         <div class="nptimes"><span id="npAt">0:00</span><span id="npLeft">-0:00</span></div>

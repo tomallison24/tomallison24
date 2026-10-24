@@ -70,7 +70,7 @@ family({
   snap(name, pic, badge, age, extra = '') {
     const b = badge ? `<span class="cbadge ${badge}">${badge === 'active' ? '<i></i>' : ''}${badge.toUpperCase()}</span>` : '';
     return `<div class="snap">${pic ? `<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">` : `<div class="noimg">${svg('cctv', 34)}<span>${mode === 'live' ? 'No picture yet' : 'Connect to see the picture'}</span></div>`}
-      ${b}<span class="cname">${esc(name)}</span>${age ? `<span class="cage">${age}</span>` : ''}${extra}</div>`;
+      ${b}<span class="cname" translate="no">${esc(name)}</span>${age ? `<span class="cage">${age}</span>` : ''}${extra}</div>`;
   },
   ageOf(c, r) {
     if (!r.ts) return '';
@@ -88,7 +88,7 @@ family({
     const watching = BLINKS.filter(c => this.cam(c).badge === 'active').length;
     put(card.querySelector('[data-r="fx"]'), skyHTML(sys.mood === 'triggered' ? grad('#241D20', '#3C2C31', '#614A50') : sys.armed ? grad('#161C26', '#1F2A3A', '#2E4058') : grad('#17181A', '#212326', '#33363B'), a, sys.armed ? { pool: 'drift', poolA: 0.12 } : sys.mood === 'triggered' ? { pool: 'pulse', poolA: 0.2 } : {}));
     put(card.querySelector('[data-r="sys"]'), `<span class="shield" style="--a:${a}">${svg(sys.armed || sys.mood === 'triggered' ? 'shield' : 'shieldOff', 30)}</span>
-      <div class="dg-info"><div class="dg-name">Blink System</div><div class="dg-title">${word}</div><div class="dg-sub">${sys.armed ? watching + ' of ' + BLINKS.length + ' watching' : sys.mood === 'offline' ? 'The sync module is not reachable' : 'Cameras on standby'}</div></div>
+      <div class="dg-info"><div class="dg-name" translate="no">Blink System</div><div class="dg-title">${word}</div><div class="dg-sub">${sys.armed ? watching + ' of ' + BLINKS.length + ' watching' : sys.mood === 'offline' ? 'The sync module is not reachable' : 'Cameras on standby'}</div></div>
       <button class="armbtn${sys.armed ? ' on' : ''}${tWaiting(sys.d, 'arm') ? ' wait' : ''}" data-a="arm" style="--a:${a}"${sys.mood === 'offline' ? ' disabled' : ''}>${sys.armed || sys.mood === 'triggered' ? 'Disarm' : 'Arm'}</button>
       ${sys.alert ? `<button class="sysalert" data-a="silence">${svg('alert', 18)}<span><b>Indoor motion detected</b>Tap to silence the Nest Mini</span></button>` : ''}`);
     card.classList.toggle('alerting', sys.alert);

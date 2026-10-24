@@ -269,14 +269,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const mainTz = () => (S.set.home && S.set.home.tz) || hereZone();
   const hereName = () => S.set.home ? S.set.home.name : phoneName();
   function renderWorld() {
-    $('hero').innerHTML = `<div class="fw">${faceSVG('big')}</div><div class="ht"><small>${esc(hereName())}</small><b id="heroT" class="num"></b><em id="heroD"></em></div>`;
+    $('hero').innerHTML = `<div class="fw">${faceSVG('big')}</div><div class="ht"><small${hereName() === 'Here' ? '' : ' translate="no"'}>${esc(hereName())}</small><b id="heroT" class="num"></b><em id="heroD"></em></div>`;
     $('cityEmpty').hidden = S.cities.length > 0;
     const list = $('cityList');
     list.hidden = !S.cities.length;
     list.classList.toggle('editing', editing);
     list.innerHTML = S.cities.map(c => `<div class="crow" data-id="${esc(c.id)}">`
       + (editing ? `<button class="del" type="button" data-del="${esc(c.id)}" aria-label="Remove ${esc(c.name)}">${ICON.minus}</button>` : `<div class="fw">${faceSVG('mini')}</div>`)
-      + `<div class="cn"><small data-rel></small><strong>${esc(c.name)}</strong></div><div class="ct" data-t></div>`
+      + `<div class="cn"><small data-rel></small><strong translate="no">${esc(c.name)}</strong></div><div class="ct" data-t></div>`
       + (editing ? `<button class="grip" type="button" data-grip="${esc(c.id)}" aria-label="Move ${esc(c.name)}: use the up and down arrow keys, or drag">${ICON.grip}</button>` : '') + '</div>').join('');
     paintWorld();
   }
@@ -344,7 +344,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('cityHint').hidden = !!res.length || !q.trim();
     $('cityHint').textContent = q.trim() ? 'No cities match “' + q.trim() + '”.' : '';
     $('cityRes').innerHTML = res.map((c, i) => { const z = L.zoneParts(c.tz, t), on = have.has(c.tz + '|' + c.name);
-      return `<button class="cres${on ? ' have' : ''}" type="button" data-i="${i}"><span class="cn"><b>${esc(c.name)}</b><small>${esc(c.where)}${on ? (cityMode === 'home' ? ' · main clock' : ' · added') : ''}</small></span><span class="cv">${esc(L.clockLine(z.h, z.mi, h24()))}</span></button>`; }).join('');
+      return `<button class="cres${on ? ' have' : ''}" type="button" data-i="${i}"><span class="cn"><b translate="no">${esc(c.name)}</b><small><span translate="no">${esc(c.where)}</span>${on ? (cityMode === 'home' ? ' · main clock' : ' · added') : ''}</small></span><span class="cv">${esc(L.clockLine(z.h, z.mi, h24()))}</span></button>`; }).join('');
     $('cityRes')._res = res;
   }
   $('cityQ').addEventListener('input', paintCityRes);
@@ -367,7 +367,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const sleepAsAlarm = () => ({ h: S.sleep.wake.h, m: S.sleep.wake.m, days: S.sleep.days, skip: S.sleep.skip });
   function nextAlarm() {
     const c = [];
-    for (const a of S.alarms) { if (a.on && a.next) c.push({ t: a.next, label: a.label || 'Alarm' }); if (a.snoozeAt) c.push({ t: a.snoozeAt, label: a.label || 'Alarm' }); }
+    for (const a of S.alarms) { if (a.on && a.next) c.push({ t: a.next, label: a.label || 'Alarm', own: !!a.label }); if (a.snoozeAt) c.push({ t: a.snoozeAt, label: a.label || 'Alarm', own: !!a.label }); }
     const sl = S.sleep;
     if (sl.set && sl.on && sl.alarm && sl.next) c.push({ t: sl.next, label: 'Wake Up' });
     if (sl.snoozeAt) c.push({ t: sl.snoozeAt, label: 'Wake Up' });
@@ -384,7 +384,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function renderAlarms() {
     // missed while Clock was closed
-    $('missed').innerHTML = S.missed.length ? `<div class="missed" role="status">${ICON.alert}<p>${S.missed.map(x => `<b>${esc(x.label)}</b> ${x.kind === 'timer' ? 'ended' : 'came due'} ${esc(pastLine(x.at))} while Clock was closed.`).join('<br>')}</p><button type="button" id="missedOk">OK</button></div>` : '';
+    $('missed').innerHTML = S.missed.length ? `<div class="missed" role="status">${ICON.alert}<p>${S.missed.map(x => `<b${x.own ? ' translate="no"' : ''}>${esc(x.label)}</b> ${x.kind === 'timer' ? 'ended' : 'came due'} ${esc(pastLine(x.at))} while Clock was closed.`).join('<br>')}</p><button type="button" id="missedOk">OK</button></div>` : '';
     // Sleep | Wake Up
     const sl = S.sleep;
     if (!sl.set) $('sleepCard').innerHTML = `<div class="sleepoff"><span>No sleep schedule</span><button class="btn quiet" type="button" id="sleepSetup">Set Up</button></div>`;
@@ -400,7 +400,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     list.hidden = !A.length; $('alarmEmpty').hidden = !!A.length;
     list.innerHTML = A.map(a => `<div class="arow${a.on ? '' : ' off'}" data-id="${esc(a.id)}">`
       + (editing ? `<button class="del" type="button" data-del="${esc(a.id)}" aria-label="Delete the ${esc(L.clockLine(a.h, a.m, h24()))} alarm">${ICON.minus}</button>` : '')
-      + `<button class="open" type="button" data-open="${esc(a.id)}" aria-label="Edit the ${esc(L.clockLine(a.h, a.m, h24()))} alarm"><span class="at">${timeHTML(a.h, a.m)}</span><span class="al">${esc(a.label || 'Alarm')}${a.days.length ? ', ' + esc(L.repeatText(a.days)) : ''}${a.snoozeAt ? ' · <span class="snz">Snoozed until ' + esc(atLine(a.snoozeAt)) + '</span>' : ''}</span></button>`
+      + `<button class="open" type="button" data-open="${esc(a.id)}" aria-label="Edit the ${esc(L.clockLine(a.h, a.m, h24()))} alarm"><span class="at">${timeHTML(a.h, a.m)}</span><span class="al">${a.label ? '<span translate="no">' + esc(a.label) + '</span>' : 'Alarm'}${a.days.length ? ', ' + esc(L.repeatText(a.days)) : ''}${a.snoozeAt ? ' · <span class="snz">Snoozed until ' + esc(atLine(a.snoozeAt)) + '</span>' : ''}</span></button>`
       + (editing ? '' : `<button class="switch" type="button" role="switch" data-sw="${esc(a.id)}" aria-checked="${a.on}" aria-label="${esc(L.clockLine(a.h, a.m, h24()))} ${esc(a.label || 'alarm')}"></button>`) + '</div>').join('');
     paintSub();
   }
@@ -428,7 +428,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // The alarm editor
   let edit = null;   // the alarm being edited (a copy), and whether it's new
   function dayButtons(box, days) {
-    box.innerHTML = L.DAY_SHORT.map((d, i) => `<button type="button" data-d="${i}" aria-pressed="${days.includes(i)}" aria-label="${L.DAY_LONG[i]}">${d.slice(0, 1)}</button>`).join('');
+    const letter = i => { const d = new Date(2024, 0, 7 + i).toLocaleDateString('en-US', { weekday: 'short' }); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };   // 7 January 2024 was a Sunday; in Russian two letters (Пн), as iOS has them
+    box.innerHTML = L.DAY_SHORT.map((d, i) => `<button type="button" data-d="${i}" aria-pressed="${days.includes(i)}" aria-label="${L.DAY_LONG[i]}">${letter(i)}</button>`).join('');
   }
   function openAlarm(id) {
     const a = id ? S.alarms.find(x => x.id === id) : null;
@@ -627,12 +628,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('runTimers').hidden = !T.length;
     $('runTimers').innerHTML = T.map(x => `<div class="trow${x.state === 'pause' ? ' paused' : ''}" data-id="${esc(x.id)}">`
       + '<div class="tring" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="28"/><circle class="fgc" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="0"/></svg></div>'
-      + `<div class="tt"><b data-left></b><small><span>${esc(x.label || L.durText(x.dur / 1000))}</span><span data-end></span></small></div>`
+      + `<div class="tt"><b data-left></b><small><span${x.label ? ' translate="no"' : ''}>${esc(x.label || L.durText(x.dur / 1000))}</span><span data-end></span></small></div>`
       + `<div class="tb"><button class="mini" type="button" data-cancel="${esc(x.id)}" aria-label="Cancel the ${esc(x.label || L.durText(x.dur / 1000))} timer">${ICON.close}</button>`
       + `<button class="mini go" type="button" data-pp="${esc(x.id)}" aria-label="${x.state === 'run' ? 'Pause' : 'Resume'} the ${esc(x.label || L.durText(x.dur / 1000))} timer">${x.state === 'run' ? ICON.pause : ICON.play}</button></div></div>`).join('');
     $('tSoundName').textContent = L.soundName(S.tsound);
     $('recentHead').hidden = $('recents').hidden = !S.recents.length;
-    $('recents').innerHTML = S.recents.map((r, i) => `<div class="rrow"><div class="rt"><b>${esc(L.leftText(r.dur))}</b><small>${esc(r.label || L.durText(r.dur / 1000))}</small></div>`
+    $('recents').innerHTML = S.recents.map((r, i) => `<div class="rrow"><div class="rt"><b>${esc(L.leftText(r.dur))}</b><small${r.label ? ' translate="no"' : ''}>${esc(r.label || L.durText(r.dur / 1000))}</small></div>`
       + `<button class="x" type="button" data-rx="${i}" aria-label="Remove from Recents">${ICON.close}</button><button class="mini go" type="button" data-rs="${i}" aria-label="Start ${esc(r.label || L.durText(r.dur / 1000))}">${ICON.play}</button></div>`).join('');
     paintTimers(); paintSub(); setWheels(false);
   }
@@ -667,7 +668,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let ringStart = 0;
   function due(r, late) {
     if (r.kind === 'bed' && late > LATE) return;   // a bedtime chime long gone isn't worth a word
-    if (late > LATE) { S.missed.push({ kind: r.kind === 'timer' ? 'timer' : 'alarm', label: r.label, at: r.at }); S.missed = S.missed.slice(-10); return; }
+    if (late > LATE) { S.missed.push({ kind: r.kind === 'timer' ? 'timer' : 'alarm', label: r.label, at: r.at, own: !!r.own }); S.missed = S.missed.slice(-10); return; }
     if (r.kind === 'bed') { if (!RING.length) { playSound('chimes', 4500); toast('Bedtime: ' + L.clockLine(S.sleep.bed.h, S.sleep.bed.m, h24()) + '. Your wake-up is ' + (S.sleep.next ? whenLine(S.sleep.next) : 'off') + '.', null, 9000); } return; }
     RING.push(r);
     if (RING.length === 1) showRing();
@@ -680,6 +681,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const d = new Date(r.kind === 'timer' ? now() : r.at);
     $('rKind').textContent = r.kind === 'timer' ? 'Timer' : r.kind === 'sleep' ? 'Wake Up' : 'Alarm';
     $('rTime').innerHTML = timeHTML(d.getHours(), d.getMinutes());
+    if (r.own) $('rLabel').setAttribute('translate', 'no'); else $('rLabel').removeAttribute('translate');   // a label typed in stays as it is in Russian
     $('rLabel').textContent = r.label;
     $('rNote').textContent = r.kind === 'timer' ? 'Ended at ' + atLine(r.at) : '';
     $('rSnooze').hidden = r.kind === 'timer' ? false : !r.snooze;
@@ -719,7 +721,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let changed = false;
     const missed = S.missed.length;
     for (const a of S.alarms) {
-      const base = { kind: 'alarm', id: a.id, label: a.label || 'Alarm', sound: a.sound, snooze: a.snooze, snoozeMin: a.snoozeMin };
+      const base = { kind: 'alarm', id: a.id, label: a.label || 'Alarm', own: !!a.label, sound: a.sound, snooze: a.snooze, snoozeMin: a.snoozeMin };
       if (a.snoozeAt && t >= a.snoozeAt) { const at = a.snoozeAt; a.snoozeAt = null; changed = true; due({ ...base, at }, t - at); }
       if (a.on && a.next && t >= a.next) {
         const at = a.next; changed = true;
@@ -733,7 +735,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (sl.bedNext && t >= sl.bedNext) { const at = sl.bedNext; changed = true; schedule(t); due({ kind: 'bed', id: 'bed', label: 'Bedtime', at }, t - at); }
     for (const x of S.timers) if (x.state === 'run' && t >= x.end) {
       x.state = 'done'; changed = true;
-      due({ kind: 'timer', id: x.id, label: x.label || L.durText(x.dur / 1000) + ' timer', at: x.end, sound: x.sound }, t - x.end);
+      due({ kind: 'timer', id: x.id, label: x.label || L.durText(x.dur / 1000) + ' timer', own: !!x.label, at: x.end, sound: x.sound }, t - x.end);
       if (t - x.end > LATE) S.timers = S.timers.filter(y => y.id !== x.id);
     }
     // the phone moved zones: alarms follow the clock on the wall (after what was already due has rung)
@@ -796,7 +798,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if ($('nTime').innerHTML !== html) $('nTime').innerHTML = html;
     }
     const dl = dayLine(t); if ($('nDate').textContent !== dl) $('nDate').textContent = dl;
-    const nx = nextAlarm(), al = nx ? ICON.bell + '<span>' + esc(nx.label + ' ' + whenLine(nx.t)) + '</span>' : '<span>No alarm set</span>';
+    const nx = nextAlarm(), al = nx ? ICON.bell + '<span><span' + (nx.own ? ' translate="no"' : '') + '>' + esc(nx.label) + '</span> ' + esc(whenLine(nx.t)) + '</span>' : '<span>No alarm set</span>';
     if ($('nAlarm').innerHTML !== al) $('nAlarm').innerHTML = al;
   }
   $('nightBtn').addEventListener('click', openNight);
@@ -808,6 +810,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Settings
   // ---------------------------------------------------------------------
   function paintSettings() {
+    if (S.set.home) $('setHomeName').setAttribute('translate', 'no'); else $('setHomeName').removeAttribute('translate');   // a place name stays as it is in Russian
     $('setHomeName').textContent = S.set.home ? S.set.home.name : phoneName() + ' (this phone)';
     document.querySelectorAll('#setDesign [data-design]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.design === S.set.design)));
     $('set24').setAttribute('aria-checked', String(!!S.set.h24));

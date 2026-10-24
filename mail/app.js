@@ -46,6 +46,9 @@ const PAGE = 40;                  // conversations shown per list
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// What the mail itself says (subjects, senders, text) stays as written in Russian too (../home/lang.js);
+// the app's own "(no subject)" is translated.
+const ownText = s => s === '(no subject)' ? '' : ' translate="no"';
 const ls = {
   get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
@@ -1053,7 +1056,7 @@ function autoTagsHTML() {
       const line = esc(p.about) + (on && n ? ' · ' + n.toLocaleString() : '');
       return '<li data-preset="' + esc(p.name) + '"><div class="rowtop"><span class="open" data-act="preset-see" role="button" tabindex="0" aria-label="' +
         esc((on ? 'Show ' : 'Preview ') + p.name) + '"><span class="who">' +
-        '<span class="tchip" style="--h:' + tagHue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
+        '<span class="tchip" translate="no" style="--h:' + tagHue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
         '<span class="gtools"><button class="switch' + (busy ? ' busy' : '') + '" role="switch" data-act="preset-toggle" aria-checked="' + on + '" aria-label="' + esc(p.name) + ' auto-tag"' +
           (busy ? ' disabled' : '') + '></button></span></div></li>';
     }).join('') + '</ul></div>';
@@ -1468,10 +1471,10 @@ function drawTidyPreview() {
     g.n++; groups.set(x.item.email, g);
   }
   const rows = [...groups.values()].sort((a, b) => b.n - a.n).map(g =>
-    '<li><span class="tw"><b>' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span>' +
+    '<li><span class="tw"><b translate="no">' + esc(g.name) + '</b><small>' + esc(g.email) + ' · ' + esc(g.why) + '</small></span><span class="tn">' + g.n + '</span>' +
     '<button class="tkeep" data-act="tidy-keep" data-email="' + esc(g.email) + '" aria-label="Always keep mail from ' + esc(g.email) + '">Keep</button></li>').join('');
   const kept = plan.keep.slice(0, 12).map(k =>
-    '<li><span class="tw"><b>' + esc(k.item.name) + '</b><small>' + esc(k.item.subject) + '</small></span><span class="tk">' + esc(k.why) + '</span></li>').join('');
+    '<li><span class="tw"><b translate="no">' + esc(k.item.name) + '</b><small' + ownText(k.item.subject) + '>' + esc(k.item.subject) + '</small></span><span class="tk">' + esc(k.why) + '</span></li>').join('');
   const n = plan.tidy.length;
   box.innerHTML = '<div class="grab"></div>' +
     '<h3>' + (n ? 'Tidy ' + n + ' old unread ' + (n === 1 ? 'email' : 'emails') + '?' : 'Nothing to tidy') + '</h3>' +
@@ -1627,7 +1630,7 @@ function tagChips(labelIds, skip) {
   const bid = bucketId(), shown = new Set(chipTags().map(l => l.id));
   return labelIds.map(id => labelsById.get(id))
     .filter(l => l && l.id !== skip && (l.id === bid || shown.has(l.id)))
-    .map(l => '<span class="tchip" style="--h:' + (l.id === bid ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>')
+    .map(l => '<span class="tchip" translate="no" style="--h:' + (l.id === bid ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>')
     .join('');
 }
 
@@ -1651,7 +1654,7 @@ function rowHTML(item, i, key) {
       '<button class="sa tagx" data-act="swipe-tag"><span class="gi">' + ICON.label + '</span>Tag</button>' +
       (inBucket
         ? '<button class="sa inbx" data-act="restore" aria-label="Back to inbox"><span class="gi">' + ICON.back + '</span>Inbox</button>'
-        : '<button class="sa mktx" data-act="bucket" aria-label="Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label) + '"><span class="gi">' + ICON.mkt + '</span>' + esc(settings.label) + '</button>') +
+        : '<button class="sa mktx" data-act="bucket" aria-label="Move ' + esc(ruleFor(item).label) + ' to ' + esc(settings.label) + '"><span class="gi">' + ICON.mkt + '</span><span translate="no">' + esc(settings.label) + '</span></button>') +
     '</span>' +
     '<span class="swipe-r">' +
       '<button class="sa flag" data-act="row-flag"><span class="gi">' + ICON.flag + '</span>' + (item.labelIds.includes('STARRED') ? 'Unflag' : 'Flag') + '</button>' +
@@ -1661,12 +1664,12 @@ function rowHTML(item, i, key) {
     '<div class="rowtop">' +
       '<button class="open" data-act="read">' +
         '<span class="who">' + (item.unread ? '<span class="dot"></span>' : item.fading ? '<span class="dot fade"></span>' : '') +
-          '<span class="name">' + esc(item.name) + '</span>' +
+          '<span class="name" translate="no">' + esc(item.name) + '</span>' +
           (item.count > 1 ? '<span class="cnt">' + item.count + '</span>' : '') +
           '<span class="when">' + (item.labelIds.includes('STARRED') ? '<span class="flagged">' + ICON.flag + '</span>' : '') +
             (item.attach ? ICON.clip : '') + esc(ago(item.date)) + '</span></span>' +
-        '<span class="subj">' + esc(item.subject) + '</span>' +
-        '<span class="snip">' + esc(item.snippet.slice(0, 90)) + '</span>' +
+        '<span class="subj"' + ownText(item.subject) + '>' + esc(item.subject) + '</span>' +
+        '<span class="snip" translate="no">' + esc(item.snippet.slice(0, 90)) + '</span>' +
         (meta ? '<span class="meta">' + meta + '</span>' : '') +
       '</button>' +
     '</div>' +
@@ -1685,6 +1688,8 @@ const MENU_ICON = {
 };
 
 // What the title says: the mailbox or tag on screen.
+// whether the title is a label's own name (a tag, or the bucket), not one of the app's words
+const ownView = () => state.view === 'marketing' || (state.view === 'inbox' && !!state.tag && state.tag !== 'STARRED' && !catOf(state.tag));
 function viewName() {
   if (state.view === 'rules') return 'Tags';
   if (state.view === 'marketing') return settings.label;
@@ -1699,6 +1704,7 @@ function drawPill() {
     : t && labelsById.get(t) ? '<i class="dot" style="--h:' + tagHue(labelsById.get(t).name) + '"></i>' : MENU_ICON.inbox;
   if ($('#vbIcon').dataset.k !== icon) { $('#vbIcon').innerHTML = icon; $('#vbIcon').dataset.k = icon; }
   $('#vbName').textContent = viewName();
+  $('#vbName').translate = !ownView();
   $('#boxbtn').setAttribute('aria-label', 'Show a mailbox. Now: ' + viewName());
 }
 
@@ -1717,10 +1723,10 @@ function boxMenuHTML() {
     row('chip', 'data-id="STARRED"', 'Flagged', inbox && state.tag === 'STARRED', ico(ICON.flag), 22) +
     '<hr>' +
     CATEGORIES.map(c => row('chip', 'data-id="' + c.id + '"', c.name, inbox && state.tag === c.id, ico(MENU_ICON[c.id]), CAT_HUE[c.id])).join('') +
-    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '"',
+    (tags.length ? '<hr><div class="mhead">Tags</div>' + tags.map(l => row('chip', 'data-id="' + esc(l.id) + '" translate="no"',
       l.name, inbox && state.tag === l.id, ico('<i class="dot"></i>'), tagHue(l.name))).join('') : '') +
     '<hr>' +
-    row('box-view', 'data-view="marketing"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt), 36) +
+    row('box-view', 'data-view="marketing" translate="no"', settings.label, state.view === 'marketing', count(state.lists.mkt?.items?.length) + ico(ICON.mkt), 36) +
     row('box-view', 'data-view="rules"', 'Manage Tags', state.view === 'rules', ico(ICON.label, true)) +
   '</div>';
 }
@@ -1796,7 +1802,9 @@ function renderChrome() {
   const all = sel && items.length && items.every(it => sel.has(it.id));
   $('#selall').textContent = all ? 'Deselect All' : 'Select All';
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
+  $('#title').translate = !(signedIn && !sel && ownView());
   fitTitle();
+  if (window.aosLang && aosLang.get() === 'ru') queueMicrotask(fitTitle);   // again once ../home/lang.js has put the Russian in (it does so just after)
   $('#vbar').classList.toggle('hide', !main || !!sel);
   if ($('#vbar').classList.contains('hide')) closeBoxMenu(true);
   else drawPill();
@@ -1887,7 +1895,7 @@ function viewList() {
   let head = '';
   if (state.search) head = '<h2 class="gh">' + items.length + (list.next ? '+' : '') + ' result' + (items.length === 1 && !list.next ? '' : 's') + ' for “' + esc(state.search) + '”</h2>';
   else if (spec.base === 'mkt') head = '<h2>' + esc(settings.label) + ' · deleted after ' + settings.days + ' days</h2>';
-  else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip" style="--h:' + (state.tag === 'STARRED' ? 36 : tagHue(tagName)) + '">' + esc(tagName) + '</span></h2>';
+  else if (state.tag && !catOf(state.tag)) head = '<h2 class="gh"><span class="tchip"' + (state.tag === 'STARRED' ? '' : ' translate="no"') + ' style="--h:' + (state.tag === 'STARRED' ? 36 : tagHue(tagName)) + '">' + esc(tagName) + '</span></h2>';
   if (!items.length) {
     const empty = state.unread ? 'No unread mail here.<br>Tap All to see everything.'
       : state.search ? 'Nothing matches “' + esc(state.search) + '”.'
@@ -1943,7 +1951,7 @@ function viewRules() {
   const tagCard = l => {
     const rules = groups.get(l.id) || [], isBucket = l.id === bid;
     const meta = [rules.length ? rules.length + ' rule' + (rules.length === 1 ? '' : 's') : 'no rules', size(l.id)].filter(Boolean).join(' · ');
-    return '<div class="card"><h2 class="gh"><span class="tchip" style="--h:' + (isBucket ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>' +
+    return '<div class="card"><h2 class="gh"><span class="tchip" translate="no" style="--h:' + (isBucket ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>' +
       '<span class="gcount">' + meta + '</span>' +
       (isBucket ? '' : '<span class="gtools">' + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
       (rules.length ? '<ul class="list">' + rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
@@ -1954,7 +1962,7 @@ function viewRules() {
   };
 
   const labelRow = (l, line, tools) => '<li data-label="' + esc(l.id) + '"><div class="rowtop">' +
-    '<span class="open"><span class="who"><span class="name">' + esc(l.name) + '</span></span><span class="snip">' + line + '</span></span>' +
+    '<span class="open"><span class="who"><span class="name" translate="no">' + esc(l.name) + '</span></span><span class="snip">' + line + '</span></span>' +
     tools + '</div></li>';
 
   const others = tags().filter(l => !yours.includes(l));
@@ -2246,10 +2254,10 @@ function renderReader() {
       '<button class="iconbtn" data-act="reader-more" aria-label="More">' + ICON.more + '</button>' +
       (inBucket
         ? '<button class="pillbtn bluec" data-act="restore-reader">' + ICON.back + 'Inbox</button>'
-        : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.mkt + esc(settings.label) + '</button>') +
+        : '<button class="pillbtn tagc" data-act="bucket-reader">' + ICON.mkt + '<span translate="no">' + esc(settings.label) + '</span></button>') +
     '</div>' +
     '<div class="card rhead">' +
-      '<div class="rsubj">' + esc(it.subject) + '</div>' +
+      '<div class="rsubj"' + ownText(it.subject) + '>' + esc(it.subject) + '</div>' +
       (it.count > 1 ? '<div class="rcount">' + it.count + ' messages</div>' : '') +
       '<div class="rtags" id="rtags">' + tagChips(it.labelIds) + '</div>' +
     '</div>' +
@@ -2281,7 +2289,7 @@ function renderReaderBar() {
 function msgCard(m, open) {
   const initial = ([...m.from.name.trim()][0] || '?').toUpperCase();
   const who = '<span class="avatar" style="--h:' + hue(m.from.host || m.from.email) + '">' + esc(initial) + '</span>' +
-    '<span class="rwho"><strong>' + esc(m.from.name) + '</strong><span class="rmail">' +
+    '<span class="rwho"><strong translate="no">' + esc(m.from.name) + '</strong><span class="rmail" translate="no">' +
       (open ? esc(m.from.email) + (m.to ? ' → ' + esc(m.to.replace(/\s*<[^>]*>/g, '').slice(0, 80)) : '') : esc(m.snippet.slice(0, 90))) +
     '</span></span>' +
     '<span class="rwhen">' + esc(open ? fullDate(m.date) : ago(m.date)) + '</span>';
@@ -2289,7 +2297,7 @@ function msgCard(m, open) {
   if (!open) return '<div class="card msg folded" data-card="' + esc(m.id) + '">' + head + '</div>';
   const body = m.html
     ? '<div class="mbody html"><iframe class="rframe" data-msg="' + esc(m.id) + '" title="Message from ' + esc(m.from.name) + '" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>'
-    : '<div class="mbody rtext">' + (m.text ? linkify(tidy(m.text)) : esc(m.snippet || 'This message has no text.')) + '</div>';
+    : '<div class="mbody rtext"' + (m.text || m.snippet ? ' translate="no"' : '') + '>' + (m.text ? linkify(tidy(m.text)) : esc(m.snippet || 'This message has no text.')) + '</div>';
   return '<div class="card msg" data-card="' + esc(m.id) + '">' + head + unsubHTML(m) + body + filesHTML(m) + '</div>';
 }
 
@@ -2322,7 +2330,7 @@ function fileRow(f, extra = '') {
   const ext = (/\.([a-z0-9]{1,5})$/i.exec(f.name || '') || [, 'file'])[1].toUpperCase().slice(0, 4);
   const h = (FILE_HUE.find(([re]) => re.test((f.type || '').toLowerCase())) || [, 230])[1];
   return '<span class="fext" style="--h:' + h + '" aria-hidden="true">' + esc(ext) + '</span>' +
-    '<span class="fmeta"><span class="fname">' + esc(f.name || 'Attachment') + '</span>' + extra + '</span>';
+    '<span class="fmeta"><span class="fname"' + (f.name ? ' translate="no"' : '') + '>' + esc(f.name || 'Attachment') + '</span>' + extra + '</span>';
 }
 function fmtSize(n) {
   if (!n) return '';
@@ -2666,7 +2674,7 @@ function closeCompose() {
 }
 
 // A choice of several, in the same sheet as the confirmations.
-function choiceSheet({ title, body, options }) {
+function choiceSheet({ title, body, options, own }) {   // own: the title and note are the mail's (a sender, a subject), kept as written
   closeSheet();
   return new Promise(resolve => {
     confirmDone = resolve;
@@ -2674,7 +2682,7 @@ function choiceSheet({ title, body, options }) {
     const el = $('#sheet');
     el.innerHTML = '<div class="scrim" data-act="sheet-close"></div>' +
       '<div class="sheet" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '">' +
-        '<div class="grab"></div><h3>' + esc(title) + '</h3>' + (body ? '<p class="note">' + body + '</p>' : '') +
+        '<div class="grab"></div><h3' + (own ? ' translate="no"' : '') + '>' + esc(title) + '</h3>' + (body ? '<p class="note"' + (own ? ' translate="no"' : '') + '>' + body + '</p>' : '') +
         options.map(o => '<button class="btn ' + (o.danger ? 'warn' : o.primary ? '' : 'ghost') + '" data-act="choice" data-id="' + esc(o.id) + '">' + esc(o.label) + '</button>').join('') +
         '<button class="btn ghost" data-act="sheet-close">Cancel</button>' +
       '</div>';
@@ -2953,7 +2961,7 @@ async function readerMore() {
   const r = state.reading;
   if (!r) return;
   const who = senderOf(r), last = [...(r.msgs || [])].reverse().find(m => m.unsub);
-  const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), options: [
+  const pick = await choiceSheet({ title: who.name || who.email, body: esc(who.email), own: true, options: [
     { id: 'remind', label: 'Remind Me', primary: true },
     ...(last ? [{ id: 'unsub', label: 'Unsubscribe' }] : []),
     tidyKept(who.email) ? { id: 'tidy-allow', label: 'Let Tidy Tidy This Sender' } : { id: 'tidy-keep', label: 'Never Tidy This Sender' },
@@ -3156,7 +3164,7 @@ function openSheet(item) {
       '<h3>Tag ' + (rule.kind === 'domain' ? 'everything from ' : 'mail from ') + who + '</h3>' +
       '<p class="note">Past and new mail ' +
         (rule.kind === 'domain' ? 'from anyone at ' + esc(rule.label) : 'from this address') + ', kept in your inbox.</p>' +
-      (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" style="--h:' + tagHue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
+      (list.length ? '<div class="tagpick">' + list.map(l => '<button class="chip2' + (item.labelIds.includes(l.id) ? ' has' : '') + '" translate="no" style="--h:' + tagHue(l.name) + '" data-act="pick-tag" data-name="' + esc(l.name) + '"><i></i>' + esc(l.name) + '</button>').join('') + '</div>' : '') +
       '<input type="text" id="newtag" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="' + (list.length ? 'Or a new tag' : 'New tag') + ' — e.g. Sofia’s school">' +
       '<button class="btn" data-act="apply-tag">' + ICON.label + 'Tag</button>' +
       '<p class="note hide" id="tagerr" role="alert" style="color:var(--bad-text);text-align:center"></p>' +
@@ -3915,7 +3923,7 @@ document.addEventListener('click', async e => {
 
     case 'bucket': { const it = findItem(li.dataset.id); if (it) doBucket(it, el, li); return; }
     case 'restore': { const it = findItem(li.dataset.id); if (it) doRestore(it, el, li); return; }
-    case 'bucket-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + esc(settings.label); doBucket(state.reading.item); } return;
+    case 'bucket-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + '<span translate="no">' + esc(settings.label) + '</span>'; doBucket(state.reading.item); } return;
     case 'restore-reader': if (state.reading) { el.disabled = true; el.innerHTML = ICON.spin + 'Inbox'; doRestore(state.reading.item); } return;
 
     case 'tag-open': if (state.reading) openSheet(state.reading.item); return;
@@ -3929,7 +3937,7 @@ document.addEventListener('click', async e => {
     case 'reader-reply': {
       const r = state.reading;
       if (!r?.msgs?.length) return;
-      const pick = await choiceSheet({ title: r.item.subject, options: [
+      const pick = await choiceSheet({ title: r.item.subject, own: r.item.subject !== '(no subject)', options: [
         { id: 'reply', label: 'Reply', primary: true }, { id: 'all', label: 'Reply All' }, { id: 'fwd', label: 'Forward' }] });
       if (pick) openCompose(draftFrom(pick, r));
       return;
@@ -4016,7 +4024,7 @@ document.addEventListener('click', async e => {
       if (!list.length) return;
       const yes = await confirmSheet({
         title: 'Delete ' + list.length + ' old labels?',
-        body: list.map(l => '<span class="chip">' + esc(l.name) + '</span>').join(' ') +
+        body: list.map(l => '<span class="chip" translate="no">' + esc(l.name) + '</span>').join(' ') +
           '<br><br>They come off their emails; the emails stay.',
         yes: 'Delete ' + list.length + ' labels',
       });

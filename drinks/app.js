@@ -55,6 +55,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
   const catName = c => (C.CAT[c] || C.CAT.other).name;
+  // In Russian (../home/lang.js): the kinds and the preset drinks are translated; a name you typed stays as written (translate="no").
+  const trWord = s => window.aosLang ? aosLang.t(s) : s;
+  const KNOWN = new Set(C.CATS.map(c => c.name).concat(C.PRESETS.map(p => p.name)));
+  const nameHtml = n => KNOWN.has(n) ? esc(n) : '<span translate="no">' + esc(n) + '</span>';
+  const nameTxt = n => KNOWN.has(n) ? trWord(n) : n;
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',
@@ -152,7 +157,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function said(list) {
     const m = new Map();
     for (const x of list) { const k = x.name || catName(x.cat); m.set(k, (m.get(k) || 0) + (+x.qty || 1)); }
-    return [...m].map(([k, q]) => k + (q > 1 ? ' ×' + q : '')).join(', ');
+    return [...m].map(([k, q]) => nameTxt(k) + (q > 1 ? ' ×' + q : '')).join(', ');
   }
   function renderWeek() {
     const ws = st.week, we = addDays(ws, 6), tod = today(), g = goals();
@@ -170,7 +175,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const aria = fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + ', ' + (s === 'drinks' ? f1(x.sd) + ' standard drinks' : text || 'not yet');
       rows += '<button class="drow' + (d === tod ? ' today' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(aria) + '">'
         + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span>'
-        + '<span class="dsum ' + cls + '">' + esc(text) + '</span>' + val + '</button>';
+        + '<span class="dsum ' + cls + '"' + (s === 'drinks' ? ' translate="no"' : '') + '>' + esc(text) + '</span>' + val + '</button>';
     }
     // The week's one number, against your weekly limit. Tapping it opens Analysis.
     const s = C.stats(data.entries, data.days, ws, we, tod);
@@ -245,8 +250,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (list.length) {
       const total = list.reduce((a, x) => a + C.std(x), 0), over = C.round(total, 2) > g.day;
       html += '<div class="rgroup" id="dList">' + list.map(x => '<div class="erow' + (f && f.editing === x.id ? ' editing' : '') + '" data-c="' + esc(C.CAT[x.cat] ? x.cat : 'other') + '">'
-        + '<button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Change ' + esc(x.name || catName(x.cat)) + '"><i class="cdot"></i><span class="et">' + esc(x.name || catName(x.cat)) + (+x.qty > 1 ? ' ×' + x.qty : '')
-        + '<small>' + esc([sizeOf(x), x.abv + '%', x.time, x.note].filter(Boolean).join(' · ')) + '</small></span><span class="ev">' + f1(C.std(x)) + '</span></button>'
+        + '<button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Change ' + esc(x.name || catName(x.cat)) + '"><i class="cdot"></i><span class="et">' + nameHtml(x.name || catName(x.cat)) + (+x.qty > 1 ? ' ×' + x.qty : '')
+        + '<small>' + esc([sizeOf(x), x.abv + '%', x.time].filter(Boolean).join(' · ')) + (x.note ? ' · <span translate="no">' + esc(x.note) + '</span>' : '') + '</small></span><span class="ev">' + f1(C.std(x)) + '</span></button>'
         + '<button class="del" type="button" data-del="' + esc(x.id) + '" aria-label="Delete ' + esc(x.name || catName(x.cat)) + '">' + ICON.close + '</button></div>').join('')
         + '<div class="dtotal' + (over ? ' over' : '') + '"><span>' + (over ? 'Over your ' + g.day + ' a day' : 'Total') + '</span><span><b>' + f1(total) + '</b> standard drinks</span></div></div>';
     } else {
@@ -255,7 +260,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     if (f) html += formHtml();
     else {
-      html += '<p class="label">' + (list.length ? 'Add another' : 'Had a drink?') + '</p><div class="usual" id="usual">' + usual().map((u, i) => '<button class="utile" type="button" data-usual="' + i + '" data-c="' + esc(u.cat) + '" aria-label="Add ' + esc(u.name + ', ' + sizeOf(u) + ', ' + u.abv + '%') + '"><i class="cdot"></i><span class="ut">' + esc(u.name) + '<small>' + esc(sizeOf(u) + ' · ' + u.abv + '%') + '</small></span>' + ICON.plus + '</button>').join('') + '</div>'
+      html += '<p class="label">' + (list.length ? 'Add another' : 'Had a drink?') + '</p><div class="usual" id="usual">' + usual().map((u, i) => '<button class="utile" type="button" data-usual="' + i + '" data-c="' + esc(u.cat) + '" aria-label="Add ' + esc(u.name + ', ' + sizeOf(u) + ', ' + u.abv + '%') + '"><i class="cdot"></i><span class="ut">' + nameHtml(u.name) + '<small>' + esc(sizeOf(u) + ' · ' + u.abv + '%') + '</small></span>' + ICON.plus + '</button>').join('') + '</div>'
         + '<button class="linkbtn" type="button" id="somethingElse">Something else…</button>';
     }
     $('dayBody').innerHTML = html;
@@ -869,7 +874,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const all = C.topDrinks(data.entries, T.from, T.tod, tr.group), total = sum(all, x => x.sd);
         if (!all.length) return '<div class="empty"><strong>No drinks in these ' + WEEKS + ' weeks</strong></div>';
         const pc = x => total ? Math.round(x.sd / total * 100) : 0;
-        const row = (x, text, v, max) => '<div class="gbar" data-c="' + esc(x.cat) + '" aria-label="' + esc(x.label + ': ' + text) + '"><span class="gn"><i class="cdot"></i><span class="nm">' + esc(x.label) + '</span></span><span class="gt"><span class="bar" style="width:' + (v / max * 55).toFixed(1) + '%"></span><span class="gv">' + esc(text) + '</span></span></div>';
+        const row = (x, text, v, max) => '<div class="gbar" data-c="' + esc(x.cat) + '" aria-label="' + esc(x.label + ': ' + text) + '"><span class="gn"><i class="cdot"></i><span class="nm">' + nameHtml(x.label) + '</span></span><span class="gt"><span class="bar" style="width:' + (v / max * 55).toFixed(1) + '%"></span><span class="gv">' + esc(text) + '</span></span></div>';
         const list = (arr, text, val) => {
           const top = arr.slice(0, 6), rest = arr.slice(6), max = Math.max(0.1, val(top[0]));
           return '<div class="rgroup bars tops">' + top.map(x => row(x, text(x), val(x), max)).join('')
@@ -878,9 +883,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const seg = '<div class="seg slides" role="radiogroup" aria-label="Group drinks by">' + [['name', 'By name'], ['kind', 'By kind']].map(([k, t]) => '<button type="button" data-group="' + k + '" aria-pressed="' + (tr.group === k) + '">' + t + '</button>').join('') + '</div>';
         const byQty = all.slice().sort((a, b) => b.qty - a.qty || b.sd - a.sd), bySd = all.slice().sort((a, b) => b.sd - a.sd);
         const most = byQty[0], big = bySd[0];
-        const callout = '<p class="callout">In the last ' + WEEKS + ' weeks you had <b>' + esc(most.label) + '</b> most often (' + plural(Math.round(most.qty), 'drink') + ')'
+        const callout = '<p class="callout">In the last ' + WEEKS + ' weeks you had <b>' + nameHtml(most.label) + '</b> most often (' + plural(Math.round(most.qty), 'drink') + ')'
           + (big.key === most.key ? ', and it’s also what adds up to the most: <b>' + f1(big.sd) + '</b> standard drinks, ' + Math.round(big.sd / total * 100) + '% of all of them.'
-            : ', but <b>' + esc(big.label) + '</b> adds up to the most: <b>' + f1(big.sd) + '</b> standard drinks, ' + pc(big) + '% of all of them.') + '</p>';
+            : ', but <b>' + nameHtml(big.label) + '</b> adds up to the most: <b>' + f1(big.sd) + '</b> standard drinks, ' + pc(big) + '% of all of them.') + '</p>';
         return seg + callout
           + '<p class="label">Had most often</p>' + list(byQty, x => plural(Math.round(x.qty), 'drink'), x => x.qty)
           + '<p class="label">Adds up to the most</p>' + list(bySd, x => f1(x.sd) + ' · ' + pc(x) + '%', x => x.sd)

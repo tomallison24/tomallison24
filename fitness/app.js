@@ -145,6 +145,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const GROUP = Object.fromEntries(GROUPS.map(g => [g.id, g]));
   const groupName = id => GROUP[id] ? GROUP[id].name : 'Other';
+  // In Russian (../home/lang.js): the built-in exercises are translated; the ones the family typed in
+  // stay as written (translate="no"). A muscle group, or a sleep stage, said where a word alone is
+  // ambiguous ("Back", "Core"), is looked up with what it is.
+  const tr = s => window.aosLang ? aosLang.t(s) : s;
+  const trAs = (what, s) => { const k = what + ': ' + s, r = tr(k); return r === k ? s : r; };
+  const gName = id => trAs('Muscle group', groupName(id));
+  const BUILTIN = new Set(GROUPS.flatMap(g => g.ex.map(n => n.toLowerCase())));
+  const exHtml = n => '<span' + (BUILTIN.has(String(n).toLowerCase()) ? '' : ' translate="no"') + '>' + esc(n) + '</span>';
   const isTimed = name => TIMED.has(String(name).toLowerCase());
   // Cardio: minutes, and a distance in the unit the machine shows - metres
   // on the rower, yards in the pool, miles on everything else.
@@ -312,7 +320,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (logs.length) { days++; exCount += logs.length; sets += n; }
       const sp = stepsOn(d); if (sp) { stepSum += +sp.n; stepDays++; }
       const sum = logs.length
-        ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(groupName(g)) + '</span>').join('') + '</span><span class="dline">' + dayLine(logs) + '</span>'
+        ? '<span class="tmeta">' + groups.map(g => '<span class="tchip" data-g="' + esc(GROUP[g] ? g : 'other') + '">' + esc(gName(g)) + '</span>').join('') + '</span><span class="dline">' + dayLine(logs) + '</span>'
         : '<span class="rest">' + (d < tod ? 'Rest day' : d === tod ? 'Nothing logged yet' : '') + '</span>';
       rows += '<button class="drow' + (d === tod ? ' today' : '') + (logs.length ? ' has' : '') + '" type="button" data-day="' + d + '" aria-label="' + esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (logs.length ? ', ' + plural(logs.length, 'exercise') : '') + (drinks.days[d] && typeof drinks.days[d].sd === 'number' ? ', ' + f1(drinks.days[d].sd) + ' standard drinks' : '') + (sp ? ', ' + (+sp.n).toLocaleString('en-US') + ' steps' + (+sp.n >= goal() ? ', goal met' : '') : '')) + '">'
         + '<span class="dn"><small>' + esc(fmt(d, { weekday: 'short' })) + '</small><b>' + +d.slice(8) + '</b></span><span class="dsum">' + sum + '</span><span class="tags">' + stepTag(d) + drinkTag(d) + '</span>' + ICON.chevR + '</button>';
@@ -424,19 +432,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const g = id => GROUP[id] ? id : 'other';
     const was = x => x.was ? 'was ' + said(x.was) + (x.when === 'earlier' ? ' on ' + short(x.was.date) : '') : '';
     const pct = x => Math.max(1, Math.round(Math.abs(x.change) * 100)) + '%';
-    const exRow = (x, dir) => '<div class="xrow" data-g="' + g(x.group) + '"><i></i><span class="xt">' + esc(x.name) + '<small>' + esc(said(x.now) + ' · ' + was(x)) + '</small></span><span class="chg ' + dir + '" aria-label="' + (dir === 'up' ? 'up ' : 'down ') + pct(x) + '">' + ICON[dir] + pct(x) + '</span></div>';
-    const grpRow = (gr, words) => '<div class="xrow" data-g="' + gr.id + '"><i></i><span class="xt">' + esc(groupName(gr.id)) + '<small>' + esc(words) + '</small></span><span class="chg down" aria-label="down">' + ICON.down + '</span></div>';
+    const exRow = (x, dir) => '<div class="xrow" data-g="' + g(x.group) + '"><i></i><span class="xt">' + exHtml(x.name) + '<small>' + esc(said(x.now) + ' · ' + was(x)) + '</small></span><span class="chg ' + dir + '" aria-label="' + (dir === 'up' ? 'up ' : 'down ') + pct(x) + '">' + ICON[dir] + pct(x) + '</span></div>';
+    const grpRow = (gr, words) => '<div class="xrow" data-g="' + gr.id + '"><i></i><span class="xt">' + esc(gName(gr.id)) + '<small>' + esc(words) + '</small></span><span class="chg down" aria-label="down">' + ICON.down + '</span></div>';
     const improving = a.up.map(x => exRow(x, 'up')).join('');
     const work = a.down.map(x => exRow(x, 'down')).join('')
       + a.missed.map(gr => grpRow(gr, 'Not trained in ' + P.words + ' (' + plural(gr.before, 'set') + ' in ' + P.before + ')')).join('')
       + a.dropped.map(gr => grpRow(gr, plural(gr.now, 'set') + ', down from ' + gr.before)).join('')
       + (a.cardioMissed ? grpRow({ id: 'cardio' }, 'None in ' + P.words + ' (' + fmtMins(a.cardioMissed.before) + ' in ' + P.before + ')') : '');
-    const quiet = (title, list) => list.length ? '<div class="xrow quiet"><span class="xt">' + esc(title) + '<small>' + esc(list.map(x => x.name).join(', ')) + '</small></span></div>' : '';
+    const quiet = (title, list) => list.length ? '<div class="xrow quiet"><span class="xt">' + esc(title) + '<small>' + list.map(x => exHtml(x.name)).join(', ') + '</small></span></div>' : '';
     // Sets by muscle group: one colour, scaled to the biggest of either window.
     const max = Math.max(1, ...a.groups.map(x => Math.max(x.now, x.before)));
     const bars = a.groups.map(x => {
       const d = x.now - x.before;
-      return '<div class="gbar" data-g="' + x.id + '" aria-label="' + esc(groupName(x.id) + ': ' + plural(x.now, 'set') + ', ' + x.before + ' before') + '"><span class="gn"><i></i>' + esc(groupName(x.id)) + '</span><span class="track"><span class="bar' + (x.now ? '' : ' zero') + '" style="width:' + (x.now / max * 72).toFixed(1) + '%"></span><span class="gv">' + x.now + (a.hasBefore && d ? ' <small>' + (d > 0 ? '+' : '−') + Math.abs(d) + '</small>' : '') + '</span></span></div>';
+      return '<div class="gbar" data-g="' + x.id + '" aria-label="' + esc(gName(x.id) + ': ' + plural(x.now, 'set') + ', ' + x.before + ' before') + '"><span class="gn"><i></i>' + esc(gName(x.id)) + '</span><span class="track"><span class="bar' + (x.now ? '' : ' zero') + '" style="width:' + (x.now / max * 72).toFixed(1) + '%"></span><span class="gv">' + x.now + (a.hasBefore && d ? ' <small>' + (d > 0 ? '+' : '−') + Math.abs(d) + '</small>' : '') + '</span></span></div>';
     }).join('');
     loadDrinks(r.beforeFrom, r.to); loadOlder(r.beforeFrom, r.to);
     main.innerHTML = seg + note + kpis
@@ -525,7 +533,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function renderDay() {
     const day = st.day, f = st.form, logs = logsOn(day);
     const list = logs.length
-      ? logs.map(x => '<div class="erow' + (f.editing === x.id ? ' editing' : '') + '" data-g="' + esc(GROUP[x.group] ? x.group : 'other') + '"><button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Edit ' + esc(x.exercise) + '"><i></i><span class="et">' + esc(x.exercise) + '<small>' + esc(groupName(x.group)) + ' · ' + esc(fmtLine(x)) + '</small></span></button>'
+      ? logs.map(x => '<div class="erow' + (f.editing === x.id ? ' editing' : '') + '" data-g="' + esc(GROUP[x.group] ? x.group : 'other') + '"><button class="ebody" type="button" data-edit="' + esc(x.id) + '" aria-label="Edit ' + esc(x.exercise) + '"><i></i><span class="et">' + exHtml(x.exercise) + '<small>' + esc(gName(x.group)) + ' · ' + esc(fmtLine(x)) + '</small></span></button>'
         + '<button class="iconbtn del" type="button" data-del="' + esc(x.id) + '" aria-label="Delete ' + esc(x.exercise) + '">' + ICON.close + '</button></div>').join('')
       : '<div class="dempty">Nothing logged ' + (day === today() ? 'today' : 'this day') + ' yet.</div>';
     $('dayBody').innerHTML = stepsHtml(day) + '<p class="label">Done</p><div class="rgroup" id="fxList">' + list + '</div>'
@@ -558,7 +566,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function pickHtml() {
     const day = st.day, f = st.form;
     if (f.q.trim()) return searchHtml(f.q);
-    const groups = '<div class="opts" role="radiogroup" aria-label="Muscle group">' + GROUPS.map(g => '<button class="opt" type="button" role="radio" data-g="' + g.id + '" data-group="' + g.id + '" aria-checked="' + (f.group === g.id) + '"><span class="gd"></span>' + esc(g.name) + '</button>').join('') + '</div>';
+    const groups = '<div class="opts" role="radiogroup" aria-label="Muscle group">' + GROUPS.map(g => '<button class="opt" type="button" role="radio" data-g="' + g.id + '" data-group="' + g.id + '" aria-checked="' + (f.group === g.id) + '"><span class="gd"></span>' + esc(gName(g.id)) + '</button>').join('') + '</div>';
     let form = '';
     if (f.group) {
       const isOther = f.exercise === OTHER;
@@ -595,7 +603,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const ALIAS = { db: 'dumbbell', bb: 'barbell', ez: 'ez-bar', ohp: 'overhead', rdl: 'romanian', rower: 'rowing', erg: 'rowing', stairmaster: 'stair', amt: 'adaptive', arc: 'arc' };
   // Other words a cardio machine goes by, so "run" or "cycle" finds it.
   const ALSO = { 'treadmill': 'run walk jog', 'indoor track': 'run walk jog', 'swimming': 'pool laps swim', 'upright bike': 'cycle cycling', 'recumbent bike': 'cycle cycling', 'spin bike': 'cycle cycling spinning', 'stair climber': 'stairs steps', 'rowing machine': 'row' };
-  const words = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  const words = t => String(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
   function allExercises() {
     const out = new Map();   // one entry a name; Romanian Deadlift is in two groups, so keep where you last logged it
     const add = (name, group) => { const k = name.toLowerCase(); if (!out.has(k)) out.set(k, { name, group }); };
@@ -610,9 +618,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const done = new Set(data.logs.map(x => x.exercise.toLowerCase()));
     const ql = String(q).trim().toLowerCase();
     return allExercises().map(x => {
-      const ws = words(x.name + ' ' + groupName(x.group) + ' ' + (ALSO[x.name.toLowerCase()] || ''));
+      const ws = words(x.name + ' ' + groupName(x.group) + ' ' + (ALSO[x.name.toLowerCase()] || '') + ' ' + tr(x.name) + ' ' + gName(x.group));   // and its Russian name, in Russian
       if (!qs.every(w => ws.some(v => v.startsWith(w) || (w.length > 3 && v.includes(w))))) return null;
-      const rank = (x.name.toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
+      const rank = (x.name.toLowerCase().startsWith(ql) || String(tr(x.name)).toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
       return Object.assign({ rank }, x);
     }).filter(Boolean).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).slice(0, 12);
   }
@@ -620,8 +628,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const hits = searchExercises(q), t = q.trim().replace(/\s+/g, ' ').slice(0, 60);
     const rows = hits.map(x => {
       const last = lastOf(x.name, st.day, st.form.editing);
-      return '<button class="srow" type="button" data-pick="' + esc(x.name) + '" data-pg="' + x.group + '" data-g="' + x.group + '"><i></i><span class="st">' + esc(x.name)
-        + '<small>' + esc(groupName(x.group)) + (last ? ' · last ' + esc(fmtLine(last)) : '') + '</small></span>' + ICON.chevR + '</button>';
+      return '<button class="srow" type="button" data-pick="' + esc(x.name) + '" data-pg="' + x.group + '" data-g="' + x.group + '"><i></i><span class="st">' + exHtml(x.name)
+        + '<small>' + esc(gName(x.group)) + (last ? ' · last ' + esc(fmtLine(last)) : '') + '</small></span>' + ICON.chevR + '</button>';
     }).join('');
     const known = hits.some(x => x.name.toLowerCase() === t.toLowerCase());
     const add = known ? '' : '<button class="srow add" type="button" data-addnew="' + esc(t) + '"><span class="st">Add “' + esc(t) + '”<small>A new exercise of your own; pick its muscle group next</small></span>' + ICON.chevR + '</button>';
@@ -638,8 +646,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // group's sections, then your own, then Other… to type one in.
   function exerciseOptions(gid, val) {
     let picked = false;
-    const o = n => { const sel = !picked && n === val; if (sel) picked = true; return '<option value="' + esc(n) + '"' + (sel ? ' selected' : '') + '>' + esc(n) + '</option>'; };
-    const grp = (label, list) => list.length ? (label ? '<optgroup label="' + esc(label) + '">' + list.map(o).join('') + '</optgroup>' : list.map(o).join('')) : '';
+    const o = n => { const sel = !picked && n === val; if (sel) picked = true; return '<option value="' + esc(n) + '"' + (sel ? ' selected' : '') + (BUILTIN.has(String(n).toLowerCase()) ? '' : ' translate="no"') + '>' + esc(n) + '</option>'; };
+    const grp = (label, list) => list.length ? (label ? '<optgroup label="' + esc(tr(label)) + '">' + list.map(o).join('') + '</optgroup>' : list.map(o).join('')) : '';
     const recent = recentIn(gid, 3), g = GROUP[gid], mine = mineIn(gid);
     const known = exercisesFor(gid).concat(recent);
     const extra = val && val !== OTHER && !known.includes(val) ? [val] : [];
@@ -647,7 +655,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const labelled = recent.length || secs.length > 1 || mine.length;
     return '<option value=""' + (val ? '' : ' selected') + ' disabled>Choose…</option>'
       + grp('Recent', recent)
-      + secs.map(([label, list]) => grp(label || (labelled ? g.name : ''), list)).join('')
+      + secs.map(([label, list]) => grp(label || (labelled ? gName(gid) : ''), list)).join('')
       + grp('Yours', mine.concat(extra))
       + '<option value="' + OTHER + '"' + (val === OTHER ? ' selected' : '') + '>Other…</option>';
   }
@@ -784,6 +792,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const doseOf = (mid, day, slot) => data.doses.find(x => x.med === mid && x.date === day && x.slot === slot);
   const timeOf = t => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   const pctOf = a => a.share == null ? '—' : Math.round(a.share * 100) + '%';
+  // The dose as you typed it (left as it is in Russian), then what the app says: "10 mg · Taken 8:02 AM"
+  const doseAnd = (dose, rest) => (dose ? '<span translate="no">' + esc(dose) + '</span>' + (rest ? ' · ' : '') : '') + esc(rest);
   // "Morning, Evening · Mon, Wed, Fri"
   function scheduleOf(m) {
     if (m.prn) return 'As needed';
@@ -815,15 +825,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!rows.length) continue;
       list += '<p class="sechead">' + esc(name) + '</p><div class="rgroup">' + rows.map(({ m }) => {
         const x = doseOf(m.id, day, slot);
-        return '<button class="mrow" type="button" data-take="' + esc(m.id) + '" data-slot="' + slot + '" aria-pressed="' + !!x + '"><span class="ck">' + ICON.tick + '</span><span class="mt">' + esc(m.name)
-          + '<small>' + esc([m.dose, x ? (x.at ? 'Taken ' + timeOf(x.at) : 'Taken') : ''].filter(Boolean).join(' · ')) + '</small></span><span class="mk">' + esc(KIND[m.kind] || '') + '</span></button>';
+        return '<button class="mrow" type="button" data-take="' + esc(m.id) + '" data-slot="' + slot + '" aria-pressed="' + !!x + '"><span class="ck">' + ICON.tick + '</span><span class="mt"><span translate="no">' + esc(m.name) + '</span>'
+          + '<small>' + doseAnd(m.dose, x ? (x.at ? 'Taken ' + timeOf(x.at) : 'Taken') : '') + '</small></span><span class="mk">' + esc(KIND[m.kind] || '') + '</span></button>';
       }).join('') + '</div>';
     }
     const prn = data.meds.filter(m => m.prn && !m.paused);
     if (prn.length) list += '<p class="sechead">As needed</p><div class="rgroup">' + prn.map(m => {
       const xs = data.doses.filter(x => x.med === m.id && x.date === day).sort((a, b) => (a.at || 0) - (b.at || 0));
       const when = xs.map(x => x.at ? timeOf(x.at) : '').filter(Boolean).join(', ');
-      return '<div class="mrow prn"><span class="mt">' + esc(m.name) + '<small>' + esc([m.dose, xs.length ? plural(xs.length, 'time') + (when ? ': ' + when : '') : 'Not taken ' + (day === tod ? 'today' : 'this day')].filter(Boolean).join(' · ')) + '</small></span>'
+      return '<div class="mrow prn"><span class="mt"><span translate="no">' + esc(m.name) + '</span><small>' + doseAnd(m.dose, xs.length ? plural(xs.length, 'time') + (when ? ': ' + when : '') : 'Not taken ' + (day === tod ? 'today' : 'this day')) + '</small></span>'
         + (xs.length ? '<button class="iconbtn" type="button" data-prnless="' + esc(m.id) + '" aria-label="Take back the last ' + esc(m.name) + '">' + ICON.minus + '</button>' : '')
         + '<button class="iconbtn glass" type="button" data-prn="' + esc(m.id) + '" aria-label="Took ' + esc(m.name) + '">' + ICON.plus + '</button></div>';
     }).join('') + '</div>';
@@ -836,7 +846,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const w = M.adherence(m, data.doses, tod, 7, floor, idx), mo = M.adherence(m, data.doses, tod, 30, floor, idx), sk = M.streak(m, data.doses, tod, floor, idx);
         how = '7 days ' + pctOf(w) + ' · 30 days ' + pctOf(mo) + (sk.days ? ' · ' + sk.days + (sk.more ? '+' : '') + (sk.days === 1 ? ' day' : ' days') + ' in a row' : '');
       }
-      return '<button class="xrow medrow' + (m.paused ? ' paused' : '') + '" type="button" data-medit="' + esc(m.id) + '"><span class="xt">' + esc(m.name) + (m.dose ? ' <em>' + esc(m.dose) + '</em>' : '')
+      return '<button class="xrow medrow' + (m.paused ? ' paused' : '') + '" type="button" data-medit="' + esc(m.id) + '"><span class="xt"><span translate="no">' + esc(m.name) + '</span>' + (m.dose ? ' <em translate="no">' + esc(m.dose) + '</em>' : '')
         + '<small>' + esc((m.paused ? 'Paused · ' : '') + (KIND[m.kind] || '') + ' · ' + scheduleOf(m)) + '</small>' + (how ? '<small class="how">' + esc(how) + '</small>' : '') + '</span>' + ICON.chevR + '</button>';
     }).join('');
     main.innerHTML = nav
@@ -1093,7 +1103,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(420).toFixed(1) + '" y2="' + y(420).toFixed(1) + '"/>';
     const n = night(sel), v = n.sleep != null ? n.sleep : n.staged ? (n.deep || 0) + (n.core || 0) + (n.rem || 0) : null;
     const s = n.sleep != null ? HL.status('sleep', n.sleep, data.health, hopts(sel)) : 'none';
-    const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + name + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
+    const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + esc(trAs('Sleep stage', name)) + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
     return '<section class="rgroup hm" data-k="sleep"><div class="hmh"><span class="hmn">Asleep</span>' + (s !== 'none' ? statPill(s, true) : '')
       + '<span class="hmv">' + (v == null ? '—' : esc(HL.hm(v))) + '</span></div>'
       + frame('sleep', days, sel, g, 'Sleep stages, the last ' + days.length + ' nights, a line at 7 hours. Arrow keys pick a night.') + legend + '</section>';
@@ -1457,7 +1467,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function renderSetMore() {
     const box = $('setMore'); if (!box) return;
-    const d = phones.data || {}, row = (t, sub, btn) => '<div class="frow"><span class="l">' + esc(t) + (sub ? '<small class="sub">' + esc(sub) + '</small>' : '') + '</span>' + (btn || '') + '</div>';
+    const d = phones.data || {}, row = (t, sub, btn, name) => '<div class="frow"><span class="l"' + (name ? ' translate="no"' : '') + '>' + esc(t) + (sub ? '<small class="sub">' + esc(sub) + '</small>' : '') + '</span>' + (btn || '') + '</div>';
     let link = '';
     if (phones.state === 'signin') link = row('Your iPhone’s steps', 'Sign in to link your iPhone', '<button class="btn quiet sm" type="button" data-psignin>Sign in</button>');
     else if (phones.state === 'loading' || phones.state === 'idle') link = row('Your iPhone’s steps', 'Checking Home Assistant…');
@@ -1465,11 +1475,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (d.linked) link = row('Your iPhone: ' + (d.linked.name || d.linked.entity), d.linked.entity, '<button class="btn quiet sm" type="button" data-punlink>Unlink</button>');
     else {
       link = row('Link your iPhone', d.list === false ? 'Type your phone’s step sensor' : d.phones && d.phones.length ? 'Pick your own phone' : 'No step sensors found that aren’t linked already.');
-      if (d.list !== false) link += (d.phones || []).map(p => row(p.name || p.entity, p.entity, '<button class="btn sm" type="button" data-plink="' + esc(p.entity) + '">Link</button>')).join('');
+      if (d.list !== false) link += (d.phones || []).map(p => row(p.name || p.entity, p.entity, '<button class="btn sm" type="button" data-plink="' + esc(p.entity) + '">Link</button>', true)).join('');
       else link += '<div class="frow"><input class="txt" id="stEntity" type="text" placeholder="sensor.your_iphone_steps" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Step sensor"><button class="btn sm" type="button" data-plinktyped>Link</button></div>';
     }
     if (phones.err && phones.state === 'ok') link += row('', phones.err);
-    const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>')).join('') + '</div>' : '';
+    const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>', true)).join('') + '</div>' : '';
     box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>'
       + '<div class="frow"><label for="stMove">Move goal</label><select id="stMove">' + opts(MOVE_GOALS, moveGoal(), g => g.toLocaleString('en-US') + ' kcal') + '</select></div>' + link + '</div>' + links + '</div>'
       + '<div class="field"><p class="label">Health</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stVitals" aria-checked="' + vitalsAlertsOn() + '"><span class="grow">Vitals alerts'
@@ -1499,7 +1509,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
     if (e.target.closest('#setErase')) {
       const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone (the Sheet keeps a copy)?' : 'Sign out and erase Fitness from this phone, losing your unsynced log, Meds and Steps?';
-      if (!confirm(msg)) return;
+      if (!confirm(tr(msg))) return;
       if (lastSyncAt) await sync(true);
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
     }

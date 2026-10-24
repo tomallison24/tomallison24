@@ -495,7 +495,7 @@
       const ok = !!ls.get(K.ok, ''), past = recent(), hb = $('ipsyHist');
       hb.hidden = !past.length && !showing; hb.setAttribute('aria-expanded', String(showing));
       if (showing) {
-        log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b>' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
+        log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b translate="no">' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
           : '<p>No earlier chats yet.</p>') + '</div>';
         input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
         return;
